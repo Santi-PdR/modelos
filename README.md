@@ -1,4 +1,4 @@
-# Capa Deteriorer Test — v1.6.1
+# Capa Deteriorer Test — v1.7.0
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Añade la *Capa Deteriorer Evil Saiyan*: geometría propia, cuatro animaciones,
@@ -8,17 +8,58 @@ con el slot **`back` de Curios API 5.14.1+1.20.1**.
 
 ## Descarga directa del `.jar`
 
-**https://github.com/Santi-PdR/modelos/releases/download/v1.6.1/capatest-1.6.1.jar**
+**https://github.com/Santi-PdR/modelos/releases/download/v1.7.0/capatest-1.7.0.jar**
 
 El CI publica el mod como **Release asset `.jar` crudo**, no como ZIP de
 `actions/upload-artifact`. El repositorio es privado: hay que iniciar sesión en
 GitHub con la cuenta `Santi-PdR` para descargarlo. Cada push a la rama
-actualiza el mismo asset de `v1.6.1` con `--clobber`; el tag queda fijo.
-Las entregas anteriores siguen disponibles en `v1.6.0`, `v1.5.1`, `v1.4.0` y
-`v1.3.0`. **Usar v1.6.1**: v1.6.0 crashea al cargar el geo plegado y v1.5.0
-tiene el crash de rotación.
+actualiza el mismo asset de `v1.7.0` con `--clobber`; el tag queda fijo.
+Las entregas anteriores siguen disponibles en `v1.6.1`, `v1.6.0`, `v1.5.1`,
+`v1.4.0` y `v1.3.0`. **Usar v1.7.0**: v1.6.0 crashea al cargar el geo plegado
+y v1.5.0 tiene el crash de rotación.
 
 > PR #1 sigue abierta: https://github.com/Santi-PdR/modelos/pull/1
+
+## v1.7.0 — pliegues anchos y material con relieve
+
+**Objetivo: apariencia y calidad de la capa.** El defecto de v1.6.x era sutil
+pero se notaba: el canvas pintaba **9 senos estrechos** de sombreado mientras
+el relieve 3D era una **parábola** independiente. Sombreado y geometría
+contaban historias distintas, así que la capa se leía como una tabla rayada y
+no como paño.
+
+- **Una sola onda para 2D y 3D.** `tools/cloth_spec.py` define `FOLDS = 3` y
+  `fold_wave(u) = cos(2π·3·u)`. `texture_pipeline.py` la usa para luz y
+  crease; `armor_model_pipeline.py::panel_z()` la muestrea en el centro de
+  cada columna para el relieve en Z. Resultado: **3 pliegues anchos** (3
+  columnas cada uno), cada valle oscuro coincide con una crease geométrica y
+  cada cresta iluminada con un panel adelantado. La amplitud del relieve
+  (0.055) es menor que el grosor del panel (0.10) para que nunca se abra un
+  hueco entre columnas vistas de lado.
+- **9 creases 3D** (3 por sección, en las columnas 1/4/7 = los valles), en
+  lugar de las 6 arbitrarias entre columnas. Tono alterno oscuro/claro.
+- **Festón real** en el dobladillo: las 9 lengüetas cuelgan con longitudes
+  curvas (más largas al centro) y una inclinación suave de 2–4°, así la
+  silueta inferior deja de ser una línea recta. Cada una sigue tomando sólo
+  su porción del chevron del canvas.
+- **Material con más calidad**: medallón con tercer anillo y cuatro engarces,
+  pespuntes en el yugo, desgaste/rozaduras discretas concentrado en bordes y
+  tercio inferior, tejido en sarga y grano. **Sin líneas de costura** entre
+  paneles. Broche reducido a una gema pequeña.
+- **Movimiento por pliegue, no por tira**: el retardo de fase por columna bajó
+  de 0.045 a 0.030 rad (y el ripple de 0.62 a 0.42) para que cada pliegue
+  ancho ondee como un bloque en vez de descomponerse en tiras independientes.
+
+**Geometría**: **126 huesos / 180 cubos** (27 paneles 9×3, 9 creases, 6
+ribetes laterales, 9 lengüetas, 2 alas de cuello, 1 broche). Se mantienen el
+canvas 96×48 compartido por icono, item 3D plegado y capa equipada; los 61
+huesos boxy ocultos en runtime; alfa base byte-idéntico; **1636 texels
+emisivos**; **324 caras UV nuevas** en zonas ya opacas; radianes, caché de
+huesos, fail-safes, ausencia de `JsonNull` y de mixins; Curios `back`
+opcional y aura serena.
+
+Los previews son render software: **no sustituyen una prueba in-game**, que
+ahora mismo está bloqueada por el conflicto de mixins descrito más abajo.
 
 ## v1.6.1 — corrección del crash `Error loading model file`
 
@@ -137,11 +178,10 @@ tres divisiones de fila. Si las franjas aparecen en orden, alineadas y sin
 inversión, el mosaico es correcto. **Los previews no sustituyen una prueba
 in-game.**
 
-Resultados versionados: [`docs/capa_v160_preview.png`](docs/capa_v160_preview.png)
-(item plegado, frente, 3/4 con onda y espalda) y
-[`docs/capa_v160_uv_test.png`](docs/capa_v160_uv_test.png) (franjas UV).
-Se generaron con v1.6.0 y **siguen vigentes**: v1.6.1 no cambia geometría ni
-texturas, sólo elimina el `JsonNull` del geo plegado.
+Resultados versionados de **v1.7.0**:
+[`docs/capa_v170_preview.png`](docs/capa_v170_preview.png) (item plegado,
+frente, 3/4 con onda y espalda) y
+[`docs/capa_v170_uv_test.png`](docs/capa_v170_uv_test.png) (franjas UV).
 
 ## Diagnóstico de crashes: dos fallos distintos
 
@@ -152,41 +192,82 @@ Hubo **dos crashes diferentes** y conviene no confundirlos:
 | `GeckoLibException: capatest:geo/item/cape_folded.geo.json: Error loading model file` | **Sí era `capatest`** (`"parent": null`) | **Corregido en v1.6.1** |
 | `MixinTransformerError ... player_animation_library.mixins.json:firstPerson.ItemInHandRendererMixin` | Conflicto entre otros mods del pack | Ajeno al mod; ver solución abajo |
 
-Con el crash report completo se pudo confirmar que el fallo de arranque del
-pack (`Description: Initializing game`, Forge 47.4.10) **no lo causa este
-mod**. La causa está en la primera línea del `Caused by`:
+### Qué significa exactamente el `MixinTransformerError`
+
+La primera línea del `Caused by` lo dice todo:
 
 ```
 org.spongepowered.asm.mixin.injection.throwables.InjectionError:
 Critical injection failure: Callback method cancelItemRender(...) in
 player_animation_library.mixins.json:firstPerson.ItemInHandRendererMixin
-failed injection check, (0/1) succeeded.
+failed injection check, (0/1) succeeded. Scanned 1 target(s).
+Using refmap player_animation_library.refmap.json
 ```
 
-Es un **conflicto de mixins entre mods de renderizado**, durante la
-transformación de `ItemInHandRenderer`, antes de que Minecraft cree el
-`EntityRenderDispatcher`, antes de cargar un mundo y, por tanto, **antes de
-que exista siquiera una capa equipada**. En todo el stack no aparece ni una
-clase `com.capatest.*`: `capatest` **no registra mixins** (el CI lo verifica),
-sólo usa GeckoLib y la API pública de Forge. Quitar `capatest` no arregla ese
-arranque (y `capatest-1.6.1.jar` corrige el **otro** crash, el del geo).
+Leyéndolo por partes:
 
-Sospechosos del pack, en orden de probabilidad:
+- **`player_animation_library.mixins.json`** es el fichero de configuración de
+  mixins del mod **Player Animation Library** (`PlayerAnimationLibForge-1.2.8+1.20.1-all.jar`),
+  no de `capatest`. Un *mixin* es un parche que modifica el bytecode de una
+  clase de Minecraft al arrancar.
+- **`firstPerson.ItemInHandRendererMixin`** parchea
+  `net.minecraft.client.renderer.ItemInHandRenderer`, la clase que dibuja el
+  item que llevas en la mano en primera persona.
+  ([código del mixin](https://github.com/KosmX/minecraftPlayerAnimator/blob/HEAD/minecraft/common/src/main/java/dev/kosmx/playerAnim/mixin/firstPerson/ItemInHandRendererMixin.java)).
+- **`cancelItemRender`** es un `@Inject` con `cancellable = true` sobre
+  `ItemInHandRenderer#renderItem`, en el punto `INVOKE` de
+  `ItemRenderer.renderStatic(LivingEntity, ItemStack, ItemDisplayContext,
+  boolean, PoseStack, MultiBufferSource, Level, int, int, int)`. Su trabajo es
+  cancelar el dibujado del item cuando una animación está mostrando el modelo
+  en tercera persona. La firma de 8 parámetros del error es la del método
+  `renderItem` que él intercepta, no la del objetivo.
+- **`(0/1) succeeded. Scanned 1 target(s)`** es la clave: Mixin **sí encontró
+  el método** `renderItem` (1 target), pero **no encontró ni una** llamada a
+  `renderStatic` con esa firma exacta dentro de él (0 inyecciones aplicadas).
+  Pasa cuando otro mixin ya reescribió `renderItem`, cuando `ItemRenderer`
+  cambió la firma de `renderStatic`, o cuando el `refmap` (que traduce los
+  nombres a los mappings SRG de Forge) no coincide con la versión instalada.
+  No es un error de memoria, de GPU ni de un asset: es un **parche que no
+  encuentra dónde engancharse**.
+- **`Description: Initializing game`** porque la transformación de clases
+  ocurre al arrancar: `Main.main` → `Minecraft.<init>` →
+  `EntityRenderDispatcher.<init>` fuerza la carga de `ItemInHandRenderer` y
+  ahí salta el mixin. Es antes de crear un mundo y, por tanto, **antes de que
+  exista una capa equipada** o se cargue un solo recurso de `capatest`.
 
-1. `ImmediatelyFast-Forge-1.5.5+1.20.4.jar` es una build **para 1.20.4**
-   corriendo en 1.20.1. Sustituirla por la build 1.20.1 o quitarla.
-2. `TRansition-1.0.21-...-SNAPSHOT` y `TRender-1.0.15-...-SNAPSHOT` son
-   snapshots que transforman el render de primera persona; probar sin ellos.
-3. `PlayerAnimationLibForge-1.2.8+1.20.1-all.jar` choca con lo anterior.
-   Actualizar PAL a una build 1.20.1 compatible o quitarla junto con los mods
-   que la requieren (p. ej. `fiskheroes`, `TRender`/`TRansition`).
-4. Para aislar: arrancar sólo con Forge + GeckoLib + Curios + `capatest`, y
-   añadir el resto por grupos. Si el `MixinTransformerError` desaparece, el
-   conflicto está en ese grupo, no en la capa.
+En todo el stack no aparece ni una clase `com.capatest.*`: este mod **no
+registra mixins** (el CI lo verifica) y sólo usa GeckoLib y la API pública de
+Forge. **Quitar `capatest` no arregla este arranque.** Tampoco lo arregla
+cambiar de versión del mod: el `GeckoLibException` del geo sí era nuestro y
+quedó corregido en v1.6.1, pero éste es otro fallo, de otro mod.
 
-`skinlayers3d`, `embeddium`, `photon`, `flywheel` y `create` aparecen en el
-stack sólo porque también aplican mixins a `Minecraft`/`EntityRenderDispatcher`;
-no son la excepción. `Flywheel Backend: flywheel:off` es informativo.
+### Cómo desatascarlo (nombres reales de tu pack)
+
+1. **Quita `ImmediatelyFast-Forge-1.5.5+1.20.4.jar`**. Es una build de
+   **Minecraft 1.20.4 corriendo en 1.20.1** y modifica justo el render de
+   items. Sustitúyela por la build 1.20.1 de ImmediatelyFast o déjala fuera.
+   Es el candidato número uno.
+2. **Quita los snapshots** `TRansition-1.0.21-1.20.1-forge-SNAPSHOT.jar` y
+   `TRender-1.0.15-1.20.1-forge-SNAPSHOT.jar`: transforman el render de
+   primera persona y pueden reescribir `renderItem` antes que PAL.
+3. **Actualiza `PlayerAnimationLibForge-1.2.8+1.20.1-all.jar`** a una build
+   1.20.1 compatible, o quítalo **junto con los mods que lo requieren**
+   (`fiskheroes`, `TRender`/`TRansition`). Quitar PAL solo puede provocar
+   `ClassNotFoundException` en sus dependientes.
+4. **Aísla por grupos**: arranca primero con Forge + GeckoLib + Curios +
+   `capatest-1.7.0.jar`. Si arranca, ve añadiendo el resto de 5 en 5 hasta que
+   reaparezca el `MixinTransformerError`: el culpable está en ese grupo.
+
+`skinlayers3d`, `embeddium`, `photon`, `flywheel`, `create` y los demás salen
+en el stack sólo porque también aplican mixins a `Minecraft` o
+`EntityRenderDispatcher`; no son la excepción. `Flywheel Backend: flywheel:off`
+es un dato informativo. El `Código de salida: 4294967295 (0xFFFFFFFF)` es
+simplemente `-1` como unsigned: el launcher indica "se cerró con error", no
+aporta más causa.
+
+Mientras este conflicto siga activo **no puedes ver ninguna mejora de la
+capa**: el juego se cae antes de renderizar nada. Por eso conviene resolverlo
+primero.
 
 ## v1.5.1 — corrección preventiva de rotación (histórico)
 
@@ -245,15 +326,15 @@ src/main/resources/META-INF/mods.toml               Metadatos: Forge + GeckoLib 
 src/main/resources/assets/capatest/                 geo/animaciones 3D, texturas, sprites, lang, modelo builtin/entity
 src/main/resources/data/                           tag curios:back + concesión del slot al player
 tools/originals/                                   PNG prístinos + geo de armadura prístino
-tools/cloth_spec.py                                 Canvas 96×48, 9 columnas, SECTION_V, UV opacas y zonas reservadas
+tools/cloth_spec.py                                 Canvas 96×48, 9 columnas, FOLDS=3/fold_wave, SECTION_V, UV opacas y zonas reservadas
 tools/fold_spec.py                                 7 franjas UV y pose de los pliegues del item
 tools/texture_pipeline.py                          Atlas de armadura, canvas compartido, icono, atlas folded y sprites (Pillow + numpy)
-tools/armor_model_pipeline.py                      Rectángulo global 9×3 + creases/ribetes/hem/clasp sobre el geo original intacto
+tools/armor_model_pipeline.py                      Rectángulo global 9×3 + relieve con fold_wave, creases en valles, festón y clasp
 tools/item_model_pipeline.py                       Geo plegado de 33 huesos + animación del item
 tools/animation_pipeline.py                        Deriva sprint/air desde moving
 tools/preview_cloth.py                             Previews software de frente/3-4/espalda/tela/canvas y --uv-test
-docs/capa_v160_preview.png                         Preview versionado de las cuatro vistas de la capa
-docs/capa_v160_uv_test.png                         Test visual del orden UV del mosaico 9×3
+docs/capa_v170_preview.png                         Preview versionado de las cuatro vistas de la capa
+docs/capa_v170_uv_test.png                         Test visual del orden UV del mosaico 9×3
 .github/workflows/build.yml                        CI: validación, build, verificación del jar y Release .jar directo
 ```
 
@@ -263,7 +344,7 @@ JDK 17 + Gradle 8.8 (el zip original no incluye `gradlew`):
 
 ```bash
 gradle build --no-daemon
-# salida: build/libs/capatest-1.6.1.jar
+# salida: build/libs/capatest-1.7.0.jar
 ```
 
 Para regenerar los assets (no hace falta para compilar, ya están commiteados):
@@ -281,11 +362,13 @@ python tools/animation_pipeline.py
 `push` y `workflow_dispatch` sobre `ubuntu-latest`: `actions/checkout@v4`,
 `actions/setup-java@v4` (17/temurin), `gradle/actions/setup-gradle@v4` (8.8),
 validación de JSON/PNG + **ningún `JsonNull` en todos los recursos** + raíz del
-geo plegado sin `parent` + 7 pliegues + **123 huesos / 177 cubos** + 27
-paneles 9×3 + 61 huesos boxy ocultos sin descendientes `v15_*` + UV nuevas en
-zonas opacas + hashes prístinos + regresión de radianes/sin `getBakedModel()` +
+geo plegado sin `parent` + 7 pliegues + **126 huesos / 180 cubos** + 27
+paneles 9×3 + 9 creases en los valles de `FOLDS=3` + onda compartida entre el
+canvas 2D y `panel_z()` + 61 huesos boxy ocultos sin descendientes `v15_*` +
+UV nuevas en zonas opacas + hashes prístinos + regresión de radianes/sin
+`getBakedModel()` +
 **ausencia de mixins** + tag/entidad Curios, `gradle build --no-daemon`, verificación de las entradas
-del jar y publicación del **`.jar` directo** en el Release `v1.6.1`. Si falla,
+del jar y publicación del **`.jar` directo** en el Release `v1.7.0`. Si falla,
 los errores de `javac` se publican como anotaciones y se sube el log completo
 como artifact aparte (que **no** es la entrega).
 
@@ -295,7 +378,7 @@ como artifact aparte (que **no** es la entrega).
 2. Descargar **GeckoLib 4.8.1 para Forge 1.20.1**:
    https://modrinth.com/mod/geckolib/version/bVtfWE8S
    (coordenada Maven: `maven.modrinth:8BmcQJ2H:bVtfWE8S`).
-3. Poner GeckoLib y **`capatest-1.6.1.jar`** en `mods/`.
+3. Poner GeckoLib y **`capatest-1.7.0.jar`** en `mods/`.
    Si el juego crashea **al arrancar** con `MixinTransformerError`, ver la
    sección «Diagnóstico de crashes»: es un conflicto entre otros mods.
 4. Mundo creativo; la capa está en **Combate** o con

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reconstruye la capa EQUIPADA como una superficie de tela continua (v1.6.0).
+"""Reconstruye la capa EQUIPADA como una superficie de tela continua (v1.7.0).
 
 Lee tools/originals/capa_deteriorer_evilsaiyan.geo.json (72 huesos / 126 cubos,
 copia prístina aprobada) y NO modifica ni uno solo de esos huesos. Añade una
@@ -7,8 +7,15 @@ segunda piel hecha de 9 columnas por cada una de las 3 secciones:
 
   * 27 paneles delgados con curvatura suave en Z, que reconstruyen el canvas
     de 96x48 como un mosaico sin costuras;
-  * 6 pliegues maestros (2 por sección), 6 ribetes laterales, 9 lengüetas
-    de dobladillo, 2 alas de cuello y 1 broche emisivo.
+  * 9 pliegues maestros (3 por sección) en los VALLES de la onda compartida
+    FOLDS=3, 6 ribetes laterales, 9 lengüetas de dobladillo con festón real,
+    2 alas de cuello y 1 broche emisivo.
+
+v1.7.0: el relieve 3D y el sombreado del canvas muestrean la MISMA onda
+(cloth_spec.fold_wave). Antes el relieve era una parábola y el canvas tenía
+9 senos independientes: la capa parecía una tabla rayada. Ahora hay 3
+pliegues anchos; cada valle oscuro coincide con una crease geométrica y cada
+cresta iluminada con un panel adelantado.
 
 Diferencia clave frente a v1.5.x: las tres secciones comparten UN rectángulo
 global de tela. Antes cada sección usaba sus propios bounds (distintos anchos
@@ -30,15 +37,17 @@ alfa base y cobertura emisiva no cambian. Uso:
 from __future__ import annotations
 
 import json
-import math
 from pathlib import Path
 
 from cloth_spec import (
     COLUMNS,
+    FOLDS,
     SECTIONS,
     UV,
     assert_opaque,
     cloth_uv,
+    fold_at_column,
+    fold_valleys,
     hem_uv,
     section_uv,
 )
@@ -118,12 +127,16 @@ def row_bounds(gx0, gx1, gy0, gy1, section: int):
 
 
 def panel_z(section: int, column: int) -> float:
+    """Relieve en Z muestreando la MISMA onda que el sombreado del canvas.
+
+    `fold_at_column` vale +1 en las crestas y -1 en los valles. La amplitud
+    (0.055) es menor que el grosor del panel (0.10) para que dos columnas
+    vecinas nunca dejen un hueco visto de lado; el pliegue se lee por la
+    diferencia de profundidad y por la crease 3D, no por una grieta.
+    """
     norm = (column - (COLUMNS - 1) / 2.0) / ((COLUMNS - 1) / 2.0)
-    # La tela se separa un poco del cuerpo hacia el dobladillo: caída natural
-    # sin romper el mosaico (todas las columnas de una fila comparten el mismo
-    # desplazamiento base).
     return (2.58 + 0.09 * section + 0.14 * (1.0 - norm * norm)
-            + 0.015 * math.sin(column * 1.2 + section * 0.6))
+            + 0.055 * fold_at_column(column))
 
 
 def build() -> dict:
@@ -157,15 +170,16 @@ def build() -> dict:
                 [cube((x, y_lo, z), (width, y_hi - y_lo, 0.10), uv, uv, si)],
             ))
 
-        # 2. Dos pliegues maestros por sección, no 12 nervios: el sombreado
-        #    del canvas ya hace el trabajo y así desaparece el código de barras.
-        for k, boundary in enumerate((3, 6)):
-            x = x0 + boundary * step - 0.022
-            z = (panel_z(si, boundary - 1) + panel_z(si, boundary)) / 2.0 + 0.03
-            tone = spec("crease_dark" if k == 0 else "crease_light", si)
+        # 2. Una crease 3D por VALLE de la onda compartida FOLDS=3 (columnas
+        #    1, 4, 7). Coincide exactamente con la línea oscura del canvas:
+        #    sombreado y relieve cuentan el mismo pliegue, sin código de barras.
+        for k, valley in enumerate(fold_valleys()):
+            x = x0 + (valley + 0.5) * step - 0.022
+            z = panel_z(si, valley) + 0.03
+            tone = spec("crease_dark" if k % 2 == 0 else "crease_light", si)
             bones.append(bone(
                 f"v15_crease_{section}_{k}",
-                f"v15_cloth_{section}_{boundary - 1}",
+                f"v15_cloth_{section}_{valley}",
                 [x + 0.022, (y_lo + y_hi) / 2.0, z],
                 [0.0, 0.0, 0.0],
                 [cube((x, y_lo + 0.05, z), (0.044, y_hi - y_lo - 0.10, 0.035),
@@ -185,19 +199,23 @@ def build() -> dict:
                       spec("rim"), spec("rim"), si)],
             ))
 
-    # 4. Dobladillo continuo: cada lengüeta samplea SÓLO su porción del
-    #    chevron del canvas, así el festón no se repite 9 veces.
+    # 4. Dobladillo con FESTÓN REAL: las lengüetas centrales cuelgan más y se
+    #    inclinan hacia atrás. Cada una samplea SÓLO su porción del chevron,
+    #    así el festón pintado no se repite 9 veces.
     bx0, _, _, _, bstep = rows[2]
     for col in range(COLUMNS):
         center = bx0 + (col + 0.5) * bstep
+        norm = (col - (COLUMNS - 1) / 2.0) / ((COLUMNS - 1) / 2.0)
+        length = 0.52 + 0.34 * (1.0 - norm * norm)
         z = panel_z(2, col) + 0.05
-        tilt = -1.5 if col % 2 == 0 else 1.5
+        tilt = -1.2 if col % 2 == 0 else 1.2
         uv = hem_uv(col)
         bones.append(bone(
             f"v15_hem_{col}", f"v15_cloth_cape_bottom_{col}",
-            [center, gy0 - 0.30, z], [0.0, 0.0, tilt],
-            [cube((center - bstep * 0.48, gy0 - 0.62, z),
-                  (bstep * 0.96, 0.68, 0.09), uv, uv, 2)],
+            [center, gy0 - 0.06, z],
+            [2.0 + 2.0 * (1.0 - norm * norm), 0.0, tilt],
+            [cube((center - bstep * 0.48, gy0 - 0.06 - length, z),
+                  (bstep * 0.96, length, 0.11), uv, uv, 2)],
         ))
 
     # 5. Cuello: dos piezas delgadas con la MISMA tela del canvas, no bloques
@@ -218,7 +236,7 @@ def build() -> dict:
     bones.append(bone(
         "v15_clasp", "cape_top",
         [0.0, gy1 - 1.15, 2.96], [0.0, 0.0, 45.0],
-        [cube((-0.48, gy1 - 1.63, 2.90), (0.96, 0.96, 0.10),
+        [cube((-0.33, gy1 - 1.48, 2.90), (0.66, 0.66, 0.10),
               spec("bright"), spec("bright"), 0)],
     ))
 

@@ -9,10 +9,10 @@ import software.bernie.geckolib.renderer.GeoItemRenderer;
 /**
  * Renderer 3D de la capa plegada para inventario, hotbar, mano y suelo.
  *
- * v1.6.1 conserva el geo de 33 huesos (7 pliegues, nervios, yugo, cuello,
- * alas, broche, cadenas, costuras y puntas). Corrige el crash
+ * v1.7.0 conserva el geo de 33 huesos (7 pliegues, nervios, yugo, cuello,
+ * alas, broche, cadenas, costuras y puntas) y la corrección v1.6.1 del crash
  * {@code GeckoLibException: capatest:geo/item/cape_folded.geo.json: Error
- * loading model file}: el hueso raíz ya no escribe {@code "parent": null},
+ * loading model file}: el hueso raíz no escribe {@code "parent": null},
  * porque Gson intenta {@code JsonNull.getAsString()} y lanza. El aspecto no
  * cambia; el atlas y el icono muestrean el MISMO canvas 96×48 que la capa
  * equipada (un único medallón y la misma filigrana). El balanceo vive en

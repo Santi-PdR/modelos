@@ -49,7 +49,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
-from cloth_spec import COLUMNS, OPAQUE_RECTS, UV as CLOTH_UV
+from cloth_spec import COLUMNS, FOLDS, OPAQUE_RECTS, UV as CLOTH_UV
 from fold_spec import PANELS, STRIP_OFFSETS, STRIP_WIDTHS, UV
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -133,9 +133,14 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> np.ndarray:
     bottom = np.array([82.0, 13.0, 48.0], dtype=np.float32)
     base = top * (1.0 - v[..., None]) + bottom * v[..., None]
 
-    fold_phase = u * COLUMNS + 0.04 * np.sin(v * np.pi * 1.5)
-    fold_light = np.power(np.clip(0.5 + 0.5 * np.sin(2.0 * np.pi * fold_phase), 0.0, 1.0), 1.2)
-    crease = np.exp(-((np.mod(fold_phase, 1.0) - 0.5) ** 2) / (2.0 * 0.08 ** 2))
+    # v1.7.0: FOLDS pliegues ANCHOS (3, no 9 rayas finas) y, sobre todo, la
+    # MISMA onda coseno que usa armor_model_pipeline.panel_z para el relieve
+    # 3D. +1 = cresta (panel adelantado, más luz), -1 = valle (crease oscura).
+    # El pequeño término en v hace que los pliegues serpenteen con la caída.
+    fold_phase = u * FOLDS + 0.02 * np.sin(v * np.pi * 1.5)
+    wave = np.cos(2.0 * np.pi * fold_phase)
+    fold_light = np.power(np.clip(0.5 + 0.5 * wave, 0.0, 1.0), 1.15)
+    crease = np.exp(-((np.mod(fold_phase, 1.0) - 0.5) ** 2) / (2.0 * 0.11 ** 2))
     radial = np.exp(-(((u - 0.5) / 0.30) ** 2 + ((v - 0.30) / 0.42) ** 2) * 1.4)
     vignette = np.exp(-((u - 0.02) / 0.06) ** 2) + np.exp(-((u - 0.98) / 0.06) ** 2)
     weave = (np.sin(xx * np.pi / 3.0) * np.sin(yy * np.pi / 3.0) * 1.3
@@ -166,6 +171,12 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> np.ndarray:
     line([(1, 5.6), (95, 5.6)], (180, 106, 220, 235), 1.0)
     line([(4, 2), (18, 6)], (232, 176, 112, 190), 0.6)
     line([(92, 2), (78, 6)], (232, 176, 112, 190), 0.6)
+    # Pespuntes del yugo: puntos gruesos (>0.5 texel) para que sobrevivan al
+    # reducir de 8x a 96x48. No forman una línea de costura entre paneles.
+    for j in range(38):
+        x = 2.0 + j * 92.0 / 37.0
+        d.ellipse([p(x - 0.30, 5.25), p(x + 0.30, 5.85)],
+                  fill=(255, 214, 246, 150))
 
     # v1.6.0: SIN líneas horizontales ni de columna. Cualquier raya dibujada
     # aquí se convierte en una costura visible entre paneles del mosaico; los
@@ -194,6 +205,13 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> np.ndarray:
     line(inner + [inner[0]], (238, 200, 255, 230), 0.8)
     d.ellipse([p(cx - 2.1, cy - 2.3), p(cx + 2.1, cy + 2.3)],
               fill=(255, 248, 255, 255))
+    # Tercer anillo y cuatro engarces: el medallón se lee como una joya
+    # montada, no como un círculo plano, incluso a 96x48.
+    d.ellipse([p(cx - 6.2, cy - 6.2), p(cx + 6.2, cy + 6.2)],
+              outline=(255, 196, 240, 205), width=max(1, int(0.6 * scale)))
+    for gx, gy in ((cx, 4.5), (cx + 12.5, cy), (cx, 23.5), (cx - 12.5, cy)):
+        d.ellipse([p(gx - 0.85, gy - 0.85), p(gx + 0.85, gy + 0.85)],
+                  fill=(255, 236, 252, 235))
 
     line([(48, 23.5), (48, 43.5)], (238, 92, 192, 220), 1.0)
     for path in (
@@ -207,6 +225,20 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> np.ndarray:
                    (38, 40), (58, 40), (48, 30)):
         d.ellipse([p(mx - 0.8, my - 0.8), p(mx + 0.8, my + 0.8)],
                   fill=(255, 146, 216, 210))
+
+    # Desgaste "deteriorer": rozaduras discretas concentradas en los bordes y
+    # en el tercio inferior. Radio >=0.5 texel para que sobreviva al 8x->1x.
+    for _ in range(110):
+        wx = float(rng.uniform(1.0, 95.0))
+        wy = float(rng.uniform(6.0, 45.5))
+        edge = max(0.0, 1.0 - min(wx, 96.0 - wx) / 12.0)
+        low = max(0.0, (wy - 27.0) / 18.0)
+        if rng.random() > min(1.0, 0.12 + 0.44 * low + 0.30 * edge):
+            continue
+        rad = float(rng.uniform(0.40, 0.72))
+        col = ((228, 170, 216, 52) if rng.random() < 0.45
+               else (16, 5, 24, 60))
+        d.ellipse([p(wx - rad, wy - rad), p(wx + rad, wy + rad)], fill=col)
 
     # Dobladillo con chevrones grandes y pespuntes.
     d.rectangle([p(1, 44), p(95, 47.9)], fill=(26, 8, 36, 255))

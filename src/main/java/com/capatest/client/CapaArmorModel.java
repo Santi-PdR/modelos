@@ -17,14 +17,18 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Modelo de la capa equipada v1.6.1 (aspecto y runtime idénticos a v1.6.0;
- * v1.6.1 sólo corrige el geo plegado, ver {@link CapaItemRenderer}).
+ * Modelo de la capa equipada v1.7.0.
  *
  * <p>La capa es un mosaico 9×3 sobre UN rectángulo global: las 27 caras
  * comparten escala y el canvas 96×48 se lee como una sola ilustración. En
  * runtime se ocultan los 61 huesos originales con cubos que no pertenecen a
  * la cadena {@code chestplate → cape_top/mid/bottom}, pero se dejan vivos sus
  * hijos {@code v15_*}, que heredan las animaciones originales.</p>
+ *
+ * <p>v1.7.0 usa 3 pliegues anchos en lugar de 9 rayas finas: el relieve en Z
+ * de la geometría y el sombreado del canvas muestrean la misma onda, así que
+ * el retardo por columna se suaviza para que cada pliegue se mueva como un
+ * bloque y no como un código de barras.</p>
  *
  * <p>Corrección del crash de v1.5.0 (vigente): GeckoLib guarda las rotaciones
  * de los huesos en <b>radianes</b> (ver {@code BakedModelFactory.constructBone}:
@@ -249,11 +253,15 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
                 if (panel == null)
                     continue;
 
+                // v1.7.0: retardo por columna más suave. Con 3 pliegues
+                // anchos (3 columnas por pliegue) un retardo fuerte por
+                // columna descompone cada pliegue en tiras que se mueven
+                // independientes; queremos que ondeen como una sola tela.
                 double phase = time * (4.4D + speed * 2.2D)
-                        - section * 0.55D - column * 0.045D;
+                        - section * 0.55D - column * 0.030D;
                 double wave = Math.sin(phase + wind * 0.8D);
                 double ripple = Math.sin(time * 2.3D - section * 0.7D
-                        + column * 0.62D + wind * 0.5D);
+                        + column * 0.42D + wind * 0.5D);
                 double lateral = (column - (COLUMNS - 1) / 2.0D) / ((COLUMNS - 1) / 2.0D);
 
                 // Todo en GRADOS, convertido a radianes justo antes de setRot*.

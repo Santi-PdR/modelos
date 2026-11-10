@@ -120,24 +120,25 @@ jobs:
           for anim_name, spec in folded_anim['animations'].items():
               assert set(spec['bones']) <= folded_names, (anim_name, set(spec['bones']) - folded_names)
 
-          # Geo de armadura v1.6.0: 72 huesos originales byte-idénticos en JSON,
-          # más 51 huesos de tela/relieve => 123 huesos / 177 cubos. Menos
-          # geometría que v1.5.1, pero un ÚNICO rectángulo 9x3 sin costuras.
+          # Geo de armadura v1.7.0: 72 huesos originales byte-idénticos en JSON,
+          # más 54 huesos de tela/relieve => 126 huesos / 180 cubos. Un ÚNICO
+          # rectángulo 9x3 sin costuras, con 3 pliegues anchos por fila.
           armor_geo = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]
           orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
           assert armor_geo['bones'][:72] == orig_bones
-          assert len(armor_geo['bones']) == 123
-          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 177
+          assert len(armor_geo['bones']) == 126
+          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 180
           new_bones = armor_geo['bones'][72:]
           new_names = {b['name'] for b in new_bones}
           assert {
               'v15_cloth_cape_top_0', 'v15_cloth_cape_mid_8', 'v15_cloth_cape_bottom_6',
-              'v15_crease_cape_top_0', 'v15_crease_cape_bottom_1',
+              'v15_crease_cape_top_0', 'v15_crease_cape_bottom_2',
               'v15_pipe_cape_top_L', 'v15_pipe_cape_bottom_R',
               'v15_hem_0', 'v15_hem_8', 'v15_shoulder_L', 'v15_shoulder_R',
               'v15_clasp'
           } <= new_names
           assert sum(1 for n in new_names if n.startswith('v15_cloth_')) == 27
+          assert sum(1 for n in new_names if n.startswith('v15_crease_')) == 9
           assert sum(1 for n in new_names if n.startswith('v15_hem_')) == 9
           # Ningún hueso de tela puede colgar de un detalle que se oculta.
           hidden = set(__import__('re').findall(
@@ -203,7 +204,13 @@ jobs:
           assert 'cloth_canvas_rgba' in texture_src
           assert 'cloth_canvas_rgba(s)' in texture_src
           assert '--uv-test' in (root / 'tools/preview_cloth.py').read_text()
-          assert 'COLUMNS = 9' in (root / 'tools/cloth_spec.py').read_text()
+          cloth_src = (root / 'tools/cloth_spec.py').read_text()
+          assert 'COLUMNS = 9' in cloth_src
+          assert 'FOLDS = 3' in cloth_src and 'def fold_wave(' in cloth_src
+          # El relieve 3D y el sombreado 2D DEBEN compartir la misma onda.
+          assert 'fold_at_column' in (root / 'tools/armor_model_pipeline.py').read_text()
+          assert 'fold_phase = u * FOLDS' in texture_src
+          assert 'column * 0.030D' in armor_model
           item_src = (root / 'tools/item_model_pipeline.py').read_text()
           assert 'if parent is not None' in item_src
           assert '"parent": parent' not in item_src
@@ -212,11 +219,11 @@ jobs:
           curio = (root / 'src/main/java/com/capatest/client/CapaCurioRenderer.java').read_text()
           assert 'Exception | LinkageError' in glow_layer
           assert 'if (wearer == null)' in curio
-          assert 'mod_version=1.6.1' in (root / 'gradle.properties').read_text()
+          assert 'mod_version=1.7.0' in (root / 'gradle.properties').read_text()
           assert 'curios_version=5.14.1+1.20.1' in (root / 'gradle.properties').read_text()
-          assert 'v1.6.1' in (root / 'src/main/resources/pack.mcmeta').read_text()
-          assert '1.6.1' in (root / 'src/main/resources/META-INF/mods.toml').read_text()
-          assert 'v1.6.1' in (root / 'README.md').read_text()
+          assert 'v1.7.0' in (root / 'src/main/resources/pack.mcmeta').read_text()
+          assert '1.7.0' in (root / 'src/main/resources/META-INF/mods.toml').read_text()
+          assert 'v1.7.0' in (root / 'README.md').read_text()
 
           data = root / 'src/main/resources/data'
           for p in data.rglob('*.json'):
@@ -225,7 +232,7 @@ jobs:
           assert 'capatest:capa_deteriorer_evilsaiyan' in tag
           entity = json.loads((data / 'capatest/curios/entities/player.json').read_text())
           assert entity == {'entities': ['player'], 'slots': ['back']}
-          print('OK: JSON/PNG sin JsonNull, 7 pliegues, 123 huesos / 177 cubos, 27 paneles 9x3, UV opacas y Curios back')
+          print('OK: JSON/PNG sin JsonNull, 7 pliegues, 126 huesos / 180 cubos, 27 paneles 9x3, 3 pliegues anchos, UV opacas y Curios back')
           PY
 
       - name: Build
@@ -254,7 +261,7 @@ jobs:
       - name: List built jars
         run: ls -lh build/libs
 
-      - name: Verify jar contents (v1.6.1 resources)
+      - name: Verify jar contents (v1.7.0 resources)
         run: |
           set -euo pipefail
           found=0
@@ -300,11 +307,43 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          JAR="build/libs/capatest-1.6.1.jar"
+          JAR="build/libs/capatest-1.7.0.jar"
           test -f "$JAR"
           NOTES=/tmp/release-notes.md
           cat > "$NOTES" <<'MD'
-          ## Capa Deteriorer v1.6.1 — corrige el crash al cargar el geo
+          ## Capa Deteriorer v1.7.0 — pliegues anchos y material con relieve
+
+          Prioridad: **apariencia y calidad de la capa**.
+
+          - **Pliegues anchos coherentes 2D/3D.** v1.6.x pintaba 9 senos
+            estrechos en el canvas mientras el relieve 3D era una parábola:
+            sombreado y geometría contaban historias distintas y la capa se
+            leía como una tabla rayada. Ahora `cloth_spec.FOLDS = 3` es la
+            única fuente de verdad: el sombreado (`fold_wave`) y el relieve en
+            Z de `panel_z()` muestrean la **misma onda coseno**. Hay 3 pliegues
+            anchos (3 columnas cada uno); cada valle oscuro coincide con una
+            crease geométrica y cada cresta iluminada con un panel adelantado.
+            9 creases 3D (3 por sección) en lugar de 6.
+          - **Festón real en el dobladillo.** Las 9 lengüetas cuelgan con
+            longitudes curvas (más largas al centro) y una inclinación suave;
+            la silueta inferior deja de ser una línea recta.
+          - **Material con más calidad.** Medallón con tercer anillo y cuatro
+            engarces, pespuntes en el yugo, desgaste/rozaduras discretas
+            concentrado en bordes y tercio inferior, y tejido en sarga. Sin
+            líneas de costura entre paneles.
+          - **Movimiento por pliegue, no por tira.** El retardo de fase por
+            columna se suavizó (0.045 -> 0.030 rad) para que cada pliegue
+            ancho ondee como un bloque en vez de descomponerse en tiras.
+          - **Geometría**: 126 huesos / 180 cubos, 27 paneles 9×3, 9 creases,
+            6 ribetes, 9 lengüetas, 2 alas de cuello y broche reducido.
+
+          Se mantienen: canvas 96×48 compartido por icono, item 3D plegado y
+          capa equipada; 61 huesos boxy ocultos en runtime; alfa base
+          byte-idéntico; 1636 texels emisivos; 324 caras UV nuevas en zonas
+          opacas; radianes, caché de huesos y fail-safes; sin `JsonNull` en
+          ningún recurso; sin mixins; Curios `back` opcional; aura serena.
+
+          ## Histórico v1.6.1 — corrige el crash al cargar el geo
 
           **Fix del crash reportado in-game**: `GeckoLibException:
           capatest:geo/item/cape_folded.geo.json: Error loading model file`
@@ -386,20 +425,44 @@ jobs:
 
           ### Si el juego no arranca con `MixinTransformerError`
 
-          Un crash con `Description: Initializing game` y
-          `player_animation_library.mixins.json:firstPerson.ItemInHandRendererMixin
-          failed injection check (0/1)` **no lo causa este mod**: ocurre al
-          transformar `ItemInHandRenderer`, antes de cargar un mundo y antes de
-          que exista una capa equipada. `capatest` no registra mixins (el CI lo
-          verifica) y no aparece en el stack. En el pack reportado, los
-          sospechosos son `ImmediatelyFast-Forge-1.5.5+1.20.4.jar` (build de
-          1.20.4 en 1.20.1), los snapshots `TRansition`/`TRender` y
-          `PlayerAnimationLibForge-1.2.8+1.20.1-all.jar`. Sustituir la build de
-          ImmediatelyFast por la de 1.20.1, actualizar/quitar PAL con sus
-          dependientes y aislar por grupos. El README trae el procedimiento
-          completo. Quitar `capatest` no arregla ese arranque. Ese crash es
-          **distinto** del `GeckoLibException: Error loading model file` que
-          corrige v1.6.1: aquél venía de otro mod, éste sí era `capatest`.
+          Ese error **no lo causa este mod** y es distinto del
+          `GeckoLibException: Error loading model file` que corrigió v1.6.1.
+
+          `player_animation_library.mixins.json:firstPerson.ItemInHandRendererMixin`
+          pertenece a **Player Animation Library**, no a `capatest`. Su método
+          `cancelItemRender` es un `@Inject` sobre
+          `ItemInHandRenderer#renderItem` en el punto `INVOKE` de
+          `ItemRenderer.renderStatic(LivingEntity, ItemStack,
+          ItemDisplayContext, boolean, PoseStack, MultiBufferSource, Level,
+          int, int, int)`. Sirve para ocultar el item de la mano cuando una
+          animación dibuja el modelo en tercera persona.
+
+          `(0/1) succeeded. Scanned 1 target(s)` significa que Mixin **encontró
+          el método** `renderItem` pero **no encontró esa llamada concreta**
+          dentro de él, así que no pudo aplicar ni una inyección. Causas
+          típicas: otro mixin ya reescribió `renderItem` o cambió la firma de
+          `renderStatic`, o el `refmap` no coincide con el mapping SRG de este
+          Forge. Ocurre en `Initializing game` porque la transformación de
+          clases sucede al arrancar, cuando `Minecraft.<init>` construye el
+          `EntityRenderDispatcher` y se carga `ItemInHandRenderer` — antes de
+          cualquier mundo y de que exista una capa equipada. En el stack no
+          aparece ni una clase `com.capatest.*`: el mod no registra mixins
+          (verificado en CI).
+
+          **Cómo desatascarlo** (nombres del pack reportado):
+          1. Quitar `ImmediatelyFast-Forge-1.5.5+1.20.4.jar`: es una build de
+             **1.20.4 corriendo en 1.20.1** y toca precisamente el render de
+             items. Sustituirla por la build 1.20.1.
+          2. Quitar los snapshots `TRansition-1.0.21-...` y `TRender-1.0.15-...`,
+             que transforman el render de primera persona.
+          3. Actualizar `PlayerAnimationLibForge-1.2.8+1.20.1-all.jar` a una
+             build 1.20.1 compatible, o quitarlo **junto con sus dependientes**
+             (`fiskheroes`, `TRender`/`TRansition`).
+          4. Probar primero con Forge + GeckoLib + Curios + `capatest` y añadir
+             el resto por grupos. Quitar `capatest` no arregla este arranque.
+
+          El README trae el procedimiento completo y el enlace al código del
+          mixin.
 
           Requiere Forge 1.20.1 (47.3.0), Java 17 y GeckoLib 4.8.1 (4.8.x).
           **Descarga: el `.jar` directo de este Release**, no un ZIP de
@@ -407,17 +470,17 @@ jobs:
           sustituyen una prueba in-game; si algo falla, el mod registra
           `Capa Deteriorer: ... desactivada` en el log en vez de propagarlo.
           MD
-          if gh release view v1.6.1 >/dev/null 2>&1; then
-            gh release upload v1.6.1 "$JAR" --clobber
+          if gh release view v1.7.0 >/dev/null 2>&1; then
+            gh release upload v1.7.0 "$JAR" --clobber
           else
-            gh release create v1.6.1 "$JAR" \
-              --title "Capa Deteriorer v1.6.1" \
+            gh release create v1.7.0 "$JAR" \
+              --title "Capa Deteriorer v1.7.0" \
               --notes-file "$NOTES" \
               --target "$GITHUB_SHA"
           fi
-          ASSETS="$(gh release view v1.6.1 --json assets --jq '.assets[].name')"
-          grep -qx 'capatest-1.6.1.jar' <<< "$ASSETS"
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.6.1/capatest-1.6.1.jar"
+          ASSETS="$(gh release view v1.7.0 --json assets --jq '.assets[].name')"
+          grep -qx 'capatest-1.7.0.jar' <<< "$ASSETS"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.7.0/capatest-1.7.0.jar"
           echo "### Descarga directa" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "[${URL}](${URL})" >> "$GITHUB_STEP_SUMMARY"

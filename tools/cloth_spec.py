@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Especificación compartida de la superficie de tela v1.6.0.
+"""Especificación compartida de la superficie de tela v1.7.0.
 
 El atlas de armadura sigue siendo de 128x128 y su alfa es prístino. La capa
 equipada usa una ilustración continua de 96x48 texels (todos opacos) para sus
@@ -16,17 +16,43 @@ paneles reconstruyen el canvas como un mosaico sin costuras.
   * 9 columnas x 3 filas = 27 paneles, con retardo de fase en runtime.
   * hem_uv() da a cada lengüeta su propia porción del dobladillo continuo.
 
+v1.7.0: FOLDS=3 pliegues ANCHOS en lugar de 9 rayas finas. fold_wave() es la
+única fuente de verdad: el sombreado 2D del canvas y el relieve 3D en Z de
+armor_model_pipeline.py muestrean la MISMA onda, así que cada valle oscuro
+coincide con una crease geométrica y cada cresta iluminada con un panel
+adelantado. Antes el relieve era una parábola y el sombreado 9 senos, sin
+relación entre sí: la capa parecía una tabla rayada.
+
 tools/armor_model_pipeline.py construye la geometría, tools/texture_pipeline.py
 pinta el canvas y CapaArmorModel.java anima los huesos v15_cloth_*.
 """
 
 from __future__ import annotations
 
+import math
+
 COLUMNS = 9
+FOLDS = 3
 SECTIONS = ("cape_top", "cape_mid", "cape_bottom")
 CANVAS = {"uv": [0.0, 0.0], "uv_size": [96.0, 48.0]}
 SECTION_V = ((0.0, 16.0), (16.0, 32.0), (32.0, 48.0))
 STRIP_W = CANVAS["uv_size"][0] / COLUMNS
+
+
+def fold_wave(u: float) -> float:
+    """+1 en la cresta del pliegue, -1 en el valle (donde va la crease)."""
+    return math.cos(2.0 * math.pi * FOLDS * u)
+
+
+def fold_at_column(column: int) -> float:
+    """Muestra de la onda en el centro de una columna del mosaico."""
+    return fold_wave((column + 0.5) / COLUMNS)
+
+
+def fold_valleys() -> tuple[int, ...]:
+    """Columnas cuyo centro cae en un valle: ahí van las creases 3D."""
+    return tuple(col for col in range(COLUMNS)
+                 if fold_at_column(col) < -0.5)
 
 UV = {
     # Superficie principal: una sola ilustración de alta resolución reducida a
