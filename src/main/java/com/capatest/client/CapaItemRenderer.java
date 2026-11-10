@@ -9,9 +9,10 @@ import software.bernie.geckolib.renderer.GeoItemRenderer;
 /**
  * Renderer 3D de la capa plegada para inventario, hotbar, mano y suelo.
  *
- * v1.5.1 conserva el geo de 33 huesos (7 pliegues, nervios, yugo, cuello,
- * alas, broche, cadenas, costuras y puntas) y estrena atlas con bordado,
- * pespuntes y sombreado por pliegue. El balanceo vive en
+ * v1.6.0 conserva el geo de 33 huesos (7 pliegues, nervios, yugo, cuello,
+ * alas, broche, cadenas, costuras y puntas), pero su atlas y el icono ahora
+ * muestrean el MISMO canvas 96×48 que la capa equipada: un único medallón y
+ * la misma filigrana. El balanceo vive en
  * animations/item/cape_folded.animation.json, así que aquí sólo hacen falta
  * la iluminación de entidad para GUI y la escala del modelo.
  */

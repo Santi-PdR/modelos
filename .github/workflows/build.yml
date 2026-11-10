@@ -91,22 +91,37 @@ jobs:
           for anim_name, spec in folded_anim['animations'].items():
               assert set(spec['bones']) <= folded_names, (anim_name, set(spec['bones']) - folded_names)
 
-          # Geo de armadura v1.5.1: 72 huesos originales byte-idénticos en JSON,
-          # más 96 huesos de tela/relieve => 168 huesos / 235 cubos.
+          # Geo de armadura v1.6.0: 72 huesos originales byte-idénticos en JSON,
+          # más 51 huesos de tela/relieve => 123 huesos / 177 cubos. Menos
+          # geometría que v1.5.1, pero un ÚNICO rectángulo 9x3 sin costuras.
           armor_geo = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]
           orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
           assert armor_geo['bones'][:72] == orig_bones
-          assert len(armor_geo['bones']) == 168
-          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 235
+          assert len(armor_geo['bones']) == 123
+          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 177
           new_bones = armor_geo['bones'][72:]
           new_names = {b['name'] for b in new_bones}
           assert {
-              'v15_cloth_cape_top_0', 'v15_cloth_cape_mid_12', 'v15_cloth_cape_bottom_6',
-              'v15_crease_cape_top_0', 'v15_crease_cape_bottom_11',
+              'v15_cloth_cape_top_0', 'v15_cloth_cape_mid_8', 'v15_cloth_cape_bottom_6',
+              'v15_crease_cape_top_0', 'v15_crease_cape_bottom_1',
               'v15_pipe_cape_top_L', 'v15_pipe_cape_bottom_R',
-              'v15_hem_0', 'v15_hem_12', 'v15_shoulder_L', 'v15_shoulder_R'
+              'v15_hem_0', 'v15_hem_8', 'v15_shoulder_L', 'v15_shoulder_R',
+              'v15_clasp'
           } <= new_names
-          assert sum(1 for n in new_names if n.startswith('v15_cloth_')) == 39
+          assert sum(1 for n in new_names if n.startswith('v15_cloth_')) == 27
+          assert sum(1 for n in new_names if n.startswith('v15_hem_')) == 9
+          # Ningún hueso de tela puede colgar de un detalle que se oculta.
+          hidden = set(__import__('re').findall(
+              r'"([^"]+)"', (root / 'src/main/java/com/capatest/client/CapaArmorModel.java')
+              .read_text().split('HIDDEN_DETAILS = {')[1].split('};')[0]))
+          assert len(hidden) == 61
+          parent = {b['name']: b.get('parent') for b in armor_geo['bones']}
+          for b in new_bones:
+              cur, chain = parent.get(b['name']), []
+              while cur:
+                  chain.append(cur)
+                  cur = parent.get(cur)
+              assert not (set(chain) & hidden), (b['name'], set(chain) & hidden)
           opaque_rects = (
               (0.0, 0.0, 96.0, 48.0),
               (105.0, 0.0, 109.0, 48.0),
@@ -128,6 +143,14 @@ jobs:
           assert model['parent'] == 'builtin/entity'
           assert {'gui', 'ground', 'fixed', 'firstperson_righthand'} <= set(model['display'])
 
+          # Garantía: capatest NO registra mixins. Un MixinTransformerError
+          # en "Initializing game" (p. ej. player_animation_library) nunca
+          # puede originarse en este mod.
+          assert not list(root.glob('src/main/resources/**/*mixin*.json'))
+          for src in (root / 'src/main/java').rglob('*.java'):
+              assert 'org.spongepowered.asm.mixin' not in src.read_text(), src
+          assert 'Mixin' not in (root / 'src/main/resources/META-INF/mods.toml').read_text()
+
           java = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
           renderer = (root / 'src/main/java/com/capatest/client/CapaItemRenderer.java').read_text()
           armor_renderer = (root / 'src/main/java/com/capatest/client/CapaArmorRenderer.java').read_text()
@@ -140,19 +163,27 @@ jobs:
           for token in ('setHidden(true)', 'setChildrenHidden(false)', 'HIDDEN_DETAILS',
                         'DataTickets.ENTITY', 'getInitialSnapshot', 'v15_cloth_', 'Mth.lerp',
                         'Math.toRadians', 'ConcurrentHashMap', 'CapaTestMod.LOGGER',
-                        'Exception | LinkageError'):
+                        'Exception | LinkageError', 'private static final int COLUMNS = 9;'):
               assert token in armor_model, token
           # Regresión del crash v1.5.0: nunca grados crudos en setRot*, ni
           # getBakedModel() en el hot path (puede reiniciar los snapshots).
           assert 'panel.setRotX(baseX[i] - bend)' not in armor_model
           assert 'getBakedModel(' not in armor_model
+          # v1.6.0: icono, item plegado y capa equipada comparten el canvas.
+          texture_src = (root / 'tools/texture_pipeline.py').read_text()
+          assert 'cloth_canvas_rgba' in texture_src
+          assert 'cloth_canvas_rgba(s)' in texture_src
+          assert '--uv-test' in (root / 'tools/preview_cloth.py').read_text()
+          assert 'COLUMNS = 9' in (root / 'tools/cloth_spec.py').read_text()
           glow_layer = (root / 'src/main/java/com/capatest/client/CapaGlowLayer.java').read_text()
           curio = (root / 'src/main/java/com/capatest/client/CapaCurioRenderer.java').read_text()
           assert 'Exception | LinkageError' in glow_layer
           assert 'if (wearer == null)' in curio
-          assert 'mod_version=1.5.1' in (root / 'gradle.properties').read_text()
+          assert 'mod_version=1.6.0' in (root / 'gradle.properties').read_text()
           assert 'curios_version=5.14.1+1.20.1' in (root / 'gradle.properties').read_text()
-          assert 'v1.5.1' in (root / 'src/main/resources/pack.mcmeta').read_text()
+          assert 'v1.6.0' in (root / 'src/main/resources/pack.mcmeta').read_text()
+          assert '1.6.0' in (root / 'src/main/resources/META-INF/mods.toml').read_text()
+          assert 'v1.6.0' in (root / 'README.md').read_text()
 
           data = root / 'src/main/resources/data'
           for p in data.rglob('*.json'):
@@ -161,7 +192,7 @@ jobs:
           assert 'capatest:capa_deteriorer_evilsaiyan' in tag
           entity = json.loads((data / 'capatest/curios/entities/player.json').read_text())
           assert entity == {'entities': ['player'], 'slots': ['back']}
-          print('OK: JSON/PNG, 7 pliegues, 168 huesos / 235 cubos, 39 paneles de tela, UV opacas y Curios back')
+          print('OK: JSON/PNG, 7 pliegues, 123 huesos / 177 cubos, 27 paneles 9x3, UV opacas y Curios back')
           PY
 
       - name: Build
@@ -190,7 +221,7 @@ jobs:
       - name: List built jars
         run: ls -lh build/libs
 
-      - name: Verify jar contents (v1.5.1 resources)
+      - name: Verify jar contents (v1.6.0 resources)
         run: |
           set -euo pipefail
           found=0
@@ -233,63 +264,93 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          JAR="build/libs/capatest-1.5.1.jar"
+          JAR="build/libs/capatest-1.6.0.jar"
           test -f "$JAR"
           NOTES=/tmp/release-notes.md
           cat > "$NOTES" <<'MD'
-          ## Capa Deteriorer v1.5.1 — corrección de crash
+          ## Capa Deteriorer v1.6.0 — una sola pieza de tela
 
-          - **Fix del crash in-game**: GeckoLib guarda las rotaciones en
-            radianes; v1.5.0 aplicaba grados (hasta 12 rad ≈ 687°) y desarmaba
-            las matrices de los 39 paneles. Ahora todo ángulo pasa por
-            `Math.toRadians` antes de `setRot*`.
-          - **Sin `getBakedModel()` por frame**: los huesos se resuelven una vez
-            desde el `AnimationProcessor` activo, evitando que
-            `setActiveModel()` reinicie los `BoneSnapshot` a mitad de frame.
-          - **Fail-safe cosmético**: la onda de la tela, el pass emisivo y el
-            render de Curios capturan errores, los registran una vez y dejan la
-            capa en pose estática en vez de tumbar el juego. Portadores nulos
-            descartados; estado de movimiento por instancia.
-          - **Acabado más limpio**: creases finos y de bajo contraste, alas de
-            hombro delgadas/oscuras, dobladillo sin peine neón y vignette con
-            realce central para leer una sola pieza de tela.
+          Prioridad de esta versión: **apariencia y calidad de la capa**.
 
-          - **Superficie de tela continua**: canvas de 96×48 dentro del atlas de
-            128×128, 13×3 paneles curvados, 168 huesos / 235 cubos. Los 72 huesos
-            y las cuatro animaciones originales siguen intactos; las losas planas
-            y los detalles boxy se ocultan en runtime, no se borran del JSON.
-          - **Caída y movimiento**: `CapaArmorModel` aplica una curva de amplitud
-            con retardo de fase de hombros a dobladillo, giro acotado, viento,
-            salto, agua, sigilo y sprint. Inspirado en WaveyCapes, Finery y
-            GlowberryClient #102, sin portar código incompatible.
-          - **Material y acabado**: pliegues anchos, tejido, ribetes, pespuntes,
-            medallón central, chevrones y sombreado por pliegue en el item 3D.
-            Alfa base byte-idéntico, cobertura emisiva de 1636 texels sin
-            cambios y todas las UV nuevas en zonas ya opacas.
-          - Aura serena, icono 64×64, 3 sprites de 16×16, Curios
-            `5.14.1+1.20.1` opcional y slot `back` sin cambios.
+          - **Superficie realmente continua.** v1.5.1 calculaba los límites por
+            sección y repartía 13 columnas sobre cada una: la ilustración se
+            estiraba de forma distinta arriba, en el centro y abajo, y partía el
+            medallón. Ahora las tres secciones comparten **un único rectángulo
+            global** y el canvas 96×48 se divide en un mosaico **9×3** con
+            exactamente la misma escala en las 27 caras. Sin líneas de costura
+            pintadas: los pliegues son sombreado y un relieve suave en Z.
+          - **Menos cajas, más paño.** Se ocultan en runtime los **61 huesos
+            originales con cubos** que no pertenecen a la cadena
+            `chestplate → cape_top/mid/bottom` (placas, dedos, jirones,
+            faldones, hombreras y tiras). El geo prístino sigue byte-idéntico y
+            sus animaciones siguen accionando a los huesos padres; el aspecto
+            de "cajas apiladas" desaparece.
+          - **Geometría más ligera:** 123 huesos / 177 cubos frente a 168 / 235
+            de v1.5.1. 27 paneles, 6 creases, 6 ribetes laterales, 9 lengüetas
+            de dobladillo, 2 alas de cuello y un broche en diamante girado 45°.
+            Vuelo de campana del 1% y caída progresiva hacia atrás, sin romper
+            la línea continua del borde.
+          - **Mismo diseño en todas partes.** El icono de inventario y el item
+            3D plegado (7 pliegues) muestrean ahora el **mismo canvas** que la
+            capa equipada: un único medallón, la misma filigrana y el mismo
+            dobladillo. Antes llevaban una ilustración aparte con dos
+            medallones. Material algo más claro para que se lea en la espalda
+            con la luz del juego.
+          - **Herramienta de validación visual versionada.**
+            `tools/preview_cloth.py` genera previews de frente/3-4/espalda, tela
+            sola, detalle original y canvas; `--uv-test` pinta franjas de
+            colores para comprobar que el orden UV del mosaico es correcto y
+            que las filas quedan alineadas.
 
-          Referencias: tr7zw/WaveyCapes, ismaildzf/finery, GlowberryClient
-          #102/#106, FabricExtras/ArmorModelAPI, GeoArmor, M1nut1/GeoAnim,
-          GeckoLib y tutoriales de Blockbench/YouTube sobre capas de alta
-          resolución y modelos 4D.
+          Garantías que se mantienen:
 
-          Requiere Forge 1.20.1 (47.x), Java 17 y GeckoLib 4.8.1. Compilado y
-          validado en CI. Si persiste un crash, revisar las primeras líneas del
-          crash report: el mod registra cualquier fallo cosmético en el log
-          (`Capa Deteriorer: ... desactivada`) en vez de propagarlo.
+          - **Estabilidad v1.5.1**: todos los ángulos se convierten con
+            `Math.toRadians` antes de `setRot*`; sin `getBakedModel()` en el hot
+            path; huesos resueltos una vez con caché; fail-safe cosmético que
+            registra el error y deja la capa estática en vez de tumbar el juego.
+          - **Movimiento**: onda con retardo de fase de hombros a dobladillo,
+            viento, giro, salto, agua, sigilo y sprint; animaciones
+            `idle/moving/sprint/air` intactas. Inspirado en WaveyCapes, Finery
+            y GlowberryClient #102/#106, sin portar código incompatible.
+          - **Assets**: alfa base byte-idéntico, cobertura emisiva de 1636
+            texels sin cambios, todas las UV nuevas en zonas ya opacas,
+            glowmask 128×128, icono 64×64, 3 sprites de 16×16, aura serena.
+          - Curios `5.14.1+1.20.1` opcional con slot `back`; sin Curios se
+            equipa en pecho y se ve en F5. Rarity EPIC, `fireResistant`, foil,
+            lore en_us/es_es y `/give @s capatest:capa_deteriorer_evilsaiyan`.
+
+          ### Si el juego no arranca con `MixinTransformerError`
+
+          Un crash con `Description: Initializing game` y
+          `player_animation_library.mixins.json:firstPerson.ItemInHandRendererMixin
+          failed injection check (0/1)` **no lo causa este mod**: ocurre al
+          transformar `ItemInHandRenderer`, antes de cargar un mundo y antes de
+          que exista una capa equipada. `capatest` no registra mixins (el CI lo
+          verifica) y no aparece en el stack. En el pack reportado, los
+          sospechosos son `ImmediatelyFast-Forge-1.5.5+1.20.4.jar` (build de
+          1.20.4 en 1.20.1), los snapshots `TRansition`/`TRender` y
+          `PlayerAnimationLibForge-1.2.8+1.20.1-all.jar`. Sustituir la build de
+          ImmediatelyFast por la de 1.20.1, actualizar/quitar PAL con sus
+          dependientes y aislar por grupos. El README trae el procedimiento
+          completo. Quitar `capatest` no arregla ese arranque.
+
+          Requiere Forge 1.20.1 (47.3.0), Java 17 y GeckoLib 4.8.1 (4.8.x).
+          **Descarga: el `.jar` directo de este Release**, no un ZIP de
+          artifact. Compilado y validado en CI. Los previews son software y no
+          sustituyen una prueba in-game; si algo falla, el mod registra
+          `Capa Deteriorer: ... desactivada` en el log en vez de propagarlo.
           MD
-          if gh release view v1.5.1 >/dev/null 2>&1; then
-            gh release upload v1.5.1 "$JAR" --clobber
+          if gh release view v1.6.0 >/dev/null 2>&1; then
+            gh release upload v1.6.0 "$JAR" --clobber
           else
-            gh release create v1.5.1 "$JAR" \
-              --title "Capa Deteriorer v1.5.1" \
+            gh release create v1.6.0 "$JAR" \
+              --title "Capa Deteriorer v1.6.0" \
               --notes-file "$NOTES" \
               --target "$GITHUB_SHA"
           fi
-          ASSETS="$(gh release view v1.5.1 --json assets --jq '.assets[].name')"
-          grep -qx 'capatest-1.5.1.jar' <<< "$ASSETS"
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.5.1/capatest-1.5.1.jar"
+          ASSETS="$(gh release view v1.6.0 --json assets --jq '.assets[].name')"
+          grep -qx 'capatest-1.6.0.jar' <<< "$ASSETS"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.6.0/capatest-1.6.0.jar"
           echo "### Descarga directa" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "[${URL}](${URL})" >> "$GITHUB_STEP_SUMMARY"

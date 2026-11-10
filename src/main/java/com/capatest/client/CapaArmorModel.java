@@ -17,14 +17,20 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Modelo de la capa equipada v1.5.1.
+ * Modelo de la capa equipada v1.6.0.
  *
- * <p>Corrección del crash de v1.5.0: GeckoLib guarda las rotaciones de los
- * huesos en <b>radianes</b> (ver {@code BakedModelFactory.constructBone}:
+ * <p>La capa es un mosaico 9×3 sobre UN rectángulo global: las 27 caras
+ * comparten escala y el canvas 96×48 se lee como una sola ilustración. En
+ * runtime se ocultan los 61 huesos originales con cubos que no pertenecen a
+ * la cadena {@code chestplate → cape_top/mid/bottom}, pero se dejan vivos sus
+ * hijos {@code v15_*}, que heredan las animaciones originales.</p>
+ *
+ * <p>Corrección del crash de v1.5.0 (vigente): GeckoLib guarda las rotaciones
+ * de los huesos en <b>radianes</b> (ver {@code BakedModelFactory.constructBone}:
  * {@code Math.toRadians(-rotation.x)}). v1.5.0 sumaba grados directamente,
  * así que un {@code bend} de 12 se convertía en 12 rad ≈ 687°: matrices
- * degeneradas en 39 paneles por frame y culling/render inestable. Ahora todos
- * los ángulos se convierten con {@link Math#toRadians(double)}.</p>
+ * degeneradas por frame y culling/render inestable. Ahora todos los ángulos
+ * se convierten con {@link Math#toRadians(double)}.</p>
  *
  * <p>También se elimina la consulta al modelo bakeado del hot path: puede
  * llamar a {@code AnimationProcessor.setActiveModel()} cuando cambia el modelo,
@@ -42,17 +48,37 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     private static final String[] SECTIONS = {"cape_top", "cape_mid", "cape_bottom"};
-    private static final int COLUMNS = 13;
+    /** v1.6.0: 9 columnas x 3 filas, mismo rectángulo global en el canvas. */
+    private static final int COLUMNS = 9;
 
-    /** Detalle boxy del geo aprobado, oculto en runtime (el JSON no se toca). */
+    /**
+     * v1.6.0: los 61 huesos originales con cubos que NO son la cadena
+     * chestplate -> cape_top/mid/bottom. Eran las placas, dedos, jirones,
+     * hombreras y tiras que tapaban la superficie continua y daban el aspecto
+     * de "cajas apiladas". Se ocultan en runtime; el geo prístino sigue intacto
+     * y sus animaciones siguen accionando a los huesos padres.
+     */
     private static final String[] HIDDEN_DETAILS = {
-            "mano_hombro_R", "mano_hombro_L", "mano_sigilo", "nucleo_sigilo",
+            "arnes_frontal", "collar_dentado", "yugo",
             "espina_0", "espina_1", "espina_2",
-            "cristal_top_L", "cristal_mid_R", "cristal_mid_L", "cristal_bot_R",
-            "flujo_violeta_0", "flujo_violeta_1", "flujo_violeta_2",
-            "flujo_violeta_3", "flujo_violeta_4",
-            "esquirla_0", "esquirla_1", "esquirla_2", "esquirla_3",
-            "esquirla_4", "esquirla_5", "esquirla_6", "esquirla_7"
+            "mano_hombro_R", "dedo_hR_0", "dedo_hR_1", "dedo_hR_2",
+            "dedo_hR_3", "dedo_hR_4",
+            "mano_hombro_L", "dedo_hL_0", "dedo_hL_1", "dedo_hL_2",
+            "dedo_hL_3", "dedo_hL_4",
+            "cristal_top_L", "flujo_violeta_0",
+            "esquirla_0", "esquirla_1",
+            "nucleo_sigilo", "mano_sigilo",
+            "dedo_sigilo_0", "dedo_sigilo_1", "dedo_sigilo_2",
+            "dedo_sigilo_3", "dedo_sigilo_4",
+            "cinturon_oxidado", "lengueta", "colgajo_R", "colgajo_L",
+            "cristal_mid_R", "cristal_mid_L",
+            "flujo_violeta_1", "flujo_violeta_2", "esquirla_2", "esquirla_3",
+            "jiron_0", "jiron_1", "jiron_2", "jiron_3", "jiron_4",
+            "faldon_R", "faldon_R_tip", "faldon_L", "faldon_L_tip",
+            "cristal_bot_R", "flujo_violeta_3", "flujo_violeta_4",
+            "esquirla_4", "esquirla_5", "esquirla_6", "esquirla_7",
+            "hombrera_der", "tira_der_0", "tira_der_1",
+            "hombrera_izq", "tira_izq_0", "tira_izq_1"
     };
 
     /** Estado por portador; es una instancia del modelo, no un static global. */

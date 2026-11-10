@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Procedural texture suite for the "Capa Deteriorer Evil Saiyan" (v1.5.1).
+Procedural texture suite for the "Capa Deteriorer Evil Saiyan" (v1.6.0).
 
 Why procedural instead of AI-generated art:
     The 128x128 armor texture is a strict UV atlas. Every cube face of
@@ -16,17 +16,19 @@ Why procedural instead of AI-generated art:
       * glow brightness is driven by the base texture colour at those pixels,
       * the glowmask must not grow, or it would punch holes in the cape.
 
-    v1.5.1 paints a single high-resolution cloth illustration into the fully
-    opaque 96x48 corner of the atlas. The new 13x3 curved panels sample it as
-    continuous vertical strips; reserved columns supply dark creases, violet
-    rim lights, lining and piping. The original neon-line glowmask is kept as
-    the energy filigree, with a soft bloom around it. Alpha and emissive texel
+    v1.6.0 paints ONE 96x48 cloth illustration into a fully opaque corner of
+    the atlas and maps it onto a single 9x3 rectangle (27 panels) that spans
+    the whole cape, so no section is stretched or cut. There are no painted
+    seam lines: the folds are shading and gentle Z relief. Reserved columns
+    supply dark creases, violet rim lights, lining and piping. The pristine
+    neon-line glowmask is kept, with a soft bloom. Alpha and emissive texel
     count are still unchanged.
 
-    The folded 3D item model uses its own 128x128 artwork atlas (generated from
-    the same cape design as the icon), split into seven continuous UV strips
-    with baked per-fold shading, stitching and reserved piping columns. The
-    ember particles use three soft, anti-aliased 16x16 sprites.
+    The icon and the folded 3D item model sample THAT SAME canvas, so the
+    medallion, filigree and hem match the equipped cape. The folded atlas is
+    split into seven continuous UV strips with baked per-fold shading,
+    stitching and reserved piping columns. Ember particles use three soft,
+    anti-aliased 16x16 sprites.
 
 Outputs (all committed, so CI needs no Python deps):
     textures/item/armor/capa_deteriorer_evilsaiyan.png            128x128
@@ -45,9 +47,9 @@ import math
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
-from cloth_spec import COLUMNS, OPAQUE_RECTS, SECTION_V, UV as CLOTH_UV
+from cloth_spec import COLUMNS, OPAQUE_RECTS, UV as CLOTH_UV
 from fold_spec import PANELS, STRIP_OFFSETS, STRIP_WIDTHS, UV
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -124,8 +126,11 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> np.ndarray:
     v = yy / float(h - 1)
     rng = np.random.default_rng(SEED + 11)
 
-    top = np.array([17.0, 10.0, 39.0], dtype=np.float32)
-    bottom = np.array([60.0, 8.0, 32.0], dtype=np.float32)
+    # v1.6.0: material algo más claro. En el juego la capa va en la espalda,
+    # con menos luz que en un preview; un púrpura demasiado negro pierde el
+    # medallón y la filigrana. Sigue siendo la misma gama Evil-Saiyan.
+    top = np.array([29.0, 14.0, 54.0], dtype=np.float32)
+    bottom = np.array([82.0, 13.0, 48.0], dtype=np.float32)
     base = top * (1.0 - v[..., None]) + bottom * v[..., None]
 
     fold_phase = u * COLUMNS + 0.04 * np.sin(v * np.pi * 1.5)
@@ -135,13 +140,17 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> np.ndarray:
     vignette = np.exp(-((u - 0.02) / 0.06) ** 2) + np.exp(-((u - 0.98) / 0.06) ** 2)
     weave = (np.sin(xx * np.pi / 3.0) * np.sin(yy * np.pi / 3.0) * 1.3
              + np.sin((xx + yy) * np.pi / 5.0) * 0.7)
+    twill = np.sin((xx * 0.55 - yy * 0.32) * np.pi / 7.0) * 1.6
     grain = rng.normal(0.0, 1.4, (h, w)).astype(np.float32)
-    rgb = base
+    # Luz cenital suave: la tela se aclara en los hombros y se asienta en el
+    # dobladillo. Es un degradado continuo, no una raya por sección.
+    drape = np.power(1.0 - v, 1.4)[..., None] * np.array([10.0, 3.0, 14.0])
+    rgb = base + drape
     rgb += (fold_light[..., None] - 0.5) * np.array([10.0, 4.0, 14.0])
     rgb -= crease[..., None] * np.array([9.0, 3.0, 11.0])
-    rgb += radial[..., None] * np.array([38.0, 9.0, 48.0])
-    rgb -= vignette[..., None] * np.array([16.0, 5.0, 16.0])
-    rgb += (weave + grain)[..., None] * np.array([0.7, 0.5, 0.9])
+    rgb += radial[..., None] * np.array([44.0, 11.0, 54.0])
+    rgb -= vignette[..., None] * np.array([18.0, 6.0, 18.0])
+    rgb += (weave + twill + grain)[..., None] * np.array([0.7, 0.5, 0.9])
 
     img = Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
     overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
@@ -153,18 +162,15 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> np.ndarray:
     # Yugo y ribetes: líneas de ~1 texel, no filamentos que desaparecen al
     # reducir la ilustración al atlas real.
     d.polygon([p(*q) for q in [(1, 1), (95, 1), (91, 6), (5, 6)]],
-              fill=(14, 8, 32, 255))
+              fill=(26, 13, 48, 255))
     line([(1, 5.6), (95, 5.6)], (180, 106, 220, 235), 1.0)
     line([(4, 2), (18, 6)], (232, 176, 112, 190), 0.6)
     line([(92, 2), (78, 6)], (232, 176, 112, 190), 0.6)
 
-    for boundary, _ in SECTION_V[1:]:
-        line([(2, boundary), (94, boundary)], (46, 20, 64, 90), 0.35)
-    for i in range(1, COLUMNS):
-        x = i * float(cw) / COLUMNS
-        line([(x, 6), (x + (48 - x) * 0.02, 44)], (54, 22, 72, 90), 0.45)
-        line([(x + 0.55, 6), (x + 0.55 + (48 - x) * 0.02, 44)],
-             (132, 62, 166, 70), 0.35)
+    # v1.6.0: SIN líneas horizontales ni de columna. Cualquier raya dibujada
+    # aquí se convierte en una costura visible entre paneles del mosaico; los
+    # pliegues ya los aportan fold_light/crease y el relieve 3D suave en Z.
+    # SECTION_V sigue siendo la división UV, no una costura pintada.
 
     for x, inward in ((1.5, 0.06), (94.5, -0.06)):
         line([(x, 6), (x + (48 - x) * inward, 44)], (246, 84, 184, 240), 1.2)
@@ -182,7 +188,7 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> np.ndarray:
         d.ellipse([p(cx - r, cy - r), p(cx + r, cy + r)],
                   outline=col, width=max(1, int(width * scale)))
     diamond = [(cx, 4.5), (cx + 12.5, cy), (cx, 23.5), (cx - 12.5, cy)]
-    d.polygon([p(*q) for q in diamond], fill=(34, 10, 44, 235))
+    d.polygon([p(*q) for q in diamond], fill=(40, 12, 56, 235))
     line(diamond + [diamond[0]], (255, 118, 208, 250), 1.3)
     inner = [(cx, 9), (cx + 6, cy), (cx, 19), (cx - 6, cy)]
     line(inner + [inner[0]], (238, 200, 255, 230), 0.8)
@@ -203,12 +209,14 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> np.ndarray:
                   fill=(255, 146, 216, 210))
 
     # Dobladillo con chevrones grandes y pespuntes.
-    d.rectangle([p(1, 44), p(95, 47.9)], fill=(18, 6, 26, 255))
-    line([(1, 44.2), (13, 46.4), (25, 44.2), (37, 46.4), (49, 44.2),
-          (61, 46.4), (73, 44.2), (85, 46.4), (95, 44.2)],
-         (196, 88, 168, 205), 1.0)
+    d.rectangle([p(1, 44), p(95, 47.9)], fill=(26, 8, 36, 255))
+    # Un chevron por columna de tela: el festón del canvas coincide con las
+    # lengüetas v15_hem_* y no se repite dentro de cada una.
+    chevron = [(1.0 + i * 94.0 / COLUMNS, 44.2 + (2.2 if i % 2 else 0.0))
+               for i in range(COLUMNS + 1)]
+    line(chevron, (196, 88, 168, 205), 1.0)
     for i in range(COLUMNS):
-        x = 2.0 + i * 7.1
+        x = 2.0 + i * 92.0 / COLUMNS
         line([(x, 47.7), (x + 1.6, 43.8)], (126, 52, 164, 120), 0.4)
 
     img = Image.alpha_composite(img, overlay)
@@ -221,11 +229,11 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> np.ndarray:
     halo = em.filter(ImageFilter.GaussianBlur(2.0 * scale))
     arr = np.asarray(img, dtype=np.float32).copy()
     halo_arr = np.asarray(halo, dtype=np.float32) / 255.0
-    arr[..., :3] += halo_arr[..., None] * np.array([18.0, 4.0, 24.0])
+    arr[..., :3] += halo_arr[..., None] * np.array([12.0, 3.0, 16.0])
     em_arr = np.asarray(em, dtype=np.float32) / 255.0
     hot = np.array([150.0, 60.0, 150.0])
-    arr[..., :3] = (arr[..., :3] * (1.0 - em_arr[..., None] * 0.22)
-                    + hot * em_arr[..., None] * 0.22)
+    arr[..., :3] = (arr[..., :3] * (1.0 - em_arr[..., None] * 0.12)
+                    + hot * em_arr[..., None] * 0.12)
     img = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGBA")
     return np.asarray(img.resize((cw, ch), Image.LANCZOS).convert("RGB"),
                       dtype=np.float32)
@@ -270,7 +278,7 @@ def assert_cloth_uvs() -> None:
                     for x0, y0, x1, y1 in OPAQUE_RECTS
                 ), f"UV nueva fuera de zona opaca: {face}"
                 checked += 1
-    assert checked > 400, checked
+    assert checked > 250, checked
     print(f"v1.5.1 cloth UV faces checked: {checked}")
 
 
@@ -542,9 +550,34 @@ def build_cape_artwork(s: int = 256) -> Image.Image:
     return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGBA")
 
 
+def cloth_canvas_rgba(s: int) -> Image.Image:
+    """El mismo canvas 96x48 que usa la capa equipada, ampliado a `s` px.
+
+    v1.6.0: el icono, el item 3D plegado y la capa equipada deben contar el
+    MISMO diseño. Antes el folded/icon usaban una ilustración aparte con dos
+    medallones y venas neón que no existían en la tela equipada.
+    """
+    glow = np.asarray(
+        Image.open(ORIGINALS / "armor_glowmask.png").convert("RGBA"),
+        dtype=np.float32,
+    )
+    canvas = np.clip(build_armor_cloth_canvas(glow[..., 3]), 0, 255).astype(np.uint8)
+    return Image.fromarray(canvas, "RGB").convert("RGBA").resize(
+        (s, s), Image.LANCZOS
+    )
+
+
 def build_icon() -> Image.Image:
-    """64x64 inventory icon (transparent background)."""
-    return build_cape_artwork(512).resize((64, 64), Image.LANCZOS)
+    """Icono 64x64: silueta clásica, pero con el bordado de la tela v1.6.0."""
+    s = 512
+    silhouette = build_cape_artwork(s)
+    mask = silhouette.getchannel("A")
+    transparent = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    out = Image.composite(cloth_canvas_rgba(s), transparent, mask)
+    edge = ImageChops.subtract(mask.filter(ImageFilter.MaxFilter(9)), mask)
+    rim = Image.new("RGBA", (s, s), (236, 116, 214, 255))
+    rim.putalpha(edge.point(lambda a: min(255, int(a * 0.85))))
+    return Image.alpha_composite(out, rim).resize((64, 64), Image.LANCZOS)
 
 
 # --------------------------------------------------------------------------
@@ -565,11 +598,12 @@ def build_folded_texture() -> Image.Image:
     alpha = np.full((s, s, 1), 255.0)
     bg = Image.fromarray(np.dstack((np.clip(rgb, 0, 255), alpha)).astype(np.uint8), "RGBA")
 
-    # Stretch the cape artwork horizontally so the seven 3D folds sample a
-    # continuous, detailed cape front rather than a narrow centred icon.
-    art = build_cape_artwork(512).resize((620, 512), Image.LANCZOS)
-    art = art.crop(((620 - 512) // 2, 0, (620 - 512) // 2 + 512, 512))
-    out = Image.alpha_composite(bg, art)
+    # v1.6.0: las siete caras plegadas muestrean el MISMO canvas continuo que
+    # la capa equipada. Una pizca del grano del fondo conserva la textura de
+    # tejido sin tapar el medallón ni la filigrana.
+    art = np.asarray(cloth_canvas_rgba(s), dtype=np.float32)
+    mix = art * 0.88 + np.asarray(bg, dtype=np.float32) * 0.12
+    out = Image.fromarray(np.clip(mix, 0, 255).astype(np.uint8), "RGBA")
 
     # Baked lighting per fold: cada franja tiene centro iluminado, bordes en
     # sombra y una leve caída de luz hacia el dobladillo. Así las 7 caras

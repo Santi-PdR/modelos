@@ -1,23 +1,27 @@
 #!/usr/bin/env python3
-"""Reconstruye la capa EQUIPADA como una superficie de tela continua (v1.5.1).
+"""Reconstruye la capa EQUIPADA como una superficie de tela continua (v1.6.0).
 
 Lee tools/originals/capa_deteriorer_evilsaiyan.geo.json (72 huesos / 126 cubos,
 copia prístina aprobada) y NO modifica ni uno solo de esos huesos. Añade una
-segunda piel hecha de 13 columnas por cada una de las 3 secciones:
+segunda piel hecha de 9 columnas por cada una de las 3 secciones:
 
-  * 39 paneles delgados, ligeramente curvados en Z y girados en Y, que
-    reemplazan visualmente a los 15 cubos planos originales;
-  * 36 nervios/creases en los límites de columna, con sombra y rim light;
-  * 6 ribetes laterales emisivos, 13 puntas de dobladillo y 2 alas de
-    hombro; las tres secciones se solapan sin costuras horizontales.
+  * 27 paneles delgados con curvatura suave en Z, que reconstruyen el canvas
+    de 96x48 como un mosaico sin costuras;
+  * 6 pliegues maestros (2 por sección), 6 ribetes laterales, 9 lengüetas
+    de dobladillo, 2 alas de cuello y 1 broche emisivo.
 
-En runtime CapaArmorModel oculta SÓLO los cubos de cape_top/mid/bottom (no sus
-hijos), así que los 72 huesos y las animaciones hand-made siguen mandando:
-los paneles nuevos son hijos de esas secciones y heredan idle/moving/sprint/air.
-Además el modelo Java les aplica una curva de amplitud con retardo de fase,
-inspirada en WaveyCapes / Finery / GlowberryClient.
+Diferencia clave frente a v1.5.x: las tres secciones comparten UN rectángulo
+global de tela. Antes cada sección usaba sus propios bounds (distintos anchos
+y alturas) con la misma UV de 16 filas, así que la ilustración se estiraba de
+forma diferente en cada tercio: el medallón se partía y las filigranas no
+continuaban. Ahora la escala es idéntica y el mosaico encaja.
 
-Todas las UV nuevas caen en rectángulos 100% opacos del atlas de 128×128;
+En runtime CapaArmorModel oculta los cubos de cape_top/mid/bottom y el detalle
+boxy original, pero deja vivos todos sus hijos: los 72 huesos y las animaciones
+hand-made siguen mandando. El modelo Java aplica además una onda con retardo
+de fase, inspirada en WaveyCapes / Finery / GlowberryClient.
+
+Todas las UV nuevas caen en rectángulos 100% opacos del atlas de 128x128;
 alfa base y cobertura emisiva no cambian. Uso:
 
     python3 tools/armor_model_pipeline.py
@@ -35,6 +39,7 @@ from cloth_spec import (
     UV,
     assert_opaque,
     cloth_uv,
+    hem_uv,
     section_uv,
 )
 
@@ -81,18 +86,44 @@ def bone(name: str, parent: str, pivot, rotation, cubes):
     }
 
 
-def section_bounds(base: dict, index: int) -> tuple[float, float, float, float]:
-    cubes = base["cubes"]
-    x0 = min(c["origin"][0] for c in cubes) - 0.32 - 0.08 * index
-    x1 = max(c["origin"][0] + c["size"][0] for c in cubes) + 0.32 + 0.08 * index
-    y0 = min(c["origin"][1] for c in cubes) - 0.10
-    y1 = max(c["origin"][1] + c["size"][1] for c in cubes) + 0.12
+def global_bounds(by_name: dict) -> tuple[float, float, float, float]:
+    """Un ÚNICO rectángulo para las 3 secciones (adiós a la distorsión UV)."""
+    cubes = [c for section in SECTIONS for c in by_name[section]["cubes"]]
+    x0 = min(c["origin"][0] for c in cubes)
+    x1 = max(c["origin"][0] + c["size"][0] for c in cubes)
+    y0 = min(c["origin"][1] for c in cubes)
+    y1 = max(c["origin"][1] + c["size"][1] for c in cubes)
     return x0, x1, y0, y1
 
 
-def panel_z(index: int, column: int) -> float:
+# Vuelo de campana MUY sutil. Un 6% se probó y producía escalones visibles en
+# los ribetes laterales (cada fila quedaba a distinto x); al 1% la silueta
+# deja de ser un rectángulo perfecto sin romper la línea continua del borde.
+# Es sólo geometría: las UV siguen siendo las mismas franjas globales.
+FLARE = (0.99, 1.00, 1.01)
+
+
+def row_bounds(gx0, gx1, gy0, gy1, section: int):
+    """Fila `section` (0=arriba): x0, x1, y0, y1, paso de columna."""
+    f = FLARE[section]
+    x0, x1 = gx0 * f, gx1 * f
+    row_h = (gy1 - gy0) / len(SECTIONS)
+    y_lo = gy0 + (len(SECTIONS) - 1 - section) * row_h
+    y_hi = y_lo + row_h
+    if section < len(SECTIONS) - 1:
+        y_lo -= 0.05          # cubre la junta con la fila inferior
+    if section > 0:
+        y_hi += 0.05          # cubre la junta con la fila superior
+    return x0, x1, y_lo, y_hi, (x1 - x0) / COLUMNS
+
+
+def panel_z(section: int, column: int) -> float:
     norm = (column - (COLUMNS - 1) / 2.0) / ((COLUMNS - 1) / 2.0)
-    return 2.48 + 0.18 * (1.0 - norm * norm) + 0.025 * math.sin(column * 1.31 + index * 0.7)
+    # La tela se separa un poco del cuerpo hacia el dobladillo: caída natural
+    # sin romper el mosaico (todas las columnas de una fila comparten el mismo
+    # desplazamiento base).
+    return (2.58 + 0.09 * section + 0.14 * (1.0 - norm * norm)
+            + 0.015 * math.sin(column * 1.2 + section * 0.6))
 
 
 def build() -> dict:
@@ -102,93 +133,94 @@ def build() -> dict:
     bones = list(original_bones)
     by_name = {b["name"]: b for b in original_bones}
 
-    section_info = []
-    for si, section in enumerate(SECTIONS):
-        x0, x1, y0, y1 = section_bounds(by_name[section], si)
-        step = (x1 - x0) / COLUMNS
-        section_info.append((x0, x1, y0, y1, step))
+    gx0, gx1, gy0, gy1 = global_bounds(by_name)
+    rows = [row_bounds(gx0, gx1, gy0, gy1, si) for si in range(len(SECTIONS))]
 
-        # 1. Paneles de tela: 13 franjas solapadas, curvadas y con rotación
-        #    propia para que la luz lea pliegues en vez de una tabla.
+    for si, section in enumerate(SECTIONS):
+        x0, x1, y_lo, y_hi, step = rows[si]
+
+        # 1. Paneles de tela: mosaico 9x3 con curvatura en Z y giro mínimo.
+        #    Casi planos en reposo para que las UV encajen; la onda la aplica
+        #    CapaArmorModel en runtime (en radianes).
         for col in range(COLUMNS):
-            norm = (col - (COLUMNS - 1) / 2.0) / ((COLUMNS - 1) / 2.0)
-            x = x0 + col * step - 0.14
-            width = step + 0.28
+            x = x0 + col * step - 0.045
+            width = step + 0.09
             z = panel_z(si, col)
-            pivot = [x + width / 2.0, (y0 + y1) / 2.0, z]
-            rotation = [
-                0.20 + 0.22 * si + 0.12 * math.cos(col * 1.7 + si),
-                norm * 3.1 + (0.35 if col % 2 else -0.35),
-                norm * 0.5 + 0.22 * math.sin(col * 1.3 + si * 0.9),
-            ]
+            pivot = [x + width / 2.0, (y_lo + y_hi) / 2.0, z]
+            # Sin giro Y por columna: cualquier giro abre huecos entre
+            # franjas UV. La inclinación X es común a toda la fila, así el
+            # mosaico sigue cerrado y la capa cae hacia atrás.
+            rotation = [0.6 + 1.0 * si, 0.0, 0.0]
+            uv = cloth_uv(si, col)
             bones.append(bone(
                 f"v15_cloth_{section}_{col}", section, pivot, rotation,
-                [cube((x, y0, z), (width, y1 - y0, 0.12),
-                      cloth_uv(si, col), cloth_uv(si, col), si)],
+                [cube((x, y_lo, z), (width, y_hi - y_lo, 0.10), uv, uv, si)],
             ))
 
-        # 2. Creases: filete oscuro + fino rim light en cada límite UV.
-        for col in range(COLUMNS - 1):
-            x = x0 + (col + 1) * step - 0.025
-            z = (panel_z(si, col) + panel_z(si, col + 1)) / 2.0 + 0.09
-            dark = spec("crease_dark", si)
-            light = spec("crease_light", si)
+        # 2. Dos pliegues maestros por sección, no 12 nervios: el sombreado
+        #    del canvas ya hace el trabajo y así desaparece el código de barras.
+        for k, boundary in enumerate((3, 6)):
+            x = x0 + boundary * step - 0.022
+            z = (panel_z(si, boundary - 1) + panel_z(si, boundary)) / 2.0 + 0.03
+            tone = spec("crease_dark" if k == 0 else "crease_light", si)
             bones.append(bone(
-                f"v15_crease_{section}_{col}",
-                f"v15_cloth_{section}_{col}",
-                [x + 0.025, (y0 + y1) / 2.0, z],
-                [0.0, (col - 6) * 0.35, 0.0],
-                [cube((x, y0 + 0.04, z), (0.05, y1 - y0 - 0.08, 0.04),
-                      dark if col % 2 else light, None, si)],
+                f"v15_crease_{section}_{k}",
+                f"v15_cloth_{section}_{boundary - 1}",
+                [x + 0.022, (y_lo + y_hi) / 2.0, z],
+                [0.0, 0.0, 0.0],
+                [cube((x, y_lo + 0.05, z), (0.044, y_hi - y_lo - 0.10, 0.035),
+                      tone, None, si)],
             ))
 
-        # 3. Ribetes laterales: heredan el movimiento del panel del borde.
+        # 3. Ribetes laterales: enmarcan la tela sin neón estridente.
         for side, sx, col in (("L", -1.0, 0), ("R", 1.0, COLUMNS - 1)):
-            x = x0 - 0.03 if sx < 0 else x1 - 0.15
-            z = panel_z(si, col) + 0.12
+            x = x0 - 0.02 if sx < 0 else x1 - 0.14
+            z = panel_z(si, col) + 0.07
             bones.append(bone(
                 f"v15_pipe_{section}_{side}",
                 f"v15_cloth_{section}_{col}",
-                [x + 0.09, (y0 + y1) / 2.0, z],
-                [0.0, -sx * 5.0, -sx * 1.5],
-                [cube((x, y0 + 0.12, z), (0.18, y1 - y0 - 0.24, 0.12),
-                      spec("bright"), spec("bright"), si)],
+                [x + 0.07, (y_lo + y_hi) / 2.0, z],
+                [0.0, -sx * 2.0, 0.0],
+                [cube((x, y_lo + 0.10, z), (0.14, y_hi - y_lo - 0.20, 0.09),
+                      spec("rim"), spec("rim"), si)],
             ))
 
-    # 4. Sin costuras horizontales añadidas: las tres secciones se solapan y
-    #    el canvas continuo se encarga de unirlas visualmente.
-
-    # 5. Dobladillo: 13 lengüetas inclinadas, cada una hija de su panel.
-    bx0, bx1, by0, _, bstep = section_info[2]
+    # 4. Dobladillo continuo: cada lengüeta samplea SÓLO su porción del
+    #    chevron del canvas, así el festón no se repite 9 veces.
+    bx0, _, _, _, bstep = rows[2]
     for col in range(COLUMNS):
         center = bx0 + (col + 0.5) * bstep
-        x = center - 0.58
-        z = panel_z(2, col) + 0.14
-        tilt = -6.0 if col % 2 == 0 else 6.0
+        z = panel_z(2, col) + 0.05
+        tilt = -1.5 if col % 2 == 0 else 1.5
+        uv = hem_uv(col)
         bones.append(bone(
             f"v15_hem_{col}", f"v15_cloth_cape_bottom_{col}",
-            [center, by0 - 0.45, z], [0.0, 0.0, tilt],
-            [
-                cube((x, by0 - 0.98, z), (1.16, 1.05, 0.16),
-                     spec("bottom_band"), spec("bottom_band"), 2),
-                # Punta oscura, no neón: el "peine rosa" de v1.5.0 rompía la
-                # lectura de una sola pieza de tela.
-                cube((center - 0.20, by0 - 1.22, z + 0.04), (0.40, 0.36, 0.08),
-                     spec("lining"), spec("lining"), 2),
-            ],
+            [center, gy0 - 0.30, z], [0.0, 0.0, tilt],
+            [cube((center - bstep * 0.48, gy0 - 0.62, z),
+                  (bstep * 0.96, 0.68, 0.09), uv, uv, 2)],
         ))
 
-    # 6. Alas de hombro: rompen la línea recta del yugo original.
-    tx0, tx1, _, _, _ = section_info[0]
+    # 5. Cuello: dos piezas delgadas con la MISMA tela del canvas, no bloques
+    #    de color plano. Sustituyen a las hombreras boxy sin cortar la lectura.
+    tx0, tx1, _, _, _ = rows[0]
     for side, sx, col in (("L", -1.0, 0), ("R", 1.0, COLUMNS - 1)):
-        x = tx0 - 0.55 if sx < 0 else tx1 - 0.95
-        z = panel_z(0, col) + 0.12
+        x = tx0 - 0.20 if sx < 0 else tx1 - 1.00
+        z = panel_z(0, col) + 0.03
+        uv = cloth_uv(0, col)
         bones.append(bone(
             f"v15_shoulder_{side}", f"v15_cloth_cape_top_{col}",
-            [x + 0.85, 21.5, z], [5.0, -sx * 8.0, -sx * 11.0],
-            [cube((x, 20.0, z), (1.7, 2.85, 0.16),
-                  spec("lining"), spec("lining"), 0)],
+            [x + 0.60, gy1 - 1.25, z], [4.0, -sx * 5.0, -sx * 7.0],
+            [cube((x, gy1 - 2.35, z), (1.2, 2.0, 0.10), uv, uv, 0)],
         ))
+
+    # 6. Broche: diamante pequeño y girado 45°, no un rectángulo magenta.
+    #    El medallón grande ya está pintado en el canvas; esto sólo da relieve.
+    bones.append(bone(
+        "v15_clasp", "cape_top",
+        [0.0, gy1 - 1.15, 2.96], [0.0, 0.0, 45.0],
+        [cube((-0.48, gy1 - 1.63, 2.90), (0.96, 0.96, 0.10),
+              spec("bright"), spec("bright"), 0)],
+    ))
 
     geo["bones"] = bones
     desc = geo["description"]
@@ -201,6 +233,9 @@ def build() -> dict:
     names = {b["name"] for b in bones}
     assert len(names) == len(bones), "nombres de hueso duplicados"
     assert sum(1 for n in names if n.startswith("v15_cloth_")) == COLUMNS * len(SECTIONS)
+    parents = set(names)
+    for b in bones:
+        assert b.get("parent") is None or b["parent"] in parents, b["name"]
     return data
 
 

@@ -9,11 +9,16 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Capa Deteriorer Evil Saiyan para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.5.1: superficie de tela continua de 96x48 con 13x3 paneles curvados,
-168 huesos / 235 cubos, caida con retardo de fase y limpieza en runtime de
-las losas planas y el detalle boxy. Item 3D plegado con atlas bordado.
-Los 72 huesos y las animaciones originales siguen intactos; alfa base y
-cobertura emisiva sin cambios. Descarga directa del .jar.
+v1.6.0: UNA sola pieza de tela. Mosaico 9x3 sobre un unico rectangulo global
+con canvas 96x48 compartido por la capa equipada, el icono y el item 3D
+plegado; sin distorsion por seccion ni costuras pintadas. 61 huesos boxy
+originales ocultos en runtime, 123 huesos / 177 cubos, vuelo de campana del
+1% y caida progresiva. Se mantiene el fix de crash de v1.5.1: radianes,
+cache de huesos, sin getBakedModel() por frame y fail-safe cosmético.
+Los 72 huesos y las cuatro animaciones originales siguen intactos; alfa
+base y cobertura emisiva sin cambios. Descarga directa del .jar.
+v1.5.1: correccion del crash de rotacion de v1.5.0; superficie 13x3 con
+168 huesos / 235 cubos. v1.5.0 esta rota, no usar.
 v1.4.0: capa equipada con relieve real (98 huesos / 152 cubos) e item 3D
 plegado de 33 huesos con siete pliegues, yugo, cuello, broche y puntas.
 Animaciones originales, alfa y glowmask intactos. Descarga directa del .jar.

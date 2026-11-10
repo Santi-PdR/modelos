@@ -26,3 +26,4 @@ Thumbs.db
 
 # Dependencias y previews locales (no se versionan)
 .cache/
+tools/_deps/
