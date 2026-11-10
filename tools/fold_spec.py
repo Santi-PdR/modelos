@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Especificación compartida del modelo plegado, conservada en v1.5.0.
+"""Especificación compartida del modelo plegado, conservada en v1.5.1.
 
 Define cómo se reparte el atlas de 128×128 entre siete pliegues y la pose de
 cada uno. tools/texture_pipeline.py usa STRIP_OFFSETS para dibujar los nervios

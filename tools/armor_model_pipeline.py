@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reconstruye la capa EQUIPADA como una superficie de tela continua (v1.5.0).
+"""Reconstruye la capa EQUIPADA como una superficie de tela continua (v1.5.1).
 
 Lee tools/originals/capa_deteriorer_evilsaiyan.geo.json (72 huesos / 126 cubos,
 copia prístina aprobada) y NO modifica ni uno solo de esos huesos. Añade una
@@ -92,7 +92,7 @@ def section_bounds(base: dict, index: int) -> tuple[float, float, float, float]:
 
 def panel_z(index: int, column: int) -> float:
     norm = (column - (COLUMNS - 1) / 2.0) / ((COLUMNS - 1) / 2.0)
-    return 2.48 + 0.24 * (1.0 - norm * norm) + 0.035 * math.sin(column * 1.31 + index * 0.7)
+    return 2.48 + 0.18 * (1.0 - norm * norm) + 0.025 * math.sin(column * 1.31 + index * 0.7)
 
 
 def build() -> dict:
@@ -117,9 +117,9 @@ def build() -> dict:
             z = panel_z(si, col)
             pivot = [x + width / 2.0, (y0 + y1) / 2.0, z]
             rotation = [
-                0.25 + 0.25 * si + 0.15 * math.cos(col * 1.7 + si),
-                norm * 4.8 + (0.5 if col % 2 else -0.5),
-                norm * 0.8 + 0.35 * math.sin(col * 1.3 + si * 0.9),
+                0.20 + 0.22 * si + 0.12 * math.cos(col * 1.7 + si),
+                norm * 3.1 + (0.35 if col % 2 else -0.35),
+                norm * 0.5 + 0.22 * math.sin(col * 1.3 + si * 0.9),
             ]
             bones.append(bone(
                 f"v15_cloth_{section}_{col}", section, pivot, rotation,
@@ -129,16 +129,16 @@ def build() -> dict:
 
         # 2. Creases: filete oscuro + fino rim light en cada límite UV.
         for col in range(COLUMNS - 1):
-            x = x0 + (col + 1) * step - 0.035
-            z = (panel_z(si, col) + panel_z(si, col + 1)) / 2.0 + 0.11
+            x = x0 + (col + 1) * step - 0.025
+            z = (panel_z(si, col) + panel_z(si, col + 1)) / 2.0 + 0.09
             dark = spec("crease_dark", si)
             light = spec("crease_light", si)
             bones.append(bone(
                 f"v15_crease_{section}_{col}",
                 f"v15_cloth_{section}_{col}",
-                [x + 0.035, (y0 + y1) / 2.0, z],
-                [0.0, (col - 6) * 0.5, 0.0],
-                [cube((x, y0 + 0.04, z), (0.07, y1 - y0 - 0.08, 0.05),
+                [x + 0.025, (y0 + y1) / 2.0, z],
+                [0.0, (col - 6) * 0.35, 0.0],
+                [cube((x, y0 + 0.04, z), (0.05, y1 - y0 - 0.08, 0.04),
                       dark if col % 2 else light, None, si)],
             ))
 
@@ -164,28 +164,30 @@ def build() -> dict:
         center = bx0 + (col + 0.5) * bstep
         x = center - 0.58
         z = panel_z(2, col) + 0.14
-        tilt = -11.0 if col % 2 == 0 else 11.0
+        tilt = -6.0 if col % 2 == 0 else 6.0
         bones.append(bone(
             f"v15_hem_{col}", f"v15_cloth_cape_bottom_{col}",
             [center, by0 - 0.45, z], [0.0, 0.0, tilt],
             [
                 cube((x, by0 - 0.98, z), (1.16, 1.05, 0.16),
                      spec("bottom_band"), spec("bottom_band"), 2),
-                cube((center - 0.24, by0 - 1.25, z + 0.05), (0.48, 0.42, 0.10),
-                     spec("bright"), spec("bright"), 2),
+                # Punta oscura, no neón: el "peine rosa" de v1.5.0 rompía la
+                # lectura de una sola pieza de tela.
+                cube((center - 0.20, by0 - 1.22, z + 0.04), (0.40, 0.36, 0.08),
+                     spec("lining"), spec("lining"), 2),
             ],
         ))
 
     # 6. Alas de hombro: rompen la línea recta del yugo original.
     tx0, tx1, _, _, _ = section_info[0]
     for side, sx, col in (("L", -1.0, 0), ("R", 1.0, COLUMNS - 1)):
-        x = tx0 - 0.75 if sx < 0 else tx1 - 1.25
-        z = panel_z(0, col) + 0.16
+        x = tx0 - 0.55 if sx < 0 else tx1 - 0.95
+        z = panel_z(0, col) + 0.12
         bones.append(bone(
             f"v15_shoulder_{side}", f"v15_cloth_cape_top_{col}",
-            [x + 1.0, 21.5, z], [7.0, -sx * 11.0, -sx * 15.0],
-            [cube((x, 19.7, z), (2.0, 3.25, 0.26),
-                  spec("yoke"), spec("yoke"), 0)],
+            [x + 0.85, 21.5, z], [5.0, -sx * 8.0, -sx * 11.0],
+            [cube((x, 20.0, z), (1.7, 2.85, 0.16),
+                  spec("lining"), spec("lining"), 0)],
         ))
 
     geo["bones"] = bones

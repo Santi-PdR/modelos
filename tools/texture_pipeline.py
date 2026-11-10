@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Procedural texture suite for the "Capa Deteriorer Evil Saiyan" (v1.5.0).
+Procedural texture suite for the "Capa Deteriorer Evil Saiyan" (v1.5.1).
 
 Why procedural instead of AI-generated art:
     The 128x128 armor texture is a strict UV atlas. Every cube face of
@@ -16,7 +16,7 @@ Why procedural instead of AI-generated art:
       * glow brightness is driven by the base texture colour at those pixels,
       * the glowmask must not grow, or it would punch holes in the cape.
 
-    v1.5.0 paints a single high-resolution cloth illustration into the fully
+    v1.5.1 paints a single high-resolution cloth illustration into the fully
     opaque 96x48 corner of the atlas. The new 13x3 curved panels sample it as
     continuous vertical strips; reserved columns supply dark creases, violet
     rim lights, lining and piping. The original neon-line glowmask is kept as
@@ -105,7 +105,7 @@ def _blurred_noise(rng: np.random.Generator, shape: tuple[int, int], radius: flo
 
 
 # --------------------------------------------------------------------------
-# 1a. v1.5.0: one continuous high-resolution cloth illustration (48x48 UV)
+# 1a. v1.5.1: one continuous high-resolution cloth illustration (96x48 UV)
 # --------------------------------------------------------------------------
 def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> np.ndarray:
     """Pinta un material de tela legible a 96x48 texels, no un mosaico.
@@ -137,10 +137,10 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> np.ndarray:
              + np.sin((xx + yy) * np.pi / 5.0) * 0.7)
     grain = rng.normal(0.0, 1.4, (h, w)).astype(np.float32)
     rgb = base
-    rgb += (fold_light[..., None] - 0.5) * np.array([16.0, 5.0, 20.0])
-    rgb -= crease[..., None] * np.array([14.0, 4.0, 16.0])
-    rgb += radial[..., None] * np.array([35.0, 8.0, 45.0])
-    rgb -= vignette[..., None] * np.array([10.0, 3.0, 10.0])
+    rgb += (fold_light[..., None] - 0.5) * np.array([10.0, 4.0, 14.0])
+    rgb -= crease[..., None] * np.array([9.0, 3.0, 11.0])
+    rgb += radial[..., None] * np.array([38.0, 9.0, 48.0])
+    rgb -= vignette[..., None] * np.array([16.0, 5.0, 16.0])
     rgb += (weave + grain)[..., None] * np.array([0.7, 0.5, 0.9])
 
     img = Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
@@ -206,7 +206,7 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> np.ndarray:
     d.rectangle([p(1, 44), p(95, 47.9)], fill=(18, 6, 26, 255))
     line([(1, 44.2), (13, 46.4), (25, 44.2), (37, 46.4), (49, 44.2),
           (61, 46.4), (73, 44.2), (85, 46.4), (95, 44.2)],
-         (244, 96, 198, 235), 1.0)
+         (196, 88, 168, 205), 1.0)
     for i in range(COLUMNS):
         x = 2.0 + i * 7.1
         line([(x, 47.7), (x + 1.6, 43.8)], (126, 52, 164, 120), 0.4)
@@ -234,8 +234,10 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> np.ndarray:
 def paint_reserved_cloth_strips(out: np.ndarray, glow_alpha: np.ndarray) -> np.ndarray:
     """Creases, forro, ribete y zona emisiva en rectángulos ya opacos."""
     y = np.arange(128, dtype=np.float32).reshape(128, 1, 1) / 127.0
-    out[:, 105:107, :3] = np.array([26.0, 10.0, 38.0]) + y * np.array([8.0, 2.0, 10.0])
-    out[:, 107:109, :3] = np.array([92.0, 42.0, 128.0]) + y * np.array([14.0, 4.0, 18.0])
+    # v1.5.1: contraste de crease reducido. En v1.5.0 las 36 creases leían
+    # como un código de barras; ahora acompañan al sombreado del canvas.
+    out[:, 105:107, :3] = np.array([34.0, 14.0, 48.0]) + y * np.array([6.0, 2.0, 8.0])
+    out[:, 107:109, :3] = np.array([66.0, 30.0, 94.0]) + y * np.array([10.0, 3.0, 14.0])
     out[:, 120:122, :3] = np.array([18.0, 8.0, 30.0]) + y * np.array([10.0, 2.0, 10.0])
     out[:, 122:124, :3] = np.array([120.0, 52.0, 172.0]) + y * np.array([48.0, 16.0, 58.0])
 
@@ -251,7 +253,7 @@ def paint_reserved_cloth_strips(out: np.ndarray, glow_alpha: np.ndarray) -> np.n
 
 
 def assert_cloth_uvs() -> None:
-    """Ninguna UV v1.5.0 puede samplear un texel transparente."""
+    """Ninguna UV v1.5.1 puede samplear un texel transparente."""
     geometry = json.loads(GEO.read_text())["minecraft:geometry"][0]
     checked = 0
     for bone in geometry.get("bones", []):
@@ -269,7 +271,7 @@ def assert_cloth_uvs() -> None:
                 ), f"UV nueva fuera de zona opaca: {face}"
                 checked += 1
     assert checked > 400, checked
-    print(f"v1.5.0 cloth UV faces checked: {checked}")
+    print(f"v1.5.1 cloth UV faces checked: {checked}")
 
 
 # --------------------------------------------------------------------------
@@ -347,7 +349,7 @@ def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
     out[..., 1] = np.where(emissive, out[..., 1] * 1.08 + 11.0, out[..., 1])
     out[..., 2] = np.where(emissive, out[..., 2] * 1.16 + 38.0, out[..., 2])
 
-    # v1.5.0: sustituimos el mosaico de tres paneles cuadrados por UNA sola
+    # v1.5.1: sustituimos el mosaico de tres paneles cuadrados por UNA sola
     # ilustración de tela. Se pinta después de los realces previos para que el
     # atlas nuevo no herede las costuras del UV antiguo.
     canvas = build_armor_cloth_canvas(glow[..., 3])

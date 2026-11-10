@@ -7,6 +7,7 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
@@ -27,6 +28,7 @@ import software.bernie.geckolib.renderer.layer.AutoGlowingGeoLayer;
  */
 public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
     private static final double PERIOD_MS = 3200.0;
+    private boolean disabled;
 
     public CapaGlowLayer(GeoArmorRenderer<CapaDeteriorerItem> renderer) {
         super(renderer);
@@ -42,7 +44,32 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
                        float partialTick,
                        int packedLight,
                        int packedOverlay) {
-        RenderType emissive = AutoGlowingTexture.getRenderType(getTextureResource(animatable));
+        if (disabled || bakedModel == null)
+            return;
+        try {
+            renderGlow(poseStack, animatable, bakedModel, bufferSource,
+                    partialTick, packedLight, packedOverlay);
+        } catch (Exception | LinkageError error) {
+            // El pass emisivo es decorativo: nunca debe tumbar el render.
+            disabled = true;
+            com.capatest.CapaTestMod.LOGGER.error(
+                    "Capa Deteriorer: capa emisiva desactivada", error);
+        }
+    }
+
+    private void renderGlow(PoseStack poseStack,
+                            CapaDeteriorerItem animatable,
+                            BakedGeoModel bakedModel,
+                            MultiBufferSource bufferSource,
+                            float partialTick,
+                            int packedLight,
+                            int packedOverlay) {
+        ResourceLocation texture = getTextureResource(animatable);
+        if (texture == null)
+            return;
+        RenderType emissive = AutoGlowingTexture.getRenderType(texture);
+        if (emissive == null)
+            return;
 
         Entity wearer = this.renderer instanceof GeoArmorRenderer<?> armor
                 ? armor.getCurrentEntity()

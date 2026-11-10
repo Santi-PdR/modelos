@@ -1,4 +1,4 @@
-# Capa Deteriorer Test — v1.5.0
+# Capa Deteriorer Test — v1.5.1
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Añade la *Capa Deteriorer Evil Saiyan*: geometría propia, cuatro animaciones,
@@ -8,18 +8,49 @@ con el slot **`back` de Curios API 5.14.1+1.20.1**.
 
 ## Descarga directa del `.jar`
 
-**https://github.com/Santi-PdR/modelos/releases/download/v1.5.0/capatest-1.5.0.jar**
+**https://github.com/Santi-PdR/modelos/releases/download/v1.5.1/capatest-1.5.1.jar**
 
 El CI publica el mod como **Release asset `.jar` crudo**, no como ZIP de
 `actions/upload-artifact`. El repositorio es privado: hay que iniciar sesión en
 GitHub con la cuenta `Santi-PdR` para descargarlo. Cada push a la rama
-actualiza el mismo asset de `v1.5.0` con `--clobber`; el tag queda fijo.
-La entrega anterior sigue en
+actualiza el mismo asset de `v1.5.1` con `--clobber`; el tag queda fijo.
+Las entregas anteriores siguen disponibles en
+`https://github.com/Santi-PdR/modelos/releases/download/v1.5.0/capatest-1.5.0.jar`
+y
 `https://github.com/Santi-PdR/modelos/releases/download/v1.4.0/capatest-1.4.0.jar`.
+**v1.5.0 tiene el crash de rotación: usar v1.5.1.**
 
 > PR #1 sigue abierta: https://github.com/Santi-PdR/modelos/pull/1
 
-## Novedades de v1.5.0 — apariencia y calidad de la tela
+## v1.5.1 — corrección del crash in-game
+
+Reportado con Forge 47.4.10 y un pack con Embeddium/Photon/skinlayers3d. El
+crash venía del camino cosmético nuevo de v1.5.0, no del geo ni del atlas:
+
+- **Unidades de rotación**: `BakedModelFactory.constructBone` convierte las
+  rotaciones del geo con `Math.toRadians(...)`; `GeoBone#setRotX/Y/Z` esperan
+  **radianes**. v1.5.0 sumaba grados (`bend` hasta 12 ≈ 687°), produciendo
+  matrices degeneradas en 39 paneles por frame. Ahora todo ángulo se convierte
+  con `Math.toRadians` antes de `setRot*`, con límites de 12°/8°/6°.
+- **Sin `getBakedModel()` en el hot path**: ese método puede llamar a
+  `AnimationProcessor.setActiveModel()` a mitad de frame, vaciar el registro
+  de huesos y reiniciar los `BoneSnapshot` (vía de NPE documentada en
+  GeckoLib). Los huesos se resuelven **una sola vez** desde el
+  `AnimationProcessor` activo, con guardia de identidad para resource reloads.
+- **Fail-safe cosmético**: `setCustomAnimations`, el pass emisivo y el render
+  de Curios capturan fallos inesperados, los registran una vez en el log y
+  siguen mostrando la capa con la pose estática del geo. Un adorno ya no puede
+  tumbar el juego. Además `CapaCurioRenderer` descarta portadores nulos.
+- **Estado por instancia**: el mapa de movimiento dejó de ser un `static`
+  global compartido; ahora es un campo del modelo y `ConcurrentHashMap`.
+
+**Mejora visual añadida**: creases más finos y de menor contraste (adiós al
+efecto «código de barras»), paneles menos girados, alas de hombro más
+delgadas y oscuras, puntas del dobladillo en violeta oscuro en vez de neón
+rosa, y vignette/realce central más marcados en el canvas para que se lea
+como una sola pieza de tela.
+
+## Novedades de v1.5.1 — apariencia y calidad de la tela
 
 **Capa EQUIPADA: una superficie continua, no un mosaico de cubos**
 
@@ -132,7 +163,7 @@ JDK 17 + Gradle 8.8 (el zip original no incluye `gradlew`):
 
 ```bash
 gradle build --no-daemon
-# salida: build/libs/capatest-1.5.0.jar
+# salida: build/libs/capatest-1.5.1.jar
 ```
 
 Para regenerar los assets (no hace falta para compilar, ya están commiteados):
@@ -152,7 +183,7 @@ python tools/animation_pipeline.py
 validación de JSON/PNG + 7 pliegues + **168 huesos / 235 cubos** + 39 paneles
 de tela + UV nuevas en zonas opacas + hashes prístinos + `CapaArmorModel` +
 tag/entidad Curios, `gradle build --no-daemon`, verificación de las entradas
-del jar y publicación del **`.jar` directo** en el Release `v1.5.0`. Si falla,
+del jar y publicación del **`.jar` directo** en el Release `v1.5.1`. Si falla,
 los errores de `javac` se publican como anotaciones y se sube el log completo.
 
 ## Probar en Singleplayer
@@ -161,7 +192,7 @@ los errores de `javac` se publican como anotaciones y se sube el log completo.
 2. Descargar **GeckoLib 4.8.1 para Forge 1.20.1**:
    https://modrinth.com/mod/geckolib/version/bVtfWE8S
    (coordenada Maven: `maven.modrinth:8BmcQJ2H:bVtfWE8S`).
-3. Poner GeckoLib y **`capatest-1.5.0.jar`** en `mods/`.
+3. Poner GeckoLib y **`capatest-1.5.1.jar`** en `mods/`.
 4. Mundo creativo; la capa está en **Combate** o con
    `/give @s capatest:capa_deteriorer_evilsaiyan`.
 5. **Sin Curios**: equipar en el **pecho** y usar **F5**.

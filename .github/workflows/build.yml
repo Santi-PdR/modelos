@@ -91,7 +91,7 @@ jobs:
           for anim_name, spec in folded_anim['animations'].items():
               assert set(spec['bones']) <= folded_names, (anim_name, set(spec['bones']) - folded_names)
 
-          # Geo de armadura v1.5.0: 72 huesos originales byte-idénticos en JSON,
+          # Geo de armadura v1.5.1: 72 huesos originales byte-idénticos en JSON,
           # más 96 huesos de tela/relieve => 168 huesos / 235 cubos.
           armor_geo = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]
           orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
@@ -138,11 +138,21 @@ jobs:
           assert 'useAlternateGuiLighting' in renderer
           assert 'new CapaArmorModel(' in armor_renderer
           for token in ('setHidden(true)', 'setChildrenHidden(false)', 'HIDDEN_DETAILS',
-                        'DataTickets.ENTITY', 'getInitialSnapshot', 'v15_cloth_', 'Mth.lerp'):
+                        'DataTickets.ENTITY', 'getInitialSnapshot', 'v15_cloth_', 'Mth.lerp',
+                        'Math.toRadians', 'ConcurrentHashMap', 'CapaTestMod.LOGGER',
+                        'Exception | LinkageError'):
               assert token in armor_model, token
-          assert 'mod_version=1.5.0' in (root / 'gradle.properties').read_text()
+          # Regresión del crash v1.5.0: nunca grados crudos en setRot*, ni
+          # getBakedModel() en el hot path (puede reiniciar los snapshots).
+          assert 'panel.setRotX(baseX[i] - bend)' not in armor_model
+          assert 'getBakedModel(' not in armor_model
+          glow_layer = (root / 'src/main/java/com/capatest/client/CapaGlowLayer.java').read_text()
+          curio = (root / 'src/main/java/com/capatest/client/CapaCurioRenderer.java').read_text()
+          assert 'Exception | LinkageError' in glow_layer
+          assert 'if (wearer == null)' in curio
+          assert 'mod_version=1.5.1' in (root / 'gradle.properties').read_text()
           assert 'curios_version=5.14.1+1.20.1' in (root / 'gradle.properties').read_text()
-          assert 'v1.5.0' in (root / 'src/main/resources/pack.mcmeta').read_text()
+          assert 'v1.5.1' in (root / 'src/main/resources/pack.mcmeta').read_text()
 
           data = root / 'src/main/resources/data'
           for p in data.rglob('*.json'):
@@ -180,7 +190,7 @@ jobs:
       - name: List built jars
         run: ls -lh build/libs
 
-      - name: Verify jar contents (v1.5.0 resources)
+      - name: Verify jar contents (v1.5.1 resources)
         run: |
           set -euo pipefail
           found=0
@@ -223,11 +233,26 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          JAR="build/libs/capatest-1.5.0.jar"
+          JAR="build/libs/capatest-1.5.1.jar"
           test -f "$JAR"
           NOTES=/tmp/release-notes.md
           cat > "$NOTES" <<'MD'
-          ## Capa Deteriorer v1.5.0
+          ## Capa Deteriorer v1.5.1 — corrección de crash
+
+          - **Fix del crash in-game**: GeckoLib guarda las rotaciones en
+            radianes; v1.5.0 aplicaba grados (hasta 12 rad ≈ 687°) y desarmaba
+            las matrices de los 39 paneles. Ahora todo ángulo pasa por
+            `Math.toRadians` antes de `setRot*`.
+          - **Sin `getBakedModel()` por frame**: los huesos se resuelven una vez
+            desde el `AnimationProcessor` activo, evitando que
+            `setActiveModel()` reinicie los `BoneSnapshot` a mitad de frame.
+          - **Fail-safe cosmético**: la onda de la tela, el pass emisivo y el
+            render de Curios capturan errores, los registran una vez y dejan la
+            capa en pose estática en vez de tumbar el juego. Portadores nulos
+            descartados; estado de movimiento por instancia.
+          - **Acabado más limpio**: creases finos y de bajo contraste, alas de
+            hombro delgadas/oscuras, dobladillo sin peine neón y vignette con
+            realce central para leer una sola pieza de tela.
 
           - **Superficie de tela continua**: canvas de 96×48 dentro del atlas de
             128×128, 13×3 paneles curvados, 168 huesos / 235 cubos. Los 72 huesos
@@ -249,20 +274,22 @@ jobs:
           GeckoLib y tutoriales de Blockbench/YouTube sobre capas de alta
           resolución y modelos 4D.
 
-          Requiere Forge 1.20.1 (47.x), Java 17 y GeckoLib 4.8.1. Validado con
-          previews software y CI; pendiente de prueba visual in-game.
+          Requiere Forge 1.20.1 (47.x), Java 17 y GeckoLib 4.8.1. Compilado y
+          validado en CI. Si persiste un crash, revisar las primeras líneas del
+          crash report: el mod registra cualquier fallo cosmético en el log
+          (`Capa Deteriorer: ... desactivada`) en vez de propagarlo.
           MD
-          if gh release view v1.5.0 >/dev/null 2>&1; then
-            gh release upload v1.5.0 "$JAR" --clobber
+          if gh release view v1.5.1 >/dev/null 2>&1; then
+            gh release upload v1.5.1 "$JAR" --clobber
           else
-            gh release create v1.5.0 "$JAR" \
-              --title "Capa Deteriorer v1.5.0" \
+            gh release create v1.5.1 "$JAR" \
+              --title "Capa Deteriorer v1.5.1" \
               --notes-file "$NOTES" \
               --target "$GITHUB_SHA"
           fi
-          ASSETS="$(gh release view v1.5.0 --json assets --jq '.assets[].name')"
-          grep -qx 'capatest-1.5.0.jar' <<< "$ASSETS"
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.5.0/capatest-1.5.0.jar"
+          ASSETS="$(gh release view v1.5.1 --json assets --jq '.assets[].name')"
+          grep -qx 'capatest-1.5.1.jar' <<< "$ASSETS"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.5.1/capatest-1.5.1.jar"
           echo "### Descarga directa" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "[${URL}](${URL})" >> "$GITHUB_STEP_SUMMARY"

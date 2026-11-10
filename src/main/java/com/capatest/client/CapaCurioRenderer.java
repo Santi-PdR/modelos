@@ -41,12 +41,18 @@ public class CapaCurioRenderer implements ICurioRenderer {
             float netHeadYaw,
             float headPitch) {
 
-        if (!(stack.getItem() instanceof CapaDeteriorerItem animatable)
+        if (stack == null || stack.isEmpty()
+                || !(stack.getItem() instanceof CapaDeteriorerItem animatable)
+                || slotContext == null || parent == null
                 || !(parent.getModel() instanceof HumanoidModel<?> humanoid)) {
             return;
         }
 
         LivingEntity wearer = slotContext.entity();
+        // GeckoLib 4.8.x puede recibir un portador nulo en renders de GUI/HUD
+        // con otros mods de render instalados; no intentar prepForRender().
+        if (wearer == null)
+            return;
         poseStack.pushPose();
         ICurioRenderer.translateIfSneaking(poseStack, wearer);
         ICurioRenderer.rotateIfSneaking(poseStack, wearer);
