@@ -33,8 +33,9 @@ de 128×128 con glowmask, icono de inventario y efectos de aura.
 
 **Efectos**
 - `CapaGlowLayer`: reemplaza el `AutoGlowingGeoLayer` plano por un re-render
-  emisivo con latido senoidal de 3.2 s, tinte violeta en los valles y mayor
-  amplitud cuando el portador corre.
+  emisivo con latido senoidal de 3.2 s, tinte violeta en los valles, mayor
+  amplitud cuando el portador corre y viraje a carmesí al perder vida
+  ("Deteriorer").
 - Aura de partículas (`SOUL_FIRE_FLAME` / `PORTAL` / `CRIMSON_SPORE`) emitida desde
   el servidor en `inventoryTick`, detrás del jugador y más intensa al correr, para
   que también la vean otros jugadores.

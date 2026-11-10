@@ -8,6 +8,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.cache.texture.AutoGlowingTexture;
 import software.bernie.geckolib.renderer.GeoArmorRenderer;
@@ -53,9 +54,16 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
         float brightness = 0.88F + amplitude * (float) Math.sin(phase);
         float violet = 0.90F + 0.08F * (1.0F - brightness);
 
+        // "Deteriorer": al perder vida el aura pierde el violeta y vira a carmesí.
+        float health = 1.0F;
+        if (wearer instanceof LivingEntity living && living.getMaxHealth() > 0.0F) {
+            health = Math.max(0.0F, Math.min(1.0F, living.getHealth() / living.getMaxHealth()));
+        }
+        float cool = 0.55F + 0.45F * health;
+
         getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, emissive,
                 bufferSource.getBuffer(emissive), partialTick,
                 LightTexture.FULL_SKY, OverlayTexture.NO_OVERLAY,
-                1.0F, violet, 1.0F, brightness);
+                1.0F, violet * cool, cool, brightness);
     }
 }
