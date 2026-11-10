@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Procedural texture suite for the "Capa Deteriorer Evil Saiyan" (v1.4.0).
+Procedural texture suite for the "Capa Deteriorer Evil Saiyan" (v1.5.0).
 
 Why procedural instead of AI-generated art:
     The 128x128 armor texture is a strict UV atlas. Every cube face of
@@ -16,10 +16,17 @@ Why procedural instead of AI-generated art:
       * glow brightness is driven by the base texture colour at those pixels,
       * the glowmask must not grow, or it would punch holes in the cape.
 
+    v1.5.0 paints a single high-resolution cloth illustration into the fully
+    opaque 96x48 corner of the atlas. The new 13x3 curved panels sample it as
+    continuous vertical strips; reserved columns supply dark creases, violet
+    rim lights, lining and piping. The original neon-line glowmask is kept as
+    the energy filigree, with a soft bloom around it. Alpha and emissive texel
+    count are still unchanged.
+
     The folded 3D item model uses its own 128x128 artwork atlas (generated from
     the same cape design as the icon), split into seven continuous UV strips
-    with baked crease shading and reserved piping columns. The ember particles
-    use three soft, anti-aliased 16x16 sprites.
+    with baked per-fold shading, stitching and reserved piping columns. The
+    ember particles use three soft, anti-aliased 16x16 sprites.
 
 Outputs (all committed, so CI needs no Python deps):
     textures/item/armor/capa_deteriorer_evilsaiyan.png            128x128
@@ -40,6 +47,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
+from cloth_spec import COLUMNS, OPAQUE_RECTS, SECTION_V, UV as CLOTH_UV
 from fold_spec import PANELS, STRIP_OFFSETS, STRIP_WIDTHS, UV
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -94,6 +102,174 @@ def _blurred_noise(rng: np.random.Generator, shape: tuple[int, int], radius: flo
         ImageFilter.GaussianBlur(radius)
     )
     return (np.asarray(img, dtype=np.float32) - 128.0) / 40.0
+
+
+# --------------------------------------------------------------------------
+# 1a. v1.5.0: one continuous high-resolution cloth illustration (48x48 UV)
+# --------------------------------------------------------------------------
+def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> np.ndarray:
+    """Pinta un material de tela legible a 96x48 texels, no un mosaico.
+
+    Se dibuja a 8x con líneas de al menos ~1 texel de grosor y se reduce con
+    Lanczos. A la resolución real de Minecraft eso importa más que el detalle
+    sub-texel: pliegues anchos, ribetes gruesos, medallón grande y dobladillo
+    en chevron. El glowmask prístino se conserva pero apenas tiñe el material.
+    """
+    cw = int(CLOTH_UV["cloth"]["uv_size"][0])  # 96
+    ch = int(CLOTH_UV["cloth"]["uv_size"][1])  # 48
+    scale = 8
+    w, h = cw * scale, ch * scale
+    yy, xx = np.mgrid[0:h, 0:w]
+    u = xx / float(w - 1)
+    v = yy / float(h - 1)
+    rng = np.random.default_rng(SEED + 11)
+
+    top = np.array([17.0, 10.0, 39.0], dtype=np.float32)
+    bottom = np.array([60.0, 8.0, 32.0], dtype=np.float32)
+    base = top * (1.0 - v[..., None]) + bottom * v[..., None]
+
+    fold_phase = u * COLUMNS + 0.04 * np.sin(v * np.pi * 1.5)
+    fold_light = np.power(np.clip(0.5 + 0.5 * np.sin(2.0 * np.pi * fold_phase), 0.0, 1.0), 1.2)
+    crease = np.exp(-((np.mod(fold_phase, 1.0) - 0.5) ** 2) / (2.0 * 0.08 ** 2))
+    radial = np.exp(-(((u - 0.5) / 0.30) ** 2 + ((v - 0.30) / 0.42) ** 2) * 1.4)
+    vignette = np.exp(-((u - 0.02) / 0.06) ** 2) + np.exp(-((u - 0.98) / 0.06) ** 2)
+    weave = (np.sin(xx * np.pi / 3.0) * np.sin(yy * np.pi / 3.0) * 1.3
+             + np.sin((xx + yy) * np.pi / 5.0) * 0.7)
+    grain = rng.normal(0.0, 1.4, (h, w)).astype(np.float32)
+    rgb = base
+    rgb += (fold_light[..., None] - 0.5) * np.array([16.0, 5.0, 20.0])
+    rgb -= crease[..., None] * np.array([14.0, 4.0, 16.0])
+    rgb += radial[..., None] * np.array([35.0, 8.0, 45.0])
+    rgb -= vignette[..., None] * np.array([10.0, 3.0, 10.0])
+    rgb += (weave + grain)[..., None] * np.array([0.7, 0.5, 0.9])
+
+    img = Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
+    overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(overlay)
+    p = lambda x, y: (int(round(x * scale)), int(round(y * scale)))
+    line = lambda pts, fill, width: d.line([p(*q) for q in pts], fill=fill,
+                                          width=max(1, int(width * scale)), joint="curve")
+
+    # Yugo y ribetes: líneas de ~1 texel, no filamentos que desaparecen al
+    # reducir la ilustración al atlas real.
+    d.polygon([p(*q) for q in [(1, 1), (95, 1), (91, 6), (5, 6)]],
+              fill=(14, 8, 32, 255))
+    line([(1, 5.6), (95, 5.6)], (180, 106, 220, 235), 1.0)
+    line([(4, 2), (18, 6)], (232, 176, 112, 190), 0.6)
+    line([(92, 2), (78, 6)], (232, 176, 112, 190), 0.6)
+
+    for boundary, _ in SECTION_V[1:]:
+        line([(2, boundary), (94, boundary)], (46, 20, 64, 90), 0.35)
+    for i in range(1, COLUMNS):
+        x = i * float(cw) / COLUMNS
+        line([(x, 6), (x + (48 - x) * 0.02, 44)], (54, 22, 72, 90), 0.45)
+        line([(x + 0.55, 6), (x + 0.55 + (48 - x) * 0.02, 44)],
+             (132, 62, 166, 70), 0.35)
+
+    for x, inward in ((1.5, 0.06), (94.5, -0.06)):
+        line([(x, 6), (x + (48 - x) * inward, 44)], (246, 84, 184, 240), 1.2)
+        line([(x + 1.8, 6), (x + 1.8 + (48 - x) * inward, 44)],
+             (132, 66, 196, 190), 0.7)
+        for j in range(16):
+            y = 7.0 + j * 2.3
+            d.ellipse([p(x - 0.35, y - 0.35), p(x + 0.35, y + 0.35)],
+                      fill=(255, 198, 232, 190))
+
+    # Medallón central y filigrana simétrica que atraviesa las 3 secciones.
+    cx, cy = 48.0, 14.0
+    for r, col, width in ((12.5, (176, 96, 220, 190), 1.0),
+                          (9.0, (248, 104, 196, 225), 0.9)):
+        d.ellipse([p(cx - r, cy - r), p(cx + r, cy + r)],
+                  outline=col, width=max(1, int(width * scale)))
+    diamond = [(cx, 4.5), (cx + 12.5, cy), (cx, 23.5), (cx - 12.5, cy)]
+    d.polygon([p(*q) for q in diamond], fill=(34, 10, 44, 235))
+    line(diamond + [diamond[0]], (255, 118, 208, 250), 1.3)
+    inner = [(cx, 9), (cx + 6, cy), (cx, 19), (cx - 6, cy)]
+    line(inner + [inner[0]], (238, 200, 255, 230), 0.8)
+    d.ellipse([p(cx - 2.1, cy - 2.3), p(cx + 2.1, cy + 2.3)],
+              fill=(255, 248, 255, 255))
+
+    line([(48, 23.5), (48, 43.5)], (238, 92, 192, 220), 1.0)
+    for path in (
+        [(48, 23.5), (34, 32), (22, 43.5)],
+        [(48, 23.5), (62, 32), (74, 43.5)],
+        [(22, 27), (31, 34), (38, 43.5)],
+        [(74, 27), (65, 34), (58, 43.5)],
+    ):
+        line(path, (172, 72, 202, 185), 0.8)
+    for mx, my in ((18, 18), (78, 18), (26, 35), (70, 35),
+                   (38, 40), (58, 40), (48, 30)):
+        d.ellipse([p(mx - 0.8, my - 0.8), p(mx + 0.8, my + 0.8)],
+                  fill=(255, 146, 216, 210))
+
+    # Dobladillo con chevrones grandes y pespuntes.
+    d.rectangle([p(1, 44), p(95, 47.9)], fill=(18, 6, 26, 255))
+    line([(1, 44.2), (13, 46.4), (25, 44.2), (37, 46.4), (49, 44.2),
+          (61, 46.4), (73, 44.2), (85, 46.4), (95, 44.2)],
+         (244, 96, 198, 235), 1.0)
+    for i in range(COLUMNS):
+        x = 2.0 + i * 7.1
+        line([(x, 47.7), (x + 1.6, 43.8)], (126, 52, 164, 120), 0.4)
+
+    img = Image.alpha_composite(img, overlay)
+
+    # Cobertura emisiva intacta, pero sin dejar que las venas antiguas
+    # conviertan la tela en ruido. El brillo lo aportan ribetes y medallón.
+    em = Image.fromarray(
+        np.clip(glow_alpha[0:ch, 0:cw], 0, 255).astype(np.uint8)
+    ).resize((w, h), Image.LANCZOS)
+    halo = em.filter(ImageFilter.GaussianBlur(2.0 * scale))
+    arr = np.asarray(img, dtype=np.float32).copy()
+    halo_arr = np.asarray(halo, dtype=np.float32) / 255.0
+    arr[..., :3] += halo_arr[..., None] * np.array([18.0, 4.0, 24.0])
+    em_arr = np.asarray(em, dtype=np.float32) / 255.0
+    hot = np.array([150.0, 60.0, 150.0])
+    arr[..., :3] = (arr[..., :3] * (1.0 - em_arr[..., None] * 0.22)
+                    + hot * em_arr[..., None] * 0.22)
+    img = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGBA")
+    return np.asarray(img.resize((cw, ch), Image.LANCZOS).convert("RGB"),
+                      dtype=np.float32)
+
+
+def paint_reserved_cloth_strips(out: np.ndarray, glow_alpha: np.ndarray) -> np.ndarray:
+    """Creases, forro, ribete y zona emisiva en rectángulos ya opacos."""
+    y = np.arange(128, dtype=np.float32).reshape(128, 1, 1) / 127.0
+    out[:, 105:107, :3] = np.array([26.0, 10.0, 38.0]) + y * np.array([8.0, 2.0, 10.0])
+    out[:, 107:109, :3] = np.array([92.0, 42.0, 128.0]) + y * np.array([14.0, 4.0, 18.0])
+    out[:, 120:122, :3] = np.array([18.0, 8.0, 30.0]) + y * np.array([10.0, 2.0, 10.0])
+    out[:, 122:124, :3] = np.array([120.0, 52.0, 172.0]) + y * np.array([48.0, 16.0, 58.0])
+
+    em = glow_alpha[109:127, 69:75] > 0
+    bright = out[109:127, 69:75, :3]
+    bright[...] = np.array([46.0, 10.0, 44.0])
+    bright[em] = np.array([255.0, 94.0, 196.0])
+
+    yoke = out[76:93, 57:71, :3]
+    yoke[...] = yoke * 0.72 + np.array([24.0, 14.0, 34.0])
+    yoke[glow_alpha[76:93, 57:71] > 0] = np.array([238.0, 116.0, 220.0])
+    return out
+
+
+def assert_cloth_uvs() -> None:
+    """Ninguna UV v1.5.0 puede samplear un texel transparente."""
+    geometry = json.loads(GEO.read_text())["minecraft:geometry"][0]
+    checked = 0
+    for bone in geometry.get("bones", []):
+        if not bone["name"].startswith("v15_"):
+            continue
+        for cube_spec in bone.get("cubes", []):
+            for face in cube_spec["uv"].values():
+                u, v = face["uv"]
+                width, height = face["uv_size"]
+                assert width > 0 and height > 0, face
+                assert 0 <= u and 0 <= v and u + width <= 128 and v + height <= 128, face
+                assert any(
+                    u >= x0 and v >= y0 and u + width <= x1 and v + height <= y1
+                    for x0, y0, x1, y1 in OPAQUE_RECTS
+                ), f"UV nueva fuera de zona opaca: {face}"
+                checked += 1
+    assert checked > 400, checked
+    print(f"v1.5.0 cloth UV faces checked: {checked}")
 
 
 # --------------------------------------------------------------------------
@@ -171,6 +347,15 @@ def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
     out[..., 1] = np.where(emissive, out[..., 1] * 1.08 + 11.0, out[..., 1])
     out[..., 2] = np.where(emissive, out[..., 2] * 1.16 + 38.0, out[..., 2])
 
+    # v1.5.0: sustituimos el mosaico de tres paneles cuadrados por UNA sola
+    # ilustración de tela. Se pinta después de los realces previos para que el
+    # atlas nuevo no herede las costuras del UV antiguo.
+    canvas = build_armor_cloth_canvas(glow[..., 3])
+    out[0:48, 0:96, :] = canvas
+    out = paint_reserved_cloth_strips(out, glow[..., 3])
+    # Los texels emisivos del canvas quedan deliberadamente discretos: el glowmask
+    # conserva su cobertura, pero el material y el medallón mandan en la capa.
+
     out = np.clip(out, 0, 255)
     out = np.where(opaque[..., None], out, rgb)  # never paint into transparent texels
     armor = np.dstack((out, alpha)).astype(np.uint8)
@@ -180,6 +365,13 @@ def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
     ga = glow[..., 3]
     new_alpha = np.where(ga > 0, np.clip(ga * 1.10 + 14.0, 0, 255), 0)
     grgb = np.clip(glow[..., :3] * 1.18 + 18.0, 0, 255)
+    # El color del glowmask no importa para GeckoLib, pero lo dejamos coherente
+    # con el núcleo rosa del canvas; la cobertura (ga > 0) NO cambia.
+    grgb[0:48, 0:96] = np.where(
+        (ga[0:48, 0:96] > 0)[..., None],
+        np.array([150.0, 60.0, 150.0]),
+        grgb[0:48, 0:96],
+    )
     glowmask = np.dstack((grgb, new_alpha)).astype(np.uint8)
 
     return Image.fromarray(armor, "RGBA"), Image.fromarray(glowmask, "RGBA")
@@ -188,6 +380,70 @@ def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
 # --------------------------------------------------------------------------
 # 2. Cape artwork: shared by the 64x64 icon and the 128x128 3D item atlas
 # --------------------------------------------------------------------------
+def add_cape_brocade(cloth: Image.Image, mask: Image.Image, outline: list,
+                     s: int) -> Image.Image:
+    """Bordado, pespuntes y material de alta resolución para el atlas folded."""
+    k = s / 256.0
+    p = lambda x, y: (int(round(x * k)), int(round(y * k)))
+    transparent = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    details = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    dd = ImageDraw.Draw(details)
+
+    # Twill diagonal y finas luces de pliegue, siempre dentro de la silueta.
+    for x in range(-s, 2 * s, max(4, int(12 * k))):
+        dd.line([p(x, 0), p(x + s, s)], fill=(186, 112, 220, 18), width=max(1, int(1 * k)))
+    for x in range(70, 200, 16):
+        dd.line([p(x + 3, 28), p(x + 3 + (x - 128) * 0.32, 214)],
+                fill=(224, 152, 244, 30), width=max(1, int(2 * k)))
+
+    # Doble ribete: exterior dorado apagado, interior violeta/rosa.
+    pts = [p(x, y) for x, y in outline]
+    inner = [(128 + (x - 128) * 0.94, 120 + (y - 120) * 0.94) for x, y in outline]
+    dd.line([p(*q) for q in outline + [outline[0]]],
+            fill=(236, 174, 116, 105), width=max(1, int(1.1 * k)), joint="curve")
+    dd.line([p(*q) for q in inner + [inner[0]]],
+            fill=(255, 112, 202, 150), width=max(1, int(1.4 * k)), joint="curve")
+
+    # Pespuntes reales a lo largo de todo el contorno.
+    r = max(1, int(0.85 * k))
+    for a, b in zip(pts, pts[1:] + pts[:1]):
+        dist = ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2) ** 0.5
+        steps = max(1, int(dist / max(2.0, 7.0 * k)))
+        for j in range(steps + 1):
+            t = j / float(steps)
+            x = a[0] + (b[0] - a[0]) * t
+            y = a[1] + (b[1] - a[1]) * t
+            dd.ellipse([int(x - r), int(y - r), int(x + r), int(y + r)],
+                       fill=(255, 218, 246, 105))
+
+    # Halo y medallón con anillos concéntricos, sin inventar glowmask.
+    glow = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    gd.ellipse([p(94, 44), p(162, 112)], fill=(255, 72, 174, 95))
+    glow = glow.filter(ImageFilter.GaussianBlur(max(2, int(9 * k))))
+    details = Image.alpha_composite(details, glow)
+    dd = ImageDraw.Draw(details)
+    for rr, col, width in ((31, (196, 118, 232, 150), 1.2),
+                           (23, (255, 106, 196, 205), 1.4),
+                           (12, (246, 222, 255, 210), 1.1)):
+        dd.ellipse([p(128 - rr, 82 - rr), p(128 + rr, 82 + rr)],
+                   outline=col, width=max(1, int(width * k)))
+    dd.polygon([p(*q) for q in [(128, 56), (146, 82), (128, 108), (110, 82)]],
+               outline=(255, 148, 218, 235), width=max(1, int(2 * k)))
+    for mx, my in ((76, 92), (180, 92), (86, 160), (170, 160),
+                   (104, 192), (152, 192), (128, 142)):
+        dd.ellipse([p(mx - 2, my - 2), p(mx + 2, my + 2)],
+                   fill=(255, 142, 210, 150))
+
+    # Chevron inferior para que el dobladillo tenga peso y textura.
+    dd.line([p(*q) for q in [(70, 206), (86, 218), (102, 206), (118, 220),
+                             (134, 206), (150, 220), (166, 206), (182, 218)]],
+            fill=(214, 108, 226, 115), width=max(1, int(1.3 * k)), joint="curve")
+
+    details = Image.composite(details, transparent, mask)
+    return Image.alpha_composite(cloth, details)
+
+
 def build_cape_artwork(s: int = 256) -> Image.Image:
     """High-resolution cape illustration with transparent background."""
     k = s / 256.0
@@ -226,6 +482,7 @@ def build_cape_artwork(s: int = 256) -> Image.Image:
     fd.line([p(128, 30), p(128, 214)], fill=(220, 120, 220, 40), width=max(1, int(3 * k)))
     folds = Image.composite(folds, transparent, mask)
     cloth = Image.alpha_composite(cloth, folds)
+    cloth = add_cape_brocade(cloth, mask, outline, s)
 
     # Shoulder yoke / Evil-Saiyan pauldrons.
     yoke = Image.new("RGBA", (s, s), (0, 0, 0, 0))
@@ -308,16 +565,21 @@ def build_folded_texture() -> Image.Image:
 
     # Stretch the cape artwork horizontally so the seven 3D folds sample a
     # continuous, detailed cape front rather than a narrow centred icon.
-    art = build_cape_artwork(256).resize((620, 512), Image.LANCZOS)
+    art = build_cape_artwork(512).resize((620, 512), Image.LANCZOS)
     art = art.crop(((620 - 512) // 2, 0, (620 - 512) // 2 + 512, 512))
     out = Image.alpha_composite(bg, art)
 
-    # Baked lighting per fold: outer strips recede, the centre catches light.
+    # Baked lighting per fold: cada franja tiene centro iluminado, bordes en
+    # sombra y una leve caída de luz hacia el dobladillo. Así las 7 caras
+    # parecen tela doblada y no una imagen plana partida en columnas.
     arr = np.asarray(out, dtype=np.float32).copy()
     body0, body1 = int(10 * s / 128), int(118 * s / 128)
+    vertical = np.linspace(1.04, 0.88, body1 - body0, dtype=np.float32)[:, None, None]
     for panel, offset, width in zip(PANELS, STRIP_OFFSETS, STRIP_WIDTHS):
         x0, x1 = int(offset * s / 128), int((offset + width) * s / 128)
-        shade = 0.80 + 0.20 * panel["bulge"]
+        local = np.linspace(0.0, 1.0, x1 - x0, dtype=np.float32)[None, :, None]
+        ridge = np.power(np.clip(np.sin(local * np.pi), 0.0, 1.0), 0.65)
+        shade = (0.66 + 0.24 * panel["bulge"] + 0.22 * ridge) * vertical
         arr[body0:body1, x0:x1, :3] *= shade
 
     # Creases exactly at the seven UV boundaries, with a thin rim highlight.
@@ -403,6 +665,7 @@ def build_particle_sprites() -> list[Image.Image]:
 
 
 def main() -> None:
+    assert_cloth_uvs()
     used = uv_usage_mask()
     print(f"UV texels used by geometry: {used.mean() * 100:.1f}%")
 

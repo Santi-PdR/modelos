@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Genera el geo y la animación de la capa plegada para el item 3D (v1.4.0).
+Genera el geo y la animación de la capa plegada para el item 3D (v1.5.0).
 
 El modelo deja de ser una serie de cinco rectángulos y pasa a ser una prenda
 con 7 pliegues en abanico, nervios de ribete, yugo con alas, cuello levantado,

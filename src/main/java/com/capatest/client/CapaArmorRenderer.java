@@ -5,7 +5,6 @@ import com.capatest.item.CapaDeteriorerItem;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.cache.object.GeoBone;
-import software.bernie.geckolib.model.DefaultedItemGeoModel;
 import software.bernie.geckolib.renderer.GeoArmorRenderer;
 
 public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
@@ -15,7 +14,9 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         // assets/capatest/animations/item/armor/capa_deteriorer_evilsaiyan.animation.json
         // assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan.png
         // y *_glowmask.png (GeckoLib 4.8 usa el sufijo "_glowmask").
-        super(new DefaultedItemGeoModel<>(
+        // CapaArmorModel oculta las losas originales y anima los paneles
+        // continuos v15_* sin tocar el geo aprobado.
+        super(new CapaArmorModel(
                 new ResourceLocation(CapaTestMod.MOD_ID, "armor/capa_deteriorer_evilsaiyan")
         ));
 

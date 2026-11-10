@@ -69,7 +69,7 @@ jobs:
           particle = json.loads((base / 'particles/capa_ember.json').read_text())
           assert len(particle['textures']) == 3
 
-          # Geo plegado v1.4.0: 33 huesos, atlas 128 y ninguna UV fuera de rango.
+          # Geo plegado: 33 huesos, atlas 128 y ninguna UV fuera de rango.
           folded = json.loads((base / 'geo/item/cape_folded.geo.json').read_text())['minecraft:geometry'][0]
           desc = folded['description']
           assert desc['identifier'] == 'geometry.cape_folded'
@@ -91,17 +91,29 @@ jobs:
           for anim_name, spec in folded_anim['animations'].items():
               assert set(spec['bones']) <= folded_names, (anim_name, set(spec['bones']) - folded_names)
 
-          # Geo de armadura: los 72 huesos originales siguen intactos y sólo
-          # se añaden 26 huesos de relieve con UV ya opacas.
+          # Geo de armadura v1.5.0: 72 huesos originales byte-idénticos en JSON,
+          # más 96 huesos de tela/relieve => 168 huesos / 235 cubos.
           armor_geo = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]
           orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
           assert armor_geo['bones'][:72] == orig_bones
-          assert len(armor_geo['bones']) == 98
+          assert len(armor_geo['bones']) == 168
+          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 235
           new_bones = armor_geo['bones'][72:]
-          assert {b['name'] for b in new_bones} >= {
-              'v14_drape_cape_top_0', 'v14_drape_cape_mid_4', 'v14_drape_cape_bottom_4',
-              'v14_wing_L', 'v14_wing_R', 'v14_seam_L', 'v14_seam_R',
-              'v14_hem_0', 'v14_hem_6'}
+          new_names = {b['name'] for b in new_bones}
+          assert {
+              'v15_cloth_cape_top_0', 'v15_cloth_cape_mid_12', 'v15_cloth_cape_bottom_6',
+              'v15_crease_cape_top_0', 'v15_crease_cape_bottom_11',
+              'v15_pipe_cape_top_L', 'v15_pipe_cape_bottom_R',
+              'v15_hem_0', 'v15_hem_12', 'v15_shoulder_L', 'v15_shoulder_R'
+          } <= new_names
+          assert sum(1 for n in new_names if n.startswith('v15_cloth_')) == 39
+          opaque_rects = (
+              (0.0, 0.0, 96.0, 48.0),
+              (105.0, 0.0, 109.0, 48.0),
+              (120.0, 0.0, 124.0, 48.0),
+              (69.0, 109.0, 75.0, 127.0),
+              (57.0, 76.0, 71.0, 93.0),
+          )
           for bone in new_bones:
               for cube in bone.get('cubes', []):
                   for face in cube['uv'].values():
@@ -109,6 +121,8 @@ jobs:
                       uw, vh = face['uv_size']
                       assert uw > 0 and vh > 0, (bone['name'], face)
                       assert 0 <= u and 0 <= v and u + uw <= 128 and v + vh <= 128, (bone['name'], face)
+                      assert any(u >= x0 and v >= y0 and u + uw <= x1 and v + vh <= y1
+                                 for x0, y0, x1, y1 in opaque_rects), (bone['name'], face)
 
           model = json.loads((base / 'models/item/capa_deteriorer_evilsaiyan.json').read_text())
           assert model['parent'] == 'builtin/entity'
@@ -116,12 +130,19 @@ jobs:
 
           java = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
           renderer = (root / 'src/main/java/com/capatest/client/CapaItemRenderer.java').read_text()
+          armor_renderer = (root / 'src/main/java/com/capatest/client/CapaArmorRenderer.java').read_text()
+          armor_model = (root / 'src/main/java/com/capatest/client/CapaArmorModel.java').read_text()
           for noisy in ('ParticleTypes.PORTAL', 'ParticleTypes.CRIMSON_SPORE',
                         'ParticleTypes.SOUL_FIRE_FLAME'):
               assert noisy not in java, noisy
           assert 'useAlternateGuiLighting' in renderer
-          assert 'mod_version=1.4.0' in (root / 'gradle.properties').read_text()
+          assert 'new CapaArmorModel(' in armor_renderer
+          for token in ('setHidden(true)', 'setChildrenHidden(false)', 'HIDDEN_DETAILS',
+                        'DataTickets.ENTITY', 'getInitialSnapshot', 'v15_cloth_', 'Mth.lerp'):
+              assert token in armor_model, token
+          assert 'mod_version=1.5.0' in (root / 'gradle.properties').read_text()
           assert 'curios_version=5.14.1+1.20.1' in (root / 'gradle.properties').read_text()
+          assert 'v1.5.0' in (root / 'src/main/resources/pack.mcmeta').read_text()
 
           data = root / 'src/main/resources/data'
           for p in data.rglob('*.json'):
@@ -130,7 +151,7 @@ jobs:
           assert 'capatest:capa_deteriorer_evilsaiyan' in tag
           entity = json.loads((data / 'capatest/curios/entities/player.json').read_text())
           assert entity == {'entities': ['player'], 'slots': ['back']}
-          print('OK: JSON/PNG, 7 pliegues UV 128, armadura 98 huesos, aura serena y Curios back')
+          print('OK: JSON/PNG, 7 pliegues, 168 huesos / 235 cubos, 39 paneles de tela, UV opacas y Curios back')
           PY
 
       - name: Build
@@ -159,7 +180,7 @@ jobs:
       - name: List built jars
         run: ls -lh build/libs
 
-      - name: Verify jar contents (v1.4.0 resources)
+      - name: Verify jar contents (v1.5.0 resources)
         run: |
           set -euo pipefail
           found=0
@@ -173,6 +194,8 @@ jobs:
             grep -qx 'com/capatest/client/CapaGlowLayer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaEmberParticle.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaItemRenderer.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapaArmorModel.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapaArmorRenderer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapaDeteriorerItem.class' /tmp/jar-contents.txt
             grep -qx 'assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json' /tmp/jar-contents.txt
             grep -qx 'assets/capatest/animations/item/armor/capa_deteriorer_evilsaiyan.animation.json' /tmp/jar-contents.txt
@@ -200,33 +223,46 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          JAR="build/libs/capatest-1.4.0.jar"
+          JAR="build/libs/capatest-1.5.0.jar"
           test -f "$JAR"
           NOTES=/tmp/release-notes.md
           cat > "$NOTES" <<'MD'
-          ## Capa Deteriorer v1.4.0
+          ## Capa Deteriorer v1.5.0
 
-          - Capa equipada con relieve: 98 huesos / 152 cubos, pliegues, alas,
-            costuras luminosas y puntas de dobladillo. Los 72 huesos y las
-            animaciones originales siguen intactos; alfa y glowmask sin cambios.
-          - Item 3D plegado rehecho con 33 huesos: 7 pliegues en abanico,
-            nervios, yugo, cuello, alas, broche, cadenas, costuras y puntas,
-            con atlas continuo de 128×128 y balanceo por animación.
-          - Aura serena y Curios 5.14.1+1.20.1 opcional, sin cambios.
+          - **Superficie de tela continua**: canvas de 96×48 dentro del atlas de
+            128×128, 13×3 paneles curvados, 168 huesos / 235 cubos. Los 72 huesos
+            y las cuatro animaciones originales siguen intactos; las losas planas
+            y los detalles boxy se ocultan en runtime, no se borran del JSON.
+          - **Caída y movimiento**: `CapaArmorModel` aplica una curva de amplitud
+            con retardo de fase de hombros a dobladillo, giro acotado, viento,
+            salto, agua, sigilo y sprint. Inspirado en WaveyCapes, Finery y
+            GlowberryClient #102, sin portar código incompatible.
+          - **Material y acabado**: pliegues anchos, tejido, ribetes, pespuntes,
+            medallón central, chevrones y sombreado por pliegue en el item 3D.
+            Alfa base byte-idéntico, cobertura emisiva de 1636 texels sin
+            cambios y todas las UV nuevas en zonas ya opacas.
+          - Aura serena, icono 64×64, 3 sprites de 16×16, Curios
+            `5.14.1+1.20.1` opcional y slot `back` sin cambios.
 
-          Requiere Forge 1.20.1 (47.x), Java 17 y GeckoLib 4.8.1.
+          Referencias: tr7zw/WaveyCapes, ismaildzf/finery, GlowberryClient
+          #102/#106, FabricExtras/ArmorModelAPI, GeoArmor, M1nut1/GeoAnim,
+          GeckoLib y tutoriales de Blockbench/YouTube sobre capas de alta
+          resolución y modelos 4D.
+
+          Requiere Forge 1.20.1 (47.x), Java 17 y GeckoLib 4.8.1. Validado con
+          previews software y CI; pendiente de prueba visual in-game.
           MD
-          if gh release view v1.4.0 >/dev/null 2>&1; then
-            gh release upload v1.4.0 "$JAR" --clobber
+          if gh release view v1.5.0 >/dev/null 2>&1; then
+            gh release upload v1.5.0 "$JAR" --clobber
           else
-            gh release create v1.4.0 "$JAR" \
-              --title "Capa Deteriorer v1.4.0" \
+            gh release create v1.5.0 "$JAR" \
+              --title "Capa Deteriorer v1.5.0" \
               --notes-file "$NOTES" \
               --target "$GITHUB_SHA"
           fi
-          ASSETS="$(gh release view v1.4.0 --json assets --jq '.assets[].name')"
-          grep -qx 'capatest-1.4.0.jar' <<< "$ASSETS"
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.4.0/capatest-1.4.0.jar"
+          ASSETS="$(gh release view v1.5.0 --json assets --jq '.assets[].name')"
+          grep -qx 'capatest-1.5.0.jar' <<< "$ASSETS"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.5.0/capatest-1.5.0.jar"
           echo "### Descarga directa" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "[${URL}](${URL})" >> "$GITHUB_STEP_SUMMARY"
