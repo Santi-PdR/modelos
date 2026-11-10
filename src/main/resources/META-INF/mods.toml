@@ -9,6 +9,10 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Capa Deteriorer Evil Saiyan para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.6.1: corrige el crash al cargar geo/item/cape_folded.geo.json. El hueso
+raiz ya no declara "parent": null (Gson/GeckoLib 4.8.x no tolera JsonNull);
+el pipeline y el CI verifican que no quede ningun null en los recursos.
+Aspecto identico a v1.6.0.
 v1.6.0: UNA sola pieza de tela. Mosaico 9x3 sobre un unico rectangulo global
 con canvas 96x48 compartido por la capa equipada, el icono y el item 3D
 plegado; sin distorsion por seccion ni costuras pintadas. 61 huesos boxy

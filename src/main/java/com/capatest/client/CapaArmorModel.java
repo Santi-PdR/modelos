@@ -17,7 +17,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Modelo de la capa equipada v1.6.0.
+ * Modelo de la capa equipada v1.6.1 (aspecto y runtime idénticos a v1.6.0;
+ * v1.6.1 sólo corrige el geo plegado, ver {@link CapaItemRenderer}).
  *
  * <p>La capa es un mosaico 9×3 sobre UN rectángulo global: las 27 caras
  * comparten escala y el canvas 96×48 se lee como una sola ilustración. En

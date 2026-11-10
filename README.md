@@ -1,4 +1,4 @@
-# Capa Deteriorer Test — v1.6.0
+# Capa Deteriorer Test — v1.6.1
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Añade la *Capa Deteriorer Evil Saiyan*: geometría propia, cuatro animaciones,
@@ -8,16 +8,60 @@ con el slot **`back` de Curios API 5.14.1+1.20.1**.
 
 ## Descarga directa del `.jar`
 
-**https://github.com/Santi-PdR/modelos/releases/download/v1.6.0/capatest-1.6.0.jar**
+**https://github.com/Santi-PdR/modelos/releases/download/v1.6.1/capatest-1.6.1.jar**
 
 El CI publica el mod como **Release asset `.jar` crudo**, no como ZIP de
 `actions/upload-artifact`. El repositorio es privado: hay que iniciar sesión en
 GitHub con la cuenta `Santi-PdR` para descargarlo. Cada push a la rama
-actualiza el mismo asset de `v1.6.0` con `--clobber`; el tag queda fijo.
-Las entregas anteriores siguen disponibles en `v1.5.1`, `v1.4.0` y `v1.3.0`.
-**v1.5.0 tiene el crash de rotación: usar v1.6.0 (o, como mínimo, v1.5.1).**
+actualiza el mismo asset de `v1.6.1` con `--clobber`; el tag queda fijo.
+Las entregas anteriores siguen disponibles en `v1.6.0`, `v1.5.1`, `v1.4.0` y
+`v1.3.0`. **Usar v1.6.1**: v1.6.0 crashea al cargar el geo plegado y v1.5.0
+tiene el crash de rotación.
 
 > PR #1 sigue abierta: https://github.com/Santi-PdR/modelos/pull/1
+
+## v1.6.1 — corrección del crash `Error loading model file`
+
+Reportado in-game: *«El juego se cerró inesperadamente mientras Rendering
+overlay»* con
+
+```
+software.bernie.geckolib.GeckoLibException:
+capatest:geo/item/cape_folded.geo.json: Error loading model file
+```
+
+**Éste sí era nuestro mod.** Causa exacta, confirmada contra GeckoLib 4.8.4:
+
+- `tools/item_model_pipeline.py` generaba el hueso raíz `cape` con
+  `"parent": null`.
+- `Bone.deserializer()` de GeckoLib lee ese campo con
+  `GsonHelper.getAsString(obj, "parent", null)`. Como la clave **sí existe**,
+  `JsonObject.has()` devuelve `true` y Gson obtiene un `JsonNull`; al llamar a
+  `JsonNull.getAsString()` lanza `UnsupportedOperationException`. Eso ocurre
+  en `GeckoLibCache.loadModels()` durante el reload de recursos, que envuelve
+  cualquier excepción en `GeckoLibException(resource, "Error loading model
+  file", ex)`. El fallo se manifiesta al renderizar el overlay porque es cuando
+  se pide el modelo al caché.
+- El geo **original aprobado** nunca tuvo ese problema: sus 8 huesos raíz
+  simplemente **omiten** la clave `parent`. `GeometryTree.fromModel()` ya
+  interpreta `parent == null` como raíz, así que no hace falta escribirla.
+
+**Corrección**: `bone()` omite `parent` cuando es `None`; el geo plegado queda
+con 33 huesos y la misma geometría, sin un solo valor `null` en todo el pack
+de recursos. No cambia ni un píxel del aspecto de v1.6.0.
+
+**Defensas añadidas**:
+
+- El pipeline falla si el geo contiene cualquier `null`, si un `parent`
+  declarado no existe o si la raíz lleva `parent`.
+- El CI escanea **todos** los JSON de `src/main/resources` (incluido
+  `pack.mcmeta`) buscando `JsonNull`, verifica que la raíz del geo plegado no
+  declare `parent` y que todo padre sea un nombre existente, y comprueba que
+  el pipeline conserva el guardia `if parent is not None`.
+
+Era un **defecto latente desde v1.4.0**: el arranque anterior se caía antes por
+el conflicto de mixins descrito más abajo, así que el juego nunca llegaba a
+cargar los recursos del mod y no se pudo detectar en las entregas previas.
 
 ## v1.6.0 — una sola pieza de tela
 
@@ -96,8 +140,17 @@ in-game.**
 Resultados versionados: [`docs/capa_v160_preview.png`](docs/capa_v160_preview.png)
 (item plegado, frente, 3/4 con onda y espalda) y
 [`docs/capa_v160_uv_test.png`](docs/capa_v160_uv_test.png) (franjas UV).
+Se generaron con v1.6.0 y **siguen vigentes**: v1.6.1 no cambia geometría ni
+texturas, sólo elimina el `JsonNull` del geo plegado.
 
-## Diagnóstico de crashes: NO todos son de la capa
+## Diagnóstico de crashes: dos fallos distintos
+
+Hubo **dos crashes diferentes** y conviene no confundirlos:
+
+| Crash | Origen | Estado |
+|---|---|---|
+| `GeckoLibException: capatest:geo/item/cape_folded.geo.json: Error loading model file` | **Sí era `capatest`** (`"parent": null`) | **Corregido en v1.6.1** |
+| `MixinTransformerError ... player_animation_library.mixins.json:firstPerson.ItemInHandRendererMixin` | Conflicto entre otros mods del pack | Ajeno al mod; ver solución abajo |
 
 Con el crash report completo se pudo confirmar que el fallo de arranque del
 pack (`Description: Initializing game`, Forge 47.4.10) **no lo causa este
@@ -115,8 +168,8 @@ transformación de `ItemInHandRenderer`, antes de que Minecraft cree el
 `EntityRenderDispatcher`, antes de cargar un mundo y, por tanto, **antes de
 que exista siquiera una capa equipada**. En todo el stack no aparece ni una
 clase `com.capatest.*`: `capatest` **no registra mixins** (el CI lo verifica),
-sólo usa GeckoLib y la API pública de Forge. Quitar `capatest-1.6.0.jar` no
-arregla ese arranque.
+sólo usa GeckoLib y la API pública de Forge. Quitar `capatest` no arregla ese
+arranque (y `capatest-1.6.1.jar` corrige el **otro** crash, el del geo).
 
 Sospechosos del pack, en orden de probabilidad:
 
@@ -210,7 +263,7 @@ JDK 17 + Gradle 8.8 (el zip original no incluye `gradlew`):
 
 ```bash
 gradle build --no-daemon
-# salida: build/libs/capatest-1.6.0.jar
+# salida: build/libs/capatest-1.6.1.jar
 ```
 
 Para regenerar los assets (no hace falta para compilar, ya están commiteados):
@@ -227,11 +280,12 @@ python tools/animation_pipeline.py
 
 `push` y `workflow_dispatch` sobre `ubuntu-latest`: `actions/checkout@v4`,
 `actions/setup-java@v4` (17/temurin), `gradle/actions/setup-gradle@v4` (8.8),
-validación de JSON/PNG + 7 pliegues + **123 huesos / 177 cubos** + 27 paneles
-9×3 + 61 huesos boxy ocultos sin descendientes `v15_*` + UV nuevas en zonas
-opacas + hashes prístinos + regresión de radianes/sin `getBakedModel()` +
+validación de JSON/PNG + **ningún `JsonNull` en todos los recursos** + raíz del
+geo plegado sin `parent` + 7 pliegues + **123 huesos / 177 cubos** + 27
+paneles 9×3 + 61 huesos boxy ocultos sin descendientes `v15_*` + UV nuevas en
+zonas opacas + hashes prístinos + regresión de radianes/sin `getBakedModel()` +
 **ausencia de mixins** + tag/entidad Curios, `gradle build --no-daemon`, verificación de las entradas
-del jar y publicación del **`.jar` directo** en el Release `v1.6.0`. Si falla,
+del jar y publicación del **`.jar` directo** en el Release `v1.6.1`. Si falla,
 los errores de `javac` se publican como anotaciones y se sube el log completo
 como artifact aparte (que **no** es la entrega).
 
@@ -241,7 +295,7 @@ como artifact aparte (que **no** es la entrega).
 2. Descargar **GeckoLib 4.8.1 para Forge 1.20.1**:
    https://modrinth.com/mod/geckolib/version/bVtfWE8S
    (coordenada Maven: `maven.modrinth:8BmcQJ2H:bVtfWE8S`).
-3. Poner GeckoLib y **`capatest-1.6.0.jar`** en `mods/`.
+3. Poner GeckoLib y **`capatest-1.6.1.jar`** en `mods/`.
    Si el juego crashea **al arrancar** con `MixinTransformerError`, ver la
    sección «Diagnóstico de crashes»: es un conflicto entre otros mods.
 4. Mundo creativo; la capa está en **Combate** o con

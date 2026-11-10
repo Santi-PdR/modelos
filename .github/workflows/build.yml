@@ -43,6 +43,27 @@ jobs:
           for p in base.rglob('*.json'):
               json.loads(p.read_text())
 
+          # REGRESIÓN v1.6.0: GeckoLib 4.8.x deserializa `parent` con
+          # GsonHelper.getAsString(obj, "parent", null). Un `"parent": null`
+          # (JsonNull) hace que Gson llame a JsonNull.getAsString() y lance
+          # UnsupportedOperationException -> "Error loading model file".
+          # Ningún JSON del pack de recursos puede contener un valor null.
+          def json_nulls(value, path=''):
+              if value is None:
+                  yield path
+              elif isinstance(value, dict):
+                  for key, item in value.items():
+                      yield from json_nulls(item, path + '/' + key)
+              elif isinstance(value, list):
+                  for index, item in enumerate(value):
+                      yield from json_nulls(item, path + '/' + str(index))
+
+          resource_files = list((root / 'src/main/resources').rglob('*.json'))
+          resource_files.append(root / 'src/main/resources/pack.mcmeta')
+          for p in resource_files:
+              offenders = list(json_nulls(json.loads(p.read_text())))
+              assert not offenders, (p, offenders[:5])
+
           # Modelo y animaciones aprobados: intocables.
           armor_anim_path = base / 'animations/item/armor/capa_deteriorer_evilsaiyan.animation.json'
           assert hashlib.sha256(armor_anim_path.read_bytes()).hexdigest() == \
@@ -78,6 +99,14 @@ jobs:
           folded_names = {b['name'] for b in folded['bones']}
           assert {'fold_0', 'fold_6', 'ridge_0', 'ridge_5', 'hem_0', 'hem_6',
                   'yoke', 'collar_center', 'clasp_frame', 'clasp'} <= folded_names
+          # Raíz sin clave `parent` (NO `"parent": null`) y padres siempre
+          # definidos. GeckoLib construye el árbol con `parent == null`.
+          assert folded['bones'][0]['name'] == 'cape'
+          assert 'parent' not in folded['bones'][0]
+          for bone in folded['bones']:
+              if 'parent' in bone:
+                  assert isinstance(bone['parent'], str), bone['name']
+                  assert bone['parent'] in folded_names, (bone['name'], bone['parent'])
           for bone in folded['bones']:
               for cube in bone.get('cubes', []):
                   for face in cube['uv'].values():
@@ -175,15 +204,19 @@ jobs:
           assert 'cloth_canvas_rgba(s)' in texture_src
           assert '--uv-test' in (root / 'tools/preview_cloth.py').read_text()
           assert 'COLUMNS = 9' in (root / 'tools/cloth_spec.py').read_text()
+          item_src = (root / 'tools/item_model_pipeline.py').read_text()
+          assert 'if parent is not None' in item_src
+          assert '"parent": parent' not in item_src
+          assert 'JsonNull en el geo' in item_src
           glow_layer = (root / 'src/main/java/com/capatest/client/CapaGlowLayer.java').read_text()
           curio = (root / 'src/main/java/com/capatest/client/CapaCurioRenderer.java').read_text()
           assert 'Exception | LinkageError' in glow_layer
           assert 'if (wearer == null)' in curio
-          assert 'mod_version=1.6.0' in (root / 'gradle.properties').read_text()
+          assert 'mod_version=1.6.1' in (root / 'gradle.properties').read_text()
           assert 'curios_version=5.14.1+1.20.1' in (root / 'gradle.properties').read_text()
-          assert 'v1.6.0' in (root / 'src/main/resources/pack.mcmeta').read_text()
-          assert '1.6.0' in (root / 'src/main/resources/META-INF/mods.toml').read_text()
-          assert 'v1.6.0' in (root / 'README.md').read_text()
+          assert 'v1.6.1' in (root / 'src/main/resources/pack.mcmeta').read_text()
+          assert '1.6.1' in (root / 'src/main/resources/META-INF/mods.toml').read_text()
+          assert 'v1.6.1' in (root / 'README.md').read_text()
 
           data = root / 'src/main/resources/data'
           for p in data.rglob('*.json'):
@@ -192,7 +225,7 @@ jobs:
           assert 'capatest:capa_deteriorer_evilsaiyan' in tag
           entity = json.loads((data / 'capatest/curios/entities/player.json').read_text())
           assert entity == {'entities': ['player'], 'slots': ['back']}
-          print('OK: JSON/PNG, 7 pliegues, 123 huesos / 177 cubos, 27 paneles 9x3, UV opacas y Curios back')
+          print('OK: JSON/PNG sin JsonNull, 7 pliegues, 123 huesos / 177 cubos, 27 paneles 9x3, UV opacas y Curios back')
           PY
 
       - name: Build
@@ -221,7 +254,7 @@ jobs:
       - name: List built jars
         run: ls -lh build/libs
 
-      - name: Verify jar contents (v1.6.0 resources)
+      - name: Verify jar contents (v1.6.1 resources)
         run: |
           set -euo pipefail
           found=0
@@ -254,6 +287,9 @@ jobs:
             grep -qx 'data/capatest/curios/entities/player.json' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaCurioRenderer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/compat/CuriosCompat.class' /tmp/jar-contents.txt
+            # El artefacto publicado DEBE llevar el geo sin JsonNull.
+            unzip -p "$jar" assets/capatest/geo/item/cape_folded.geo.json > /tmp/folded-geo.json
+            python3 -c 'import json; b=json.load(open("/tmp/folded-geo.json"))["minecraft:geometry"][0]["bones"]; n={x["name"] for x in b}; assert b[0]["name"]=="cape" and "parent" not in b[0]; assert all(x.get("parent","cape") in n for x in b); print("OK: geo plegado dentro del jar sin parent:null")'
             echo "OK: clases, mods.toml, 3D item, partículas y datos Curios presentes"
           done
           test "$found" -eq 1
@@ -264,13 +300,42 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          JAR="build/libs/capatest-1.6.0.jar"
+          JAR="build/libs/capatest-1.6.1.jar"
           test -f "$JAR"
           NOTES=/tmp/release-notes.md
           cat > "$NOTES" <<'MD'
-          ## Capa Deteriorer v1.6.0 — una sola pieza de tela
+          ## Capa Deteriorer v1.6.1 — corrige el crash al cargar el geo
 
-          Prioridad de esta versión: **apariencia y calidad de la capa**.
+          **Fix del crash reportado in-game**: `GeckoLibException:
+          capatest:geo/item/cape_folded.geo.json: Error loading model file`
+          (juego cerrado mientras `Rendering overlay`). Esta vez **sí era
+          nuestro mod**.
+
+          - **Causa**: `tools/item_model_pipeline.py` escribía
+            `"parent": null` en el hueso raíz `cape` del geo plegado.
+            GeckoLib 4.8.x deserializa ese campo con
+            `GsonHelper.getAsString(obj, "parent", null)`. Como la clave está
+            presente, Gson obtiene un `JsonNull` y llama a `getAsString()`,
+            que lanza `UnsupportedOperationException`; GeckoLib lo envuelve
+            como "Error loading model file" durante el reload de recursos,
+            antes de poder renderizar el item en el inventario.
+          - **Corrección**: los huesos raíz **omiten** la clave `parent`, que
+            es el formato Bedrock correcto y lo que ya hacía el geo original
+            aprobado en sus 8 raíces. `GeometryTree.fromModel` sigue tratando
+            `parent == null` como raíz, así que la geometría no cambia en nada.
+          - **Defensa**: el pipeline ahora falla si el geo contiene cualquier
+            `null` o un padre inexistente; el CI escanea **todos** los JSON del
+            pack de recursos en busca de `JsonNull` y verifica que la raíz del
+            geo plegado no declare `parent`. El aspecto de la capa es idéntico
+            a v1.6.0.
+
+          Era un defecto latente desde v1.4.0 que no se había podido detectar:
+          el arranque anterior se caía antes por un conflicto de mixins ajeno
+          al mod, por lo que el juego nunca llegaba a cargar los recursos.
+
+          ## Base v1.6.0 — una sola pieza de tela
+
+          Prioridad de esa versión: **apariencia y calidad de la capa**.
 
           - **Superficie realmente continua.** v1.5.1 calculaba los límites por
             sección y repartía 13 columnas sobre cada una: la ilustración se
@@ -332,7 +397,9 @@ jobs:
           `PlayerAnimationLibForge-1.2.8+1.20.1-all.jar`. Sustituir la build de
           ImmediatelyFast por la de 1.20.1, actualizar/quitar PAL con sus
           dependientes y aislar por grupos. El README trae el procedimiento
-          completo. Quitar `capatest` no arregla ese arranque.
+          completo. Quitar `capatest` no arregla ese arranque. Ese crash es
+          **distinto** del `GeckoLibException: Error loading model file` que
+          corrige v1.6.1: aquél venía de otro mod, éste sí era `capatest`.
 
           Requiere Forge 1.20.1 (47.3.0), Java 17 y GeckoLib 4.8.1 (4.8.x).
           **Descarga: el `.jar` directo de este Release**, no un ZIP de
@@ -340,17 +407,17 @@ jobs:
           sustituyen una prueba in-game; si algo falla, el mod registra
           `Capa Deteriorer: ... desactivada` en el log en vez de propagarlo.
           MD
-          if gh release view v1.6.0 >/dev/null 2>&1; then
-            gh release upload v1.6.0 "$JAR" --clobber
+          if gh release view v1.6.1 >/dev/null 2>&1; then
+            gh release upload v1.6.1 "$JAR" --clobber
           else
-            gh release create v1.6.0 "$JAR" \
-              --title "Capa Deteriorer v1.6.0" \
+            gh release create v1.6.1 "$JAR" \
+              --title "Capa Deteriorer v1.6.1" \
               --notes-file "$NOTES" \
               --target "$GITHUB_SHA"
           fi
-          ASSETS="$(gh release view v1.6.0 --json assets --jq '.assets[].name')"
-          grep -qx 'capatest-1.6.0.jar' <<< "$ASSETS"
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.6.0/capatest-1.6.0.jar"
+          ASSETS="$(gh release view v1.6.1 --json assets --jq '.assets[].name')"
+          grep -qx 'capatest-1.6.1.jar' <<< "$ASSETS"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.6.1/capatest-1.6.1.jar"
           echo "### Descarga directa" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "[${URL}](${URL})" >> "$GITHUB_STEP_SUMMARY"

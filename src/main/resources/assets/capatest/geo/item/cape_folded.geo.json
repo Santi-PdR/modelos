@@ -17,7 +17,6 @@
       "bones": [
         {
           "name": "cape",
-          "parent": null,
           "pivot": [
             0,
             12,

@@ -48,13 +48,25 @@ def cube(origin, size, front, back=None):
 
 
 def bone(name, parent, pivot, rotation, cubes):
-    return {
-        "name": name,
-        "parent": parent,
+    """Un hueso raíz NO debe llevar `"parent": null`.
+
+    GeckoLib 4.8.x deserializa `parent` con
+    `GsonHelper.getAsString(obj, "parent", null)`. Si la clave está presente
+    con valor `null`, Gson ve un `JsonNull` e intenta `getAsString()`, que
+    lanza `UnsupportedOperationException`; GeckoLib lo envuelve en
+    `GeckoLibException: <geo>: Error loading model file` durante el reload de
+    recursos. El formato Bedrock correcto es omitir la clave por completo:
+    `GeometryTree.fromModel` ya trata `parent == null` como hueso raíz.
+    """
+    data = {"name": name}
+    if parent is not None:
+        data["parent"] = parent
+    data.update({
         "pivot": [round(v, 4) for v in pivot],
         "rotation": [round(v, 4) for v in rotation],
         "cubes": cubes,
-    }
+    })
+    return data
 
 
 def build_geo() -> dict:
@@ -234,7 +246,27 @@ def build_animations() -> dict:
 def main() -> None:
     geo = build_geo()
     anim = build_animations()
-    names = {b["name"] for b in geo["minecraft:geometry"][0]["bones"]}
+    bones = geo["minecraft:geometry"][0]["bones"]
+    names = {b["name"] for b in bones}
+
+    # Regresión del crash v1.6.0: ningún valor null en el geo y todos los
+    # padres declarados deben existir. Gson no tolera JsonNull en `parent`.
+    def find_null(value, path="geo"):
+        if value is None:
+            yield path
+        elif isinstance(value, dict):
+            for key, item in value.items():
+                yield from find_null(item, f"{path}/{key}")
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                yield from find_null(item, f"{path}/{index}")
+
+    nulls = list(find_null(geo))
+    assert not nulls, f"JsonNull en el geo (GeckoLib no lo tolera): {nulls[:5]}"
+    dangling = sorted({b["parent"] for b in bones if "parent" in b} - names)
+    assert not dangling, f"huesos con padre inexistente: {dangling}"
+    assert "parent" not in bones[0], "el hueso raíz no debe declarar parent"
+
     for anim_name, spec in anim["animations"].items():
         missing = set(spec["bones"]) - names
         assert not missing, (anim_name, missing)
