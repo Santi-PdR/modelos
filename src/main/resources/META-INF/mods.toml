@@ -9,9 +9,11 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Capa Deteriorer Evil Saiyan para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.2.0: modelo 3D en inventario, partículas propias con sprites animados y
+compatibilidad opcional con el slot "back" de Curios API.
 v1.1.0: atlas de textura mejorado respetando el UV, icono 64x64, animaciones
 derivadas de sprint y salto sin alterar el idle/moving original, brillo emisivo
-pulsante, aura de partículas y correcciones de renderizado.'''
+pulsante y correcciones de renderizado.'''
 
 [[dependencies.${mod_id}]]
 modId="forge"
@@ -32,4 +34,12 @@ modId="geckolib"
 mandatory=true
 versionRange="[4.8.1,)"
 ordering="NONE"
+side="BOTH"
+
+# Curios es OPCIONAL: sin él la capa se equipa en el pecho como siempre.
+[[dependencies.${mod_id}]]
+modId="curios"
+mandatory=false
+versionRange="[5.14.1,)"
+ordering="AFTER"
 side="BOTH"

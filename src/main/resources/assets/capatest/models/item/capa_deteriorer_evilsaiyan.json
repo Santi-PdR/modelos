@@ -1,6 +1,37 @@
 {
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "capatest:item/capa_deteriorer_evilsaiyan"
+  "parent": "builtin/entity",
+  "texture_size": [64, 64],
+  "display": {
+    "gui": {
+      "rotation": [25, 145, 0],
+      "translation": [0, -2.5, 0],
+      "scale": [0.55, 0.55, 0.55]
+    },
+    "ground": {
+      "translation": [0, 2, 0],
+      "scale": [0.35, 0.35, 0.35]
+    },
+    "fixed": {
+      "rotation": [0, 180, 0],
+      "scale": [0.5, 0.5, 0.5]
+    },
+    "thirdperson_righthand": {
+      "rotation": [60, 45, 0],
+      "translation": [0, 1, 0],
+      "scale": [0.45, 0.45, 0.45]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [60, -45, 0],
+      "translation": [0, 1, 0],
+      "scale": [0.45, 0.45, 0.45]
+    },
+    "firstperson_righthand": {
+      "rotation": [0, 90, 0],
+      "scale": [0.4, 0.4, 0.4]
+    },
+    "firstperson_lefthand": {
+      "rotation": [0, -90, 0],
+      "scale": [0.4, 0.4, 0.4]
+    }
   }
 }

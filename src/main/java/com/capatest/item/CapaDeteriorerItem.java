@@ -1,8 +1,11 @@
 package com.capatest.item;
 
 import com.capatest.client.CapaArmorRenderer;
+import com.capatest.client.CapaItemRenderer;
+import com.capatest.particle.CapaParticles;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -51,6 +54,7 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
     public void initializeClient(Consumer<IClientItemExtensions> consumer) {
         consumer.accept(new IClientItemExtensions() {
             private GeoArmorRenderer<?> renderer;
+            private CapaItemRenderer itemRenderer;
 
             @Override
             public @NotNull HumanoidModel<?> getHumanoidArmorModel(
@@ -66,6 +70,15 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
                 this.renderer.prepForRender(livingEntity, itemStack, equipmentSlot, original);
                 return this.renderer;
             }
+
+            /** Modelo 3D real en inventario / mano / suelo (parent builtin/entity). */
+            @Override
+            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (this.itemRenderer == null) {
+                    this.itemRenderer = new CapaItemRenderer();
+                }
+                return this.itemRenderer;
+            }
         });
     }
 
@@ -80,11 +93,8 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
                 return PlayState.CONTINUE;
             }
 
-            // BUG FIX: GeoArmorRenderer construye AnimationState con
-            // isMoving()=false y limbSwing=0, así que state.isMoving() no sirve.
-            // Además entity.xo/zo es la posición del tick anterior: al renderizar
-            // varios frames por tick producía parpadeos entre idle y moving.
-            // Usamos la velocidad real, que es estable durante todo el tick.
+            // GeoArmorRenderer construye AnimationState con isMoving()=false y
+            // limbSwing=0, así que usamos la velocidad real (estable por tick).
             Vec3 motion = entity.getDeltaMovement();
             double horizontal = motion.x * motion.x + motion.z * motion.z;
             boolean moving = horizontal > 0.0009D;
@@ -108,10 +118,9 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
     }
 
     /**
-     * BUG FIX: sin este override Forge buscaba
+     * Sin este override Forge buscaba
      * capatest:textures/models/armor/capa_deteriorer_evilsaiyan_layer_1.png,
-     * que no existe (el mod usa el atlas de GeckoLib). Ahora se enlaza la
-     * textura correcta y desaparece el recurso perdido.
+     * que no existe (el mod usa el atlas de GeckoLib).
      */
     @Override
     public String getArmorTexture(ItemStack stack, Entity entity, EquipmentSlot slot, String type) {
@@ -133,11 +142,6 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
         super.appendHoverText(stack, level, tooltip, flag);
     }
 
-    /**
-     * Aura de partículas. Se emite desde el servidor (integrado o dedicado) para
-     * que también la vean otros jugadores; en cliente no hacemos nada y así
-     * evitamos duplicados y trabajo innecesario.
-     */
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
         if (level.isClientSide || !(entity instanceof Player player)) {
@@ -147,7 +151,19 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
                 || player.getItemBySlot(EquipmentSlot.CHEST).getItem() != this) {
             return;
         }
-        if (player.tickCount % 4 != 0 || !(level instanceof ServerLevel server)) {
+        spawnAura(level, player);
+    }
+
+    /**
+     * Aura de partículas, emitida desde el servidor para que también la vean
+     * otros jugadores. La llaman inventoryTick (slot de pecho) y CuriosCompat
+     * (slot back de Curios), así que el efecto no se pierde al cambiar de slot.
+     */
+    public static void spawnAura(Level level, Player player) {
+        if (level.isClientSide || !(level instanceof ServerLevel server)) {
+            return;
+        }
+        if (player.tickCount % 4 != 0) {
             return;
         }
 
@@ -157,8 +173,11 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
         double y = player.getY() + 0.85 + ThreadLocalRandom.current().nextDouble() * 0.9;
         boolean fast = player.isSprinting();
 
+        // Partícula propia del mod (3 sprites) + apoyo de las vanilla.
+        server.sendParticles(CapaParticles.CAPA_EMBER.get(), x, y, z,
+                fast ? 3 : 2, 0.12, 0.18, 0.12, 0.01);
         server.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, x, y, z,
-                fast ? 3 : 1, 0.12, 0.18, 0.12, 0.01);
+                fast ? 2 : 1, 0.12, 0.18, 0.12, 0.01);
         if (player.tickCount % 8 == 0) {
             server.sendParticles(ParticleTypes.PORTAL, x, y + 0.2, z,
                     fast ? 3 : 2, 0.28, 0.35, 0.28, 0.02);

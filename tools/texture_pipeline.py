@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Procedural texture upgrade for the "Capa Deteriorer Evil Saiyan" (v1.1.0).
+Procedural texture upgrade for the "Capa Deteriorer Evil Saiyan" (v1.2.0).
 
 Why procedural instead of AI-generated art:
     The 128x128 armor texture is a strict UV atlas. Every cube face of
@@ -20,6 +20,8 @@ Outputs (all committed, so CI needs no Python deps):
     textures/item/armor/capa_deteriorer_evilsaiyan.png            128x128
     textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png  128x128
     textures/item/capa_deteriorer_evilsaiyan.png                  64x64
+    textures/item/cape_folded.png                                  64x64  (3D item atlas)
+    textures/particle/capa_ember_0..2.png                          16x16  (custom particles)
 
 Usage:  python tools/texture_pipeline.py     (requires Pillow + numpy)
 """
@@ -233,6 +235,73 @@ def build_icon() -> Image.Image:
     return composed.resize((64, 64), Image.LANCZOS)
 
 
+# --------------------------------------------------------------------------
+# 3. Atlas for the folded 3D inventory model (opaque cloth, UV-mapped)
+# --------------------------------------------------------------------------
+def build_folded_texture() -> Image.Image:
+    s = 64
+    yy, xx = np.mgrid[0:s, 0:s]
+    t = (yy / (s - 1))[..., None]
+    top = np.array([24.0, 14.0, 46.0])
+    bottom = np.array([78.0, 14.0, 46.0])
+    rgb = top * (1.0 - t) + bottom * t
+
+    folds = (np.sin(xx * np.pi / 7.0) * 9.0 + np.cos(xx * np.pi / 3.0) * 4.0)[..., None]
+    rng = np.random.default_rng(SEED + 2)
+    rgb = rgb + folds + rng.normal(0, 3.5, (s, s))[..., None]
+
+    border = (xx < 3) | (xx > s - 4)
+    rgb[..., 0] += border * 90.0
+    rgb[..., 1] += border * 12.0
+    rgb[..., 2] += border * 70.0
+
+    band = (yy >= 4) & (yy < 9)  # yoke
+    rgb[..., 0] += band * 70.0
+    rgb[..., 1] += band * 20.0
+    rgb[..., 2] += band * 110.0
+
+    seam = ((xx % 12) < 1) & (yy > 10)  # vertical energy seams
+    rgb[..., 0] += seam * 30.0
+    rgb[..., 2] += seam * 45.0
+
+    diamond = np.abs(xx - 32) + np.abs(yy - 22) < 7  # chest emblem
+    rgb[..., 0] += diamond * 100.0
+    rgb[..., 1] += diamond * 40.0
+    rgb[..., 2] += diamond * 120.0
+
+    rgb = np.clip(rgb, 0, 255)
+    alpha = np.full((s, s, 1), 255.0)
+    return Image.fromarray(np.dstack((rgb, alpha)).astype(np.uint8), "RGBA")
+
+
+# --------------------------------------------------------------------------
+# 4. Three animated ember sprites (transparent, additive-looking)
+# --------------------------------------------------------------------------
+def build_particle_sprites() -> list[Image.Image]:
+    s = 16
+    yy, xx = np.mgrid[0:s, 0:s]
+    c = (s - 1) / 2.0
+    radius = np.sqrt((xx - c) ** 2 + (yy - c) ** 2)
+    sprites = []
+
+    for frame, spread in enumerate((2.0, 3.1, 4.2)):
+        glow = np.clip(1.0 - radius / (spread * 2.3), 0.0, 1.0) ** 1.6
+        core = np.clip(1.0 - radius / spread, 0.0, 1.0)
+        # Small upward wisp on later frames.
+        wisp = np.clip(1.0 - (np.abs(xx - c) / (spread * 0.55)), 0.0, 1.0) * \
+            np.clip((c - yy) / (spread * 1.8), 0.0, 1.0) * 0.35 * frame
+        alpha = np.clip((glow * 0.62 + core * 0.8 + wisp) * 255.0, 0, 255)
+
+        rgb = np.zeros((s, s, 3), dtype=np.float32)
+        rgb[..., 0] = 80.0 + 175.0 * core
+        rgb[..., 1] = 20.0 + 70.0 * core
+        rgb[..., 2] = 110.0 + 145.0 * core
+        sprites.append(Image.fromarray(
+            np.dstack((np.clip(rgb, 0, 255), alpha)).astype(np.uint8), "RGBA"))
+
+    return sprites
+
+
 def main() -> None:
     used = uv_usage_mask()
     print(f"UV texels used by geometry: {used.mean() * 100:.1f}%")
@@ -245,6 +314,17 @@ def main() -> None:
     icon = build_icon()
     icon.save(ICON)
     print("icon:", icon.size)
+
+    folded = build_folded_texture()
+    folded.save(ASSETS / "textures/item/cape_folded.png")
+    print("folded atlas:", folded.size)
+
+    particle_dir = ASSETS / "textures/particle"
+    particle_dir.mkdir(parents=True, exist_ok=True)
+    embers = build_particle_sprites()
+    for index, sprite in enumerate(embers):
+        sprite.save(particle_dir / f"capa_ember_{index}.png")
+    print(f"particle sprites: {len(embers)} x 16x16")
 
     # Sanity: glowmask must stay 128x128 and must not cover new texels.
     ga = np.asarray(Image.open(ORIGINALS / "armor_glowmask.png").convert("RGBA"))[..., 3]

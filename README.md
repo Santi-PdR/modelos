@@ -1,75 +1,85 @@
-# Capa Deteriorer Test — v1.1.0
+# Capa Deteriorer Test — v1.2.0
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
-Añade una capa (armadura de pecho) animada: *Capa Deteriorer Evil Saiyan*, con
-geometría propia de 72 huesos, animaciones `idle`/`moving` hechas a mano, textura
-de 128×128 con glowmask, icono de inventario y efectos de aura.
+Añade la *Capa Deteriorer Evil Saiyan*: geometría propia de 72 huesos, cuatro
+animaciones, textura de 128×128 con glowmask pulsante, **modelo 3D en el
+inventario**, **partículas propias** y compatibilidad opcional con el slot
+**`back` de Curios API**.
 
-## Qué cambió en v1.1.0
+## Novedades de v1.2.0
 
-**Textura (mismo atlas UV, sin romper el modelo)**
-- `tools/texture_pipeline.py` lee los originales de `tools/originals/`, calcula qué
-  texeles usa realmente el `.geo.json` (68.6 %) y mejora **sólo los canales de color**
-  de los píxeles ya opacos: grano de tela determinista, iluminación vertical,
-  sombras frías hacia índigo, venas de energía magenta/carmesí y sangrado violeta
-  alrededor del neon. El canal alfa se conserva byte a byte.
-- Dato importante: el `AutoGlowingGeoLayer` de GeckoLib 4.8 **sólo usa el alfa** del
-  `_glowmask.png` y **borra esos píxeles de la textura base**. Por eso el pipeline
-  potencia el color de esos píxeles y **no amplía** la cobertura del glowmask
-  (1636 texeles, idéntica), evitando agujeros en la capa.
-- Icono de inventario nuevo: 16×16 → **64×64** con silueta, hombreras, emblema,
-  borde neon y motas de energía (supersampling 4×).
+**Modelo 3D del ítem (adiós icono 2D)**
+- `assets/capatest/models/item/capa_deteriorer_evilsaiyan.json` usa
+  `parent: builtin/entity` y `CapaDeteriorerItem#initializeClient` devuelve un
+  `GeoItemRenderer` propio (`CapaItemRenderer`).
+- Geo, animación y atlas independientes (`cape_folded.*`), generados por
+  `tools/texture_pipeline.py`: la capa aparece plegada y con leve balanceo en
+  GUI, mano, suelo y marco; la armadura puesta sigue usando el modelo grande
+  de 126 cubos sin cambios.
 
-**Animación (idle y moving intactos)**
-- `tools/animation_pipeline.py` deriva dos estados nuevos de `animation.moving`
-  sin modificar ni un byte de `animation.idle` / `animation.moving`:
-  - `animation.sprint`: ciclo 0.72 s, rotaciones ×1.18 → la capa se abre más.
-  - `animation.air`: ciclo 1.35 s, huesos de tela con barrido X ×1.55 → flota al
-    saltar/caer/usar elytra.
-- **Bug fix**: `GeoArmorRenderer` crea el `AnimationState` con `isMoving()=false` y
-  `limbSwing=0`, y el código usaba `entity.xo/zo` (posición del tick anterior), lo
-  que podía parpadear entre estados durante el render. Ahora se usa
-  `getDeltaMovement()` + `onGround()` + `isSprinting()`, estable durante todo el tick.
+**Partículas propias del mod**
+- `SimpleParticleType` `capatest:capa_ember` registrado en
+  `ForgeRegistries.PARTICLE_TYPES`, con
+  `assets/capatest/particles/capa_ember.json` y tres PNG de 16×16 en
+  `assets/capatest/textures/particle/`.
+- `CapaEmberParticle` + `RegisterParticleProvidersEvent#registerSpriteSet`
+  (bus MOD, sólo cliente): sprites animados, tinte magenta/violeta y fundido.
+- `ServerLevel#sendParticles` emite las brasas detrás del jugador; las partículas
+  vanilla (`SOUL_FIRE_FLAME` / `PORTAL` / `CRIMSON_SPORE`) quedan como refuerzo.
 
-**Efectos**
-- `CapaGlowLayer`: reemplaza el `AutoGlowingGeoLayer` plano por un re-render
-  emisivo con latido senoidal de 3.2 s, tinte violeta en los valles, mayor
-  amplitud cuando el portador corre y viraje a carmesí al perder vida
-  ("Deteriorer").
-- Aura de partículas (`SOUL_FIRE_FLAME` / `PORTAL` / `CRIMSON_SPORE`) emitida desde
-  el servidor en `inventoryTick`, detrás del jugador y más intensa al correr, para
-  que también la vean otros jugadores.
-- `Rarity.EPIC`, resistente al fuego, glint permanente en inventario y tooltip
-  traducido (en_us / es_es).
+**Slot `back` de Curios (dependencia blanda)**
+- `data/curios/tags/items/back.json` mete la capa en el tag `curios:back` y
+  `data/capatest/curios/entities/player.json` concede el slot `back` al jugador
+  (los slots predefinidos de Curios **no** se añaden por defecto).
+- `CuriosCompat` se carga **por reflexión** únicamente si `ModList` detecta
+  `curios`; registra un `ICurioItem` con `canEquip` restringido a `back` y
+  reutiliza `spawnAura` desde `curioTick`. Sin Curios la capa sigue funcionando
+  exactamente igual en el slot de pecho.
+- `CapaCurioRenderer` registra un `ICurioRenderer` en `FMLClientSetupEvent` y
+  delega en el mismo `GeoArmorRenderer` (`prepForRender(CHEST)` + `defaultRender`
+  con el `MultiBufferSource` de Curios), conservando brillo y animaciones.
+- `build.gradle` compila contra `curios-forge:5.14.1+1.20.1:api` con
+  `compileOnly`: el jar de Curios **no** se empaqueta ni es obligatorio.
 
-**Corrección de render**
-- `ArmorMaterial#getName()` devolvía `capatest:capa_deteriorer_evilsaiyan`; Forge
-  interpreta los `:` como namespace y buscaba una textura de armadura vanilla
-  inexistente. Ahora devuelve un id simple y el item sobreescribe
-  `getArmorTexture()` apuntando al atlas de GeckoLib.
-- Estadísticas de armadura coherentes por tipo (durabilidad del pecho 900,
-  defensa 9, dureza 3.0, resistencia al empuje 0.15).
+> Las animaciones `animation.idle` y `animation.moving` siguen siendo
+> byte-idénticas a las originales aprobadas.
+
+## BASE v1.1.0 (resumen)
+
+- **Textura**: `tools/texture_pipeline.py` mejora sólo los canales RGB de los
+  texeles ya opacos (68.6 % del atlas), conservando el alfa. El glowmask mantiene
+  sus 1636 texeles, porque GeckoLib 4.8 usa únicamente su alfa.
+- **Animación**: `tools/animation_pipeline.py` deriva `sprint` (0.72 s) y `air`
+  (1.35 s) desde `moving` sin tocar `idle`/`moving`. Detección de movimiento con
+  `getDeltaMovement()` + `onGround()` + `isSprinting()` (bug fix del parpadeo).
+- **Efectos**: `CapaGlowLayer` con latido de 3.2 s, amplitud al correr y viraje
+  carmesí según la vida; aura emitida desde servidor; `Rarity.EPIC`,
+  `fireResistant`, glint y tooltips en_us/es_es.
+- **Corrección**: `ArmorMaterial#getName()` sin `:` y `getArmorTexture()`
+  apuntando al atlas de GeckoLib; defensa 9, dureza 3.0, empuje 0.15,
+  durabilidad de pecho 900.
 
 ## Estructura
 
 ```
-build.gradle / gradle.properties / settings.gradle   ForgeGradle 6, Gradle 8.8, GeckoLib 4.8.1
-src/main/java/com/capatest/                         Mod, material, item (estados + aura), renderer, glow layer
-src/main/resources/META-INF/mods.toml               Metadatos y dependencias
-src/main/resources/assets/capatest/                 geo, animación, texturas, lang, modelo de item
+build.gradle / gradle.properties / settings.gradle   ForgeGradle 6, Gradle 8.8, GeckoLib 4.8.1, Curios API (compileOnly)
+src/main/java/com/capatest/                         Mod, material, item, renderers, glow layer, partículas, compat Curios
+src/main/resources/META-INF/mods.toml               Metadatos: Forge + GeckoLib obligatorios, Curios opcional
+src/main/resources/assets/capatest/                 geo/animaciones 3D, texturas, sprites, lang, modelo builtin/entity
+src/main/resources/data/                           tag curios:back + concesión del slot al player
 tools/originals/                                   Texturas prístinas para regenerar
-tools/texture_pipeline.py                          Pipeline de textura (Pillow + numpy)
+tools/texture_pipeline.py                          Atlas de armadura, icono, atlas 3D y sprites (Pillow + numpy)
 tools/animation_pipeline.py                        Deriva sprint/air desde moving
 .github/workflows/build.yml                        CI: push + workflow_dispatch
 ```
 
 ## Compilar
 
-JDK 17 + Gradle 8.8 (el zip no incluye `gradlew`):
+JDK 17 + Gradle 8.8 (el zip original no incluye `gradlew`):
 
 ```bash
 gradle build --no-daemon
-# salida: build/libs/capatest-1.1.0.jar
+# salida: build/libs/capatest-1.2.0.jar
 ```
 
 Para regenerar los assets (no hace falta para compilar, ya están commiteados):
@@ -84,10 +94,11 @@ python tools/animation_pipeline.py
 
 `push` y `workflow_dispatch` sobre `ubuntu-latest`: `actions/checkout@v4`,
 `actions/setup-java@v4` (17/temurin), `gradle/actions/setup-gradle@v4` (8.8),
-validación de recursos, `gradle build --no-daemon`, verificación del contenido
-del jar y `actions/upload-artifact@v4` con `build/libs/*.jar`
-(excluyendo `*-sources.jar`). Si la compilación falla, los errores de `javac` se
-publican como anotaciones del run y se sube el log completo.
+validación de JSON/PNG (incluye tag y entidad de Curios), `gradle build
+--no-daemon`, verificación de las entradas del jar (clases, geo 3D, 3 sprites,
+datos) y `actions/upload-artifact@v4` con `build/libs/*.jar` (excluyendo
+`*-sources.jar`). Si falla, los errores de `javac` se publican como anotaciones
+y se sube el log completo.
 
 ## Probar en Singleplayer
 
@@ -95,9 +106,13 @@ publican como anotaciones del run y se sube el log completo.
 2. Descargar **GeckoLib 4.8.1 para Forge 1.20.1**:
    https://modrinth.com/mod/geckolib/version/bVtfWE8S
    (coordenada Maven: `maven.modrinth:8BmcQJ2H:bVtfWE8S`).
-3. Poner GeckoLib y `capatest-1.1.0.jar` en `mods/`.
+3. Poner GeckoLib y `capatest-1.2.0.jar` en `mods/`.
 4. Mundo creativo; la capa está en **Combate** o con
-   `/give @s capatest:capa_deteriorer_evilsaiyan`. Equipar en el **pecho** y usar
-   **F5** para verla en tercera persona.
-5. Comprobar: `idle` (3.6 s) en reposo, `moving` al caminar, `sprint` al correr,
-   `air` al saltar, brillo pulsante y estela de partículas detrás del jugador.
+   `/give @s capatest:capa_deteriorer_evilsaiyan`.
+5. **Sin Curios**: equipar en el **pecho** y usar **F5**.
+6. **Con Curios 5.14.1+1.20.1** (opcional, p. ej. desde
+   https://modrinth.com/mod/curios): abrir el inventario de Curios y ponerla en
+   el slot **`back`**; se ve y anima igual que en el pecho.
+7. Comprobar: modelo 3D en el hotbar/mano, `idle` (3.6 s), `moving`, `sprint`,
+   `air`, brillo pulsante/rojo al perder vida y brasas propias detrás del
+   jugador (también visibles para otros jugadores).

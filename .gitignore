@@ -5,6 +5,10 @@ out/
 run/
 runs/
 
+# Python (herramientas de generación de assets)
+__pycache__/
+*.py[cod]
+
 # IDE
 .idea/
 *.iml

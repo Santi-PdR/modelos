@@ -40,6 +40,12 @@ minecraft {
 }
 
 repositories {
+    // Curios API: dependencia BLANDA (sólo compile-time), el jar no se incluye.
+    maven {
+        name = 'Curios'
+        url = 'https://maven.theillusivec4.top/'
+    }
+
     exclusiveContent {
         forRepository {
             maven {
@@ -58,6 +64,9 @@ dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     // GeckoLib 4.8.1 para Forge 1.20.1 (Modrinth Maven)
     implementation fg.deobf("maven.modrinth:8BmcQJ2H:${geckolib_modrinth_version}")
+    // Curios 5.14.1 para Forge 1.20.1. compileOnly => el mod funciona sin Curios;
+    // las clases de compat se cargan por reflexión sólo si el mod está presente.
+    compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}:api")
 }
 
 tasks.named('processResources', ProcessResources).configure {

@@ -44,9 +44,28 @@ jobs:
                        'armor/capa_deteriorer_evilsaiyan_glowmask.png'):
               w, h = struct.unpack('>II', (base / 'textures/item' / name).read_bytes()[16:24])
               assert (w, h) == (128, 128), (name, w, h)
-          w, h = struct.unpack('>II', (base / 'textures/item/capa_deteriorer_evilsaiyan.png').read_bytes()[16:24])
-          assert (w, h) == (64, 64), (w, h)
-          print('OK: JSON válidos, 4 animaciones, atlas 128x128, icono 64x64')
+          for name in ('capa_deteriorer_evilsaiyan.png', 'cape_folded.png'):
+              w, h = struct.unpack('>II', (base / 'textures/item' / name).read_bytes()[16:24])
+              assert (w, h) == (64, 64), (name, w, h)
+          for i in range(3):
+              p = base / 'textures/particle' / f'capa_ember_{i}.png'
+              w, h = struct.unpack('>II', p.read_bytes()[16:24])
+              assert (w, h) == (16, 16), (p, w, h)
+          particle = json.loads((base / 'particles/capa_ember.json').read_text())
+          assert len(particle['textures']) == 3
+          folded = json.loads((base / 'geo/item/cape_folded.geo.json').read_text())
+          assert folded['minecraft:geometry'][0]['description']['identifier'] == 'geometry.capa_folded'
+          folded_anim = json.loads((base / 'animations/item/cape_folded.animation.json').read_text())
+          assert expected <= set(folded_anim['animations']), sorted(folded_anim['animations'])
+          assert (base / 'models/item/capa_deteriorer_evilsaiyan.json').read_text().find('builtin/entity') > 0
+          data = pathlib.Path('src/main/resources/data')
+          for p in data.rglob('*.json'):
+              json.loads(p.read_text())
+          tag = json.loads((data / 'curios/tags/items/back.json').read_text())['values']
+          assert 'capatest:capa_deteriorer_evilsaiyan' in tag
+          entity = json.loads((data / 'capatest/curios/entities/player.json').read_text())
+          assert entity == {'entities': ['player'], 'slots': ['back']}
+          print('OK: JSON/PNG válidos, 3D item, 3 sprites, tag curios:back y slot back')
           PY
 
       - name: Build
@@ -75,7 +94,7 @@ jobs:
       - name: List built jars
         run: ls -lh build/libs
 
-      - name: Verify jar contents
+      - name: Verify jar contents (v1.2.0 resources)
         run: |
           set -euo pipefail
           found=0
@@ -93,14 +112,25 @@ jobs:
             grep -qx 'assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan.png' /tmp/jar-contents.txt
             grep -qx 'assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png' /tmp/jar-contents.txt
             grep -qx 'assets/capatest/textures/item/capa_deteriorer_evilsaiyan.png' /tmp/jar-contents.txt
-            echo "OK: clases, mods.toml, geo/animación y texturas presentes"
+            grep -qx 'assets/capatest/geo/item/cape_folded.geo.json' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/animations/item/cape_folded.animation.json' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/textures/item/cape_folded.png' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/particles/capa_ember.json' /tmp/jar-contents.txt
+            for i in 0 1 2; do
+              grep -qx "assets/capatest/textures/particle/capa_ember_${i}.png" /tmp/jar-contents.txt
+            done
+            grep -qx 'data/curios/tags/items/back.json' /tmp/jar-contents.txt
+            grep -qx 'data/capatest/curios/entities/player.json' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapaCurioRenderer.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/compat/CuriosCompat.class' /tmp/jar-contents.txt
+            echo "OK: clases, mods.toml, 3D item, partículas y datos Curios presentes"
           done
           test "$found" -eq 1
 
       - name: Upload mod jar
         uses: actions/upload-artifact@v4
         with:
-          name: capatest-1.1.0-forge-1.20.1
+          name: capatest-1.2.0-forge-1.20.1
           path: |
             build/libs/*.jar
             !build/libs/*-sources.jar
