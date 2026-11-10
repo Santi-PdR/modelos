@@ -7,59 +7,63 @@ import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.model.DefaultedItemGeoModel;
 import software.bernie.geckolib.renderer.GeoArmorRenderer;
-import software.bernie.geckolib.renderer.layer.AutoGlowingGeoLayer;
 
 public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     public CapaArmorRenderer() {
-        // Apunta automáticamente a:
+        // Apunta a:
         // assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json
         // assets/capatest/animations/item/armor/capa_deteriorer_evilsaiyan.animation.json
         // assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan.png
-        // y AutoGlowingGeoLayer carga *_glowmask.png automáticamente.
+        // y *_glowmask.png (GeckoLib 4.8 usa el sufijo "_glowmask").
         super(new DefaultedItemGeoModel<>(
                 new ResourceLocation(CapaTestMod.MOD_ID, "armor/capa_deteriorer_evilsaiyan")
         ));
 
-        addRenderLayer(new AutoGlowingGeoLayer<>(this));
+        // Emisivo pulsante en vez del AutoGlowingGeoLayer plano.
+        addRenderLayer(new CapaGlowLayer(this));
+    }
+
+    private GeoBone bone(String name) {
+        return getGeoModel().getBone(name).orElse(null);
     }
 
     @Override
     public @Nullable GeoBone getHeadBone() {
-        return this.model.getBone("helmet").orElse(null);
+        return bone("helmet");
     }
 
     @Override
     public @Nullable GeoBone getBodyBone() {
-        return this.model.getBone("chestplate").orElse(null);
+        return bone("chestplate");
     }
 
     @Override
     public @Nullable GeoBone getRightArmBone() {
-        return this.model.getBone("rightArm").orElse(null);
+        return bone("rightArm");
     }
 
     @Override
     public @Nullable GeoBone getLeftArmBone() {
-        return this.model.getBone("leftArm").orElse(null);
+        return bone("leftArm");
     }
 
     @Override
     public @Nullable GeoBone getRightLegBone() {
-        return this.model.getBone("rightLeg").orElse(null);
+        return bone("rightLeg");
     }
 
     @Override
     public @Nullable GeoBone getLeftLegBone() {
-        return this.model.getBone("leftLeg").orElse(null);
+        return bone("leftLeg");
     }
 
     @Override
     public @Nullable GeoBone getRightBootBone() {
-        return this.model.getBone("rightBoot").orElse(null);
+        return bone("rightBoot");
     }
 
     @Override
     public @Nullable GeoBone getLeftBootBone() {
-        return this.model.getBone("leftBoot").orElse(null);
+        return bone("leftBoot");
     }
 }

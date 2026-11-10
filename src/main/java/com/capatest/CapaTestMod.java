@@ -5,6 +5,7 @@ import com.capatest.item.CapaDeteriorerItem;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Rarity;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
@@ -26,7 +27,8 @@ public class CapaTestMod {
             () -> new CapaDeteriorerItem(
                     CapaArmorMaterial.INSTANCE,
                     ArmorItem.Type.CHESTPLATE,
-                    new Item.Properties().stacksTo(1)
+                    // Épico + resistente al fuego: la capa de un Saiyan no se quema.
+                    new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant()
             )
     );
 

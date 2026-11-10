@@ -29,8 +29,48 @@ jobs:
       - name: Gradle version
         run: gradle --version
 
+      # Validación barata de assets antes de pagar el costo de ForgeGradle.
+      - name: Validate resources
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, struct
+          base = pathlib.Path('src/main/resources/assets/capatest')
+          for p in base.rglob('*.json'):
+              json.loads(p.read_text())
+          anim = json.loads((base / 'animations/item/armor/capa_deteriorer_evilsaiyan.animation.json').read_text())
+          expected = {'animation.idle', 'animation.moving', 'animation.sprint', 'animation.air'}
+          assert expected <= set(anim['animations']), sorted(anim['animations'])
+          for name in ('armor/capa_deteriorer_evilsaiyan.png',
+                       'armor/capa_deteriorer_evilsaiyan_glowmask.png'):
+              w, h = struct.unpack('>II', (base / 'textures/item' / name).read_bytes()[16:24])
+              assert (w, h) == (128, 128), (name, w, h)
+          w, h = struct.unpack('>II', (base / 'textures/item/capa_deteriorer_evilsaiyan.png').read_bytes()[16:24])
+          assert (w, h) == (64, 64), (w, h)
+          print('OK: JSON válidos, 4 animaciones, atlas 128x128, icono 64x64')
+          PY
+
       - name: Build
-        run: gradle build --no-daemon --stacktrace
+        id: build
+        run: |
+          set -o pipefail
+          gradle build --no-daemon --stacktrace 2>&1 | tee /tmp/gradle-build.log
+
+      # Los logs de Actions viven en un host que el sandbox no puede leer;
+      # publicamos los errores de javac como anotaciones del run.
+      - name: Surface compiler errors as annotations
+        if: failure() && steps.build.outcome == 'failure'
+        run: |
+          grep -E '(error:|FAILURE:|What went wrong|^> |Caused by:|Could not resolve|Execution failed)' /tmp/gradle-build.log | head -80 | while IFS= read -r line; do
+            printf '::error::%s\n' "$line"
+          done
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: /tmp/gradle-build.log
+          if-no-files-found: ignore
 
       - name: List built jars
         run: ls -lh build/libs
@@ -46,16 +86,21 @@ jobs:
             jar tf "$jar" > /tmp/jar-contents.txt
             grep -qx 'META-INF/mods.toml' /tmp/jar-contents.txt
             grep -qx 'com/capatest/CapaTestMod.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapaGlowLayer.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/item/CapaDeteriorerItem.class' /tmp/jar-contents.txt
             grep -qx 'assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/animations/item/armor/capa_deteriorer_evilsaiyan.animation.json' /tmp/jar-contents.txt
             grep -qx 'assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan.png' /tmp/jar-contents.txt
-            echo "OK: mods.toml, clase principal, geo y textura presentes"
+            grep -qx 'assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/textures/item/capa_deteriorer_evilsaiyan.png' /tmp/jar-contents.txt
+            echo "OK: clases, mods.toml, geo/animación y texturas presentes"
           done
           test "$found" -eq 1
 
       - name: Upload mod jar
         uses: actions/upload-artifact@v4
         with:
-          name: capatest-1.0.0-forge-1.20.1
+          name: capatest-1.1.0-forge-1.20.1
           path: |
             build/libs/*.jar
             !build/libs/*-sources.jar
