@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Procedural texture upgrade for the "Capa Deteriorer Evil Saiyan" (v1.2.0).
+Procedural texture suite for the "Capa Deteriorer Evil Saiyan" (v1.3.0).
 
 Why procedural instead of AI-generated art:
     The 128x128 armor texture is a strict UV atlas. Every cube face of
@@ -16,11 +16,15 @@ Why procedural instead of AI-generated art:
       * glow brightness is driven by the base texture colour at those pixels,
       * the glowmask must not grow, or it would punch holes in the cape.
 
+    The folded 3D item model uses its own 128x128 artwork atlas (generated from
+    the same cape design as the icon), and the ember particles use three soft,
+    anti-aliased 16x16 sprites.
+
 Outputs (all committed, so CI needs no Python deps):
     textures/item/armor/capa_deteriorer_evilsaiyan.png            128x128
     textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png  128x128
     textures/item/capa_deteriorer_evilsaiyan.png                  64x64
-    textures/item/cape_folded.png                                  64x64  (3D item atlas)
+    textures/item/cape_folded.png                                  128x128 (3D item atlas)
     textures/particle/capa_ember_0..2.png                          16x16  (custom particles)
 
 Usage:  python tools/texture_pipeline.py     (requires Pillow + numpy)
@@ -81,8 +85,16 @@ def dilate(binary: np.ndarray, radius: int = 1) -> np.ndarray:
     return out
 
 
+def _blurred_noise(rng: np.random.Generator, shape: tuple[int, int], radius: float) -> np.ndarray:
+    raw = rng.normal(0.0, 1.0, shape).astype(np.float32)
+    img = Image.fromarray(np.clip(raw * 40 + 128, 0, 255).astype(np.uint8)).filter(
+        ImageFilter.GaussianBlur(radius)
+    )
+    return (np.asarray(img, dtype=np.float32) - 128.0) / 40.0
+
+
 # --------------------------------------------------------------------------
-# 1. Armor texture: cloth grain, cool shadows, crimson/violet energy veins
+# 1. Armor texture: woven cloth, fold lighting, violet bloom, hot neon core
 # --------------------------------------------------------------------------
 def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
     base = np.asarray(Image.open(ORIGINALS / "armor.png").convert("RGBA"), dtype=np.float32)
@@ -93,51 +105,68 @@ def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
     h, w = alpha.shape
     yy, xx = np.mgrid[0:h, 0:w]
 
-    # Deterministic, slightly blurred noise + a fine woven diagonal grain.
     rng = np.random.default_rng(SEED)
-    raw = rng.normal(0.0, 1.0, (h, w)).astype(np.float32)
-    smooth = (
-        np.asarray(
-            Image.fromarray(np.clip(raw * 40 + 128, 0, 255).astype(np.uint8)).filter(
-                ImageFilter.GaussianBlur(0.55)
-            ),
-            dtype=np.float32,
-        )
-        - 128.0
-    ) / 40.0
+    fine = _blurred_noise(rng, (h, w), 0.55)
+    medium = _blurred_noise(rng, (h, w), 2.4)
+
+    # Multi-scale fabric: plain weave + diagonal twill + broad cloth folds.
     weave = np.sin(xx * np.pi / 2.0) * np.sin(yy * np.pi / 2.0)
-    grain = weave * 2.6 + smooth * 5.0
+    twill = np.sin((xx + yy) * np.pi / 3.0)
+    folds = np.sin(xx * np.pi / 8.0 + np.sin(yy * np.pi / 30.0) * 0.6) * np.cos(yy * np.pi / 24.0)
+    grain = weave * 3.2 + twill * 1.6 + fine * 6.0 + medium * 8.0
 
     luma = rgb[..., 0] * 0.2126 + rgb[..., 1] * 0.7152 + rgb[..., 2] * 0.0722
-    neon_raw = np.clip((luma - 55.0) / 110.0, 0.0, 1.0)  # 0 = cloth, 1 = neon trim
+    neon_raw = np.clip((luma - 52.0) / 112.0, 0.0, 1.0)
     neon_w = neon_raw * opaque
     cloth_w = np.where(opaque, 1.0 - neon_raw, 0.0)
 
     out = rgb.copy()
+    vertical_light = (1.0 - yy / (h - 1) - 0.5) * 22.0
+    warm = np.clip((yy / (h - 1) - 0.45) / 0.55, 0.0, 1.0)[..., None]
 
-    # Cool the dark cloth towards deep indigo and add cloth grain + top lighting.
-    vertical_light = ((1.0 - yy / (h - 1)) - 0.5) * 17.0
-    for channel, mul in enumerate((0.96, 0.93, 1.11)):
-        out[..., channel] = rgb[..., channel] * mul + cloth_w * (grain + vertical_light)
+    # Cooler indigo at the shoulders, plum/crimson shadows toward the hem.
+    for channel, mul in enumerate((0.92, 0.90, 1.16)):
+        out[..., channel] = rgb[..., channel] * mul + cloth_w * (
+            grain + vertical_light + folds * 9.0
+        )
+    out[..., 0] += cloth_w * warm[..., 0] * 17.0
+    out[..., 1] += cloth_w * warm[..., 0] * 2.0
+    out[..., 2] += cloth_w * warm[..., 0] * 11.0
 
-    # Energy bleed: cape cloth immediately around neon lines picks up a violet halo.
-    neon_core = (luma > 118) & opaque
-    near = dilate(neon_core) & ~neon_core & opaque & used
-    out[..., 0] += near * 15.0
-    out[..., 1] += near * 3.0
-    out[..., 2] += near * 25.0
+    # Soft violet bloom bleeding from the neon veins into the surrounding cloth.
+    neon_core = (luma > 108) & opaque
+    bloom = np.asarray(
+        Image.fromarray((neon_core * 255).astype(np.uint8)).filter(
+            ImageFilter.GaussianBlur(2.3)
+        ),
+        dtype=np.float32,
+    ) / 255.0
+    halo = bloom * cloth_w
+    out[..., 0] += halo * 36.0
+    out[..., 1] += halo * 9.0
+    out[..., 2] += halo * 48.0
 
-    # Brighten and saturate the neon trim itself (crimson core / violet edge).
+    # Rim light along UV-island borders => the 126 cube faces read as real folds.
+    island_edge = used & dilate(~used, 2) & opaque
+    out[..., 0] += island_edge * 17.0
+    out[..., 1] += island_edge * 6.0
+    out[..., 2] += island_edge * 23.0
+
+    # Crimson core / violet edge on the trim itself.
     boost = neon_w
-    out[..., 0] += boost * (rgb[..., 0] * 0.28 + 26.0)
-    out[..., 1] += boost * (rgb[..., 1] * 0.10 + 6.0)
-    out[..., 2] += boost * (rgb[..., 2] * 0.22 + 34.0)
+    out[..., 0] += boost * (rgb[..., 0] * 0.34 + 32.0)
+    out[..., 1] += boost * (rgb[..., 1] * 0.12 + 7.0)
+    out[..., 2] += boost * (rgb[..., 2] * 0.26 + 40.0)
+    hot = (luma > 176) & opaque
+    out[..., 0] += hot * 42.0
+    out[..., 1] += hot * 36.0
+    out[..., 2] += hot * 50.0
 
     # GeckoLib's emissive pass reuses these very pixels, so push them harder.
     emissive = glow[..., 3] > 0
-    out[..., 0] = np.where(emissive, out[..., 0] * 1.12 + 26.0, out[..., 0])
-    out[..., 1] = np.where(emissive, out[..., 1] * 1.05 + 8.0, out[..., 1])
-    out[..., 2] = np.where(emissive, out[..., 2] * 1.12 + 30.0, out[..., 2])
+    out[..., 0] = np.where(emissive, out[..., 0] * 1.16 + 34.0, out[..., 0])
+    out[..., 1] = np.where(emissive, out[..., 1] * 1.08 + 11.0, out[..., 1])
+    out[..., 2] = np.where(emissive, out[..., 2] * 1.16 + 38.0, out[..., 2])
 
     out = np.clip(out, 0, 255)
     out = np.where(opaque[..., None], out, rgb)  # never paint into transparent texels
@@ -154,10 +183,12 @@ def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
 
 
 # --------------------------------------------------------------------------
-# 2. Inventory icon: 4x supersampled cape silhouette (16x16 -> 64x64)
+# 2. Cape artwork: shared by the 64x64 icon and the 128x128 3D item atlas
 # --------------------------------------------------------------------------
-def build_icon() -> Image.Image:
-    s = 256
+def build_cape_artwork(s: int = 256) -> Image.Image:
+    """High-resolution cape illustration with transparent background."""
+    k = s / 256.0
+    p = lambda x, y: (int(round(x * k)), int(round(y * k)))
     transparent = Image.new("RGBA", (s, s), (0, 0, 0, 0))
 
     outline = [
@@ -166,16 +197,17 @@ def build_icon() -> Image.Image:
         (126, 210), (110, 228), (94, 208), (78, 220), (66, 206),
         (53, 112), (66, 38),
     ]
+    pts = [p(x, y) for x, y in outline]
 
     mask = Image.new("L", (s, s), 0)
-    ImageDraw.Draw(mask).polygon(outline, fill=255)
+    ImageDraw.Draw(mask).polygon(pts, fill=255)
 
-    # Vertical cloth gradient: dark violet shoulders -> deep crimson hem.
+    # Vertical cloth gradient: indigo shoulders -> deep crimson hem.
     cloth = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     cd = ImageDraw.Draw(cloth)
     for y in range(s):
         t = y / (s - 1)
-        top, bottom = (22.0, 12.0, 42.0), (74.0, 12.0, 40.0)
+        top, bottom = (20.0, 12.0, 40.0), (72.0, 10.0, 38.0)
         col = tuple(int(top[c] * (1 - t) + bottom[c] * t) for c in range(3))
         cd.line([(0, y), (s, y)], fill=col + (255,))
     cloth = Image.composite(cloth, transparent, mask)
@@ -183,121 +215,161 @@ def build_icon() -> Image.Image:
     # Fold shading, clipped to the silhouette.
     folds = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     fd = ImageDraw.Draw(folds)
-    for i, x in enumerate(range(70, 200, 18)):
-        shade = 115 if i % 2 == 0 else 38
-        fd.line([(x, 28), (x + (x - 128) * 0.30, 214)], fill=(shade, 16, shade, 62), width=9)
-    fd.line([(80, 26), (176, 26)], fill=(150, 70, 210, 90), width=7)
-    fd.line([(128, 30), (128, 214)], fill=(220, 120, 220, 45), width=3)
+    for i, x in enumerate(range(70, 200, 16)):
+        shade = 104 if i % 2 == 0 else 26
+        fd.line([p(x, 26), p(x + (x - 128) * 0.32, 216)],
+                fill=(shade, 14, shade, 58), width=max(1, int(9 * k)))
+    fd.line([p(80, 26), p(176, 26)], fill=(150, 70, 210, 92), width=max(1, int(7 * k)))
+    fd.line([p(128, 30), p(128, 214)], fill=(220, 120, 220, 40), width=max(1, int(3 * k)))
     folds = Image.composite(folds, transparent, mask)
     cloth = Image.alpha_composite(cloth, folds)
 
-    # Shoulder yoke / Evil-Saiyan style pauldrons, drawn over the cloth.
+    # Shoulder yoke / Evil-Saiyan pauldrons.
     yoke = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     yd = ImageDraw.Draw(yoke)
-    yd.polygon([(48, 12), (92, 12), (98, 40), (66, 52), (50, 34)], fill=(26, 14, 44, 255))
-    yd.polygon([(208, 12), (164, 12), (158, 40), (190, 52), (206, 34)], fill=(26, 14, 44, 255))
-    yd.line([(48, 12), (92, 12), (98, 40), (66, 52), (50, 34), (48, 12)],
-            fill=(168, 92, 255, 210), width=3)
-    yd.line([(208, 12), (164, 12), (158, 40), (190, 52), (206, 34), (208, 12)],
-            fill=(168, 92, 255, 210), width=3)
+    yd.polygon([p(*q) for q in [(48, 12), (92, 12), (98, 40), (66, 52), (50, 34)]],
+               fill=(24, 13, 42, 255))
+    yd.polygon([p(*q) for q in [(208, 12), (164, 12), (158, 40), (190, 52), (206, 34)]],
+               fill=(24, 13, 42, 255))
+    for poly in (
+        [(48, 12), (92, 12), (98, 40), (66, 52), (50, 34), (48, 12)],
+        [(208, 12), (164, 12), (158, 40), (190, 52), (206, 34), (208, 12)],
+    ):
+        yd.line([p(*q) for q in poly], fill=(168, 92, 255, 215), width=max(1, int(3 * k)))
     cloth = Image.alpha_composite(cloth, yoke)
 
-    # Neon trim + central emblem, with a soft bloom behind them.
+    # Neon trim, branching veins, motes and central emblem.
     neon = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     nd = ImageDraw.Draw(neon)
-    path = outline + [outline[0]]
-    nd.line(path, fill=(255, 62, 168, 255), width=6, joint="curve")
-    nd.line([(p[0] + (128 - p[0]) * 0.10, p[1] + 12) for p in outline[2:15]],
-            fill=(150, 92, 255, 170), width=3, joint="curve")
-    nd.line([(80, 24), (176, 24)], fill=(255, 150, 220, 235), width=5)
-    # Scattered energy motes following the cloth folds.
-    motes = [(92, 96), (106, 132), (150, 108), (164, 150), (84, 168),
-             (176, 182), (112, 186), (144, 170), (128, 146)]
-    for mx, my in motes:
-        nd.ellipse([(mx - 3, my - 3), (mx + 3, my + 3)], fill=(255, 90, 190, 220))
-    # Chest emblem: diamond with a bright core.
-    nd.polygon([(128, 58), (143, 80), (128, 102), (113, 80)], outline=(255, 90, 190, 255), width=4)
-    nd.ellipse([(122, 74), (134, 86)], fill=(240, 210, 255, 255))
+    nd.line(pts + [pts[0]], fill=(255, 66, 172, 255), width=max(1, int(6 * k)), joint="curve")
+    nd.line([p(x + (128 - x) * 0.10, y + 12) for x, y in outline[2:15]],
+            fill=(150, 96, 255, 175), width=max(1, int(3 * k)), joint="curve")
+    nd.line([p(80, 24), p(176, 24)], fill=(255, 152, 222, 235), width=max(1, int(5 * k)))
 
-    bloom = neon.filter(ImageFilter.GaussianBlur(7))
-    bloom.putalpha(bloom.getchannel("A").point(lambda v: int(v * 0.55)))
+    veins = [
+        [(128, 96), (112, 128), (96, 168), (84, 204)],
+        [(128, 96), (146, 130), (162, 170), (176, 206)],
+        [(128, 100), (126, 142), (120, 186)],
+        [(100, 120), (88, 152), (92, 190)],
+        [(156, 120), (170, 154), (166, 192)],
+    ]
+    for v in veins:
+        nd.line([p(*q) for q in v], fill=(240, 58, 140, 205),
+                width=max(1, int(3 * k)), joint="curve")
+    motes = [(92, 96), (106, 132), (150, 108), (164, 150), (84, 168),
+             (176, 182), (112, 186), (144, 170), (128, 146), (118, 200), (140, 198)]
+    for mx, my in motes:
+        r = max(1, int(3 * k))
+        nd.ellipse([p(mx - 3, my - 3), p(mx + 3, my + 3)], fill=(255, 96, 190, 225))
+    nd.polygon([p(*q) for q in [(128, 56), (146, 82), (128, 108), (110, 82)]],
+               outline=(255, 96, 190, 255), width=max(1, int(4 * k)))
+    nd.ellipse([p(121, 75), p(135, 89)], fill=(242, 214, 255, 255))
+    nd.ellipse([p(125, 79), p(131, 85)], fill=(255, 255, 255, 255))
+
+    bloom = neon.filter(ImageFilter.GaussianBlur(max(2, int(7 * k))))
+    bloom.putalpha(bloom.getchannel("A").point(lambda v: int(v * 0.58)))
     composed = Image.alpha_composite(cloth, bloom)
     composed = Image.alpha_composite(composed, neon)
 
-    # Fine cloth noise, only inside the silhouette.
+    # Fine woven noise, only inside the silhouette.
     rng = np.random.default_rng(SEED + 1)
     noise = rng.normal(0, 7, (s, s)).astype(np.float32)
     arr = np.asarray(composed, dtype=np.float32).copy()
     inside = np.asarray(mask, dtype=bool) & (arr[..., 3] > 0)
     arr[..., :3] += noise[..., None] * inside[..., None]
-    composed = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGBA")
+    return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGBA")
 
-    return composed.resize((64, 64), Image.LANCZOS)
+
+def build_icon() -> Image.Image:
+    """64x64 inventory icon (transparent background)."""
+    return build_cape_artwork(512).resize((64, 64), Image.LANCZOS)
 
 
 # --------------------------------------------------------------------------
-# 3. Atlas for the folded 3D inventory model (opaque cloth, UV-mapped)
+# 3. Atlas for the folded 3D inventory model (opaque, 128x128, 5 UV strips)
 # --------------------------------------------------------------------------
 def build_folded_texture() -> Image.Image:
-    s = 64
+    s = 512
     yy, xx = np.mgrid[0:s, 0:s]
     t = (yy / (s - 1))[..., None]
-    top = np.array([24.0, 14.0, 46.0])
-    bottom = np.array([78.0, 14.0, 46.0])
+    top = np.array([16.0, 10.0, 32.0])
+    bottom = np.array([52.0, 10.0, 34.0])
     rgb = top * (1.0 - t) + bottom * t
 
-    folds = (np.sin(xx * np.pi / 7.0) * 9.0 + np.cos(xx * np.pi / 3.0) * 4.0)[..., None]
+    weave = (np.sin(xx * np.pi / 2.0) * np.sin(yy * np.pi / 2.0) * 3.0)[..., None]
+    folds = (np.sin(xx * np.pi / 46.0) * 9.0 + np.cos(yy * np.pi / 80.0) * 5.0)[..., None]
     rng = np.random.default_rng(SEED + 2)
-    rgb = rgb + folds + rng.normal(0, 3.5, (s, s))[..., None]
-
-    border = (xx < 3) | (xx > s - 4)
-    rgb[..., 0] += border * 90.0
-    rgb[..., 1] += border * 12.0
-    rgb[..., 2] += border * 70.0
-
-    band = (yy >= 4) & (yy < 9)  # yoke
-    rgb[..., 0] += band * 70.0
-    rgb[..., 1] += band * 20.0
-    rgb[..., 2] += band * 110.0
-
-    seam = ((xx % 12) < 1) & (yy > 10)  # vertical energy seams
-    rgb[..., 0] += seam * 30.0
-    rgb[..., 2] += seam * 45.0
-
-    diamond = np.abs(xx - 32) + np.abs(yy - 22) < 7  # chest emblem
-    rgb[..., 0] += diamond * 100.0
-    rgb[..., 1] += diamond * 40.0
-    rgb[..., 2] += diamond * 120.0
-
-    rgb = np.clip(rgb, 0, 255)
+    rgb = rgb + weave + folds + rng.normal(0, 4.0, (s, s))[..., None]
     alpha = np.full((s, s, 1), 255.0)
-    return Image.fromarray(np.dstack((rgb, alpha)).astype(np.uint8), "RGBA")
+    bg = Image.fromarray(np.dstack((np.clip(rgb, 0, 255), alpha)).astype(np.uint8), "RGBA")
+
+    # Stretch the cape artwork horizontally so the five 3D folds sample a
+    # continuous, detailed cape front rather than a narrow centred icon.
+    art = build_cape_artwork(256).resize((620, 512), Image.LANCZOS)
+    art = art.crop(((620 - 512) // 2, 0, (620 - 512) // 2 + 512, 512))
+    out = Image.alpha_composite(bg, art)
+
+    # Woven gold/violet yoke band and hem, plus a subtle side seam.
+    d = ImageDraw.Draw(out)
+    d.rectangle([0, 0, s - 1, int(9 * s / 128)], fill=(58, 26, 78, 255))
+    d.line([(0, int(11 * s / 128)), (s, int(11 * s / 128))],
+           fill=(196, 118, 246, 255), width=max(2, int(2 * s / 128)))
+    d.rectangle([0, s - int(9 * s / 128), s - 1, s - 1], fill=(26, 8, 30, 255))
+    for side in (int(1.5 * s / 128), s - int(1.5 * s / 128)):
+        d.line([(side, 0), (side, s)], fill=(120, 40, 160, 255), width=max(1, int(s / 128)))
+
+    return out.resize((SIZE, SIZE), Image.LANCZOS)
 
 
 # --------------------------------------------------------------------------
-# 4. Three animated ember sprites (transparent, additive-looking)
+# 4. Three soft ember sprites (anti-aliased, low intensity)
 # --------------------------------------------------------------------------
 def build_particle_sprites() -> list[Image.Image]:
-    s = 16
+    """Tres estados de brasa: núcleo cálido, destello frío y halo apagándose.
+
+    Se generan a 64px y se reducen con Lanczos para que el sprite de 16px
+    tenga antialiasing real. La intensidad es deliberadamente baja: el aura
+    debe acompañar la capa, no llenar el cielo de motas.
+    """
+    s = 64
+    out_s = 16
     yy, xx = np.mgrid[0:s, 0:s]
     c = (s - 1) / 2.0
-    radius = np.sqrt((xx - c) ** 2 + (yy - c) ** 2)
+    r2 = (xx - c) ** 2 + (yy - c) ** 2
     sprites = []
 
-    for frame, spread in enumerate((2.0, 3.1, 4.2)):
-        glow = np.clip(1.0 - radius / (spread * 2.3), 0.0, 1.0) ** 1.6
-        core = np.clip(1.0 - radius / spread, 0.0, 1.0)
-        # Small upward wisp on later frames.
-        wisp = np.clip(1.0 - (np.abs(xx - c) / (spread * 0.55)), 0.0, 1.0) * \
-            np.clip((c - yy) / (spread * 1.8), 0.0, 1.0) * 0.35 * frame
-        alpha = np.clip((glow * 0.62 + core * 0.8 + wisp) * 255.0, 0, 255)
+    # spread, tinte RGB, potencia del núcleo, brillo de la cruz
+    frames = [
+        (6.2, (1.00, 0.36, 0.78), 0.90, 0.05),
+        (8.0, (0.88, 0.52, 1.00), 0.72, 0.34),
+        (10.4, (0.58, 0.42, 0.96), 0.34, 0.08),
+    ]
+
+    for frame, (spread, tint, core_power, cross_power) in enumerate(frames):
+        halo = np.exp(-r2 / (2.0 * (spread * 1.5) ** 2)) * 0.34
+        core = np.exp(-r2 / (2.0 * (spread * 0.42) ** 2)) * core_power
+        ring = (
+            np.exp(-((np.sqrt(r2) - spread * 1.15) ** 2)
+                   / (2.0 * (spread * 0.22) ** 2)) * 0.16
+            if frame == 2 else 0.0
+        )
+        flare = (
+            np.exp(-((xx - c) ** 2) / (2.0 * (spread * 0.14) ** 2))
+            * np.exp(-((yy - c) ** 2) / (2.0 * (spread * 1.05) ** 2))
+            + np.exp(-((yy - c) ** 2) / (2.0 * (spread * 0.14) ** 2))
+            * np.exp(-((xx - c) ** 2) / (2.0 * (spread * 1.05) ** 2))
+        ) * cross_power
+        a = np.clip((halo + core + ring + flare) * 0.62, 0.0, 1.0)
 
         rgb = np.zeros((s, s, 3), dtype=np.float32)
-        rgb[..., 0] = 80.0 + 175.0 * core
-        rgb[..., 1] = 20.0 + 70.0 * core
-        rgb[..., 2] = 110.0 + 145.0 * core
-        sprites.append(Image.fromarray(
-            np.dstack((np.clip(rgb, 0, 255), alpha)).astype(np.uint8), "RGBA"))
+        for channel, base in enumerate((72.0, 26.0, 92.0)):
+            rgb[..., channel] = base + (255.0 * tint[channel] - base) * np.clip(
+                core + flare * 0.5, 0.0, 1.0
+            )
+        img = Image.fromarray(
+            np.dstack((np.clip(rgb, 0, 255), a * 255.0)).astype(np.uint8), "RGBA"
+        )
+        sprites.append(img.resize((out_s, out_s), Image.LANCZOS))
 
     return sprites
 
@@ -324,13 +396,17 @@ def main() -> None:
     embers = build_particle_sprites()
     for index, sprite in enumerate(embers):
         sprite.save(particle_dir / f"capa_ember_{index}.png")
-    print(f"particle sprites: {len(embers)} x 16x16")
+    print(f"particle sprites: {len(embers)} x {embers[0].size[0]}x{embers[0].size[1]}")
 
     # Sanity: glowmask must stay 128x128 and must not cover new texels.
     ga = np.asarray(Image.open(ORIGINALS / "armor_glowmask.png").convert("RGBA"))[..., 3]
     gb = np.asarray(glowmask)[..., 3]
     assert (ga > 0).sum() == (gb > 0).sum(), "glowmask coverage changed - would punch holes"
     print(f"emissive texels unchanged: {(ga > 0).sum()}")
+    assert np.array_equal(
+        np.asarray(Image.open(ORIGINALS / "armor.png").convert("RGBA"))[..., 3],
+        np.asarray(armor)[..., 3],
+    ), "base alpha changed"
 
 
 if __name__ == "__main__":

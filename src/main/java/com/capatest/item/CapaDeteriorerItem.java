@@ -6,7 +6,7 @@ import com.capatest.particle.CapaParticles;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
-import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -155,36 +155,37 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
     }
 
     /**
-     * Aura de partículas, emitida desde el servidor para que también la vean
-     * otros jugadores. La llaman inventoryTick (slot de pecho) y CuriosCompat
-     * (slot back de Curios), así que el efecto no se pierde al cambiar de slot.
+     * Aura SERENA, emitida desde el servidor para que también la vean otros
+     * jugadores. La llaman inventoryTick (slot de pecho) y CuriosCompat (slot
+     * back de Curios). El sello por tick evita duplicar el efecto si ambos
+     * caminos se ejecutan en el mismo tick con Curios instalado.
+     *
+     * v1.3.0 elimina PORTAL/CRIMSON_SPORE/SOUL_FIRE_FLAME: eran las motas que
+     * llenaban el cielo en las capturas. Ahora queda una sola brasa propia,
+     * dos por segundo, pegada a la espalda y con deriva casi nula.
      */
     public static void spawnAura(Level level, Player player) {
         if (level.isClientSide || !(level instanceof ServerLevel server)) {
             return;
         }
-        if (player.tickCount % 4 != 0) {
+        if (player.tickCount % 10 != 0) {
             return;
         }
 
-        double yaw = Math.toRadians(player.getYRot());
-        double x = player.getX() - Math.sin(yaw) * 0.38;   // detrás del jugador
-        double z = player.getZ() + Math.cos(yaw) * 0.38;
-        double y = player.getY() + 0.85 + ThreadLocalRandom.current().nextDouble() * 0.9;
-        boolean fast = player.isSprinting();
+        CompoundTag data = player.getPersistentData();
+        int tick = player.tickCount;
+        if (data.getInt("capatest:aura_tick") == tick) {
+            return;
+        }
+        data.putInt("capatest:aura_tick", tick);
 
-        // Partícula propia del mod (3 sprites) + apoyo de las vanilla.
+        double yaw = Math.toRadians(player.getYRot());
+        double x = player.getX() - Math.sin(yaw) * 0.30;   // detrás del jugador
+        double z = player.getZ() + Math.cos(yaw) * 0.30;
+        double y = player.getY() + 0.55 + ThreadLocalRandom.current().nextDouble() * 0.70;
+        int count = player.isSprinting() ? 2 : 1;
+
         server.sendParticles(CapaParticles.CAPA_EMBER.get(), x, y, z,
-                fast ? 3 : 2, 0.12, 0.18, 0.12, 0.01);
-        server.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, x, y, z,
-                fast ? 2 : 1, 0.12, 0.18, 0.12, 0.01);
-        if (player.tickCount % 8 == 0) {
-            server.sendParticles(ParticleTypes.PORTAL, x, y + 0.2, z,
-                    fast ? 3 : 2, 0.28, 0.35, 0.28, 0.02);
-        }
-        if (player.tickCount % 12 == 0) {
-            server.sendParticles(ParticleTypes.CRIMSON_SPORE, x, y + 0.4, z,
-                    1, 0.25, 0.10, 0.25, 0.005);
-        }
+                count, 0.07, 0.10, 0.07, 0.001);
     }
 }

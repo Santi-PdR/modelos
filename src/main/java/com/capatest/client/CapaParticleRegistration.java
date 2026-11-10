@@ -7,7 +7,12 @@ import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-/** Registro del proveedor de partículas, sólo en cliente y en el mod bus. */
+/**
+ * Registro del proveedor de partículas, sólo en cliente y en el mod bus.
+ * v1.3.0: sigue usando registerSpriteSet (obligatorio para
+ * PARTICLE_SHEET_TRANSLUCENT), pero el provider aplica fade, deriva mínima y
+ * alpha bajo; la frecuencia de emisión se controla en spawnAura.
+ */
 @Mod.EventBusSubscriber(modid = CapaTestMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class CapaParticleRegistration {
     private CapaParticleRegistration() {
