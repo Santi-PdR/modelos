@@ -9,6 +9,9 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Capa Deteriorer Evil Saiyan para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.4.0: capa equipada con relieve real (98 huesos / 152 cubos) e item 3D
+plegado de 33 huesos con siete pliegues, yugo, cuello, broche y puntas.
+Animaciones originales, alfa y glowmask intactos. Descarga directa del .jar.
 v1.3.0: modelo 3D plegado de 8 huesos con atlas 128x128 continuo, texturas
 procedurales multicapa, aura de brasas propia mucho más tranquila y descarga
 directa del .jar desde GitHub Releases.

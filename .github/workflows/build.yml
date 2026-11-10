@@ -39,15 +39,19 @@ jobs:
           import hashlib, json, pathlib, struct
           root = pathlib.Path('.')
           base = root / 'src/main/resources/assets/capatest'
+
           for p in base.rglob('*.json'):
               json.loads(p.read_text())
 
-          # idle/moving originales, aprobados por el usuario: intocables.
+          # Modelo y animaciones aprobados: intocables.
           armor_anim_path = base / 'animations/item/armor/capa_deteriorer_evilsaiyan.animation.json'
           assert hashlib.sha256(armor_anim_path.read_bytes()).hexdigest() == \
               'd796ef2c349b2481077ca72f6f4b4920d066058b02119288c10cfc50f8d75dca'
           expected = {'animation.idle', 'animation.moving', 'animation.sprint', 'animation.air'}
           assert expected <= set(json.loads(armor_anim_path.read_text())['animations'])
+          orig_geo_path = root / 'tools/originals/capa_deteriorer_evilsaiyan.geo.json'
+          assert hashlib.sha256(orig_geo_path.read_bytes()).hexdigest() == \
+              'e01e347c5be0678b18907d91452d7a0c405ec430ef3fc751096532c804d43b8c'
 
           for name in ('armor/capa_deteriorer_evilsaiyan.png',
                        'armor/capa_deteriorer_evilsaiyan_glowmask.png'):
@@ -65,21 +69,47 @@ jobs:
           particle = json.loads((base / 'particles/capa_ember.json').read_text())
           assert len(particle['textures']) == 3
 
-          # Geo plegado v1.3.0: 8 huesos, atlas 128 y ninguna UV fuera de rango.
+          # Geo plegado v1.4.0: 33 huesos, atlas 128 y ninguna UV fuera de rango.
           folded = json.loads((base / 'geo/item/cape_folded.geo.json').read_text())['minecraft:geometry'][0]
           desc = folded['description']
           assert desc['identifier'] == 'geometry.cape_folded'
           assert (desc['texture_width'], desc['texture_height']) == (128, 128)
-          assert len(folded['bones']) == 8
+          assert len(folded['bones']) == 33
+          folded_names = {b['name'] for b in folded['bones']}
+          assert {'fold_0', 'fold_6', 'ridge_0', 'ridge_5', 'hem_0', 'hem_6',
+                  'yoke', 'collar_center', 'clasp_frame', 'clasp'} <= folded_names
           for bone in folded['bones']:
               for cube in bone.get('cubes', []):
                   for face in cube['uv'].values():
                       u, v = face['uv']
                       uw, vh = face['uv_size']
+                      assert uw > 0 and vh > 0, (bone['name'], face)
                       assert 0 <= u and 0 <= v and u + uw <= 128 and v + vh <= 128, (bone['name'], face)
 
           folded_anim = json.loads((base / 'animations/item/cape_folded.animation.json').read_text())
           assert expected <= set(folded_anim['animations'])
+          for anim_name, spec in folded_anim['animations'].items():
+              assert set(spec['bones']) <= folded_names, (anim_name, set(spec['bones']) - folded_names)
+
+          # Geo de armadura: los 72 huesos originales siguen intactos y sólo
+          # se añaden 26 huesos de relieve con UV ya opacas.
+          armor_geo = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]
+          orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
+          assert armor_geo['bones'][:72] == orig_bones
+          assert len(armor_geo['bones']) == 98
+          new_bones = armor_geo['bones'][72:]
+          assert {b['name'] for b in new_bones} >= {
+              'v14_drape_cape_top_0', 'v14_drape_cape_mid_4', 'v14_drape_cape_bottom_4',
+              'v14_wing_L', 'v14_wing_R', 'v14_seam_L', 'v14_seam_R',
+              'v14_hem_0', 'v14_hem_6'}
+          for bone in new_bones:
+              for cube in bone.get('cubes', []):
+                  for face in cube['uv'].values():
+                      u, v = face['uv']
+                      uw, vh = face['uv_size']
+                      assert uw > 0 and vh > 0, (bone['name'], face)
+                      assert 0 <= u and 0 <= v and u + uw <= 128 and v + vh <= 128, (bone['name'], face)
+
           model = json.loads((base / 'models/item/capa_deteriorer_evilsaiyan.json').read_text())
           assert model['parent'] == 'builtin/entity'
           assert {'gui', 'ground', 'fixed', 'firstperson_righthand'} <= set(model['display'])
@@ -90,7 +120,7 @@ jobs:
                         'ParticleTypes.SOUL_FIRE_FLAME'):
               assert noisy not in java, noisy
           assert 'useAlternateGuiLighting' in renderer
-          assert 'mod_version=1.3.0' in (root / 'gradle.properties').read_text()
+          assert 'mod_version=1.4.0' in (root / 'gradle.properties').read_text()
           assert 'curios_version=5.14.1+1.20.1' in (root / 'gradle.properties').read_text()
 
           data = root / 'src/main/resources/data'
@@ -100,7 +130,7 @@ jobs:
           assert 'capatest:capa_deteriorer_evilsaiyan' in tag
           entity = json.loads((data / 'capatest/curios/entities/player.json').read_text())
           assert entity == {'entities': ['player'], 'slots': ['back']}
-          print('OK: JSON/PNG, UV 128, 8 huesos, aura serena, tag curios:back y slot back')
+          print('OK: JSON/PNG, 7 pliegues UV 128, armadura 98 huesos, aura serena y Curios back')
           PY
 
       - name: Build
@@ -129,7 +159,7 @@ jobs:
       - name: List built jars
         run: ls -lh build/libs
 
-      - name: Verify jar contents (v1.3.0 resources)
+      - name: Verify jar contents (v1.4.0 resources)
         run: |
           set -euo pipefail
           found=0
@@ -170,30 +200,33 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          JAR="build/libs/capatest-1.3.0.jar"
+          JAR="build/libs/capatest-1.4.0.jar"
           test -f "$JAR"
           NOTES=/tmp/release-notes.md
           cat > "$NOTES" <<'MD'
-          ## Capa Deteriorer v1.3.0
+          ## Capa Deteriorer v1.4.0
 
-          - Modelo 3D plegado de 8 huesos con atlas continuo de 128×128.
-          - Texturas procedurales multicapa, alfa y glowmask intactos.
-          - Aura propia mucho más tranquila: sin partículas vanilla por el cielo.
-          - Curios 5.14.1+1.20.1 opcional, sin cambios.
+          - Capa equipada con relieve: 98 huesos / 152 cubos, pliegues, alas,
+            costuras luminosas y puntas de dobladillo. Los 72 huesos y las
+            animaciones originales siguen intactos; alfa y glowmask sin cambios.
+          - Item 3D plegado rehecho con 33 huesos: 7 pliegues en abanico,
+            nervios, yugo, cuello, alas, broche, cadenas, costuras y puntas,
+            con atlas continuo de 128×128 y balanceo por animación.
+          - Aura serena y Curios 5.14.1+1.20.1 opcional, sin cambios.
 
           Requiere Forge 1.20.1 (47.x), Java 17 y GeckoLib 4.8.1.
           MD
-          if gh release view v1.3.0 >/dev/null 2>&1; then
-            gh release upload v1.3.0 "$JAR" --clobber
+          if gh release view v1.4.0 >/dev/null 2>&1; then
+            gh release upload v1.4.0 "$JAR" --clobber
           else
-            gh release create v1.3.0 "$JAR" \
-              --title "Capa Deteriorer v1.3.0" \
+            gh release create v1.4.0 "$JAR" \
+              --title "Capa Deteriorer v1.4.0" \
               --notes-file "$NOTES" \
               --target "$GITHUB_SHA"
           fi
-          ASSETS="$(gh release view v1.3.0 --json assets --jq '.assets[].name')"
-          grep -qx 'capatest-1.3.0.jar' <<< "$ASSETS"
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.3.0/capatest-1.3.0.jar"
+          ASSETS="$(gh release view v1.4.0 --json assets --jq '.assets[].name')"
+          grep -qx 'capatest-1.4.0.jar' <<< "$ASSETS"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.4.0/capatest-1.4.0.jar"
           echo "### Descarga directa" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "[${URL}](${URL})" >> "$GITHUB_STEP_SUMMARY"

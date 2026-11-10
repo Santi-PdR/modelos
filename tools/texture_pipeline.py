@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Procedural texture suite for the "Capa Deteriorer Evil Saiyan" (v1.3.0).
+Procedural texture suite for the "Capa Deteriorer Evil Saiyan" (v1.4.0).
 
 Why procedural instead of AI-generated art:
     The 128x128 armor texture is a strict UV atlas. Every cube face of
@@ -17,8 +17,9 @@ Why procedural instead of AI-generated art:
       * the glowmask must not grow, or it would punch holes in the cape.
 
     The folded 3D item model uses its own 128x128 artwork atlas (generated from
-    the same cape design as the icon), and the ember particles use three soft,
-    anti-aliased 16x16 sprites.
+    the same cape design as the icon), split into seven continuous UV strips
+    with baked crease shading and reserved piping columns. The ember particles
+    use three soft, anti-aliased 16x16 sprites.
 
 Outputs (all committed, so CI needs no Python deps):
     textures/item/armor/capa_deteriorer_evilsaiyan.png            128x128
@@ -38,6 +39,8 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
+
+from fold_spec import PANELS, STRIP_OFFSETS, STRIP_WIDTHS, UV
 
 ROOT = Path(__file__).resolve().parents[1]
 ORIGINALS = ROOT / "tools" / "originals"
@@ -286,7 +289,7 @@ def build_icon() -> Image.Image:
 
 
 # --------------------------------------------------------------------------
-# 3. Atlas for the folded 3D inventory model (opaque, 128x128, 5 UV strips)
+# 3. Atlas for the folded 3D inventory model (opaque, 128x128, 7 UV strips)
 # --------------------------------------------------------------------------
 def build_folded_texture() -> Image.Image:
     s = 512
@@ -303,20 +306,45 @@ def build_folded_texture() -> Image.Image:
     alpha = np.full((s, s, 1), 255.0)
     bg = Image.fromarray(np.dstack((np.clip(rgb, 0, 255), alpha)).astype(np.uint8), "RGBA")
 
-    # Stretch the cape artwork horizontally so the five 3D folds sample a
+    # Stretch the cape artwork horizontally so the seven 3D folds sample a
     # continuous, detailed cape front rather than a narrow centred icon.
     art = build_cape_artwork(256).resize((620, 512), Image.LANCZOS)
     art = art.crop(((620 - 512) // 2, 0, (620 - 512) // 2 + 512, 512))
     out = Image.alpha_composite(bg, art)
 
-    # Woven gold/violet yoke band and hem, plus a subtle side seam.
+    # Baked lighting per fold: outer strips recede, the centre catches light.
+    arr = np.asarray(out, dtype=np.float32).copy()
+    body0, body1 = int(10 * s / 128), int(118 * s / 128)
+    for panel, offset, width in zip(PANELS, STRIP_OFFSETS, STRIP_WIDTHS):
+        x0, x1 = int(offset * s / 128), int((offset + width) * s / 128)
+        shade = 0.80 + 0.20 * panel["bulge"]
+        arr[body0:body1, x0:x1, :3] *= shade
+
+    # Creases exactly at the seven UV boundaries, with a thin rim highlight.
+    out = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGBA")
     d = ImageDraw.Draw(out)
+    for boundary in STRIP_OFFSETS[1:]:
+        x = int(boundary * s / 128)
+        d.line([(x, body0), (x, body1)], fill=(14, 5, 22, 255), width=2)
+        d.line([(x + 2, body0), (x + 2, body1)], fill=(126, 52, 178, 255), width=1)
+
+    # Woven violet yoke band and hem.
     d.rectangle([0, 0, s - 1, int(9 * s / 128)], fill=(58, 26, 78, 255))
-    d.line([(0, int(11 * s / 128)), (s, int(11 * s / 128))],
+    d.line([(0, int(11 * s / 128)), (s - 1, int(11 * s / 128))],
            fill=(196, 118, 246, 255), width=max(2, int(2 * s / 128)))
     d.rectangle([0, s - int(9 * s / 128), s - 1, s - 1], fill=(26, 8, 30, 255))
-    for side in (int(1.5 * s / 128), s - int(1.5 * s / 128)):
-        d.line([(side, 0), (side, s)], fill=(120, 40, 160, 255), width=max(1, int(s / 128)))
+    d.line([(0, s - int(2 * s / 128)), (s - 1, s - int(2 * s / 128))],
+           fill=(154, 62, 198, 255), width=max(1, int(s / 128)))
+
+    # Reserved columns: dark lining (120..123) and neon piping (124..127).
+    arr = np.asarray(out, dtype=np.float32).copy()
+    lining0 = int(UV["lining"]["uv"][0] * s / 128)
+    piping0 = int(UV["piping"]["uv"][0] * s / 128)
+    arr[:, lining0:piping0, :3] = np.array([20.0, 8.0, 30.0])
+    glow = np.array([188.0, 78.0, 226.0]) * (0.72 + 0.28 * t[:, piping0:s, :])
+    arr[:, piping0:s, :3] = np.clip(glow, 0, 255)
+    arr[:, lining0:s, 3] = 255.0
+    out = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGBA")
 
     return out.resize((SIZE, SIZE), Image.LANCZOS)
 
