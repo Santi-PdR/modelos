@@ -35,6 +35,23 @@ jobs:
       - name: List built jars
         run: ls -lh build/libs
 
+      - name: Verify jar contents
+        run: |
+          set -euo pipefail
+          found=0
+          for jar in build/libs/*.jar; do
+            case "$jar" in *-sources.jar) continue ;; esac
+            found=1
+            echo "== $jar =="
+            jar tf "$jar" > /tmp/jar-contents.txt
+            grep -qx 'META-INF/mods.toml' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/CapaTestMod.class' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan.png' /tmp/jar-contents.txt
+            echo "OK: mods.toml, clase principal, geo y textura presentes"
+          done
+          test "$found" -eq 1
+
       - name: Upload mod jar
         uses: actions/upload-artifact@v4
         with:
