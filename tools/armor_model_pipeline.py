@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reconstruye la capa EQUIPADA como una superficie de tela continua (v1.9.0).
+"""Reconstruye la capa EQUIPADA como una superficie de tela continua (v1.10.0).
 
 Lee tools/originals/capa_deteriorer_evilsaiyan.geo.json (72 huesos / 126 cubos,
 copia prístina aprobada) y NO modifica ni uno solo de esos huesos. Añade una

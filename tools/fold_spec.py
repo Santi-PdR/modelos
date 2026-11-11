@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Especificación compartida del item plegado v1.9.0: un bulto de tela 3D.
+"""Especificación compartida del item plegado v1.10.0: un bulto de tela 3D.
 
 El item deja de ser un abanico de 7 láminas casi planas (v1.4-v1.7) y pasa a
 ser una capa DOBLADA con volumen: bloque de forro detrás, 7 franjas delanteras

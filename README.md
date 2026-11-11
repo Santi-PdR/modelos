@@ -1,140 +1,100 @@
-# Mantle of the Blight Star — v1.9.0
+# Mantle of the Blight Star — v1.10.0
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Añade el **Mantle of the Blight Star**: geometría propia, cinco animaciones
-(cuatro de armadura + una propia del item), textura de 128×128 con glowmask
-pulsante, **bulto 3D plegado animado en inventario/mano**, un **motivo de
-estrella marchita**, **dos tipos de aura muda** (brasas cálidas + motas frías
-orbitales) y compatibilidad opcional con el slot **`back` de Curios API
-5.14.1+1.20.1**.
+(cuatro de armadura + `animation.item`), textura de 128×128 con glowmask
+pulsante, **bulto 3D plegado animado**, un **icono pixel art 2D/RPG**, tela
+tejida con bordado, **dos tipos de aura muda** y compatibilidad opcional con
+el slot **`back` de Curios API 5.14.1+1.20.1**.
 
-El nombre visible queda **en inglés en `en_us.json` y `es_es.json`**, como se
-pidió; el lore sí está traducido. Es un nombre de uso general, ligado al
-planeta **Blight Star**, no a un personaje Saiyan. El ID interno sigue siendo
+El nombre visible está **en inglés** en `en_us.json` y `es_es.json`; el lore sí
+está traducido. El ID interno sigue siendo
 `capatest:capa_deteriorer_evilsaiyan` para no romper mundos, comandos ni el tag
 de Curios.
 
 ## Descarga directa del `.jar`
 
-**https://github.com/Santi-PdR/modelos/releases/download/v1.9.0/capatest-1.9.0.jar**
+**https://github.com/Santi-PdR/modelos/releases/download/v1.10.0/capatest-1.10.0.jar**
 
 El CI publica el mod como **Release asset `.jar` crudo**, no como ZIP de
 `actions/upload-artifact`. El repositorio es privado: hay que iniciar sesión en
 GitHub con la cuenta `Santi-PdR` para descargarlo. Cada push a la rama
-actualiza el mismo asset de `v1.9.0` con `--clobber`; el tag queda fijo.
-Las entregas anteriores siguen disponibles en `v1.8.0`, `v1.7.0`, `v1.6.1`,
-`v1.6.0`, `v1.5.1`, `v1.4.0` y `v1.3.0`. **Usar v1.9.0**: v1.6.0 crashea al
-cargar el geo plegado y v1.5.0 tiene el crash de rotación.
+actualiza el mismo asset de `v1.10.0` con `--clobber`; el tag queda fijo.
+Las entregas anteriores siguen disponibles en `v1.9.0`, `v1.8.0`, `v1.7.0`,
+`v1.6.1`, `v1.6.0`, `v1.5.1`, `v1.4.0` y `v1.3.0`. **Usar v1.10.0**:
+v1.6.0 crashea al cargar el geo plegado y v1.5.0 tiene el crash de rotación.
 
 > PR #1 sigue abierta: https://github.com/Santi-PdR/modelos/pull/1
 
-## v1.9.0 — Blight Star: nombre, modelo trabajado y efectos ligeros
+## v1.10.0 — icono pixel art 2D RPG y tela reworkada
 
-### 1. La combinación de nombre
+### 1. Icono: ahora SÍ es como las dos capas de referencia
 
-El nombre anterior (*Dying Star Mantle*) se combina con el planeta **Blight
-Star** así:
+El icono de v1.9.0 era una ilustración suave con degradados, hombreras
+biseladas y halo: **no era el estilo que pediste**. Las dos referencias
+`image-13.png` / `image-14.png` son en realidad **el mismo icono 16×16
+recoloreado**: capucha redondeada, hombros, pliegues verticales, dobladillo,
+5–6 colores planos, contorno duro y **cero antialiasing, degradado o bloom**.
 
-> **Mantle of the Blight Star**
+v1.10.0 recupera esa silueta y esa técnica:
 
-Conserva «Mantle» y la idea de «última luz de una estrella», pero el astro ya
-no es genérico: es Blight Star. El lore queda neutro y usable para cualquier
-capa cósmica / de exploración / de RPG:
+- `ICON_PIXEL_MAP`: los 16×16 píxeles de la referencia, con paleta plana de
+  11 colores en violeta + oro + cian (`ICON_PALETTE`).
+- broche de 5 píxeles con núcleo claro, estrella cian de 4 puntas en el
+  pliegue central y vetas frías sueltas (equivalentes a las verdes de la
+  referencia 2).
+- **Ampliado 4× con `Image.NEAREST`** a 64×64: bloques de color definidos, sin
+  blur, sin degradado, sin halo. Rim light discreto de 1 píxel en el borde
+  superior/izquierdo para que se lea en el slot.
+- `preview_cloth.py` también amplía el icono con `NEAREST` para no mentir en
+  la comparación.
 
-- `Woven from the last light of Blight Star`
-- `Violet twill · blighted constellations · calm ember aura`
-- `A diamond clasp holds the fold; its star still remembers the night`
+Comparativa a igual escala:
+[`docs/capa_v1100_icon_compare.png`](docs/capa_v1100_icon_compare.png)
+(referencia 1 · referencia 2 · icono nuevo). Icono final:
+[`docs/capa_v1100_icon.png`](docs/capa_v1100_icon.png).
 
-### 2. Icono rehecho con las dos referencias
+### 2. Textura: de líneas neón a paño tejido y bordado
 
-El icono anterior parecía un rectángulo oscuro. v1.9.0 lo redibuja desde cero
-usando las **dos capas 16×16** que pasaste como referencia:
+Dijiste que la tela probablemente se veía fea; le di la pasada antes de que la
+probaras. El problema de v1.9.0 era un **gran diamante magenta de líneas
+finas** sobre fondo casi negro, con bloom rosa: parecía un wireframe, no tela.
+v1.10.0:
 
-- de la capa granate: silueta ancha, **hombreras**, cuello alto, broche cálido,
-  pliegue central y festón inferior;
-- de la capa negra/verde: **ribete luminoso**, contraste de hombreras y borde
-  exterior;
-- traducido a la paleta violeta + oro + cian de Blight Star, con doble ribete,
-  bisel en las hombreras, esporas y núcleo estelar de ocho rayos.
+- **sarga con más presencia**: trama, diagonal, urdimbre, grano y sombreado
+  de los 3 pliegues; el paño deja de ser un plano oscuro.
+- **medallón relleno** con facetas oscuras y bisel, engarce **dorado** y
+  núcleo cian de Blight Star; ya no es un contorno magenta vacío.
+- **bordado a puntadas** (`stitch()`) en yugo, doble ribete, constelación,
+  sigilos, valles de los pliegues y dobladillo, en hilo oro/violeta en vez de
+  líneas luminosas continuas.
+- estrellas y pespuntes en oro apagado; esporas frías más escasas; **bloom
+  reducido a menos de la mitad**; cian sólo en el núcleo y los 8 rayos.
+- el bulto plegado, las hombreras y la gema del broche se retiñeron a la misma
+  paleta oro/violeta/cian para que item y capa equipada combinen.
 
-Comparativa: [`docs/capa_v190_icon_compare.png`](docs/capa_v190_icon_compare.png).
-El icono final sigue siendo **64×64** y se reduce desde arte a 512px para que
-se lea en el slot sin parecer recortado.
+**Intacto**: alfa base byte-idéntico, **1636 texels emisivos** sin ampliar el
+glowmask de armadura, UV≤128, canvas 96×48, 648 caras UV nuevas en zonas
+opacas, onda 2D/3D compartida y superficie lisa.
 
-### 3. Modelo más trabajado: relieve, espalda y FRENTE
+### 3. Se conserva todo lo de v1.9.0
 
-Se **conserva toda la superficie continua** de v1.7.0/v1.8.0: canvas 96×48,
-mosaico 9×3, 3 pliegues anchos con la misma onda 2D/3D, 61 huesos boxy
-ocultos, alfa base byte-idéntico y **1636 texels emisivos** sin ampliar el
-glowmask de armadura. Encima de eso, ahora hay una prenda con volumen real:
+Relieve 3D (**171 huesos / 234 cubos**: 9 nervios, 2 cortinas, 5 pesas,
+cuello trasero, tirantes y arnés delantero con hombreras/cadenas/placa),
+`animation.item` en GUI/hotbar/mano, glowmask de dos tintas del item, aura de
+brasas + motas cian con presupuesto fijo de 4 partículas por tick de emisión,
+**sin `playSound` ni `SoundEvent` propio**, fail-safes, radianes, cero
+`JsonNull`, cero mixins y Curios `back`.
 
-- **Relieve 3D**: `panel_z()` aumenta la curvatura; 9 **nervios gruesos** en
-  las crestas (`v15_ridge_*`), 2 **cortinas laterales continuas** colgando de
-  los hombros (`v15_drape_*`) y 5 **pesas de dobladillo** (`v15_weight_*`).
-- **Espalda**: cuello trasero levantado de 3 piezas, 2 tirantes de suspensión,
-  medallón de Blight Star con 8 rayos cian y órbita discontinua, 4 fragmentos
-  orbitales 3D animados y esporas frías discretas.
-- **FRENTE del jugador**: arnés completo con 2 **hombreras biseladas**, 2 tiras
-  diagonales, 2 cadenas, broche, cuello de 3 piezas, placa central, bandas y
-  faldillas cortas con punta emisiva. Todo cuelga de `chestplate`, así que se
-  ve en F5 y con Curios, no queda escondido detrás de la capa.
-- **Animación del arnés**: `CapaArmorModel` mueve hombreras y cadenas con el
-  giro, el sprint y un vaivén corto; nervios, cortinas y pesas heredan la onda
-  de los paneles/hembras.
-- **Geometría**: **171 huesos / 234 cubos** (27 paneles 9×3, 9 creases, 9
-  nervios, 6 ribetes, 9 lengüetas, 2 cortinas, 5 pesas, 5 estrellas,
-  4 órbitas, 2 alas, 1 broche y el arnés delantero). **648 caras UV nuevas**,
-  todas en zonas ya opacas.
-
-Previews específicos: [`docs/capa_v190_side_relief.png`](docs/capa_v190_side_relief.png)
-(perfil / relieve) y [`docs/capa_v190_front_rig.png`](docs/capa_v190_front_rig.png)
-(arnés delantero aislado).
-
-### 4. Animación propia del item
-
-El bulto plegado sube a **36 huesos** (añade 2 hombreras con relieve) y
-estrena **`animation.item`**, seleccionada por `CapaDeteriorerItem` cuando no
-hay entidad (GUI, hotbar, mano):
-
-- balanceo y **bob** del bulto, apertura suave de los 7 pliegues, vaivén de
-  rollos, puntas, cadenas y hombreras;
-- giro de 14° y **pulso de escala** del broche;
-- ciclo de 3.2 s con `easeInOutSine`, sin movimientos bruscos.
-
-Las animaciones `idle/moving/sprint/air` siguen intactas para la armadura.
-`CapaItemGlowLayer` mantiene el pulso violeta de 2.6 s y añade un destello
-cian lento; el glowmask separado del item mezcla ambas tintas.
-
-### 5. Efectos y partículas: leves, mudas y optimizadas
-
-- **Segundo tipo de partícula**: `capatest:capa_blight_mote`, con tres sprites
-  propios de 16×16 (núcleo, cruz y anillo que se apaga). `CapaBlightParticle`
-  las mueve en una órbita minúscula con alpha bajo y sin gravedad.
-- **Presupuesto fijo**: brasa violeta cada **10 ticks** (2 al correr) + mota
-  cian cada **20 ticks** (2 al correr). Máximo **4 partículas por tick de
-  emisión**, siempre cerca de la espalda y emitidas desde servidor para que
-  también las vean otros jugadores. Sin `PORTAL` / `CRIMSON_SPORE` /
-  `SOUL_FIRE_FLAME` ni motas por el cielo.
-- **Sin sonido molesto**: el aura no llama a `playSound` ni registra
-  `SoundEvent` propio; el CI lo verifica. El único sonido es el de
-  equipamiento vanilla de armadura, una vez al ponérsela.
-- **Glow con luz fría**: `CapaGlowLayer` vira suavemente a cian al perder vida
-  o correr; ambos glow layers conservan fail-safe y no modifican el atlas base
-  ni el glowmask prístino.
-- **Estabilidad intacta**: `FULL_SKY` fuera de GUI, radianes, caché de huesos,
-  cinco animaciones, cero `JsonNull`, cero mixins y Curios `back` opcional.
-
-Los previews de esta versión son **render software**; la comprobación in-game
-de los cambios v1.9.0 queda para el próximo arranque. Las capturas in-game de
-v1.8.0 ya confirmaron que el pack arranca, que la capa lisa se ve equipada y
-que el bulto 3D se renderiza en mano/slot.
-
-Previews nuevos: [`docs/capa_v190_preview.png`](docs/capa_v190_preview.png)
-(6 vistas), [`docs/capa_v190_uv_test.png`](docs/capa_v190_uv_test.png) (orden
-UV), [`docs/capa_v190_icon.png`](docs/capa_v190_icon.png),
-[`docs/capa_v190_item_glowmask.png`](docs/capa_v190_item_glowmask.png),
-[`docs/capa_v190_particles.png`](docs/capa_v190_particles.png) (6 sprites) y
-la comparativa del icono.
+Los previews de esta versión son render software; la prueba in-game queda para
+tu próximo arranque (v1.8.0 ya confirmó arranque, capa equipada y bulto 3D).
+Previews: [`docs/capa_v1100_preview.png`](docs/capa_v1100_preview.png)
+(6 vistas), [`docs/capa_v1100_uv_test.png`](docs/capa_v1100_uv_test.png),
+[`docs/capa_v1100_item_glowmask.png`](docs/capa_v1100_item_glowmask.png),
+[`docs/capa_v1100_particles.png`](docs/capa_v1100_particles.png),
+[`docs/capa_v1100_front_rig.png`](docs/capa_v1100_front_rig.png),
+[`docs/capa_v1100_side_relief.png`](docs/capa_v1100_side_relief.png) y la
+comparativa del icono.
 
 ## Opciones de nombre (todas en inglés)
 
@@ -151,21 +111,34 @@ queda):
 | Blightstar Veil | Nombre compuesto, ligero |
 | Last Ember of Blight Star | Enfatiza aura y brasas |
 
+## v1.9.0 (histórico) — Blight Star, relieve, arnés y animación del item
+
+- Nombre **Mantle of the Blight Star** en inglés, lore traducido, ID interno
+  conservado.
+- Medallón de estrella marchita, 4 fragmentos orbitales 3D, esporas frías y
+  segundo tipo de partículas (`capa_blight_mote`) en aura muda.
+- Relieve 3D y **arnés delantero** con hombreras, cadenas y placa animadas;
+  171 huesos / 234 cubos.
+- Bulto plegado de 36 huesos con hombreras y **`animation.item`** (bob,
+  apertura de pliegues, giro/pulso del broche).
+- Icono de ilustración suave y canvas de líneas magenta: **ambos reemplazados
+  en v1.10.0** por el pixel art 16×16 y el paño bordado.
+
 ## v1.8.0 (histórico) — bulto 3D, icono proporcionado y material
 
 - El item en mano/slot dejó de ser un abanico plano: **bulto 3D de 34 huesos**
   con forro, 7 franjas con relieve, yugo, cuello, broche de diamante,
   cadenas, tiras, 3 rollos y 5 puntas de dobladillo.
 - Se corrigió el **recorte**: icono 64×64 y atlas plegado 128×128 dejaron de
-  estirar el canvas 96×48 a un cuadrado (`cloth_canvas_fitted` +
-  `build_icon_artwork`). Display transforms ajustados y `FULL_SKY` fuera de GUI.
+  estirar el canvas 96×48 a un cuadrado (`cloth_canvas_fitted`). Display
+  transforms ajustados y `FULL_SKY` fuera de GUI.
 - `CapaItemGlowLayer` estrenó `cape_folded_glowmask.png` con `RenderType.eyes`
   y pulso de 2.6 s, sin modificar el atlas base.
 - Capa equipada: medallón completo, doble ribete, sigilos, constelación,
   filigrana, dobladillo de 4 texels y **5 estrellas 3D** emisivas.
   **131 huesos / 185 cubos**, 354 caras UV nuevas, 1636 emisivos intactos.
 - Nombre neutro *Dying Star Mantle* / *Manto de la Estrella Moribunda*, que
-  v1.9.0 sustituye por la combinación con Blight Star.
+  v1.9.0 sustituyó por la combinación con Blight Star.
 
 ## v1.7.0 (histórico) — pliegues anchos y material con relieve
 
@@ -326,17 +299,16 @@ tres divisiones de fila. Si las franjas aparecen en orden, alineadas y sin
 inversión, el mosaico es correcto. **Los previews no sustituyen una prueba
 in-game.**
 
-Resultados versionados de **v1.9.0**:
-[`docs/capa_v190_preview.png`](docs/capa_v190_preview.png) (bulto plegado,
-frente, 3/4 con onda y espalda),
-[`docs/capa_v190_uv_test.png`](docs/capa_v190_uv_test.png) (franjas UV),
-[`docs/capa_v190_icon.png`](docs/capa_v190_icon.png) (icono 64×64 ampliado) y
-[`docs/capa_v190_item_glowmask.png`](docs/capa_v190_item_glowmask.png)
+Resultados versionados de **v1.10.0**:
+[`docs/capa_v1100_preview.png`](docs/capa_v1100_preview.png) (bulto plegado, frente, 3/4, espalda, relieve y arnés),
+[`docs/capa_v1100_uv_test.png`](docs/capa_v1100_uv_test.png) (franjas UV),
+[`docs/capa_v1100_icon.png`](docs/capa_v1100_icon.png) (icono pixel art 64×64 ampliado ×4) y
+[`docs/capa_v1100_item_glowmask.png`](docs/capa_v1100_item_glowmask.png)
 (efecto emisivo del item) y
-[`docs/capa_v190_particles.png`](docs/capa_v190_particles.png) (brasas + motas),
-[`docs/capa_v190_front_rig.png`](docs/capa_v190_front_rig.png),
-[`docs/capa_v190_side_relief.png`](docs/capa_v190_side_relief.png) y
-[`docs/capa_v190_icon_compare.png`](docs/capa_v190_icon_compare.png).
+[`docs/capa_v1100_particles.png`](docs/capa_v1100_particles.png) (brasas + motas),
+[`docs/capa_v1100_front_rig.png`](docs/capa_v1100_front_rig.png),
+[`docs/capa_v1100_side_relief.png`](docs/capa_v1100_side_relief.png) y
+[`docs/capa_v1100_icon_compare.png`](docs/capa_v1100_icon_compare.png).
 
 ## Diagnóstico de crashes: dos fallos distintos
 
@@ -412,7 +384,7 @@ quedó corregido en v1.6.1, pero éste es otro fallo, de otro mod.
    (`fiskheroes`, `TRender`/`TRansition`). Quitar PAL solo puede provocar
    `ClassNotFoundException` en sus dependientes.
 4. **Aísla por grupos**: arranca primero con Forge + GeckoLib + Curios +
-   `capatest-1.9.0.jar`. Si arranca, ve añadiendo el resto de 5 en 5 hasta que
+   `capatest-1.10.0.jar`. Si arranca, ve añadiendo el resto de 5 en 5 hasta que
    reaparezca el `MixinTransformerError`: el culpable está en ese grupo.
 
 `skinlayers3d`, `embeddium`, `photon`, `flywheel`, `create` y los demás salen
@@ -474,9 +446,9 @@ rota.**
   descripciones y metadatos (sin transcripción completa de cada vídeo); la
   implementación se validó con previews software y, desde v1.8.0, también con
   capturas in-game de la capa equipada y del item en mano/slot. Para el icono
-  v1.9.0 se usaron además dos referencias 16×16 aportadas por el usuario
+  v1.10.0 se usaron además dos referencias 16×16 aportadas por el usuario
   (capa granate con broche cálido y capa negra con ribete neón); véase
-  `docs/capa_v190_icon_compare.png`.
+  `docs/capa_v1100_icon_compare.png`.
 
 ## Estructura
 
@@ -489,19 +461,19 @@ src/main/resources/data/                           tag curios:back + concesión 
 tools/originals/                                   PNG prístinos + geo de armadura prístino
 tools/cloth_spec.py                                 Canvas 96×48, 9 columnas, FOLDS=3/fold_wave, SECTION_V, UV opacas y zonas reservadas
 tools/fold_spec.py                                 Bulto plegado: 7 franjas, rollos, gem y regiones reservadas
-tools/texture_pipeline.py                          Atlas, cool_ink, icono desde refs 16x16, folded, glowmask y 2 sets de sprites
+tools/texture_pipeline.py                          Atlas, canvas bordado, icono pixel art 16x16, folded, glowmask y 2 sets de sprites
 tools/armor_model_pipeline.py                      9×3 + fold_wave, nervios 3D, cortinas, pesas, arnés frontal y órbitas
 tools/item_model_pipeline.py                       Bulto de 36 huesos + 5 animaciones (incluida animation.item)
 tools/animation_pipeline.py                        Deriva sprint/air desde moving
 tools/preview_cloth.py                             6 vistas, arnés aislado, relieve de perfil, canvas/icono/partículas y --uv-test
-docs/capa_v190_preview.png                         Preview versionado de las cuatro vistas de la capa
-docs/capa_v190_uv_test.png                         Test visual del orden UV del mosaico 9×3
-docs/capa_v190_icon.png                            Icono 64×64 ampliado
-docs/capa_v190_item_glowmask.png                   Efecto emisivo violeta/cian del item plegado
-docs/capa_v190_particles.png                       Brasas cálidas + motas frías de Blight Star
-docs/capa_v190_front_rig.png                       Arnés delantero aislado
-docs/capa_v190_side_relief.png                     Perfil del relieve 3D
-docs/capa_v190_icon_compare.png                    Referencias 16x16 frente al icono nuevo
+docs/capa_v1100_preview.png                         Preview versionado de las seis vistas de la capa
+docs/capa_v1100_uv_test.png                         Test visual del orden UV del mosaico 9×3
+docs/capa_v1100_icon.png                            Icono pixel art 64×64 ampliado ×4
+docs/capa_v1100_item_glowmask.png                   Efecto emisivo violeta/cian del item plegado
+docs/capa_v1100_particles.png                       Brasas cálidas + motas frías de Blight Star
+docs/capa_v1100_front_rig.png                       Arnés delantero aislado
+docs/capa_v1100_side_relief.png                     Perfil del relieve 3D
+docs/capa_v1100_icon_compare.png                    Referencias 16×16 frente al icono pixel art
 .github/workflows/build.yml                        CI: validación, build, verificación del jar y Release .jar directo
 ```
 
@@ -511,7 +483,7 @@ JDK 17 + Gradle 8.8 (el zip original no incluye `gradlew`):
 
 ```bash
 gradle build --no-daemon
-# salida: build/libs/capatest-1.9.0.jar
+# salida: build/libs/capatest-1.10.0.jar
 ```
 
 Para regenerar los assets (no hace falta para compilar, ya están commiteados):
@@ -536,7 +508,7 @@ real + glowmask del item de dos tintas + 6 sprites + 5 animaciones + aura muda +
 UV nuevas en zonas opacas + hashes prístinos + regresión de radianes/sin
 `getBakedModel()` +
 **ausencia de mixins** + tag/entidad Curios, `gradle build --no-daemon`, verificación de las entradas
-del jar y publicación del **`.jar` directo** en el Release `v1.9.0`. Si falla,
+del jar y publicación del **`.jar` directo** en el Release `v1.10.0`. Si falla,
 los errores de `javac` se publican como anotaciones y se sube el log completo
 como artifact aparte (que **no** es la entrega).
 
@@ -546,7 +518,7 @@ como artifact aparte (que **no** es la entrega).
 2. Descargar **GeckoLib 4.8.1 para Forge 1.20.1**:
    https://modrinth.com/mod/geckolib/version/bVtfWE8S
    (coordenada Maven: `maven.modrinth:8BmcQJ2H:bVtfWE8S`).
-3. Poner GeckoLib y **`capatest-1.9.0.jar`** en `mods/`.
+3. Poner GeckoLib y **`capatest-1.10.0.jar`** en `mods/`.
    Si el juego crashea **al arrancar** con `MixinTransformerError`, ver la
    sección «Diagnóstico de crashes»: es un conflicto entre otros mods.
 4. Mundo creativo; la capa está en **Combate** o con

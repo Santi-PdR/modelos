@@ -78,8 +78,12 @@ jobs:
                        'armor/capa_deteriorer_evilsaiyan_glowmask.png'):
               w, h = struct.unpack('>II', (base / 'textures/item' / name).read_bytes()[16:24])
               assert (w, h) == (128, 128), (name, w, h)
-          w, h = struct.unpack('>II', (base / 'textures/item/capa_deteriorer_evilsaiyan.png').read_bytes()[16:24])
+          icon_path = base / 'textures/item/capa_deteriorer_evilsaiyan.png'
+          w, h = struct.unpack('>II', icon_path.read_bytes()[16:24])
           assert (w, h) == (64, 64), ('icon', w, h)
+          # v1.10.0: un icono pixel art 16x16 ampliado con NEAREST comprime en
+          # menos de 2 KB. El de v1.9.0 (ilustración suave) pesaba ~6.5 KB.
+          assert 300 <= icon_path.stat().st_size < 2000, icon_path.stat().st_size
           w, h = struct.unpack('>II', (base / 'textures/item/cape_folded.png').read_bytes()[16:24])
           assert (w, h) == (128, 128), ('folded atlas', w, h)
           for i in range(3):
@@ -245,6 +249,14 @@ jobs:
           assert 'def cloth_canvas_fitted(' in texture_src
           assert 'def build_icon_artwork(' in texture_src
           assert 'def build_folded_texture(' in texture_src
+          # v1.10.0: el icono DEBE ser pixel art 16x16 ampliado con NEAREST,
+          # no una ilustración con degradados/AA como la de v1.9.0.
+          assert 'ICON_PIXEL_MAP' in texture_src
+          assert 'ICON_PALETTE' in texture_src
+          assert 'build_icon_artwork(64)' in texture_src
+          assert 'Image.NEAREST' in texture_src
+          assert 'def stitch(' in texture_src
+          assert 'ICON_PIXEL_MAP' in (root / 'tools/texture_pipeline.py').read_text()
           assert 'cape_folded_glowmask' in texture_src
           assert 'cool_ink' in texture_src
           assert 'def build_blight_sprites(' in texture_src
@@ -271,11 +283,11 @@ jobs:
           curio = (root / 'src/main/java/com/capatest/client/CapaCurioRenderer.java').read_text()
           assert 'Exception | LinkageError' in glow_layer
           assert 'if (wearer == null)' in curio
-          assert 'mod_version=1.9.0' in (root / 'gradle.properties').read_text()
+          assert 'mod_version=1.10.0' in (root / 'gradle.properties').read_text()
           assert 'curios_version=5.14.1+1.20.1' in (root / 'gradle.properties').read_text()
-          assert 'v1.9.0' in (root / 'src/main/resources/pack.mcmeta').read_text()
-          assert '1.9.0' in (root / 'src/main/resources/META-INF/mods.toml').read_text()
-          assert 'v1.9.0' in (root / 'README.md').read_text()
+          assert 'v1.10.0' in (root / 'src/main/resources/pack.mcmeta').read_text()
+          assert '1.10.0' in (root / 'src/main/resources/META-INF/mods.toml').read_text()
+          assert 'v1.10.0' in (root / 'README.md').read_text()
           assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/en_us.json').read_text()
           assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/es_es.json').read_text()
           assert 'CAPA_BLIGHT_MOTE' in java
@@ -285,9 +297,10 @@ jobs:
           assert 'CapaBlightParticle' in (root / 'src/main/java/com/capatest/client/CapaParticleRegistration.java').read_text()
           # v1.9.0: icono rehecho desde las dos referencias 16x16 del usuario.
           assert 'def build_icon_artwork(' in texture_src
+          assert 'pixel art' in (root / 'README.md').read_text()
           assert 'hombreras' in (root / 'README.md').read_text()
-          for doc in ('capa_v190_icon_compare.png', 'capa_v190_front_rig.png',
-                      'capa_v190_side_relief.png', 'capa_v190_particles.png'):
+          for doc in ('capa_v1100_icon_compare.png', 'capa_v1100_front_rig.png',
+                      'capa_v1100_side_relief.png', 'capa_v1100_particles.png'):
               assert (root / 'docs' / doc).is_file(), doc
 
           # Aura MUDA: ningún playSound ni sonido propio en las partículas /
@@ -335,7 +348,7 @@ jobs:
       - name: List built jars
         run: ls -lh build/libs
 
-      - name: Verify jar contents (v1.9.0 resources)
+      - name: Verify jar contents (v1.10.0 resources)
         run: |
           set -euo pipefail
           found=0
@@ -394,87 +407,72 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          JAR="build/libs/capatest-1.9.0.jar"
+          JAR="build/libs/capatest-1.10.0.jar"
           test -f "$JAR"
           NOTES=/tmp/release-notes.md
           cat > "$NOTES" <<'MD'
-          ## Mantle of the Blight Star v1.9.0 — icono, relieve, animación y aura
+          ## Mantle of the Blight Star v1.10.0 — icono pixel art 2D RPG y tela bordada
 
-          ### Nombre en inglés: combinación con Blight Star
+          ### Icono: estilo de las dos referencias 16x16
 
-          **Mantle of the Blight Star** es el nombre visible. El anterior
-          (*Dying Star Mantle*) se combina con el planeta **Blight Star**: conserva
-          «Mantle» y la última luz de una estrella, sin depender de
-          Deteriorer/Evil Saiyan. Está en inglés en `en_us.json` y `es_es.json`;
-          el lore sí está traducido. El ID interno
-          `capatest:capa_deteriorer_evilsaiyan` se conserva para no romper mundos,
-          comandos, el tag `curios:back`, geometrías ni texturas.
+          El icono de v1.9.0 era una ilustración suave con degradados y halo: no era
+          lo que pediste. Las dos capas de referencia son **el mismo icono 16x16
+          recoloreado** (capucha, hombros, pliegues verticales, dobladillo, paleta
+          plana, contorno duro, sin antialiasing ni bloom). v1.10.0 recupera esa
+          silueta y esa técnica:
 
-          Otras combinaciones en el README: *Blight Star Mantle*,
-          *The Blight Star's Shroud*, *Dying Light of Blight Star*,
-          *Blightstar Veil* y *Last Ember of Blight Star*.
+          - `ICON_PIXEL_MAP` + `ICON_PALETTE`: 16x16 con 11 colores planos en violeta,
+            oro y cian; broche de 5 píxeles con núcleo claro, estrella cian de 4
+            puntas y vetas frías sueltas como las verdes de la referencia 2.
+          - **Ampliado 4x con `Image.NEAREST`** a 64x64: bloques de color definidos,
+            sin blur, degradado, halo ni bisel. Rim light de 1 píxel arriba/izquierda.
+          - `preview_cloth.py` amplía el icono con `NEAREST` para no falsear la
+            comparación: `docs/capa_v1100_icon_compare.png` (ref 1 / ref 2 / nuevo).
 
-          ### Icono rehecho con las dos referencias 16x16
+          ### Textura: de líneas neón a paño tejido y bordado
 
-          El icono anterior parecía un rectángulo oscuro. Se redibujó desde cero
-          a 512px y se redujo a 64x64: de la capa granate toma hombreras, cuello
-          alto, broche cálido, pliegue central y festón; de la capa negra/verde,
-          el ribete luminoso. Todo en paleta violeta + oro + cian de Blight Star,
-          con bisel, doble ribete, esporas y núcleo de ocho rayos.
-          Comparativa: `docs/capa_v190_icon_compare.png`.
+          v1.9.0 dibujaba un gran diamante magenta de líneas finas con bloom rosa
+          sobre fondo casi negro. v1.10.0 lo reemplaza por tela de verdad:
 
-          ### Modelo más trabajado: relieve, espalda y FRENTE
+          - **sarga con cuerpo**: trama, diagonal, urdimbre, grano y sombreado de los
+            3 pliegues anchos; el paño deja de ser un plano oscuro.
+          - **medallón relleno** con facetas oscuras, bisel y engarce dorado; núcleo
+            cian de Blight Star con 8 rayos cortos y órbita discontinua en oro.
+          - **bordado a puntadas** (`stitch()`) en yugo, doble ribete, constelación,
+            sigilos, valles de pliegue y dobladillo. Hilo oro/violeta en vez de líneas
+            luminosas continuas; estrellas y pespuntes en oro apagado; bloom reducido
+            a menos de la mitad; cian sólo en el núcleo.
+          - bulto plegado, hombreras y gema del broche reteñidos a la misma paleta
+            para que item y capa equipada combinen.
+          - **Intacto**: alfa base byte-idéntico, **1636 texels emisivos** sin ampliar
+            el glowmask de armadura, UV<=128, canvas 96x48, 648 caras UV nuevas en
+            zonas opacas, onda 2D/3D compartida y superficie lisa.
 
-          Se mantiene TODA la tela continua v1.7/v1.8: canvas 96x48, mosaico 9x3,
-          3 pliegues anchos con onda 2D/3D compartida, 61 huesos boxy ocultos,
-          alfa base byte-idéntico y **1636 texels emisivos sin ampliar el glowmask**.
+          ### Se conserva íntegro lo anterior
 
-          - **Relieve 3D**: `panel_z()` con más curvatura, 9 nervios gruesos en las
-            crestas, 2 cortinas laterales continuas y 5 pesas de dobladillo.
-          - **Espalda**: cuello trasero de 3 piezas, 2 tirantes, medallón de
-            Blight Star con 8 rayos cian y órbita discontinua, 4 fragmentos
-            orbitales 3D animados y esporas frías discretas.
-          - **FRENTE del jugador**: arnés con 2 hombreras biseladas, tiras
-            diagonales, cadenas, broche, cuello de 3 piezas, placa central,
-            bandas y faldillas con punta emisiva. Cuelga de `chestplate`, así
-            que se ve en F5 y con Curios. `CapaArmorModel` mueve hombreras y
-            cadenas con giro/sprint; nervios, cortinas y pesas heredan la onda.
-          - **Geometría**: **171 huesos / 234 cubos** y **648 caras UV nuevas**,
-            todas en zonas ya opacas. Previews: `capa_v190_side_relief.png` y
-            `capa_v190_front_rig.png`.
+          Relieve 3D (**171 huesos / 234 cubos**: 9 nervios, 2 cortinas, 5 pesas,
+          cuello trasero, tirantes y arnés delantero con hombreras/cadenas/placa),
+          **`animation.item`** en GUI/hotbar/mano (36 huesos, 5 animaciones), glowmask
+          de dos tintas del item, aura de brasas + motas cian con presupuesto fijo de
+          4 partículas por tick de emisión, **sin `playSound` ni `SoundEvent` propio**,
+          fail-safes, radianes, cero `JsonNull`, cero mixins y Curios `back`.
 
-          ### Animación propia del item
+          Previews v1.10.0: `capa_v1100_preview.png` (6 vistas),
+          `capa_v1100_icon_compare.png`, `capa_v1100_icon.png`,
+          `capa_v1100_side_relief.png`, `capa_v1100_front_rig.png`,
+          `capa_v1100_item_glowmask.png`, `capa_v1100_particles.png` y
+          `capa_v1100_uv_test.png`. Son render software: la prueba in-game queda para
+          el próximo arranque; las capturas de v1.8.0 ya confirmaron arranque, capa
+          equipada y bulto 3D.
 
-          El bulto plegado sube a **36 huesos** (2 hombreras con relieve) y estrena
-          `animation.item`, seleccionada cuando no hay entidad (GUI, hotbar, mano):
-          balanceo y bob del bulto, apertura suave de 7 pliegues, vaivén de rollos,
-          puntas, cadenas y hombreras, giro de 14 grados y pulso de escala del
-          broche. Ciclo de 3.2 s con `easeInOutSine`. Las animaciones
-          `idle/moving/sprint/air` siguen intactas para la armadura.
-          `CapaItemGlowLayer` mantiene el pulso violeta de 2.6 s y añade un
-          destello cian lento; el glowmask del item mezcla ambas tintas.
+          ## Histórico v1.9.0 — Blight Star, relieve, arnés y animación del item
 
-          ### Efectos y partículas: leves, mudas y optimizadas
-
-          - Segundo tipo propio: `capatest:capa_blight_mote`, con **3 sprites
-            16x16** (núcleo, cruz y anillo que se apaga) y `CapaBlightParticle`
-            en órbita minúscula, alpha bajo y sin gravedad.
-          - **Presupuesto fijo**: brasa violeta cada **10 ticks** (2 al correr) +
-            mota cian cada **20 ticks** (2 al correr). Máximo **4 partículas por
-            tick de emisión**, siempre cerca de la espalda y emitidas desde
-            servidor para que también las vean otros jugadores. Sin `PORTAL`,
-            `CRIMSON_SPORE`, `SOUL_FIRE_FLAME` ni motas por el cielo.
-          - **Sin sonido molesto**: el aura no llama a `playSound` ni registra
-            `SoundEvent` propio; el CI lo verifica. El único sonido es el de
-            equipamiento vanilla de armadura, una vez al ponérsela.
-          - `CapaGlowLayer` vira suavemente a cian al perder vida o correr;
-            ambos glow layers conservan fail-safe y no modifican atlas base ni
-            glowmask prístino. Siguen `FULL_SKY` fuera de GUI, radianes, caché,
-            cinco animaciones, cero `JsonNull`, cero mixins y Curios `back`.
-
-          Los previews v1.9.0 son render software; la prueba in-game de estos
-          cambios queda para el próximo arranque. Las capturas de v1.8.0 ya
-          confirmaron que el pack arranca y que capa y bulto 3D se renderizan.
+          Nombre **Mantle of the Blight Star** en inglés, lore traducido e ID interno
+          conservado. Medallón de estrella marchita, 4 fragmentos orbitales 3D,
+          esporas frías, segundo tipo de partículas (`capa_blight_mote`) y aura muda.
+          Relieve 3D y arnés delantero animado; bulto plegado de 36 huesos con
+          `animation.item`. Su icono de ilustración suave y su canvas de líneas
+          magenta quedaron reemplazados en v1.10.0.
 
           ## Histórico v1.8.0 — bulto 3D, icono proporcionado y material
 
@@ -622,17 +620,17 @@ jobs:
           sustituyen una prueba in-game; si algo falla, el mod registra
           `Blight Star Mantle: ... desactivada` en el log en vez de propagarlo.
           MD
-          if gh release view v1.9.0 >/dev/null 2>&1; then
-            gh release upload v1.9.0 "$JAR" --clobber
+          if gh release view v1.10.0 >/dev/null 2>&1; then
+            gh release upload v1.10.0 "$JAR" --clobber
           else
-            gh release create v1.9.0 "$JAR" \
-              --title "Mantle of the Blight Star v1.9.0" \
+            gh release create v1.10.0 "$JAR" \
+              --title "Mantle of the Blight Star v1.10.0" \
               --notes-file "$NOTES" \
               --target "$GITHUB_SHA"
           fi
-          ASSETS="$(gh release view v1.9.0 --json assets --jq '.assets[].name')"
-          grep -qx 'capatest-1.9.0.jar' <<< "$ASSETS"
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.9.0/capatest-1.9.0.jar"
+          ASSETS="$(gh release view v1.10.0 --json assets --jq '.assets[].name')"
+          grep -qx 'capatest-1.10.0.jar' <<< "$ASSETS"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.10.0/capatest-1.10.0.jar"
           echo "### Descarga directa" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "[${URL}](${URL})" >> "$GITHUB_STEP_SUMMARY"

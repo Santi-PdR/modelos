@@ -9,7 +9,22 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.9.0: combinacion del nombre cosmico anterior con el planeta Blight Star.
+v1.10.0: ICONO PIXEL ART 2D/RPG. Las dos referencias 16x16 del usuario son
+el mismo icono recoloreado (capucha, hombros, pliegues, dobladillo, paleta
+plana, contorno duro, sin antialiasing). Se recupera esa silueta en
+ICON_PIXEL_MAP/ICON_PALETTE (11 colores), se amplia 4x con Image.NEAREST a
+64x64 y se anaden broche de 5 pixeles, estrella cian y vetas frias. Fin de la
+ilustracion suave con degradados de v1.9.0.
+TEXTURA REWORKADA: el gran diamante magenta de lineas finas y el bloom rosa se
+sustituyen por sarga tejida (trama, diagonal, urdimbre, grano), medallon
+RELLENO con facetas y engarce dorado, bordado a puntadas (stitch) en yugo,
+doble ribete, constelacion, valles de pliegue y dobladillo, y cian solo en el
+nucleo de Blight Star. Item plegado, hombreras y gema retenidos a oro/violeta.
+Alfa base, 1636 texels emisivos, UV<=128, canvas 96x48 y 648 caras UV nuevas
+en zonas opacas SIN cambios. Se conservan relieve 3D (171 huesos / 234 cubos),
+arnes frontal, animation.item, aura muda de presupuesto fijo y fail-safes.
+
+Historico v1.9.0: combinacion del nombre cosmico anterior con el planeta Blight Star.
 El nombre visible queda en ingles en ambos idiomas; el lore sigue traducido.
 Icono rehecho desde dos referencias 16x16 (hombreras, cuello alto, broche
 calido, feston y ribete luminoso). Anade un motivo de estrella marchita en el

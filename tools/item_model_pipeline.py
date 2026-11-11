@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Genera el geo y la animación de la capa plegada para el item 3D (v1.9.0).
+Genera el geo y la animación de la capa plegada para el item 3D (v1.10.0).
 
 v1.8.0: el item deja de ser un abanico plano de siete láminas y pasa a ser un
 BULTO de capa doblada con grosor real. Hay un bloque de forro detrás, siete
