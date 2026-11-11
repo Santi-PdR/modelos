@@ -1,0 +1,73 @@
+name: Publicar entrega para Claude
+
+# El sandbox de Arena NO puede subir Release assets: uploads.github.com está
+# bloqueado (SSL_ERROR_SYSCALL / EOF). GitHub Actions sí puede, así que este
+# workflow publica el ZIP del proyecto + prompt como asset de la Release.
+on:
+  push:
+    paths:
+      - 'entrega_para_claude.zip'
+      - 'PROMPT_PARA_CLAUDE.md'
+      - 'ESTADO_TECNICO_PARA_CLAUDE.md'
+      - '.github/workflows/publicar-entrega-claude.yml'
+  workflow_dispatch:
+
+jobs:
+  upload:
+    name: Subir ZIP + prompt a la Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar el ZIP
+        run: |
+          set -euo pipefail
+          test -f entrega_para_claude.zip
+          unzip -t entrega_para_claude.zip
+          unzip -Z1 entrega_para_claude.zip | grep -qx 'PROMPT.txt'
+          unzip -Z1 entrega_para_claude.zip | grep -qx 'referencias/01_OBJETIVO_blockbench.png'
+          unzip -Z1 entrega_para_claude.zip | grep -qx 'proyecto/src/main/resources/assets/capatest/textures/item/capa_deteriorer_evilsaiyan.png'
+          test "$(unzip -Z1 entrega_para_claude.zip | wc -l)" -ge 130
+          echo "ZIP verificado: $(wc -c < entrega_para_claude.zip) bytes"
+
+      - name: Preparar prompt en texto plano y estado técnico
+        run: |
+          set -euo pipefail
+          cp PROMPT_PARA_CLAUDE.md "$RUNNER_TEMP/PROMPT.md"
+          cp ESTADO_TECNICO_PARA_CLAUDE.md "$RUNNER_TEMP/ESTADO_TECNICO.md"
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          s = Path('PROMPT_PARA_CLAUDE.md').read_text()
+          a = s.index('\n```\n', s.index('## TEXTO PARA COPIAR Y PEGAR')) + len('\n```\n')
+          b = s.index('\n```', a)
+          Path(os.environ['RUNNER_TEMP'], 'PROMPT.txt').write_text(s[a:b].strip() + '\n')
+          print('PROMPT.txt:', b - a, 'caracteres')
+          PY
+          test -s "$RUNNER_TEMP/PROMPT.txt"
+
+      - name: Publicar assets en la Release v1.15.0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release view v1.15.0 >/dev/null
+          gh release upload v1.15.0 \
+            entrega_para_claude.zip \
+            "$RUNNER_TEMP/PROMPT.txt" \
+            "$RUNNER_TEMP/PROMPT.md" \
+            "$RUNNER_TEMP/ESTADO_TECNICO.md" \
+            --clobber
+          ASSETS="$(gh release view v1.15.0 --json assets --jq '.assets[].name')"
+          for f in entrega_para_claude.zip PROMPT.txt PROMPT.md ESTADO_TECNICO.md; do
+            grep -qx "$f" <<< "$ASSETS"
+          done
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.15.0/entrega_para_claude.zip"
+          echo "### Entrega para Claude" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "[Descargar entrega_para_claude.zip](${URL})" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "[PROMPT.txt](https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.15.0/PROMPT.txt)" >> "$GITHUB_STEP_SUMMARY"
