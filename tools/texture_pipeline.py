@@ -174,14 +174,14 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.nda
     n_big = _blurred_noise(rng, (h, w), 8.0)
 
     # Carmesí oscuro arriba -> violeta-negro abajo.
-    top = np.array([47.0, 11.0, 26.0], dtype=np.float32)
-    bot = np.array([11.0, 6.0, 20.0], dtype=np.float32)
+    top = np.array([74.0, 17.0, 30.0], dtype=np.float32)
+    bot = np.array([19.0, 9.0, 30.0], dtype=np.float32)
     rgb = top * (1.0 - v[..., None]) + bot * v[..., None]
 
     # Morado desvaído en parches grandes y gris ceniza de desgaste.
-    rgb += np.clip(n_big, 0.0, 1.4)[..., None] * np.array([14.0, 3.0, 26.0])
+    rgb += np.clip(n_big, 0.0, 1.4)[..., None] * np.array([18.0, 4.0, 22.0])
     ash = np.clip(0.5 + 0.5 * n_med, 0.0, 1.0)[..., None]
-    rgb += ash * (0.22 + 0.42 * v)[..., None] * np.array([24.0, 23.0, 27.0])
+    rgb += ash * (0.30 + 0.50 * v)[..., None] * np.array([30.0, 28.0, 33.0])
 
     # Tres pliegues anchos (misma onda que el relieve 3D) con sombreado.
     fold = np.cos(2.0 * np.pi * FOLDS * u + 0.10 * np.sin(v * np.pi * 1.7))
@@ -220,23 +220,23 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.nda
     cd = ImageDraw.Draw(cool_ink)
     p = lambda x, y: (int(round(x * scale)), int(round(y * scale)))
 
-    ROSE = (255, 122, 200, 255)
-    ROSE_CORE = (255, 196, 232, 255)
-    MAGENTA = (206, 20, 132, 240)
-    MAGENTA_DARK = (104, 8, 66, 205)
+    ROSE = (236, 92, 168, 210)
+    ROSE_CORE = (248, 176, 214, 230)
+    MAGENTA = (168, 18, 104, 190)
+    MAGENTA_DARK = (72, 6, 46, 150)
 
     # Bordes iluminados: un filete rosa de 1 px recorre ambos lados.
     for ex in (0.7, 95.3):
-        d.line([p(ex, 0), p(ex, 47.9)], fill=(214, 40, 138, 170),
-               width=max(1, int(0.30 * scale)))
-        gd.line([p(ex, 0), p(ex, 47.9)], fill=120,
-                width=max(1, int(0.35 * scale)))
+        d.line([p(ex, 0), p(ex, 47.9)], fill=(160, 26, 104, 110),
+               width=max(1, int(0.22 * scale)))
+        gd.line([p(ex, 0), p(ex, 47.9)], fill=80,
+                width=max(1, int(0.25 * scale)))
 
     # 11 grietas principales con ramificaciones y nodos. Cada una serpentea
     # desde el hombro hasta el dobladillo; el jitter crece hacia abajo para
     # leer como energía inestable que desprende la tela.
-    for ci in range(6):
-        x = (4.0, 19.0, 31.0, 52.0, 70.0, 87.0)[ci] + float(rng.uniform(-2.0, 2.0))
+    for ci in range(4):
+        x = (12.0, 34.0, 61.0, 84.0)[ci] + float(rng.uniform(-2.0, 2.0))
         pts = []
         for j in range(24):
             yv = -1.0 + j * 2.15
@@ -247,40 +247,41 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.nda
         # La grieta se DIBUJA A TROZOS: tramos que se encienden y se
         # apagan. Una línea continua parecía un código de barras; los
         # huecos la convierten en energía inestable sobre tela podrida.
-        spans = ((0, 6), (7, 12), (13, 18), (19, 24))
+        # Menos del 45% de la grieta está encendida: el paño respira.
+        spans = ((0, 4), (9, 13), (17, 21))
         for si, (a, b) in enumerate(spans):
             seg = pts[a:b]
             if len(seg) < 2:
                 continue
-            power = 1.0 if (ci + si) % 3 else 0.55
+            power = 0.85 if (ci + si) % 3 else 0.35
             halo = MAGENTA_DARK if power > 0.8 else (72, 6, 48, 170)
-            d.line(seg, fill=halo, width=max(2, int(1.25 * scale * power)), joint="curve")
-            d.line(seg, fill=MAGENTA, width=max(1, int(0.60 * scale * power)), joint="curve")
-            d.line(seg, fill=ROSE, width=max(1, int(0.30 * scale)), joint="curve")
-            gd.line(seg, fill=int(225 * power), width=max(1, int(0.45 * scale)), joint="curve")
-            cd.line(seg, fill=70, width=max(1, int(0.30 * scale)), joint="curve")
+            d.line(seg, fill=halo, width=max(1, int(0.85 * scale * power)), joint="curve")
+            d.line(seg, fill=MAGENTA, width=max(1, int(0.38 * scale * power)), joint="curve")
+            d.line(seg, fill=ROSE, width=max(1, int(0.20 * scale)), joint="curve")
+            gd.line(seg, fill=int(180 * power), width=max(1, int(0.30 * scale)), joint="curve")
+            cd.line(seg, fill=45, width=max(1, int(0.22 * scale)), joint="curve")
         # Ramas cortas que se abren en la mitad inferior.
-        for j in range(3):
-            k = 5 + j * 6
+        for j in range(2):
+            k = 7 + j * 8
             if k + 2 >= len(pts):
                 break
             a = pts[k]
             bx = pts[k + 1][0] + int(float(rng.uniform(2.5, 8.5)) * scale) * (1 if ci % 2 else -1)
             by = pts[k + 1][1] + int(0.9 * scale)
-            d.line([a, (bx, by)], fill=MAGENTA, width=max(1, int(0.75 * scale)))
-            d.line([a, (bx, by)], fill=ROSE, width=max(1, int(0.30 * scale)))
-            gd.line([a, (bx, by)], fill=150, width=max(1, int(0.35 * scale)))
+            d.line([a, (bx, by)], fill=MAGENTA, width=max(1, int(0.45 * scale)))
+            d.line([a, (bx, by)], fill=ROSE, width=max(1, int(0.20 * scale)))
+            gd.line([a, (bx, by)], fill=110, width=max(1, int(0.25 * scale)))
         # Nodos de energía (chispas) a lo largo de la grieta.
-        for j in range(3, 24, 7):
+        for j in range(4, 24, 10):
             qx, qy = pts[j]
-            r = max(1, int(0.75 * scale))
+            r = max(1, int(0.50 * scale))
             d.ellipse([qx - r, qy - r, qx + r, qy + r], fill=ROSE_CORE)
             gd.ellipse([qx - r, qy - r, qx + r, qy + r], fill=255)
 
     # Vettable diagonales secundarias: rompen la verticalidad y recuerdan
     # los jirones de la referencia de Blockbench.
-    for di in range(7):
-        x0 = 2.0 + di * 13.5 + float(rng.uniform(-3.0, 3.0))
+    for di in range(2):
+        x0 = 22.0 + di * 44.0 + float(rng.uniform(-3.0, 3.0))
         y0 = 6.0 + float(rng.uniform(0.0, 30.0))
         dx = float(rng.uniform(4.0, 11.0)) * (1.0 if di % 2 else -1.0)
         dy = float(rng.uniform(5.0, 12.0))
@@ -296,7 +297,7 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.nda
         q = p(sx, sy)
         if q[0] >= w or q[1] >= h:
             continue
-        hot = rng.random() < (0.25 + 0.45 * sy / 48.0)
+        hot = rng.random() < (0.10 + 0.22 * sy / 48.0)
         d.point(q, fill=ROSE if hot else (96, 88, 100, 190))
         if hot:
             gd.point(q, fill=190)
@@ -310,8 +311,8 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.nda
             ImageFilter.GaussianBlur(1.7 * scale)), dtype=np.float32
     ) / 255.0
     arr = np.asarray(img, dtype=np.float32).copy()
-    arr[..., :3] += blur[..., None] * np.array([27.0, 4.0, 20.0])
-    arr[..., :3] += ink[..., None] * np.array([15.0, 4.0, 12.0])
+    arr[..., :3] += blur[..., None] * np.array([12.0, 2.0, 9.0])
+    arr[..., :3] += ink[..., None] * np.array([8.0, 2.0, 6.0])
 
     cool = np.asarray(cool_ink, dtype=np.float32) / 255.0
     cool_blur = np.asarray(
@@ -367,11 +368,16 @@ def paint_reserved_cloth_strips(out: np.ndarray, glow_alpha: np.ndarray) -> np.n
     energy[ey[..., 0, 0] > 0.78, ...] = np.array([26.0, 10.0, 38.0])
     out[109:127, 69:75, :3] = energy
 
-    # Yugo / cuello: carmesí oscuro con dos vetas magenta finas.
+    # Yugo / bufanda: carmesí oscuro con sombreado y desgaste. NO lleva
+    # franjas verticales regulares: en v1.14.0 cada segmento del collar
+    # muestreaba las mismas dos lineas magenta y el cuello parecia una reja
+    # de barrotes rosa. Ahora solo quedan tres vetas cortas e irregulares.
     yoke = out[76:93, 57:71, :3]
-    yoke[...] = np.array([46.0, 12.0, 34.0]) + y[:17] * np.array([14.0, 3.0, 20.0])
-    yoke[:, 2:3, :] = np.array([214.0, 28.0, 140.0])
-    yoke[:, 11:12, :] = np.array([160.0, 18.0, 108.0])
+    yoke[...] = np.array([58.0, 15.0, 33.0]) + y[:17] * np.array([20.0, 5.0, 22.0])
+    shade = np.linspace(0.0, 1.0, 14, dtype=np.float32).reshape(1, 14, 1)
+    yoke -= shade * np.array([12.0, 3.0, 10.0])
+    for (x0, y0, length) in ((2, 3, 3), (9, 8, 2), (5, 13, 4)):
+        yoke[y0:y0 + length, x0:x0 + 1, :] = np.array([146.0, 26.0, 96.0])
     return out
 
 

@@ -237,7 +237,7 @@ def posed(geo):
             ci = int(n.rsplit("_", 1)[1])
             b["rotation"][2] += math.sin(3.2 + ci) * 2.4
         elif n.startswith("v16_tatter_") or n.startswith("v16_shred_") \
-                or n.startswith("v16_fray_"):
+                or n.startswith("v16_fray_") or n.startswith("v16_hem_"):
             ci = int(n.rsplit("_", 1)[1])
             b["rotation"][0] += (2.0 + 4.0 * (ci % 5) / 5.0) * 0.8
             b["rotation"][1] += math.sin(1.7 + ci) * 2.2
@@ -330,7 +330,7 @@ def main():
     armor = load(ARMOR_GEO)
     folded = load(FOLDED_GEO)
     runtime_hidden = effective_hidden(armor)
-    # v1.14.0: la "piel nueva" son v15_* (tela base / hems / orbitas /
+    # v1.15.0: la "piel nueva" son v15_* (tela base / hems / orbitas /
     # hombreras) y v16_* (collar, jirones, venas, microvoxeles).
     cloth_only = {b["name"] for b in armor["bones"]
                   if not b["name"].startswith(("v15_", "v16_"))}
@@ -357,7 +357,7 @@ def main():
 
     views = [
         (render(folded, FOLDED_TEX, set(), yaw=-28, pitch=14, size=520),
-         "FOLDED ITEM 3D - bulto v1.14.0"),
+         "FOLDED ITEM 3D - bulto v1.15.0"),
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=0, pitch=8, size=520),
          "DETERIORO - frente"),
         (render(posed(armor), ARMOR_TEX, runtime_hidden, yaw=-28, pitch=10, size=520),
@@ -377,7 +377,7 @@ def main():
         args.out / "original_detail.png")
     Image.open(ARMOR_TEX).convert("RGBA").crop((0, 0, 96, 48)).resize(
         (768, 384), Image.LANCZOS).save(args.out / "canvas.png")
-    # v1.14.0: icono pixel art 16x16 conservando la forma aprobada, con
+    # v1.15.0: icono pixel art 16x16 conservando la forma aprobada, con
     # paleta Rosé, grietas, 5 puntas y microvóxeles; NEAREST sin AA.
     Image.open(ICON).convert("RGBA").resize(
         (256, 256), Image.NEAREST).save(args.out / "icon.png")

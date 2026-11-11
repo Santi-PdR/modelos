@@ -9,6 +9,15 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.15.0: CORRECCION VISUAL Y ANIMACIONES. Se elimina la jaula de 78 tiras
+finas que no se parecia a la referencia: ahora hay 27 paneles de pano grueso,
+11 cintas anchas solapadas de 3 tramos, 18 flecos de dobladillo y una bufanda
+de 2 anillos de 16 segmentos con borde dentado y 24 flecos (8 tiras largas).
+Textura mucho mas oscura: carmesi, morado desvaido y ceniza, con solo 12
+venas rosa. El .bbmodel exporta UUID canonicos y CUATRO animaciones reales
+de Blockbench (5008 keyframes sobre 212 huesos): idle, caminar, correr y
+deterioro; el maniqui Steve/Alex lleva cara y tunica. 290 huesos / 377 cubos.
+
 v1.14.0: DETERIORO / EVIL SAIYAN ROSE. Geometria rehecha con collar de dos
 anillos de 14 segmentos, 20 flecos, yugo de union, 78 jirones largos en 3
 capas (espesor 0.25-0.50 e inflate 0.01/0.03/0.05), 56 microvoxeles de 1-2

@@ -1,60 +1,74 @@
-# Mantle of the Blight Star — v1.14.0
+# Mantle of the Blight Star — v1.15.0
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
-Añade el **Mantle of the Blight Star**. Esta revisión rehace por completo la
-capa equipada bajo la temática **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
+Añade el **Mantle of the Blight Star** bajo la temática
+**Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-> ✅ **Publicada.** Compilada en CI (Gradle 8.8 / JDK 17) en el commit
-> `5b7d86c`; Release `v1.14.0` es la *latest*. Los previews son render
-> **software**: la prueba in-game sigue pendiente.
+> ✅ **Publicada.** Release `v1.15.0` (latest), compilada en CI con
+> Gradle 8.8 / JDK 17. Los previews son render **software**: la prueba
+> in-game sigue pendiente.
 
-## Ver el modelo ANTES de compilar
+## Ver el modelo
 
 - **Visor AUTOCONTENIDO (recomendado)**:
-  [`docs/capa_v1140_visor.html`](docs/capa_v1140_visor.html). Es un único
-  `.html` con la geometría, el atlas, los iconos, los GIFs y el `.bbmodel`
-  incrustados como data URLs: se abre con doble clic, sin servidor, sin red y
-  sin token. Se genera con `python3 tools/build_standalone_preview.py`.
-  El sandbox tiene `allowPublicTraffic=false`, así que una URL cruda
-  `https://8000-*.e2b.app` abierta fuera del *Live Preview* de Arena devuelve
-  **403 MISSING TRAFFIC ACCESS TOKEN**: la plataforma sólo inyecta la cabecera
-  `e2b-traffic-access-token` en su propio panel de preview. Para el visor en
-  vivo, usar la pestaña **Live Preview** (puerto 8000), no el link en crudo.
-- **Proyecto Blockbench**: [`docs/capa_v1140.bbmodel`](docs/capa_v1140.bbmodel)
-  (jerarquía de huesos, rotación del hueso en el grupo y la del cubo en el
-  elemento, UV por cara, `inflate`, atlas incrustado y un grupo
-  `PLAYER · Steve/Alex (referencia)` para juzgar el ajuste del cuello).
-  Se genera con `python3 tools/bbmodel_export.py`. Como el formato `bedrock`
-  de Blockbench es de textura única, el atlas va en una imagen 128×144: las
-  128 primeras filas son el atlas del mod (byte-idéntico) y las 16 últimas un
-  parche sólido exclusivo del maniquí. También se puede descargar desde el
-  visor autocontenido (enlace con `download=`), sin depender del proxy del
-  sandbox ni de su token.
-- **Previews**: [`docs/capa_v1140_preview.png`](docs/capa_v1140_preview.png),
-  [`docs/capa_v1140_side_relief.png`](docs/capa_v1140_side_relief.png),
-  [`docs/capa_v1140_icon_compare.png`](docs/capa_v1140_icon_compare.png).
-  Son render software, no capturas in-game.
+  [`docs/capa_v1150_visor.html`](docs/capa_v1150_visor.html). Un único
+  `.html` con geometría, atlas, iconos, GIFs y `.bbmodel` incrustados:
+  se abre con doble clic, sin servidor, sin red y sin token. Se genera con
+  `python3 tools/build_standalone_preview.py`. El sandbox tiene
+  `allowPublicTraffic=false`, así que una URL cruda `https://8000-*.e2b.app`
+  fuera del *Live Preview* de Arena devuelve **403 MISSING TRAFFIC ACCESS
+  TOKEN**; para el visor en vivo usar la pestaña **Live Preview** (puerto 8000).
+- **Proyecto Blockbench**: [`docs/capa_v1150.bbmodel`](docs/capa_v1150.bbmodel).
+  Incluye jerarquía de 290 huesos, UV por cara, `inflate`, **4 animaciones
+  reales** (`idle_respiracion`, `caminar`, `correr_saltar`,
+  `deterioro_particulas`) con **5008 keyframes sobre 212 huesos**, y un grupo
+  `PLAYER · Steve/Alex` con **cara, pelo y túnica**. Se genera con
+  `python3 tools/bbmodel_export.py`. Todos los UUID son canónicos 8-4-4-4-12:
+  con los md5 de 32 caracteres de v1.14.0, `Animation.extend()` de Blockbench
+  no resolvía los animadores y los keyframes quedaban huérfanos.
+- **Previews**: [`docs/capa_v1150_preview.png`](docs/capa_v1150_preview.png),
+  [`docs/capa_v1150_side_relief.png`](docs/capa_v1150_side_relief.png),
+  [`docs/capa_v1150_icon_compare.png`](docs/capa_v1150_icon_compare.png).
 
-## Descargas directas (Release `v1.14.0`)
+## Descargas directas (Release `v1.15.0`)
 
 | Archivo | Link |
 |---|---|
-| **Mod compilado** (`capatest-1.14.0.jar`, 171700 B) | https://github.com/Santi-PdR/modelos/releases/download/v1.14.0/capatest-1.14.0.jar |
-| **Proyecto Blockbench** (`capa_v1140.bbmodel`) | https://github.com/Santi-PdR/modelos/releases/download/v1.14.0/capa_v1140.bbmodel |
-| **Visor 3D offline** (`capa_v1140_visor.html`) | https://github.com/Santi-PdR/modelos/releases/download/v1.14.0/capa_v1140_visor.html |
-| Comparativa de 6 vistas | https://github.com/Santi-PdR/modelos/releases/download/v1.14.0/capa_v1140_preview.png |
+| **Mod compilado** (`capatest-1.15.0.jar`) | https://github.com/Santi-PdR/modelos/releases/download/v1.15.0/capatest-1.15.0.jar |
+| **Proyecto Blockbench** (`capa_v1150.bbmodel`) | https://github.com/Santi-PdR/modelos/releases/download/v1.15.0/capa_v1150.bbmodel |
+| **Visor 3D offline** (`capa_v1150_visor.html`) | https://github.com/Santi-PdR/modelos/releases/download/v1.15.0/capa_v1150_visor.html |
+| Comparativa de 6 vistas | https://github.com/Santi-PdR/modelos/releases/download/v1.15.0/capa_v1150_preview.png |
 
-Release: https://github.com/Santi-PdR/modelos/releases/tag/v1.14.0 ·
-CI: https://github.com/Santi-PdR/modelos/actions/runs/43033963606 ✅ ·
-`capatest-1.14.0.jar` crudo, nunca ZIP de `actions/upload-artifact`.
+Release: https://github.com/Santi-PdR/modelos/releases/tag/v1.15.0 ·
+`capatest-1.15.0.jar` crudo, nunca ZIP de `actions/upload-artifact`.
 El repositorio es privado: hay que iniciar sesión en GitHub con la cuenta
-`Santi-PdR` para descargar. Las entregas anteriores siguen en `v1.12.0`,
-`v1.11.0`, `v1.10.0`, `v1.9.0`, `v1.8.0`, `v1.7.0`, `v1.6.1`, `v1.6.0`,
-`v1.5.1`, `v1.4.0` y `v1.3.0`. **Usar v1.14.0**.
+`Santi-PdR`. **Usar v1.15.0**: v1.14.0 fue rechazada visualmente.
 
 > PR #1 sigue abierta: https://github.com/Santi-PdR/modelos/pull/1
 
-## v1.14.0 — Deterioro / Evil Saiyan Rosé
+## v1.15.0 — corrección del rechazo de v1.14.0
+
+Dijiste: *«Que es esto amigo, no se parece en nada a lo que te pedí, además
+faltan las animaciones»*. v1.14.0 era una **jaula de 78 tiras finas magenta**
+con un cubo blanco por cabeza, y el `.bbmodel` tenía `animations: []`.
+
+| | v1.14.0 (rechazada) | **v1.15.0** |
+|---|---|---|
+| Paño | 78 tiras finas iguales → rejilla | **27 paneles gruesos + 11 cintas anchas solapadas** en 3 tramos que se estrechan |
+| Bufanda | anillo de cajas con franjas rosa | **2 anillos de 16 segmentos**, borde muy dentado, **24 flecos** (8 tiras largas) |
+| Color | neón magenta por todas partes | **carmesí oscuro / morado desvaído / gris ceniza**, grietas reducidas de 6 a 4 y 12 venas |
+| Maniquí | cubo blanco + bloques planos | **cara, pelo y túnica** en el parche 16×16 |
+| Animaciones en Blockbench | **ninguna** | **4 en bucle, 5008 keyframes, 212 huesos** |
+| Huesos / cubos | 339 / 484 | **290 / 377** |
+| UUID | md5 de 32 caracteres | **UUID canónicos** (los animadores se enganchan) |
+
+`CapaArmorModel.java` sigue animando en runtime con fases independientes en
+radianes y fail-safe; se regeneró `DETERIORO_NAMES` para los 176 huesos
+`v16_*` nuevos. Se conservan ID, `curios:back`, los 72 huesos originales
+byte-idénticos, 1636 emisivos, alfa prístino, 0 `JsonNull`, 0 mixins,
+`animation.item`, UV ≤ 128 y el icono pixel art aprobado.
+
+## v1.14.0 (rechazada) — primer intento Rosé
 
 Petición: *«revisa y corrige a fondo el modelo (.bbmodel / JSON), rehaz su
 textura y geometría para elevar masivamente su calidad visual y añade efectos
@@ -78,7 +92,7 @@ la nueva capa.
 
 ### 2. Geometría tridimensional de jirones complejos
 
-| | v1.12.0 (rechazada) | **v1.14.0** |
+| | v1.12.0 (rechazada) | **v1.15.0** |
 |---|---|---|
 | Superficie | lámina rectangular continua de 0.85 | **27 láminas base + 78 jirones largos** |
 | Capas | 1 | **3 capas** con `inflate` `0.01 / 0.03 / 0.05` |
