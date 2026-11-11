@@ -89,18 +89,26 @@ jobs:
 
           particle = json.loads((base / 'particles/capa_ember.json').read_text())
           assert len(particle['textures']) == 3
+          for i in range(3):
+              p = base / 'textures/particle' / f'capa_blight_mote_{i}.png'
+              w, h = struct.unpack('>II', p.read_bytes()[16:24])
+              assert (w, h) == (16, 16), (p, w, h)
 
-          # Geo plegado v1.8.0: bulto 3D de 34 huesos, atlas 128 y ninguna UV
-          # fuera de rango. Ya no es un abanico plano de 7 láminas.
+          blight_particle = json.loads((base / 'particles/capa_blight_mote.json').read_text())
+          assert len(blight_particle['textures']) == 3
+
+          # Geo plegado v1.9.0: bulto 3D de 36 huesos con 2 hombreras,
+          # atlas 128 y ninguna UV fuera de rango. No es un abanico plano.
           folded = json.loads((base / 'geo/item/cape_folded.geo.json').read_text())['minecraft:geometry'][0]
           desc = folded['description']
           assert desc['identifier'] == 'geometry.cape_folded'
           assert (desc['texture_width'], desc['texture_height']) == (128, 128)
-          assert len(folded['bones']) == 34
+          assert len(folded['bones']) == 36
           folded_names = {b['name'] for b in folded['bones']}
           assert {'fold_0', 'fold_6', 'ridge_0', 'ridge_5', 'hem_0', 'hem_4',
                   'roll_0', 'roll_2', 'strap_L', 'strap_R', 'chain_L', 'chain_R',
-                  'yoke', 'collar_center', 'clasp_frame', 'clasp'} <= folded_names
+                  'yoke', 'collar_center', 'clasp_frame', 'clasp',
+                  'pauldron_L', 'pauldron_R'} <= folded_names
           # Raíz sin clave `parent` (NO `"parent": null`) y padres siempre
           # definidos. GeckoLib construye el árbol con `parent == null`.
           assert folded['bones'][0]['name'] == 'cape'
@@ -119,17 +127,24 @@ jobs:
 
           folded_anim = json.loads((base / 'animations/item/cape_folded.animation.json').read_text())
           assert expected <= set(folded_anim['animations'])
+          # v1.9.0: animación PROPIA del item en GUI/hotbar/mano.
+          assert 'animation.item' in folded_anim['animations']
+          assert len(folded_anim['animations']) == 5
+          item_anim = folded_anim['animations']['animation.item']
+          assert {'cape', 'clasp', 'pauldron_L', 'pauldron_R'} <= set(item_anim['bones'])
+          assert 'position' in item_anim['bones']['cape']
+          assert 'scale' in item_anim['bones']['clasp']
           for anim_name, spec in folded_anim['animations'].items():
               assert set(spec['bones']) <= folded_names, (anim_name, set(spec['bones']) - folded_names)
 
-          # Geo de armadura v1.8.0: 72 huesos originales byte-idénticos en JSON,
-          # más 59 huesos de tela/relieve/estrellas => 131 huesos / 185 cubos.
+          # Geo de armadura v1.9.0: 72 huesos originales byte-idénticos en JSON,
+          # más 99 de tela/relieve/arnés/estrellas/órbita => 171 huesos / 234 cubos.
           # Un ÚNICO rectángulo 9x3 sin costuras, con 3 pliegues anchos por fila.
           armor_geo = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]
           orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
           assert armor_geo['bones'][:72] == orig_bones
-          assert len(armor_geo['bones']) == 131
-          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 185
+          assert len(armor_geo['bones']) == 171
+          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 234
           new_bones = armor_geo['bones'][72:]
           new_names = {b['name'] for b in new_bones}
           assert {
@@ -137,12 +152,27 @@ jobs:
               'v15_crease_cape_top_0', 'v15_crease_cape_bottom_2',
               'v15_pipe_cape_top_L', 'v15_pipe_cape_bottom_R',
               'v15_hem_0', 'v15_hem_8', 'v15_shoulder_L', 'v15_shoulder_R',
-              'v15_clasp', 'v15_star_0', 'v15_star_4'
+              'v15_clasp', 'v15_star_0', 'v15_star_4',
+              'v15_orbit_0', 'v15_orbit_3',
+              'v15_ridge_cape_top_0', 'v15_drape_L', 'v15_drape_R',
+              'v15_weight_0', 'v15_weight_4', 'v15_back_collar_0',
+              'v15_suspend_L', 'v15_pauldron_L', 'v15_pauldron_R',
+              'v15_front_strap_L', 'v15_front_chain_L', 'v15_front_clasp',
+              'v15_front_collar_0', 'v15_front_placket',
+              'v15_front_band_L', 'v15_front_tassel_L'
           } <= new_names
           assert sum(1 for n in new_names if n.startswith('v15_cloth_')) == 27
           assert sum(1 for n in new_names if n.startswith('v15_crease_')) == 9
           assert sum(1 for n in new_names if n.startswith('v15_hem_')) == 9
           assert sum(1 for n in new_names if n.startswith('v15_star_')) == 5
+          assert sum(1 for n in new_names if n.startswith('v15_orbit_')) == 4
+          assert sum(1 for n in new_names if n.startswith('v15_ridge_')) == 9
+          assert sum(1 for n in new_names if n.startswith('v15_drape_')) == 2
+          assert sum(1 for n in new_names if n.startswith('v15_weight_')) == 5
+          assert sum(1 for n in new_names if n.startswith('v15_back_collar_')) == 3
+          assert sum(1 for n in new_names if n.startswith('v15_suspend_')) == 2
+          assert sum(1 for n in new_names if n.startswith('v15_pauldron_')) == 2
+          assert sum(1 for n in new_names if n.startswith('v15_front_')) == 13
           # Ningún hueso de tela puede colgar de un detalle que se oculta.
           hidden = set(__import__('re').findall(
               r'"([^"]+)"', (root / 'src/main/java/com/capatest/client/CapaArmorModel.java')
@@ -208,7 +238,7 @@ jobs:
           # getBakedModel() en el hot path (puede reiniciar los snapshots).
           assert 'panel.setRotX(baseX[i] - bend)' not in armor_model
           assert 'getBakedModel(' not in armor_model
-          # v1.8.0: el canvas se ENCAJA con proporción real en icono/atlas
+          # v1.9.0: el canvas se ENCAJA con proporción real en icono/atlas
           # plegado (antes se estiraba 96x48 a un cuadrado) y el item tiene
           # glowmask propio. La onda 2D/3D compartida v1.7.0 sigue vigente.
           texture_src = (root / 'tools/texture_pipeline.py').read_text()
@@ -216,6 +246,8 @@ jobs:
           assert 'def build_icon_artwork(' in texture_src
           assert 'def build_folded_texture(' in texture_src
           assert 'cape_folded_glowmask' in texture_src
+          assert 'cool_ink' in texture_src
+          assert 'def build_blight_sprites(' in texture_src
           assert '--uv-test' in (root / 'tools/preview_cloth.py').read_text()
           fg_bytes = (base / 'textures/item/cape_folded_glowmask.png').read_bytes()
           assert struct.unpack('>II', fg_bytes[16:24]) == (128, 128)
@@ -227,6 +259,10 @@ jobs:
           assert 'fold_at_column' in (root / 'tools/armor_model_pipeline.py').read_text()
           assert 'fold_phase = u * FOLDS' in texture_src
           assert 'column * 0.030D' in armor_model
+          assert 'v15_orbit_' in armor_model
+          assert 'v15_pauldron_' in armor_model and 'v15_front_chain_' in armor_model
+          assert 'fold_crests' in (root / 'tools/armor_model_pipeline.py').read_text()
+          assert 'def build_blight_sprites(' in texture_src
           item_src = (root / 'tools/item_model_pipeline.py').read_text()
           assert 'if parent is not None' in item_src
           assert '"parent": parent' not in item_src
@@ -235,13 +271,33 @@ jobs:
           curio = (root / 'src/main/java/com/capatest/client/CapaCurioRenderer.java').read_text()
           assert 'Exception | LinkageError' in glow_layer
           assert 'if (wearer == null)' in curio
-          assert 'mod_version=1.8.0' in (root / 'gradle.properties').read_text()
+          assert 'mod_version=1.9.0' in (root / 'gradle.properties').read_text()
           assert 'curios_version=5.14.1+1.20.1' in (root / 'gradle.properties').read_text()
-          assert 'v1.8.0' in (root / 'src/main/resources/pack.mcmeta').read_text()
-          assert '1.8.0' in (root / 'src/main/resources/META-INF/mods.toml').read_text()
-          assert 'v1.8.0' in (root / 'README.md').read_text()
-          assert 'Dying Star Mantle' in (root / 'src/main/resources/assets/capatest/lang/en_us.json').read_text()
-          assert 'Manto de la Estrella Moribunda' in (root / 'src/main/resources/assets/capatest/lang/es_es.json').read_text()
+          assert 'v1.9.0' in (root / 'src/main/resources/pack.mcmeta').read_text()
+          assert '1.9.0' in (root / 'src/main/resources/META-INF/mods.toml').read_text()
+          assert 'v1.9.0' in (root / 'README.md').read_text()
+          assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/en_us.json').read_text()
+          assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/es_es.json').read_text()
+          assert 'CAPA_BLIGHT_MOTE' in java
+          assert 'animation.item' in java and 'ITEM_ANIM' in java
+          assert 'EMBER_INTERVAL_TICKS = 10' in java
+          assert 'BLIGHT_INTERVAL_TICKS = 20' in java
+          assert 'CapaBlightParticle' in (root / 'src/main/java/com/capatest/client/CapaParticleRegistration.java').read_text()
+          # v1.9.0: icono rehecho desde las dos referencias 16x16 del usuario.
+          assert 'def build_icon_artwork(' in texture_src
+          assert 'hombreras' in (root / 'README.md').read_text()
+          for doc in ('capa_v190_icon_compare.png', 'capa_v190_front_rig.png',
+                      'capa_v190_side_relief.png', 'capa_v190_particles.png'):
+              assert (root / 'docs' / doc).is_file(), doc
+
+          # Aura MUDA: ningún playSound ni sonido propio en las partículas /
+          # efectos. El único SoundEvents.* permitido es el equipamiento
+          # vanilla de ArmorMaterial, que suena una vez al ponerse la capa.
+          for java_src in (root / 'src/main/java').rglob('*.java'):
+              src_text = java_src.read_text()
+              assert 'playSound(' not in src_text, java_src
+              if java_src.name != 'CapaArmorMaterial.java':
+                  assert 'SoundEvents.' not in src_text, java_src
 
           data = root / 'src/main/resources/data'
           for p in data.rglob('*.json'):
@@ -250,7 +306,7 @@ jobs:
           assert 'capatest:capa_deteriorer_evilsaiyan' in tag
           entity = json.loads((data / 'capatest/curios/entities/player.json').read_text())
           assert entity == {'entities': ['player'], 'slots': ['back']}
-          print('OK: JSON/PNG sin JsonNull, bulto 34 huesos, 131 huesos / 185 cubos, 27 paneles 9x3, 5 estrellas 3D, icono proporcionado, glowmask del item, UV opacas y Curios back')
+          print('OK: JSON/PNG sin JsonNull, item 36 huesos + animation.item, 171 huesos / 234 cubos, 27 paneles 9x3, relieve 3D y arnés frontal, 5 estrellas + 4 órbitas, 2 sets de partículas mudas, icono desde refs, glowmask del item, UV opacas y Curios back')
           PY
 
       - name: Build
@@ -279,7 +335,7 @@ jobs:
       - name: List built jars
         run: ls -lh build/libs
 
-      - name: Verify jar contents (v1.8.0 resources)
+      - name: Verify jar contents (v1.9.0 resources)
         run: |
           set -euo pipefail
           found=0
@@ -292,6 +348,7 @@ jobs:
             grep -qx 'com/capatest/CapaTestMod.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaGlowLayer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaEmberParticle.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapaBlightParticle.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaItemRenderer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaItemGlowLayer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaArmorModel.class' /tmp/jar-contents.txt
@@ -310,6 +367,10 @@ jobs:
             for i in 0 1 2; do
               grep -qx "assets/capatest/textures/particle/capa_ember_${i}.png" /tmp/jar-contents.txt
             done
+            grep -qx 'assets/capatest/particles/capa_blight_mote.json' /tmp/jar-contents.txt
+            for i in 0 1 2; do
+              grep -qx "assets/capatest/textures/particle/capa_blight_mote_${i}.png" /tmp/jar-contents.txt
+            done
             grep -qx 'data/curios/tags/items/back.json' /tmp/jar-contents.txt
             grep -qx 'data/capatest/curios/entities/player.json' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaCurioRenderer.class' /tmp/jar-contents.txt
@@ -319,7 +380,11 @@ jobs:
             python3 -c 'import json; b=json.load(open("/tmp/folded-geo.json"))["minecraft:geometry"][0]["bones"]; n={x["name"] for x in b}; assert b[0]["name"]=="cape" and "parent" not in b[0]; assert all(x.get("parent","cape") in n for x in b); print("OK: geo plegado dentro del jar sin parent:null")'
             unzip -p "$jar" assets/capatest/textures/item/cape_folded_glowmask.png > /tmp/folded-glow.png
             python3 -c 'import struct; d=open("/tmp/folded-glow.png","rb").read(); assert struct.unpack(">II", d[16:24]) == (128, 128); print("OK: glowmask del item 128x128 dentro del jar")'
-            echo "OK: clases, mods.toml, 3D item, glowmask, partículas y datos Curios presentes"
+            unzip -p "$jar" assets/capatest/animations/item/cape_folded.animation.json > /tmp/folded-anim.json
+            python3 -c 'import json; a=json.load(open("/tmp/folded-anim.json"))["animations"]; assert len(a)==5 and "animation.item" in a; print("OK: 5 animaciones con animation.item dentro del jar")'
+            unzip -p "$jar" assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json > /tmp/armor-geo.json
+            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==171 and sum(len(x.get("cubes",[])) for x in b)==234; print("OK: 171 huesos / 234 cubos dentro del jar")'
+            echo "OK: clases, mods.toml, 3D item, animation.item, relieve 3D, glowmask, 2 sets de partículas y datos Curios presentes"
           done
           test "$found" -eq 1
 
@@ -329,69 +394,98 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          JAR="build/libs/capatest-1.8.0.jar"
+          JAR="build/libs/capatest-1.9.0.jar"
           test -f "$JAR"
           NOTES=/tmp/release-notes.md
           cat > "$NOTES" <<'MD'
-          ## Manto de la Estrella Moribunda v1.8.0 — item, nombre y material
+          ## Mantle of the Blight Star v1.9.0 — icono, relieve, animación y aura
 
-          Prioridad: **que la capa se vea bien en la mano, en el slot y equipada**.
+          ### Nombre en inglés: combinación con Blight Star
 
-          ### Item en mano / slot, rehecho
+          **Mantle of the Blight Star** es el nombre visible. El anterior
+          (*Dying Star Mantle*) se combina con el planeta **Blight Star**: conserva
+          «Mantle» y la última luz de una estrella, sin depender de
+          Deteriorer/Evil Saiyan. Está en inglés en `en_us.json` y `es_es.json`;
+          el lore sí está traducido. El ID interno
+          `capatest:capa_deteriorer_evilsaiyan` se conserva para no romper mundos,
+          comandos, el tag `curios:back`, geometrías ni texturas.
 
-          El abanico plano de 7 láminas parecía una tabla oscura. Ahora es un
-          **bulto de capa doblada con grosor real**: bloque de forro, 7 franjas
-          delanteras con relieve en Z, yugo, cuello levantado, broche de
-          diamante, cadenas, tiras, 3 rollos de tela y 5 puntas de dobladillo
-          (**34 huesos**). Las 7 caras siguen reconstruyendo una sola
-          ilustración, pero con volumen y pliegues horizontales.
-          - `CapaItemRenderer` fuerza `LightTexture.FULL_SKY` fuera de la GUI:
-            en las capturas nocturnas el item ya no se ve casi negro.
-          - `CapaItemGlowLayer` re-renderiza `cape_folded_glowmask.png` con
-            `RenderType.eyes` y un pulso suave de 2.6 s. No modifica el atlas
-            base, así que un fallo del efecto no deja huecos.
-          - Display transforms ajustados para que el bulto mire a la cámara en
-            GUI, primera y tercera persona.
+          Otras combinaciones en el README: *Blight Star Mantle*,
+          *The Blight Star's Shroud*, *Dying Light of Blight Star*,
+          *Blightstar Veil* y *Last Ember of Blight Star*.
 
-          ### Fin del "mal recortado"
+          ### Icono rehecho con las dos referencias 16x16
 
-          El icono 64×64 y el atlas plegado **estiraban** el canvas 96×48 a un
-          cuadrado: el medallón se deformaba y la silueta parecía cortada.
-          v1.8.0 los encaja con la proporción real (`cloth_canvas_fitted`) y
-          dibuja un icono propio de capa doblada (`build_icon_artwork`) con
-          doble ribete, halo, medallón completo, filigrana, constelación y
-          chevron. El atlas plegado añade gema de diamante legible, yugo y
-          dobladillo sobrios, y columnas reservadas más discretas.
+          El icono anterior parecía un rectángulo oscuro. Se redibujó desde cero
+          a 512px y se redujo a 64x64: de la capa granate toma hombreras, cuello
+          alto, broche cálido, pliegue central y festón; de la capa negra/verde,
+          el ribete luminoso. Todo en paleta violeta + oro + cian de Blight Star,
+          con bisel, doble ribete, esporas y núcleo de ocho rayos.
+          Comparativa: `docs/capa_v190_icon_compare.png`.
 
-          ### Más detalles y efectos en la capa equipada
+          ### Modelo más trabajado: relieve, espalda y FRENTE
 
-          - **Medallón completo**: antes lo tapaba el yugo (centro en v=14);
-            ahora está en v=18.5 con tres anillos, diamante, engarces y núcleo.
-          - **Doble ribete perimetral**, sigilos laterales, campo de estrellas,
-            constelación y filigrana bordada. Sin líneas de costura entre
-            paneles.
-          - **Dobladillo de 4 texels** (antes 2) con chevron y pespuntes, para
-            que el festón no se corte.
-          - **5 estrellas 3D** (`v15_star_*`) en los puntos de la constelación;
-            usan la zona emisiva ya existente, así que `CapaGlowLayer` las hace
-            latir **sin ampliar la cobertura del glowmask** (1636 texels).
-          - **Geometría**: 131 huesos / 185 cubos (27 paneles 9×3, 9 creases,
-            6 ribetes, 9 lengüetas, 5 estrellas, 2 alas, 1 broche).
+          Se mantiene TODA la tela continua v1.7/v1.8: canvas 96x48, mosaico 9x3,
+          3 pliegues anchos con onda 2D/3D compartida, 61 huesos boxy ocultos,
+          alfa base byte-idéntico y **1636 texels emisivos sin ampliar el glowmask**.
 
-          Se mantienen: onda compartida `FOLDS=3` entre sombreado 2D y relieve
-          3D, canvas 96×48 continuo, 61 huesos boxy ocultos, alfa base
-          byte-idéntico, 1636 emisivos, 354 caras UV nuevas en zonas opacas,
-          radianes, caché, fail-safes, cero `JsonNull`, cero mixins, Curios
-          `back` opcional y aura serena.
+          - **Relieve 3D**: `panel_z()` con más curvatura, 9 nervios gruesos en las
+            crestas, 2 cortinas laterales continuas y 5 pesas de dobladillo.
+          - **Espalda**: cuello trasero de 3 piezas, 2 tirantes, medallón de
+            Blight Star con 8 rayos cian y órbita discontinua, 4 fragmentos
+            orbitales 3D animados y esporas frías discretas.
+          - **FRENTE del jugador**: arnés con 2 hombreras biseladas, tiras
+            diagonales, cadenas, broche, cuello de 3 piezas, placa central,
+            bandas y faldillas con punta emisiva. Cuelga de `chestplate`, así
+            que se ve en F5 y con Curios. `CapaArmorModel` mueve hombreras y
+            cadenas con giro/sprint; nervios, cortinas y pesas heredan la onda.
+          - **Geometría**: **171 huesos / 234 cubos** y **648 caras UV nuevas**,
+            todas en zonas ya opacas. Previews: `capa_v190_side_relief.png` y
+            `capa_v190_front_rig.png`.
 
-          ### Nombre y descripción
+          ### Animación propia del item
 
-          Nuevo nombre neutro, sin la referencia Saiyan: **Dying Star Mantle** /
-          **Manto de la Estrella Moribunda**, con lore de sarga violeta,
-          constelaciones y brasas serenas. El ID interno
-          `capatest:capa_deteriorer_evilsaiyan` se conserva para no romper
-          mundos, comandos ni el tag de Curios. El README trae otras opciones
-          de nombre por si prefieres cambiarlo.
+          El bulto plegado sube a **36 huesos** (2 hombreras con relieve) y estrena
+          `animation.item`, seleccionada cuando no hay entidad (GUI, hotbar, mano):
+          balanceo y bob del bulto, apertura suave de 7 pliegues, vaivén de rollos,
+          puntas, cadenas y hombreras, giro de 14 grados y pulso de escala del
+          broche. Ciclo de 3.2 s con `easeInOutSine`. Las animaciones
+          `idle/moving/sprint/air` siguen intactas para la armadura.
+          `CapaItemGlowLayer` mantiene el pulso violeta de 2.6 s y añade un
+          destello cian lento; el glowmask del item mezcla ambas tintas.
+
+          ### Efectos y partículas: leves, mudas y optimizadas
+
+          - Segundo tipo propio: `capatest:capa_blight_mote`, con **3 sprites
+            16x16** (núcleo, cruz y anillo que se apaga) y `CapaBlightParticle`
+            en órbita minúscula, alpha bajo y sin gravedad.
+          - **Presupuesto fijo**: brasa violeta cada **10 ticks** (2 al correr) +
+            mota cian cada **20 ticks** (2 al correr). Máximo **4 partículas por
+            tick de emisión**, siempre cerca de la espalda y emitidas desde
+            servidor para que también las vean otros jugadores. Sin `PORTAL`,
+            `CRIMSON_SPORE`, `SOUL_FIRE_FLAME` ni motas por el cielo.
+          - **Sin sonido molesto**: el aura no llama a `playSound` ni registra
+            `SoundEvent` propio; el CI lo verifica. El único sonido es el de
+            equipamiento vanilla de armadura, una vez al ponérsela.
+          - `CapaGlowLayer` vira suavemente a cian al perder vida o correr;
+            ambos glow layers conservan fail-safe y no modifican atlas base ni
+            glowmask prístino. Siguen `FULL_SKY` fuera de GUI, radianes, caché,
+            cinco animaciones, cero `JsonNull`, cero mixins y Curios `back`.
+
+          Los previews v1.9.0 son render software; la prueba in-game de estos
+          cambios queda para el próximo arranque. Las capturas de v1.8.0 ya
+          confirmaron que el pack arranca y que capa y bulto 3D se renderizan.
+
+          ## Histórico v1.8.0 — bulto 3D, icono proporcionado y material
+
+          Item plegado rehecho como **bulto 3D de 34 huesos** con forro, 7 franjas,
+          yugo, cuello, broche de diamante, cadenas, tiras, 3 rollos y 5 puntas.
+          Fin del recorte: icono 64×64 y atlas 128×128 con proporción real
+          (`cloth_canvas_fitted` / `build_icon_artwork`), transforms ajustados y
+          `FULL_SKY` fuera de GUI. Nuevo `CapaItemGlowLayer` con
+          `cape_folded_glowmask.png` y `RenderType.eyes`. Capa equipada con
+          medallón completo, doble ribete, constelación, dobladillo de 4 texels y
+          5 estrellas 3D: **131 huesos / 185 cubos**, 354 caras UV nuevas.
 
           ## Histórico v1.7.0 — pliegues anchos coherentes 2D/3D
 
@@ -526,19 +620,19 @@ jobs:
           **Descarga: el `.jar` directo de este Release**, no un ZIP de
           artifact. Compilado y validado en CI. Los previews son software y no
           sustituyen una prueba in-game; si algo falla, el mod registra
-          `Manto de la Estrella Moribunda: ... desactivada` en el log en vez de propagarlo.
+          `Blight Star Mantle: ... desactivada` en el log en vez de propagarlo.
           MD
-          if gh release view v1.8.0 >/dev/null 2>&1; then
-            gh release upload v1.8.0 "$JAR" --clobber
+          if gh release view v1.9.0 >/dev/null 2>&1; then
+            gh release upload v1.9.0 "$JAR" --clobber
           else
-            gh release create v1.8.0 "$JAR" \
-              --title "Manto de la Estrella Moribunda v1.8.0" \
+            gh release create v1.9.0 "$JAR" \
+              --title "Mantle of the Blight Star v1.9.0" \
               --notes-file "$NOTES" \
               --target "$GITHUB_SHA"
           fi
-          ASSETS="$(gh release view v1.8.0 --json assets --jq '.assets[].name')"
-          grep -qx 'capatest-1.8.0.jar' <<< "$ASSETS"
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.8.0/capatest-1.8.0.jar"
+          ASSETS="$(gh release view v1.9.0 --json assets --jq '.assets[].name')"
+          grep -qx 'capatest-1.9.0.jar' <<< "$ASSETS"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.9.0/capatest-1.9.0.jar"
           echo "### Descarga directa" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "[${URL}](${URL})" >> "$GITHUB_STEP_SUMMARY"

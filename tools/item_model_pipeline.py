@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Genera el geo y la animación de la capa plegada para el item 3D (v1.8.0).
+Genera el geo y la animación de la capa plegada para el item 3D (v1.9.0).
 
 v1.8.0: el item deja de ser un abanico plano de siete láminas y pasa a ser un
 BULTO de capa doblada con grosor real. Hay un bloque de forro detrás, siete
@@ -9,10 +9,11 @@ cuello levantado, un broche de diamante, dos cadenas, dos tiras laterales,
 tres rollos de tela en la base y cinco puntas de dobladillo. Las siete caras
 delanteras siguen reconstruyendo UNA sola ilustración continua del atlas.
 
-También escribe animations/item/cape_folded.animation.json: el balanceo de los
-pliegues, rollos y puntas pasa a estar en la animación (no en Java), y las
-cuatro animaciones idle/moving/sprint/air siguen disponibles para el
-controlador del item.
+v1.9.0: añade dos HOMBRERAS con relieve propio y una animación de item
+dedicada (`animation.item`) con balanceo, bob, giro del broche, escala y
+apertura de pliegues. El controlador Java la usa cuando no hay entidad
+(inventario, hotbar, mano), mientras que idle/moving/sprint/air siguen
+disponibles para el resto de contextos.
 
 Uso:  python tools/item_model_pipeline.py
 """
@@ -128,6 +129,21 @@ def build_geo() -> dict:
             [cube((wx, TOP_Y + 0.2, 1.15), (2.0, 1.2, 0.6), UV["top_band"])],
         ))
 
+    # 3b. v1.9.0: hombreras del bulto. Dos capas (paño + ribete) con giro
+    #     propio; dan la silueta de capa colgada incluso en el slot.
+    for side, sx in (("L", -1.0), ("R", 1.0)):
+        px = -WIDTH / 2.0 - 1.0 if sx < 0 else WIDTH / 2.0 - 1.0
+        bones.append(bone(
+            f"pauldron_{side}", "yoke",
+            [px + 1.0, TOP_Y + 0.8, 1.35], [6.0, sx * 10.0, sx * 14.0],
+            [
+                cube((px, TOP_Y + 0.1, 1.20), (2.0, 1.35, 0.55),
+                     UV["pauldron"]),
+                cube((px + 0.12, TOP_Y + 1.30, 1.12), (1.76, 0.22, 0.18),
+                     UV["pauldron_rim"]),
+            ],
+        ))
+
     # 4. Broche: marco y gema en DIAMANTE (rotación del hueso, no del cubo),
     #    con dos tramos de cadena. Es el punto focal del item en la mano.
     bones.append(bone(
@@ -198,13 +214,25 @@ def build_geo() -> dict:
     }
 
 
-def rot(frames: dict[float, list[float]]) -> dict:
+def channel(name: str, frames: dict[float, list[float]]) -> dict:
     return {
-        "rotation": {
+        name: {
             f"{t:.2f}": {"vector": [round(v, 3) for v in vec], "easing": "easeInOutSine"}
             for t, vec in frames.items()
         }
     }
+
+
+def rot(frames: dict[float, list[float]]) -> dict:
+    return channel("rotation", frames)
+
+
+def pos(frames: dict[float, list[float]]) -> dict:
+    return channel("position", frames)
+
+
+def scale(frames: dict[float, list[float]]) -> dict:
+    return channel("scale", frames)
 
 
 def build_animations() -> dict:
@@ -241,6 +269,16 @@ def build_animations() -> dict:
             for j in range(3)
         }
 
+    def pauldron_frames(mid: float, spread: float):
+        return {
+            side: rot({
+                0.0: [0, 0, 0],
+                mid / 2.0: [spread * 0.4, 0, (1 if side.endswith("L") else -1) * spread],
+                mid: [0, 0, 0],
+            })
+            for side in ("pauldron_L", "pauldron_R")
+        }
+
     idle = {
         "cape": rot({0.0: [0, 0, 0], 2.0: [0.7, 0, 0.3], 4.0: [0, 0, 0]}),
         "yoke": rot({0.0: [0, 0, 0], 2.0: [-0.3, 0, -0.2], 4.0: [0, 0, 0]}),
@@ -250,6 +288,7 @@ def build_animations() -> dict:
     idle.update(fold_frames(4.0, 0.8))
     idle.update(hem_frames(4.0, 1.4))
     idle.update(roll_frames(4.0, 0.6))
+    idle.update(pauldron_frames(4.0, 0.6))
 
     moving = {
         "cape": rot({0.0: [2.0, 0, 0], 0.6: [3.2, 0, 0.8], 1.2: [2.0, 0, 0]}),
@@ -258,6 +297,7 @@ def build_animations() -> dict:
     moving.update(fold_frames(1.2, 1.4))
     moving.update(hem_frames(1.2, 2.2))
     moving.update(roll_frames(1.2, 1.0))
+    moving.update(pauldron_frames(1.2, 1.2))
 
     sprint = {
         "cape": rot({0.0: [4.0, 0, 0], 0.4: [6.4, 0, 1.3], 0.8: [4.0, 0, 0]}),
@@ -266,6 +306,7 @@ def build_animations() -> dict:
     sprint.update(fold_frames(0.8, 2.0))
     sprint.update(hem_frames(0.8, 3.0))
     sprint.update(roll_frames(0.8, 1.5))
+    sprint.update(pauldron_frames(0.8, 1.8))
 
     air = {
         "cape": rot({0.0: [6.5, 0, 0], 0.75: [9.0, 0, -1.2], 1.5: [6.5, 0, 0]}),
@@ -274,6 +315,62 @@ def build_animations() -> dict:
     air.update(fold_frames(1.5, 1.8))
     air.update(hem_frames(1.5, 2.6))
     air.update(roll_frames(1.5, 1.3))
+    air.update(pauldron_frames(1.5, 1.5))
+
+    # v1.9.0: animación PROPIA del item en GUI/hotbar/mano. Es más visible
+    # que el idle de armadura: bob, balanceo, apertura de pliegues, giro del
+    # broche, pulso de escala y vaivén de hombreras. Sigue siendo suave.
+    cape_item = rot({
+        0.0: [0.0, 0.0, 0.0],
+        0.8: [2.4, 1.2, -1.6],
+        1.6: [0.0, 0.0, 0.0],
+        2.4: [-1.8, -1.0, 1.4],
+        3.2: [0.0, 0.0, 0.0],
+    })
+    cape_item.update(pos({
+        0.0: [0.0, 0.0, 0.0],
+        0.8: [0.0, 0.10, 0.0],
+        1.6: [0.0, 0.0, 0.0],
+        2.4: [0.0, -0.05, 0.0],
+        3.2: [0.0, 0.0, 0.0],
+    }))
+    clasp_item = rot({
+        0.0: [0, 0, 0],
+        1.6: [0, 0, 14.0],
+        3.2: [0, 0, 0],
+    })
+    clasp_item.update(scale({
+        0.0: [1.0, 1.0, 1.0],
+        0.8: [1.08, 1.08, 1.08],
+        1.6: [1.0, 1.0, 1.0],
+        2.4: [1.05, 1.05, 1.05],
+        3.2: [1.0, 1.0, 1.0],
+    }))
+    item = {
+        "cape": cape_item,
+        "yoke": rot({
+            0.0: [0, 0, 0], 0.8: [-1.2, 0.6, 0.4], 1.6: [0, 0, 0],
+            2.4: [0.9, -0.5, -0.3], 3.2: [0, 0, 0],
+        }),
+        "collar_center": rot({
+            0.0: [0, 0, 0], 1.6: [3.0, 0, 0], 3.2: [0, 0, 0],
+        }),
+        "clasp": clasp_item,
+        "clasp_frame": rot({
+            0.0: [0, 0, 0], 1.6: [0, 0, -5.0], 3.2: [0, 0, 0],
+        }),
+    }
+    item.update(fold_frames(3.2, 2.4))
+    item.update(hem_frames(3.2, 4.0))
+    item.update(roll_frames(3.2, 1.4))
+    item.update(pauldron_frames(3.2, 2.2))
+    for side in ("chain_L", "chain_R"):
+        sign = -1.0 if side.endswith("L") else 1.0
+        item[side] = rot({
+            0.0: [0, 0, 0],
+            1.6: [0, 0, sign * 5.0],
+            3.2: [0, 0, 0],
+        })
 
     return {
         "format_version": "1.8.0",
@@ -282,6 +379,7 @@ def build_animations() -> dict:
             "animation.moving": {"loop": True, "animation_length": 1.2, "bones": moving},
             "animation.sprint": {"loop": True, "animation_length": 0.8, "bones": sprint},
             "animation.air": {"loop": True, "animation_length": 1.5, "bones": air},
+            "animation.item": {"loop": True, "animation_length": 3.2, "bones": item},
         },
     }
 
@@ -309,7 +407,9 @@ def main() -> None:
     dangling = sorted({b["parent"] for b in bones if "parent" in b} - names)
     assert not dangling, f"huesos con padre inexistente: {dangling}"
     assert "parent" not in bones[0], "el hueso raíz no debe declarar parent"
-    assert len(names) == 34, f"geo plegado inesperado: {len(names)} huesos"
+    assert len(names) == 36, f"geo plegado inesperado: {len(names)} huesos"
+    assert {"pauldron_L", "pauldron_R"} <= names
+    assert "animation.item" in anim["animations"]
 
     for bone in bones:
         for c in bone.get("cubes", []):
@@ -327,7 +427,7 @@ def main() -> None:
     OUT_GEO.write_text(json.dumps(geo, indent=2, ensure_ascii=False) + "\n")
     OUT_ANIM.write_text(json.dumps(anim, indent=2, ensure_ascii=False) + "\n")
     print(f"wrote {OUT_GEO.relative_to(ROOT)}: {len(names)} bones")
-    print(f"wrote {OUT_ANIM.relative_to(ROOT)}: 4 animations, all bones valid")
+    print(f"wrote {OUT_ANIM.relative_to(ROOT)}: 5 animations, all bones valid")
 
 
 if __name__ == "__main__":

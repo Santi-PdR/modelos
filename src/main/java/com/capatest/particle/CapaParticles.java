@@ -16,6 +16,10 @@ public final class CapaParticles {
     public static final RegistryObject<SimpleParticleType> CAPA_EMBER =
             PARTICLES.register("capa_ember", () -> new SimpleParticleType(false));
 
+    /** v1.9.0: mota fría y MUDA de Blight Star, 3 sprites en particles/capa_blight_mote.json. */
+    public static final RegistryObject<SimpleParticleType> CAPA_BLIGHT_MOTE =
+            PARTICLES.register("capa_blight_mote", () -> new SimpleParticleType(false));
+
     private CapaParticles() {
     }
 

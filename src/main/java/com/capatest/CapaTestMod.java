@@ -32,7 +32,7 @@ public class CapaTestMod {
             () -> new CapaDeteriorerItem(
                     CapaArmorMaterial.INSTANCE,
                     ArmorItem.Type.CHESTPLATE,
-                    // Épico + resistente al fuego: la capa de un Saiyan no se quema.
+                    // Épico + resistente al fuego: la última luz de Blight Star no se apaga.
                     new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant()
             )
     );

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Especificación compartida del item plegado v1.8.0: un bulto de tela 3D.
+"""Especificación compartida del item plegado v1.9.0: un bulto de tela 3D.
 
 El item deja de ser un abanico de 7 láminas casi planas (v1.4-v1.7) y pasa a
 ser una capa DOBLADA con volumen: bloque de forro detrás, 7 franjas delanteras
@@ -10,6 +10,8 @@ pero ahora con grosor, capas y una silueta legible en mano y en el slot.
 
 tools/texture_pipeline.py usa STRIP_OFFSETS/STRIP_WIDTHS para el sombreado por
 pliegue y tools/item_model_pipeline.py usa PANELS para el geo y la animación.
+v1.9.0 añade dos regiones reservadas para las hombreras del bulto y una
+animación propia de item en GUI/mano (`animation.item`).
 """
 
 from __future__ import annotations
@@ -63,4 +65,8 @@ UV = {
     "bottom_band": {"uv": [0, 118], "uv_size": [120, 10]},
     "gem": {"uv": [54, 30], "uv_size": [20, 22]},
     "roll": {"uv": [96, 48], "uv_size": [24, 16]},
+    # v1.9.0: hombreras del bulto plegado. Zonas libres entre `edge` y el
+    # borde derecho, lejos del canvas y del broche.
+    "pauldron": {"uv": [96, 72], "uv_size": [24, 16]},
+    "pauldron_rim": {"uv": [96, 88], "uv_size": [24, 8]},
 }

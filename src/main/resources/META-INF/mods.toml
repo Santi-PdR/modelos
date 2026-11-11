@@ -7,14 +7,31 @@ modId="${mod_id}"
 version="${mod_version}"
 displayName="${mod_name}"
 authors="${mod_authors}"
-description='''Manto de la Estrella Moribunda / Dying Star Mantle para Forge 1.20.1 con GeckoLib 4.8.1.
+description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.9.0: combinacion del nombre cosmico anterior con el planeta Blight Star.
+El nombre visible queda en ingles en ambos idiomas; el lore sigue traducido.
+Icono rehecho desde dos referencias 16x16 (hombreras, cuello alto, broche
+calido, feston y ribete luminoso). Anade un motivo de estrella marchita en el
+medallon, icono y broche; 4 fragmentos orbitales 3D animados; RELIEVE 3D
+notorio (9 nervios en las crestas, 2 cortinas laterales continuas y 5 pesas
+de dobladillo); cuello trasero, tirantes y un ARNES DELANTERO con hombreras,
+tiras, cadenas, placa, bandas y faldillas animadas con giro/sprint. El item
+plegado sube a 36 huesos con dos hombreras y estrena animation.item (bob,
+apertura de pliegues, giro y pulso del broche) para GUI/hotbar/mano. Total:
+171 huesos / 234 cubos. Segundo tipo de particulas frias en orbita corta,
+presupuesto fijo de maximo 4 particulas por tick de emision y aura MUDA: sin
+playSound ni SoundEvent propio (solo el equipamiento vanilla). Destellos cian
+en los glow layers y brillo pulsante mas rico. Se conserva la tela lisa y
+continua de v1.7/v1.8, los 72 huesos originales, el canvas 96x48, el alfa
+base y los 1636 texels emisivos. Nombre interno
+capatest:capa_deteriorer_evilsaiyan conservado por compatibilidad con mundos,
+comandos, tag Curios, geometrias y texturas.
 v1.8.0: item plegado reconstruido como bulto 3D con grosor real (34 huesos),
 icono y atlas con proporcion correcta (fin del canvas estirado), canvas
 redisenado con medallon completo, doble ribete, constelacion, sigilos y
 dobladillo de 4 texels, 5 estrellas 3D emisivas, glowmask pulsante del item y
 efecto full-sky en mano. Nombre y descripcion neutros, sin referencia Saiyan.
-Nombre interno capatest:capa_deteriorer_evilsaiyan conservado por compatibilidad.
 v1.7.0: pliegues anchos coherentes. FOLDS=3 es la unica fuente de verdad:
 el sombreado del canvas y el relieve 3D en Z muestrean la misma onda coseno,
 con 9 creases geometricas en los valles y 9 lenguetas de feston real.

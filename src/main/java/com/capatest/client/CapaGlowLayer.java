@@ -25,6 +25,10 @@ import software.bernie.geckolib.renderer.layer.AutoGlowingGeoLayer;
  *
  * Ojo: GeckoLib sólo usa el ALFA del *_glowmask.png; el color del brillo sale
  * de la textura base, por eso tools/texture_pipeline.py potencia esos píxeles.
+ *
+ * v1.9.0: además del latido violeta, un componente cian muy suave aparece al
+ * perder vida o al correr, evocando la luz fría de Blight Star. La cobertura
+ * del glowmask sigue intacta: sólo cambian los canales del re-render.
  */
 public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
     private static final double PERIOD_MS = 3200.0;
@@ -53,7 +57,7 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
             // El pass emisivo es decorativo: nunca debe tumbar el render.
             disabled = true;
             com.capatest.CapaTestMod.LOGGER.error(
-                    "Manto de la Estrella Moribunda: capa emisiva desactivada", error);
+                    "Blight Star Mantle: capa emisiva desactivada", error);
         }
     }
 
@@ -81,16 +85,21 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
         float brightness = 0.88F + amplitude * (float) Math.sin(phase);
         float violet = 0.90F + 0.08F * (1.0F - brightness);
 
-        // "Deteriorer": al perder vida el aura pierde el violeta y vira a carmesí.
+        // v1.9.0: al perder vida (o al correr) el aura no vira a rojo, sino a
+        // un cian frío: es la luz "blight" del planeta, no una herida.
         float health = 1.0F;
         if (wearer instanceof LivingEntity living && living.getMaxHealth() > 0.0F) {
             health = Math.max(0.0F, Math.min(1.0F, living.getHealth() / living.getMaxHealth()));
         }
         float cool = 0.55F + 0.45F * health;
+        float blight = (1.0F - health) * 0.22F + (charged ? 0.06F : 0.0F);
+        float red = 1.0F - blight * 0.30F;
+        float green = Math.min(1.0F, violet * cool + blight * 0.55F);
+        float blue = Math.min(1.0F, cool + blight * 0.40F);
 
         getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, emissive,
                 bufferSource.getBuffer(emissive), partialTick,
                 LightTexture.FULL_SKY, OverlayTexture.NO_OVERLAY,
-                1.0F, violet * cool, cool, brightness);
+                red, green, blue, brightness);
     }
 }

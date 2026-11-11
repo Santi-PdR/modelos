@@ -20,6 +20,11 @@ import software.bernie.geckolib.renderer.GeoItemRenderer;
  * no estiran el canvas 96×48 a un cuadrado: usan una composición con la
  * proporción correcta y los mismos motivos que la capa equipada.
  *
+ * v1.9.0: el bulto sube a 36 huesos con dos hombreras de relieve y estrena
+ * `animation.item` (bob, apertura de pliegues, giro/pulso del broche). El
+ * broche incorpora la estrella marchita de Blight Star y
+ * {@link CapaItemGlowLayer} añade un destello cian lento al pulso violeta.
+ *
  * Se mantienen la corrección v1.6.1 del crash
  * {@code GeckoLibException: capatest:geo/item/cape_folded.geo.json: Error
  * loading model file}: el hueso raíz no escribe {@code "parent": null},

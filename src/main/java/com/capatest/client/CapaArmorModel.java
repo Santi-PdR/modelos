@@ -34,6 +34,15 @@ import java.util.concurrent.ConcurrentHashMap;
  * del canvas. Usan la zona emisiva ya existente, así que {@link CapaGlowLayer}
  * las hace latir sin cambiar la cobertura del glowmask.</p>
  *
+ * <p>v1.9.0 añade 4 fragmentos orbitales ({@code v15_orbit_*}) alrededor del
+ * medallón de Blight Star. Giran muy despacio en Z, con un poco más de energía
+ * al correr; es animación cosmética y comparte el mismo fail-safe.</p>
+ *
+ * <p>También anima las 2 hombreras ({@code v15_pauldron_*}) y las 2 cadenas
+ * delanteras ({@code v15_front_chain_*}): siguen el giro del cuerpo y el
+ * sprint con amplitudes de 1–2°. Los nervios, drapeados y pesas cuelgan de
+ * los paneles/hembras, así que heredan la onda sin coste extra de búsqueda.</p>
+ *
  * <p>Corrección del crash de v1.5.0 (vigente): GeckoLib guarda las rotaciones
  * de los huesos en <b>radianes</b> (ver {@code BakedModelFactory.constructBone}:
  * {@code Math.toRadians(-rotation.x)}). v1.5.0 sumaba grados directamente,
@@ -59,6 +68,11 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     private static final String[] SECTIONS = {"cape_top", "cape_mid", "cape_bottom"};
     /** v1.6.0: 9 columnas x 3 filas, mismo rectángulo global en el canvas. */
     private static final int COLUMNS = 9;
+    /** v1.9.0: 4 fragmentos orbitando el núcleo de Blight Star. */
+    private static final int ORBIT_SHARDS = 4;
+    /** v1.9.0: arnés delantero animado con el giro/sprint del portador. */
+    private static final int PAULDRONS = 2;
+    private static final int FRONT_CHAINS = 2;
 
     /**
      * v1.6.0: los 61 huesos originales con cubos que NO son la cadena
@@ -96,10 +110,16 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     private GeoBone cachedRoot;
     private GeoBone[] panels;
     private GeoBone[] hems;
+    private GeoBone[] orbitShards;
+    private GeoBone[] pauldrons;
+    private GeoBone[] frontChains;
     private float[] baseX;
     private float[] baseY;
     private float[] baseZ;
     private float[] hemBaseZ;
+    private float[] orbitBaseZ;
+    private float[] pauldronBaseZ;
+    private float[] frontChainBaseZ;
     private boolean clothReady;
     /** Fail-safe cosmético: tras un error inesperado no se vuelve a intentar. */
     private boolean disabled;
@@ -120,7 +140,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         } catch (Exception | LinkageError error) {
             disabled = true;
             CapaTestMod.LOGGER.error(
-                    "Manto de la Estrella Moribunda: animación de tela desactivada (la capa se muestra estática)", error);
+                    "Blight Star Mantle: animación de tela desactivada (la capa se muestra estática)", error);
             restoreBasePose();
         }
     }
@@ -172,13 +192,52 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             foundHemZ[column] = snapshot == null ? bone.getRotZ() : snapshot.getRotZ();
         }
 
+        GeoBone[] foundOrbit = new GeoBone[ORBIT_SHARDS];
+        float[] foundOrbitZ = new float[ORBIT_SHARDS];
+        for (int i = 0; i < ORBIT_SHARDS; i++) {
+            GeoBone bone = getBone("v15_orbit_" + i).orElse(null);
+            if (bone == null)
+                continue;
+            foundOrbit[i] = bone;
+            BoneSnapshot snapshot = bone.getInitialSnapshot();
+            foundOrbitZ[i] = snapshot == null ? bone.getRotZ() : snapshot.getRotZ();
+        }
+
+        GeoBone[] foundPauldrons = new GeoBone[PAULDRONS];
+        float[] foundPauldronZ = new float[PAULDRONS];
+        for (int i = 0; i < PAULDRONS; i++) {
+            GeoBone bone = getBone("v15_pauldron_" + (i == 0 ? "L" : "R")).orElse(null);
+            if (bone == null)
+                continue;
+            foundPauldrons[i] = bone;
+            BoneSnapshot snapshot = bone.getInitialSnapshot();
+            foundPauldronZ[i] = snapshot == null ? bone.getRotZ() : snapshot.getRotZ();
+        }
+
+        GeoBone[] foundChains = new GeoBone[FRONT_CHAINS];
+        float[] foundChainZ = new float[FRONT_CHAINS];
+        for (int i = 0; i < FRONT_CHAINS; i++) {
+            GeoBone bone = getBone("v15_front_chain_" + (i == 0 ? "L" : "R")).orElse(null);
+            if (bone == null)
+                continue;
+            foundChains[i] = bone;
+            BoneSnapshot snapshot = bone.getInitialSnapshot();
+            foundChainZ[i] = snapshot == null ? bone.getRotZ() : snapshot.getRotZ();
+        }
+
         cachedRoot = root;
         panels = foundPanels;
         hems = foundHems;
+        orbitShards = foundOrbit;
+        pauldrons = foundPauldrons;
+        frontChains = foundChains;
         baseX = foundX;
         baseY = foundY;
         baseZ = foundZ;
         hemBaseZ = foundHemZ;
+        orbitBaseZ = foundOrbitZ;
+        pauldronBaseZ = foundPauldronZ;
+        frontChainBaseZ = foundChainZ;
         clothReady = resolved > 0;
         hideOriginalSlabs();
     }
@@ -291,6 +350,37 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             hem.setRotZ(hemBaseZ[column]
                     + (float) Math.toRadians(Mth.clamp(flutterDeg, -5.0D, 5.0D)));
         }
+
+        // v1.9.0: los 4 fragmentos de Blight Star giran como un halo lento.
+        // Sólo se toca RotZ: el hueso padre (panel de tela) ya aporta la onda.
+        for (int i = 0; i < ORBIT_SHARDS; i++) {
+            GeoBone shard = orbitShards[i];
+            if (shard == null)
+                continue;
+            double spinDeg = Math.sin(time * (0.85D + speed * 0.65D)
+                    + i * Math.PI / 2.0D + seed * 0.09D)
+                    * (1.4D + sprint * 1.2D);
+            shard.setRotZ(orbitBaseZ[i] + (float) Math.toRadians(spinDeg));
+        }
+
+        // Arnés delantero: acompaña el giro y el sprint sin competir con la
+        // onda principal. Las cadenas tienen un vaivén corto y silencioso.
+        for (int i = 0; i < PAULDRONS; i++) {
+            GeoBone pad = pauldrons[i];
+            if (pad == null)
+                continue;
+            double padDeg = turn * 1.2D + sprint * 0.8D
+                    + Math.sin(time * 1.7D + i * 1.9D + wind * 0.2D) * 0.45D;
+            pad.setRotZ(pauldronBaseZ[i] + (float) Math.toRadians(padDeg));
+        }
+        for (int i = 0; i < FRONT_CHAINS; i++) {
+            GeoBone chain = frontChains[i];
+            if (chain == null)
+                continue;
+            double chainDeg = Math.sin(time * 2.1D + i * 1.3D + wind * 0.35D)
+                    * (0.6D + speed * 1.0D + sprint * 0.5D);
+            chain.setRotZ(frontChainBaseZ[i] + (float) Math.toRadians(chainDeg));
+        }
     }
 
     /** Si la animación cosmética falla, devolvemos la pose original del geo. */
@@ -310,6 +400,24 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
                 for (int i = 0; i < hems.length; i++) {
                     if (hems[i] != null)
                         hems[i].setRotZ(hemBaseZ[i]);
+                }
+            }
+            if (orbitShards != null) {
+                for (int i = 0; i < orbitShards.length; i++) {
+                    if (orbitShards[i] != null)
+                        orbitShards[i].setRotZ(orbitBaseZ[i]);
+                }
+            }
+            if (pauldrons != null) {
+                for (int i = 0; i < pauldrons.length; i++) {
+                    if (pauldrons[i] != null)
+                        pauldrons[i].setRotZ(pauldronBaseZ[i]);
+                }
+            }
+            if (frontChains != null) {
+                for (int i = 0; i < frontChains.length; i++) {
+                    if (frontChains[i] != null)
+                        frontChains[i].setRotZ(frontChainBaseZ[i]);
                 }
             }
         } catch (Exception ignored) {

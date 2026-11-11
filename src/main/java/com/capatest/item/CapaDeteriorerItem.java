@@ -43,6 +43,10 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
     // sprint/air se derivan de moving con tools/animation_pipeline.py
     private static final RawAnimation SPRINT_ANIM = RawAnimation.begin().thenLoop("animation.sprint");
     private static final RawAnimation AIR_ANIM = RawAnimation.begin().thenLoop("animation.air");
+    // v1.9.0: animación dedicada del bulto plegado en GUI/hotbar/mano.
+    private static final RawAnimation ITEM_ANIM = RawAnimation.begin().thenLoop("animation.item");
+    private static final int EMBER_INTERVAL_TICKS = 10;
+    private static final int BLIGHT_INTERVAL_TICKS = 20;
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
@@ -87,8 +91,14 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
         controllers.add(new AnimationController<>(this, "cape_controller", 4, state -> {
             Entity entity = state.getData(DataTickets.ENTITY);
 
-            // En inventario / GUI no hay entidad; los ArmorStand always idle.
-            if (entity == null || entity instanceof ArmorStand) {
+            // v1.9.0: sin entidad es el ITEM 3D en GUI/hotbar/mano. Usa su
+            // propia animación (bob, apertura de pliegues y broche), no el
+            // idle de la armadura. Los ArmorStand sí siguen con idle.
+            if (entity == null) {
+                state.setAnimation(ITEM_ANIM);
+                return PlayState.CONTINUE;
+            }
+            if (entity instanceof ArmorStand) {
                 state.setAnimation(IDLE_ANIM);
                 return PlayState.CONTINUE;
             }
@@ -163,14 +173,19 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
      * caminos se ejecutan en el mismo tick con Curios instalado.
      *
      * v1.3.0 elimina PORTAL/CRIMSON_SPORE/SOUL_FIRE_FLAME: eran las motas que
-     * llenaban el cielo en las capturas. Ahora queda una sola brasa propia,
-     * dos por segundo, pegada a la espalda y con deriva casi nula.
+     * llenaban el cielo en las capturas. Queda una brasa propia, dos por
+     * segundo, pegada a la espalda y con deriva casi nula.
+     *
+     * v1.9.0 añade MOTAS FRÍAS de Blight Star: una cada dos segundos en idle
+     * (dos al correr), en una órbita minúscula alrededor de la espalda. Es un
+     * aura MUDA y de presupuesto fijo: no se registran SoundEvent ni se llama
+     * a playSound, y el máximo son 4 partículas por tick de emisión.
      */
     public static void spawnAura(Level level, Player player) {
         if (level.isClientSide || !(level instanceof ServerLevel server)) {
             return;
         }
-        if (player.tickCount % 10 != 0) {
+        if (player.tickCount % EMBER_INTERVAL_TICKS != 0) {
             return;
         }
 
@@ -189,5 +204,20 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
 
         server.sendParticles(CapaParticles.CAPA_EMBER.get(), x, y, z,
                 count, 0.07, 0.10, 0.07, 0.001);
+
+        // v1.9.0: mota cian en órbita lenta. Se emite con la mitad de
+        // frecuencia que la brasa y siempre cerca del paño, nunca en el cielo.
+        if (tick % BLIGHT_INTERVAL_TICKS == 0) {
+            double angle = tick * 0.11D;
+            double side = Math.cos(angle) * 0.20D;
+            double depth = Math.sin(angle) * 0.07D;
+            double ox = x + Math.cos(yaw) * side - Math.sin(yaw) * depth;
+            double oz = z + Math.sin(yaw) * side + Math.cos(yaw) * depth;
+            double oy = player.getY() + 0.88D
+                    + ThreadLocalRandom.current().nextDouble() * 0.44D;
+            int motes = player.isSprinting() ? 2 : 1;
+            server.sendParticles(CapaParticles.CAPA_BLIGHT_MOTE.get(), ox, oy, oz,
+                    motes, 0.025, 0.035, 0.025, 0.001);
+        }
     }
 }

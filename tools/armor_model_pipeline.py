@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reconstruye la capa EQUIPADA como una superficie de tela continua (v1.8.0).
+"""Reconstruye la capa EQUIPADA como una superficie de tela continua (v1.9.0).
 
 Lee tools/originals/capa_deteriorer_evilsaiyan.geo.json (72 huesos / 126 cubos,
 copia prístina aprobada) y NO modifica ni uno solo de esos huesos. Añade una
@@ -9,7 +9,13 @@ segunda piel hecha de 9 columnas por cada una de las 3 secciones:
     de 96x48 como un mosaico sin costuras;
   * 9 pliegues maestros (3 por sección) en los VALLES de la onda compartida
     FOLDS=3, 6 ribetes laterales, 9 lengüetas de dobladillo con festón real,
-    2 alas de cuello, 1 broche emisivo y 5 estrellas 3D sobre la constelación.
+    2 alas de cuello, 1 broche emisivo, 5 estrellas 3D y 4 fragmentos
+    orbitales de Blight Star alrededor del medallón;
+  * v1.9.0: 9 nervios 3D en las crestas, 2 cortinas laterales continuas,
+    5 pesas de dobladillo, cuello trasero, 2 tirantes de suspensión y un
+    arnés delantero completo (2 hombreras, 2 tiras, 2 cadenas, broche y
+    cuello de 3 piezas, placa central, bandas y faldillas). Total:
+    171 huesos / 234 cubos.
 
 v1.7.0: el relieve 3D y el sombreado del canvas muestrean la MISMA onda
 (cloth_spec.fold_wave). Antes el relieve era una parábola y el canvas tenía
@@ -20,7 +26,12 @@ cresta iluminada con un panel adelantado.
 v1.8.0: añade 5 pequeñas estrellas 3D (`v15_star_*`) en las coordenadas de la
 constelación del canvas. Usan la zona emisiva `bright` ya existente, así que
 el `CapaGlowLayer` las hace latir sin ampliar la cobertura del glowmask.
-Total: 131 huesos / 185 cubos.
+
+v1.9.0: añade 4 fragmentos orbitales (`v15_orbit_*`) alrededor del núcleo de
+Blight Star, relieve grueso en las crestas, drapeados laterales, pesas que
+cuelgan, cuello trasero, tirantes y un arnés FRONTAL con hombreras. La tela
+sigue lisa/continua: el 3D vive en capas delgadas encima del mosaico.
+Total: **171 huesos / 234 cubos**.
 
 Diferencia clave frente a v1.5.x: las tres secciones comparten UN rectángulo
 global de tela. Antes cada sección usaba sus propios bounds (distintos anchos
@@ -54,6 +65,7 @@ from cloth_spec import (
     assert_opaque,
     cloth_uv,
     fold_at_column,
+    fold_crests,
     fold_valleys,
     hem_uv,
     section_uv,
@@ -142,8 +154,10 @@ def panel_z(section: int, column: int) -> float:
     diferencia de profundidad y por la crease 3D, no por una grieta.
     """
     norm = (column - (COLUMNS - 1) / 2.0) / ((COLUMNS - 1) / 2.0)
-    return (2.58 + 0.09 * section + 0.14 * (1.0 - norm * norm)
-            + 0.055 * fold_at_column(column))
+    # v1.9.0: relieve más notorio sin abrir huecos. La amplitud sigue siendo
+    # menor que el grosor útil del conjunto (panel 0.10 + nervios y drapeados).
+    return (2.58 + 0.11 * section + 0.18 * (1.0 - norm * norm)
+            + 0.085 * fold_at_column(column))
 
 
 def build() -> dict:
@@ -251,6 +265,172 @@ def build() -> dict:
                   spec("bright"), spec("bright"), si)],
         ))
 
+    # 4c. v1.9.0: 4 fragmentos orbitales alrededor del núcleo de Blight Star.
+    #     Son diamantes aún más pequeños que las estrellas, en los puntos
+    #     cardinales del medallón. CapaArmorModel los hace girar despacio.
+    orbit_points = ((48.0, 12.4), (54.1, 18.5), (48.0, 24.6), (41.9, 18.5))
+    for i, (su, sv) in enumerate(orbit_points):
+        si, col, sx, sy, sz = canvas_point(su, sv)
+        section = SECTIONS[si]
+        size = 0.13
+        bones.append(bone(
+            f"v15_orbit_{i}",
+            f"v15_cloth_{section}_{col}",
+            [sx, sy, sz + 0.015], [0.0, 0.0, 45.0],
+            [cube((sx - size / 2.0, sy - size / 2.0, sz + 0.015),
+                  (size, size, 0.035),
+                  spec("bright"), spec("bright"), si)],
+        ))
+
+    # 4d. v1.9.0: RELIEVE 3D REAL. Un nervio grueso en cada cresta de la onda
+    #     (0, 3, 6 por sección) y dos paneles laterales que cuelgan de los
+    #     hombros con giro en Y/Z. La tela sigue siendo un mosaico continuo.
+    for si, section in enumerate(SECTIONS):
+        x0, x1, y_lo, y_hi, step = rows[si]
+        for k, crest in enumerate(fold_crests()):
+            x = x0 + (crest + 0.5) * step - 0.06
+            z = panel_z(si, crest) + 0.13
+            bones.append(bone(
+                f"v15_ridge_{section}_{k}",
+                f"v15_cloth_{section}_{crest}",
+                [x + 0.06, (y_lo + y_hi) / 2.0, z],
+                [0.0, 0.0, 0.0],
+                [cube((x, y_lo + 0.08, z),
+                      (0.12, y_hi - y_lo - 0.16, 0.16),
+                      spec("crease_light"), spec("crease_light"), si)],
+            ))
+    # 4d2. Dos CORTINAS laterales CONTINUAS (una por lado), no seis barras
+    #      segmentadas: cuelgan del panel central y caen de hombros a dobladillo.
+    for side, sx, col in (("L", -1.0, 0), ("R", 1.0, COLUMNS - 1)):
+        x = gx0 - 0.18 if sx < 0 else gx1 - 0.42
+        z = panel_z(1, col) + 0.16
+        bones.append(bone(
+            f"v15_drape_{side}", f"v15_cloth_cape_mid_{col}",
+            [x + 0.35, (gy0 + gy1) / 2.0, z],
+            [1.5, sx * 8.0, sx * 3.0],
+            [
+                cube((x, gy0 + 0.10, z),
+                     (0.70, gy1 - gy0 - 0.20, 0.20),
+                     spec("crease_light"), spec("crease_light"), 1),
+                cube((x if sx < 0 else x + 0.60, gy0 + 0.10, z + 0.02),
+                     (0.10, gy1 - gy0 - 0.20, 0.22),
+                     spec("rim"), spec("rim"), 1),
+            ],
+        ))
+
+    # 4e. Pesas del dobladillo: 5 diamantes que cuelgan de las lengüetas.
+    #     Heredan el vaivén de v15_hem_* y refuerzan la lectura de prenda
+    #     colgada, no de rectángulo pegado a la espalda.
+    bx0, _, _, _, bstep = rows[2]
+    for j, col in enumerate((0, 2, 4, 6, 8)):
+        center = bx0 + (col + 0.5) * bstep
+        z = panel_z(2, col) + 0.14
+        bones.append(bone(
+            f"v15_weight_{j}", f"v15_hem_{col}",
+            [center, gy0 - 1.15, z], [0.0, 0.0, 45.0],
+            [cube((center - 0.11, gy0 - 1.28, z),
+                  (0.22, 0.22, 0.10),
+                  spec("bright"), spec("bright"), 2)],
+        ))
+
+    # 4f. Cuello trasero levantado y tirantes de suspensión desde los hombros.
+    for i, (cx, rz) in enumerate(((-2.4, -12.0), (0.0, 0.0), (2.4, 12.0))):
+        bones.append(bone(
+            f"v15_back_collar_{i}", "cape_top",
+            [cx, gy1 + 0.35, 2.95], [0.0, 0.0, rz],
+            [cube((cx - 1.0, gy1 - 0.25, 2.75),
+                  (2.0, 1.1, 0.45),
+                  spec("yoke"), spec("yoke"), 0)],
+        ))
+    for side, sx in (("L", -1.0), ("R", 1.0)):
+        x = -4.6 if sx < 0 else 4.35
+        bones.append(bone(
+            f"v15_suspend_{side}", "chestplate",
+            [x + 0.12, 22.0, 1.6], [0.0, 0.0, sx * 18.0],
+            [cube((x, 20.3, 1.45), (0.24, 3.4, 0.24),
+                  spec("rim"), spec("rim"), 0)],
+        ))
+
+    # 4g. v1.9.0: FRENTE del jugador. Hombreras con relieve, arnés diagonal,
+    #     broche, cadenas y cuello delantero. Todo cuelga de `chestplate`
+    #     (no de los huesos boxy ocultos), así que se ve en F5 y con Curios.
+    for side, sx in (("L", -1.0), ("R", 1.0)):
+        px = -5.35 if sx < 0 else 3.35
+        bones.append(bone(
+            f"v15_pauldron_{side}", "chestplate",
+            [px + 1.0, 22.9, -1.0],
+            [4.0, sx * 12.0, sx * 8.0],
+            [
+                cube((px, 22.2, -1.65), (2.0, 1.4, 0.42),
+                     spec("yoke"), spec("yoke"), 0),
+                cube((px + 0.15, 23.35, -1.72), (1.7, 0.22, 0.18),
+                     spec("rim"), spec("rim"), 0),
+                cube((px + 0.78, 22.65, -1.82), (0.44, 0.44, 0.14),
+                     spec("bright"), spec("bright"), 0),
+            ],
+        ))
+        sx2 = -2.0 if sx < 0 else 2.0
+        bones.append(bone(
+            f"v15_front_strap_{side}", "chestplate",
+            [sx2, 20.8, -2.45], [0.0, 0.0, -sx * 36.0],
+            [cube((sx2 - 0.14, 19.0, -2.52),
+                  (0.28, 3.6, 0.16),
+                  spec("rim"), spec("rim"), 0)],
+        ))
+        bones.append(bone(
+            f"v15_front_chain_{side}", "chestplate",
+            [sx * 0.9, 19.1, -2.55], [0.0, 0.0, sx * 5.0],
+            [cube((sx * 0.9 - 0.09, 17.6, -2.62),
+                  (0.18, 2.4, 0.14),
+                  spec("rim"), spec("rim"), 0)],
+        ))
+    bones.append(bone(
+        "v15_front_clasp", "chestplate",
+        [0.0, 21.6, -2.68], [0.0, 0.0, 45.0],
+        [cube((-0.36, 21.24, -2.75), (0.72, 0.72, 0.16),
+              spec("bright"), spec("bright"), 0)],
+    ))
+    for i, (cx, rz) in enumerate(((-2.1, -14.0), (0.0, 0.0), (2.1, 14.0))):
+        bones.append(bone(
+            f"v15_front_collar_{i}", "chestplate",
+            [cx, 23.5, -1.95], [0.0, 0.0, rz],
+            [cube((cx - 0.9, 23.0, -2.15), (1.8, 1.0, 0.42),
+                  spec("yoke"), spec("yoke"), 0)],
+        ))
+
+    # 4h. Más arnés delantero: placa central, bandas que unen hombros y
+    #     dos faldillas cortas con punta emisiva. Así el frente no queda
+    #     como cuatro barras sueltas y se lee como prenda colgada.
+    bones.append(bone(
+        "v15_front_placket", "chestplate",
+        [0.0, 19.4, -2.62], [0.0, 0.0, 0.0],
+        [
+            cube((-0.34, 17.5, -2.68), (0.68, 3.9, 0.14),
+                 spec("yoke"), spec("yoke"), 0),
+            cube((-0.20, 20.7, -2.76), (0.40, 0.40, 0.12),
+                 spec("bright"), spec("bright"), 0),
+        ],
+    ))
+    for side, sx in (("L", -1.0), ("R", 1.0)):
+        bx = -3.4 if sx < 0 else 1.4
+        bones.append(bone(
+            f"v15_front_band_{side}", "chestplate",
+            [bx + 1.0, 21.5, -2.50], [0.0, 0.0, sx * 18.0],
+            [cube((bx, 21.28, -2.56), (2.0, 0.30, 0.14),
+                  spec("rim"), spec("rim"), 0)],
+        ))
+        tx = -1.6 if sx < 0 else 1.2
+        bones.append(bone(
+            f"v15_front_tassel_{side}", "chestplate",
+            [tx + 0.2, 16.6, -2.56], [0.0, 0.0, sx * 4.0],
+            [
+                cube((tx, 15.4, -2.62), (0.40, 1.6, 0.14),
+                     spec("rim"), spec("rim"), 0),
+                cube((tx + 0.10, 15.1, -2.70), (0.20, 0.20, 0.10),
+                     spec("bright"), spec("bright"), 0),
+            ],
+        ))
+
     # 5. Cuello: dos piezas delgadas con la MISMA tela del canvas, no bloques
     #    de color plano. Sustituyen a las hombreras boxy sin cortar la lectura.
     tx0, tx1, _, _, _ = rows[0]
@@ -284,6 +464,14 @@ def build() -> dict:
     names = {b["name"] for b in bones}
     assert len(names) == len(bones), "nombres de hueso duplicados"
     assert sum(1 for n in names if n.startswith("v15_cloth_")) == COLUMNS * len(SECTIONS)
+    assert sum(1 for n in names if n.startswith("v15_orbit_")) == 4
+    assert sum(1 for n in names if n.startswith("v15_ridge_")) == 9
+    assert sum(1 for n in names if n.startswith("v15_drape_")) == 2
+    assert sum(1 for n in names if n.startswith("v15_weight_")) == 5
+    assert sum(1 for n in names if n.startswith("v15_back_collar_")) == 3
+    assert sum(1 for n in names if n.startswith("v15_suspend_")) == 2
+    assert sum(1 for n in names if n.startswith("v15_pauldron_")) == 2
+    assert sum(1 for n in names if n.startswith("v15_front_")) == 13
     parents = set(names)
     for b in bones:
         assert b.get("parent") is None or b["parent"] in parents, b["name"]

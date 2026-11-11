@@ -15,7 +15,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         // assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan.png
         // y *_glowmask.png (GeckoLib 4.8 usa el sufijo "_glowmask").
         // CapaArmorModel oculta las losas originales y anima los paneles
-        // continuos v15_* sin tocar el geo aprobado.
+        // continuos v15_*, el arnés delantero y los detalles 3D v1.9.0,
+        // sin tocar el geo aprobado.
         super(new CapaArmorModel(
                 new ResourceLocation(CapaTestMod.MOD_ID, "armor/capa_deteriorer_evilsaiyan")
         ));

@@ -23,7 +23,8 @@ import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
  * atlas base: si esta capa fallara, el item sigue viéndose completo.
  *
  * El brillo "respira" con un periodo de 2.6 s y se vuelve algo más violeta en
- * los valles. Es decorativo: cualquier error se registra y se desactiva.
+ * los valles. v1.9.0 añade un destello cian más lento (Blight Star) en el
+ * canal azul/verde. Es decorativo: cualquier error se registra y se desactiva.
  */
 public class CapaItemGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
     private static final ResourceLocation GLOW = new ResourceLocation(
@@ -53,13 +54,17 @@ public class CapaItemGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
             double phase = (System.currentTimeMillis() % PERIOD_MS) / PERIOD_MS * Math.PI * 2.0;
             float brightness = 0.72F + 0.28F * (float) Math.sin(phase);
             float violet = 0.88F + 0.10F * (1.0F - brightness);
+            float cyan = 0.10F + 0.10F * (float) Math.cos(phase * 0.5D);
+            float red = 1.0F - cyan * 0.12F;
+            float green = Math.min(1.0F, violet + cyan * 0.28F);
+            float blue = Math.min(1.0F, brightness + cyan * 0.14F);
             getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, eyes,
                     bufferSource.getBuffer(eyes), partialTick,
                     LightTexture.FULL_SKY, OverlayTexture.NO_OVERLAY,
-                    1.0F, violet, brightness, brightness);
+                    red, green, blue, brightness);
         } catch (Exception | LinkageError error) {
             disabled = true;
-            CapaTestMod.LOGGER.error("Manto de la Estrella Moribunda: efecto emisivo del item desactivado", error);
+            CapaTestMod.LOGGER.error("Blight Star Mantle: efecto emisivo del item desactivado", error);
         }
     }
 }

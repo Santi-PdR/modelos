@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Especificación compartida de la superficie de tela v1.8.0.
+"""Especificación compartida de la superficie de tela v1.9.0.
 
 El atlas de armadura sigue siendo de 128x128 y su alfa es prístino. La capa
 equipada usa una ilustración continua de 96x48 texels (todos opacos) para sus
@@ -27,6 +27,12 @@ v1.8.0: el canvas se rediseña con medallón completo, doble ribete,
 constelación, sigilos y un dobladillo de 4 texels. El item plegado y el icono
 dejan de estirar el canvas 2:1 a un cuadrado (tools/texture_pipeline.py los
 encaja con `cloth_canvas_fitted` / `build_icon_artwork`).
+
+v1.9.0: mantiene TODA la superficie lisa anterior y añade un motivo de
+estrella marchita en el medallón: rayos y órbita cian, motas frías y bloom en
+dos tintas. `panel_z()` y `fold_crests()` refuerzan el relieve 3D sin romper
+la onda compartida. El glowmask de armadura sigue con la misma cobertura; los
+destellos nuevos viven en el color base y en el glowmask separado del item.
 
 tools/armor_model_pipeline.py construye la geometría, tools/texture_pipeline.py
 pinta el canvas y CapaArmorModel.java anima los huesos v15_cloth_*.
@@ -58,6 +64,12 @@ def fold_valleys() -> tuple[int, ...]:
     """Columnas cuyo centro cae en un valle: ahí van las creases 3D."""
     return tuple(col for col in range(COLUMNS)
                  if fold_at_column(col) < -0.5)
+
+
+def fold_crests() -> tuple[int, ...]:
+    """Una cresta por pliegue ancho: ahí van los nervios 3D realzados."""
+    step = COLUMNS // FOLDS
+    return tuple(col for col in range(0, COLUMNS, step))
 
 UV = {
     # Superficie principal: una sola ilustración de alta resolución reducida a

@@ -5,11 +5,12 @@ Uso:
     python -m pip install Pillow numpy
     python tools/preview_cloth.py --out /tmp/capa_preview
 
-Genera vistas del bulto plegado v1.8.0, la capa equipada (frente/3-4/espalda),
-la superficie de tela aislada, el canvas 96x48, el icono 64x64 ampliado, el
-glowmask del item y el detalle original que queda visible. Sirve para detectar
-cortes de UV, costuras y silueta boxy sin abrir Minecraft. El sombreado y la
-orientación de caras son aproximaciones.
+Genera vistas del bulto plegado, la capa equipada v1.9.0 (frente/3-4/espalda),
+un perfil para el relieve 3D y el arnés delantero aislado, la superficie de
+tela, el canvas 96x48, el icono 64x64 ampliado, el glowmask del item, los seis
+sprites de partículas y el detalle original que queda visible. Sirve para
+detectar cortes de UV, costuras y silueta boxy sin abrir Minecraft. El
+sombreado y la orientación de caras son aproximaciones.
 """
 
 from __future__ import annotations
@@ -31,6 +32,7 @@ ARMOR_TEX = ASSETS / "textures/item/armor/capa_deteriorer_evilsaiyan.png"
 FOLDED_TEX = ASSETS / "textures/item/cape_folded.png"
 FOLDED_GLOW = ASSETS / "textures/item/cape_folded_glowmask.png"
 ICON = ASSETS / "textures/item/capa_deteriorer_evilsaiyan.png"
+PARTICLE_DIR = ASSETS / "textures/particle"
 
 # Debe coincidir con CapaArmorModel.SECTIONS + HIDDEN_DETAILS.
 SECTION_BONES = {"cape_top", "cape_mid", "cape_bottom"}
@@ -215,10 +217,10 @@ def posed(geo):
             sec, col = n[len("v15_cloth_"):].rsplit("_", 1)
             si, ci = secs[sec], int(col)
             share = 0.30 + 0.35 * si
-            wave = math.sin(1.9 - si * 0.55 - ci * 0.045)
+            wave = math.sin(1.9 - si * 0.55 - ci * 0.030)
             b["rotation"][0] -= 6.0 * share * (0.55 + 0.45 * wave)
             b["rotation"][1] += (ci - 6) * 0.30 * share
-            b["rotation"][2] += math.sin(ci * 0.62) * 1.0 * share
+            b["rotation"][2] += math.sin(ci * 0.42) * 1.0 * share
         elif n.startswith("v15_hem_"):
             ci = int(n.rsplit("_", 1)[1])
             b["rotation"][2] += math.sin(2.3 - ci * 0.55) * 2.2
@@ -280,6 +282,25 @@ def compose(images, labels, cols, size, bg=(13, 11, 18)):
     return canvas
 
 
+def particle_sheet(path):
+    """Hoja de contacto de los 6 sprites: 3 brasas + 3 motas de Blight Star."""
+    names = ([f"capa_ember_{i}.png" for i in range(3)]
+             + [f"capa_blight_mote_{i}.png" for i in range(3)])
+    labels = ["EMBER 0", "EMBER 1", "EMBER 2",
+              "BLIGHT 0", "BLIGHT 1", "BLIGHT 2"]
+    cell = 128
+    sheet = Image.new("RGB", (3 * (cell + 10) + 5, 2 * (cell + 28) + 5), (13, 11, 18))
+    d = ImageDraw.Draw(sheet)
+    for i, (name, label) in enumerate(zip(names, labels)):
+        sprite = Image.open(PARTICLE_DIR / name).convert("RGBA").resize(
+            (cell, cell), Image.LANCZOS)
+        x = 5 + (i % 3) * (cell + 10)
+        y = 25 + (i // 3) * (cell + 28)
+        sheet.paste(sprite, (x, y), sprite)
+        d.text((x, y - 17), label, fill=(220, 235, 245))
+    sheet.save(path)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="/tmp/capa_preview", type=pathlib.Path)
@@ -301,17 +322,32 @@ def main():
             args.out / "uv_test_front.png")
         print("UV test:", test_atlas, args.out / "uv_test_front.png")
 
+    # v1.9.0: vistas extra para el relieve 3D y el arnés delantero.
+    front_rig_only = {b["name"] for b in armor["bones"]
+                      if not (b["name"].startswith("v15_pauldron_")
+                              or b["name"].startswith("v15_front_")
+                              or b["name"].startswith("v15_suspend_")
+                              or b["name"].startswith("v15_back_collar_"))}
+    side_relief = render(armor, ARMOR_TEX, runtime_hidden,
+                         yaw=-62, pitch=14, size=520)
+    front_rig = render(armor, ARMOR_TEX, front_rig_only,
+                       yaw=180, pitch=8, size=520)
+    side_relief.save(args.out / "side_relief.png")
+    front_rig.save(args.out / "front_rig.png")
+
     views = [
         (render(folded, FOLDED_TEX, set(), yaw=-28, pitch=14, size=520),
-         "FOLDED ITEM 3D - bulto v1.8.0"),
+         "FOLDED ITEM 3D - bulto v1.9.0"),
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=0, pitch=8, size=520),
          "EQUIPPED - frente"),
         (render(posed(armor), ARMOR_TEX, runtime_hidden, yaw=-28, pitch=10, size=520),
          "EQUIPPED - onda 3/4"),
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=180, pitch=8, size=520),
          "EQUIPPED - espalda"),
+        (side_relief, "RELIEVE 3D - perfil"),
+        (front_rig, "ARNES FRONTAL - detalle"),
     ]
-    compose([v for v, _ in views], [l for _, l in views], 2, 520).save(args.out / "full.png")
+    compose([v for v, _ in views], [l for _, l in views], 3, 520).save(args.out / "full.png")
     compose([
         render(armor, ARMOR_TEX, cloth_only, yaw=0, pitch=8, size=700),
         render(posed(armor), ARMOR_TEX, cloth_only, yaw=-28, pitch=10, size=700),
@@ -324,6 +360,7 @@ def main():
         (256, 256), Image.LANCZOS).save(args.out / "icon.png")
     Image.open(FOLDED_GLOW).convert("RGBA").resize(
         (256, 256), Image.LANCZOS).save(args.out / "folded_glowmask.png")
+    particle_sheet(args.out / "particles.png")
     visible = [b["name"] for b in armor["bones"]
                if not b["name"].startswith("v15_") and b["name"] not in runtime_hidden
                and b.get("cubes")]
