@@ -9,6 +9,15 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.12.0: VOLUMEN 3D REAL E ICONO REDISENADO. La tela deja de ser una
+lamina de 0.10 y pasa a bloques de 0.85 con relieve de pliegues de 0.28;
+se anaden hombreras TRASERAS solidas, cuello levantado, placas escalonadas,
+cadenas 3D, medallon con cuerpo y gorget, todos visibles desde la espalda.
+Los cantos del atlas se aclaran para que el grosor se lea como sarga y no
+como barrotes. El icono pixel art 16x16 se redibuja por completo: hombreras
+con gemas, manto trapezoidal, broche diamante, bordado y feston de 3 puntas.
+Se conservan violeta + oro + cian. 193 huesos / 281 cubos.
+
 v1.11.0: ICONO CON SILUETA PROPIA. El icono pixel art 16x16 de v1.10.0
 gusto en ESTILO pero copiaba la forma de las dos referencias (que son el
 mismo icono recoloreado: un pico de capucha centrado, cuerpo cuadrado y

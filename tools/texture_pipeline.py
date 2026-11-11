@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Procedural texture suite for the Mantle of the Blight Star (v1.11.0).
+Procedural texture suite for the Mantle of the Blight Star (v1.12.0).
 
 Why procedural instead of AI-generated art:
     The 128x128 armor texture is a strict UV atlas. Every cube face of
@@ -37,11 +37,17 @@ Why procedural instead of AI-generated art:
     two reference capes (which are the SAME 16x16 shape recoloured): a single
     centred hood-peak, a square body and a centre split that opens into two
     flaring legs. The user liked the pixel-art STYLE but asked for a shape of
-    its own. ICON_PIXEL_MAP is now a distinct, symmetric mantle: two standing
-    collar peaks with an open V, jutting gold pauldrons, a pinched waist, a
-    flared skirt, THREE bright vertical pleats, a diamond throat clasp, the
-    cyan Blight Star and a three-point crown hem (echoing FOLDS=3). Same
-    approved technique: flat palette, hard outline, Image.NEAREST, no AA.
+    its own (v1.11.0), then REDRAWN for v1.12.0 because the user rejected it:
+    the 16x16 ICON_PIXEL_MAP now has jutting gold pauldrons with cyan gems,
+    a trapezoidal mantle with THREE wide pleats, a 5-pixel diamond clasp,
+    gold embroidery, cold veins, the Blight Star and a hanging three-point
+    hem. Flat palette, hard outline, Image.NEAREST, no gradients/AA/bloom.
+
+    v1.12.0 also gives the EQUIPPED cape real 3D volume (see
+    armor_model_pipeline.py): 0.85-thick cloth blocks instead of 0.10 sheets,
+    solid rear pauldrons, a raised collar, stepped plates, 3D chains and a
+    medallion with depth. The reserved cloth strips are lightened so the
+    newly visible side faces read as thick twill, not black bars.
 
     v1.10.0 replaces the smooth illustrated 64x64 icon with TRUE 16x16 pixel
     art (ICON_PIXEL_MAP/ICON_PALETTE, upscaled 4x with Image.NEAREST), matching
@@ -428,11 +434,15 @@ def paint_reserved_cloth_strips(out: np.ndarray, glow_alpha: np.ndarray) -> np.n
     y = np.arange(128, dtype=np.float32).reshape(128, 1, 1) / 127.0
     # v1.5.1: contraste de crease reducido. En v1.5.0 las 36 creases leían
     # como un código de barras; ahora acompañan al sombreado del canvas.
-    out[:, 105:107, :3] = np.array([34.0, 14.0, 48.0]) + y * np.array([6.0, 2.0, 8.0])
-    out[:, 107:109, :3] = np.array([60.0, 28.0, 86.0]) + y * np.array([8.0, 3.0, 12.0])
-    out[:, 120:122, :3] = np.array([18.0, 8.0, 30.0]) + y * np.array([10.0, 2.0, 10.0])
+    # v1.12.0: los cantos de los bloques de 0.85 ahora se ven de perfil y
+    # de 3/4. Antes eran casi negros y parecian barrotes; se aclaran a un
+    # forro violeta medio (misma paleta, solo sombreado) para que el relieve
+    # se lea como tela gruesa y no como una reja.
+    out[:, 105:107, :3] = np.array([54.0, 24.0, 68.0]) + y * np.array([8.0, 3.0, 10.0])
+    out[:, 107:109, :3] = np.array([86.0, 42.0, 108.0]) + y * np.array([10.0, 4.0, 14.0])
+    out[:, 120:122, :3] = np.array([40.0, 16.0, 54.0]) + y * np.array([12.0, 3.0, 12.0])
     # v1.10.0: ribete menos neón, más hilo dorado/violeta apagado.
-    out[:, 122:124, :3] = np.array([92.0, 48.0, 126.0]) + y * np.array([30.0, 12.0, 36.0])
+    out[:, 122:124, :3] = np.array([118.0, 66.0, 138.0]) + y * np.array([32.0, 14.0, 38.0])
 
     em = glow_alpha[109:127, 69:75] > 0
     bright = out[109:127, 69:75, :3]
@@ -632,7 +642,7 @@ def cloth_canvas_fitted(w: int, h: int) -> tuple[Image.Image, Image.Image]:
 
 
 # --------------------------------------------------------------------------
-# v1.11.0 ICON: pixel art 2D/RPG de 16x16 con SILUETA PROPIA.
+# v1.12.0 ICON: pixel art 2D/RPG de 16x16 REDISENADO (hombreras + broche).
 #
 # Las dos referencias (image-13/14) son EL MISMO icono 16x16 recoloreado: un
 # único pico de capucha centrado, cuerpo cuadrado y una hendidura central
@@ -652,22 +662,22 @@ def cloth_canvas_fitted(w: int, h: int) -> tuple[Image.Image, Image.Image]:
 # --------------------------------------------------------------------------
 
 ICON_PIXEL_MAP = (
-    "....GG....GG....",
-    "...GDHK..KHDG...",
-    "...GDHGKKGHDG...",
-    ".GGMDHMLLMHDMGG.",
-    ".GLMDHMLLMHDMLG.",
-    "..KMDHMLLMHDMK..",
-    "..KMDHMLLMHDMK..",
-    "..KMDHMLLMHDMK..",
-    "..KMDHMLLMHDMK..",
-    ".KLMDHMLLMHDMLK.",
-    "KMLMDHMLLMHDMLMK",
-    "KMLMDHMLLMHDMLMK",
-    "KMLMKKMLLMKKMLMK",
-    "KMLK..KLLK..KLMK",
-    "KMLK..KLLK..KLMK",
-    ".GG....GG....GG.",
+    "...KGG....GGK...",
+    "....KLHMLHLK....",
+    "KWWKLHKGLKHMKWWK",
+    "KCCKLHGWGLHMKCCK",
+    "KHHKLHMGLLHMKHHK",
+    "..MLLHMCCLHMML..",
+    "..MGLHMMLLHMGL..",
+    ".DMLLHMMELHMMLD.",
+    ".DMELHMEWEHMELD.",
+    "KGMLLHMMELHMMLGK",
+    "KDMLLHMMLLHMMLDK",
+    "KDMLEHMMLLHEMLDK",
+    "KGMLLHMMLLHMMLGK",
+    "GGMLGHGMLGHGMLGG",
+    "KKDDKKKDDKKKDDKK",
+    "..GW...GW...GW..",
 )
 
 # Paleta plana (9 tonos opacos + transparente): mismos violetas que v1.10.0,
@@ -687,57 +697,37 @@ ICON_PALETTE = {
 
 
 def build_icon_artwork(size: int = 64) -> Image.Image:
-    """Icono 64x64 con píxeles de 4x4, NO una ilustración con antialiasing.
+    """Icono 64x64 de PIXEL ART DURO (16x16 -> 4x, Image.NEAREST).
 
-    Se dibuja a 16x16 con la SILUETA PROPIA de v1.11.0 (dos picos de cuello,
-    hombreras, cintura, tres pliegues y dobladillo de tres puntas), se añaden
-    el broche de 5 píxeles en la garganta, una estrella cian de 4 puntas y
-    vetas frías, y se amplía con `Image.NEAREST`. Bloques de color definidos:
-    el estilo de icono 2D de RPG aprobado, con forma ya no copiada.
+    v1.12.0 redibuja el icono rechazado de v1.11.0. La forma ya no es un
+    rectangulo a franjas: dos HOMBRERAS con ribete de oro y gemas cian
+    sobresalen del cuello, el manto cae en trapecio con TRES pliegues anchos,
+    el broche es un diamante de 5 pixeles, hay bordado, vetas frias, la
+    estrella de Blight Star y un feston de tres puntas que cuelga.
+
+    Todo el detalle vive en ICON_PIXEL_MAP: no hay overlays, degradados,
+    antialiasing ni bloom. Solo un rim light discreto de UN pixel, aplicado
+    como suma por pixel (no cambia la silueta ni el alfa).
     """
     rows = ICON_PIXEL_MAP
     assert len(rows) == 16 and all(len(r) == 16 for r in rows), "icono base 16x16"
     grid = [list(r) for r in rows]
-
-    def put(x, y, ch):
-        if 0 <= x < 16 and 0 <= y < 16 and grid[y][x] != ".":
-            grid[y][x] = ch
-
-    # Broche: diamante de 5 px en la GARGANTA, cerrando el escote en V de los
-    # dos picos del cuello. Núcleo claro para que se lea en el slot.
-    put(7, 2, "G")
-    put(6, 3, "G")
-    put(7, 3, "W")
-    put(8, 3, "G")
-    put(7, 4, "G")
-
-    # Estrella de Blight Star sobre el pliegue CENTRAL: 4 puntas + núcleo.
-    put(7, 8, "W")
-    put(6, 8, "C")
-    put(8, 8, "C")
-    put(7, 7, "C")
-    put(7, 9, "C")
-
-    # Vetas cian sueltas, equivalentes a las vetas verdes de la referencia 2.
-    for x, y in ((3, 6), (12, 6), (2, 10), (13, 10),
-                 (5, 11), (10, 11)):
-        put(x, y, "E")
 
     px = np.zeros((16, 16, 4), dtype=np.uint8)
     for y in range(16):
         for x in range(16):
             px[y, x] = ICON_PALETTE[grid[y][x]]
 
-    # Rim light de UN píxel en el borde superior/izquierdo. Es una suma
-    # discreta por píxel: sigue siendo pixel art, sin blur ni degradado.
+    # Rim light de UN pixel en el borde superior/izquierdo del violeta.
+    # Se excluyen oro, cian, blanco y contorno para no blanquear el broche.
     opaque = px[..., 3] > 0
     for y in range(16):
         for x in range(16):
-            if not opaque[y, x] or grid[y][x] in (".", "K", "G", "W", "C"):
+            if not opaque[y, x] or grid[y][x] in (".", "K", "G", "W", "C", "E"):
                 continue
             if x == 0 or y == 0 or not opaque[y, x - 1] or not opaque[y - 1, x]:
                 px[y, x, :3] = np.clip(
-                    px[y, x, :3].astype(np.int16) + np.array([26, 10, 24], dtype=np.int16),
+                    px[y, x, :3].astype(np.int16) + np.array([24, 8, 22], dtype=np.int16),
                     0, 255,
                 ).astype(np.uint8)
 

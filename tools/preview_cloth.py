@@ -5,7 +5,7 @@ Uso:
     python -m pip install Pillow numpy
     python tools/preview_cloth.py --out /tmp/capa_preview
 
-Genera vistas del bulto plegado, la capa equipada v1.11.0 (frente/3-4/espalda),
+Genera vistas del bulto plegado, la capa equipada v1.12.0 (frente/3-4/espalda),
 un perfil para el relieve 3D y el arnés delantero aislado, la superficie de
 tela, el canvas 96x48, el icono 64x64 ampliado, el glowmask del item, los seis
 sprites de partículas y el detalle original que queda visible. Sirve para
@@ -323,11 +323,10 @@ def main():
         print("UV test:", test_atlas, args.out / "uv_test_front.png")
 
     # v1.9.0: vistas extra para el relieve 3D y el arnés delantero.
-    front_rig_only = {b["name"] for b in armor["bones"]
-                      if not (b["name"].startswith("v15_pauldron_")
-                              or b["name"].startswith("v15_front_")
-                              or b["name"].startswith("v15_suspend_")
-                              or b["name"].startswith("v15_back_collar_"))}
+    # v1.12.0: ya NO mostramos el arnes aislado (parecian "piezas sueltas
+    # flotando", que es exactamente lo que el usuario reprocho). En su lugar
+    # el rig se ve MONTADO sobre la tela, desde el frente.
+    front_rig_only = runtime_hidden
     side_relief = render(armor, ARMOR_TEX, runtime_hidden,
                          yaw=-62, pitch=14, size=520)
     front_rig = render(armor, ARMOR_TEX, front_rig_only,
@@ -337,7 +336,7 @@ def main():
 
     views = [
         (render(folded, FOLDED_TEX, set(), yaw=-28, pitch=14, size=520),
-         "FOLDED ITEM 3D - bulto v1.11.0"),
+         "FOLDED ITEM 3D - bulto v1.12.0"),
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=0, pitch=8, size=520),
          "EQUIPPED - frente"),
         (render(posed(armor), ARMOR_TEX, runtime_hidden, yaw=-28, pitch=10, size=520),
@@ -345,7 +344,8 @@ def main():
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=180, pitch=8, size=520),
          "EQUIPPED - espalda"),
         (side_relief, "RELIEVE 3D - perfil"),
-        (front_rig, "ARNES FRONTAL - detalle"),
+        (render(armor, ARMOR_TEX, runtime_hidden, yaw=205, pitch=14, size=520),
+         "HOMBRERAS 3D - espalda 3/4"),
     ]
     compose([v for v, _ in views], [l for _, l in views], 3, 520).save(args.out / "full.png")
     compose([
@@ -356,8 +356,8 @@ def main():
         args.out / "original_detail.png")
     Image.open(ARMOR_TEX).convert("RGBA").crop((0, 0, 96, 48)).resize(
         (768, 384), Image.LANCZOS).save(args.out / "canvas.png")
-    # v1.11.0: el icono es pixel art 16x16 de SILUETA PROPIA ampliado;
-    # NEAREST conserva los bloques de color y permite compararlo con las refs.
+    # v1.12.0: icono pixel art 16x16 REDISEÑADO (hombreras, broche,
+    # pliegues anchos y festón); NEAREST conserva los bloques de color.
     Image.open(ICON).convert("RGBA").resize(
         (256, 256), Image.NEAREST).save(args.out / "icon.png")
     Image.open(FOLDED_GLOW).convert("RGBA").resize(

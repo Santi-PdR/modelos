@@ -1,4 +1,4 @@
-# Mantle of the Blight Star — v1.11.0
+# Mantle of the Blight Star — v1.12.0
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Añade el **Mantle of the Blight Star**: geometría propia, cinco animaciones
@@ -14,59 +14,105 @@ de Curios.
 
 ## Descarga directa del `.jar`
 
-**https://github.com/Santi-PdR/modelos/releases/download/v1.11.0/capatest-1.11.0.jar**
+**https://github.com/Santi-PdR/modelos/releases/download/v1.12.0/capatest-1.12.0.jar**
 
 El CI publica el mod como **Release asset `.jar` crudo**, no como ZIP de
 `actions/upload-artifact`. El repositorio es privado: hay que iniciar sesión en
 GitHub con la cuenta `Santi-PdR` para descargarlo. Cada push a la rama
-actualiza el mismo asset de `v1.11.0` con `--clobber`; el tag queda fijo.
-Las entregas anteriores siguen disponibles en `v1.10.0`, `v1.9.0`, `v1.8.0`,
-`v1.7.0`, `v1.6.1`, `v1.6.0`, `v1.5.1`, `v1.4.0` y `v1.3.0`. **Usar v1.11.0**:
+actualiza el mismo asset de `v1.12.0` con `--clobber`; el tag queda fijo.
+Las entregas anteriores siguen disponibles en `v1.11.0`, `v1.10.0`, `v1.9.0`, `v1.8.0`,
+`v1.7.0`, `v1.6.1`, `v1.6.0`, `v1.5.1`, `v1.4.0` y `v1.3.0`. **Usar v1.12.0**:
 v1.6.0 crashea al cargar el geo plegado y v1.5.0 tiene el crash de rotación.
 
 > PR #1 sigue abierta: https://github.com/Santi-PdR/modelos/pull/1
 
-## v1.11.0 — el icono tiene su PROPIA FORMA
+## v1.12.0 — VOLUMEN 3D REAL e icono rediseñado
 
-Dijiste: *«El icono quedó mucho mejor, pero que tenga su propia forma»*. El
-**estilo pixel art 2D/RPG queda aprobado y no se toca**; lo que cambia es la
-**silueta**.
+Dijiste: *«No me gustó el icono y la capa sigue estando fea, tiene que ser 3d
+con detalles como ejemplo hombreras o otras cosas en la capa y relieve y más»*.
+v1.11.0 había cambiado **sólo el icono**: la capa equipada seguía siendo un
+póster plano colgado de la espalda. Esta versión ataca la causa raíz, que
+estaba en la **geometría**, no en los colores.
 
-Las dos referencias (`image-13.png` / `image-14.png`) son en realidad **el mismo
-icono 16×16 recoloreado**: un único pico de capucha centrado, cuerpo cuadrado y
-una hendidura central inferior que abre dos patas acampanadas. v1.10.0 las copió
-recoloreadas en violeta/oro/cian: por eso, aunque el estilo gustó, la forma
-seguía siendo la de las referencias.
+### Diagnóstico: por qué se veía plana
 
-v1.11.0 dibuja una **forma nueva, propia y simétrica** en `ICON_PIXEL_MAP`:
+| | v1.11.0 (rechazada) | v1.12.0 |
+|---|---|---|
+| Grosor de cada panel de tela | `0.10` px → lámina | **`0.85` px → bloque** |
+| Relieve de la onda `FOLDS=3` | `0.085` px | **`0.28` px** |
+| Nervios, crestas, gemas | `panel_z + 0.03`, **dentro** del panel | `face_z()`, **delante** de la cara SUR |
+| Hombreras | `2.0×1.4×0.42` en `Z < 0` (frente del jugador) | **traseras**, `3.6×1.95×2.05`, visibles en F5 |
+| Huesos / cubos | 171 / 234 | **193 / 281** |
 
-- **cuello alto de DOS picos** con escote en V abierto y ribete dorado (frente
-  a la capucha de un solo pico de las referencias);
-- **hombreras que sobresalen** por encima del cuello, **cintura ceñida** y
-  **faldón acampanado**;
-- **tres pliegues verticales luminosos** (M/L/D, sombra H sólo en los valles),
-  no franjas horizontales;
-- **dobladillo de TRES puntas** (tridente, eco de `FOLDS=3`), NO la hendidura
-  central de las referencias;
-- broche diamante de 5 píxeles en la garganta, cadenas cortas, **estrella cian
-  de Blight Star** en el pecho y vetas frías sueltas.
+Además, las 13 piezas del `ARNESFRONTAL` estaban en `Z ≈ -2.5` mientras la
+tela vivía en `Z ≈ +2.6…+3.0`: desde la espalda sencillamente **no existían**.
+La vista de perfil era casi una línea y las capturas in-game mostraban una
+lámina con el medallón pintado.
 
-Técnica intacta: 16×16, paleta plana de 9 tonos opacos + transparente, contorno duro, **cero
-antialiasing / degradado / bloom / bisel**, ampliado 4× con `Image.NEAREST`.
-El CI ahora **decodifica el PNG real del asset** (stdlib puro, sin Pillow) y
-verifica la máscara alfa 16×16: dos picos arriba con V abierta, tres puntas
-abajo, centro opaco (sin split) y coincidencia exacta con `ICON_PIXEL_MAP`.
+### Qué se añade
 
-**Sólo cambia el icono.** El atlas de armadura, el glowmask prístino, el bulto
-plegado y los 6 sprites de partículas quedan **byte-idénticos** a v1.10.0
-(**1636 texels emisivos** intactos). Nombre, lore e ID interno sin cambios.
+- **Paño con cuerpo**: 27 bloques de `0.85` de grosor con relieve compartido
+  por la onda 2D (sombreado) y 3D (geometría); crestas, valles, ribetes y
+  cortinas laterales ahora sobresalen de la cara visible.
+- **Hombreras traseras sólidas**: dos placas con cresta dorada, gema cian y
+  faldón, más un **cuello trasero levantado** de tres piezas.
+- **Detalles en relieve**: 6 placas escalonadas en los bordes del manto,
+  6 eslabones de cadena 3D, 6 remaches, un **medallón** con marco + gema +
+  núcleo y un **gorget** alto con cierre.
+- **Sombreado de cantos**: las zonas reservadas `crease_*` / `lining` / `rim`
+  del atlas se aclaran. Con `0.85` de grosor son muy visibles y antes parecían
+  barrotes negros. Se conserva **violeta + oro + cian**: el problema era la
+  falta de volumen, no la paleta.
+- `visible_bounds_width/height` pasan de `4.5/4.8` a **`5.2/5.2`** para que
+  el culling no recorte las hombreras.
 
-Comparativas a igual escala:
-[`docs/capa_v1110_icon_compare.png`](docs/capa_v1110_icon_compare.png)
-(ref 1 · ref 2 · forma propia) y
-[`docs/capa_v1110_silhouette_compare.png`](docs/capa_v1110_silhouette_compare.png)
-(máscaras alfa: forma de las referencias frente a la nueva). Icono final:
-[`docs/capa_v1110_icon.png`](docs/capa_v1110_icon.png).
+La vista [`docs/capa_v1120_side_relief.png`](docs/capa_v1120_side_relief.png)
+ya no es una línea: muestra el paño grueso y las hombreras. En
+[`docs/capa_v1120_preview.png`](docs/capa_v1120_preview.png) la última vista es
+**«HOMBRERAS 3D - espalda 3/4»**, en lugar del arnés aislado que parecía un
+montón de piezas sueltas flotando.
+
+### Icono: pixel art 2D rediseñado
+
+El `ICON_PIXEL_MAP` de v1.11.0 (un rectángulo a franjas) se sustituye por un
+dibujo **nuevo** de 16×16:
+
+- **dos hombreras dibujadas** con ribete de oro y gemas cian que sobresalen
+  del cuello, separadas del manto por un escalón;
+- **manto trapezoidal** con **tres pliegues anchos** (franjas de 2–3 px, no
+  alternancia de 1 px que parecía un código de barras);
+- **broche diamante** de 5 píxeles en la garganta, bordado dorado en los
+  bordes, vetas frías, **estrella de Blight Star** y **festón de tres puntas**
+  que cuelga del dobladillo.
+
+Técnica intacta y aprobada: paleta plana de 9 tonos opacos + transparente,
+contorno duro, **cero antialiasing / degradado / bloom / bisel**, ampliado 4×
+con `Image.NEAREST`. El CI **decodifica el PNG real** (stdlib puro) y verifica
+la máscara alfa 16×16: dos picos arriba con V abierta, tres puntas abajo,
+centro opaco, coincidencia exacta con `ICON_PIXEL_MAP` y que **no** es la
+forma de v1.10.0 ni la de v1.11.0.
+
+Comparativas: [`docs/capa_v1120_icon_compare.png`](docs/capa_v1120_icon_compare.png)
+y [`docs/capa_v1120_silhouette_compare.png`](docs/capa_v1120_silhouette_compare.png).
+Icono final: [`docs/capa_v1120_icon.png`](docs/capa_v1120_icon.png).
+
+### Se conserva íntegro
+
+ID `capatest:capa_deteriorer_evilsaiyan`, nombre/lore, tag Curios `back`,
+canvas continuo 9×3 de 96×48, `FOLDS=3` con onda compartida, 61 huesos boxy
+ocultos, **1636 texels emisivos** y alfa base prístinos, glowmask sin ampliar,
+`animation.item` (36 huesos / 5 animaciones), aura muda, fail-safes, radianes,
+raíz sin `parent`, cero `JsonNull`, cero mixins y UV ≤ 128.
+
+## v1.11.0 (histórico, rechazada) — el icono tenía su PROPIA FORMA
+
+v1.10.0 había copiado la silueta de las dos referencias 16×16 (que en realidad
+son el mismo icono recoloreado). v1.11.0 dibujó una forma nueva y simétrica:
+dos picos de cuello con escote en V, hombreras salientes, cintura ceñida, tres
+pliegues verticales y dobladillo de tres puntas, con broche diamante y estrella
+cian. **Sólo cambió el icono**, por lo que la capa equipada siguió viéndose
+plana y fue rechazada. Se conserva como histórico técnico y como base de la
+regresión de silueta que hoy impide repetirla.
 
 ## v1.10.0 (histórico) — icono pixel art 2D RPG y tela reworkada
 
@@ -79,7 +125,7 @@ recoloreado**: capucha redondeada, hombros, pliegues verticales, dobladillo,
 5–6 colores planos, contorno duro y **cero antialiasing, degradado o bloom**.
 
 v1.10.0 recuperó esa silueta y esa técnica (la silueta se sustituye en
-v1.11.0 por la forma propia descrita arriba):
+v1.12.0 por la forma propia descrita arriba):
 
 - `ICON_PIXEL_MAP`: los 16×16 píxeles de la referencia, con paleta plana de
   11 colores en violeta + oro + cian (`ICON_PALETTE`).
@@ -93,9 +139,9 @@ v1.11.0 por la forma propia descrita arriba):
   la comparación.
 
 Comparativa a igual escala:
-[`docs/capa_v1110_icon_compare.png`](docs/capa_v1110_icon_compare.png)
+[`docs/capa_v1120_icon_compare.png`](docs/capa_v1120_icon_compare.png)
 (referencia 1 · referencia 2 · icono nuevo). Icono final:
-[`docs/capa_v1110_icon.png`](docs/capa_v1110_icon.png).
+[`docs/capa_v1120_icon.png`](docs/capa_v1120_icon.png).
 
 ### 2. Textura: de líneas neón a paño tejido y bordado
 
@@ -122,7 +168,7 @@ opacas, onda 2D/3D compartida y superficie lisa.
 
 ### 3. Se conserva todo lo de v1.9.0
 
-Relieve 3D (**171 huesos / 234 cubos**: 9 nervios, 2 cortinas, 5 pesas,
+Relieve 3D (**193 huesos / 281 cubos**: 9 nervios, 2 cortinas, 5 pesas,
 cuello trasero, tirantes y arnés delantero con hombreras/cadenas/placa),
 `animation.item` en GUI/hotbar/mano, glowmask de dos tintas del item, aura de
 brasas + motas cian con presupuesto fijo de 4 partículas por tick de emisión,
@@ -131,12 +177,12 @@ brasas + motas cian con presupuesto fijo de 4 partículas por tick de emisión,
 
 Los previews de esta versión son render software; la prueba in-game queda para
 tu próximo arranque (v1.8.0 ya confirmó arranque, capa equipada y bulto 3D).
-Previews: [`docs/capa_v1110_preview.png`](docs/capa_v1110_preview.png)
-(6 vistas), [`docs/capa_v1110_uv_test.png`](docs/capa_v1110_uv_test.png),
-[`docs/capa_v1110_item_glowmask.png`](docs/capa_v1110_item_glowmask.png),
-[`docs/capa_v1110_particles.png`](docs/capa_v1110_particles.png),
-[`docs/capa_v1110_front_rig.png`](docs/capa_v1110_front_rig.png),
-[`docs/capa_v1110_side_relief.png`](docs/capa_v1110_side_relief.png) y la
+Previews: [`docs/capa_v1120_preview.png`](docs/capa_v1120_preview.png)
+(6 vistas), [`docs/capa_v1120_uv_test.png`](docs/capa_v1120_uv_test.png),
+[`docs/capa_v1120_item_glowmask.png`](docs/capa_v1120_item_glowmask.png),
+[`docs/capa_v1120_particles.png`](docs/capa_v1120_particles.png),
+[`docs/capa_v1120_front_rig.png`](docs/capa_v1120_front_rig.png),
+[`docs/capa_v1120_side_relief.png`](docs/capa_v1120_side_relief.png) y la
 comparativa del icono.
 
 ## Opciones de nombre (todas en inglés)
@@ -161,7 +207,7 @@ queda):
 - Medallón de estrella marchita, 4 fragmentos orbitales 3D, esporas frías y
   segundo tipo de partículas (`capa_blight_mote`) en aura muda.
 - Relieve 3D y **arnés delantero** con hombreras, cadenas y placa animadas;
-  171 huesos / 234 cubos.
+  193 huesos / 281 cubos.
 - Bulto plegado de 36 huesos con hombreras y **`animation.item`** (bob,
   apertura de pliegues, giro/pulso del broche).
 - Icono de ilustración suave y canvas de líneas magenta: **ambos reemplazados
@@ -342,17 +388,17 @@ tres divisiones de fila. Si las franjas aparecen en orden, alineadas y sin
 inversión, el mosaico es correcto. **Los previews no sustituyen una prueba
 in-game.**
 
-Resultados versionados de **v1.11.0**:
-[`docs/capa_v1110_preview.png`](docs/capa_v1110_preview.png) (bulto plegado, frente, 3/4, espalda, relieve y arnés),
-[`docs/capa_v1110_uv_test.png`](docs/capa_v1110_uv_test.png) (franjas UV),
-[`docs/capa_v1110_icon.png`](docs/capa_v1110_icon.png) (icono pixel art 64×64 de forma propia) y
-[`docs/capa_v1110_item_glowmask.png`](docs/capa_v1110_item_glowmask.png)
+Resultados versionados de **v1.12.0**:
+[`docs/capa_v1120_preview.png`](docs/capa_v1120_preview.png) (bulto plegado, frente, 3/4, espalda, relieve y hombreras 3D),
+[`docs/capa_v1120_uv_test.png`](docs/capa_v1120_uv_test.png) (franjas UV),
+[`docs/capa_v1120_icon.png`](docs/capa_v1120_icon.png) (icono pixel art 64×64 rediseñado) y
+[`docs/capa_v1120_item_glowmask.png`](docs/capa_v1120_item_glowmask.png)
 (efecto emisivo del item) y
-[`docs/capa_v1110_particles.png`](docs/capa_v1110_particles.png) (brasas + motas),
-[`docs/capa_v1110_front_rig.png`](docs/capa_v1110_front_rig.png),
-[`docs/capa_v1110_side_relief.png`](docs/capa_v1110_side_relief.png) y
-[`docs/capa_v1110_icon_compare.png`](docs/capa_v1110_icon_compare.png) y
-[`docs/capa_v1110_silhouette_compare.png`](docs/capa_v1110_silhouette_compare.png).
+[`docs/capa_v1120_particles.png`](docs/capa_v1120_particles.png) (brasas + motas),
+[`docs/capa_v1120_front_rig.png`](docs/capa_v1120_front_rig.png),
+[`docs/capa_v1120_side_relief.png`](docs/capa_v1120_side_relief.png) y
+[`docs/capa_v1120_icon_compare.png`](docs/capa_v1120_icon_compare.png) y
+[`docs/capa_v1120_silhouette_compare.png`](docs/capa_v1120_silhouette_compare.png).
 
 ## Diagnóstico de crashes: dos fallos distintos
 
@@ -428,7 +474,7 @@ quedó corregido en v1.6.1, pero éste es otro fallo, de otro mod.
    (`fiskheroes`, `TRender`/`TRansition`). Quitar PAL solo puede provocar
    `ClassNotFoundException` en sus dependientes.
 4. **Aísla por grupos**: arranca primero con Forge + GeckoLib + Curios +
-   `capatest-1.11.0.jar`. Si arranca, ve añadiendo el resto de 5 en 5 hasta que
+   `capatest-1.12.0.jar`. Si arranca, ve añadiendo el resto de 5 en 5 hasta que
    reaparezca el `MixinTransformerError`: el culpable está en ese grupo.
 
 `skinlayers3d`, `embeddium`, `photon`, `flywheel`, `create` y los demás salen
@@ -490,9 +536,9 @@ rota.**
   descripciones y metadatos (sin transcripción completa de cada vídeo); la
   implementación se validó con previews software y, desde v1.8.0, también con
   capturas in-game de la capa equipada y del item en mano/slot. Para el icono
-  v1.10.0/v1.11.0 se usaron además dos referencias 16×16 aportadas por el usuario
+  v1.10.0/v1.12.0 se usaron además dos referencias 16×16 aportadas por el usuario
   (capa granate con broche cálido y capa negra con ribete neón); véase
-  `docs/capa_v1110_icon_compare.png`.
+  `docs/capa_v1120_icon_compare.png`.
 
 ## Estructura
 
@@ -510,15 +556,15 @@ tools/armor_model_pipeline.py                      9×3 + fold_wave, nervios 3D,
 tools/item_model_pipeline.py                       Bulto de 36 huesos + 5 animaciones (incluida animation.item)
 tools/animation_pipeline.py                        Deriva sprint/air desde moving
 tools/preview_cloth.py                             6 vistas, arnés aislado, relieve de perfil, canvas/icono/partículas y --uv-test
-docs/capa_v1110_preview.png                         Preview versionado de las seis vistas de la capa
-docs/capa_v1110_uv_test.png                         Test visual del orden UV del mosaico 9×3
-docs/capa_v1110_icon.png                            Icono pixel art 64×64 ampliado ×4
-docs/capa_v1110_item_glowmask.png                   Efecto emisivo violeta/cian del item plegado
-docs/capa_v1110_particles.png                       Brasas cálidas + motas frías de Blight Star
-docs/capa_v1110_front_rig.png                       Arnés delantero aislado
-docs/capa_v1110_side_relief.png                     Perfil del relieve 3D
-docs/capa_v1110_icon_compare.png                    Referencias 16×16 frente al icono de forma propia
-docs/capa_v1110_silhouette_compare.png              Máscaras alfa: refs frente a la silueta propia
+docs/capa_v1120_preview.png                         Preview versionado de las seis vistas de la capa
+docs/capa_v1120_uv_test.png                         Test visual del orden UV del mosaico 9×3
+docs/capa_v1120_icon.png                            Icono pixel art 64×64 ampliado ×4
+docs/capa_v1120_item_glowmask.png                   Efecto emisivo violeta/cian del item plegado
+docs/capa_v1120_particles.png                       Brasas cálidas + motas frías de Blight Star
+docs/capa_v1120_front_rig.png                       Arnés delantero aislado
+docs/capa_v1120_side_relief.png                     Perfil del relieve 3D
+docs/capa_v1120_icon_compare.png                    Referencias 16×16 frente al icono de forma propia
+docs/capa_v1120_silhouette_compare.png              Máscaras alfa: refs frente a la silueta propia
 .github/workflows/build.yml                        CI: validación, build, verificación del jar y Release .jar directo
 ```
 
@@ -528,7 +574,7 @@ JDK 17 + Gradle 8.8 (el zip original no incluye `gradlew`):
 
 ```bash
 gradle build --no-daemon
-# salida: build/libs/capatest-1.11.0.jar
+# salida: build/libs/capatest-1.12.0.jar
 ```
 
 Para regenerar los assets (no hace falta para compilar, ya están commiteados):
@@ -546,14 +592,14 @@ python tools/animation_pipeline.py
 `push` y `workflow_dispatch` sobre `ubuntu-latest`: `actions/checkout@v4`,
 `actions/setup-java@v4` (17/temurin), `gradle/actions/setup-gradle@v4` (8.8),
 validación de JSON/PNG + **ningún `JsonNull` en todos los recursos** + raíz del
-geo plegado sin `parent` (36 huesos de bulto) + **171 huesos / 234 cubos** +
+geo plegado sin `parent` (36 huesos de bulto) + **193 huesos / 281 cubos** +
 27 paneles 9×3 + 9 creases + 9 nervios + arnés delantero + 5 estrellas y 4 órbitas 3D +
 onda compartida entre el canvas 2D y `panel_z()` + icono/atlas con proporción
 real + glowmask del item de dos tintas + 6 sprites + 5 animaciones + aura muda + 61 huesos boxy ocultos sin descendientes `v15_*` +
 UV nuevas en zonas opacas + hashes prístinos + regresión de radianes/sin
 `getBakedModel()` +
 **ausencia de mixins** + tag/entidad Curios, `gradle build --no-daemon`, verificación de las entradas
-del jar y publicación del **`.jar` directo** en el Release `v1.11.0`. Si falla,
+del jar y publicación del **`.jar` directo** en el Release `v1.12.0`. Si falla,
 los errores de `javac` se publican como anotaciones y se sube el log completo
 como artifact aparte (que **no** es la entrega).
 
@@ -563,7 +609,7 @@ como artifact aparte (que **no** es la entrega).
 2. Descargar **GeckoLib 4.8.1 para Forge 1.20.1**:
    https://modrinth.com/mod/geckolib/version/bVtfWE8S
    (coordenada Maven: `maven.modrinth:8BmcQJ2H:bVtfWE8S`).
-3. Poner GeckoLib y **`capatest-1.11.0.jar`** en `mods/`.
+3. Poner GeckoLib y **`capatest-1.12.0.jar`** en `mods/`.
    Si el juego crashea **al arrancar** con `MixinTransformerError`, ver la
    sección «Diagnóstico de crashes»: es un conflicto entre otros mods.
 4. Mundo creativo; la capa está en **Combate** o con
