@@ -1,12 +1,12 @@
-# Mantle of the Blight Star — v1.14.0 (trabajo local, SIN PUBLICAR)
+# Mantle of the Blight Star — v1.14.0
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Añade el **Mantle of the Blight Star**. Esta revisión rehace por completo la
 capa equipada bajo la temática **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-> ⚠️ **Estado:** trabajo local para revisar en el visor antes de compilar.
-> No hay commit, build, CI ni Release nuevo. Última versión publicada:
-> `v1.12.0` (rechazada por el usuario).
+> ✅ **Publicada.** Compilada en CI (Gradle 8.8 / JDK 17) en el commit
+> `5b7d86c`; Release `v1.14.0` es la *latest*. Los previews son render
+> **software**: la prueba in-game sigue pendiente.
 
 ## Ver el modelo ANTES de compilar
 
@@ -35,12 +35,22 @@ capa equipada bajo la temática **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
   [`docs/capa_v1140_icon_compare.png`](docs/capa_v1140_icon_compare.png).
   Son render software, no capturas in-game.
 
-## Descarga directa del `.jar`
+## Descargas directas (Release `v1.14.0`)
 
-**Pendiente de publicación.** Cuando se apruebe, el CI publicará
-`capatest-1.14.0.jar` crudo (nunca ZIP de `actions/upload-artifact`).
-La última Release existente sigue siendo
-https://github.com/Santi-PdR/modelos/releases/download/v1.12.0/capatest-1.12.0.jar
+| Archivo | Link |
+|---|---|
+| **Mod compilado** (`capatest-1.14.0.jar`, 171700 B) | https://github.com/Santi-PdR/modelos/releases/download/v1.14.0/capatest-1.14.0.jar |
+| **Proyecto Blockbench** (`capa_v1140.bbmodel`) | https://github.com/Santi-PdR/modelos/releases/download/v1.14.0/capa_v1140.bbmodel |
+| **Visor 3D offline** (`capa_v1140_visor.html`) | https://github.com/Santi-PdR/modelos/releases/download/v1.14.0/capa_v1140_visor.html |
+| Comparativa de 6 vistas | https://github.com/Santi-PdR/modelos/releases/download/v1.14.0/capa_v1140_preview.png |
+
+Release: https://github.com/Santi-PdR/modelos/releases/tag/v1.14.0 ·
+CI: https://github.com/Santi-PdR/modelos/actions/runs/43033963606 ✅ ·
+`capatest-1.14.0.jar` crudo, nunca ZIP de `actions/upload-artifact`.
+El repositorio es privado: hay que iniciar sesión en GitHub con la cuenta
+`Santi-PdR` para descargar. Las entregas anteriores siguen en `v1.12.0`,
+`v1.11.0`, `v1.10.0`, `v1.9.0`, `v1.8.0`, `v1.7.0`, `v1.6.1`, `v1.6.0`,
+`v1.5.1`, `v1.4.0` y `v1.3.0`. **Usar v1.14.0**.
 
 > PR #1 sigue abierta: https://github.com/Santi-PdR/modelos/pull/1
 
