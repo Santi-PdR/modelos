@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Especificación compartida de la superficie de tela v1.10.0.
+"""Especificación compartida de la superficie de tela v1.11.0.
 
 El atlas de armadura sigue siendo de 128x128 y su alfa es prístino. La capa
 equipada usa una ilustración continua de 96x48 texels (todos opacos) para sus

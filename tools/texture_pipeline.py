@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Procedural texture suite for the Mantle of the Blight Star (v1.10.0).
+Procedural texture suite for the Mantle of the Blight Star (v1.11.0).
 
 Why procedural instead of AI-generated art:
     The 128x128 armor texture is a strict UV atlas. Every cube face of
@@ -32,6 +32,16 @@ Why procedural instead of AI-generated art:
     item uses a fitted (not distorted) canvas band, a readable diamond gem and
     a separate `cape_folded_glowmask.png` rendered with a pulsing eyes layer
     by CapaItemGlowLayer.
+
+    v1.11.0 gives the pixel-art icon its OWN silhouette. v1.10.0 copied the
+    two reference capes (which are the SAME 16x16 shape recoloured): a single
+    centred hood-peak, a square body and a centre split that opens into two
+    flaring legs. The user liked the pixel-art STYLE but asked for a shape of
+    its own. ICON_PIXEL_MAP is now a distinct, symmetric mantle: two standing
+    collar peaks with an open V, jutting gold pauldrons, a pinched waist, a
+    flared skirt, THREE bright vertical pleats, a diamond throat clasp, the
+    cyan Blight Star and a three-point crown hem (echoing FOLDS=3). Same
+    approved technique: flat palette, hard outline, Image.NEAREST, no AA.
 
     v1.10.0 replaces the smooth illustrated 64x64 icon with TRUE 16x16 pixel
     art (ICON_PIXEL_MAP/ICON_PALETTE, upscaled 4x with Image.NEAREST), matching
@@ -622,36 +632,46 @@ def cloth_canvas_fitted(w: int, h: int) -> tuple[Image.Image, Image.Image]:
 
 
 # --------------------------------------------------------------------------
-# v1.10.0 ICON: pixel art 2D/RPG de 16x16, como las dos capas de referencia.
+# v1.11.0 ICON: pixel art 2D/RPG de 16x16 con SILUETA PROPIA.
 #
-# Las dos referencias que pasó el usuario son EL MISMO icono 16x16 recoloreado:
-# capucha redondeada, hombros, pliegues verticales y dobladillo, con 5-6
-# colores planos, contorno duro y CERO antialiasing/degradado/bloom. v1.9.0 se
-# equivocó al dibujar una ilustración suave a 512px; aquí se recupera esa
-# silueta y esa técnica, traducida a violeta + oro + cian de Blight Star.
+# Las dos referencias (image-13/14) son EL MISMO icono 16x16 recoloreado: un
+# único pico de capucha centrado, cuerpo cuadrado y una hendidura central
+# inferior que abre dos piernas acampanadas. v1.10.0 las COPIÓ (recoloreadas);
+# el usuario aprobó el estilo pixel art pero pidió «que tenga su propia forma».
+#
+# Forma propia, deliberadamente distinta y simétrica:
+#   * cuello alto de DOS picos con escote en V abierto y ribete dorado;
+#   * hombreras que SOBRESALEN por encima del cuello (y=3);
+#   * cintura ceñida (y=5..8) y faldón acampanado (y=9..12);
+#   * tres pliegues VERTICALES luminosos (M/L/D, H sólo en los valles);
+#   * dobladillo de TRES puntas (tridente, eco de FOLDS=3), NO la hendidura
+#     central de las referencias;
+#   * broche diamante en la garganta y estrella cian de Blight Star en el pecho.
+# Técnica intacta: paleta plana, contorno duro, CERO AA/degradado/bloom,
+# ampliado 4x con Image.NEAREST.
 # --------------------------------------------------------------------------
 
 ICON_PIXEL_MAP = (
-    ".......HKK......",
-    "......HHKKK.....",
-    "....HHHKKKKKK...",
-    "...HMLMHKKLLLK..",
-    "...HDLLGMMLLDK..",
-    "...HDLLMMMLLMK..",
-    "...HDLLMHLLLLK..",
-    "...HMLLMHLDMLHK.",
-    "...HMLMMKLMDLDK.",
-    "..HHMLMDKHMDLDHK",
-    ".HDMDDMDKKMDMDDK",
-    ".HDMDDMDKHMDMDDK",
-    "KHMDDMDDKDMDDDDK",
-    "KHDDMDDHKDDDDDK.",
-    ".KKKHDHKKDHKKK..",
-    "....KKKKKKK.....",
+    "....GG....GG....",
+    "...GDHK..KHDG...",
+    "...GDHGKKGHDG...",
+    ".GGMDHMLLMHDMGG.",
+    ".GLMDHMLLMHDMLG.",
+    "..KMDHMLLMHDMK..",
+    "..KMDHMLLMHDMK..",
+    "..KMDHMLLMHDMK..",
+    "..KMDHMLLMHDMK..",
+    ".KLMDHMLLMHDMLK.",
+    "KMLMDHMLLMHDMLMK",
+    "KMLMDHMLLMHDMLMK",
+    "KMLMKKMLLMKKMLMK",
+    "KMLK..KLLK..KLMK",
+    "KMLK..KLLK..KLMK",
+    ".GG....GG....GG.",
 )
 
-# Paleta plana: mismo esquema de 6 tonos que la referencia granate, más los
-# acentos fríos de la referencia negra/verde y el broche dorado.
+# Paleta plana (9 tonos opacos + transparente): mismos violetas que v1.10.0,
+# más los acentos fríos de Blight Star y el oro de cuello/hombreras/dobladillo.
 ICON_PALETTE = {
     ".": (0, 0, 0, 0),
     "K": (15, 8, 22, 255),       # contorno duro
@@ -669,10 +689,11 @@ ICON_PALETTE = {
 def build_icon_artwork(size: int = 64) -> Image.Image:
     """Icono 64x64 con píxeles de 4x4, NO una ilustración con antialiasing.
 
-    Se dibuja a 16x16 con la silueta de las referencias, se añaden el broche
-    de 5 píxeles, una estrella cian de 4 puntas y vetas frías, y se amplía con
-    `Image.NEAREST`. El resultado conserva bloques de color perfectamente
-    definidos: es exactamente el estilo de icono 2D de RPG que se pidió.
+    Se dibuja a 16x16 con la SILUETA PROPIA de v1.11.0 (dos picos de cuello,
+    hombreras, cintura, tres pliegues y dobladillo de tres puntas), se añaden
+    el broche de 5 píxeles en la garganta, una estrella cian de 4 puntas y
+    vetas frías, y se amplía con `Image.NEAREST`. Bloques de color definidos:
+    el estilo de icono 2D de RPG aprobado, con forma ya no copiada.
     """
     rows = ICON_PIXEL_MAP
     assert len(rows) == 16 and all(len(r) == 16 for r in rows), "icono base 16x16"
@@ -682,15 +703,15 @@ def build_icon_artwork(size: int = 64) -> Image.Image:
         if 0 <= x < 16 and 0 <= y < 16 and grid[y][x] != ".":
             grid[y][x] = ch
 
-    # Broche: diamante de 5 px justo donde la referencia granate tiene su
-    # píxel amarillo. Núcleo claro para que se lea en el slot.
-    put(7, 3, "G")
-    put(6, 4, "G")
-    put(7, 4, "W")
-    put(8, 4, "G")
-    put(7, 5, "G")
+    # Broche: diamante de 5 px en la GARGANTA, cerrando el escote en V de los
+    # dos picos del cuello. Núcleo claro para que se lea en el slot.
+    put(7, 2, "G")
+    put(6, 3, "G")
+    put(7, 3, "W")
+    put(8, 3, "G")
+    put(7, 4, "G")
 
-    # Estrella de Blight Star en el pliegue central: 4 puntas + núcleo.
+    # Estrella de Blight Star sobre el pliegue CENTRAL: 4 puntas + núcleo.
     put(7, 8, "W")
     put(6, 8, "C")
     put(8, 8, "C")
@@ -698,8 +719,8 @@ def build_icon_artwork(size: int = 64) -> Image.Image:
     put(7, 9, "C")
 
     # Vetas cian sueltas, equivalentes a las vetas verdes de la referencia 2.
-    for x, y in ((3, 9), (4, 12), (10, 7), (12, 10),
-                 (2, 11), (11, 13), (5, 6), (9, 11)):
+    for x, y in ((3, 6), (12, 6), (2, 10), (13, 10),
+                 (5, 11), (10, 11)):
         put(x, y, "E")
 
     px = np.zeros((16, 16, 4), dtype=np.uint8)

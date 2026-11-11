@@ -9,6 +9,16 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.11.0: ICONO CON SILUETA PROPIA. El icono pixel art 16x16 de v1.10.0
+gusto en ESTILO pero copiaba la forma de las dos referencias (que son el
+mismo icono recoloreado: un pico de capucha centrado, cuerpo cuadrado y
+hendidura central inferior en dos piernas). v1.11.0 mantiene la tecnica
+aprobada (paleta plana, contorno duro, Image.NEAREST, sin AA) pero dibuja
+una forma nueva y simetrica: cuello alto de DOS picos con escote en V,
+hombreras que sobresalen, cintura cenida, faldon acampanado, tres pliegues
+verticales, broche diamante en la garganta, estrella cian de Blight Star y
+dobladillo de TRES puntas (eco de FOLDS=3), NO la hendidura de las refs.
+Solo cambia el icono: todas las demas texturas quedan byte-identicas.
 v1.10.0: ICONO PIXEL ART 2D/RPG. Las dos referencias 16x16 del usuario son
 el mismo icono recoloreado (capucha, hombros, pliegues, dobladillo, paleta
 plana, contorno duro, sin antialiasing). Se recupera esa silueta en

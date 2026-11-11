@@ -81,8 +81,8 @@ jobs:
           icon_path = base / 'textures/item/capa_deteriorer_evilsaiyan.png'
           w, h = struct.unpack('>II', icon_path.read_bytes()[16:24])
           assert (w, h) == (64, 64), ('icon', w, h)
-          # v1.10.0: un icono pixel art 16x16 ampliado con NEAREST comprime en
-          # menos de 2 KB. El de v1.9.0 (ilustración suave) pesaba ~6.5 KB.
+          # v1.10.0/v1.11.0: un icono pixel art 16x16 ampliado con NEAREST comprime
+          # en menos de 2 KB. El de v1.9.0 (ilustración suave) pesaba ~6.5 KB.
           assert 300 <= icon_path.stat().st_size < 2000, icon_path.stat().st_size
           w, h = struct.unpack('>II', (base / 'textures/item/cape_folded.png').read_bytes()[16:24])
           assert (w, h) == (128, 128), ('folded atlas', w, h)
@@ -256,6 +256,59 @@ jobs:
           assert 'build_icon_artwork(64)' in texture_src
           assert 'Image.NEAREST' in texture_src
           assert 'def stitch(' in texture_src
+
+          # REGRESIÓN v1.11.0: el icono debe tener SILUETA PROPIA, no la
+          # forma de las dos referencias (un pico de capucha centrado +
+          # hendidura central inferior). Se decodifica el PNG REAL del
+          # asset (RGBA8, stdlib puro) y se muestrea la máscara alfa 16x16.
+          import re as _re, zlib as _zlib
+          def icon_silhouette(path):
+              data = path.read_bytes()
+              assert data[:8] == b'\x89PNG\r\n\x1a\n'
+              pos, idat, w, h, bd, ct = 8, b'', 0, 0, 0, 0
+              while pos < len(data):
+                  ln = struct.unpack('>I', data[pos:pos+4])[0]
+                  typ = data[pos+4:pos+8]; chunk = data[pos+8:pos+8+ln]
+                  if typ == b'IHDR': w, h, bd, ct = struct.unpack('>IIBB', chunk[:10])
+                  elif typ == b'IDAT': idat += chunk
+                  elif typ == b'IEND': break
+                  pos += 12 + ln
+              assert (w, h, bd, ct) == (64, 64, 8, 6)
+              raw = _zlib.decompress(idat); bpp = 4; stride = w * bpp
+              prev = bytearray(stride); i = 0; rows = []
+              for _ in range(h):
+                  ft = raw[i]; i += 1
+                  scan = bytearray(raw[i:i+stride]); i += stride
+                  for x in range(stride):
+                      a = scan[x-bpp] if x >= bpp else 0
+                      b = prev[x]; c = prev[x-bpp] if x >= bpp else 0
+                      if ft == 1: scan[x] = (scan[x] + a) & 255
+                      elif ft == 2: scan[x] = (scan[x] + b) & 255
+                      elif ft == 3: scan[x] = (scan[x] + ((a+b)//2)) & 255
+                      elif ft == 4:
+                          p = a+b-c; pa = abs(p-a); pb = abs(p-b); pc = abs(p-c)
+                          pr = a if (pa <= pb and pa <= pc) else (b if pb <= pc else c)
+                          scan[x] = (scan[x] + pr) & 255
+                      elif ft != 0: raise AssertionError(ft)
+                  rows.append(scan); prev = scan
+              return [''.join('#' if rows[y*4][x*16+3] > 0 else '.'
+                             for x in range(16)) for y in range(16)]
+          sil = icon_silhouette(icon_path)
+          def runs(row): return len(_re.findall(r'[^.]+', row))
+          # Dos picos de cuello separados por un escote en V abierto.
+          assert runs(sil[0]) == 2 and sil[0][6:10] == '....', sil[0]
+          # Dobladillo de TRES puntas (tridente), no la hendidura central
+          # de las referencias, que parte el borde inferior en dos patas.
+          assert runs(sil[15]) == 3, sil[15]
+          # Centro opaco en el faldón: NO hay split central.
+          assert sil[12][7] == '#' and sil[12][8] == '#', sil[12]
+          # La silueta coincide exactamente con ICON_PIXEL_MAP del código.
+          _m = _re.search(r'ICON_PIXEL_MAP = \((.*?)\)', texture_src, _re.S).group(1)
+          _rows = _re.findall(r'"([.A-Z]{16})"', _m)
+          assert len(_rows) == 16
+          assert sil == [''.join('#' if c != '.' else '.' for c in r) for r in _rows]
+          # No es la silueta copiada de v1.10.0 (capucha de un pico).
+          assert _rows[0] != '.......HKK......'
           assert 'ICON_PIXEL_MAP' in (root / 'tools/texture_pipeline.py').read_text()
           assert 'cape_folded_glowmask' in texture_src
           assert 'cool_ink' in texture_src
@@ -283,11 +336,11 @@ jobs:
           curio = (root / 'src/main/java/com/capatest/client/CapaCurioRenderer.java').read_text()
           assert 'Exception | LinkageError' in glow_layer
           assert 'if (wearer == null)' in curio
-          assert 'mod_version=1.10.0' in (root / 'gradle.properties').read_text()
+          assert 'mod_version=1.11.0' in (root / 'gradle.properties').read_text()
           assert 'curios_version=5.14.1+1.20.1' in (root / 'gradle.properties').read_text()
-          assert 'v1.10.0' in (root / 'src/main/resources/pack.mcmeta').read_text()
-          assert '1.10.0' in (root / 'src/main/resources/META-INF/mods.toml').read_text()
-          assert 'v1.10.0' in (root / 'README.md').read_text()
+          assert 'v1.11.0' in (root / 'src/main/resources/pack.mcmeta').read_text()
+          assert '1.11.0' in (root / 'src/main/resources/META-INF/mods.toml').read_text()
+          assert 'v1.11.0' in (root / 'README.md').read_text()
           assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/en_us.json').read_text()
           assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/es_es.json').read_text()
           assert 'CAPA_BLIGHT_MOTE' in java
@@ -299,8 +352,9 @@ jobs:
           assert 'def build_icon_artwork(' in texture_src
           assert 'pixel art' in (root / 'README.md').read_text()
           assert 'hombreras' in (root / 'README.md').read_text()
-          for doc in ('capa_v1100_icon_compare.png', 'capa_v1100_front_rig.png',
-                      'capa_v1100_side_relief.png', 'capa_v1100_particles.png'):
+          for doc in ('capa_v1110_icon_compare.png', 'capa_v1110_silhouette_compare.png',
+                      'capa_v1110_front_rig.png', 'capa_v1110_side_relief.png',
+                      'capa_v1110_particles.png'):
               assert (root / 'docs' / doc).is_file(), doc
 
           # Aura MUDA: ningún playSound ni sonido propio en las partículas /
@@ -319,7 +373,7 @@ jobs:
           assert 'capatest:capa_deteriorer_evilsaiyan' in tag
           entity = json.loads((data / 'capatest/curios/entities/player.json').read_text())
           assert entity == {'entities': ['player'], 'slots': ['back']}
-          print('OK: JSON/PNG sin JsonNull, item 36 huesos + animation.item, 171 huesos / 234 cubos, 27 paneles 9x3, relieve 3D y arnés frontal, 5 estrellas + 4 órbitas, 2 sets de partículas mudas, icono desde refs, glowmask del item, UV opacas y Curios back')
+          print('OK: JSON/PNG sin JsonNull, item 36 huesos + animation.item, 171 huesos / 234 cubos, 27 paneles 9x3, relieve 3D y arnés frontal, 5 estrellas + 4 órbitas, 2 sets de partículas mudas, icono de silueta propia, glowmask del item, UV opacas y Curios back')
           PY
 
       - name: Build
@@ -348,7 +402,7 @@ jobs:
       - name: List built jars
         run: ls -lh build/libs
 
-      - name: Verify jar contents (v1.10.0 resources)
+      - name: Verify jar contents (v1.11.0 resources)
         run: |
           set -euo pipefail
           found=0
@@ -407,11 +461,58 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          JAR="build/libs/capatest-1.10.0.jar"
+          JAR="build/libs/capatest-1.11.0.jar"
           test -f "$JAR"
           NOTES=/tmp/release-notes.md
           cat > "$NOTES" <<'MD'
-          ## Mantle of the Blight Star v1.10.0 — icono pixel art 2D RPG y tela bordada
+          ## Mantle of the Blight Star v1.11.0 — el icono tiene su PROPIA FORMA
+
+          Dijiste: *«El icono quedó mucho mejor, pero que tenga su propia forma»*.
+          El **estilo pixel art 2D/RPG queda aprobado y no se toca**; lo que cambia
+          es la **silueta**. v1.10.0 había copiado la forma de las dos referencias
+          (que en realidad son EL MISMO icono 16x16 recoloreado: un único pico de
+          capucha centrado, cuerpo cuadrado y una hendidura central inferior que
+          abre dos patas acampanadas). Era, literalmente, un recoloreado.
+
+          v1.11.0 dibuja una forma nueva, propia y simétrica en `ICON_PIXEL_MAP`:
+
+          - **cuello alto de DOS picos** con escote en V abierto y ribete dorado,
+            en vez de la capucha de un solo pico;
+          - **hombreras que sobresalen** por encima del cuello (fila 3);
+          - **cintura ceñida** y **faldón acampanado**;
+          - **tres pliegues verticales luminosos** (M/L/D, sombra H sólo en los
+            valles), no franjas horizontales;
+          - **dobladillo de TRES puntas** (tridente, eco de `FOLDS=3`), NO la
+            hendidura central de las referencias;
+          - broche diamante en la garganta, cadenas cortas, estrella cian de
+            Blight Star en el pecho y vetas frías sueltas.
+
+          Técnica intacta: 16x16, paleta plana de 9 tonos opacos + transparente, contorno duro, CERO
+          antialiasing/degradado/bloom/bisel, ampliado 4x con `Image.NEAREST`.
+          El CI ahora **decodifica el PNG real** (stdlib puro) y verifica la
+          máscara alfa 16x16: dos picos arriba con V abierta, tres puntas abajo,
+          centro opaco (sin split) y coincidencia exacta con `ICON_PIXEL_MAP`.
+
+          **Sólo cambia el icono**: el atlas de armadura, el glowmask, el bulto
+          plegado y los 6 sprites de partículas quedan **byte-idénticos** a
+          v1.10.0 (1636 texels emisivos intactos). Nombre, lore e ID interno sin
+          cambios. Comparativas: `docs/capa_v1110_icon_compare.png` (ref 1 / ref 2
+          / forma propia) y `docs/capa_v1110_silhouette_compare.png` (máscaras).
+
+          ### Se conserva íntegro lo anterior
+
+          Paño tejido y bordado v1.10.0, relieve 3D (**171 huesos / 234 cubos**),
+          **`animation.item`** (36 huesos, 5 animaciones), glowmask de dos tintas,
+          aura muda de brasas + motas, fail-safes, radianes, cero `JsonNull`, cero
+          mixins y Curios `back`. Previews: `capa_v1110_preview.png` (6 vistas),
+          `capa_v1110_icon.png`, `capa_v1110_icon_compare.png`,
+          `capa_v1110_silhouette_compare.png`, `capa_v1110_side_relief.png`,
+          `capa_v1110_front_rig.png`, `capa_v1110_item_glowmask.png`,
+          `capa_v1110_particles.png` y `capa_v1110_uv_test.png`. Son render
+          software: la prueba in-game queda para el próximo arranque (v1.8.0 ya
+          confirmó arranque, capa equipada y bulto 3D).
+
+          ## Histórico v1.10.0 — icono pixel art 2D RPG y tela bordada
 
           ### Icono: estilo de las dos referencias 16x16
 
@@ -427,7 +528,7 @@ jobs:
           - **Ampliado 4x con `Image.NEAREST`** a 64x64: bloques de color definidos,
             sin blur, degradado, halo ni bisel. Rim light de 1 píxel arriba/izquierda.
           - `preview_cloth.py` amplía el icono con `NEAREST` para no falsear la
-            comparación: `docs/capa_v1100_icon_compare.png` (ref 1 / ref 2 / nuevo).
+            comparación: `docs/capa_v1110_icon_compare.png` (ref 1 / ref 2 / nuevo).
 
           ### Textura: de líneas neón a paño tejido y bordado
 
@@ -457,13 +558,9 @@ jobs:
           4 partículas por tick de emisión, **sin `playSound` ni `SoundEvent` propio**,
           fail-safes, radianes, cero `JsonNull`, cero mixins y Curios `back`.
 
-          Previews v1.10.0: `capa_v1100_preview.png` (6 vistas),
-          `capa_v1100_icon_compare.png`, `capa_v1100_icon.png`,
-          `capa_v1100_side_relief.png`, `capa_v1100_front_rig.png`,
-          `capa_v1100_item_glowmask.png`, `capa_v1100_particles.png` y
-          `capa_v1100_uv_test.png`. Son render software: la prueba in-game queda para
-          el próximo arranque; las capturas de v1.8.0 ya confirmaron arranque, capa
-          equipada y bulto 3D.
+          El pixel art de v1.10.0 gustó por el estilo, pero su silueta era la de
+          las referencias; v1.11.0 la sustituye por la forma propia descrita arriba.
+          Los previews se versionaron de nuevo a `capa_v1110_*`.
 
           ## Histórico v1.9.0 — Blight Star, relieve, arnés y animación del item
 
@@ -620,17 +717,17 @@ jobs:
           sustituyen una prueba in-game; si algo falla, el mod registra
           `Blight Star Mantle: ... desactivada` en el log en vez de propagarlo.
           MD
-          if gh release view v1.10.0 >/dev/null 2>&1; then
-            gh release upload v1.10.0 "$JAR" --clobber
+          if gh release view v1.11.0 >/dev/null 2>&1; then
+            gh release upload v1.11.0 "$JAR" --clobber
           else
-            gh release create v1.10.0 "$JAR" \
-              --title "Mantle of the Blight Star v1.10.0" \
+            gh release create v1.11.0 "$JAR" \
+              --title "Mantle of the Blight Star v1.11.0" \
               --notes-file "$NOTES" \
               --target "$GITHUB_SHA"
           fi
-          ASSETS="$(gh release view v1.10.0 --json assets --jq '.assets[].name')"
-          grep -qx 'capatest-1.10.0.jar' <<< "$ASSETS"
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.10.0/capatest-1.10.0.jar"
+          ASSETS="$(gh release view v1.11.0 --json assets --jq '.assets[].name')"
+          grep -qx 'capatest-1.11.0.jar' <<< "$ASSETS"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.11.0/capatest-1.11.0.jar"
           echo "### Descarga directa" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "[${URL}](${URL})" >> "$GITHUB_STEP_SUMMARY"
