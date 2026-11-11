@@ -5,10 +5,11 @@ Uso:
     python -m pip install Pillow numpy
     python tools/preview_cloth.py --out /tmp/capa_preview
 
-Genera vistas del item plegado, la capa equipada (frente/3-4/espalda), la
-superficie de tela aislada, el canvas 96x48 y el detalle original que queda
-visible. Sirve para detectar cortes de UV, costuras y silueta boxy sin abrir
-Minecraft. El sombreado y la orientación de caras son aproximaciones.
+Genera vistas del bulto plegado v1.8.0, la capa equipada (frente/3-4/espalda),
+la superficie de tela aislada, el canvas 96x48, el icono 64x64 ampliado, el
+glowmask del item y el detalle original que queda visible. Sirve para detectar
+cortes de UV, costuras y silueta boxy sin abrir Minecraft. El sombreado y la
+orientación de caras son aproximaciones.
 """
 
 from __future__ import annotations
@@ -28,6 +29,8 @@ ARMOR_GEO = ASSETS / "geo/item/armor/capa_deteriorer_evilsaiyan.geo.json"
 FOLDED_GEO = ASSETS / "geo/item/cape_folded.geo.json"
 ARMOR_TEX = ASSETS / "textures/item/armor/capa_deteriorer_evilsaiyan.png"
 FOLDED_TEX = ASSETS / "textures/item/cape_folded.png"
+FOLDED_GLOW = ASSETS / "textures/item/cape_folded_glowmask.png"
+ICON = ASSETS / "textures/item/capa_deteriorer_evilsaiyan.png"
 
 # Debe coincidir con CapaArmorModel.SECTIONS + HIDDEN_DETAILS.
 SECTION_BONES = {"cape_top", "cape_mid", "cape_bottom"}
@@ -300,7 +303,7 @@ def main():
 
     views = [
         (render(folded, FOLDED_TEX, set(), yaw=-28, pitch=14, size=520),
-         "FOLDED ITEM 3D - 7 pliegues"),
+         "FOLDED ITEM 3D - bulto v1.8.0"),
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=0, pitch=8, size=520),
          "EQUIPPED - frente"),
         (render(posed(armor), ARMOR_TEX, runtime_hidden, yaw=-28, pitch=10, size=520),
@@ -317,6 +320,10 @@ def main():
         args.out / "original_detail.png")
     Image.open(ARMOR_TEX).convert("RGBA").crop((0, 0, 96, 48)).resize(
         (768, 384), Image.LANCZOS).save(args.out / "canvas.png")
+    Image.open(ICON).convert("RGBA").resize(
+        (256, 256), Image.LANCZOS).save(args.out / "icon.png")
+    Image.open(FOLDED_GLOW).convert("RGBA").resize(
+        (256, 256), Image.LANCZOS).save(args.out / "folded_glowmask.png")
     visible = [b["name"] for b in armor["bones"]
                if not b["name"].startswith("v15_") and b["name"] not in runtime_hidden
                and b.get("cubes")]

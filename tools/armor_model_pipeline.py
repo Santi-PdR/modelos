@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reconstruye la capa EQUIPADA como una superficie de tela continua (v1.7.0).
+"""Reconstruye la capa EQUIPADA como una superficie de tela continua (v1.8.0).
 
 Lee tools/originals/capa_deteriorer_evilsaiyan.geo.json (72 huesos / 126 cubos,
 copia prístina aprobada) y NO modifica ni uno solo de esos huesos. Añade una
@@ -9,13 +9,18 @@ segunda piel hecha de 9 columnas por cada una de las 3 secciones:
     de 96x48 como un mosaico sin costuras;
   * 9 pliegues maestros (3 por sección) en los VALLES de la onda compartida
     FOLDS=3, 6 ribetes laterales, 9 lengüetas de dobladillo con festón real,
-    2 alas de cuello y 1 broche emisivo.
+    2 alas de cuello, 1 broche emisivo y 5 estrellas 3D sobre la constelación.
 
 v1.7.0: el relieve 3D y el sombreado del canvas muestrean la MISMA onda
 (cloth_spec.fold_wave). Antes el relieve era una parábola y el canvas tenía
 9 senos independientes: la capa parecía una tabla rayada. Ahora hay 3
 pliegues anchos; cada valle oscuro coincide con una crease geométrica y cada
 cresta iluminada con un panel adelantado.
+
+v1.8.0: añade 5 pequeñas estrellas 3D (`v15_star_*`) en las coordenadas de la
+constelación del canvas. Usan la zona emisiva `bright` ya existente, así que
+el `CapaGlowLayer` las hace latir sin ampliar la cobertura del glowmask.
+Total: 131 huesos / 185 cubos.
 
 Diferencia clave frente a v1.5.x: las tres secciones comparten UN rectángulo
 global de tela. Antes cada sección usaba sus propios bounds (distintos anchos
@@ -42,7 +47,9 @@ from pathlib import Path
 from cloth_spec import (
     COLUMNS,
     FOLDS,
+    SECTION_V,
     SECTIONS,
+    STRIP_W,
     UV,
     assert_opaque,
     cloth_uv,
@@ -216,6 +223,32 @@ def build() -> dict:
             [2.0 + 2.0 * (1.0 - norm * norm), 0.0, tilt],
             [cube((center - bstep * 0.48, gy0 - 0.06 - length, z),
                   (bstep * 0.96, length, 0.11), uv, uv, 2)],
+        ))
+
+    # 4b. Estrellas 3D de la constelación: 5 gemas diminutas que coinciden
+    #     con los puntos brillantes del canvas. Usan la zona emisiva `bright`
+    #     ya existente, así que CapaGlowLayer las hace latir SIN ampliar la
+    #     cobertura del glowmask prístino (no se abren huecos en la tela).
+    def canvas_point(u: float, v: float):
+        si = next(i for i, (a, b) in enumerate(SECTION_V) if a <= v < b)
+        column = min(COLUMNS - 1, max(0, int(u / STRIP_W)))
+        x = gx0 + (u / 96.0) * (gx1 - gx0)
+        y = gy1 - (v / 48.0) * (gy1 - gy0)
+        z = panel_z(si, column) + 0.09
+        return si, column, x, y, z
+
+    star_points = ((18, 18), (78, 18), (26, 35), (70, 35), (48, 30))
+    for i, (su, sv) in enumerate(star_points):
+        si, col, sx, sy, sz = canvas_point(su, sv)
+        section = SECTIONS[si]
+        size = 0.20
+        bones.append(bone(
+            f"v15_star_{i}",
+            f"v15_cloth_{section}_{col}",
+            [sx, sy, sz], [0.0, 0.0, 45.0],
+            [cube((sx - size / 2.0, sy - size / 2.0, sz),
+                  (size, size, 0.045),
+                  spec("bright"), spec("bright"), si)],
         ))
 
     # 5. Cuello: dos piezas delgadas con la MISMA tela del canvas, no bloques

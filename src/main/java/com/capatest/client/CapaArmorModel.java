@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Modelo de la capa equipada v1.7.0.
+ * Modelo de la capa equipada v1.8.0.
  *
  * <p>La capa es un mosaico 9×3 sobre UN rectángulo global: las 27 caras
  * comparten escala y el canvas 96×48 se lee como una sola ilustración. En
@@ -29,6 +29,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * de la geometría y el sombreado del canvas muestrean la misma onda, así que
  * el retardo por columna se suaviza para que cada pliegue se mueva como un
  * bloque y no como un código de barras.</p>
+ *
+ * <p>v1.8.0 añade 5 estrellas 3D ({@code v15_star_*}) sobre la constelación
+ * del canvas. Usan la zona emisiva ya existente, así que {@link CapaGlowLayer}
+ * las hace latir sin cambiar la cobertura del glowmask.</p>
  *
  * <p>Corrección del crash de v1.5.0 (vigente): GeckoLib guarda las rotaciones
  * de los huesos en <b>radianes</b> (ver {@code BakedModelFactory.constructBone}:
@@ -116,7 +120,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         } catch (Exception | LinkageError error) {
             disabled = true;
             CapaTestMod.LOGGER.error(
-                    "Capa Deteriorer: animación de tela desactivada (la capa se muestra estática)", error);
+                    "Manto de la Estrella Moribunda: animación de tela desactivada (la capa se muestra estática)", error);
             restoreBasePose();
         }
     }

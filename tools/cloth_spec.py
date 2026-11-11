@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Especificación compartida de la superficie de tela v1.7.0.
+"""Especificación compartida de la superficie de tela v1.8.0.
 
 El atlas de armadura sigue siendo de 128x128 y su alfa es prístino. La capa
 equipada usa una ilustración continua de 96x48 texels (todos opacos) para sus
@@ -22,6 +22,11 @@ armor_model_pipeline.py muestrean la MISMA onda, así que cada valle oscuro
 coincide con una crease geométrica y cada cresta iluminada con un panel
 adelantado. Antes el relieve era una parábola y el sombreado 9 senos, sin
 relación entre sí: la capa parecía una tabla rayada.
+
+v1.8.0: el canvas se rediseña con medallón completo, doble ribete,
+constelación, sigilos y un dobladillo de 4 texels. El item plegado y el icono
+dejan de estirar el canvas 2:1 a un cuadrado (tools/texture_pipeline.py los
+encaja con `cloth_canvas_fitted` / `build_icon_artwork`).
 
 tools/armor_model_pipeline.py construye la geometría, tools/texture_pipeline.py
 pinta el canvas y CapaArmorModel.java anima los huesos v15_cloth_*.
@@ -59,7 +64,8 @@ UV = {
     # 96x48. Todas sus filas y columnas están opacas en el PNG original.
     "cloth": dict(CANVAS),
     "top_band": {"uv": [0.0, 0.0], "uv_size": [96.0, 2.0]},
-    "bottom_band": {"uv": [0.0, 46.0], "uv_size": [96.0, 2.0]},
+    # v1.8.0: dobladillo de 4 texels (antes 2). El chevron ya no se corta.
+    "bottom_band": {"uv": [0.0, 44.0], "uv_size": [96.0, 4.0]},
     # Zonas sin emisivos: creases oscuros / iluminados, forro y ribete.
     "crease_dark": {"uv": [105.0, 0.0], "uv_size": [2.0, 48.0]},
     "crease_light": {"uv": [107.0, 0.0], "uv_size": [2.0, 48.0]},
@@ -100,8 +106,8 @@ def cloth_uv(section: int, column: int) -> dict:
 def hem_uv(column: int) -> dict:
     """Cada lengüeta toma su porción del dobladillo, no todo el chevron."""
     return {
-        "uv": [round(column * STRIP_W, 4), 46.0],
-        "uv_size": [round(STRIP_W, 4), 2.0],
+        "uv": [round(column * STRIP_W, 4), 44.0],
+        "uv_size": [round(STRIP_W, 4), 4.0],
     }
 
 

@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-Genera el geo y la animación de la capa plegada para el item 3D (v1.5.1).
+Genera el geo y la animación de la capa plegada para el item 3D (v1.8.0).
 
-El modelo deja de ser una serie de cinco rectángulos y pasa a ser una prenda
-con 7 pliegues en abanico, nervios de ribete, yugo con alas, cuello levantado,
-broche con marco y cadena, costuras laterales y dobladillo de puntas. Cada
-pliegue muestrea una franja vertical distinta del atlas de 128×128, así que
-las siete caras delanteras reconstruyen UNA sola ilustración continua.
+v1.8.0: el item deja de ser un abanico plano de siete láminas y pasa a ser un
+BULTO de capa doblada con grosor real. Hay un bloque de forro detrás, siete
+franjas delanteras con relieve en Z (no rotación en abanico), un yugo con
+cuello levantado, un broche de diamante, dos cadenas, dos tiras laterales,
+tres rollos de tela en la base y cinco puntas de dobladillo. Las siete caras
+delanteras siguen reconstruyendo UNA sola ilustración continua del atlas.
 
 También escribe animations/item/cape_folded.animation.json: el balanceo de los
-pliegues pasa a estar en la animación (no en Java), y las cuatro animaciones
-idle/moving/sprint/air siguen disponibles para el controlador del item.
+pliegues, rollos y puntas pasa a estar en la animación (no en Java), y las
+cuatro animaciones idle/moving/sprint/air siguen disponibles para el
+controlador del item.
 
 Uso:  python tools/item_model_pipeline.py
 """
@@ -20,7 +22,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from fold_spec import PANELS, TOP_Y, UV
+from fold_spec import BOTTOM_Y, PANELS, TOP_Y, UV, WIDTH
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT_GEO = ROOT / "src/main/resources/assets/capatest/geo/item/cape_folded.geo.json"
@@ -71,94 +73,111 @@ def bone(name, parent, pivot, rotation, cubes):
 
 def build_geo() -> dict:
     bones = [
-        bone("cape", None, [0, 12, 0], [0, 0, 0], [
-            cube((-7.2, 1.2, -1.25), (14.4, 12.8, 0.9), UV["lining"]),
+        # Forro: da grosor real al bulto y se ve en los lados / al girarlo.
+        bone("cape", None, [0, 8.0, 0], [0, 0, 0], [
+            cube((-WIDTH / 2.0, BOTTOM_Y - 0.4, -1.1),
+                 (WIDTH, TOP_Y - BOTTOM_Y + 0.8, 2.2), UV["lining"]),
         ]),
     ]
 
-    # 1. Siete pliegues en abanico, con altura/profundidad/rotación graduales.
+    # 1. Siete franjas delanteras: misma ilustración, relieve en Z y curva
+    #    suave. Ya NO se abren en abanico: el item se lee como paño doblado.
     for p in PANELS:
         i = p["index"]
         bones.append(bone(
             f"fold_{i}", "cape",
             [p["x"] + p["width"] / 2.0, TOP_Y, p["depth"]],
             [p["rx"], p["ry"], p["rz"]],
-            [cube(
-                (p["x"], TOP_Y - p["height"], p["depth"]),
-                (p["width"], p["height"], 0.55),
-                p["strip"],
-            )],
+            [cube((p["x"], BOTTOM_Y, p["depth"]),
+                  (p["width"], p["height"], 0.5), p["strip"])],
         ))
 
-    # 2. Nervios de ribete entre pliegues.
+    # 2. Nervios de ribete entre franjas, ligeramente por delante de la tela.
     for i in range(6):
         a, b = PANELS[i], PANELS[i + 1]
-        x = b["x"] - 0.09
-        z = (a["depth"] + b["depth"]) / 2.0 + 0.30
-        h = min(a["height"], b["height"]) * 0.94
+        x = b["x"] - 0.07
+        z = (a["depth"] + b["depth"]) / 2.0 + 0.55
+        h = min(a["height"], b["height"]) * 0.98
         bones.append(bone(
             f"ridge_{i}", "cape",
-            [x + 0.09, TOP_Y - h / 2.0, z],
-            [0, (a["ry"] + b["ry"]) * 0.25, 0],
-            [cube((x, TOP_Y - h, z), (0.18, h, 0.14), UV["piping"])],
+            [x + 0.07, BOTTOM_Y + h / 2.0, z],
+            [0, (a["ry"] + b["ry"]) * 0.18, 0],
+            [cube((x, BOTTOM_Y + 0.1, z), (0.14, h, 0.12), UV["piping"])],
         ))
 
-    # 3. Yugo, alas y cuello levantado.
-    bones.append(bone("yoke", "cape", [0, 14.2, 0], [0, 0, 0], [
-        cube((-7.8, 13.5, -1.35), (15.6, 1.8, 3.1), UV["top_band"]),
+    # 3. Yugo, cuello levantado y alas de hombro.
+    bones.append(bone("yoke", "cape", [0, TOP_Y, 0], [0, 0, 0], [
+        cube((-WIDTH / 2.0 - 0.4, TOP_Y, -1.25),
+             (WIDTH + 0.8, 1.6, 3.0), UV["top_band"]),
     ]))
-    bones.append(bone("collar_center", "yoke", [0, 14.6, 1.7], [-14, 0, 0], [
-        cube((-2.2, 14.7, 1.55), (4.4, 0.9, 0.7), UV["top_band"]),
-    ]))
+    bones.append(bone(
+        "collar_center", "yoke", [0, TOP_Y + 1.2, 1.8], [-12, 0, 0],
+        [cube((-1.6, TOP_Y + 1.0, 1.55), (3.2, 0.8, 0.6), UV["top_band"])],
+    ))
     for side, sx in (("L", -1.0), ("R", 1.0)):
-        x = -5.0 if sx < 0 else 2.4
+        x = -3.6 if sx < 0 else 1.2
         bones.append(bone(
             f"collar_{side}", "yoke",
-            [x + 1.3, 14.6, 1.6],
-            [-10, 0, -sx * 12],
-            [cube((x, 14.4, 1.45), (2.6, 0.8, 0.6), UV["top_band"])],
+            [x + 1.2, TOP_Y + 1.2, 1.6], [-10, 0, -sx * 10],
+            [cube((x, TOP_Y + 0.9, 1.45), (2.4, 0.8, 0.6), UV["top_band"])],
         ))
-        wx = -7.9 if sx < 0 else 5.9
+        wx = -WIDTH / 2.0 - 0.5 if sx < 0 else WIDTH / 2.0 - 1.5
         bones.append(bone(
             f"wing_{side}", "yoke",
-            [wx + 1.0, 13.8, 1.2],
-            [6, sx * 10, sx * 18],
-            [cube((wx, 13.4, 1.15), (2.0, 1.2, 0.6), UV["top_band"])],
+            [wx + 1.0, TOP_Y + 0.6, 1.2], [6, sx * 10, sx * 16],
+            [cube((wx, TOP_Y + 0.2, 1.15), (2.0, 1.2, 0.6), UV["top_band"])],
         ))
 
-    # 4. Broche: marco, gema y dos tramos de cadena.
-    bones.append(bone("clasp_frame", "yoke", [0, 14.0, 1.8], [0, 0, 0], [
-        cube((-1.75, 12.75, 1.65), (3.5, 3.5, 0.30), UV["piping"]),
-    ]))
-    bones.append(bone("clasp", "yoke", [0, 14.0, 2.0], [0, 0, 0], [
-        cube((-1.4, 13.1, 1.95), (2.8, 2.8, 0.65), UV["gem"]),
-    ]))
-    bones.append(bone("chain_L", "yoke", [-3.0, 14.2, 1.9], [0, 0, -8], [
-        cube((-4.1, 14.05, 1.85), (2.2, 0.35, 0.25), UV["piping"]),
-    ]))
-    bones.append(bone("chain_R", "yoke", [3.0, 14.2, 1.9], [0, 0, 8], [
-        cube((1.9, 14.05, 1.85), (2.2, 0.35, 0.25), UV["piping"]),
-    ]))
+    # 4. Broche: marco y gema en DIAMANTE (rotación del hueso, no del cubo),
+    #    con dos tramos de cadena. Es el punto focal del item en la mano.
+    bones.append(bone(
+        "clasp_frame", "yoke", [0, TOP_Y + 0.7, 2.0], [0, 0, 45],
+        [cube((-1.5, TOP_Y - 0.8, 1.9), (3.0, 3.0, 0.25), UV["piping"])],
+    ))
+    bones.append(bone(
+        "clasp", "yoke", [0, TOP_Y + 0.7, 2.15], [0, 0, 45],
+        [cube((-1.15, TOP_Y - 0.45, 2.05), (2.3, 2.3, 0.35), UV["gem"])],
+    ))
+    bones.append(bone(
+        "chain_L", "yoke", [-2.7, TOP_Y + 1.0, 2.0], [0, 0, -8],
+        [cube((-3.9, TOP_Y + 0.85, 1.95), (2.2, 0.30, 0.25), UV["piping"])],
+    ))
+    bones.append(bone(
+        "chain_R", "yoke", [2.7, TOP_Y + 1.0, 2.0], [0, 0, 8],
+        [cube((1.7, TOP_Y + 0.85, 1.95), (2.2, 0.30, 0.25), UV["piping"])],
+    ))
 
-    # 5. Costuras laterales y puntas del dobladillo.
+    # 5. Tiras laterales: enmarcan el bulto sin tapar la ilustración.
     for side, sx in (("L", -1.0), ("R", 1.0)):
-        x = -7.18 if sx < 0 else 6.96
+        x = -WIDTH / 2.0 + 0.05 if sx < 0 else WIDTH / 2.0 - 0.27
         bones.append(bone(
             f"strap_{side}", "cape",
-            [x + 0.11, 8.0, 1.25],
-            [0, -sx * 4, 0],
-            [cube((x, 1.4, 1.25), (0.22, 12.2, 0.18), UV["piping"])],
+            [x + 0.11, 8.0, 1.75], [0, -sx * 3, 0],
+            [cube((x, BOTTOM_Y + 0.2, 1.70),
+                  (0.22, TOP_Y - BOTTOM_Y - 0.4, 0.18), UV["piping"])],
         ))
-    for p in PANELS:
-        i = p["index"]
-        hw = 1.6
-        x = p["x"] + p["width"] / 2.0 - hw / 2.0
-        tilt = -12.0 if i % 2 == 0 else 12.0
+
+    # 6. Tres ROLLOS de tela en la base: dan la lectura de "capa doblada".
+    for j in range(3):
+        y = BOTTOM_Y - 1.15 + j * 0.62
+        z = 1.55 + 0.12 * j
+        bones.append(bone(
+            f"roll_{j}", "cape", [0, y + 0.28, z], [0, 0, 0],
+            [cube((-WIDTH / 2.0 + 0.2, y, z),
+                  (WIDTH - 0.4, 0.55, 0.5), UV["roll"])],
+        ))
+
+    # 7. Cinco puntas de dobladillo con inclinación alterna.
+    span = (WIDTH - 1.2) / 5.0
+    for i in range(5):
+        x = -WIDTH / 2.0 + 0.6 + i * span
+        hw = span * 0.82
         bones.append(bone(
             f"hem_{i}", "cape",
-            [x + hw / 2.0, 1.0, 0.7],
-            [0, 0, tilt],
-            [cube((x, 0.55, 0.62), (hw, 1.0, 0.35), UV["bottom_band"])],
+            [x + hw / 2.0, BOTTOM_Y - 1.55, 1.9],
+            [0, 0, -8 if i % 2 == 0 else 8],
+            [cube((x, BOTTOM_Y - 1.95, 1.85),
+                  (hw, 0.70, 0.30), UV["bottom_band"])],
         ))
 
     return {
@@ -169,8 +188,8 @@ def build_geo() -> dict:
                     "identifier": "geometry.cape_folded",
                     "texture_width": 128,
                     "texture_height": 128,
-                    "visible_bounds_width": 3.5,
-                    "visible_bounds_height": 4.0,
+                    "visible_bounds_width": 3.2,
+                    "visible_bounds_height": 3.6,
                     "visible_bounds_offset": [0, 0.5, 0],
                 },
                 "bones": bones,
@@ -191,46 +210,70 @@ def rot(frames: dict[float, list[float]]) -> dict:
 def build_animations() -> dict:
     folds = {f"fold_{p['index']}": p for p in PANELS}
 
-    def fold_frames(mid: float, spread: float, phase: float = 0.0):
+    def fold_frames(mid: float, spread: float):
         out = {}
         for name, p in folds.items():
             i = p["index"]
             out[name] = rot({
                 0.0: [0, 0, 0],
-                mid / 2.0: [spread * 0.5, 0, (i - 3) * spread * 0.16],
+                mid / 2.0: [spread * 0.5, 0, (i - 3) * spread * 0.14],
                 mid: [0, 0, 0],
             })
         return out
 
+    def hem_frames(mid: float, spread: float):
+        return {
+            f"hem_{i}": rot({
+                0.0: [0, 0, 0],
+                mid / 2.0: [0, 0, spread if i % 2 == 0 else -spread],
+                mid: [0, 0, 0],
+            })
+            for i in range(5)
+        }
+
+    def roll_frames(mid: float, spread: float):
+        return {
+            f"roll_{j}": rot({
+                0.0: [0, 0, 0],
+                mid / 2.0: [spread * (0.4 + 0.3 * j), 0, 0],
+                mid: [0, 0, 0],
+            })
+            for j in range(3)
+        }
+
     idle = {
-        "cape": rot({0.0: [0, 0, 0], 2.0: [0.8, 0, 0.4], 4.0: [0, 0, 0]}),
-        "yoke": rot({0.0: [0, 0, 0], 2.0: [-0.4, 0, -0.2], 4.0: [0, 0, 0]}),
-        "collar_center": rot({0.0: [0, 0, 0], 2.0: [1.2, 0, 0], 4.0: [0, 0, 0]}),
+        "cape": rot({0.0: [0, 0, 0], 2.0: [0.7, 0, 0.3], 4.0: [0, 0, 0]}),
+        "yoke": rot({0.0: [0, 0, 0], 2.0: [-0.3, 0, -0.2], 4.0: [0, 0, 0]}),
+        "collar_center": rot({0.0: [0, 0, 0], 2.0: [1.0, 0, 0], 4.0: [0, 0, 0]}),
         "clasp": rot({0.0: [0, 0, 0], 2.0: [0, 0, 2.0], 4.0: [0, 0, 0]}),
     }
-    idle.update(fold_frames(4.0, 0.9))
-    for i in range(7):
-        idle[f"hem_{i}"] = rot({
-            0.0: [0, 0, 0],
-            2.0: [0, 0, 1.6 if i % 2 == 0 else -1.6],
-            4.0: [0, 0, 0],
-        })
+    idle.update(fold_frames(4.0, 0.8))
+    idle.update(hem_frames(4.0, 1.4))
+    idle.update(roll_frames(4.0, 0.6))
 
     moving = {
-        "cape": rot({0.0: [2.5, 0, 0], 0.6: [4.0, 0, 1.0], 1.2: [2.5, 0, 0]}),
-        "yoke": rot({0.0: [-0.5, 0, 0], 0.6: [-1.0, 0, 0.4], 1.2: [-0.5, 0, 0]}),
+        "cape": rot({0.0: [2.0, 0, 0], 0.6: [3.2, 0, 0.8], 1.2: [2.0, 0, 0]}),
+        "yoke": rot({0.0: [-0.4, 0, 0], 0.6: [-0.8, 0, 0.3], 1.2: [-0.4, 0, 0]}),
     }
-    moving.update(fold_frames(1.2, 1.6))
+    moving.update(fold_frames(1.2, 1.4))
+    moving.update(hem_frames(1.2, 2.2))
+    moving.update(roll_frames(1.2, 1.0))
+
     sprint = {
-        "cape": rot({0.0: [5.0, 0, 0], 0.4: [8.0, 0, 1.6], 0.8: [5.0, 0, 0]}),
-        "yoke": rot({0.0: [-1.0, 0, 0], 0.4: [-1.6, 0, 0.6], 0.8: [-1.0, 0, 0]}),
+        "cape": rot({0.0: [4.0, 0, 0], 0.4: [6.4, 0, 1.3], 0.8: [4.0, 0, 0]}),
+        "yoke": rot({0.0: [-0.8, 0, 0], 0.4: [-1.3, 0, 0.5], 0.8: [-0.8, 0, 0]}),
     }
-    sprint.update(fold_frames(0.8, 2.4))
+    sprint.update(fold_frames(0.8, 2.0))
+    sprint.update(hem_frames(0.8, 3.0))
+    sprint.update(roll_frames(0.8, 1.5))
+
     air = {
-        "cape": rot({0.0: [8.0, 0, 0], 0.75: [11.0, 0, -1.5], 1.5: [8.0, 0, 0]}),
-        "yoke": rot({0.0: [-1.5, 0, 0], 0.75: [-2.2, 0, -0.6], 1.5: [-1.5, 0, 0]}),
+        "cape": rot({0.0: [6.5, 0, 0], 0.75: [9.0, 0, -1.2], 1.5: [6.5, 0, 0]}),
+        "yoke": rot({0.0: [-1.2, 0, 0], 0.75: [-1.8, 0, -0.5], 1.5: [-1.2, 0, 0]}),
     }
-    air.update(fold_frames(1.5, 2.0))
+    air.update(fold_frames(1.5, 1.8))
+    air.update(hem_frames(1.5, 2.6))
+    air.update(roll_frames(1.5, 1.3))
 
     return {
         "format_version": "1.8.0",
@@ -266,6 +309,15 @@ def main() -> None:
     dangling = sorted({b["parent"] for b in bones if "parent" in b} - names)
     assert not dangling, f"huesos con padre inexistente: {dangling}"
     assert "parent" not in bones[0], "el hueso raíz no debe declarar parent"
+    assert len(names) == 34, f"geo plegado inesperado: {len(names)} huesos"
+
+    for bone in bones:
+        for c in bone.get("cubes", []):
+            for face in c["uv"].values():
+                u, v = face["uv"]
+                w, h = face["uv_size"]
+                assert w > 0 and h > 0, face
+                assert 0 <= u and 0 <= v and u + w <= 128 and v + h <= 128, face
 
     for anim_name, spec in anim["animations"].items():
         missing = set(spec["bones"]) - names

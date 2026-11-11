@@ -139,6 +139,8 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
                 .withStyle(ChatFormatting.DARK_PURPLE));
         tooltip.add(Component.translatable("item.capatest.capa_deteriorer_evilsaiyan.lore2")
                 .withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("item.capatest.capa_deteriorer_evilsaiyan.lore3")
+                .withStyle(ChatFormatting.DARK_PURPLE, ChatFormatting.ITALIC));
         super.appendHoverText(stack, level, tooltip, flag);
     }
 

@@ -53,7 +53,7 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
             // El pass emisivo es decorativo: nunca debe tumbar el render.
             disabled = true;
             com.capatest.CapaTestMod.LOGGER.error(
-                    "Capa Deteriorer: capa emisiva desactivada", error);
+                    "Manto de la Estrella Moribunda: capa emisiva desactivada", error);
         }
     }
 

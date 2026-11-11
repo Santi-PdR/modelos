@@ -7,8 +7,14 @@ modId="${mod_id}"
 version="${mod_version}"
 displayName="${mod_name}"
 authors="${mod_authors}"
-description='''Capa Deteriorer Evil Saiyan para Forge 1.20.1 con GeckoLib 4.8.1.
+description='''Manto de la Estrella Moribunda / Dying Star Mantle para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.8.0: item plegado reconstruido como bulto 3D con grosor real (34 huesos),
+icono y atlas con proporcion correcta (fin del canvas estirado), canvas
+redisenado con medallon completo, doble ribete, constelacion, sigilos y
+dobladillo de 4 texels, 5 estrellas 3D emisivas, glowmask pulsante del item y
+efecto full-sky en mano. Nombre y descripcion neutros, sin referencia Saiyan.
+Nombre interno capatest:capa_deteriorer_evilsaiyan conservado por compatibilidad.
 v1.7.0: pliegues anchos coherentes. FOLDS=3 es la unica fuente de verdad:
 el sombreado del canvas y el relieve 3D en Z muestrean la misma onda coseno,
 con 9 creases geometricas en los valles y 9 lenguetas de feston real.
