@@ -81,7 +81,7 @@ jobs:
           icon_path = base / 'textures/item/capa_deteriorer_evilsaiyan.png'
           w, h = struct.unpack('>II', icon_path.read_bytes()[16:24])
           assert (w, h) == (64, 64), ('icon', w, h)
-          # v1.10.0/v1.12.0: un icono pixel art 16x16 ampliado con NEAREST comprime
+          # v1.10.0/v1.14.0: un icono pixel art 16x16 ampliado con NEAREST comprime
           # en menos de 2 KB. El de v1.9.0 (ilustración suave) pesaba ~6.5 KB.
           assert 300 <= icon_path.stat().st_size < 2000, icon_path.stat().st_size
           w, h = struct.unpack('>II', (base / 'textures/item/cape_folded.png').read_bytes()[16:24])
@@ -142,41 +142,46 @@ jobs:
               assert set(spec['bones']) <= folded_names, (anim_name, set(spec['bones']) - folded_names)
 
           # Geo de armadura v1.9.0: 72 huesos originales byte-idénticos en JSON,
-          # más 121 de tela/relieve/arnés/volumen => 193 huesos / 281 cubos.
+          # más 267 de tela/jirones/collar/microvóxeles => 339 huesos / 484 cubos.
           # Un ÚNICO rectángulo 9x3 sin costuras, con 3 pliegues anchos por fila.
           armor_geo = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]
           orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
           assert armor_geo['bones'][:72] == orig_bones
-          assert len(armor_geo['bones']) == 193
-          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 281
+          assert len(armor_geo['bones']) == 339
+          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 484
           new_bones = armor_geo['bones'][72:]
           new_names = {b['name'] for b in new_bones}
           assert {
               'v15_cloth_cape_top_0', 'v15_cloth_cape_mid_8', 'v15_cloth_cape_bottom_6',
-              'v15_crease_cape_top_0', 'v15_crease_cape_bottom_2',
-              'v15_pipe_cape_top_L', 'v15_pipe_cape_bottom_R',
-              'v15_hem_0', 'v15_hem_8', 'v15_shoulder_L', 'v15_shoulder_R',
-              'v15_clasp', 'v15_star_0', 'v15_star_4',
-              'v15_orbit_0', 'v15_orbit_3',
-              'v15_ridge_cape_top_0', 'v15_drape_L', 'v15_drape_R',
-              'v15_weight_0', 'v15_weight_4', 'v15_back_collar_0',
-              'v15_suspend_L', 'v15_pauldron_L', 'v15_pauldron_R',
-              'v15_front_strap_L', 'v15_front_chain_L', 'v15_front_clasp',
-              'v15_front_collar_0', 'v15_front_placket',
-              'v15_front_band_L', 'v15_front_tassel_L'
+              'v15_hem_0', 'v15_hem_8', 'v15_orbit_0', 'v15_orbit_3',
+              'v15_rear_pad_L', 'v15_rear_pad_R',
+              'v16_collar_outer_0', 'v16_collar_inner_13', 'v16_fray_19',
+              'v16_yoke_0', 'v16_tatter_0_0', 'v16_tatter_12_5',
+              'v16_shred_L_0', 'v16_vein_0', 'v16_mote_55', 'v16_ash_0',
           } <= new_names
           assert sum(1 for n in new_names if n.startswith('v15_cloth_')) == 27
-          assert sum(1 for n in new_names if n.startswith('v15_crease_')) == 9
           assert sum(1 for n in new_names if n.startswith('v15_hem_')) == 9
-          assert sum(1 for n in new_names if n.startswith('v15_star_')) == 5
           assert sum(1 for n in new_names if n.startswith('v15_orbit_')) == 4
-          assert sum(1 for n in new_names if n.startswith('v15_ridge_')) == 9
-          assert sum(1 for n in new_names if n.startswith('v15_drape_')) == 2
-          assert sum(1 for n in new_names if n.startswith('v15_weight_')) == 5
-          assert sum(1 for n in new_names if n.startswith('v15_back_collar_')) == 3
-          assert sum(1 for n in new_names if n.startswith('v15_suspend_')) == 2
-          assert sum(1 for n in new_names if n.startswith('v15_pauldron_')) == 2
-          assert sum(1 for n in new_names if n.startswith('v15_front_')) == 13
+          assert sum(1 for n in new_names if n.startswith('v16_collar_')) == 28
+          assert sum(1 for n in new_names if n.startswith('v16_fray_')) == 20
+          assert sum(1 for n in new_names if n.startswith('v16_yoke_')) == 5
+          assert sum(1 for n in new_names if n.startswith('v16_tatter_')) == 78
+          assert sum(1 for n in new_names if n.startswith('v16_shred_')) == 12
+          assert sum(1 for n in new_names if n.startswith('v16_vein_')) == 18
+          assert sum(1 for n in new_names if n.startswith('v16_mote_')) == 56
+          assert sum(1 for n in new_names if n.startswith('v16_ash_')) == 8
+          # Todas las tiras nuevas: espesor 0.25-0.50 y capas separadas.
+          cloth = [b for b in new_bones if b['name'].startswith(
+              ('v16_tatter_', 'v16_fray_', 'v16_yoke_'))]
+          assert cloth and all(0.25 <= c['size'][2] <= 0.50
+                               and 0.01 <= c.get('inflate', 0) <= 0.05
+                               for b in cloth for c in b['cubes']), 'espesor/inflate'
+          assert sum(1 for b in armor_geo['bones'] for c in b.get('cubes', [])
+                     if c.get('inflate')) >= 250
+          # Los microvóxeles son de 1x1x1 / 2x2x2 px (0.0625 / 0.125).
+          motes = [b for b in new_bones if b['name'].startswith('v16_mote_')]
+          assert all(any(abs(c['size'][0] - s) < 1e-6 for s in (0.0625, 0.125))
+                     for b in motes for c in b['cubes']), 'microvóxel'
           # Ningún hueso de tela puede colgar de un detalle que se oculta.
           hidden = set(__import__('re').findall(
               r'"([^"]+)"', (root / 'src/main/java/com/capatest/client/CapaArmorModel.java')
@@ -255,9 +260,11 @@ jobs:
           assert 'ICON_PALETTE' in texture_src
           assert 'build_icon_artwork(64)' in texture_src
           assert 'Image.NEAREST' in texture_src
-          assert 'def stitch(' in texture_src
+          assert 'def build_armor_cloth_canvas(' in texture_src
+          assert 'energy_ramp' in (root / 'tools/cloth_spec.py').read_text()
+          assert 'def _fit_emissive_mask(' in texture_src
 
-          # REGRESIÓN v1.12.0: el icono debe tener SILUETA PROPIA, no la
+          # REGRESIÓN v1.14.0: el icono debe tener SILUETA PROPIA, no la
           # forma de las dos referencias (un pico de capucha centrado +
           # hendidura central inferior). Se decodifica el PNG REAL del
           # asset (RGBA8, stdlib puro) y se muestrea la máscara alfa 16x16.
@@ -297,9 +304,9 @@ jobs:
           def runs(row): return len(_re.findall(r'[^.]+', row))
           # Dos picos de cuello separados por un escote en V abierto.
           assert runs(sil[0]) == 2 and sil[0][6:10] == '....', sil[0]
-          # Dobladillo de TRES puntas (tridente), no la hendidura central
+          # Dobladillo de CINCO puntas deshilachadas, no la hendidura central
           # de las referencias, que parte el borde inferior en dos patas.
-          assert runs(sil[15]) == 3, sil[15]
+          assert runs(sil[15]) == 5, sil[15]
           # Centro opaco en el faldón: NO hay split central.
           assert sil[12][7] == '#' and sil[12][8] == '#', sil[12]
           # La silueta coincide exactamente con ICON_PIXEL_MAP del código.
@@ -313,12 +320,19 @@ jobs:
           assert _rows[0] != '....GG....GG....'
           # El volumen 3D REAL debe estar en la geometría, no sólo en el JSON.
           armor_src = (root / 'tools/armor_model_pipeline.py').read_text()
-          assert 'PANEL_DEPTH = 0.85' in armor_src
-          assert 'def face_z(' in armor_src
-          assert 'v15_rear_pad_' in armor_src and 'v15_medallion' in armor_src
+          assert 'INFLATE = (0.01, 0.03, 0.05)' in armor_src
+          assert 'MOTE_COUNT = 56' in armor_src and 'FRAY_COUNT = 20' in armor_src
           geo_bones = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]['bones']
-          assert sum(1 for b in geo_bones if b['name'].startswith('v15_rear_pad_')) == 2
-          assert all(c['size'][2] >= 0.85 for b in geo_bones if b['name'].startswith('v15_cloth_') for c in b['cubes'])
+          assert sum(1 for b in geo_bones if b['name'].startswith('v16_tatter_')) == 78
+          assert all(0.25 <= c['size'][2] <= 0.50 for b in geo_bones
+                     if b['name'].startswith('v16_tatter_') for c in b['cubes'])
+          # Proyecto Blockbench REAL, con maniquí y UV por cara.
+          bb = json.loads((root / 'docs/capa_v1140.bbmodel').read_text())
+          assert bb['meta']['format_version'] == '5.0'
+          assert len(bb['elements']) == 484 + 6 and len(bb['groups']) >= 339
+          assert any('Steve/Alex' in g['name'] for g in bb['groups'])
+          assert all('faces' in e and e['faces'] for e in bb['elements'])
+          assert bb['textures'][0]['source'].startswith('data:image/png;base64,')
           assert 'ICON_PIXEL_MAP' in (root / 'tools/texture_pipeline.py').read_text()
           assert 'cape_folded_glowmask' in texture_src
           assert 'cool_ink' in texture_src
@@ -331,12 +345,13 @@ jobs:
           assert 'COLUMNS = 9' in cloth_src
           assert 'FOLDS = 3' in cloth_src and 'def fold_wave(' in cloth_src
           # El relieve 3D y el sombreado 2D DEBEN compartir la misma onda.
-          assert 'fold_at_column' in (root / 'tools/armor_model_pipeline.py').read_text()
-          assert 'fold_phase = u * FOLDS' in texture_src
+          assert 'FOLDS' in (root / 'tools/armor_model_pipeline.py').read_text()
+          assert 'FOLDS' in texture_src
           assert 'column * 0.030D' in armor_model
           assert 'v15_orbit_' in armor_model
           assert 'v15_pauldron_' in armor_model and 'v15_front_chain_' in armor_model
-          assert 'fold_crests' in (root / 'tools/armor_model_pipeline.py').read_text()
+          assert 'INFLATE = (0.01, 0.03, 0.05)' in (root / 'tools/armor_model_pipeline.py').read_text()
+          assert 'assert_opaque' in (root / 'tools/armor_model_pipeline.py').read_text()
           assert 'def build_blight_sprites(' in texture_src
           item_src = (root / 'tools/item_model_pipeline.py').read_text()
           assert 'if parent is not None' in item_src
@@ -346,11 +361,11 @@ jobs:
           curio = (root / 'src/main/java/com/capatest/client/CapaCurioRenderer.java').read_text()
           assert 'Exception | LinkageError' in glow_layer
           assert 'if (wearer == null)' in curio
-          assert 'mod_version=1.12.0' in (root / 'gradle.properties').read_text()
+          assert 'mod_version=1.14.0' in (root / 'gradle.properties').read_text()
           assert 'curios_version=5.14.1+1.20.1' in (root / 'gradle.properties').read_text()
-          assert 'v1.12.0' in (root / 'src/main/resources/pack.mcmeta').read_text()
-          assert '1.12.0' in (root / 'src/main/resources/META-INF/mods.toml').read_text()
-          assert 'v1.12.0' in (root / 'README.md').read_text()
+          assert 'v1.14.0' in (root / 'src/main/resources/pack.mcmeta').read_text()
+          assert '1.14.0' in (root / 'src/main/resources/META-INF/mods.toml').read_text()
+          assert 'v1.14.0' in (root / 'README.md').read_text()
           assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/en_us.json').read_text()
           assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/es_es.json').read_text()
           assert 'CAPA_BLIGHT_MOTE' in java
@@ -362,9 +377,12 @@ jobs:
           assert 'def build_icon_artwork(' in texture_src
           assert 'pixel art' in (root / 'README.md').read_text()
           assert 'hombreras' in (root / 'README.md').read_text()
-          for doc in ('capa_v1120_icon_compare.png', 'capa_v1120_silhouette_compare.png',
-                      'capa_v1120_front_rig.png', 'capa_v1120_side_relief.png',
-                      'capa_v1120_particles.png'):
+          for doc in ('capa_v1140_preview.png', 'capa_v1140_icon.png',
+                      'capa_v1140_icon_compare.png', 'capa_v1140_silhouette_compare.png',
+                      'capa_v1140_side_relief.png', 'capa_v1140_front_rig.png',
+                      'capa_v1140_item_glowmask.png', 'capa_v1140_particles.png',
+                      'capa_v1140_uv_test.png', 'capa_v1140.bbmodel',
+                      'capa_v1140_visor.html'):
               assert (root / 'docs' / doc).is_file(), doc
 
           # Aura MUDA: ningún playSound ni sonido propio en las partículas /
@@ -383,7 +401,11 @@ jobs:
           assert 'capatest:capa_deteriorer_evilsaiyan' in tag
           entity = json.loads((data / 'capatest/curios/entities/player.json').read_text())
           assert entity == {'entities': ['player'], 'slots': ['back']}
-          print('OK: JSON/PNG sin JsonNull, item 36 huesos + animation.item, 193 huesos / 281 cubos, 27 paneles 9x3 de 0.85, relieve 3D, hombreras traseras y arnés frontal, 5 estrellas + 4 órbitas, 2 sets de partículas mudas, icono pixel art rediseñado, glowmask del item, UV opacas y Curios back')
+          stand = (root / 'docs/capa_v1140_visor.html').read_text()
+          assert 'fetch(' not in stand and 'assets/' not in stand, 'visor no autocontenido'
+          assert 'INLINE_GEO' in stand and 'download="capa_deteriorer_evilsaiyan.bbmodel"' in stand
+
+          print('OK: JSON/PNG sin JsonNull, item 36 huesos + animation.item, 339 huesos / 484 cubos, collar de 28 segmentos + 20 flecos, 78 jirones en 3 capas con inflate, 56 microvóxeles y 18 venas, .bbmodel con maniquí Steve/Alex, textura Rosé con grietas, icono pixel art actualizado, glowmask del item, UV opacas y Curios back')
           PY
 
       - name: Build
@@ -412,7 +434,7 @@ jobs:
       - name: List built jars
         run: ls -lh build/libs
 
-      - name: Verify jar contents (v1.12.0 resources)
+      - name: Verify jar contents (v1.14.0 resources)
         run: |
           set -euo pipefail
           found=0
@@ -460,7 +482,7 @@ jobs:
             unzip -p "$jar" assets/capatest/animations/item/cape_folded.animation.json > /tmp/folded-anim.json
             python3 -c 'import json; a=json.load(open("/tmp/folded-anim.json"))["animations"]; assert len(a)==5 and "animation.item" in a; print("OK: 5 animaciones con animation.item dentro del jar")'
             unzip -p "$jar" assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json > /tmp/armor-geo.json
-            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==193 and sum(len(x.get("cubes",[])) for x in b)==281; print("OK: 193 huesos / 281 cubos dentro del jar")'
+            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==339 and sum(len(x.get("cubes",[])) for x in b)==484; print("OK: 339 huesos / 484 cubos dentro del jar")'
             echo "OK: clases, mods.toml, 3D item, animation.item, relieve 3D, glowmask, 2 sets de partículas y datos Curios presentes"
           done
           test "$found" -eq 1
@@ -471,70 +493,80 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          JAR="build/libs/capatest-1.12.0.jar"
+          JAR="build/libs/capatest-1.14.0.jar"
           test -f "$JAR"
           NOTES=/tmp/release-notes.md
           cat > "$NOTES" <<'MD'
-          ## Mantle of the Blight Star v1.12.0 — VOLUMEN 3D REAL + icono nuevo
+          ## Mantle of the Blight Star v1.14.0 — Deterioro / Evil Saiyan Rosé
 
-          Dijiste: *«No me gustó el icono y la capa sigue estando fea, tiene que
-          ser 3d con detalles como ejemplo hombreras o otras cosas en la capa
-          y relieve y más»*. v1.12.0 había cambiado SÓLO el icono: la capa
-          equipada seguía siendo un póster plano. Esta versión ataca la causa
-          raíz, que estaba en la geometría, no en los colores.
+          Revisión a fondo del modelo, la textura y los efectos, siguiendo la
+          captura de Blockbench como guía de volumen. **Publicada sólo después
+          de aprobación visual en el visor.**
 
-          ### La capa ahora tiene cuerpo
+          ### Collar y conexión con el jugador
 
-          | | v1.12.0 (rechazada) | v1.12.0 |
+          - Collar voluminoso de **dos anillos de 14 segmentos** rodeando
+            cuello y hombros, con solape real, borde dentado y **20 flecos**
+            deshilachados por todo el contorno.
+          - Yugo de 5 piezas une collar y espalda; hombreras envolventes van
+            de `Z=-1.35` a `Z=+3.75`. Cero piezas flotantes.
+          - [`docs/capa_v1140.bbmodel`](../blob/HEAD/docs/capa_v1140.bbmodel)
+            incluye maniquí **Steve/Alex** para juzgar el ajuste en Blockbench.
+
+          ### Jirones 3D y desintegración
+
+          | | v1.12.0 | **v1.14.0** |
           |---|---|---|
-          | Grosor de cada panel | 0.10 px (lámina) | **0.85 px (bloque)** |
-          | Relieve de pliegues | 0.085 px | **0.28 px** (onda FOLDS=3) |
-          | Decoraciones | `panel_z + 0.03`, **dentro** del panel | cara SUR `+Z`, **por delante** |
-          | Hombreras | 2.0×1.4×0.42 en Z<0 (**frente**, invisibles desde la espalda) | **hombreras TRASERAS sólidas** 3.6×1.95×2.05 |
-          | Huesos / cubos | 171 / 234 | **193 / 281** |
+          | Huesos / cubos | 193 / 281 | **339 / 484** |
+          | Tiradas de tela | 27 paneles de 0.85 | **27 láminas + 78 jirones largos** |
+          | Espesor | 0.85 | **0.25–0.50** en 3 capas |
+          | Separación de capas | — | **`inflate` 0.01 / 0.03 / 0.05** |
+          | Microvóxeles | — | **56** de 1×1×1 / 2×2×2 px + 8 cenizas |
 
-          Además: cuello trasero levantado, 6 placas escalonadas en los bordes,
-          6 eslabones de cadena 3D, 6 remaches, medallón con marco + gema +
-          núcleo en relieve, gorget alto y crestas/ribetes/nervios engrosados.
-          Las caras laterales del atlas (`crease_*`, `lining`, `rim`) se
-          **aclaran**: con 0.85 de grosor ahora son muy visibles y antes
-          parecían barrotes negros. Se conserva **violeta + oro + cian**; el
-          problema era la falta de volumen y el sombreado, no la paleta.
+          12 tiras se desprenden por los costados, 18 venas recorren los
+          jirones y 56 microvóxeles con pivote desplazado 0.6 se desplazan
+          de verdad al girar el hueso (sin partículas externas ni mixins).
 
-          La vista de perfil (`docs/capa_v1120_side_relief.png`) ya NO es una
-          línea: muestra el paño grueso, las hombreras que sobresalen y el
-          cuello. Las vistas de espalda y 3/4 trasero muestran las hombreras
-          montadas en lugar de «piezas sueltas flotando».
+          ### Textura y energía
 
-          ### Icono pixel art rediseñado
+          Carmesí muy oscuro, morado desvaído y gris ceniza; grietas de
+          energía con halo magenta y núcleo rosa encendido, trama de sarga,
+          agujeros rasgados y rampa rosa → magenta → violeta-negro en bordes
+          y partículas. **1636 texels emisivos intactos**, redistribuidos a
+          las grietas (el glowmask no crece). Alfa base prístino y UV ≤ 128.
 
-          El `ICON_PIXEL_MAP` de v1.12.0 (un rectángulo a franjas) se sustituye
-          por un dibujo nuevo de 16×16: **dos hombreras con ribete de oro y
-          gemas cian** que sobresalen del cuello, manto trapezoidal con **tres
-          pliegues anchos**, **broche diamante** de 5 píxeles, bordado dorado,
-          vetas frías, estrella de Blight Star y festón de tres puntas que
-          cuelga. Sin degradados, sin antialiasing, sin bloom; paleta plana,
-          contorno duro y `Image.NEAREST` 4×. El CI decodifica el PNG real y
-          verifica que la silueta coincide con el mapa, que sigue habiendo dos
-          picos arriba / tres puntas abajo / centro opaco, y que **no** es la
-          forma de v1.10.0 ni la de v1.12.0.
+          ### Movimiento e icono
 
-          ### Se conserva íntegro lo anterior
+          `CapaArmorModel` resuelve 225 huesos `v16_*` por nombre y anima
+          respiración del collar, ondeo de jirones con retardo, pulso de
+          venas y deriva de microvóxeles, en radianes y con fail-safe.
+          El icono mantiene la forma 16×16 plana/`NEAREST` aprobada, adapta
+          la paleta, añade grietas, 5 puntas y 4 microvóxeles.
 
-          ID `capatest:capa_deteriorer_evilsaiyan`, nombre y lore, tag Curios
-          `back`, canvas continuo 9×3 y 96×48, `FOLDS=3` con onda 2D/3D
-          compartida, 61 huesos boxy ocultos, **1636 texels emisivos** y alfa
-          base prístinos, glowmask sin ampliar, `animation.item` (36 huesos,
-          5 animaciones), aura muda, fail-safes, radianes, raíz sin `parent`,
-          cero `JsonNull` y cero mixins. UV ≤ 128 y `visible_bounds` ampliados
-          a 5.2 para no recortar las hombreras.
+          ### Se conserva íntegro
 
-          Previews: `capa_v1120_preview.png` (6 vistas),
-          `capa_v1120_icon.png`, `capa_v1120_icon_compare.png`,
-          `capa_v1120_silhouette_compare.png`, `capa_v1120_side_relief.png`,
-          `capa_v1120_front_rig.png`, `capa_v1120_item_glowmask.png`,
-          `capa_v1120_particles.png` y `capa_v1120_uv_test.png`. Son render
-          software: la prueba in-game queda para el próximo arranque.
+          ID `capatest:capa_deteriorer_evilsaiyan`, `curios:back`, los 72
+          huesos originales byte-idénticos, `animation.item`, aura muda,
+          `visible_bounds` 6.0/5.6, raíz sin `parent`, 0 `JsonNull` y 0 mixins.
+
+          ### Descargas de esta Release
+
+          | Archivo | Para qué |
+          |---|---|
+          | `capatest-1.14.0.jar` | El mod compilado (Forge 1.20.1) |
+          | `capa_v1140.bbmodel` | Proyecto editable de **Blockbench** con maniquí Steve/Alex |
+          | `capa_v1140_visor.html` | Visor 3D **autocontenido**: abrir con doble clic, sin servidor ni token |
+          | `capa_v1140_preview.png` | Comparativa de 6 vistas (render software) |
+
+          El sandbox de Arena tiene `allowPublicTraffic=false`: una URL
+          `https://8000-*.e2b.app` abierta fuera del *Live Preview* devuelve
+          **403 MISSING TRAFFIC ACCESS TOKEN**. Por eso el `.bbmodel` se
+          entrega desde GitHub y el visor funciona sin red.
+
+          Previews: `docs/capa_v1140_preview.png` (6 vistas),
+          `capa_v1140_side_relief.png`, `capa_v1140_icon_compare.png`,
+          `capa_v1140_silhouette_compare.png`, `capa_v1140_uv_test.png`.
+          Son render software: la prueba in-game queda para el próximo arranque.
 
           ## Histórico v1.10.0 — icono pixel art 2D RPG y tela bordada
 
@@ -552,7 +584,7 @@ jobs:
           - **Ampliado 4x con `Image.NEAREST`** a 64x64: bloques de color definidos,
             sin blur, degradado, halo ni bisel. Rim light de 1 píxel arriba/izquierda.
           - `preview_cloth.py` amplía el icono con `NEAREST` para no falsear la
-            comparación: `docs/capa_v1120_icon_compare.png` (ref 1 / ref 2 / nuevo).
+            comparación: `docs/capa_v1140_icon_compare.png` (ref 1 / ref 2 / nuevo).
 
           ### Textura: de líneas neón a paño tejido y bordado
 
@@ -583,8 +615,8 @@ jobs:
           fail-safes, radianes, cero `JsonNull`, cero mixins y Curios `back`.
 
           El pixel art de v1.10.0 gustó por el estilo, pero su silueta era la de
-          las referencias; v1.12.0 la sustituye por la forma propia descrita arriba.
-          Los previews se versionaron de nuevo a `capa_v1120_*`.
+          las referencias; v1.14.0 la sustituye por la forma propia descrita arriba.
+          Los previews se versionaron de nuevo a `capa_v1140_*`.
 
           ## Histórico v1.9.0 — Blight Star, relieve, arnés y animación del item
 
@@ -741,17 +773,34 @@ jobs:
           sustituyen una prueba in-game; si algo falla, el mod registra
           `Blight Star Mantle: ... desactivada` en el log en vez de propagarlo.
           MD
-          if gh release view v1.12.0 >/dev/null 2>&1; then
-            gh release upload v1.12.0 "$JAR" --clobber
+          if gh release view v1.14.0 >/dev/null 2>&1; then
+            gh release upload v1.14.0 "$JAR" --clobber
           else
-            gh release create v1.12.0 "$JAR" \
-              --title "Mantle of the Blight Star v1.12.0" \
+            gh release create v1.14.0 "$JAR" \
+              --title "Mantle of the Blight Star v1.14.0" \
               --notes-file "$NOTES" \
               --target "$GITHUB_SHA"
           fi
-          ASSETS="$(gh release view v1.12.0 --json assets --jq '.assets[].name')"
-          grep -qx 'capatest-1.12.0.jar' <<< "$ASSETS"
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.12.0/capatest-1.12.0.jar"
+          # v1.14.0: el proyecto Blockbench y el visor offline se entregan
+          # TAMBIEN como assets de la Release. El sandbox tiene el trafico
+          # publico restringido (403 sin e2b-traffic-access-token), asi que
+          # un link al preview NO sirve para descargar: GitHub si.
+          test -f docs/capa_v1140.bbmodel
+          test -f docs/capa_v1140_visor.html
+          gh release upload v1.14.0 \
+            docs/capa_v1140.bbmodel \
+            docs/capa_v1140_visor.html \
+            docs/capa_v1140_preview.png \
+            --clobber
+          ASSETS="$(gh release view v1.14.0 --json assets --jq '.assets[].name')"
+          grep -qx 'capatest-1.14.0.jar' <<< "$ASSETS"
+          grep -qx 'capa_v1140.bbmodel' <<< "$ASSETS"
+          grep -qx 'capa_v1140_visor.html' <<< "$ASSETS"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.14.0/capatest-1.14.0.jar"
           echo "### Descarga directa" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "[${URL}](${URL})" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "[Blockbench: capa_v1140.bbmodel](https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.14.0/capa_v1140.bbmodel)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "[Visor offline: capa_v1140_visor.html](https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.14.0/capa_v1140_visor.html)" >> "$GITHUB_STEP_SUMMARY"

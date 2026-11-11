@@ -5,7 +5,7 @@ Uso:
     python -m pip install Pillow numpy
     python tools/preview_cloth.py --out /tmp/capa_preview
 
-Genera vistas del bulto plegado, la capa equipada v1.12.0 (frente/3-4/espalda),
+Genera vistas del bulto plegado, la capa equipada v1.13.0 (frente/3-4/espalda),
 un perfil para el relieve 3D y el arnés delantero aislado, la superficie de
 tela, el canvas 96x48, el icono 64x64 ampliado, el glowmask del item, los seis
 sprites de partículas y el detalle original que queda visible. Sirve para
@@ -224,6 +224,24 @@ def posed(geo):
         elif n.startswith("v15_hem_"):
             ci = int(n.rsplit("_", 1)[1])
             b["rotation"][2] += math.sin(2.3 - ci * 0.55) * 2.2
+        elif n.startswith("v16_mote_") or n.startswith("v16_ash_"):
+            ci = int(n.rsplit("_", 1)[1])
+            b["rotation"][0] += math.sin(1.9 + ci * 0.37) * 7.0
+            b["rotation"][1] += math.cos(1.3 + ci) * 5.0
+            b["rotation"][2] += math.sin(2.4 + ci * 0.37) * 3.5
+        elif n.startswith("v16_collar_") or n.startswith("v16_yoke_"):
+            ci = int(n.rsplit("_", 1)[1])
+            b["rotation"][0] += math.sin(1.9 + ci * 0.37) * 1.6
+            b["rotation"][2] += math.sin(1.1 + ci) * 0.8
+        elif n.startswith("v16_vein_"):
+            ci = int(n.rsplit("_", 1)[1])
+            b["rotation"][2] += math.sin(3.2 + ci) * 2.4
+        elif n.startswith("v16_tatter_") or n.startswith("v16_shred_") \
+                or n.startswith("v16_fray_"):
+            ci = int(n.rsplit("_", 1)[1])
+            b["rotation"][0] += (2.0 + 4.0 * (ci % 5) / 5.0) * 0.8
+            b["rotation"][1] += math.sin(1.7 + ci) * 2.2
+            b["rotation"][2] += math.sin(1.4 + ci) * 2.6
     return out
 
 
@@ -312,7 +330,10 @@ def main():
     armor = load(ARMOR_GEO)
     folded = load(FOLDED_GEO)
     runtime_hidden = effective_hidden(armor)
-    cloth_only = {b["name"] for b in armor["bones"] if not b["name"].startswith("v15_")}
+    # v1.14.0: la "piel nueva" son v15_* (tela base / hems / orbitas /
+    # hombreras) y v16_* (collar, jirones, venas, microvoxeles).
+    cloth_only = {b["name"] for b in armor["bones"]
+                  if not b["name"].startswith(("v15_", "v16_"))}
     original_only = cloth_only | runtime_hidden
 
     if args.uv_test:
@@ -336,16 +357,16 @@ def main():
 
     views = [
         (render(folded, FOLDED_TEX, set(), yaw=-28, pitch=14, size=520),
-         "FOLDED ITEM 3D - bulto v1.12.0"),
+         "FOLDED ITEM 3D - bulto v1.14.0"),
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=0, pitch=8, size=520),
-         "EQUIPPED - frente"),
+         "DETERIORO - frente"),
         (render(posed(armor), ARMOR_TEX, runtime_hidden, yaw=-28, pitch=10, size=520),
-         "EQUIPPED - onda 3/4"),
+         "DETERIORO - flujo de jirones 3/4"),
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=180, pitch=8, size=520),
-         "EQUIPPED - espalda"),
-        (side_relief, "RELIEVE 3D - perfil"),
+         "DETERIORO - espalda (F5)"),
+        (side_relief, "JIRONES 3D - perfil"),
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=205, pitch=14, size=520),
-         "HOMBRERAS 3D - espalda 3/4"),
+         "COLLAR + MICROVOXELES - 3/4"),
     ]
     compose([v for v, _ in views], [l for _, l in views], 3, 520).save(args.out / "full.png")
     compose([
@@ -356,16 +377,16 @@ def main():
         args.out / "original_detail.png")
     Image.open(ARMOR_TEX).convert("RGBA").crop((0, 0, 96, 48)).resize(
         (768, 384), Image.LANCZOS).save(args.out / "canvas.png")
-    # v1.12.0: icono pixel art 16x16 REDISEÑADO (hombreras, broche,
-    # pliegues anchos y festón); NEAREST conserva los bloques de color.
+    # v1.14.0: icono pixel art 16x16 conservando la forma aprobada, con
+    # paleta Rosé, grietas, 5 puntas y microvóxeles; NEAREST sin AA.
     Image.open(ICON).convert("RGBA").resize(
         (256, 256), Image.NEAREST).save(args.out / "icon.png")
     Image.open(FOLDED_GLOW).convert("RGBA").resize(
         (256, 256), Image.LANCZOS).save(args.out / "folded_glowmask.png")
     particle_sheet(args.out / "particles.png")
     visible = [b["name"] for b in armor["bones"]
-               if not b["name"].startswith("v15_") and b["name"] not in runtime_hidden
-               and b.get("cubes")]
+               if not b["name"].startswith(("v15_", "v16_"))
+               and b["name"] not in runtime_hidden and b.get("cubes")]
     (args.out / "visible_original_bones.txt").write_text("\n".join(visible) + "\n")
     print(f"wrote {len(list(args.out.iterdir()))} files to {args.out}")
     print("visible original bones:", len(visible))

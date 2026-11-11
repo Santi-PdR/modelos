@@ -147,63 +147,71 @@ def _blurred_noise(rng: np.random.Generator, shape: tuple[int, int], radius: flo
 # 1a. v1.5.1: one continuous high-resolution cloth illustration (96x48 UV)
 # --------------------------------------------------------------------------
 def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Canvas 96x48 v1.10.0: paño tejido y bordado, SIN aspecto de neón.
+    """Canvas 96x48 v1.14.0: DETERIORO + EVIL SAIYAN ROSÉ.
 
-    v1.9.0 dibujaba un gran diamante magenta de líneas finas sobre un fondo
-    casi negro: la crítica fue que parecía "feísima". v1.10.0 baja la
-    saturación, sube la presencia de la sarga (trama, diagonal, grano),
-    rellena el medallón con facetas oscuras, cambia las líneas por puntadas
-    de hilo dorado y deja el cian sólo en el núcleo de Blight Star.
+    Base de carmesí muy oscuro que cae a violeta-negro, parches de morado
+    desvaído y gris ceniza (desgaste), trama de sarga, pliegues anchos y
+    agujeros rasgados. Encima, una red de GRIETAS DE ENERGÍA con núcleo
+    rosa encendido, halo magenta y borde violeta-negro: recorren toda la
+    capa de los hombros al dobladillo, se ramifican y se vuelven más densas
+    abajo, donde la prenda se desintegra.
 
-    Devuelve (RGB 96x48, tinta violeta, tinta cian). Las tintas realzan el
-    color base y construyen el glowmask del item, pero NO amplían la
-    cobertura emisiva del atlas de armadura: el glowmask prístino (1636
-    texels) y el alfa base siguen intactos. La onda 2D/3D compartida no cambia.
+    Devuelve (RGB 96x48, tinta rosa, tinta fría). Las tintas alimentan el
+    bloom del color base y el glowmask del item plegado. El alfa base NO se
+    toca y la cobertura emisiva del atlas (1636 texels) se REDISTRIBUYE a
+    las grietas en build_armor(), sin crecer: así no se abren huecos.
     """
-    cw = int(CLOTH_UV["cloth"]["uv_size"][0])  # 96
-    ch = int(CLOTH_UV["cloth"]["uv_size"][1])  # 48
-    scale = 8
+    cw, ch = 96, 48
+    scale = 4
     w, h = cw * scale, ch * scale
     yy, xx = np.mgrid[0:h, 0:w]
     u = xx / float(w - 1)
     v = yy / float(h - 1)
     rng = np.random.default_rng(SEED + 11)
 
-    top = np.array([38.0, 22.0, 64.0], dtype=np.float32)
-    bottom = np.array([94.0, 28.0, 64.0], dtype=np.float32)
-    base = top * (1.0 - v[..., None]) + bottom * v[..., None]
-    fold_phase = u * FOLDS + 0.02 * np.sin(v * np.pi * 1.5)
-    wave = np.cos(2.0 * np.pi * fold_phase)
-    fold_light = np.power(np.clip(0.5 + 0.5 * wave, 0.0, 1.0), 1.15)
-    crease = np.exp(-((np.mod(fold_phase, 1.0) - 0.5) ** 2) / (2.0 * 0.11 ** 2))
-    radial = np.exp(-(((u - 0.5) / 0.34) ** 2 + ((v - 0.38) / 0.46) ** 2) * 1.4)
-    vignette = np.exp(-((u - 0.02) / 0.06) ** 2) + np.exp(-((u - 0.98) / 0.06) ** 2)
-    weave = (np.sin(xx * np.pi / 3.0) * np.sin(yy * np.pi / 3.0) * 2.1
-             + np.sin((xx + yy) * np.pi / 5.0) * 1.1)
-    twill = np.sin((xx * 0.55 - yy * 0.32) * np.pi / 7.0) * 2.4
-    warp = np.sin(xx * np.pi / 11.0) * np.sin(yy * np.pi / 29.0) * 1.8
-    grain = rng.normal(0.0, 1.1, (h, w)).astype(np.float32)
-    drape = np.power(1.0 - v, 1.4)[..., None] * np.array([12.0, 4.0, 16.0])
-    rgb = base + drape
-    rgb += (fold_light[..., None] - 0.5) * np.array([15.0, 6.0, 19.0])
-    rgb -= crease[..., None] * np.array([11.0, 4.0, 13.0])
-    rgb += radial[..., None] * np.array([30.0, 9.0, 40.0])
-    rgb -= vignette[..., None] * np.array([22.0, 8.0, 22.0])
-    rgb += (weave + twill + warp + grain)[..., None] * np.array([1.0, 0.7, 1.2])
+    n_fine = _blurred_noise(rng, (h, w), 0.7)
+    n_med = _blurred_noise(rng, (h, w), 2.6)
+    n_big = _blurred_noise(rng, (h, w), 8.0)
 
-    # Campo de estrellas tenue y determinista (puntos de hilo, no ruido).
-    for _ in range(64):
-        sx = float(rng.uniform(2.0, 94.0))
-        sy = float(rng.uniform(8.5, 41.5))
-        if abs(sx - 48.0) < 13.0 and sy < 31.0:
-            continue
-        sr = float(rng.uniform(0.18, 0.38))
-        warm = rng.random() < 0.62
-        rgb[int(sy * scale), int(sx * scale)] += (
-            np.array([20.0, 14.0, 8.0]) if warm else np.array([5.0, 12.0, 16.0])
-        )
+    # Carmesí oscuro arriba -> violeta-negro abajo.
+    top = np.array([47.0, 11.0, 26.0], dtype=np.float32)
+    bot = np.array([11.0, 6.0, 20.0], dtype=np.float32)
+    rgb = top * (1.0 - v[..., None]) + bot * v[..., None]
+
+    # Morado desvaído en parches grandes y gris ceniza de desgaste.
+    rgb += np.clip(n_big, 0.0, 1.4)[..., None] * np.array([14.0, 3.0, 26.0])
+    ash = np.clip(0.5 + 0.5 * n_med, 0.0, 1.0)[..., None]
+    rgb += ash * (0.22 + 0.42 * v)[..., None] * np.array([24.0, 23.0, 27.0])
+
+    # Tres pliegues anchos (misma onda que el relieve 3D) con sombreado.
+    fold = np.cos(2.0 * np.pi * FOLDS * u + 0.10 * np.sin(v * np.pi * 1.7))
+    rgb += (0.5 + 0.5 * fold)[..., None] * np.array([12.0, 2.0, 16.0])
+    rgb -= (0.5 - 0.5 * fold)[..., None] * np.array([13.0, 5.0, 14.0])
+
+    # Trama, sarga diagonal y grano de hilo viejo.
+    weave = np.sin(xx * np.pi / 2.0) * np.sin(yy * np.pi / 2.0) * 2.3
+    twill = np.sin((xx + yy) * np.pi / 3.3) * 1.7
+    rgb += (weave + twill + n_fine * 5.0)[..., None] * np.array([0.9, 0.8, 1.1])
+
+    # Viñeta: los bordes de la tela se comen la luz.
+    vig = (np.exp(-((u - 0.015) / 0.055) ** 2)
+           + np.exp(-((u - 0.985) / 0.055) ** 2))[..., None]
+    rgb -= vig * np.array([16.0, 5.0, 18.0])
 
     img = Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
+
+    # Agujeros y desgarros oscuros, más frecuentes hacia el dobladillo.
+    holes = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    hd = ImageDraw.Draw(holes)
+    for _ in range(46):
+        hx = float(rng.uniform(2.0, 94.0))
+        hy = float(rng.uniform(6.0, 47.0))
+        rad = float(rng.uniform(0.5, 2.1)) * (0.5 + 0.9 * hy / 48.0)
+        hd.ellipse([int((hx - rad) * scale), int((hy - rad) * scale),
+                    int((hx + rad) * scale), int((hy + rad) * scale)],
+                   fill=(7, 4, 13, 235))
+    img = Image.alpha_composite(img, holes)
+
     overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     d = ImageDraw.Draw(overlay)
     glow_ink = Image.new("L", (w, h), 0)
@@ -212,246 +220,158 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.nda
     cd = ImageDraw.Draw(cool_ink)
     p = lambda x, y: (int(round(x * scale)), int(round(y * scale)))
 
-    GOLD = (232, 192, 126, 240)
-    GOLD_DIM = (190, 150, 100, 200)
-    THREAD = (206, 146, 186, 185)
-    VIOLET = (146, 88, 172, 185)
-    CYAN = (128, 214, 238, 225)
-    DARK = (22, 10, 34, 255)
+    ROSE = (255, 122, 200, 255)
+    ROSE_CORE = (255, 196, 232, 255)
+    MAGENTA = (206, 20, 132, 240)
+    MAGENTA_DARK = (104, 8, 66, 205)
 
-    def line(pts, fill, width, glow=0):
-        coords = [p(*q) for q in pts]
-        wpx = max(1, int(width * scale))
-        d.line(coords, fill=fill, width=wpx, joint="curve")
-        if glow:
-            gd.line(coords, fill=glow, width=max(1, int(wpx * 0.8)))
+    # Bordes iluminados: un filete rosa de 1 px recorre ambos lados.
+    for ex in (0.7, 95.3):
+        d.line([p(ex, 0), p(ex, 47.9)], fill=(214, 40, 138, 170),
+               width=max(1, int(0.30 * scale)))
+        gd.line([p(ex, 0), p(ex, 47.9)], fill=120,
+                width=max(1, int(0.35 * scale)))
 
-    def stitch(pts, fill, step=1.25, length=0.82, width=0.40, glow=0):
-        """Puntada corta: bordado en vez de línea neón continua."""
-        for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
-            dist = math.hypot(x1 - x0, y1 - y0)
-            if dist < 1e-6:
+    # 11 grietas principales con ramificaciones y nodos. Cada una serpentea
+    # desde el hombro hasta el dobladillo; el jitter crece hacia abajo para
+    # leer como energía inestable que desprende la tela.
+    for ci in range(6):
+        x = (4.0, 19.0, 31.0, 52.0, 70.0, 87.0)[ci] + float(rng.uniform(-2.0, 2.0))
+        pts = []
+        for j in range(24):
+            yv = -1.0 + j * 2.15
+            x += float(rng.uniform(-0.55, 0.55)) + 0.42 * math.sin(j * 0.55 + ci)
+            x += 0.24 * (j / 24.0) * math.sin(ci * 2.1)
+            x = max(1.0, min(95.0, x))
+            pts.append(p(x, yv))
+        # La grieta se DIBUJA A TROZOS: tramos que se encienden y se
+        # apagan. Una línea continua parecía un código de barras; los
+        # huecos la convierten en energía inestable sobre tela podrida.
+        spans = ((0, 6), (7, 12), (13, 18), (19, 24))
+        for si, (a, b) in enumerate(spans):
+            seg = pts[a:b]
+            if len(seg) < 2:
                 continue
-            n = max(1, int(dist / step))
-            for k in range(n):
-                t0 = k * step / dist
-                t1 = min(1.0, t0 + length / dist)
-                a = (x0 + (x1 - x0) * t0, y0 + (y1 - y0) * t0)
-                b = (x0 + (x1 - x0) * t1, y0 + (y1 - y0) * t1)
-                line([a, b], fill, width, glow)
+            power = 1.0 if (ci + si) % 3 else 0.55
+            halo = MAGENTA_DARK if power > 0.8 else (72, 6, 48, 170)
+            d.line(seg, fill=halo, width=max(2, int(1.25 * scale * power)), joint="curve")
+            d.line(seg, fill=MAGENTA, width=max(1, int(0.60 * scale * power)), joint="curve")
+            d.line(seg, fill=ROSE, width=max(1, int(0.30 * scale)), joint="curve")
+            gd.line(seg, fill=int(225 * power), width=max(1, int(0.45 * scale)), joint="curve")
+            cd.line(seg, fill=70, width=max(1, int(0.30 * scale)), joint="curve")
+        # Ramas cortas que se abren en la mitad inferior.
+        for j in range(3):
+            k = 5 + j * 6
+            if k + 2 >= len(pts):
+                break
+            a = pts[k]
+            bx = pts[k + 1][0] + int(float(rng.uniform(2.5, 8.5)) * scale) * (1 if ci % 2 else -1)
+            by = pts[k + 1][1] + int(0.9 * scale)
+            d.line([a, (bx, by)], fill=MAGENTA, width=max(1, int(0.75 * scale)))
+            d.line([a, (bx, by)], fill=ROSE, width=max(1, int(0.30 * scale)))
+            gd.line([a, (bx, by)], fill=150, width=max(1, int(0.35 * scale)))
+        # Nodos de energía (chispas) a lo largo de la grieta.
+        for j in range(3, 24, 7):
+            qx, qy = pts[j]
+            r = max(1, int(0.75 * scale))
+            d.ellipse([qx - r, qy - r, qx + r, qy + r], fill=ROSE_CORE)
+            gd.ellipse([qx - r, qy - r, qx + r, qy + r], fill=255)
 
-    def ellipse(box, fill, width=0, glow=0):
-        coords = [p(box[0], box[1]), p(box[2], box[3])]
-        if width:
-            d.ellipse(coords, outline=fill, width=max(1, int(width * scale)))
-        else:
-            d.ellipse(coords, fill=fill)
-        if glow:
-            gd.ellipse(coords, fill=glow)
+    # Vettable diagonales secundarias: rompen la verticalidad y recuerdan
+    # los jirones de la referencia de Blockbench.
+    for di in range(7):
+        x0 = 2.0 + di * 13.5 + float(rng.uniform(-3.0, 3.0))
+        y0 = 6.0 + float(rng.uniform(0.0, 30.0))
+        dx = float(rng.uniform(4.0, 11.0)) * (1.0 if di % 2 else -1.0)
+        dy = float(rng.uniform(5.0, 12.0))
+        seg = [p(x0, y0), p(x0 + dx * 0.5, y0 + dy * 0.5), p(x0 + dx, y0 + dy)]
+        d.line(seg, fill=MAGENTA, width=max(1, int(0.50 * scale)), joint="curve")
+        d.line(seg, fill=ROSE, width=max(1, int(0.25 * scale)), joint="curve")
+        gd.line(seg, fill=165, width=max(1, int(0.35 * scale)), joint="curve")
 
-    def cool_line(pts, width, glow=170):
-        coords = [p(*q) for q in pts]
-        cd.line(coords, fill=glow, width=max(1, int(width * scale)), joint="curve")
-
-    def cool_ellipse(box, glow=170):
-        coords = [p(box[0], box[1]), p(box[2], box[3])]
-        cd.ellipse(coords, fill=glow)
-
-    # 1. Yugo de tela tejida, con pespuntes dorados en vez de una raya rosa.
-    d.polygon([p(*q) for q in [(1, 1), (95, 1), (91, 7), (5, 7)]],
-              fill=(30, 16, 50, 255))
-    stitch([(1, 6.8), (95, 6.8)], GOLD, step=1.3, length=0.9, width=0.48, glow=95)
-    stitch([(4, 2), (18, 6)], GOLD_DIM, width=0.28)
-    stitch([(92, 2), (78, 6)], GOLD_DIM, width=0.28)
-    for j in range(38):
-        x = 2.0 + j * 92.0 / 37.0
-        ellipse((x - 0.24, 6.45, x + 0.24, 6.95), (216, 178, 122, 175))
-
-    # 2. Doble ribete: oro apagado por fuera, violeta por dentro, con puntadas.
-    border = [(1.6, 7.6), (94.4, 7.6), (94.4, 42.0), (1.6, 42.0)]
-    stitch(border + [border[0]], GOLD, step=1.35, length=1.0, width=0.50, glow=90)
-    inner_border = [(3.1, 9.1), (92.9, 9.1), (92.9, 40.5), (3.1, 40.5)]
-    stitch(inner_border + [inner_border[0]], THREAD, step=1.25, length=0.85, width=0.40, glow=70)
-
-    # 3. Medallón RELLENO: facetas de paño oscuro, engarce dorado y estrella
-    #    cian. Ya no es un diamante de contorno magenta sobre fondo negro.
-    cx, cy = 48.0, 18.5
-    diamond = [(cx, 7.0), (cx + 11.0, cy), (cx, 30.0), (cx - 11.0, cy)]
-    d.polygon([p(*q) for q in diamond], fill=(26, 12, 42, 255))
-    inner_facet = [(cx, 10.0), (cx + 7.6, cy), (cx, 27.0), (cx - 7.6, cy)]
-    d.polygon([p(*q) for q in inner_facet], fill=(42, 18, 58, 255))
-    # bisel: mitad iluminada, mitad en sombra
-    d.polygon([p(*q) for q in [(cx, 10.0), (cx + 7.6, cy), (cx, 27.0)]],
-              fill=(58, 26, 76, 235))
-    stitch(diamond + [diamond[0]], GOLD, step=1.25, length=0.9, width=0.58, glow=140)
-    stitch(inner_facet + [inner_facet[0]], GOLD_DIM, step=1.2, length=0.7, width=0.42, glow=85)
-    for r, col, glow in ((10.4, VIOLET, 55), (7.6, (110, 70, 140, 140), 35)):
-        ellipse((cx - r, cy - r, cx + r, cy + r), col, 0.4, glow)
-    for gx, gy in diamond:
-        ellipse((gx - 0.8, gy - 0.8, gx + 0.8, gy + 0.8),
-                (226, 190, 126, 235), glow=150)
-
-    # 3b. Núcleo de Blight Star: 8 rayos cian cortos y órbita discontinua
-    #     dorada (antes 12 arcos cian que parecían una rueda).
-    for j in range(8):
-        a = 2.0 * math.pi * j / 8.0
-        ray = [(cx + 1.1 * math.cos(a), cy + 1.1 * math.sin(a)),
-               (cx + 3.2 * math.cos(a), cy + 3.2 * math.sin(a))]
-        line(ray, CYAN, 0.40, 120)
-        cool_line(ray, 0.30, 205)
-    ellipse((cx - 1.5, cy - 1.7, cx + 1.5, cy + 1.7), (36, 24, 54, 255))
-    ellipse((cx - 0.62, cy - 0.62, cx + 0.62, cy + 0.62),
-            (226, 250, 255, 255), glow=255)
-    cool_ellipse((cx - 0.85, cy - 0.85, cx + 0.85, cy + 0.85), 255)
-    for j in range(10):
-        a0 = 2.0 * math.pi * j / 10.0 + 0.06
-        a1 = a0 + 0.24
-        arc = [(cx + 12.2 * math.cos(a), cy + 12.2 * math.sin(a))
-               for a in np.linspace(a0, a1, 5)]
-        stitch(arc, GOLD_DIM, step=1.2, length=0.5, width=0.26, glow=35)
-
-    # 4. Constelación bordada: hilo, no líneas luminosas. Las 5 estrellas 3D
-    #    siguen usando la misma zona emisiva `bright` del atlas.
-    stars = [(18, 18), (78, 18), (26, 35), (70, 35), (48, 30)]
-    stitch([(48, 29.0), (48, 41.5)], THREAD, step=1.2, length=0.85, width=0.46, glow=85)
-    for path in (
-        [(48, 29.0), (34, 33), (22, 41.0)],
-        [(48, 29.0), (62, 33), (74, 41.0)],
-        [(22, 27), (31, 34), (38, 41.0)],
-        [(74, 27), (65, 34), (58, 41.0)],
-        [(18, 18), (30, 22), (48, 29.0)],
-        [(78, 18), (66, 22), (48, 29.0)],
-        [(26, 35), (38, 33), (48, 29.0)],
-        [(70, 35), (58, 33), (48, 29.0)],
-    ):
-        stitch(path, THREAD, step=1.35, length=0.85, width=0.40, glow=65)
-    for mx, my in stars:
-        ellipse((mx - 0.85, my - 0.85, mx + 0.85, my + 0.85),
-                (236, 198, 132, 235), glow=200)
-        stitch([(mx - 1.6, my), (mx + 1.6, my)], GOLD_DIM, width=0.22, glow=35)
-        stitch([(mx, my - 1.6), (mx, my + 1.6)], GOLD_DIM, width=0.22, glow=35)
-
-    # 5. Sigilos laterales pequeños, bordados en oro apagado.
-    for sx, sy in ((8, 12), (88, 12), (8, 26), (88, 26), (8, 38), (88, 38)):
-        sig = [(sx, sy - 1.5), (sx + 1.5, sy), (sx, sy + 1.5), (sx - 1.5, sy)]
-        stitch(sig + [sig[0]], GOLD_DIM, step=1.1, length=0.5, width=0.24, glow=30)
-        ellipse((sx - 0.3, sy - 0.3, sx + 0.3, sy + 0.3),
-                (220, 186, 126, 200), glow=110)
-
-    # 4b. Bordado vertical en los valles de los 3 pliegues: da detalle de
-    #     cerca SIN crear las rayas neón de v1.5.x ni tapar el medallón.
-    for k in range(1, FOLDS):
-        fx = 96.0 * k / FOLDS
-        stitch([(fx, 9.5), (fx, 41.0)], GOLD_DIM,
-               step=2.1, length=0.9, width=0.26, glow=30)
-
-    # 5b. Esporas frías discretas, como la segunda referencia pero apagadas.
-    for _ in range(26):
-        sx = float(rng.uniform(3.0, 93.0))
-        sy = float(rng.uniform(8.0, 41.0))
-        if abs(sx - 48.0) < 12.0 and sy < 31.0:
+    # Ceniza / chispas sueltas: puntos de 1 px sin halo, deterministas.
+    for _ in range(64):
+        sx = float(rng.uniform(0.0, 96.0))
+        sy = float(rng.uniform(0.0, 48.0))
+        q = p(sx, sy)
+        if q[0] >= w or q[1] >= h:
             continue
-        rad = float(rng.uniform(0.16, 0.30))
-        ellipse((sx - rad, sy - rad, sx + rad, sy + rad),
-                (120, 200, 220, 90))
-        cool_ellipse((sx - rad * 1.2, sy - rad * 1.2,
-                      sx + rad * 1.2, sy + rad * 1.2), 60)
-
-    # 6. Desgaste: rozaduras muy discretas, sin motas rosas por todo el paño.
-    for _ in range(95):
-        wx = float(rng.uniform(1.0, 95.0))
-        wy = float(rng.uniform(7.5, 41.5))
-        edge = max(0.0, 1.0 - min(wx, 96.0 - wx) / 12.0)
-        low = max(0.0, (wy - 27.0) / 14.0)
-        if rng.random() > min(1.0, 0.08 + 0.32 * low + 0.22 * edge):
-            continue
-        rad = float(rng.uniform(0.35, 0.62))
-        col = ((196, 160, 128, 34) if rng.random() < 0.5
-               else (14, 5, 22, 48))
-        ellipse((wx - rad, wy - rad, wx + rad, wy + rad), col)
-
-    # 7. Dobladillo: chevron de hilo + pespuntes, sin franja rosa.
-    d.rectangle([p(1, 42), p(95, 47.9)], fill=(28, 12, 38, 255))
-    chevron = [(1.0 + i * 94.0 / COLUMNS, 42.8 + (1.8 if i % 2 else 0.0))
-               for i in range(COLUMNS + 1)]
-    stitch(chevron, GOLD, step=1.2, length=0.85, width=0.48, glow=95)
-    stitch([(1, 42.2), (95, 42.2)], GOLD_DIM, step=1.5, length=0.7, width=0.28)
-    for i in range(COLUMNS):
-        x = 2.0 + i * 92.0 / COLUMNS
-        stitch([(x, 47.7), (x + 1.6, 42.6)], VIOLET, step=1.1, length=0.5, width=0.22)
+        hot = rng.random() < (0.25 + 0.45 * sy / 48.0)
+        d.point(q, fill=ROSE if hot else (96, 88, 100, 190))
+        if hot:
+            gd.point(q, fill=190)
 
     img = Image.alpha_composite(img, overlay)
 
-    # Tinta de bordado: bloom MUCHO más bajo que en v1.9.0. Sólo color base.
+    # Bloom rosa alrededor del núcleo: contraste alto sin tocar el alfa.
     ink = np.asarray(glow_ink, dtype=np.float32) / 255.0
     blur = np.asarray(
         Image.fromarray((ink * 255).astype(np.uint8)).filter(
-            ImageFilter.GaussianBlur(2.0 * scale)
-        ), dtype=np.float32
+            ImageFilter.GaussianBlur(1.7 * scale)), dtype=np.float32
     ) / 255.0
     arr = np.asarray(img, dtype=np.float32).copy()
-    arr[..., :3] += blur[..., None] * np.array([7.0, 4.0, 6.0])
-    arr[..., :3] += ink[..., None] * np.array([13.0, 8.0, 11.0])
+    arr[..., :3] += blur[..., None] * np.array([27.0, 4.0, 20.0])
+    arr[..., :3] += ink[..., None] * np.array([15.0, 4.0, 12.0])
 
     cool = np.asarray(cool_ink, dtype=np.float32) / 255.0
     cool_blur = np.asarray(
         Image.fromarray((cool * 255).astype(np.uint8)).filter(
-            ImageFilter.GaussianBlur(1.8 * scale)
-        ), dtype=np.float32
+            ImageFilter.GaussianBlur(1.4 * scale)), dtype=np.float32
     ) / 255.0
-    arr[..., :3] += cool_blur[..., None] * np.array([1.0, 6.0, 9.0])
-    arr[..., :3] += cool[..., None] * np.array([2.0, 18.0, 24.0])
+    arr[..., :3] += cool_blur[..., None] * np.array([6.0, 14.0, 26.0])
 
-    # Cobertura emisiva original intacta; sólo tiñe el material.
-    em = Image.fromarray(
-        np.clip(glow_alpha[0:ch, 0:cw], 0, 255).astype(np.uint8)
-    ).resize((w, h), Image.LANCZOS)
-    halo = em.filter(ImageFilter.GaussianBlur(2.0 * scale))
-    halo_arr = np.asarray(halo, dtype=np.float32) / 255.0
-    arr[..., :3] += halo_arr[..., None] * np.array([8.0, 3.0, 10.0])
-    em_arr = np.asarray(em, dtype=np.float32) / 255.0
-    hot = np.array([120.0, 70.0, 130.0])
-    arr[..., :3] = (arr[..., :3] * (1.0 - em_arr[..., None] * 0.10)
-                    + hot * em_arr[..., None] * 0.10)
-    final = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGBA")
-    rgb_small = np.asarray(final.resize((cw, ch), Image.LANCZOS).convert("RGB"),
-                           dtype=np.float32)
-    glow_small = np.asarray(
-        Image.fromarray((ink * 255).astype(np.uint8)).resize(
-            (cw, ch), Image.LANCZOS
-        ), dtype=np.float32
-    ) / 255.0
-    cool_small = np.asarray(
-        Image.fromarray((cool * 255).astype(np.uint8)).resize(
-            (cw, ch), Image.LANCZOS
-        ), dtype=np.float32
-    ) / 255.0
-    return rgb_small, glow_small, cool_small
+    # Reducción 4x -> 96x48 (BOX conserva la media, no añade AA al icono).
+    small = np.asarray(
+        Image.fromarray(np.clip(arr[..., :3], 0, 255).astype(np.uint8), "RGB")
+        .resize((cw, ch), Image.BOX), dtype=np.float32
+    )
+    ink_small = np.asarray(glow_ink.resize((cw, ch), Image.BOX), dtype=np.float32) / 255.0
+    cool_small = np.asarray(cool_ink.resize((cw, ch), Image.BOX), dtype=np.float32) / 255.0
+    return small, ink_small, cool_small
 
 
 def paint_reserved_cloth_strips(out: np.ndarray, glow_alpha: np.ndarray) -> np.ndarray:
-    """Creases, forro, ribete y zona emisiva en rectángulos ya opacos."""
+    """Columnas reservadas v1.14.0: ceniza, forro y rampa de energía Rosé.
+
+    El atlas sigue teniendo EXACTAMENTE el mismo alfa. Lo que cambia es el
+    RGB de esas franjas ya opacas: los cantos de los jirones pasan a gris
+    ceniza / violeta, el ribete a una vena magenta y el parche emisivo a una
+    rampa rosa -> magenta -> violeta-negro de la que samplean los 56
+    microvóxeles. Cada partícula toma un sub-rectángulo de 2x2 distinto.
+    """
     y = np.arange(128, dtype=np.float32).reshape(128, 1, 1) / 127.0
-    # v1.5.1: contraste de crease reducido. En v1.5.0 las 36 creases leían
-    # como un código de barras; ahora acompañan al sombreado del canvas.
-    # v1.12.0: los cantos de los bloques de 0.85 ahora se ven de perfil y
-    # de 3/4. Antes eran casi negros y parecian barrotes; se aclaran a un
-    # forro violeta medio (misma paleta, solo sombreado) para que el relieve
-    # se lea como tela gruesa y no como una reja.
-    out[:, 105:107, :3] = np.array([54.0, 24.0, 68.0]) + y * np.array([8.0, 3.0, 10.0])
-    out[:, 107:109, :3] = np.array([86.0, 42.0, 108.0]) + y * np.array([10.0, 4.0, 14.0])
-    out[:, 120:122, :3] = np.array([40.0, 16.0, 54.0]) + y * np.array([12.0, 3.0, 12.0])
-    # v1.10.0: ribete menos neón, más hilo dorado/violeta apagado.
-    out[:, 122:124, :3] = np.array([118.0, 66.0, 138.0]) + y * np.array([32.0, 14.0, 38.0])
 
-    em = glow_alpha[109:127, 69:75] > 0
-    bright = out[109:127, 69:75, :3]
-    bright[...] = np.array([46.0, 10.0, 44.0])
-    bright[em] = np.array([226.0, 142.0, 198.0])
+    # Gris ceniza y violeta apagado para los cantos con grosor real.
+    out[:, 105:107, :3] = np.array([56.0, 51.0, 60.0]) + y * np.array([10.0, 5.0, 16.0])
+    out[:, 107:109, :3] = np.array([82.0, 32.0, 88.0]) + y * np.array([16.0, 4.0, 22.0])
+    out[:, 120:122, :3] = np.array([34.0, 14.0, 44.0]) + y * np.array([14.0, 3.0, 18.0])
 
+    # Vena de energía vertical: rosa encendido arriba, magenta en el centro,
+    # violeta-negro abajo. Bézier cuadrática, NO un degradado suave en el
+    # icono (que sigue siendo pixel art plano).
+    t = y
+    hot = np.array([255.0, 122.0, 200.0], dtype=np.float32)
+    mag = np.array([206.0, 20.0, 132.0], dtype=np.float32)
+    dark = np.array([17.0, 8.0, 28.0], dtype=np.float32)
+    ramp = (hot * (1.0 - t) ** 2 + 2.0 * mag * t * (1.0 - t) + dark * t ** 2)
+    out[:, 122:124, :3] = ramp
+
+    # Parche de los microvóxeles (6x18). Gradiente 2D: el eje X va de rosa a
+    # magenta y el eje Y se apaga a violeta-negro. Así 56 cubos de 1-2 px
+    # pueden tomar colores distintos con UV distintas.
+    ey = np.linspace(0.0, 1.0, 18, dtype=np.float32).reshape(18, 1, 1)
+    ex = np.linspace(0.0, 1.0, 6, dtype=np.float32).reshape(1, 6, 1)
+    energy = (hot * (1.0 - ey) * (1.0 - ex)
+              + mag * (1.0 - ey) * ex
+              + dark * ey)
+    energy[ey[..., 0, 0] > 0.78, ...] = np.array([26.0, 10.0, 38.0])
+    out[109:127, 69:75, :3] = energy
+
+    # Yugo / cuello: carmesí oscuro con dos vetas magenta finas.
     yoke = out[76:93, 57:71, :3]
-    yoke[...] = yoke * 0.72 + np.array([24.0, 14.0, 34.0])
-    yoke[glow_alpha[76:93, 57:71] > 0] = np.array([206.0, 158.0, 128.0])
+    yoke[...] = np.array([46.0, 12.0, 34.0]) + y[:17] * np.array([14.0, 3.0, 20.0])
+    yoke[:, 2:3, :] = np.array([214.0, 28.0, 140.0])
+    yoke[:, 11:12, :] = np.array([160.0, 18.0, 108.0])
     return out
 
 
@@ -480,6 +400,42 @@ def assert_cloth_uvs() -> None:
 # --------------------------------------------------------------------------
 # 1. Armor texture: woven cloth, fold lighting, violet bloom, hot neon core
 # --------------------------------------------------------------------------
+def _fit_emissive_mask(priority: np.ndarray, opaque: np.ndarray, target: int,
+                       allowed: np.ndarray | None = None) -> np.ndarray:
+    """Elige EXACTAMENTE `target` texels opacos, priorizando energía y grietas.
+
+    GeckoLib borra del color base los pixeles marcados en el glowmask. Si la
+    cobertura creciera aparecerían agujeros en la capa; si decreciera, las
+    grietas no brillarían. Por eso se mantiene el conteo prístino (1636) y
+    sólo se trasladan a las nuevas grietas de energía.
+    """
+    mask = np.zeros((SIZE, SIZE), dtype=bool)
+    count = 0
+    for level in (2, 1):
+        ys, xs = np.nonzero((priority == level) & opaque & ~mask)
+        order = np.lexsort((xs, ys))
+        for i in order:
+            if count >= target:
+                break
+            mask[ys[i], xs[i]] = True
+            count += 1
+        if count >= target:
+            break
+    if count < target:
+        for radius in (1, 2, 3, 5):
+            pool = dilate(mask, radius) & opaque & ~mask & (allowed if allowed is not None else True)
+            ys, xs = np.nonzero(pool)
+            for i in np.lexsort((xs, ys)):
+                if count >= target:
+                    break
+                mask[ys[i], xs[i]] = True
+                count += 1
+            if count >= target:
+                break
+    assert count == target, (count, target)
+    return mask
+
+
 def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
     base = np.asarray(Image.open(ORIGINALS / "armor.png").convert("RGBA"), dtype=np.float32)
     glow = np.asarray(Image.open(ORIGINALS / "armor_glowmask.png").convert("RGBA"), dtype=np.float32)
@@ -546,11 +502,8 @@ def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
     out[..., 1] += hot * 36.0
     out[..., 2] += hot * 50.0
 
-    # GeckoLib's emissive pass reuses these very pixels, so push them harder.
-    emissive = glow[..., 3] > 0
-    out[..., 0] = np.where(emissive, out[..., 0] * 1.16 + 34.0, out[..., 0])
-    out[..., 1] = np.where(emissive, out[..., 1] * 1.08 + 11.0, out[..., 1])
-    out[..., 2] = np.where(emissive, out[..., 2] * 1.16 + 38.0, out[..., 2])
+    # v1.14.0: el realce emisivo se aplica DESPUÉS de pintar las grietas
+    # (más abajo), usando la máscara redistribuida, no la prístina.
 
     # v1.5.1: sustituimos el mosaico de tres paneles cuadrados por UNA sola
     # ilustración de tela. Se pinta después de los realces previos para que el
@@ -573,22 +526,41 @@ def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
     out[0:48, 0:96, :3] += cool_arr[..., None] * np.array([1.0, 5.0, 8.0])
     out = paint_reserved_cloth_strips(out, glow[..., 3])
 
+    # v1.14.0: las GRIETAS se vuelven emisivas. Se trasladan los 1636
+    # texels del glowmask prístino (mismo conteo, cero agujeros nuevos) a
+    # los núcleos de energía, a la rampa de los microvóxeles y a las venas.
+    ga = glow[..., 3]
+    target = int((ga > 0).sum())
+    crack_blur = np.asarray(
+        Image.fromarray((np.clip(canvas_glow * 2.2, 0, 1) * 255).astype(np.uint8))
+        .filter(ImageFilter.GaussianBlur(1.1)), dtype=np.float32
+    ) / 255.0
+    crack = crack_blur > 0.045
+    priority = np.zeros((SIZE, SIZE), dtype=np.int8)
+    priority[109:127, 69:75] = 2          # rampa de microvóxeles
+    priority[0:48, 122:124] = 2          # vena de los bordes
+    priority[0:48, 0:96] = np.where(crack, 1, 0)
+    allowed = np.zeros((SIZE, SIZE), dtype=bool)
+    allowed[0:48, 0:96] = True
+    allowed[109:127, 69:75] = True
+    allowed[0:48, 122:124] = True
+    emissive = _fit_emissive_mask(priority, opaque, target, allowed)
+
+    out[..., 0] = np.where(emissive, out[..., 0] * 1.12 + 38.0, out[..., 0])
+    out[..., 1] = np.where(emissive, out[..., 1] * 1.06 + 10.0, out[..., 1])
+    out[..., 2] = np.where(emissive, out[..., 2] * 1.12 + 40.0, out[..., 2])
+
     out = np.clip(out, 0, 255)
     out = np.where(opaque[..., None], out, rgb)  # never paint into transparent texels
     armor = np.dstack((out, alpha)).astype(np.uint8)
 
-    # Glowmask: only alpha matters to GeckoLib, and only existing pixels may
-    # stay lit (growing it would erase more base pixels => holes in the cape).
-    ga = glow[..., 3]
-    new_alpha = np.where(ga > 0, np.clip(ga * 1.10 + 14.0, 0, 255), 0)
-    grgb = np.clip(glow[..., :3] * 1.18 + 18.0, 0, 255)
-    # El color del glowmask no importa para GeckoLib, pero lo dejamos coherente
-    # con el núcleo rosa del canvas; la cobertura (ga > 0) NO cambia.
-    grgb[0:48, 0:96] = np.where(
-        (ga[0:48, 0:96] > 0)[..., None],
-        np.array([150.0, 60.0, 150.0]),
-        grgb[0:48, 0:96],
-    )
+    # GeckoLib sólo lee el ALFA del glowmask; el RGB se deja coherente con
+    # el rosa encendido para que también se vea bien en editores externos.
+    grgb = np.broadcast_to(
+        np.array([255.0, 110.0, 190.0], dtype=np.float32), (SIZE, SIZE, 3)
+    ).copy()
+    grgb[~emissive] = np.array([14.0, 6.0, 22.0])
+    new_alpha = np.where(emissive, 255.0, 0.0)
     glowmask = np.dstack((grgb, new_alpha)).astype(np.uint8)
 
     return Image.fromarray(armor, "RGBA"), Image.fromarray(glowmask, "RGBA")
@@ -661,49 +633,84 @@ def cloth_canvas_fitted(w: int, h: int) -> tuple[Image.Image, Image.Image]:
 # ampliado 4x con Image.NEAREST.
 # --------------------------------------------------------------------------
 
-ICON_PIXEL_MAP = (
-    "...KGG....GGK...",
-    "....KLHMLHLK....",
-    "KWWKLHKGLKHMKWWK",
-    "KCCKLHGWGLHMKCCK",
-    "KHHKLHMGLLHMKHHK",
-    "..MLLHMCCLHMML..",
-    "..MGLHMMLLHMGL..",
-    ".DMLLHMMELHMMLD.",
-    ".DMELHMEWEHMELD.",
-    "KGMLLHMMELHMMLGK",
-    "KDMLLHMMLLHMMLDK",
-    "KDMLEHMMLLHEMLDK",
-    "KGMLLHMMLLHMMLGK",
-    "GGMLGHGMLGHGMLGG",
-    "KKDDKKKDDKKKDDKK",
-    "..GW...GW...GW..",
+# v1.14.0: el usuario APROBO el icono "Blight Star" de v1.13.0 y pidio
+# actualizarlo segun la capa nueva (Deterioro / Evil Saiyan Rose). Se
+# conserva EXACTAMENTE su silueta y su logica de 5 tonos cercanos; cambian
+# la paleta (carmesi oscuro + morado desvaido + gris ceniza, acentos rosa y
+# magenta), las grietas de energia, el dobladillo mas deshilachado y 4
+# microvoxeles flotantes. Sigue siendo 16x16 plano, NEAREST, sin AA,
+# degradados ni bloom. ICON_ALTERNATIVE guarda la forma aprobada para que el
+# visor permita comparar antes/despues.
+ICON_ALTERNATIVE = (
+    "..KKGG....GGKK..",
+    "...HGHHHKKHGH...",
+    "....HHHHHHKKK...",
+    "...HMLMGKKLLLK..",
+    "...HELGWGMLEDK..",
+    "...GDLLGMMLLGK..",
+    "...HDLLMHLLLLK..",
+    "...HMLLMHLLMLHK.",
+    "...HMLMCKLMDLDK.",
+    "..HEMLECEHMDLDHK",
+    ".HDMLDMEKKMDEDDK",
+    ".HDMDDMDKHMLMDDK",
+    "KHMDDMLDKDMDDDDK",
+    "KHDDMDDHKLDDDDK.",
+    ".KKGHDHGKDHKGK..",
+    "...KK.KKK.KK....",
 )
+
+# Icono ACTIVO v1.14.0.
+ICON_PIXEL_MAP = (
+    "..KKGG....GGKK..",
+    "...HGHHHKKHGH...",
+    ".P..HHHHHHKKK...",
+    "...HMLMGKKLLLK..",
+    "...HELGWGMLEDK..",
+    "...GDLLGMMLLGK..",
+    "...HELLMHLLELK..",
+    "...HCLLMHLLMLHK.",
+    "...HMLMCKLMPLDP.",
+    "..HEELECEHMDLDHK",
+    ".HDMLDMEKKMGEDDK",
+    "PHDMDDMDKHMLMDDK",
+    "KHMDPMLDKDMEDDDK",
+    "KHDDMDDHKLDDDDKP",
+    ".KK.HD.GKDH.GK..",
+    "..K.KK..K.K.K...",
+)
+
+ICON_CANDIDATES = {"aprobado_v1130": ICON_ALTERNATIVE, "rose_v1140": ICON_PIXEL_MAP}
+
+
 
 # Paleta plana (9 tonos opacos + transparente): mismos violetas que v1.10.0,
 # más los acentos fríos de Blight Star y el oro de cuello/hombreras/dobladillo.
 ICON_PALETTE = {
     ".": (0, 0, 0, 0),
-    "K": (15, 8, 22, 255),       # contorno duro
-    "H": (43, 14, 54, 255),      # sombra profunda del pliegue
-    "D": (72, 22, 78, 255),      # sarga base
-    "M": (97, 31, 96, 255),      # tono medio
-    "L": (126, 47, 116, 255),    # hombros iluminados
-    "G": (232, 194, 118, 255),   # broche cálido
-    "W": (226, 250, 255, 255),   # núcleo de la estrella
-    "C": (110, 216, 240, 255),   # cian de Blight Star
-    "E": (58, 150, 184, 255),    # veta fría apagada
+    "K": (12, 5, 18, 255),       # contorno violeta-negro
+    "H": (42, 11, 28, 255),     # carmesi muy oscuro
+    "D": (66, 24, 70, 255),     # morado desvaido
+    "M": (88, 30, 84, 255),     # tono medio
+    "L": (112, 52, 108, 255),   # luz del pliegue
+    "G": (232, 104, 172, 255),  # rosa encendido (broche / hombreras)
+    "W": (255, 222, 238, 255),  # nucleo del broche
+    "C": (214, 34, 138, 255),   # magenta Evil Saiyan
+    "E": (96, 22, 72, 255),     # veta de energia apagada
+    "P": (140, 20, 96, 255),    # microvoxel / chispa de ceniza
 }
+
+
 
 
 def build_icon_artwork(size: int = 64) -> Image.Image:
     """Icono 64x64 de PIXEL ART DURO (16x16 -> 4x, Image.NEAREST).
 
-    v1.12.0 redibuja el icono rechazado de v1.11.0. La forma ya no es un
-    rectangulo a franjas: dos HOMBRERAS con ribete de oro y gemas cian
-    sobresalen del cuello, el manto cae en trapecio con TRES pliegues anchos,
-    el broche es un diamante de 5 pixeles, hay bordado, vetas frias, la
-    estrella de Blight Star y un feston de tres puntas que cuelga.
+    v1.13.0 recupero la LOGICA VISUAL de la referencia 1: silueta organica,
+    5 tonos muy cercanos, contorno duro y acentos minimos. El usuario lo
+    APROBO. v1.14.0 conserva esa forma y solo la adapta a la capa nueva:
+    carmesi oscuro / morado desvaido / gris ceniza, grietas rosa y magenta,
+    dobladillo de 5 puntas y 4 microvoxeles. Sin oro ni cian.
 
     Todo el detalle vive en ICON_PIXEL_MAP: no hay overlays, degradados,
     antialiasing ni bloom. Solo un rim light discreto de UN pixel, aplicado
@@ -723,7 +730,7 @@ def build_icon_artwork(size: int = 64) -> Image.Image:
     opaque = px[..., 3] > 0
     for y in range(16):
         for x in range(16):
-            if not opaque[y, x] or grid[y][x] in (".", "K", "G", "W", "C", "E"):
+            if not opaque[y, x] or grid[y][x] in (".", "K", "G", "W", "C", "E", "P"):
                 continue
             if x == 0 or y == 0 or not opaque[y, x - 1] or not opaque[y - 1, x]:
                 px[y, x, :3] = np.clip(

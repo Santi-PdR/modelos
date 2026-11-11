@@ -9,6 +9,14 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.14.0: DETERIORO / EVIL SAIYAN ROSE. Geometria rehecha con collar de dos
+anillos de 14 segmentos, 20 flecos, yugo de union, 78 jirones largos en 3
+capas (espesor 0.25-0.50 e inflate 0.01/0.03/0.05), 56 microvoxeles de 1-2
+px, 18 venas y 8 fragmentos de ceniza. Textura de carmesi oscuro, morado
+desvaido y gris ceniza con grietas rosa/magenta; 1636 emisivos
+redistribuidos. Animacion con fases independientes, radianes y fail-safe.
+Icono pixel art aprobado adaptado a la nueva paleta. 339 huesos / 484 cubos.
+
 v1.12.0: VOLUMEN 3D REAL E ICONO REDISENADO. La tela deja de ser una
 lamina de 0.10 y pasa a bloques de 0.85 con relieve de pliegues de 0.28;
 se anaden hombreras TRASERAS solidas, cuello levantado, placas escalonadas,

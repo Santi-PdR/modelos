@@ -1,56 +1,42 @@
 #!/usr/bin/env python3
-"""Reconstruye la capa EQUIPADA con VOLUMEN 3D REAL (v1.12.0).
+"""Reconstruye la capa EQUIPADA como PRENDA DE DETERIORO / EVIL SAIYAN ROSÉ.
 
-Lee tools/originals/capa_deteriorer_evilsaiyan.geo.json (72 huesos / 126 cubos,
-copia prístina aprobada) y NO modifica ni uno solo de esos huesos. Añade una
-segunda piel hecha de 9 columnas por cada una de las 3 secciones:
+A partir de tools/originals/capa_deteriorer_evilsaiyan.geo.json (72 huesos /
+126 cubos, copia prístina aprobada) se conservan esos 72 huesos BYTE-IDÉNTICOS
+y se construye encima una segunda piel completamente nueva:
 
-  * 27 paneles delgados con curvatura suave en Z, que reconstruyen el canvas
-    de 96x48 como un mosaico sin costuras;
-  * 9 pliegues maestros (3 por sección) en los VALLES de la onda compartida
-    FOLDS=3, 6 ribetes laterales, 9 lengüetas de dobladillo con festón real,
-    2 alas de cuello, 1 broche emisivo, 5 estrellas 3D y 4 fragmentos
-    orbitales de Blight Star alrededor del medallón;
-  * v1.9.0: 9 nervios 3D en las crestas, 2 cortinas laterales continuas,
-    5 pesas de dobladillo, cuello trasero, 2 tirantes de suspensión y un
-    arnés delantero completo (2 hombreras, 2 tiras, 2 cadenas, broche y
-    cuello de 3 piezas, placa central, bandas y faldillas).
-  * v1.12.0: la tela pasa de láminas de 0.10 a BLOQUES de 0.85, el relieve
-    compartido de 0.085 a 0.28, y TODAS las decoraciones se anclan a la
-    cara SUR (+Z) en lugar de quedar dentro del panel. Se añaden 2 hombreras
-    TRASERAS sólidas (antes sólo las delanteras, invisibles desde la espalda),
-    6 placas escalonadas, 6 eslabones 3D, 6 remaches, un medallón con cuerpo
-    y un gorget. Total: **193 huesos / 281 cubos**.
+  * COLLAR / BUFANDA voluminoso y deshilachado: dos anillos de 14 segmentos
+    cada uno alrededor del cuello y los hombros (v16_collar_outer_*, inner_*),
+    con solape real entre segmentos y tiras deshilachadas (v16_fray_*). Un
+    yugo de 5 piezas (v16_yoke_*) lo une a la espalda sin huecos ni piezas
+    flotantes. Las dos hombreras envolventes v15_rear_pad_* cierran el
+    hombro de delante a atrás.
 
-v1.7.0: el relieve 3D y el sombreado del canvas muestrean la MISMA onda
-(cloth_spec.fold_wave). Antes el relieve era una parábola y el canvas tenía
-9 senos independientes: la capa parecía una tabla rayada. Ahora hay 3
-pliegues anchos; cada valle oscuro coincide con una crease geométrica y cada
-cresta iluminada con un panel adelantado.
+  * JIRONES 3D COMPLEJOS: la tela ya NO es un rectángulo continuo. Hay una
+    capa base de 27 tiras (v15_cloth_*, 2 cubos cada una, con rotura), una
+    segunda capa de 45 tiras (v16_tatter_*), 12 jirones que se desprenden
+    por los costados (v16_shred_*) y 9 puntas rasgadas (v15_hem_*). Cada
+    pieza tiene ESPESOR REAL de 0.25 a 0.50 unidades en Z.
 
-v1.8.0: añade 5 pequeñas estrellas 3D (`v15_star_*`) en las coordenadas de la
-constelación del canvas. Usan la zona emisiva `bright` ya existente, así que
-el `CapaGlowLayer` las hace latir sin ampliar la cobertura del glowmask.
+  * ANTI Z-FIGHTING: cada capa lleva `inflate` de 0.01 / 0.03 / 0.05 en los
+    cubos (campo estándar de la geometría Bedrock, que Blockbench lee) y
+    además un desplazamiento explícito en Z de 0.01..0.05. Las dos garantías
+    son independientes: si GeckoLib ignora `inflate`, el solape sigue bien.
 
-v1.9.0: añade 4 fragmentos orbitales (`v15_orbit_*`) alrededor del núcleo de
-Blight Star, relieve grueso en las crestas, drapeados laterales, pesas que
-cuelgan, cuello trasero, tirantes y un arnés FRONTAL con hombreras. La tela
-sigue lisa/continua: el 3D vive en capas delgadas encima del mosaico.
-Total v1.9.0: **171 huesos / 234 cubos**; v1.12.0: **193 / 281**.
+  * ENERGÍA: 18 venas finas (v16_vein_*) sobre la cara SUR de los jirones y
+    56 MICROVÓXELES de 1x1x1 / 2x2x2 px (0.0625 / 0.125 unidades) que se
+    desprenden abajo, en los costados y alrededor del collar (v16_mote_*),
+    más 8 fragmentos de ceniza (v16_ash_*). Cada microvóxel es un hueso
+    propio con pivote desplazado: al girarlo en runtime la partícula se
+    desplaza de verdad, sin partículas externas ni mixins.
 
-Diferencia clave frente a v1.5.x: las tres secciones comparten UN rectángulo
-global de tela. Antes cada sección usaba sus propios bounds (distintos anchos
-y alturas) con la misma UV de 16 filas, así que la ilustración se estiraba de
-forma diferente en cada tercio: el medallón se partía y las filigranas no
-continuaban. Ahora la escala es idéntica y el mosaico encaja.
+  * FLUJO DINÁMICO: CapaArmorModel anima tela, dobladillo, collar, jirones,
+    venas y microvóxeles con fases independientes (todo en radianes y con
+    fail-safe). tools/preview_cloth.py y preview/ replican esa onda.
 
-En runtime CapaArmorModel oculta los cubos de cape_top/mid/bottom y el detalle
-boxy original, pero deja vivos todos sus hijos: los 72 huesos y las animaciones
-hand-made siguen mandando. El modelo Java aplica además una onda con retardo
-de fase, inspirada en WaveyCapes / Finery / GlowberryClient.
-
-Todas las UV nuevas caen en rectángulos 100% opacos del atlas de 128x128;
-alfa base y cobertura emisiva no cambian. Uso:
+Todas las UV nuevas caen en rectángulos 100% opacos del atlas de 128x128.
+Se mantienen ID, Curios `back`, canvas 96x48, raíz sin `parent`, 0 JsonNull,
+radianes, fail-safes, 0 mixins y UV <= 128. Uso:
 
     python3 tools/armor_model_pipeline.py
 """
@@ -58,6 +44,7 @@ alfa base y cobertura emisiva no cambian. Uso:
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 from cloth_spec import (
@@ -69,62 +56,90 @@ from cloth_spec import (
     UV,
     assert_opaque,
     cloth_uv,
-    fold_at_column,
-    fold_crests,
-    fold_valleys,
     hem_uv,
-    section_uv,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
 ORIGINAL = ROOT / "tools" / "originals" / "capa_deteriorer_evilsaiyan.geo.json"
 OUT = ROOT / "src/main/resources/assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json"
 
+# v1.14.0: separación entre capas. Rango pedido: 0.01 - 0.05.
+INFLATE = (0.01, 0.03, 0.05)
 
-def spec(region: str, section: int | None = None, width: float | None = None) -> dict:
-    result = dict(section_uv(region, section, width)) if section is not None else dict(UV[region])
-    assert_opaque(result)
-    return result
-
-
-def faces(north: dict, south: dict | None = None, section: int = 0) -> dict:
-    out = {
-        "north": dict(north),
-        "south": dict(south or north),
-        # v1.12.0: con bloques de 0.85 los cantos son muy visibles. Usar el
-        # tono CLARO de la sarga (no el forro oscuro) evita que las 9 columnas
-        # se lean como barrotes desde el perfil; el sombreado por normal ya
-        # oscurece estas caras lo suficiente para dar volumen.
-        "east": spec("crease_light", section),
-        "west": spec("crease_light", section),
-        "up": spec("top_band"),
-        "down": spec("bottom_band"),
-    }
-    for face in out.values():
-        assert_opaque(face)
-    return out
+# Número de piezas de la nueva familia (debe coincidir con CapaArmorModel).
+COLLAR_SEGS = 14
+FRAY_COUNT = 20
+YOKE_COUNT = 5
+TATTER_SEGS = 5
+SHRED_PER_SIDE = 6
+VEIN_COUNT = 18
+MOTE_COUNT = 56
+ASH_COUNT = 8
 
 
-def cube(origin, size, north, south=None, section: int = 0):
+def S(region: str, w: float | None = None, h: float | None = None,
+      du: float = 0.0, dv: float = 0.0) -> dict:
+    """Rectángulo UV absoluto dentro de una zona opaca del atlas."""
+    s = dict(UV[region])
+    s["uv"] = [round(s["uv"][0] + du, 4), round(s["uv"][1] + dv, 4)]
+    s["uv_size"] = [round(s["uv_size"][0] if w is None else w, 4),
+                    round(s["uv_size"][1] if h is None else h, 4)]
+    assert_opaque(s)
+    return s
+
+
+def chunk(col: int, seg: int, nseg: int = 6) -> dict:
+    """Trozo del canvas 96x48 que corresponde a una tira en el espacio."""
+    w = 96.0 / COLUMNS
+    h = 48.0 / nseg
+    col = max(0, min(COLUMNS - 1, col))
+    seg = max(0, min(nseg - 1, seg % nseg))
+    s = {"uv": [round(col * w, 4), round(seg * h, 4)],
+         "uv_size": [round(w, 4), round(h, 4)]}
+    assert_opaque(s)
+    return s
+
+
+def mote_uv(i: int) -> dict:
+    """Sub-rectángulo 2x2 de la rampa rosa/magenta/violeta-negro."""
+    return S("energy_ramp", w=2.0, h=2.0,
+             du=float(i % 4), dv=float((i * 5) % 16))
+
+
+def cube16(origin, size, front: dict, side: dict | None = None,
+           inflate: float = 0.0) -> dict:
+    """Cubo con ESPESOR real e `inflate` anti Z-fighting.
+
+    north/south toman el trozo de tela (o la rampa de energía), y los cuatro
+    cantos toman una franja reservada: así el grosor se lee como borde
+    iluminado y no como una barra negra.
+    """
+    s = side or S("ash")
     return {
         "origin": [round(v, 4) for v in origin],
         "size": [round(v, 4) for v in size],
-        "uv": faces(north, south, section),
+        "uv": {
+            "north": dict(front), "south": dict(front),
+            "east": dict(s), "west": dict(s),
+            "up": dict(s), "down": dict(s),
+        },
+        "inflate": round(inflate, 4),
     }
 
 
-def bone(name: str, parent: str, pivot, rotation, cubes):
-    return {
+def bone(name: str, parent: str | None, pivot, rotation, cubes) -> dict:
+    out = {
         "name": name,
-        "parent": parent,
         "pivot": [round(v, 4) for v in pivot],
         "rotation": [round(v, 4) for v in rotation],
         "cubes": cubes,
     }
+    if parent:
+        out["parent"] = parent
+    return out
 
 
 def global_bounds(by_name: dict) -> tuple[float, float, float, float]:
-    """Un ÚNICO rectángulo para las 3 secciones (adiós a la distorsión UV)."""
     cubes = [c for section in SECTIONS for c in by_name[section]["cubes"]]
     x0 = min(c["origin"][0] for c in cubes)
     x1 = max(c["origin"][0] + c["size"][0] for c in cubes)
@@ -133,54 +148,19 @@ def global_bounds(by_name: dict) -> tuple[float, float, float, float]:
     return x0, x1, y0, y1
 
 
-# Vuelo de campana MUY sutil. Un 6% se probó y producía escalones visibles en
-# los ribetes laterales (cada fila quedaba a distinto x); al 1% la silueta
-# deja de ser un rectángulo perfecto sin romper la línea continua del borde.
-# Es sólo geometría: las UV siguen siendo las mismas franjas globales.
-FLARE = (0.99, 1.00, 1.01)
-
-# v1.12.0 VOLUMEN REAL. Hasta v1.11.0 la tela era una lamina de 0.10 de
-# grosor y el relieve de los pliegues solo 0.085: en el juego se veia como un
-# poster plano. Ahora cada panel es un BLOQUE de 0.85 y la onda compartida
-# FOLDS=3 separa crestas/valles 0.42 en Z (< 0.85, sin huecos). Todas las
-# decoraciones se anclan a face_z(): la cara SUR (+Z) que mira el espectador
-# cuando la capa esta en la espalda. Antes iban a panel_z+0.03, es decir,
-# DENTRO del panel, y por eso no se veian.
-PANEL_DEPTH = 0.85
-RELIEF = 0.28
-
-
 def row_bounds(gx0, gx1, gy0, gy1, section: int):
-    """Fila `section` (0=arriba): x0, x1, y0, y1, paso de columna."""
-    f = FLARE[section]
-    x0, x1 = gx0 * f, gx1 * f
     row_h = (gy1 - gy0) / len(SECTIONS)
     y_lo = gy0 + (len(SECTIONS) - 1 - section) * row_h
-    y_hi = y_lo + row_h
-    if section < len(SECTIONS) - 1:
-        y_lo -= 0.05          # cubre la junta con la fila inferior
-    if section > 0:
-        y_hi += 0.05          # cubre la junta con la fila superior
-    return x0, x1, y_lo, y_hi, (x1 - x0) / COLUMNS
+    return gx0, gx1, y_lo, y_lo + row_h, (gx1 - gx0) / COLUMNS
 
 
-def panel_z(section: int, column: int) -> float:
-    """Relieve en Z muestreando la MISMA onda que el sombreado del canvas.
-
-    `fold_at_column` vale +0.5 en las crestas y -1 en los valles (9 columnas,
-    FOLDS=3): la diferencia maxima entre columnas vecinas es 1.5 * RELIEF =
-    0.42, MENOR que PANEL_DEPTH (0.85). Asi los bloques se solapan y nunca
-    queda una grieta, pero el escalon de profundidad SI se ve de lado y de 3/4.
-    Era 0.085 en v1.11.0 (invisible).
-    """
-    norm = (column - (COLUMNS - 1) / 2.0) / ((COLUMNS - 1) / 2.0)
-    return (2.55 + 0.10 * section + 0.16 * (1.0 - norm * norm)
-            + RELIEF * fold_at_column(column))
-
-
-def face_z(section: int, column: int) -> float:
-    """Z de la cara SUR del panel (la que se ve desde la espalda)."""
-    return panel_z(section, column) + PANEL_DEPTH
+def section_for_y(y, gy0, gy1) -> str:
+    row_h = (gy1 - gy0) / 3.0
+    if y >= gy0 + 2 * row_h:
+        return "cape_top"
+    if y >= gy0 + row_h:
+        return "cape_mid"
+    return "cape_bottom"
 
 
 def build() -> dict:
@@ -189,414 +169,316 @@ def build() -> dict:
     original_bones = list(geo["bones"])
     bones = list(original_bones)
     by_name = {b["name"]: b for b in original_bones}
-
     gx0, gx1, gy0, gy1 = global_bounds(by_name)
-    rows = [row_bounds(gx0, gx1, gy0, gy1, si) for si in range(len(SECTIONS))]
+    step = (gx1 - gx0) / COLUMNS
 
+    # ------------------------------------------------------------------
+    # 1. CAPA BASE: 27 tiras v15_cloth_* (2 cubos cada una, con rotura).
+    #    Conservamos el nombre porque CapaArmorModel ya las resuelve y les
+    #    aplica la onda compartida; así no se pierde ni una línea de la
+    #    animación existente.
+    # ------------------------------------------------------------------
     for si, section in enumerate(SECTIONS):
-        x0, x1, y_lo, y_hi, step = rows[si]
-
-        # 1. Paneles de tela: mosaico 9x3 con curvatura en Z y giro mínimo.
-        #    Casi planos en reposo para que las UV encajen; la onda la aplica
-        #    CapaArmorModel en runtime (en radianes).
+        _, _, y_lo, y_hi, _ = row_bounds(gx0, gx1, gy0, gy1, si)
+        row_h = y_hi - y_lo
         for col in range(COLUMNS):
-            x = x0 + col * step - 0.045
-            width = step + 0.09
-            z = panel_z(si, col)
-            pivot = [x + width / 2.0, (y_lo + y_hi) / 2.0, z + PANEL_DEPTH / 2.0]
-            # Sin giro Y por columna: cualquier giro abre huecos entre
-            # franjas UV. La inclinación X es común a toda la fila, así el
-            # mosaico sigue cerrado y la capa cae hacia atrás.
-            rotation = [0.6 + 1.0 * si, 0.0, 0.0]
+            norm = (col - (COLUMNS - 1) / 2.0) / ((COLUMNS - 1) / 2.0)
+            x = gx0 + col * step
+            width = step * 1.10
+            z = (2.42 + 0.12 * si + 0.18 * (1.0 - norm * norm)
+                 + 0.14 * math.cos(2.0 * math.pi * FOLDS * (col + 0.5) / COLUMNS))
             uv = cloth_uv(si, col)
+            # Lamina CONTINUA: los huecos los crean los jirones de encima,
+            # no una cuadricula de bloques iguales.
+            cubes = [cube16(
+                (x, y_lo + 0.06, z), (width, row_h - 0.14, 0.34),
+                uv, S("ash"), INFLATE[0],
+            )]
+            # Punta rasgada irregular al final de la seccion inferior.
+            if si == 2:
+                tip = 0.45 + 0.55 * abs(math.sin(col * 2.3))
+                cubes.append(cube16(
+                    (x + 0.08, y_lo - tip, z + 0.02),
+                    (width * 0.72, tip, 0.28),
+                    hem_uv(col), S("crease_light"), INFLATE[1],
+                ))
             bones.append(bone(
-                f"v15_cloth_{section}_{col}", section, pivot, rotation,
-                [cube((x, y_lo, z), (width, y_hi - y_lo, PANEL_DEPTH), uv, uv, si)],
+                f"v15_cloth_{section}_{col}", section,
+                [x + width / 2.0, (y_lo + y_hi) / 2.0, z + 0.17],
+                [0.6 + 1.0 * si, 0.0, 1.2 * math.sin(col * 1.7)],
+                cubes,
             ))
 
-        # 2. Una crease 3D por VALLE de la onda compartida FOLDS=3 (columnas
-        #    1, 4, 7). Coincide exactamente con la línea oscura del canvas:
-        #    sombreado y relieve cuentan el mismo pliegue, sin código de barras.
-        for k, valley in enumerate(fold_valleys()):
-            x = x0 + (valley + 0.5) * step - 0.022
-            z = face_z(si, valley) + 0.02
-            tone = spec("crease_dark" if k % 2 == 0 else "crease_light", si)
-            bones.append(bone(
-                f"v15_crease_{section}_{k}",
-                f"v15_cloth_{section}_{valley}",
-                [x + 0.022, (y_lo + y_hi) / 2.0, z],
-                [0.0, 0.0, 0.0],
-                [cube((x - 0.05, y_lo + 0.05, z), (0.13, y_hi - y_lo - 0.10, 0.20),
-                      tone, None, si)],
-            ))
-
-        # 3. Ribetes laterales: enmarcan la tela sin neón estridente.
-        for side, sx, col in (("L", -1.0, 0), ("R", 1.0, COLUMNS - 1)):
-            x = x0 - 0.02 if sx < 0 else x1 - 0.14
-            z = face_z(si, col) + 0.03
-            bones.append(bone(
-                f"v15_pipe_{section}_{side}",
-                f"v15_cloth_{section}_{col}",
-                [x + 0.07, (y_lo + y_hi) / 2.0, z],
-                [0.0, -sx * 2.0, 0.0],
-                [cube((x - 0.06, y_lo + 0.10, z), (0.24, y_hi - y_lo - 0.20, 0.34),
-                      spec("rim"), spec("rim"), si)],
-            ))
-
-    # 4. Dobladillo con FESTÓN REAL: las lengüetas centrales cuelgan más y se
-    #    inclinan hacia atrás. Cada una samplea SÓLO su porción del chevron,
-    #    así el festón pintado no se repite 9 veces.
-    bx0, _, _, _, bstep = rows[2]
+    # ------------------------------------------------------------------
+    # 2. PUNTAS RASGADAS del dobladillo (9). Cuelgan de la tira inferior.
+    # ------------------------------------------------------------------
     for col in range(COLUMNS):
-        center = bx0 + (col + 0.5) * bstep
-        norm = (col - (COLUMNS - 1) / 2.0) / ((COLUMNS - 1) / 2.0)
-        length = 0.52 + 0.34 * (1.0 - norm * norm)
-        z = face_z(2, col) + 0.02
-        tilt = -1.2 if col % 2 == 0 else 1.2
-        uv = hem_uv(col)
+        center = gx0 + (col + 0.5) * step
+        norm = abs((col - 4) / 4.0)
+        length = 0.75 + 0.85 * (1.0 - norm) + 0.25 * math.sin(col * 2.1)
+        z = 2.75 + 0.14 * math.cos(col * 1.3)
         bones.append(bone(
             f"v15_hem_{col}", f"v15_cloth_cape_bottom_{col}",
-            [center, gy0 - 0.06, z],
-            [2.0 + 2.0 * (1.0 - norm * norm), 0.0, tilt],
-            [cube((center - bstep * 0.48, gy0 - 0.06 - length, z),
-                  (bstep * 0.96, length, 0.58), uv, uv, 2)],
+            [center, gy0 - 0.05, z],
+            [2.0 + 2.0 * (1.0 - norm), 0.0, -7.0 + 3.5 * col],
+            [cube16((center - step * 0.42, gy0 - 0.05 - length, z),
+                    (step * 0.84, length, 0.30),
+                    hem_uv(col), S("energy_vein"), INFLATE[1])],
         ))
-
-    # 4b. Estrellas 3D de la constelación: 5 gemas diminutas que coinciden
-    #     con los puntos brillantes del canvas. Usan la zona emisiva `bright`
-    #     ya existente, así que CapaGlowLayer las hace latir SIN ampliar la
-    #     cobertura del glowmask prístino (no se abren huecos en la tela).
-    def canvas_point(u: float, v: float):
-        si = next(i for i, (a, b) in enumerate(SECTION_V) if a <= v < b)
-        column = min(COLUMNS - 1, max(0, int(u / STRIP_W)))
-        x = gx0 + (u / 96.0) * (gx1 - gx0)
-        y = gy1 - (v / 48.0) * (gy1 - gy0)
-        z = face_z(si, column) + 0.12
-        return si, column, x, y, z
-
-    star_points = ((18, 18), (78, 18), (26, 35), (70, 35), (48, 30))
-    for i, (su, sv) in enumerate(star_points):
-        si, col, sx, sy, sz = canvas_point(su, sv)
-        section = SECTIONS[si]
-        size = 0.34
-        bones.append(bone(
-            f"v15_star_{i}",
-            f"v15_cloth_{section}_{col}",
-            [sx, sy, sz], [0.0, 0.0, 45.0],
-            [cube((sx - size / 2.0, sy - size / 2.0, sz),
-                  (size, size, 0.32),
-                  spec("bright"), spec("bright"), si)],
-        ))
-
-    # 4c. v1.9.0: 4 fragmentos orbitales alrededor del núcleo de Blight Star.
-    #     Son diamantes aún más pequeños que las estrellas, en los puntos
-    #     cardinales del medallón. CapaArmorModel los hace girar despacio.
-    orbit_points = ((48.0, 12.4), (54.1, 18.5), (48.0, 24.6), (41.9, 18.5))
-    for i, (su, sv) in enumerate(orbit_points):
-        si, col, sx, sy, sz = canvas_point(su, sv)
-        section = SECTIONS[si]
-        size = 0.22
-        bones.append(bone(
-            f"v15_orbit_{i}",
-            f"v15_cloth_{section}_{col}",
-            [sx, sy, sz + 0.015], [0.0, 0.0, 45.0],
-            [cube((sx - size / 2.0, sy - size / 2.0, sz + 0.015),
-                  (size, size, 0.26),
-                  spec("bright"), spec("bright"), si)],
-        ))
-
-    # 4d. v1.9.0: RELIEVE 3D REAL. Un nervio grueso en cada cresta de la onda
-    #     (0, 3, 6 por sección) y dos paneles laterales que cuelgan de los
-    #     hombros con giro en Y/Z. La tela sigue siendo un mosaico continuo.
-    for si, section in enumerate(SECTIONS):
-        x0, x1, y_lo, y_hi, step = rows[si]
-        for k, crest in enumerate(fold_crests()):
-            x = x0 + (crest + 0.5) * step - 0.06
-            z = face_z(si, crest) + 0.03
-            bones.append(bone(
-                f"v15_ridge_{section}_{k}",
-                f"v15_cloth_{section}_{crest}",
-                [x + 0.06, (y_lo + y_hi) / 2.0, z],
-                [0.0, 0.0, 0.0],
-                [cube((x - 0.08, y_lo + 0.08, z),
-                      (0.20, y_hi - y_lo - 0.16, 0.28),
-                      spec("crease_light"), spec("crease_light"), si)],
-            ))
-    # 4d2. Dos CORTINAS laterales CONTINUAS (una por lado), no seis barras
-    #      segmentadas: cuelgan del panel central y caen de hombros a dobladillo.
-    for side, sx, col in (("L", -1.0, 0), ("R", 1.0, COLUMNS - 1)):
-        x = gx0 - 0.18 if sx < 0 else gx1 - 0.42
-        z = face_z(1, col) + 0.05
-        bones.append(bone(
-            f"v15_drape_{side}", f"v15_cloth_cape_mid_{col}",
-            [x + 0.35, (gy0 + gy1) / 2.0, z],
-            [1.5, sx * 8.0, sx * 3.0],
-            [
-                cube((x, gy0 + 0.10, z),
-                     (0.80, gy1 - gy0 - 0.20, 0.58),
-                     spec("crease_light"), spec("crease_light"), 1),
-                cube((x if sx < 0 else x + 0.66, gy0 + 0.10, z + 0.03),
-                     (0.14, gy1 - gy0 - 0.20, 0.62),
-                     spec("rim"), spec("rim"), 1),
-            ],
-        ))
-
-    # 4e. Pesas del dobladillo: 5 diamantes que cuelgan de las lengüetas.
-    #     Heredan el vaivén de v15_hem_* y refuerzan la lectura de prenda
-    #     colgada, no de rectángulo pegado a la espalda.
-    bx0, _, _, _, bstep = rows[2]
-    for j, col in enumerate((0, 2, 4, 6, 8)):
-        center = bx0 + (col + 0.5) * bstep
-        z = face_z(2, col) + 0.18
-        bones.append(bone(
-            f"v15_weight_{j}", f"v15_hem_{col}",
-            [center, gy0 - 1.15, z], [0.0, 0.0, 45.0],
-            [cube((center - 0.20, gy0 - 1.36, z),
-                  (0.40, 0.40, 0.36),
-                  spec("bright"), spec("bright"), 2)],
-        ))
-
-    # 4f. Cuello trasero levantado y tirantes de suspensión desde los hombros.
-    for i, (cx, rz) in enumerate(((-2.25, -8.0), (0.0, 0.0), (2.25, 8.0))):
-        bones.append(bone(
-            f"v15_back_collar_{i}", "cape_top",
-            [cx, gy1 - 0.05, 3.45], [0.0, 0.0, rz],
-            [cube((cx - 1.30, gy1 - 0.85, 2.65),
-                  (2.60, 1.65, 1.55),
-                  spec("yoke"), spec("yoke"), 0)],
-        ))
-    for side, sx in (("L", -1.0), ("R", 1.0)):
-        x = -4.6 if sx < 0 else 4.35
-        bones.append(bone(
-            f"v15_suspend_{side}", "chestplate",
-            [x + 0.12, 22.0, 1.6], [0.0, 0.0, sx * 18.0],
-            [cube((x - 0.06, 20.3, 1.35), (0.38, 3.4, 0.55),
-                  spec("rim"), spec("rim"), 0),
-             cube((x - 0.11, 20.6, 1.28), (0.48, 0.30, 0.68),
-                  spec("bright"), spec("bright"), 0)],
-        ))
-
-    # 4g. v1.9.0: FRENTE del jugador. Hombreras con relieve, arnés diagonal,
-    #     broche, cadenas y cuello delantero. Todo cuelga de `chestplate`
-    #     (no de los huesos boxy ocultos), así que se ve en F5 y con Curios.
-    for side, sx in (("L", -1.0), ("R", 1.0)):
-        px = -5.35 if sx < 0 else 3.35
-        bones.append(bone(
-            f"v15_pauldron_{side}", "chestplate",
-            [px + 1.0, 22.9, -1.0],
-            [4.0, sx * 12.0, sx * 8.0],
-            [
-                cube((px - 0.55, 22.05, -2.35), (3.30, 1.75, 2.15),
-                     spec("yoke"), spec("yoke"), 0),
-                cube((px - 0.65, 23.65, -2.45), (3.50, 0.34, 2.35),
-                     spec("rim"), spec("rim"), 0),
-                cube((px + 0.35, 22.55, -2.58), (0.80, 0.80, 0.32),
-                     spec("bright"), spec("bright"), 0),
-                cube((px - 0.35, 21.75, -2.30), (2.90, 0.30, 2.00),
-                     spec("crease_light"), spec("crease_light"), 0),
-            ],
-        ))
-        sx2 = -2.0 if sx < 0 else 2.0
-        bones.append(bone(
-            f"v15_front_strap_{side}", "chestplate",
-            [sx2, 20.8, -2.45], [0.0, 0.0, -sx * 36.0],
-            [cube((sx2 - 0.24, 19.0, -2.62),
-                  (0.48, 3.6, 0.55),
-                  spec("rim"), spec("rim"), 0)],
-        ))
-        bones.append(bone(
-            f"v15_front_chain_{side}", "chestplate",
-            [sx * 0.9, 19.1, -2.55], [0.0, 0.0, sx * 5.0],
-            [cube((sx * 0.9 - 0.16, 17.6, -2.72),
-                  (0.32, 2.4, 0.46),
-                  spec("rim"), spec("rim"), 0)],
-        ))
-    bones.append(bone(
-        "v15_front_clasp", "chestplate",
-        [0.0, 21.6, -2.68], [0.0, 0.0, 45.0],
-        [cube((-0.55, 21.10, -2.90), (1.10, 1.10, 0.62),
-              spec("bright"), spec("bright"), 0),
-         cube((-0.70, 21.00, -2.80), (1.40, 1.30, 0.18),
-              spec("yoke"), spec("yoke"), 0)],
-    ))
-    for i, (cx, rz) in enumerate(((-2.1, -14.0), (0.0, 0.0), (2.1, 14.0))):
-        bones.append(bone(
-            f"v15_front_collar_{i}", "chestplate",
-            [cx, 23.5, -1.95], [0.0, 0.0, rz],
-            [cube((cx - 1.0, 22.9, -2.30), (2.0, 1.5, 1.20),
-                  spec("yoke"), spec("yoke"), 0),
-             cube((cx - 1.05, 24.25, -2.40), (2.10, 0.28, 1.35),
-                  spec("rim"), spec("rim"), 0)],
-        ))
-
-    # 4h. Más arnés delantero: placa central, bandas que unen hombros y
-    #     dos faldillas cortas con punta emisiva. Así el frente no queda
-    #     como cuatro barras sueltas y se lee como prenda colgada.
-    bones.append(bone(
-        "v15_front_placket", "chestplate",
-        [0.0, 19.4, -2.62], [0.0, 0.0, 0.0],
-        [
-            cube((-0.50, 17.5, -2.80), (1.00, 3.9, 0.55),
-                 spec("yoke"), spec("yoke"), 0),
-            cube((-0.28, 20.7, -2.92), (0.56, 0.56, 0.28),
-                 spec("bright"), spec("bright"), 0),
-        ],
-    ))
-    for side, sx in (("L", -1.0), ("R", 1.0)):
-        bx = -3.4 if sx < 0 else 1.4
-        bones.append(bone(
-            f"v15_front_band_{side}", "chestplate",
-            [bx + 1.0, 21.5, -2.50], [0.0, 0.0, sx * 18.0],
-            [cube((bx, 21.20, -2.62), (2.0, 0.42, 0.50),
-                  spec("rim"), spec("rim"), 0)],
-        ))
-        tx = -1.6 if sx < 0 else 1.2
-        bones.append(bone(
-            f"v15_front_tassel_{side}", "chestplate",
-            [tx + 0.2, 16.6, -2.56], [0.0, 0.0, sx * 4.0],
-            [
-                cube((tx - 0.08, 15.4, -2.72), (0.56, 1.6, 0.46),
-                     spec("rim"), spec("rim"), 0),
-                cube((tx + 0.06, 15.0, -2.82), (0.32, 0.32, 0.26),
-                     spec("bright"), spec("bright"), 0),
-            ],
-        ))
-
-    # 5. Cuello: dos piezas delgadas con la MISMA tela del canvas, no bloques
-    #    de color plano. Sustituyen a las hombreras boxy sin cortar la lectura.
-    tx0, tx1, _, _, _ = rows[0]
-    for side, sx, col in (("L", -1.0, 0), ("R", 1.0, COLUMNS - 1)):
-        x = tx0 - 0.20 if sx < 0 else tx1 - 1.00
-        z = face_z(0, col) + 0.05
-        uv = cloth_uv(0, col)
-        bones.append(bone(
-            f"v15_shoulder_{side}", f"v15_cloth_cape_top_{col}",
-            [x + 0.60, gy1 - 1.25, z], [2.0, -sx * 3.0, -sx * 3.0],
-            [cube((x + 0.18, gy1 - 1.85, z), (0.90, 1.40, 0.55), uv, uv, 0),
-             cube((x - 0.10, gy1 - 0.45, z - 0.05), (1.40, 0.26, 0.82),
-                  spec("rim"), spec("rim"), 0)],
-        ))
-
-    # 6. Broche: diamante pequeño y girado 45°, no un rectángulo magenta.
-    #    El medallón grande ya está pintado en el canvas; esto sólo da relieve.
-    bones.append(bone(
-        "v15_clasp", "cape_top",
-        [0.0, gy1 - 1.15, face_z(0, 4) + 0.35], [0.0, 0.0, 45.0],
-        [cube((-0.55, gy1 - 1.70, face_z(0, 4) + 0.10), (1.10, 1.10, 0.60),
-              spec("bright"), spec("bright"), 0),
-         cube((-0.72, gy1 - 1.88, face_z(0, 4) + 0.02), (1.44, 1.44, 0.20),
-              spec("yoke"), spec("yoke"), 0)],
-    ))
 
     # ------------------------------------------------------------------
-    # 7. v1.12.0 — VOLUMEN 3D EN LA ESPALDA (lo que el usuario ve en F5).
-    #    Hasta aqui las "hombreras" colgaban de chestplate en Z NEGATIVO
-    #    (frente del jugador): desde atras solo se veia la lamina de tela.
-    #    Ahora hay hombreras TRASERAS solidas que envuelven el hombro,
-    #    placas escalonadas, cadenas 3D y un medallon con cuerpo. Todas
-    #    cuelgan de `chestplate` (no de los 61 detalles ocultos) y usan
-    #    solo UV de zonas 100% opacas del atlas.
+    # 3. NÚCLEOS de energía (v15_orbit_*): 4 microvóxeles grandes en el
+    #    centro de la capa. El modelo Java ya los hace girar despacio.
+    # ------------------------------------------------------------------
+    for i in range(4):
+        ang = i * math.pi / 2.0
+        x = 1.9 * math.cos(ang)
+        y = 16.0 + 1.9 * math.sin(ang)
+        z = 3.45
+        bones.append(bone(
+            f"v15_orbit_{i}", "v15_cloth_cape_mid_4",
+            [x - 0.45, y + 0.45, z], [0.0, 0.0, 45.0],
+            [cube16((x, y, z), (0.24, 0.24, 0.20),
+                    mote_uv(i + 7), mote_uv(i + 7), INFLATE[2])],
+        ))
+
+    # ------------------------------------------------------------------
+    # 4. HOMBRERAS ENVOLVENTES (v15_rear_pad_*): van de delante a atrás,
+    #    abrazando el hombro. El Java v1.13.0 ya les da vaivén propio.
     # ------------------------------------------------------------------
     for side, sx in (("L", -1.0), ("R", 1.0)):
-        # Placa principal de la hombrera trasera: bloque con 3 ejes reales.
-        hx = -7.05 if sx < 0 else 3.45
+        hx = -7.15 if sx < 0 else 3.55
         bones.append(bone(
             f"v15_rear_pad_{side}", "chestplate",
-            [hx + 1.80, 23.0, 3.55], [4.0, sx * 9.0, -sx * 9.0],
+            [hx + 1.8, 23.0, 0.9], [3.0, sx * 8.0, -sx * 7.0],
             [
-                cube((hx, 22.05, 2.55), (3.60, 1.95, 2.05),
-                     spec("yoke"), spec("yoke"), 0),             # cuerpo
-                cube((hx - 0.18, 23.85, 2.42), (3.96, 0.38, 2.32),
-                     spec("rim"), spec("rim"), 0),               # cresta oro
-                cube((hx + 0.30, 22.35, 4.52), (0.95, 0.95, 0.42),
-                     spec("bright"), spec("bright"), 0),          # gema
+                cube16((hx, 22.10, -1.35), (3.60, 1.95, 5.10),
+                       S("yoke"), S("ash"), INFLATE[0]),
+                cube16((hx - 0.16, 23.80, -1.50), (3.92, 0.36, 5.40),
+                       S("yoke"), S("ash"), INFLATE[1]),
+                cube16((hx + 0.55, 22.45, 3.55), (0.85, 0.85, 0.40),
+                       mote_uv(3), mote_uv(3), INFLATE[2]),
             ],
         ))
-        # Greca de 3 placas que baja por el borde lateral de la capa: da
-        # relieve y "armadura" sin amontonar cajas en los hombros.
-        for k in range(3):
-            py = 18.60 - k * 4.30
-            px = -6.35 if sx < 0 else 5.55
+
+    # ------------------------------------------------------------------
+    # 5. COLLAR / BUFANDA voluminoso: DOS anillos de 14 segmentos. Cada
+    #    segmento se solapa con el siguiente (arco ~1.9, ancho 2.2) y se
+    #    orienta tangencialmente con rotación Y = theta + 90 grados.
+    #    Radio exterior 5.4x3.2 / interior 4.35x2.55, centro z = 0.4.
+    # ------------------------------------------------------------------
+    for ring, (rx, rz, cy, hh, dep, infl) in enumerate((
+            (5.00, 2.90, 23.20, 2.15, 0.46, INFLATE[0]),
+            (4.00, 2.30, 23.80, 1.80, 0.38, INFLATE[2]))):
+        for k in range(COLLAR_SEGS):
+            th = 2.0 * math.pi * k / COLLAR_SEGS
+            cx = rx * math.cos(th)
+            cz = 0.40 + rz * math.sin(th)
+            w = 2.35 if ring == 0 else 2.05
+            # Altura alterna: el borde superior queda DENTADO, no recto.
+            h = hh * (1.0 + 0.22 * math.sin(k * 2.1 + ring))
+            jitter = 6.0 * math.sin(k * 2.3 + ring)
+            rot = [6.0 * math.sin(k * 1.1 + ring),
+                   math.degrees(th) + 90.0,
+                   jitter]
+            front = S("yoke") if ring == 0 else S("ash")
+            side = S("ash") if ring == 0 else S("crease_light")
             bones.append(bone(
-                f"v15_slab_{side}_{k}", "chestplate",
-                [px + 0.40, py + 0.30, 3.55], [0.0, 0.0, -sx * 3.0],
-                [cube((px, py, 3.05), (0.80, 0.62, 1.05),
-                      spec("yoke"), spec("yoke"), 0),
-                 cube((px - 0.06, py + 0.55, 2.98), (0.92, 0.14, 1.18),
-                      spec("rim"), spec("rim"), 0)],
-            ))
-        # Cadena 3D: eslabones alternos desde la hombrera al broche central.
-        for k in range(3):
-            cx = sx * (5.55 - k * 1.55)
-            cy = 21.55 - k * 0.30
-            bones.append(bone(
-                f"v15_chain3d_{side}_{k}", "chestplate",
-                [cx, cy, 4.05], [0.0, 0.0, (30.0 if k % 2 else -30.0)],
-                [cube((cx - 0.16, cy - 0.16, 3.80), (0.32, 0.32, 0.50),
-                      spec("rim"), spec("rim"), 0)],
-            ))
-        # Remaches en el borde exterior de la capa.
-        for k in range(3):
-            ry = 18.4 - k * 4.2
-            rx = -6.55 if sx < 0 else 6.25
-            bones.append(bone(
-                f"v15_stud_{side}_{k}", "chestplate",
-                [rx + 0.15, ry + 0.15, 3.65], [0.0, 0.0, 45.0],
-                [cube((rx, ry, 3.30), (0.30, 0.30, 0.55),
-                      spec("bright"), spec("bright"), 0)],
+                f"v16_collar_{'outer' if ring == 0 else 'inner'}_{k}",
+                "chestplate", [cx, cy, cz + infl], rot,
+                [cube16((cx - w / 2.0, cy - h / 2.0, cz - dep / 2.0 + infl),
+                        (w, h, dep), front, side, infl)],
             ))
 
-    # Medallon central 3D: marco + gema con relieve real sobre el canvas.
-    mz = face_z(1, 4) + 0.12
-    bones.append(bone(
-        "v15_medallion", "chestplate",
-        [0.0, 17.0, mz + 0.55], [0.0, 0.0, 45.0],
-        [cube((-1.05, 15.95, mz), (2.10, 2.10, 0.32),
-              spec("yoke"), spec("yoke"), 0),
-         cube((-0.78, 16.22, mz + 0.30), (1.56, 1.56, 0.55),
-              spec("bright"), spec("bright"), 0),
-         cube((-0.30, 16.70, mz + 0.82), (0.60, 0.60, 0.28),
-              spec("bright"), spec("bright"), 0)],
-    ))
-    # Gorget / collar alto frontal que cierra el conjunto por arriba.
-    bones.append(bone(
-        "v15_gorget", "chestplate",
-        [0.0, 23.6, 3.30], [0.0, 0.0, 0.0],
-        [cube((-2.90, 23.15, 2.60), (5.80, 1.10, 1.55),
-              spec("yoke"), spec("yoke"), 0),
-         cube((-3.05, 24.10, 2.50), (6.10, 0.30, 1.75),
-              spec("rim"), spec("rim"), 0),
-         cube((-0.45, 23.40, 4.10), (0.90, 0.90, 0.40),
-              spec("bright"), spec("bright"), 0)],
-    ))
+    # 6. TIRAS DESHILACHADAS por TODO el contorno (Shigaraki): 20 flecos
+    #    de longitud distinta, delante y detrás, que rompen el borde inferior
+    #    del collar y lo conectan visualmente con los jirones.
+    for k in range(FRAY_COUNT):
+        th = 2.0 * math.pi * k / FRAY_COUNT
+        cx = 4.85 * math.cos(th)
+        cz = 0.40 + 2.80 * math.sin(th)
+        length = 1.15 + 2.25 * abs(math.sin(k * 2.7))
+        parent = f"v16_collar_outer_{(k * COLLAR_SEGS // FRAY_COUNT) % COLLAR_SEGS}"
+        bones.append(bone(
+            f"v16_fray_{k}", parent,
+            [cx, 22.45, cz], [4.0, 0.0, -16.0 + 7.0 * math.sin(k * 1.9)],
+            [cube16((cx - 0.27, 22.45 - length, cz),
+                    (0.54, length, 0.28),
+                    chunk(k % COLUMNS, 1), S("ash"), INFLATE[1])],
+        ))
+
+    # 7. YUGO: 5 piezas que conectan el collar con la espalda. Sin huecos:
+    #    cada caja se solapa 0.3 con la vecina y baja hasta la primera tira.
+    for j in range(YOKE_COUNT):
+        x = -4.6 + j * 2.3
+        bones.append(bone(
+            f"v16_yoke_{j}", "cape_top",
+            [x + 1.15, 22.6, 3.05], [3.0, 0.0, 3.0 * math.sin(j * 1.4)],
+            [cube16((x, 21.2, 2.75), (2.55, 2.75, 0.46),
+                    chunk(j % COLUMNS, 0), S("crease_light"), INFLATE[1])],
+        ))
+
+    # ------------------------------------------------------------------
+    # 8. SEGUNDA CAPA DE JIRONES: 9 columnas x 5 segmentos. Cada pieza
+    #    tiene 0.25..0.50 de espesor, su propio giro, su propio inflate y
+    #    su trozo de canvas. Hacia abajo se estrechan y algunas faltan:
+    #    la capa se desmorona en lugar de terminar en un rectángulo.
+    # ------------------------------------------------------------------
+    stream_cols = 13
+    stream_n = 6
+    cstep = (gx1 - gx0) / stream_cols
+    for col in range(stream_cols):
+        for k in range(stream_n):
+            r = math.sin(col * 2.7 + k * 3.9)
+            q = math.cos(col * 1.9 + k * 4.3)
+            x = gx0 + (col + 0.5) * cstep + 0.42 * r
+            y_top = 22.6 + 0.55 * q
+            # Longitudes MUY distintas: la capa se deshilacha en puntas.
+            y_end = 2.6 + 8.6 * (0.5 + 0.5 * math.sin(col * 1.3 + k * 2.1))
+            length = y_top - y_end
+            width = 0.46 + 0.34 * (0.5 + 0.5 * r)
+            thickness = 0.27 + 0.09 * ((col + k) % 3)
+            layer = k % 3
+            z = (2.86 + 0.30 * layer + 0.26 * q + INFLATE[layer])
+            parent = section_for_y(y_top - length * 0.5, gy0, gy1)
+            rot = [2.0 + 3.0 * abs(q), 5.0 * r,
+                   (4.0 + 7.0 * (k / stream_n)) * (1.0 if r >= 0 else -1.0)]
+            main_h = length * 0.76
+            cubes = [
+                cube16((x - width / 2.0, y_top - main_h, z),
+                       (width, main_h, thickness),
+                       chunk(col % COLUMNS, k, stream_n),
+                       S("ash" if (col + k) % 3 else "energy_vein"),
+                       INFLATE[layer]),
+                # Punta estrecha y desplazada: se lee como hilo que se rompe.
+                cube16((x - width * 0.28 + 0.16 * r, y_end, z + 0.03),
+                       (width * 0.55, main_h * 0.34, max(0.25, thickness * 0.8)),
+                       chunk((col + 2) % COLUMNS, min(k + 2, stream_n - 1), stream_n),
+                       S("crease_light"), INFLATE[1]),
+            ]
+            bones.append(bone(
+                f"v16_tatter_{col}_{k}", parent,
+                [x, y_top - length / 2.0, z + thickness / 2.0],
+                rot, cubes,
+            ))
+
+    # 9. JIRONES que se DESPRENDEN por los costados, girados hacia fuera.
+    for side, sx in (("L", -1.0), ("R", 1.0)):
+        for k in range(SHRED_PER_SIDE):
+            x = (gx0 - 0.35 - 0.55 * k) if sx < 0 else (gx1 - 0.55 + 0.35 * k)
+            y = 20.5 - k * 2.65
+            length = 2.6 + 0.7 * math.sin(k * 2.1)
+            z = 2.85 + 0.30 * math.sin(k * 1.3)
+            bones.append(bone(
+                f"v16_shred_{side}_{k}", "cape_mid",
+                [x, y, z], [6.0, sx * 12.0, sx * (16.0 + 5.0 * k)],
+                [cube16((x - 0.35, y - length, z),
+                        (0.70, length, 0.32),
+                        chunk(0 if sx < 0 else COLUMNS - 1, k, TATTER_SEGS),
+                        S("energy_vein"), INFLATE[2])],
+            ))
+
+    # 10. VENAS DE ENERGÍA: tiras finísimas en la cara SUR de los jirones.
+    seg_h = (gy1 - 5.0) / TATTER_SEGS
+    #     Usan la rampa rosa/magenta y un inflate de 0.01..0.05 para no
+    #     combatir en Z con la tela que hay debajo.
+    for i in range(VEIN_COUNT):
+        col = i % COLUMNS
+        seg = (i // COLUMNS) % TATTER_SEGS
+        norm = (col - 4.0) / 4.0
+        x = gx0 + (col + 0.5) * step + 0.22 * math.sin(i * 1.9)
+        y = gy1 - 2.0 - seg * seg_h
+        z = 3.42 + 0.10 * math.sin(i * 2.7)
+        parent = f"v16_tatter_{col}_{seg}"
+        bones.append(bone(
+            f"v16_vein_{i}", parent,
+            [x, y, z], [0.0, 0.0, 8.0 * math.sin(i * 2.1)],
+            [cube16((x - 0.07, y - seg_h * 0.78, z),
+                    (0.14, seg_h * 0.78, 0.07),
+                    S("energy_vein", w=2.0, h=8.0, dv=float(i % 6) * 6.0),
+                    S("energy_ramp", w=2.0, h=2.0, dv=float(i % 14)),
+                    INFLATE[2])],
+        ))
+
+    # ------------------------------------------------------------------
+    # 11. MICROVÓXELES: ceniza, chispas y partículas de deterioro.
+    #     1x1x1 px = 0.0625 unidades, 2x2x2 px = 0.125. El pivote queda
+    #     desplazado ~0.6: al girar el hueso en runtime la partícula se
+    #     mueve de verdad (sin partículas externas ni mixins).
+    # ------------------------------------------------------------------
+    for i in range(MOTE_COUNT):
+        r = (i * 37) % 100 / 100.0
+        q = (i * 61) % 100 / 100.0
+        s = 0.0625 if i % 3 else 0.125
+        if i < 30:                       # debajo de la capa
+            x = gx0 - 1.0 + r * (gx1 - gx0 + 2.0)
+            y = 2.6 + q * 7.4
+            z = 2.3 + r * 4.1
+            parent = "cape_bottom"
+        elif i < 46:                     # costados
+            side = -1.0 if i % 2 else 1.0
+            x = side * (6.0 + r * 2.3)
+            y = 8.0 + q * 14.0
+            z = 2.2 + r * 3.6
+            parent = "cape_mid"
+        else:                            # alrededor del collar
+            x = -6.2 + r * 12.4
+            y = 22.2 + q * 5.2
+            z = -2.4 + r * 7.6
+            parent = "chestplate"
+        uv = mote_uv(i)
+        bones.append(bone(
+            f"v16_mote_{i}", parent,
+            [x - 0.62, y + 0.62, z],
+            [12.0 * math.sin(i), 18.0 * math.cos(i * 0.7), 24.0 * math.sin(i * 1.3)],
+            [cube16((x, y, z), (s, s, s), uv, uv, INFLATE[2])],
+        ))
+
+    # 12. Fragmentos de ceniza mayores, oscuros, entre los jirones.
+    for i in range(ASH_COUNT):
+        x = gx0 + 0.8 + (i * 1.63) % (gx1 - gx0 - 1.6)
+        y = 6.0 + (i * 2.9) % 13.0
+        z = 3.3 + 0.5 * math.sin(i * 2.2)
+        s = 0.1875
+        bones.append(bone(
+            f"v16_ash_{i}", "cape_bottom",
+            [x - 0.5, y + 0.5, z], [0.0, 0.0, 45.0 * math.sin(i)],
+            [cube16((x, y, z), (s, s, s), S("ash"), S("ash"), INFLATE[0])],
+        ))
 
     geo["bones"] = bones
     desc = geo["description"]
-    desc["visible_bounds_width"] = 5.2
-    desc["visible_bounds_height"] = 5.2
+    desc["visible_bounds_width"] = 6.0
+    desc["visible_bounds_height"] = 5.6
     desc["visible_bounds_offset"] = [0, 0.5, 0]
 
-    # Garantía: los 72 huesos aprobados siguen byte-idénticos en JSON.
-    assert geo["bones"][:72] == original_bones
+    # ---- Garantías de integridad -------------------------------------
+    assert geo["bones"][:72] == original_bones, "los 72 huesos originales cambiaron"
     names = {b["name"] for b in bones}
     assert len(names) == len(bones), "nombres de hueso duplicados"
-    assert sum(1 for n in names if n.startswith("v15_cloth_")) == COLUMNS * len(SECTIONS)
-    assert sum(1 for n in names if n.startswith("v15_orbit_")) == 4
-    assert sum(1 for n in names if n.startswith("v15_ridge_")) == 9
-    assert sum(1 for n in names if n.startswith("v15_drape_")) == 2
-    assert sum(1 for n in names if n.startswith("v15_weight_")) == 5
-    assert sum(1 for n in names if n.startswith("v15_back_collar_")) == 3
-    assert sum(1 for n in names if n.startswith("v15_suspend_")) == 2
-    assert sum(1 for n in names if n.startswith("v15_pauldron_")) == 2
-    assert sum(1 for n in names if n.startswith("v15_front_")) == 13
-    assert sum(1 for n in names if n.startswith("v15_rear_pad_")) == 2
-    assert sum(1 for n in names if n.startswith("v15_slab_")) == 6
-    assert sum(1 for n in names if n.startswith("v15_chain3d_")) == 6
-    assert sum(1 for n in names if n.startswith("v15_stud_")) == 6
-    assert "v15_medallion" in names and "v15_gorget" in names
-    parents = set(names)
+    for prefix, expected in (
+            ("v15_cloth_", 27), ("v15_hem_", 9), ("v15_orbit_", 4),
+            ("v15_rear_pad_", 2), ("v16_collar_", 2 * COLLAR_SEGS),
+            ("v16_fray_", FRAY_COUNT), ("v16_yoke_", YOKE_COUNT),
+            ("v16_tatter_", 13 * 6),
+            ("v16_shred_", 2 * SHRED_PER_SIDE),
+            ("v16_vein_", VEIN_COUNT), ("v16_mote_", MOTE_COUNT),
+            ("v16_ash_", ASH_COUNT)):
+        assert sum(1 for n in names if n.startswith(prefix)) == expected, prefix
     for b in bones:
-        assert b.get("parent") is None or b["parent"] in parents, b["name"]
+        assert b.get("parent") is None or b["parent"] in names, b["name"]
+    # Sólo la piel nueva: los 72 huesos prístinos tienen grosores y UV
+    # heredados que NO deben tocarse ni validarse con las reglas nuevas.
+    for b in bones[72:]:
+        for c in b.get("cubes", []):
+            for f in c["uv"].values():
+                assert_opaque(f)
+            assert 0.0 < c["inflate"] <= 0.05, c["inflate"]
+    thick = [c["size"][2] for b in bones[72:]
+             for c in b["cubes"]
+             if b["name"].startswith(("v15_cloth_", "v16_tatter_", "v16_shred_",
+                                      "v16_fray_", "v15_hem_"))]
+    assert all(0.25 <= t <= 0.50 for t in thick), (min(thick), max(thick))
     return data
 
 
@@ -606,7 +488,12 @@ def main() -> None:
     OUT.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
     geo = data["minecraft:geometry"][0]
     cubes = sum(len(b.get("cubes", [])) for b in geo["bones"])
+    new = [b for b in geo["bones"][72:]]
     print(f"wrote {OUT.relative_to(ROOT)}: {len(geo['bones'])} bones, {cubes} cubes")
+    print(f"  collar {sum(1 for b in new if b['name'].startswith('v16_collar_'))}"
+          f" | jirones {sum(1 for b in new if b['name'].startswith('v16_tatter_'))}"
+          f" | microvoxeles {sum(1 for b in new if b['name'].startswith('v16_mote_'))}"
+          f" | venas {sum(1 for b in new if b['name'].startswith('v16_vein_'))}")
 
 
 if __name__ == "__main__":

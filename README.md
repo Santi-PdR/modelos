@@ -1,108 +1,130 @@
-# Mantle of the Blight Star — v1.12.0
+# Mantle of the Blight Star — v1.14.0 (trabajo local, SIN PUBLICAR)
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
-Añade el **Mantle of the Blight Star**: geometría propia, cinco animaciones
-(cuatro de armadura + `animation.item`), textura de 128×128 con glowmask
-pulsante, **bulto 3D plegado animado**, un **icono pixel art 2D/RPG de silueta
-propia**, tela tejida con bordado, **dos tipos de aura muda** y compatibilidad opcional con
-el slot **`back` de Curios API 5.14.1+1.20.1**.
+Añade el **Mantle of the Blight Star**. Esta revisión rehace por completo la
+capa equipada bajo la temática **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-El nombre visible está **en inglés** en `en_us.json` y `es_es.json`; el lore sí
-está traducido. El ID interno sigue siendo
-`capatest:capa_deteriorer_evilsaiyan` para no romper mundos, comandos ni el tag
-de Curios.
+> ⚠️ **Estado:** trabajo local para revisar en el visor antes de compilar.
+> No hay commit, build, CI ni Release nuevo. Última versión publicada:
+> `v1.12.0` (rechazada por el usuario).
+
+## Ver el modelo ANTES de compilar
+
+- **Visor AUTOCONTENIDO (recomendado)**:
+  [`docs/capa_v1140_visor.html`](docs/capa_v1140_visor.html). Es un único
+  `.html` con la geometría, el atlas, los iconos, los GIFs y el `.bbmodel`
+  incrustados como data URLs: se abre con doble clic, sin servidor, sin red y
+  sin token. Se genera con `python3 tools/build_standalone_preview.py`.
+  El sandbox tiene `allowPublicTraffic=false`, así que una URL cruda
+  `https://8000-*.e2b.app` abierta fuera del *Live Preview* de Arena devuelve
+  **403 MISSING TRAFFIC ACCESS TOKEN**: la plataforma sólo inyecta la cabecera
+  `e2b-traffic-access-token` en su propio panel de preview. Para el visor en
+  vivo, usar la pestaña **Live Preview** (puerto 8000), no el link en crudo.
+- **Proyecto Blockbench**: [`docs/capa_v1140.bbmodel`](docs/capa_v1140.bbmodel)
+  (jerarquía de huesos, rotación del hueso en el grupo y la del cubo en el
+  elemento, UV por cara, `inflate`, atlas incrustado y un grupo
+  `PLAYER · Steve/Alex (referencia)` para juzgar el ajuste del cuello).
+  Se genera con `python3 tools/bbmodel_export.py`. Como el formato `bedrock`
+  de Blockbench es de textura única, el atlas va en una imagen 128×144: las
+  128 primeras filas son el atlas del mod (byte-idéntico) y las 16 últimas un
+  parche sólido exclusivo del maniquí. También se puede descargar desde el
+  visor autocontenido (enlace con `download=`), sin depender del proxy del
+  sandbox ni de su token.
+- **Previews**: [`docs/capa_v1140_preview.png`](docs/capa_v1140_preview.png),
+  [`docs/capa_v1140_side_relief.png`](docs/capa_v1140_side_relief.png),
+  [`docs/capa_v1140_icon_compare.png`](docs/capa_v1140_icon_compare.png).
+  Son render software, no capturas in-game.
 
 ## Descarga directa del `.jar`
 
-**https://github.com/Santi-PdR/modelos/releases/download/v1.12.0/capatest-1.12.0.jar**
-
-El CI publica el mod como **Release asset `.jar` crudo**, no como ZIP de
-`actions/upload-artifact`. El repositorio es privado: hay que iniciar sesión en
-GitHub con la cuenta `Santi-PdR` para descargarlo. Cada push a la rama
-actualiza el mismo asset de `v1.12.0` con `--clobber`; el tag queda fijo.
-Las entregas anteriores siguen disponibles en `v1.11.0`, `v1.10.0`, `v1.9.0`, `v1.8.0`,
-`v1.7.0`, `v1.6.1`, `v1.6.0`, `v1.5.1`, `v1.4.0` y `v1.3.0`. **Usar v1.12.0**:
-v1.6.0 crashea al cargar el geo plegado y v1.5.0 tiene el crash de rotación.
+**Pendiente de publicación.** Cuando se apruebe, el CI publicará
+`capatest-1.14.0.jar` crudo (nunca ZIP de `actions/upload-artifact`).
+La última Release existente sigue siendo
+https://github.com/Santi-PdR/modelos/releases/download/v1.12.0/capatest-1.12.0.jar
 
 > PR #1 sigue abierta: https://github.com/Santi-PdR/modelos/pull/1
 
-## v1.12.0 — VOLUMEN 3D REAL e icono rediseñado
+## v1.14.0 — Deterioro / Evil Saiyan Rosé
 
-Dijiste: *«No me gustó el icono y la capa sigue estando fea, tiene que ser 3d
-con detalles como ejemplo hombreras o otras cosas en la capa y relieve y más»*.
-v1.11.0 había cambiado **sólo el icono**: la capa equipada seguía siendo un
-póster plano colgado de la espalda. Esta versión ataca la causa raíz, que
-estaba en la **geometría**, no en los colores.
+Petición: *«revisa y corrige a fondo el modelo (.bbmodel / JSON), rehaz su
+textura y geometría para elevar masivamente su calidad visual y añade efectos
+dinámicos bajo Deterioro (Shigaraki) y Evil Saiyan (Rosé). Usa la foto de
+Blockbench como guía de volumen de jirones, partículas y energía»*.
+El icono aprobado de v1.13.0 se **conserva en forma y estilo** y se adapta a
+la nueva capa.
 
-### Diagnóstico: por qué se veía plana
+### 1. Integración en el jugador y collar de alta calidad
 
-| | v1.11.0 (rechazada) | v1.12.0 |
+- **Collar / bufanda voluminoso**: dos anillos de **14 segmentos** cada uno
+  alrededor de cuello y hombros (radio exterior 5.0×2.9, interior 4.0×2.3),
+  con **solape real** entre segmentos (ancho 2.35 > paso del arco) y borde
+  superior dentado por altura alterna. Nada de piezas flotantes.
+- **20 flecos deshilachados** cuelgan de todo el contorno, delante y detrás.
+- Un **yugo de 5 piezas** une el collar con la espalda y dos **hombreras
+  envolventes** (`v15_rear_pad_*`) van de `Z=-1.35` a `Z=+3.75`, abrazando el
+  hombro de delante a atrás.
+- El `.bbmodel` incluye un maniquí Steve/Alex; el visor web lo activa por
+  defecto para comprobar que el collar rodea el cuello y no lo atraviesa.
+
+### 2. Geometría tridimensional de jirones complejos
+
+| | v1.12.0 (rechazada) | **v1.14.0** |
 |---|---|---|
-| Grosor de cada panel de tela | `0.10` px → lámina | **`0.85` px → bloque** |
-| Relieve de la onda `FOLDS=3` | `0.085` px | **`0.28` px** |
-| Nervios, crestas, gemas | `panel_z + 0.03`, **dentro** del panel | `face_z()`, **delante** de la cara SUR |
-| Hombreras | `2.0×1.4×0.42` en `Z < 0` (frente del jugador) | **traseras**, `3.6×1.95×2.05`, visibles en F5 |
-| Huesos / cubos | 171 / 234 | **193 / 281** |
+| Superficie | lámina rectangular continua de 0.85 | **27 láminas base + 78 jirones largos** |
+| Capas | 1 | **3 capas** con `inflate` `0.01 / 0.03 / 0.05` |
+| Espesor de las tiras | 0.85 (bloque) | **0.25 – 0.50** |
+| Borde inferior | festón regular | **puntas de longitud aleatoria** que se desmoronan |
+| Huesos / cubos | 193 / 281 | **339 / 484** |
 
-Además, las 13 piezas del `ARNESFRONTAL` estaban en `Z ≈ -2.5` mientras la
-tela vivía en `Z ≈ +2.6…+3.0`: desde la espalda sencillamente **no existían**.
-La vista de perfil era casi una línea y las capturas in-game mostraban una
-lámina con el medallón pintado.
+Todos los cubos nuevos llevan el campo `inflate` (estándar Bedrock, lo lee
+Blockbench) **y** un desplazamiento explícito en Z de 0.01–0.05, así que no
+hay Z-fighting aunque GeckoLib ignore `inflate`. Cada jirón tiene cuerpo +
+punta estrecha desplazada, y 12 tiras se desprenden giradas por los costados.
+`visible_bounds` → `6.0 / 5.6`.
 
-### Qué se añade
+### 3. Efectos de energía y desintegración
 
-- **Paño con cuerpo**: 27 bloques de `0.85` de grosor con relieve compartido
-  por la onda 2D (sombreado) y 3D (geometría); crestas, valles, ribetes y
-  cortinas laterales ahora sobresalen de la cara visible.
-- **Hombreras traseras sólidas**: dos placas con cresta dorada, gema cian y
-  faldón, más un **cuello trasero levantado** de tres piezas.
-- **Detalles en relieve**: 6 placas escalonadas en los bordes del manto,
-  6 eslabones de cadena 3D, 6 remaches, un **medallón** con marco + gema +
-  núcleo y un **gorget** alto con cierre.
-- **Sombreado de cantos**: las zonas reservadas `crease_*` / `lining` / `rim`
-  del atlas se aclaran. Con `0.85` de grosor son muy visibles y antes parecían
-  barrotes negros. Se conserva **violeta + oro + cian**: el problema era la
-  falta de volumen, no la paleta.
-- `visible_bounds_width/height` pasan de `4.5/4.8` a **`5.2/5.2`** para que
-  el culling no recorte las hombreras.
+- **56 microvóxeles** de `1×1×1` / `2×2×2` px (`0.0625` / `0.125` unidades),
+  8 fragmentos de ceniza, 18 **venas** finas y 4 núcleos orbitales. Cada
+  microvóxel es un hueso con **pivote desplazado 0.6**: al girarlo en runtime
+  la partícula se desplaza de verdad, sin partículas externas ni mixins.
+- Se concentran **abajo, en los costados y alrededor del collar**, como en la
+  referencia de Blockbench.
+- Rampa de textura **rosa → magenta → violeta-negro** para las partículas y
+  los bordes iluminados; venas y grietas con núcleo rosa encendido.
 
-La vista [`docs/capa_v1120_side_relief.png`](docs/capa_v1120_side_relief.png)
-ya no es una línea: muestra el paño grueso y las hombreras. En
-[`docs/capa_v1120_preview.png`](docs/capa_v1120_preview.png) la última vista es
-**«HOMBRERAS 3D - espalda 3/4»**, en lugar del arnés aislado que parecía un
-montón de piezas sueltas flotando.
+### 4. Textura avanzada: Rosé y oscuridad
 
-### Icono: pixel art 2D rediseñado
+Canvas continuo 96×48 rehecho: **carmesí muy oscuro → violeta-negro**, parches
+de **morado desvaído** y **gris ceniza**, trama de sarga, agujeros rasgados y
+**grietas de energía a trozos** (halo magenta, núcleo `#FF7AC8`, nodos y
+ramificaciones diagonales). El glowmask mantiene **exactamente 1636 texels
+emisivos**, pero se **redistribuyen** a las grietas y a la rampa de partículas:
+no crece (no abre huecos) y ahora la energía brilla de verdad. Alfa base
+prístino, UV ≤ 128.
 
-El `ICON_PIXEL_MAP` de v1.11.0 (un rectángulo a franjas) se sustituye por un
-dibujo **nuevo** de 16×16:
+### 5. Flujo dinámico
 
-- **dos hombreras dibujadas** con ribete de oro y gemas cian que sobresalen
-  del cuello, separadas del manto por un escalón;
-- **manto trapezoidal** con **tres pliegues anchos** (franjas de 2–3 px, no
-  alternancia de 1 px que parecía un código de barras);
-- **broche diamante** de 5 píxeles en la garganta, bordado dorado en los
-  bordes, vetas frías, **estrella de Blight Star** y **festón de tres puntas**
-  que cuelga del dobladillo.
+`CapaArmorModel` resuelve 225 huesos `v16_*` por nombre y les da fases
+independientes: respiración del collar, ondeo de jirones con retardo por
+segmento, pulso de venas y deriva de microvóxeles que responde a correr,
+saltar y girar. Todo en **grados → `Math.toRadians`**, con `BoneSnapshot`,
+fail-safe y restauración de la pose estática. Cero mixins.
 
-Técnica intacta y aprobada: paleta plana de 9 tonos opacos + transparente,
-contorno duro, **cero antialiasing / degradado / bloom / bisel**, ampliado 4×
-con `Image.NEAREST`. El CI **decodifica el PNG real** (stdlib puro) y verifica
-la máscara alfa 16×16: dos picos arriba con V abierta, tres puntas abajo,
-centro opaco, coincidencia exacta con `ICON_PIXEL_MAP` y que **no** es la
-forma de v1.10.0 ni la de v1.11.0.
+### 6. Icono actualizado
 
-Comparativas: [`docs/capa_v1120_icon_compare.png`](docs/capa_v1120_icon_compare.png)
-y [`docs/capa_v1120_silhouette_compare.png`](docs/capa_v1120_silhouette_compare.png).
-Icono final: [`docs/capa_v1120_icon.png`](docs/capa_v1120_icon.png).
+Se conserva la silueta 16×16 y la técnica **plana/duro/`NEAREST`** que aprobaste
+(sin degradados, AA ni bloom). Cambia la paleta a la capa nueva, añade grietas
+de energía, dobladillo de **5 puntas** deshilachadas y **4 microvóxeles**
+flotando. El CI decodifica el PNG real y comprueba la coincidencia con
+`ICON_PIXEL_MAP`.
 
 ### Se conserva íntegro
 
 ID `capatest:capa_deteriorer_evilsaiyan`, nombre/lore, tag Curios `back`,
-canvas continuo 9×3 de 96×48, `FOLDS=3` con onda compartida, 61 huesos boxy
-ocultos, **1636 texels emisivos** y alfa base prístinos, glowmask sin ampliar,
-`animation.item` (36 huesos / 5 animaciones), aura muda, fail-safes, radianes,
-raíz sin `parent`, cero `JsonNull`, cero mixins y UV ≤ 128.
+canvas 96×48, `FOLDS=3`, los **72 huesos originales byte-idénticos**, 61
+detalles boxy ocultos, 1636 emisivos, alfa base, `animation.item`, aura muda,
+radianes, fail-safes, raíz sin `parent`, 0 `JsonNull`, 0 mixins y UV ≤ 128.
 
 ## v1.11.0 (histórico, rechazada) — el icono tenía su PROPIA FORMA
 

@@ -87,6 +87,15 @@ UV = {
     # Zonas ya emisivas / de armadura del atlas aprobado.
     "bright": {"uv": [69.0, 109.0], "uv_size": [6.0, 18.0]},
     "yoke": {"uv": [57.0, 76.0], "uv_size": [14.0, 17.0]},
+
+    # v1.14.0 Deterioro / Evil Saiyan Rosé. Siguen siendo rectángulos 100%
+    # opacos del atlas prístino, así que el alfa base NO cambia. Lo que se
+    # repinta es el RGB: rampa de energía rosa -> magenta -> violeta-negro
+    # para los microvóxeles, vena brillante para los bordes, y gris ceniza
+    # para los cantos de los jirones.
+    "energy_ramp": {"uv": [69.0, 109.0], "uv_size": [6.0, 18.0]},
+    "energy_vein": {"uv": [122.0, 0.0], "uv_size": [2.0, 48.0]},
+    "ash": {"uv": [105.0, 0.0], "uv_size": [2.0, 48.0]},
 }
 
 # Rectángulos (x0, y0, x1, y1) donde el PNG prístino tiene alfa=255 en TODOS

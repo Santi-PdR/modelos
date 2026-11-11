@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Modelo de la capa equipada v1.8.0.
+ * Modelo de la capa equipada v1.14.0 (Deterioro / Evil Saiyan Rosé).
  *
  * <p>La capa es un mosaico 9×3 sobre UN rectángulo global: las 27 caras
  * comparten escala y el canvas 96×48 se lee como una sola ilustración. En
@@ -113,6 +113,8 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     private GeoBone[] orbitShards;
     private GeoBone[] pauldrons;
     private GeoBone[] frontChains;
+    /** v1.13.0: hombreras TRASERAS animadas (las que se ven en F5). */
+    private GeoBone[] rearPads;
     private float[] baseX;
     private float[] baseY;
     private float[] baseZ;
@@ -120,7 +122,11 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     private float[] orbitBaseZ;
     private float[] pauldronBaseZ;
     private float[] frontChainBaseZ;
+    private float[] rearPadBaseX;
     private boolean clothReady;
+    /** v1.14.0: collar, jirones, venas y microvóxeles de la piel nueva. */
+    private GeoBone[] deterioroBones;
+    private float[][] deterioroBase;
     /** Fail-safe cosmético: tras un error inesperado no se vuelve a intentar. */
     private boolean disabled;
 
@@ -225,12 +231,26 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             foundChainZ[i] = snapshot == null ? bone.getRotZ() : snapshot.getRotZ();
         }
 
+        // v1.13.0: las hombreras traseras se resuelven aparte para darles
+        // su propio vaiven; no heredan la onda de los paneles de tela.
+        GeoBone[] foundRear = new GeoBone[PAULDRONS];
+        float[] foundRearBaseX = new float[PAULDRONS];
+        for (int i = 0; i < PAULDRONS; i++) {
+            GeoBone bone = getBone("v15_rear_pad_" + (i == 0 ? "L" : "R")).orElse(null);
+            if (bone == null)
+                continue;
+            foundRear[i] = bone;
+            BoneSnapshot snap = bone.getInitialSnapshot();
+            foundRearBaseX[i] = snap == null ? bone.getRotX() : snap.getRotX();
+        }
+
         cachedRoot = root;
         panels = foundPanels;
         hems = foundHems;
         orbitShards = foundOrbit;
         pauldrons = foundPauldrons;
         frontChains = foundChains;
+        rearPads = foundRear;
         baseX = foundX;
         baseY = foundY;
         baseZ = foundZ;
@@ -238,7 +258,9 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         orbitBaseZ = foundOrbitZ;
         pauldronBaseZ = foundPauldronZ;
         frontChainBaseZ = foundChainZ;
+        rearPadBaseX = foundRearBaseX;
         clothReady = resolved > 0;
+        resolveDeterioro();
         hideOriginalSlabs();
     }
 
@@ -373,6 +395,24 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
                     + Math.sin(time * 1.7D + i * 1.9D + wind * 0.2D) * 0.45D;
             pad.setRotZ(pauldronBaseZ[i] + (float) Math.toRadians(padDeg));
         }
+        // v1.13.0: ANIMACION de las hombreras traseras. RotX con retardo
+        // por lado + un pequeno giro en Z con el giro del cuerpo. Todo en
+        // grados convertido a radianes, como el resto del modelo.
+        if (rearPads != null) {
+            for (int i = 0; i < rearPads.length; i++) {
+                GeoBone pad = rearPads[i];
+                if (pad == null)
+                    continue;
+                double phase = time * (2.6D + speed * 2.0D) + i * 1.7D + wind * 0.4D;
+                double liftDeg = Math.sin(phase) * (0.8D + speed * 2.2D
+                        + airborne * 1.6D + sprint * 1.1D);
+                double tiltDeg = turn * 1.6D + Math.sin(phase * 0.7D) * 0.6D;
+                pad.setRotX(rearPadBaseX[i] + (float) Math.toRadians(
+                        Mth.clamp(liftDeg, -6.0D, 6.0D)));
+                pad.setRotZ((float) Math.toRadians(
+                        Mth.clamp(tiltDeg, -4.0D, 4.0D)));
+            }
+        }
         for (int i = 0; i < FRONT_CHAINS; i++) {
             GeoBone chain = frontChains[i];
             if (chain == null)
@@ -381,47 +421,209 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
                     * (0.6D + speed * 1.0D + sprint * 0.5D);
             chain.setRotZ(frontChainBaseZ[i] + (float) Math.toRadians(chainDeg));
         }
+
+        animateDeterioro(time, speed, lift, turn, airborne, sprint, wind, seed, amplitude);
     }
 
     /** Si la animación cosmética falla, devolvemos la pose original del geo. */
     private void restoreBasePose() {
-        if (panels == null)
+        if (panels == null && deterioroBones == null)
             return;
         try {
-            for (int i = 0; i < panels.length; i++) {
-                GeoBone panel = panels[i];
-                if (panel == null)
-                    continue;
-                panel.setRotX(baseX[i]);
-                panel.setRotY(baseY[i]);
-                panel.setRotZ(baseZ[i]);
+            restoreDeterioro();
+            // v1.14.0: deterioroBones puede estar resuelto antes de que
+            // panels exista; sin este guardia panels.length lanzaba NPE
+            // justo en el fail-safe (dentro de un catch silencioso).
+            if (panels != null && baseX != null && baseY != null && baseZ != null) {
+                for (int i = 0; i < panels.length; i++) {
+                    GeoBone panel = panels[i];
+                    if (panel == null)
+                        continue;
+                    panel.setRotX(baseX[i]);
+                    panel.setRotY(baseY[i]);
+                    panel.setRotZ(baseZ[i]);
+                }
             }
-            if (hems != null) {
+            if (hems != null && hemBaseZ != null) {
                 for (int i = 0; i < hems.length; i++) {
                     if (hems[i] != null)
                         hems[i].setRotZ(hemBaseZ[i]);
                 }
             }
-            if (orbitShards != null) {
+            if (orbitShards != null && orbitBaseZ != null) {
                 for (int i = 0; i < orbitShards.length; i++) {
                     if (orbitShards[i] != null)
                         orbitShards[i].setRotZ(orbitBaseZ[i]);
                 }
             }
-            if (pauldrons != null) {
+            if (pauldrons != null && pauldronBaseZ != null) {
                 for (int i = 0; i < pauldrons.length; i++) {
                     if (pauldrons[i] != null)
                         pauldrons[i].setRotZ(pauldronBaseZ[i]);
                 }
             }
-            if (frontChains != null) {
+            if (frontChains != null && frontChainBaseZ != null) {
                 for (int i = 0; i < frontChains.length; i++) {
                     if (frontChains[i] != null)
                         frontChains[i].setRotZ(frontChainBaseZ[i]);
                 }
             }
+            if (rearPads != null && rearPadBaseX != null) {
+                for (int i = 0; i < rearPads.length; i++) {
+                    if (rearPads[i] != null) {
+                        rearPads[i].setRotX(rearPadBaseX[i]);
+                        rearPads[i].setRotZ(0.0F);
+                    }
+                }
+            }
         } catch (Exception ignored) {
             // La pose estática del geo sigue siendo válida sin este rescate.
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // v1.14.0 — DETERIORO / EVIL SAIYAN ROSÉ
+    // ------------------------------------------------------------------
+    /** Nombres generados por tools/armor_model_pipeline.py. Si cambias el
+     *  geo, regenera esta lista; el resolvedor nunca inventa nombres y
+     *  getBone() falla de forma silenciosa (null) si el modelo no está. */
+    private static final String[] DETERIORO_NAMES = {
+            "v16_collar_outer_0", "v16_collar_outer_1", "v16_collar_outer_2", "v16_collar_outer_3",
+            "v16_collar_outer_4", "v16_collar_outer_5", "v16_collar_outer_6", "v16_collar_outer_7",
+            "v16_collar_outer_8", "v16_collar_outer_9", "v16_collar_outer_10", "v16_collar_outer_11",
+            "v16_collar_outer_12", "v16_collar_outer_13", "v16_collar_inner_0", "v16_collar_inner_1",
+            "v16_collar_inner_2", "v16_collar_inner_3", "v16_collar_inner_4", "v16_collar_inner_5",
+            "v16_collar_inner_6", "v16_collar_inner_7", "v16_collar_inner_8", "v16_collar_inner_9",
+            "v16_collar_inner_10", "v16_collar_inner_11", "v16_collar_inner_12", "v16_collar_inner_13",
+            "v16_fray_0", "v16_fray_1", "v16_fray_2", "v16_fray_3",
+            "v16_fray_4", "v16_fray_5", "v16_fray_6", "v16_fray_7",
+            "v16_fray_8", "v16_fray_9", "v16_fray_10", "v16_fray_11",
+            "v16_fray_12", "v16_fray_13", "v16_fray_14", "v16_fray_15",
+            "v16_fray_16", "v16_fray_17", "v16_fray_18", "v16_fray_19",
+            "v16_yoke_0", "v16_yoke_1", "v16_yoke_2", "v16_yoke_3",
+            "v16_yoke_4", "v16_tatter_0_0", "v16_tatter_0_1", "v16_tatter_0_2",
+            "v16_tatter_0_3", "v16_tatter_0_4", "v16_tatter_0_5", "v16_tatter_1_0",
+            "v16_tatter_1_1", "v16_tatter_1_2", "v16_tatter_1_3", "v16_tatter_1_4",
+            "v16_tatter_1_5", "v16_tatter_2_0", "v16_tatter_2_1", "v16_tatter_2_2",
+            "v16_tatter_2_3", "v16_tatter_2_4", "v16_tatter_2_5", "v16_tatter_3_0",
+            "v16_tatter_3_1", "v16_tatter_3_2", "v16_tatter_3_3", "v16_tatter_3_4",
+            "v16_tatter_3_5", "v16_tatter_4_0", "v16_tatter_4_1", "v16_tatter_4_2",
+            "v16_tatter_4_3", "v16_tatter_4_4", "v16_tatter_4_5", "v16_tatter_5_0",
+            "v16_tatter_5_1", "v16_tatter_5_2", "v16_tatter_5_3", "v16_tatter_5_4",
+            "v16_tatter_5_5", "v16_tatter_6_0", "v16_tatter_6_1", "v16_tatter_6_2",
+            "v16_tatter_6_3", "v16_tatter_6_4", "v16_tatter_6_5", "v16_tatter_7_0",
+            "v16_tatter_7_1", "v16_tatter_7_2", "v16_tatter_7_3", "v16_tatter_7_4",
+            "v16_tatter_7_5", "v16_tatter_8_0", "v16_tatter_8_1", "v16_tatter_8_2",
+            "v16_tatter_8_3", "v16_tatter_8_4", "v16_tatter_8_5", "v16_tatter_9_0",
+            "v16_tatter_9_1", "v16_tatter_9_2", "v16_tatter_9_3", "v16_tatter_9_4",
+            "v16_tatter_9_5", "v16_tatter_10_0", "v16_tatter_10_1", "v16_tatter_10_2",
+            "v16_tatter_10_3", "v16_tatter_10_4", "v16_tatter_10_5", "v16_tatter_11_0",
+            "v16_tatter_11_1", "v16_tatter_11_2", "v16_tatter_11_3", "v16_tatter_11_4",
+            "v16_tatter_11_5", "v16_tatter_12_0", "v16_tatter_12_1", "v16_tatter_12_2",
+            "v16_tatter_12_3", "v16_tatter_12_4", "v16_tatter_12_5", "v16_shred_L_0",
+            "v16_shred_L_1", "v16_shred_L_2", "v16_shred_L_3", "v16_shred_L_4",
+            "v16_shred_L_5", "v16_shred_R_0", "v16_shred_R_1", "v16_shred_R_2",
+            "v16_shred_R_3", "v16_shred_R_4", "v16_shred_R_5", "v16_vein_0",
+            "v16_vein_1", "v16_vein_2", "v16_vein_3", "v16_vein_4",
+            "v16_vein_5", "v16_vein_6", "v16_vein_7", "v16_vein_8",
+            "v16_vein_9", "v16_vein_10", "v16_vein_11", "v16_vein_12",
+            "v16_vein_13", "v16_vein_14", "v16_vein_15", "v16_vein_16",
+            "v16_vein_17", "v16_mote_0", "v16_mote_1", "v16_mote_2",
+            "v16_mote_3", "v16_mote_4", "v16_mote_5", "v16_mote_6",
+            "v16_mote_7", "v16_mote_8", "v16_mote_9", "v16_mote_10",
+            "v16_mote_11", "v16_mote_12", "v16_mote_13", "v16_mote_14",
+            "v16_mote_15", "v16_mote_16", "v16_mote_17", "v16_mote_18",
+            "v16_mote_19", "v16_mote_20", "v16_mote_21", "v16_mote_22",
+            "v16_mote_23", "v16_mote_24", "v16_mote_25", "v16_mote_26",
+            "v16_mote_27", "v16_mote_28", "v16_mote_29", "v16_mote_30",
+            "v16_mote_31", "v16_mote_32", "v16_mote_33", "v16_mote_34",
+            "v16_mote_35", "v16_mote_36", "v16_mote_37", "v16_mote_38",
+            "v16_mote_39", "v16_mote_40", "v16_mote_41", "v16_mote_42",
+            "v16_mote_43", "v16_mote_44", "v16_mote_45", "v16_mote_46",
+            "v16_mote_47", "v16_mote_48", "v16_mote_49", "v16_mote_50",
+            "v16_mote_51", "v16_mote_52", "v16_mote_53", "v16_mote_54",
+            "v16_mote_55", "v16_ash_0", "v16_ash_1", "v16_ash_2",
+            "v16_ash_3", "v16_ash_4", "v16_ash_5", "v16_ash_6",
+            "v16_ash_7"
+    };
+
+    private void resolveDeterioro() {
+        deterioroBones = new GeoBone[DETERIORO_NAMES.length];
+        deterioroBase = new float[DETERIORO_NAMES.length][3];
+        for (int i = 0; i < DETERIORO_NAMES.length; i++) {
+            GeoBone bone = getBone(DETERIORO_NAMES[i]).orElse(null);
+            if (bone == null)
+                continue;
+            deterioroBones[i] = bone;
+            BoneSnapshot snap = bone.getInitialSnapshot();
+            deterioroBase[i][0] = snap == null ? bone.getRotX() : snap.getRotX();
+            deterioroBase[i][1] = snap == null ? bone.getRotY() : snap.getRotY();
+            deterioroBase[i][2] = snap == null ? bone.getRotZ() : snap.getRotZ();
+        }
+    }
+
+    /** Flujo dinámico de la tela destrozada + deriva de las partículas.
+     *  Todo en GRADOS convertido con Math.toRadians. Los microvóxeles
+     *  tienen el pivote desplazado 0.6, así que al girar el hueso la
+     *  partícula se DESPLAZA de verdad, sin mixins ni partículas externas. */
+    private void animateDeterioro(double time, double speed, double lift,
+                                  double turn, double airborne, double sprint,
+                                  double wind, double seed, double amplitude) {
+        if (deterioroBones == null)
+            return;
+        for (int i = 0; i < deterioroBones.length; i++) {
+            GeoBone b = deterioroBones[i];
+            if (b == null)
+                continue;
+            String n = DETERIORO_NAMES[i];
+            double phase = time * 2.4D + i * 0.37D + wind * 0.6D;
+            if (n.startsWith("v16_mote_") || n.startsWith("v16_ash_")) {
+                double fall = Math.sin(phase * 1.7D + seed * 0.03D);
+                double drift = Math.cos(phase * 0.9D + i);
+                double amp = 7.0D + speed * 9.0D + airborne * 5.0D + sprint * 4.0D;
+                b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
+                        Mth.clamp(fall * amp, -18.0D, 18.0D)));
+                b.setRotY(deterioroBase[i][1] + (float) Math.toRadians(
+                        Mth.clamp(drift * amp * 0.70D, -14.0D, 14.0D)));
+                b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
+                        Mth.clamp(Math.sin(phase) * amp * 0.50D, -12.0D, 12.0D)));
+            } else if (n.startsWith("v16_collar_") || n.startsWith("v16_yoke_")) {
+                double breathe = Math.sin(phase * 0.8D) * (1.2D + sprint * 1.0D);
+                b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
+                        Mth.clamp(breathe + lift * 2.0D, -4.0D, 4.0D)));
+                b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
+                        Mth.clamp(turn * 1.2D, -3.0D, 3.0D)));
+            } else if (n.startsWith("v16_vein_")) {
+                double pulse = Math.sin(phase * 3.1D) * (0.8D + sprint * 1.2D);
+                b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
+                        Mth.clamp(pulse * 2.0D, -5.0D, 5.0D)));
+            } else {
+                double seg = (i % 5) / 5.0D;
+                double wave = Math.sin(phase - seg * 1.8D);
+                double bend = amplitude * (0.35D + 0.65D * seg) * (0.40D + 0.60D * wave);
+                double sway = (turn * 2.2D + wind * 0.8D
+                        + Math.sin(phase * 0.7D + i) * 1.1D) * (0.30D + speed * 0.70D);
+                double curl = Math.sin(phase * 0.6D + i) * 3.0D + turn * 1.5D;
+                b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
+                        Mth.clamp(bend, -14.0D, 14.0D)));
+                b.setRotY(deterioroBase[i][1] + (float) Math.toRadians(
+                        Mth.clamp(sway, -9.0D, 9.0D)));
+                b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
+                        Mth.clamp(curl, -8.0D, 8.0D)));
+            }
+        }
+    }
+
+    private void restoreDeterioro() {
+        if (deterioroBones == null)
+            return;
+        for (int i = 0; i < deterioroBones.length; i++) {
+            GeoBone b = deterioroBones[i];
+            if (b == null)
+                continue;
+            b.setRotX(deterioroBase[i][0]);
+            b.setRotY(deterioroBase[i][1]);
+            b.setRotZ(deterioroBase[i][2]);
         }
     }
 }
