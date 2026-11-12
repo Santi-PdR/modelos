@@ -9,6 +9,14 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.20.0: EL .BBMODEL TAMBIEN CAMBIA DE VERSION. El exportador lee
+mod_version y escribe docs/CAPA_v1.20.0.bbmodel, con `name` interno
+capa_deteriorer_evilsaiyan_v1_20_0 y asset de Release del mismo nombre.
+Forma contra la captura: alas exteriores diagonalizadas que mueren a
+t~0.66-0.80, solo los jirones centrales llegan al suelo (V real),
+jirones un 16% mas finos para dejar huecos negros, y bufanda en cuenco
+sin cuernos. Silueta medida 1.10x, fidelidad de atlas 1.239.
+
 v1.19.0: SIN PIEZAS VOLANDO + ANIMACIONES REHECHAS. Se eliminan del
 modelo las motas/ceniza 3D, el yugo y las anclas visibles; el reverso
 de la bufanda se integra al pano. Las particulas se generan en runtime

@@ -234,10 +234,19 @@ jobs:
           # los jirones interiores vuelven a cerrarse en el dobladillo.
           assert abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_0_seg3'))) > \
                  abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_7_seg3')))
-          # v1.18.0: el abanico RADIAL abre hasta t~0.72 y CIERRA en el
-          # ultimo tramo. Se compara con el MAXIMO (seg5), no con seg3.
-          assert abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_3_seg6'))) < \
-                 abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_3_seg5')))
+          # v1.20.0: la V de la CAPTURA se mide por ALTURA, no por un
+          # jiron suelto. Las alas exteriores terminan ~6 unidades mas
+          # ARRIBA que los jirones centrales; antes las 16 llegaban al
+          # suelo y la capa era una falda.
+          def _y(b): return b['cubes'][0]['origin'][1]
+          def _bn(name): return next(b for b in ribbons if b['name'] == name)
+          assert _y(_bn('v17_ribbon_0_seg6')) > _y(_bn('v17_ribbon_7_seg6')) + 3.0
+          assert _y(_bn('v17_ribbon_15_seg6')) > _y(_bn('v17_ribbon_8_seg6')) + 3.0
+          # El cierre radial del ultimo tramo sigue vivo en la mayoria.
+          _close = sum(1 for _k in range(16)
+                       if abs(_x(_bn(f'v17_ribbon_{_k}_seg6')))
+                       < abs(_x(_bn(f'v17_ribbon_{_k}_seg5'))))
+          assert _close >= 8, _close
           # REGRESIÓN rev. B: ningún cubo de la capa puede quedar
           # DESPRENDIDO. Se mide la distancia al vecino más cercano.
           import math as _math
@@ -423,7 +432,7 @@ jobs:
           # dobladillo). Ahora TODOS los lobulos llegan al dobladillo y
           # la envolvente cierra de forma monotona hasta t=1.0.
           tips = [_CS.tip_t(k) for k in range(16)]
-          assert min(tips) >= 0.90 and max(tips) - min(tips) > 0.03, 'puntas desiguales'
+          assert 0.64 <= min(tips) < 0.80 and max(tips) > 0.95, 'V de la captura'
           assert 6.5 < _CS.silhouette(0.733) < 8.5, 'apertura del abanico'
           assert _CS.silhouette(0.9) < _CS.silhouette(0.733), 'cierra hacia el dobladillo'
           assert _CS.silhouette(1.0) < _CS.silhouette(0.9) * 1.02, 'la punta no se reabre'
@@ -439,7 +448,17 @@ jobs:
           assert all(0.25 <= c['size'][2] <= 0.50 for b in geo_bones
                      if b['name'].startswith('v17_ribbon_') for c in b['cubes'])
           # Proyecto Blockbench REAL, con maniquí y UV por cara.
-          bb = json.loads((root / 'docs/capa_v1170.bbmodel').read_text())
+          _bbver = [l.split('=', 1)[1].strip() for l in
+                    (root / 'gradle.properties').read_text().splitlines()
+                    if l.startswith('mod_version=')][0]
+          _bbpath = root / 'docs' / f'CAPA_v{_bbver}.bbmodel'
+          assert _bbpath.is_file(), f'falta .bbmodel versionado: {_bbpath}'
+          assert not (root / 'docs/capa_v1170.bbmodel').exists(), 'nombre viejo'
+          _stale = [q.name for q in (root / 'docs').glob('*.bbmodel')
+                    if q.name != f'CAPA_v{_bbver}.bbmodel']
+          assert not _stale, ('quedan .bbmodel de versiones viejas', _stale)
+          bb = json.loads(_bbpath.read_text())
+          assert bb['name'] == f'capa_deteriorer_evilsaiyan_v{_bbver.replace(".", "_")}'
           assert bb['meta']['format_version'] == '5.0'
           # v1.17.3: el .bbmodel de Blockbench muestra SOLO la capa: sin
           # maniqui Steve/Alex y sin los 126 cubos de la armadura vieja.
@@ -480,7 +499,7 @@ jobs:
           # rev. B: las partículas SON RUNTIME. El .bbmodel no lleva pista
           # de efectos ni referencia JSONs externos; Blockbench abre limpio.
           import json as _json
-          _bbtext = (root / 'docs/capa_v1170.bbmodel').read_text()
+          _bbtext = _bbpath.read_text()
           assert '"channel":"particle"' not in _bbtext
           assert '"effects"' not in _bbtext and 'particles/' not in _bbtext
           assert all(len(_a.get('markers', [])) >= 2 for _a in bb['animations'])
@@ -576,7 +595,7 @@ jobs:
                       'capa_v1170_icon_compare.png', 'capa_v1170_silhouette_compare.png',
                       'capa_v1170_side_relief.png', 'capa_v1170_front_rig.png',
                       'capa_v1170_item_glowmask.png', 'capa_v1170_particles.png',
-                      'capa_v1170_uv_test.png', 'capa_v1170.bbmodel',
+                      'capa_v1170_uv_test.png',
                       'capa_v1170_visor.html'):
               assert (root / 'docs' / doc).is_file(), doc
 
@@ -598,14 +617,15 @@ jobs:
           assert entity == {'entities': ['player'], 'slots': ['back']}
           stand = (root / 'docs/capa_v1170_visor.html').read_text()
           assert 'fetch(' not in stand and 'assets/' not in stand, 'visor no autocontenido'
-          assert 'INLINE_GEO' in stand and 'download="capa_deteriorer_evilsaiyan.bbmodel"' in stand
+          assert 'INLINE_GEO' in stand
+          assert f'download="CAPA_v{ver}.bbmodel"' in stand, 'visor sin version'
 
           assert 'spawnAura(Level level, Player player, boolean deterioro)' in java
           assert 'spawnAura(player.level(), player, deterioro)' in (root / 'src/main/java/com/capatest/compat/CuriosCompat.java').read_text()
           assert (root / 'tools/audit_model.py').is_file()
           assert '--check' in (root / 'tools/audit_model.py').read_text()
           assert 'tools/audit_model.py --check' in (root / '.github/workflows/build.yml').read_text()
-          print('OK: v1.19.0, JSON/PNG sin JsonNull, 254 huesos / 308 cubos SIN piezas flotantes (ni motas, ni ceniza, ni yugo, ni anclas visibles), 16 jirones radiales + 10 tejas + 10 venas, .bbmodel con 182 cubos y 4 animaciones (12624 keyframes C1) SIN Effects track, GeckoLib animando los 182 huesos de tela, curva unica cape_motion compartida con Java y visor, particulas SOLO en runtime spawnAura(), atlas v1.18.0 = FOTO limpia, icono 2D y backup byte-identico, UV opacas y Curios back')
+          print('OK: v1.20.0, JSON/PNG sin JsonNull, 254 huesos / 308 cubos SIN piezas flotantes (ni motas, ni ceniza, ni yugo, ni anclas visibles), 16 jirones radiales + 10 tejas + 10 venas, .bbmodel con 182 cubos y 4 animaciones (12624 keyframes C1) SIN Effects track, GeckoLib animando los 182 huesos de tela, curva unica cape_motion compartida con Java y visor, particulas SOLO en runtime spawnAura(), atlas v1.18.0 = FOTO limpia, icono 2D y backup byte-identico, UV opacas y Curios back')
           PY
 
       # v1220: la autoevaluacion MEDIDA se ejecuta AQUI, en GitHub Actions,
@@ -723,15 +743,18 @@ jobs:
           JAR="build/libs/capatest-$VER.jar"
           test -f "$JAR"
           NOTES=/tmp/release-notes.md
-          BB_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/capa_v1170.bbmodel"
+          BBF="docs/CAPA_v$VER.bbmodel"
+          BB_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/CAPA_v$VER.bbmodel"
           cat > "$NOTES" <<'MD'
           ## Mantle of the Blight Star __TAG__ — build más reciente
 
           JAR compilado en CI (JDK 17 + Gradle 8.8, Forge 1.20.1-47.3.0).
-          Cada entrega sube de versión: `v1.18.0` queda como histórico y
+          Cada entrega sube de versión: `v1.19.0` queda como histórico y
           **no se sobreescribe**.
 
-          **Link directo del .bbmodel**: __BBURL__
+          **Link directo del .bbmodel (VERSIONADO)**: __BBURL__
+          El archivo se llama `CAPA_v__VER__.bbmodel` y su `name`
+          interno en Blockbench incluye la versión.
 
           ### Qué incluye
 
@@ -779,7 +802,7 @@ jobs:
           | Archivo | Para qué |
           |---|---|
           | `capatest-__VER__.jar` | El mod compilado |
-          | `capa_v1170.bbmodel` | Proyecto editable de Blockbench |
+          | `CAPA_v__VER__.bbmodel` | Proyecto editable de Blockbench (VERSIONADO) |
           | `capa_v1170_visor.html` | Visor 3D offline |
           | `capa_v1170_preview.png` | 6 vistas del render software |
           | `capa_v1170_comparativa.png` | Tu referencia frente al modelo |
@@ -797,25 +820,25 @@ jobs:
           fi
           # El proyecto Blockbench y el visor offline se entregan TAMBIEN
           # como assets: el sandbox tiene el trafico publico restringido.
-          test -f docs/capa_v1170.bbmodel
+          test -f "$BBF"
           test -f docs/capa_v1170_visor.html
           test -f docs/capa_v1170_preview.png
           test -f docs/capa_v1170_comparativa.png
           gh release upload "$TAG" \
-            docs/capa_v1170.bbmodel \
+            "$BBF" \
             docs/capa_v1170_visor.html \
             docs/capa_v1170_preview.png \
             docs/capa_v1170_comparativa.png \
             --clobber
           ASSETS="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
           grep -qx "capatest-$VER.jar" <<< "$ASSETS"
-          grep -qx 'capa_v1170.bbmodel' <<< "$ASSETS"
+          grep -qx "CAPA_v$VER.bbmodel" <<< "$ASSETS"
           grep -qx 'capa_v1170_visor.html' <<< "$ASSETS"
           URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/capatest-$VER.jar"
           echo "### Descarga directa" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "[${URL}](${URL})" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "[Blockbench: capa_v1170.bbmodel](https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/capa_v1170.bbmodel)" >> "$GITHUB_STEP_SUMMARY"
+          echo "[Blockbench: CAPA_v$VER.bbmodel]($BB_URL)" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "[Visor offline: capa_v1170_visor.html](https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/capa_v1170_visor.html)" >> "$GITHUB_STEP_SUMMARY"

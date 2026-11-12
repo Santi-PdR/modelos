@@ -157,9 +157,13 @@ def tip_t(k: int) -> float:
     # cortas de v1240 (t~0.72) dejaban el dobladillo en 27.9% de paño
     # frente al 48% del PNG; ahora se mide 41.3%. El 3/4 view hace que
     # las puntas de la derecha cuelguen un poco mas (sweep).
-    base = 1.0 - 0.10 * a ** 3.0
-    sweep = 0.03 * max(0.0, a)
-    return min(1.0, max(0.88, base + 0.030 * math.sin(k * 3.31 + 0.7) + sweep))
+    # v1.20.0: la V de la CAPTURA. Las alas exteriores (rojo vivo) mueren
+    # a t~0.76 en punta diagonal; solo los jirones centrales (violeta)
+    # cuelgan hasta el suelo. Antes los 16 llegaban a t>=0.88 y la capa
+    # parecia una falda plisada de puntas romas.
+    base = 1.0 - 0.34 * a ** 1.5
+    sweep = 0.02 * max(0.0, a)
+    return min(1.0, max(0.66, base + 0.020 * math.sin(k * 3.31 + 0.7) + sweep))
 
 
 def fan_x(k: int, t: float) -> float:
@@ -179,7 +183,10 @@ def fan_x(k: int, t: float) -> float:
     t = max(0.0, min(1.0, t))
     # rev. B: 9.10 -> 8.20. Medido contra el PNG: el render era
     # 1.09x mas ancho en t=0.2..0.7; con 8.20 queda en 1.00x.
-    rad = 0.70 + 8.20 * t
+    rad = 0.70 + 7.40 * t
+    # v1.20.0: las ALAS exteriores abren mas deprisa (en la
+    # captura salen del cuello a ~35 grados, no a ~15).
+    rad *= 1.0 + 0.30 * abs(a)
     # La captura NO es un triangulo: abre hasta t~0.72 y CIERRA en V
     # hacia las puntas (los jirones exteriores se recogen).
     if t > 0.68:
@@ -216,7 +223,7 @@ def ribbon_w(k: int, t: float) -> float:
         # v1228: los jirones CENTRALES son los que llegan al suelo y
         # deben aportar la masa de paño del dobladillo (48% en t=0.8).
         # Los exteriores se mantienen finos para dejar huecos negros.
-        center = 1.0 + 0.25 * (1.0 - abs(lateral(k))) * min(1.0, f / 0.55)
+        center = 1.0 + 0.14 * (1.0 - abs(lateral(k))) * min(1.0, f / 0.55)
         # v1232: en el ultimo tercio los lobos CENTRALES se ensanchan sin
         # tocar la envolvente exterior (la silueta de t=0.8/0.9 ya calza
         # 0.96x/0.97x). Rellena el 27% de paño del dobladillo, que en la
@@ -228,7 +235,9 @@ def ribbon_w(k: int, t: float) -> float:
         # v1.18.0: JIRONES FINOS. El fill 0.78 y la base 0.86+0.88f unian
         # las 16 cintas en una falda maciza. La referencia tiene HUECOS
         # NEGROS entre jirones y puntas estrechas.
-        fill = 1.0 + 0.14 * max(0.0, min(1.0, (f - 0.35) / 0.55))
+        # v1.20.0: -16% de paño por jiron => HUECOS NEGROS reales
+        # entre cintas, como en la captura (antes falda maciza).
+        fill = 0.86 + 0.10 * max(0.0, min(1.0, (f - 0.35) / 0.55))
         return (0.58 + 0.55 * f) * scale * center * fill
     # v1283: el afilado final se retrasa al ultimo 6% y nunca baja de
     # 0.38 unidades. Antes las puntas exteriores se convertian en agujas

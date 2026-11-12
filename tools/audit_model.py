@@ -25,6 +25,10 @@ from PIL import Image
 import preview_cloth as P
 
 ROOT = Path(__file__).resolve().parents[1]
+VER = next(l.split("=", 1)[1].strip() for l in
+           (ROOT / "gradle.properties").read_text().splitlines()
+           if l.startswith("mod_version="))
+BB = ROOT / "docs" / f"CAPA_v{VER}.bbmodel"
 
 # v1.18.0: cloth/energy/color/total quedan como INFORMACION, no como
 # umbral: media un atlas sintetico que ya no existe. El test ahora exige
@@ -117,7 +121,9 @@ def static_checks() -> None:
     assert len(cal["rows"]) == 10, "falta el perfil de calibración medido"
     assert "color_calibration.json" in (
         ROOT / "tools" / "texture_pipeline.py").read_text()
-    bb = json.loads((ROOT / "docs" / "CAPA_v1.17.0.bbmodel").read_text())
+    assert BB.is_file(), f"falta el .bbmodel de la version {VER}"
+    bb = json.loads(BB.read_text())
+    assert bb["name"] == f'capa_deteriorer_evilsaiyan_v{VER.replace(".", "_")}'
     assert len(bb["animations"]) == 4
     # rev. B: NO puede haber animador `effects` ni canal `particle`: eran
     # referencias a JSONs Snowstorm que Blockbench no encuentra al abrir
@@ -184,7 +190,11 @@ def static_checks() -> None:
     # monotona hasta t=1.0 en vez de reabrirse en abanico.
     import cape_shape as _CS
     tips = [_CS.tip_t(k) for k in range(16)]
-    assert min(tips) >= 0.90 and max(tips) - min(tips) > 0.03, tips
+    # v1.20.0: las alas exteriores MUEREN a t~0.66-0.80 y solo el
+    # centro llega al suelo. Antes las 16 puntas iban a t>=0.90 y la
+    # capa parecia una falda (el PNG tiene alas diagonales cortas).
+    assert 0.64 <= min(tips) < 0.80 and max(tips) > 0.95, tips
+    assert tips[0] < tips[7] and tips[15] < tips[8], tips
     assert 6.5 < _CS.silhouette(0.733) < 8.5, 'apertura del abanico'
     assert _CS.silhouette(0.9) < _CS.silhouette(0.733), 'cierra hacia el dobladillo'
     assert _CS.silhouette(1.0) < _CS.silhouette(0.9) * 1.02, 'la punta no se reabre'
@@ -211,7 +221,8 @@ def static_checks() -> None:
     assert 'getCustomRenderer' not in item_java, 'el BEWLR 3D tapa el icono'
     # v1.17.3: regresión de la prueba real en Blockbench. El .bbmodel
     # NO puede volver a incluir el maniquí ni los cubos de armadura vieja.
-    bb = json.loads((ROOT / 'docs/capa_v1170.bbmodel').read_text())
+    assert (ROOT / 'docs' / f'CAPA_v{VER}.bbmodel').read_bytes() == BB.read_bytes()
+    bb = json.loads(BB.read_text())
     assert len(bb['elements']) == 182, len(bb['elements'])
     assert bb['resolution'] == {'width': 128, 'height': 128}
     assert all(max(f['uv']) <= 128 for e in bb['elements']

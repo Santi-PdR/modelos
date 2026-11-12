@@ -209,7 +209,9 @@ def build() -> dict:
         # cae en el centro; antes y_top era casi plano y parecía una losa.
         # v1.17.2: baja 1.15 para SOLAPAR con los jirones; en
         # Blockbench la bufanda quedaba como una banda flotante separada.
-        y_top = 23.30 + 0.42 * abs(fx) + 0.12 * math.sin(i * 2.7)
+        # v1.20.0: el borde superior CAE hacia los hombros. Con
+        # +0.42*|fx| los extremos subian y parecian CUERNOS.
+        y_top = 23.30 - 0.55 * abs(fx) + 0.10 * math.sin(i * 2.7)
         # Arco parabolico: lóbulo central ancho y redondeado, alas que
         # se recogen deprisa hacia los hombros (recorte 4x de la captura).
         # Cuenco aplanado: lóbulo central redondeado y lados recogidos.
@@ -225,7 +227,7 @@ def build() -> dict:
         bones.append(bone(
             f"v17_cowl_front_{i}", "chestplate",
             [x, y_top - height / 2.0, z + 0.45],
-            [0.0, 0.0, fx * 14.0],
+            [0.0, 0.0, fx * 7.0],
             [cube16((x - w / 2.0, bottom, z),
                     (w, height, 0.90), cowl_uv_i, DARK, INFLATE[i % 3])]))
         # Dientes desiguales, MAS LARGOS en el lóbulo central.
@@ -234,14 +236,14 @@ def build() -> dict:
         # v1275: los dientes de los HOMBROS cuelgan mas: en la captura el
         # carmesi baja hasta el arnes por los lados, llenando t=0.0 sin
         # ninguna pieza flotante ni losa sobre la U gris.
-        hang = 1.75 if i in (0, 1, 7, 8) else 1.0
+        hang = 2.10 if i in (0, 1, 7, 8) else 1.0
         tooth = (0.45 + 1.70 * abs(math.sin(i * 2.7 + 0.4))) * (0.72 + 0.42 * (1.0 - abs(fx))) * hang
         tw = 0.92 + 0.50 * (1.0 - abs(fx)) + 0.18 * abs(math.cos(i * 1.9))
         zf = z + 0.92
         bones.append(bone(
             f"v17_cowl_tooth_{i}", f"v17_cowl_front_{i}",
             [x, bottom + 0.10, zf + 0.15],
-            [0.0, 0.0, fx * 20.0 + 10.0 * math.sin(i * 2.1)],
+            [0.0, 0.0, fx * 6.0 + 4.0 * math.sin(i * 2.1)],
             [cube16((x - tw / 2.0, bottom + 0.10 - tooth, zf),
                     (tw, tooth, 0.24), cowl_uv, DARK, INFLATE[1])]))
 

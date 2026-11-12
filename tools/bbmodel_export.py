@@ -46,10 +46,28 @@ from PIL import Image
 import cape_motion as M
 
 ROOT = Path(__file__).resolve().parents[1]
+
+def mod_version() -> str:
+    """La versión del .bbmodel sale de gradle.properties, NO se hardcodea.
+
+    v1.20.0: el usuario señaló que el archivo seguía llamándose
+    `CAPA_v1.17.0.bbmodel` aunque el mod ya era v1.19.0. Ahora el
+    nombre del archivo, el `name` interno de Blockbench y el asset de
+    la Release cambian SOLOS con cada subida de versión.
+    """
+    for line in (ROOT / "gradle.properties").read_text().splitlines():
+        if line.startswith("mod_version="):
+            return line.split("=", 1)[1].strip()
+    raise RuntimeError("falta mod_version en gradle.properties")
+
+VER = mod_version()
+VER_TAG = VER.replace(".", "_")
+BB_NAME = f"CAPA_v{VER}.bbmodel"
+
 GEO = ROOT / "src/main/resources/assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json"
 ATLAS = ROOT / "src/main/resources/assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan.png"
 OUT = ROOT / "preview/assets/capa_deteriorer_evilsaiyan.bbmodel"
-DOC = ROOT / "docs/capa_v1170.bbmodel"
+DOC = ROOT / "docs" / BB_NAME     # ej. docs/CAPA_v1.20.0.bbmodel
 
 FACES = ("north", "south", "east", "west", "up", "down")
 
@@ -282,7 +300,7 @@ def build() -> dict:
 
     return {
         "meta": {"format_version": "5.0", "model_format": "bedrock", "box_uv": False},
-        "name": "capa_deteriorer_evilsaiyan_revB",
+        "name": f"capa_deteriorer_evilsaiyan_v{VER_TAG}",
         "model_identifier": "geometry.capa_deteriorer_evilsaiyan",
         "visible_box": [1, 1, 1],
         "resolution": {"width": 128, "height": 128},
@@ -311,6 +329,7 @@ def main() -> None:
     assert all(n["uuid"] in gids for n in model["outliner"])
     assert len(model["textures"]) == 1 and model["textures"][0]["source"].startswith(
         "data:image/png;base64,")
+    assert model["name"] == f"capa_deteriorer_evilsaiyan_v{VER_TAG}", model["name"]
     import re as _re
     _raw = base64.b64decode(model["textures"][0]["source"].split(",", 1)[1])
     _im = Image.open(io.BytesIO(_raw))
@@ -359,7 +378,7 @@ def main() -> None:
     print(f"wrote {OUT.relative_to(ROOT)}: {len(model['elements'])} cubos, "
           f"{len(model['groups'])} grupos, {len(anims)} animaciones, "
           f"{total} keyframes, {len(text)} bytes")
-    print(f"  copia en {DOC.relative_to(ROOT)}")
+    print(f"  copia en {DOC.relative_to(ROOT)} (version {VER})")
 
 
 if __name__ == "__main__":

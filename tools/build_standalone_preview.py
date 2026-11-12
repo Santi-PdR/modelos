@@ -24,6 +24,13 @@ ASSETS = PREVIEW / "assets"
 OUT = ROOT / "docs/capa_v1170_visor.html"
 
 
+def mod_version() -> str:
+    for line in (ROOT / "gradle.properties").read_text().splitlines():
+        if line.startswith("mod_version="):
+            return line.split("=", 1)[1].strip()
+    raise RuntimeError("falta mod_version")
+
+
 def b64(path: Path) -> str:
     return base64.b64encode(path.read_bytes()).decode()
 
@@ -79,7 +86,7 @@ def main() -> None:
         assert p.is_file(), name
         if name.endswith(".bbmodel"):
             return (f'{attr}="data:application/octet-stream;base64,{b64(p)}" '
-                    f'download="capa_deteriorer_evilsaiyan.bbmodel"{extra}')
+                    f'download="CAPA_v{mod_version()}.bbmodel"{extra}')
         return f'{attr}="{data(p)}"{extra}'
 
     html = re.sub(r'(src|href)="assets/([A-Za-z0-9_.-]+)"([^>]*)',
