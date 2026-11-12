@@ -61,6 +61,16 @@ import java.util.concurrent.ConcurrentHashMap;
  * desactiva una sola vez (con log) y la capa sigue renderizándose con la pose
  * estática del geo, en vez de tirar el juego.</p>
  *
+ * <p>REV. B: NO hay motas ni ceniza en el modelo. Los 26 cubos sueltos
+ * que aparecían flotando en Blockbench se eliminaron del geo; las
+ * partículas las emite {@code CapaDeteriorerItem.spawnAura()} desde el
+ * servidor cuando la capa está equipada. Además, la fase de la onda
+ * dejó de ser {@code i * 0.37} (un índice global sin relación con la
+ * tela) y ahora es {@code -0.62*tramo + columna*0.19}: el movimiento
+ * BAJA por cada jirón. Curva y constantes compartidas con
+ * {@code tools/cape_motion.py}, el {@code .bbmodel}, el
+ * {@code animation.json} de GeckoLib y el visor.</p>
+ *
  * Referencias (ideas, no código portado): tr7zw/WaveyCapes, ismaildzf/finery,
  * GlowberryClient #102/#106, FabricExtras/ArmorModelAPI y GeckoLib 1.20.1.
  */
@@ -127,6 +137,8 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     /** v1.14.0: collar, jirones, venas y microvóxeles de la piel nueva. */
     private GeoBone[] deterioroBones;
     private float[][] deterioroBase;
+    /** rev. B: {familia, columna, tramo} REAL, no el indice del array. */
+    private int[][] deterioroParts;
     /** Fail-safe cosmético: tras un error inesperado no se vuelve a intentar. */
     private boolean disabled;
 
@@ -500,8 +512,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             "v17_cowl_tooth_4", "v17_cowl_front_5", "v17_cowl_tooth_5", "v17_cowl_front_6",
             "v17_cowl_tooth_6", "v17_cowl_front_7", "v17_cowl_tooth_7", "v17_cowl_front_8",
             "v17_cowl_tooth_8", "v17_cowl_back_0", "v17_cowl_back_1", "v17_cowl_back_2",
-            "v17_cowl_back_3", "v17_cowl_back_4", "v17_yoke_0", "v17_yoke_1",
-            "v17_yoke_2", "v17_yoke_3", "v17_yoke_4", "v17_yoke_5",
+            "v17_cowl_back_3", "v17_cowl_back_4",
             "v17_ribbon_0_seg0", "v17_ribbon_0_seg1", "v17_ribbon_0_seg2", "v17_ribbon_0_seg3",
             "v17_ribbon_0_seg4", "v17_ribbon_0_seg5", "v17_ribbon_1_seg0", "v17_ribbon_1_seg1",
             "v17_ribbon_1_seg2", "v17_ribbon_1_seg3", "v17_ribbon_1_seg4", "v17_ribbon_1_seg5",
@@ -532,24 +543,50 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             "v17_ribbon_12_seg6", "v17_ribbon_13_seg6", "v17_ribbon_14_seg6", "v17_ribbon_15_seg6",
             "v17_shingle_0", "v17_shingle_1", "v17_shingle_2", "v17_shingle_3",
             "v17_shingle_4", "v17_shingle_5", "v17_shingle_6", "v17_shingle_7",
-            "v17_shingle_8", "v17_shingle_9", "v17_mote_0", "v17_mote_1",
-            "v17_mote_2", "v17_mote_3", "v17_mote_4", "v17_mote_5",
-            "v17_mote_6", "v17_mote_7", "v17_mote_8", "v17_mote_9",
-            "v17_mote_10", "v17_mote_11", "v17_mote_12", "v17_mote_13",
-            "v17_mote_14", "v17_mote_15", "v17_mote_16", "v17_mote_17",
-            "v17_mote_18", "v17_mote_19", "v17_mote_20", "v17_mote_21",
-            "v17_mote_22", "v17_mote_23", "v17_mote_24", "v17_mote_25",
-            "v17_vein_0", "v17_vein_1", "v17_vein_2", "v17_vein_3",
+            "v17_shingle_8", "v17_shingle_9", "v17_vein_0", "v17_vein_1", "v17_vein_2", "v17_vein_3",
             "v17_vein_4", "v17_vein_5", "v17_vein_6", "v17_vein_7",
-            "v17_vein_8", "v17_vein_9", "v17_ash_0", "v17_ash_1",
-            "v17_ash_2", "v17_ash_3", "v17_ash_4", "v17_ash_5",
-            "v17_ash_6", "v17_ash_7"
+            "v17_vein_8", "v17_vein_9"
     };
+
+    /** Espejo de `tools/cape_motion.py::parts()`: familia 0=tela,
+     *  1=capucha, 2=vena, 3=teja. Sin esto la onda usaba el índice del
+     *  array y dos jirones vecinos podían moverse en contrafase. */
+    private static int[] motionParts(String name) {
+        try {
+            int last = name.lastIndexOf('_');
+            String tail = last >= 0 ? name.substring(last + 1) : "0";
+            int col = 0;
+            if (name.startsWith("v17_ribbon_") && tail.startsWith("seg")) {
+                String[] parts = name.split("_");
+                return new int[]{0, Integer.parseInt(parts[2]),
+                        Integer.parseInt(tail.substring(3))};
+            }
+            if (name.startsWith("v15_cloth_cape_")) {
+                col = Integer.parseInt(tail);
+                int seg = name.contains("cape_mid_") ? 3
+                        : (name.contains("cape_bottom_") ? 6 : 0);
+                return new int[]{0, col, seg};
+            }
+            if (name.startsWith("v15_hem_"))
+                return new int[]{0, Integer.parseInt(tail), 6};
+            if (name.startsWith("v17_vein_"))
+                return new int[]{2, Integer.parseInt(tail), 0};
+            if (name.startsWith("v17_shingle_"))
+                return new int[]{3, Integer.parseInt(tail), 0};
+            if (name.startsWith("v17_cowl_") || name.startsWith("v17_yoke_"))
+                return new int[]{1, Integer.parseInt(tail), 0};
+            return new int[]{0, Integer.parseInt(tail), 0};
+        } catch (RuntimeException ignored) {
+            return new int[]{0, 0, 0};
+        }
+    }
 
     private void resolveDeterioro() {
         deterioroBones = new GeoBone[DETERIORO_NAMES.length];
         deterioroBase = new float[DETERIORO_NAMES.length][3];
+        deterioroParts = new int[DETERIORO_NAMES.length][3];
         for (int i = 0; i < DETERIORO_NAMES.length; i++) {
+            deterioroParts[i] = motionParts(DETERIORO_NAMES[i]);
             GeoBone bone = getBone(DETERIORO_NAMES[i]).orElse(null);
             if (bone == null)
                 continue;
@@ -561,104 +598,77 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         }
     }
 
-    /** Flujo dinámico de la tela destrozada + deriva de las partículas.
-     *  Todo en GRADOS convertido con Math.toRadians. Los microvóxeles
-     *  tienen el pivote desplazado 0.6, así que al girar el hueso la
-     *  partícula se DESPLAZA de verdad, sin mixins ni partículas externas. */
+    /** Onda de la tela: MISMA curva de 3 armonicos que cape_motion.py.
+     *  Todo en GRADOS convertido con Math.toRadians. No hay deriva de
+     *  microvoxeles: las particulas ya no viven en la geometria. */
     private void animateDeterioro(double time, double speed, double lift,
                                   double turn, double airborne, double sprint,
                                   double wind, double seed, double amplitude) {
-        if (deterioroBones == null)
+        if (deterioroBones == null || deterioroParts == null)
             return;
+        double gain = Mth.clamp(0.55D + speed * 1.25D + sprint * 0.85D
+                + airborne * 0.45D + amplitude * 0.08D, 0.35D, 2.60D);
+        double step = Mth.clamp(speed * 1.40D - sprint * 0.60D, 0.0D, 1.20D);
+        double flare = sprint * 0.90D + airborne * 0.60D;
+        double shiver = airborne * 0.35D;
+        double cycle = (time * (0.55D + speed * 1.10D + sprint * 0.60D)) % 1.0D;
+        if (cycle < 0.0D)
+            cycle += 1.0D;
+        double twoPiF = 2.0D * Math.PI * cycle;
+        // Rafaga LENTA: tela pesada que no repite exactamente la misma pose.
+        double gust = Math.sin(time * 0.23D + seed * 0.07D) * 1.3D;
+
         for (int i = 0; i < deterioroBones.length; i++) {
             GeoBone b = deterioroBones[i];
             if (b == null)
                 continue;
-            String n = DETERIORO_NAMES[i];
-            double phase = time * 2.4D + i * 0.37D + wind * 0.6D;
-            if (n.startsWith("v17_mote_") || n.startsWith("v17_ash_")) {
-                double fall = Math.sin(phase * 1.7D + seed * 0.03D);
-                double drift = Math.cos(phase * 0.9D + i);
-                double amp = 7.0D + speed * 9.0D + airborne * 5.0D + sprint * 4.0D;
-                b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
-                        Mth.clamp(fall * amp, -18.0D, 18.0D)));
-                b.setRotY(deterioroBase[i][1] + (float) Math.toRadians(
-                        Mth.clamp(drift * amp * 0.70D, -14.0D, 14.0D)));
-                b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
-                        Mth.clamp(Math.sin(phase) * amp * 0.50D, -12.0D, 12.0D)));
-            } else if (n.startsWith("v17_cowl_tooth_")) {
-                double flutter = Math.sin(phase * 2.7D + i * 0.8D)
-                        * (1.8D + sprint * 1.6D);
-                b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
-                        Mth.clamp(flutter, -5.0D, 5.0D)));
-                b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
-                        Mth.clamp(flutter * 0.75D, -4.0D, 4.0D)));
-            } else if (n.startsWith("v17_cowl_") || n.startsWith("v17_yoke_")) {
-                double breathe = Math.sin(phase * 0.8D) * (1.2D + sprint * 1.0D);
-                b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
-                        Mth.clamp(breathe + lift * 2.0D, -4.0D, 4.0D)));
-                b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
-                        Mth.clamp(turn * 1.2D, -3.0D, 3.0D)));
-            } else if (n.startsWith("v17_shingle_")) {
-                double ripple = Math.sin(phase * 1.3D + i) * (1.6D + sprint * 2.0D);
-                b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
-                        Mth.clamp(ripple, -6.0D, 6.0D)));
-                b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
-                        Mth.clamp(ripple * 0.55D, -4.0D, 4.0D)));
-            } else if (n.startsWith("v17_vein_")) {
-                double pulse = Math.sin(phase * 3.1D) * (1.1D + sprint * 1.4D)
-                        + Math.sin(phase * 6.7D + i) * 0.5D;
-                b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
-                        Mth.clamp(pulse * 2.4D, -7.0D, 7.0D)));
-                b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
-                        Mth.clamp(pulse * 0.7D, -3.0D, 3.0D)));
-            } else if (n.startsWith("v17_ribbon_")) {
-                int under = n.lastIndexOf('_');
-                int segN = 0;
-                if (under > 3 && n.substring(under + 1).startsWith("seg")) {
-                    try {
-                        segN = Integer.parseInt(n.substring(under + 4));
-                    } catch (NumberFormatException ignored) {
-                        segN = 0;
-                    }
-                }
-                double seg = segN / 6.0D;
-                double ph = phase - seg * 1.8D;
-                double bend = amplitude * (0.30D + 0.70D * seg)
-                        * (0.45D + 0.55D * Math.sin(ph));
-                double sway = (turn * 2.2D + wind * 0.8D
-                        + Math.sin(phase * 0.7D + i) * 1.1D)
-                        * (0.30D + speed * 0.70D);
-                double curl = Math.sin(phase * 0.6D + i)
-                        * (1.2D + 2.6D * seg) + turn * 1.5D;
-                // v1214: rafaga LENTA superpuesta, periodo ~10x el ondeo.
-                // Da la sensacion de tela pesada que no vuelve a la misma
-                // pose en cada ciclo, sin tocar los limites de seguridad.
-                double gust = Math.sin(phase * 0.23D + i * 0.07D) * 1.3D;
-                // v1240: flutter de las puntas, tercer armonico del ondeo.
-                // Crece con el tramo: la tela rasgada vibra mas que el yugo.
-                double flutter = Math.sin(phase * 3.1D + i * 0.9D)
-                        * (0.35D + 1.25D * seg);
-                b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
-                        Mth.clamp(bend, -14.0D, 14.0D)));
-                b.setRotY(deterioroBase[i][1] + (float) Math.toRadians(
-                        Mth.clamp(sway + gust * 0.5D, -9.0D, 9.0D)));
-                b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
-                        Mth.clamp(curl + gust + flutter, -8.0D, 8.0D)));
+            int family = deterioroParts[i][0];
+            int col = deterioroParts[i][1];
+            int seg = deterioroParts[i][2];
+            double segF = Math.min(1.0D, seg / 6.0D);
+            double lateral = (col - 7.5D) / 7.5D;
+            // TRAVEL = 0.62, COLUMN_PHASE = 0.19, fase base = 0.45 (caminar).
+            double phase = -0.62D * seg + col * 0.19D + 0.45D;
+            double h = (0.055D + 0.020D * sprint + 0.020D * airborne)
+                    * (1.0D + 0.30D * seg);
+            double w = 0.75D * (Math.sin(twoPiF + phase) - Math.sin(phase))
+                    + 0.18D * (Math.sin(2.0D * twoPiF + phase * 1.7D)
+                               - Math.sin(phase * 1.7D))
+                    + h * (Math.sin(3.0D * twoPiF + phase * 2.3D)
+                           - Math.sin(phase * 2.3D));
+            double rx, ry, rz;
+            if (family == 0) {
+                double amp = (2.2D + 6.5D * segF) * gain;
+                rx = amp * 0.5D * w
+                        - flare * 4.0D * (0.5D + 0.5D * Math.sin(twoPiF + phase));
+                ry = step * 3.0D * lateral * Math.sin(twoPiF) + turn * 1.2D
+                        + wind * 0.5D + gust * 0.35D;
+                rz = amp * w + gust
+                        + shiver * 3.0D * (0.30D + 0.70D * segF)
+                        * Math.sin(6.0D * twoPiF + col * 1.3D + seg * 0.9D);
+            } else if (family == 1) {
+                double amp = 1.4D * gain;
+                rx = amp * 0.45D * w + lift * 1.0D;
+                ry = 0.0D;
+                rz = amp * 0.30D * w + turn * 1.2D;
+            } else if (family == 2) {
+                double amp = 5.0D * gain;
+                rx = amp * 0.12D * w;
+                ry = 0.0D;
+                rz = amp * w
+                        + Math.sin(6.0D * twoPiF + col) * (0.6D + sprint * 1.4D);
             } else {
-                double seg = (i % 6) / 6.0D;
-                double wave = Math.sin(phase - seg * 1.8D);
-                double bend = amplitude * (0.35D + 0.65D * seg) * (0.40D + 0.60D * wave);
-                double sway = (turn * 2.2D + wind * 0.8D
-                        + Math.sin(phase * 0.7D + i) * 1.1D) * (0.30D + speed * 0.70D);
-                double curl = Math.sin(phase * 0.6D + i) * 3.0D + turn * 1.5D;
-                b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
-                        Mth.clamp(bend, -14.0D, 14.0D)));
-                b.setRotY(deterioroBase[i][1] + (float) Math.toRadians(
-                        Mth.clamp(sway, -9.0D, 9.0D)));
-                b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
-                        Mth.clamp(curl, -8.0D, 8.0D)));
+                double amp = 3.2D * gain;
+                rx = amp * 0.40D * w;
+                ry = 0.0D;
+                rz = amp * w;
             }
+            b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
+                    Mth.clamp(rx, -15.0D, 15.0D)));
+            b.setRotY(deterioroBase[i][1] + (float) Math.toRadians(
+                    Mth.clamp(ry, -10.0D, 10.0D)));
+            b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
+                    Mth.clamp(rz, -12.0D, 12.0D)));
         }
     }
 

@@ -16,6 +16,12 @@ v1.17.0: corrige DOS defectos graves de la entrega anterior.
    huesos v16_* y los 27 paneles de paño: respiración del collar, ondeo de
    las cintas con retardo, pulso de las venas y deriva de las partículas.
 
+rev. B: se ELIMINAN las motas/ceniza 3D, el animador `effects` de
+Bedrock (referenciaba JSONs de partículas que Blockbench no encuentra)
+y las cuatro ondas distintas. Ahora `tools/cape_motion.py` es la única
+curva: retardo real por tramo, vaivén de paso, barrido al correr y
+estremecimiento, todo con tangentes Bézier C1.
+
 v1.17.2: se ELIMINA el maniquí Steve/Alex. El exportador metía 6 cubos
 (cabeza, torso, brazos, piernas) con un parche de textura en las filas
 128..143 de una imagen 128x144. En el visor web pasaban desapercibidos, pero
@@ -36,6 +42,8 @@ import math
 from pathlib import Path
 
 from PIL import Image
+
+import cape_motion as M
 
 ROOT = Path(__file__).resolve().parents[1]
 GEO = ROOT / "src/main/resources/assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json"
@@ -124,260 +132,87 @@ def make_group(name: str, pivot, rotation, children, key: str,
     }
 
 
-def kf(channel: str, t: float, x: float, y: float, z: float, key: str,
-       interp: str = "bezier", tangent: tuple[float, float, float] | None = None,
-       effect: dict | None = None) -> dict:
-    """Keyframe de Blockbench.
+def kf(channel: str, t: float, values, key: str,
+       derivative, length: float) -> dict:
+    """Keyframe Bézier con tangentes de la DERIVADA ANALÍTICA.
 
-    v1.17.0 v1205: la interpolacion `linear` producia ESQUINAS visibles
-    en la tela (la documentacion de Blockbench recomienda `catmullrom`
-    o `bezier` para movimiento organico). Se usan curvas Bezier cuyas
-    tangentes salen de la DERIVADA ANALITICA de la onda, asi la curva es
-    C1-continua en todos los keyframes y el bucle no tiene salto.
+    El mango dura un tercio del intervalo entre muestras: antes era 0.30 s
+    fijo, que en el clip de 0.8 s se metía dentro de cuatro keyframes
+    vecinos y producía rebotes. Con `dt = intervalo/3` la curva es C1 y
+    no invade el tramo siguiente.
     """
-    if effect is not None:
-        points = [dict(effect)]
-    else:
-        points = [{"x": str(round(x, 3)), "y": str(round(y, 3)),
-                   "z": str(round(z, 3))}]
-    if tangent is None:
-        lt, rt = [-0.30] * 3, [0.30] * 3
-        lv, rv = [0, 0, 0], [0, 0, 0]
-    else:
-        lt, rt = [-0.30] * 3, [0.30] * 3
-        rv = [round(v * 0.30, 3) for v in tangent]
-        lv = [round(-v * 0.30, 3) for v in tangent]
+    vals = [round(float(v), 4) for v in values]
+    dt = length / M.WAVE_SAMPLES / 3.0
+    slope = [round(float(d) / length * dt, 5) for d in derivative]
     return {
         "channel": channel,
-        "data_points": points,
+        "data_points": [{"x": str(vals[0]), "y": str(vals[1]),
+                         "z": str(vals[2])}],
         "uuid": uid(key),
         "time": round(t, 4),
         "color": -1,
-        "interpolation": interp,
+        "interpolation": "bezier",
         "bezier_linked": False,
-        "bezier_left_time": lt,
-        "bezier_left_value": lv,
-        "bezier_right_time": rt,
-        "bezier_right_value": rv,
+        "bezier_left_time": [round(-dt, 5)] * 3,
+        "bezier_left_value": [-v for v in slope],
+        "bezier_right_time": [round(dt, 5)] * 3,
+        "bezier_right_value": slope,
     }
 
 
-def _wave_derivative(f: float, phase: float, flutter: float = 1.0) -> float:
-    """d(_wave)/df: tangente exacta de la onda, no una aproximacion.
-
-    v1240: tercer armonico (3 ciclos por bucle) = FLUTTER de las puntas.
-    Su derivada analitica mantiene la continuidad C1 en todos los kfs.
-    """
-    return (0.75 * 2.0 * math.pi * math.cos(2.0 * math.pi * f + phase)
-            + 0.18 * 4.0 * math.pi * math.cos(4.0 * math.pi * f + phase * 1.7)
-            + 0.055 * flutter * 6.0 * math.pi
-            * math.cos(6.0 * math.pi * f + phase * 2.3))
-
-
-STYLE_GAIN = {
-    # tela, motas, venas, cuello, tejas
-    "idle":      (0.55, 0.60, 0.70, 0.80, 0.55),
-    "caminar":   (1.00, 1.00, 1.00, 1.00, 1.00),
-    "correr":    (1.70, 1.60, 1.45, 1.40, 1.60),
-    "deterioro": (0.35, 1.80, 2.50, 0.45, 0.45),
-}
-
-# Cada animacion arranca con una fase DISTINTA: al cambiar de clip la
-# capa no salta desde la misma pose.
-STYLE_PHASE = {"idle": 0.0, "caminar": 0.45,
-               "correr": 0.95, "deterioro": 1.70}
-
-
-def motion_for(name: str, idx: int, style: str) -> tuple[float, float, float, float]:
-    """Amplitud (grados) y FASE por segmento/columna, por familia y estilo.
-
-    v1.17.0: antes habia una rama `v17_ribbon_` INALCANZABLE (otra rama
-    mas general la capturaba) y el estilo `deterioro` caia siempre en los
-    valores de `idle`. Ahora la fase sale del SEGMENTO REAL del nombre,
-    de modo que la onda baja por la capa en Java, visor y Blockbench.
-    """
-    g = STYLE_GAIN[style]
-    col, seg = idx % 16, 0
-    if name.startswith("v17_ribbon_"):
-        parts = name.split("_")
-        try:
-            col = int(parts[2])
-        except (ValueError, IndexError):
-            col = idx % 16
-        tail = parts[-1]
-        seg = int(tail[3:]) if tail.startswith("seg") else 0
-    phase = seg * 0.62 + col * 0.19 + STYLE_PHASE[style]
-    if name.startswith(("v17_mote_", "v17_ash_", "v16_mote_", "v16_ash_")):
-        a = 8.0 * g[1]
-        return (a, a * 0.7, a * 0.5, phase)
-    if name.startswith(("v17_cowl_", "v17_yoke_", "v16_collar_", "v16_yoke_")):
-        a = 2.0 * g[3]
-        return (a, 0.0, a * 0.6, phase * 0.4)
-    if name.startswith(("v17_vein_", "v16_vein_")):
-        a = 7.0 * g[2]
-        return (a * 0.25, 0.0, a, phase * 2.4)
-    if name.startswith("v17_shingle_"):
-        a = 4.0 * g[4]
-        return (a * 0.45, a * 0.20, a * 0.80, phase * 1.3)
-    if name.startswith(("v17_ribbon_", "v16_fray_", "v16_hem_",
-                        "v16_shred_", "v16_tatter_")):
-        # La onda CRECE hacia las puntas (seg/6), no i%5.
-        a = (2.2 + 6.5 * (seg / 6.0)) * g[0]
-        return (a * 0.5, 0.0, a, phase)
-    a = 2.4 * g[0]
-    return (a * 0.5, 0.0, a, phase * 0.8)
-
-
+# Cada clip arranca con fase distinta y tiene su propio carácter en
+# `cape_motion.STYLES`. Ya NO hay pista `effects`: las partículas son
+# runtime (`CapaDeteriorerItem.spawnAura`), no geometría ni keyframes.
 ANIMATION_SPECS = (
-    ("idle_respiracion", "loop", 4.0, "idle", 1.0),
-    ("caminar", "loop", 1.2, "caminar", 1.0),
-    ("correr_saltar", "loop", 0.8, "correr", 1.0),
-    ("deterioro_particulas", "loop", 3.0, "deterioro", 1.15),
+    ("idle_respiracion", "idle"),
+    ("caminar", "caminar"),
+    ("correr_saltar", "correr"),
+    ("deterioro_tela", "deterioro"),
 )
-
-WAVE_SAMPLES = 11             # v1240: 12 muestras por hueso, C1 mas fino
-
-
-def _wave(f: float, phase: float, flutter: float = 1.0) -> float:
-    """Onda periodica que VALE 0 en f=0 y f=1: el bucle no pega un salto.
-
-    `flutter` crece con el numero de tramo: los jirones bajos vibran mas
-    que la bufanda, como tela rasgada y ligera.
-    """
-    return ((math.sin(2.0 * math.pi * f + phase) - math.sin(phase)) * 0.75
-            + (math.sin(4.0 * math.pi * f + phase * 1.7)
-               - math.sin(phase * 1.7)) * 0.18
-            + (math.sin(6.0 * math.pi * f + phase * 2.3)
-               - math.sin(phase * 2.3)) * 0.055 * flutter)
+MARKERS = {
+    "idle": ("inhalar", "exhalar"),
+    "caminar": ("paso_izquierdo", "paso_derecho"),
+    "correr": ("impulso", "recogida"),
+    "deterioro": ("estremecimiento_1", "estremecimiento_2",
+                  "estremecimiento_3", "estremecimiento_4"),
+}
+MARKER_TIMES = {"idle": (0.0, 0.5), "caminar": (0.0, 0.5),
+                "correr": (0.0, 0.5), "deterioro": (0.0, 0.25, 0.5, 0.75)}
 
 
 def build_animations(anim_bones: list[tuple[str, str]]) -> list[dict]:
-    """4 animaciones diferenciadas: rotacion + posicion + ESCALA (venas)."""
+    """4 clips con rotación + posición en las puntas + escala de capucha/venas."""
     out = []
-    for aname, loop, length, style, mult in ANIMATION_SPECS:
+    for aname, style in ANIMATION_SPECS:
+        length = M.STYLES[style]["length"]
         animators = {}
-        for idx, (bname, guuid) in enumerate(anim_bones):
-            ax, ay, az, phase = motion_for(bname, idx, style)
-            ax, ay, az = ax * mult, ay * mult, az * mult
-            # v1240: el flutter es MAYOR en las puntas y en las motas.
-            flutter = 1.0
-            if bname.startswith("v17_ribbon_") and "seg" in bname:
-                seg = int(bname.split("_")[-1][3:])
-                flutter = 1.0 + 0.30 * seg
-            elif bname.startswith(("v17_mote_", "v17_vein_")):
-                flutter = 1.7
+        for bname, guuid in anim_bones:
             keyframes = []
-            for j in range(WAVE_SAMPLES + 1):
-                f = j / WAVE_SAMPLES
-                w = _wave(f, phase, flutter)
-                dw = _wave_derivative(f, phase, flutter) / WAVE_SAMPLES
-                keyframes.append(kf("rotation", round(length * f, 4),
-                                    ax * w, ay * w, az * w,
+            for j in range(M.WAVE_SAMPLES + 1):
+                f = j / M.WAVE_SAMPLES
+                t = round(length * f, 4)
+                pose = M.sample(bname, style, f)
+                keyframes.append(kf("rotation", t, pose["rot"],
                                     f"{aname}/{bname}/r{j}",
-                                    tangent=(ax * dw, ay * dw, az * dw)))
-            if bname.startswith(("v17_mote_", "v17_ash_",
-                                 "v16_mote_", "v16_ash_")):
-                drift = (1.6 if style == "deterioro" else 0.9) * mult
-                rise = drift * 1.8 if style == "deterioro" else -drift
-                keyframes += [
-                    kf("position", 0.0, 0, 0, 0, f"{aname}/{bname}/p0"),
-                    kf("position", round(length * 0.5, 4),
-                       drift, rise, 0, f"{aname}/{bname}/p1"),
-                    kf("position", length, 0, 0, 0, f"{aname}/{bname}/p2"),
-                ]
-            if bname.startswith(("v17_mote_", "v17_ash_",
-                                 "v16_mote_", "v16_ash_")):
-                # PARPADEO: las motas cambian de tamano, no solo giran.
-                blink = 0.42 if style == "deterioro" else 0.24
-                keyframes += [
-                    kf("scale", 0.0, 1, 1, 1, f"{aname}/{bname}/b0"),
-                    kf("scale", round(length * 0.5, 4),
-                       1 + blink, 1 + blink, 1 + blink,
-                       f"{aname}/{bname}/b1"),
-                    kf("scale", length, 1, 1, 1, f"{aname}/{bname}/b2"),
-                ]
-            if (bname.startswith("v17_ribbon_") and bname[-4:-1] == "seg"
-                    and bname[-1] in "456"):
-                # TIRON POR TRAMO: la gravedad baja por la tela en vez de
-                # actuar solo en la punta. La amplitud crece con el segmento.
-                seg = int(bname[-1])
-                pull = 0.055 * seg * mult
-                keyframes += [
-                    kf("position", 0.0, 0, 0, 0, f"{aname}/{bname}/t0"),
-                    kf("position", round(length * 0.5, 4),
-                       0, -pull, 0, f"{aname}/{bname}/t1"),
-                    kf("position", length, 0, 0, 0, f"{aname}/{bname}/t2"),
-                ]
-            if bname.startswith(("v17_cowl_", "v17_yoke_",
-                                 "v16_collar_", "v16_yoke_")):
-                # RESPIRACION: la bufanda se hincha y se relaja con un
-                # periodo LENTO y distinto del ondeo de los jirones.
-                breath = 0.045 if style == "deterioro" else 0.022
-                keyframes += [
-                    kf("scale", 0.0, 1, 1, 1, f"{aname}/{bname}/h0"),
-                    kf("scale", round(length * 0.5, 4),
-                       1 + breath, 1 + breath * 0.55, 1 + breath * 0.3,
-                       f"{aname}/{bname}/h1"),
-                    kf("scale", length, 1, 1, 1, f"{aname}/{bname}/h2"),
-                ]
-            if bname.startswith(("v17_vein_", "v16_vein_")):
-                pulse = 0.34 if style == "deterioro" else 0.18
-                keyframes += [
-                    kf("scale", 0.0, 1, 1, 1, f"{aname}/{bname}/s0"),
-                    kf("scale", round(length * 0.5, 4),
-                       1 + pulse, 1 + pulse, 1, f"{aname}/{bname}/s1"),
-                    kf("scale", length, 1, 1, 1, f"{aname}/{bname}/s2"),
-                ]
-            animators[guuid] = {
-                "name": bname,
-                "type": "bone",
-                "keyframes": keyframes,
-            }
-        # EffectAnimator: Blockbench usa la clave literal 'effects' y
-        # canales 'particle'/'sound'/'timeline' con data_points de efecto.
-        # EffectAnimator en los CUATRO clips. Dos emisores Snowstorm:
-        # brasas vivas al correr / deteriorarse y un rescoldo tenue en
-        # reposo y al caminar. Blockbench usa la clave literal 'effects'.
-        times = {
-            "idle": [0.0, length * 0.5],
-            "caminar": [0.0, length * 0.5],
-            "correr": [0.0, length * 0.5],
-            "deterioro": [0.0, length * 0.25, length * 0.5, length * 0.75],
-        }[style]
-        hot = style in ("correr", "deterioro")
-        effect_id = ("capatest:capa_embers" if hot
-                     else "capatest:capa_embers_calm")
-        effect_file = ("particles/capa_embers.json" if hot
-                       else "particles/capa_embers_calm.json")
-        fx = []
-        for j, tt in enumerate(times):
-            # v1224: en `deterioro` se alternan brasas y ESQUIRLAS, para
-            # que el clip tenga su propio efecto y no sea una copia de correr.
-            if style == "deterioro" and j % 2 == 1:
-                eid, efile = "capatest:capa_shards", "particles/capa_shards.json"
-            else:
-                eid, efile = effect_id, effect_file
-            fx.append(kf("particle", round(tt, 4), 0, 0, 0,
-                         f"{aname}/effects/e{j}", interp="step",
-                         effect={"effect": eid, "locator": "",
-                                 "script": "", "file": efile,
-                                 "bind_to_actor": True}))
-        animators["effects"] = {
-            "name": "Effects", "type": "effect", "keyframes": fx,
-        }
-        marker_names = {
-            "idle": ["inhalar", "exhalar"],
-            "caminar": ["paso_izquierdo", "paso_derecho"],
-            "correr": ["brasas_1", "brasas_2"],
-            "deterioro": ["brasas_1", "brasas_2", "brasas_3", "brasas_4"],
-        }[style]
-        markers = [{"color": -1, "time": round(tt, 4), "name": nm}
-                   for tt, nm in zip(times, marker_names)]
+                                    pose["drot"], length))
+                if pose["has_pos"]:
+                    keyframes.append(kf("position", t, pose["pos"],
+                                        f"{aname}/{bname}/p{j}",
+                                        pose["dpos"], length))
+                if pose["has_scale"]:
+                    keyframes.append(kf("scale", t, pose["scale"],
+                                        f"{aname}/{bname}/s{j}",
+                                        pose["dscale"], length))
+            animators[guuid] = {"name": bname, "type": "bone",
+                                "keyframes": keyframes}
+        times = MARKER_TIMES[style]
+        markers = [{"color": -1, "time": round(length * t, 4), "name": nm}
+                   for t, nm in zip(times, MARKERS[style])]
         out.append({
             "uuid": uid(f"animation/{aname}"),
             "name": aname,
             "markers": markers,
-            "loop": loop,
+            "loop": "loop",
             "override": False,
             "length": length,
             "snapping": 24,
@@ -410,7 +245,8 @@ def build() -> dict:
         # Los 72 huesos pristinos se mantienen como GRUPOS VACIOS: aportan
         # pivote y rotacion a la jerarquia (sin ellos el capuchon se
         # separaba del cuerpo) pero NO aportan cubos visibles.
-        if key.startswith(CAPE_BONES):
+        if key.startswith(CAPE_BONES) and not key.startswith(
+                ("v17_mote_", "v17_ash_", "v16_mote_", "v16_ash_")):
             for ci, c in enumerate(b.get("cubes", [])):
                 ek = f"{key}/cube/{ci}"
                 elements.append(make_element(b, ci, c, ek))
@@ -432,8 +268,9 @@ def build() -> dict:
         else:
             roots.append(node)
 
-    # v1.17.2: NO se añade ningún maniquí. Blockbench debe mostrar la capa
-    # y solamente la capa; los 340 cubos son los del geo del mod.
+    # rev. B: NO se añade maniquí, ni motas/ceniza 3D, ni animador de
+    # efectos. Blockbench muestra SOLO tela y NO busca archivos externos:
+    # la única textura está embebida y las partículas son runtime.
 
     texture = {
         "path": "", "name": "capa_deteriorer_evilsaiyan.png", "folder": "",
@@ -445,7 +282,7 @@ def build() -> dict:
 
     return {
         "meta": {"format_version": "5.0", "model_format": "bedrock", "box_uv": False},
-        "name": "capa_deteriorer_evilsaiyan_v1172",
+        "name": "capa_deteriorer_evilsaiyan_revB",
         "model_identifier": "geometry.capa_deteriorer_evilsaiyan",
         "visible_box": [1, 1, 1],
         "resolution": {"width": 128, "height": 128},
@@ -479,7 +316,10 @@ def main() -> None:
     _im = Image.open(io.BytesIO(_raw))
     assert _im.size == (128, 128), ("textura del .bbmodel", _im.size)
     assert model["resolution"] == {"width": 128, "height": 128}
-    assert len(model["elements"]) == 214, len(model["elements"])
+    assert len(model["elements"]) == 182, len(model["elements"])
+    assert not any(e["name"].startswith(("v17_mote_", "v17_ash_",
+                                       "v16_mote_", "v16_ash_"))
+                   for e in model["elements"]), "vuelven las motas 3D"
     assert not any(e["name"] in ("head", "torso", "arm_L", "arm_R", "leg_L", "leg_R")
                    for e in model["elements"]), "vuelve el maniquí"
     assert not any("Steve/Alex" in g["name"] for g in model["groups"])
@@ -496,18 +336,26 @@ def main() -> None:
     for a in anims:
         assert uuid_re.match(a["uuid"]), a["name"]
         assert a["loop"] == "loop" and a["length"] > 0
+        assert "effects" not in a["animators"], "Blockbench busca JSONs que no existen"
+        assert len(a["markers"]) >= 2
         for guuid, an in a["animators"].items():
-            if guuid == "effects":
-                assert an["keyframes"]
-            else:
-                assert uuid_re.match(guuid) and guuid in gids, (a["name"], guuid)
-                assert an["type"] == "bone" and an["keyframes"]
+            assert uuid_re.match(guuid) and guuid in gids, (a["name"], guuid)
+            assert an["type"] == "bone" and an["keyframes"]
             for k in an["keyframes"]:
                 assert uuid_re.match(k["uuid"])
-                assert k["channel"] in ("rotation", "position", "scale",
-                                        "particle", "sound", "timeline")
+                assert k["channel"] in ("rotation", "position", "scale")
+                assert k["interpolation"] == "bezier"
                 assert k["data_points"]
+                assert all(abs(x + y) < 0.002 for x, y in zip(
+                    k["bezier_left_value"], k["bezier_right_value"]))
             total += len(an["keyframes"])
+    # Ojo: el flag `"particle": false` de la textura SÍ es legítimo (es un
+    # campo de Blockbench). Lo que no puede aparecer es un canal de efectos
+    # ni una ruta a JSONs externos que Blockbench intente resolver al abrir.
+    assert '"channel":"particle"' not in text and '"effects"' not in text \
+        and 'particles/' not in text, \
+        "el .bbmodel no puede referenciar partículas externas"
+    assert total >= 11000, total
     print(f"wrote {OUT.relative_to(ROOT)}: {len(model['elements'])} cubos, "
           f"{len(model['groups'])} grupos, {len(anims)} animaciones, "
           f"{total} keyframes, {len(text)} bytes")

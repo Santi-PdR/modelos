@@ -156,11 +156,10 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
                 || player.getItemBySlot(EquipmentSlot.CHEST).getItem() != this) {
             return;
         }
-        // v1220: el Effects track del .bbmodel distingue "rescoldo" en
-        // reposo, "brasas" al correr y "deterioro". En Java/GeckoLib los
-        // keyframes de particula NO se disparan solos: replicamos ese
-        // estado aqui, desde el servidor, para que el efecto exista de
-        // verdad en el juego y lo vean tambien los demas jugadores.
+        // rev. B: NO hay Effects track ni motas 3D. Las partículas se
+        // generan AQUI, desde el servidor, sólo mientras la capa está
+        // equipada; así las ven también los demás jugadores y el
+        // .bbmodel no busca JSONs de partículas que no existen.
         boolean deterioro = stack.isDamaged()
                 || player.getHealth() < player.getMaxHealth() * 0.5F;
         spawnAura(level, player, deterioro);
@@ -185,6 +184,12 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
      * (dos al correr), en una órbita minúscula alrededor de la espalda. Es un
      * aura MUDA y de presupuesto fijo: no se registran SoundEvent ni se llama
      * a playSound, y el máximo son 7 partículas por tick de emisión.
+     *
+     * <p>rev. B: los 26 cubos `v17_mote_*` / `v17_ash_*` que flotaban en
+     * Blockbench se ELIMINARON del geo. Las 8 motas medidas en la
+     * referencia siguen siendo la guía de distribución, pero ahora son
+     * partículas reales: se emiten en varias alturas y a ambos lados del
+     * paño, con presupuesto fijo de 7 por tick.
      */
     public static void spawnAura(Level level, Player player, boolean deterioro) {
         if (level.isClientSide || !(level instanceof ServerLevel server)) {
@@ -202,32 +207,41 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
         data.putInt("capatest:aura_tick", tick);
 
         double yaw = Math.toRadians(player.getYRot());
-        double x = player.getX() - Math.sin(yaw) * 0.30;   // detrás del jugador
-        double z = player.getZ() + Math.cos(yaw) * 0.30;
-        double y = player.getY() + 0.55 + ThreadLocalRandom.current().nextDouble() * 0.70;
+        double backX = -Math.sin(yaw), backZ = Math.cos(yaw);
+        double sideX = Math.cos(yaw), sideZ = Math.sin(yaw);
+        double x = player.getX() + backX * 0.30D;   // detrás del jugador
+        double z = player.getZ() + backZ * 0.30D;
         boolean sprint = player.isSprinting();
         int count = deterioro ? 3 : (sprint ? 2 : 1);
-        double spread = deterioro ? 0.13 : 0.07;
+        double spread = deterioro ? 0.13D : 0.07D;
 
-        server.sendParticles(CapaParticles.CAPA_EMBER.get(), x, y, z,
-                count, spread, 0.10, spread, deterioro ? 0.004 : 0.001);
+        // rev. B: las motas NO son geometría. Se generan en runtime a lo
+        // largo del paño (tres alturas y ambos lados), como en la captura
+        // de referencia, en vez de flotar como cubos dentro del modelo.
+        for (int i = 0; i < count; i++) {
+            double side = (i - (count - 1) * 0.5D) * 0.22D;
+            double height = 0.55D + i * 0.30D
+                    + ThreadLocalRandom.current().nextDouble() * 0.55D;
+            server.sendParticles(CapaParticles.CAPA_EMBER.get(),
+                    x + sideX * side, player.getY() + height,
+                    z + sideZ * side, 1, spread, 0.10D, spread,
+                    deterioro ? 0.004D : 0.001D);
+        }
 
         // Estela detrás del jugador al correr o deteriorarse: un punto
         // extra, dentro del presupuesto fijo de 7 particulas por tick.
         if (sprint || deterioro) {
-            double sx = x - Math.sin(yaw) * 0.28D;
-            double sz = z + Math.cos(yaw) * 0.28D;
+            double sx = x + backX * 0.28D;
+            double sz = z + backZ * 0.28D;
             server.sendParticles(CapaParticles.CAPA_EMBER.get(), sx,
-                    y + 0.12D, sz, 1, 0.05, 0.06, 0.05, 0.001);
+                    player.getY() + 0.72D, sz, 1, 0.05D, 0.06D, 0.05D, 0.001D);
         }
 
-        // v1.9.0: mota cian en órbita lenta. Se emite con la mitad de
-        // frecuencia que la brasa y siempre cerca del paño, nunca en el cielo.
         // Esquirlas: SOLO en deterioro. Suben un instante y caen, como
         // fragmentos de tela que se desprenden del dobladillo.
         if (deterioro) {
             server.sendParticles(CapaParticles.CAPA_SHARD.get(), x,
-                    y + 0.25D, z, 1, 0.10, 0.16, 0.10, 0.002);
+                    player.getY() + 0.40D, z, 1, 0.10D, 0.16D, 0.10D, 0.002D);
         }
 
         if (tick % BLIGHT_INTERVAL_TICKS == 0) {

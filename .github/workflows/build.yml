@@ -70,12 +70,19 @@ jobs:
               offenders = list(json_nulls(json.loads(p.read_text())))
               assert not offenders, (p, offenders[:5])
 
-          # Modelo y animaciones aprobados: intocables.
+          # rev. B: el animation.json aprobado animaba SOLO huesos de la
+          # armadura vieja (ocultos por Java). Los 4 clips DEBEN tener
+          # pistas reales de los jirones nuevos, con la curva unica.
           armor_anim_path = base / 'animations/item/armor/capa_deteriorer_evilsaiyan.animation.json'
-          assert hashlib.sha256(armor_anim_path.read_bytes()).hexdigest() == \
-              'd796ef2c349b2481077ca72f6f4b4920d066058b02119288c10cfc50f8d75dca'
+          armor_anim = json.loads(armor_anim_path.read_text())
           expected = {'animation.idle', 'animation.moving', 'animation.sprint', 'animation.air'}
-          assert expected <= set(json.loads(armor_anim_path.read_text())['animations'])
+          assert expected <= set(armor_anim['animations'])
+          for _name, _a in armor_anim['animations'].items():
+              assert sum(1 for _b in _a['bones'] if _b.startswith('v17_ribbon_')) == 112, _name
+              assert all(len(_a['bones'][_b]['rotation']) >= 9
+                         for _b in _a['bones'] if _b.startswith('v17_ribbon_')), _name
+          assert (root / 'tools/cape_motion.py').is_file()
+          assert (root / 'tools/cape_animation_pipeline.py').is_file()
           orig_geo_path = root / 'tools/originals/capa_deteriorer_evilsaiyan.geo.json'
           assert hashlib.sha256(orig_geo_path.read_bytes()).hexdigest() == \
               'e01e347c5be0678b18907d91452d7a0c405ec430ef3fc751096532c804d43b8c'
@@ -116,8 +123,12 @@ jobs:
                   head = fh.read(24)
               assert head[:8] == b'\x89PNG\r\n\x1a\n' \
                   and struct.unpack('>II', head[16:24]) == (16, 16), p
-          ps = json.loads((root / 'docs/particles/capa_shards.json').read_text())
-          assert ps['particle_effect']['description']['identifier'] == 'capatest:capa_shards'
+          # rev. B: los JSON de Snowstorm (Bedrock) se ELIMINARON. El mod
+          # de Forge usa sus propias definiciones en assets/capatest/
+          # particles/ y Blockbench ya no busca archivos que no existen.
+          assert not (root / 'docs/particles').exists()
+          assert not list((root / 'preview/assets/particles').glob('capa_embers*.json'))
+          assert not (root / 'preview/assets/particles/capa_shards.json').exists()
 
           # Geo plegado v1.9.0: bulto 3D de 36 huesos con 2 hombreras,
           # atlas 128 y ninguna UV fuera de rango. No es un abanico plano.
@@ -160,7 +171,7 @@ jobs:
               assert set(spec['bones']) <= folded_names, (anim_name, set(spec['bones']) - folded_names)
 
           # v1.17.0: la geometría se TRAZA del PNG del usuario. Los 72
-          # huesos originales siguen BYTE-IDÉNTICOS; encima, 214 huesos
+          # huesos originales siguen BYTE-IDÉNTICOS; encima, 182 huesos
           # nuevos reconstruyen el ABANICO medido en la referencia.
           profile = json.loads((root / 'tools/reference_profile.json').read_text())
           assert profile['source'].startswith('referencias/REFERENCIA_CAPA.png')
@@ -182,8 +193,8 @@ jobs:
           armor_geo = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]
           orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
           assert armor_geo['bones'][:72] == orig_bones
-          assert len(armor_geo['bones']) == 286
-          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 340
+          assert len(armor_geo['bones']) == 254
+          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 308
           new_bones = armor_geo['bones'][72:]
           new_names = {b['name'] for b in new_bones}
           assert {
@@ -191,16 +202,18 @@ jobs:
               'v17_ribbon_0_seg0', 'v17_ribbon_7_seg3', 'v17_ribbon_15_seg6',
               'v17_shingle_0', 'v17_shingle_9', 'v17_vein_0', 'v17_vein_9',
               'v17_cowl_front_0', 'v17_cowl_front_8', 'v17_cowl_tooth_8',
-              'v17_cowl_back_4', 'v17_yoke_5', 'v17_mote_17', 'v17_ash_7',
+              'v17_cowl_back_4',
           } <= new_names
           assert sum(1 for n in new_names if n.startswith('v15_cloth_')) == 27
           assert sum(1 for n in new_names if n.startswith('v17_ribbon_')) == 112
           assert sum(1 for n in new_names if n.startswith('v17_cowl_front_')) == 9
           assert sum(1 for n in new_names if n.startswith('v17_cowl_tooth_')) == 9
           assert sum(1 for n in new_names if n.startswith('v17_cowl_back_')) == 5
-          assert sum(1 for n in new_names if n.startswith('v17_yoke_')) == 6
-          assert sum(1 for n in new_names if n.startswith('v17_mote_')) == 18
-          assert sum(1 for n in new_names if n.startswith('v17_ash_')) == 8
+          # rev. B: CERO geometría de partículas / arnés flotante.
+          _forbidden = ('v17_yoke_', 'v17_mote_', 'v17_ash_',
+                        'v16_mote_', 'v16_ash_')
+          assert not any(n.startswith(_forbidden) for n in new_names), \
+              'vuelven los cubos que flotaban en Blockbench'
           assert sum(1 for n in new_names if n.startswith('v17_shingle_')) == 10
           assert sum(1 for n in new_names if n.startswith('v17_vein_')) == 10
           veins = [b for b in new_bones if b['name'].startswith('v17_vein_')]
@@ -225,8 +238,20 @@ jobs:
           # ultimo tramo. Se compara con el MAXIMO (seg5), no con seg3.
           assert abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_3_seg6'))) < \
                  abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_3_seg5')))
-          motes = [b for b in new_bones if b['name'].startswith('v17_mote_')]
-          assert all(0.10 <= c['size'][0] <= 0.85 for b in motes for c in b['cubes'])
+          # REGRESIÓN rev. B: ningún cubo de la capa puede quedar
+          # DESPRENDIDO. Se mide la distancia al vecino más cercano.
+          import math as _math
+          _centres = []
+          for _b in new_bones:
+              for _c in _b.get('cubes', []):
+                  _o, _sz = _c['origin'], _c['size']
+                  _centres.append(tuple(_o[i] + _sz[i] / 2 for i in range(3)))
+          _worst = 0.0
+          for _i, _c0 in enumerate(_centres):
+              _best = min(_math.dist(_c0, _c1)
+                          for _j, _c1 in enumerate(_centres) if _j != _i)
+              _worst = max(_worst, _best)
+          assert _worst < 2.2, ('pieza desprendida', _worst)
           # Ningún hueso de tela puede colgar de un detalle que se oculta.
           hidden = set(__import__('re').findall(
               r'"([^"]+)"', (root / 'src/main/java/com/capatest/client/CapaArmorModel.java')
@@ -418,7 +443,7 @@ jobs:
           assert bb['meta']['format_version'] == '5.0'
           # v1.17.3: el .bbmodel de Blockbench muestra SOLO la capa: sin
           # maniqui Steve/Alex y sin los 126 cubos de la armadura vieja.
-          assert len(bb['elements']) == 214 and len(bb['groups']) >= 286
+          assert len(bb['elements']) == 182 and len(bb['groups']) >= 254
           assert not any('Steve/Alex' in g['name'] for g in bb['groups'])
           assert bb['resolution'] == {'width': 128, 'height': 128}
           assert all(max(f['uv']) <= 128 for e in bb['elements'] for f in e['faces'].values())
@@ -432,47 +457,41 @@ jobs:
           for _a in bb['animations']:
               assert _uuid.match(_a['uuid']) and _a['loop'] == 'loop'
               assert _a['animators'], 'animador vacio'
+              assert 'effects' not in _a['animators'], 'Blockbench busca JSONs ajenos'
               for _gid, _an in _a['animators'].items():
-                  if _gid == 'effects':
-                      assert _an['keyframes']
-                  else:
-                      assert _uuid.match(_gid) and _gid in _gids, 'animador huerfano'
-                      assert _an['type'] == 'bone' and _an['keyframes']
+                  assert _uuid.match(_gid) and _gid in _gids, 'animador huerfano'
+                  assert _an['type'] == 'bone' and _an['keyframes']
                   for _k in _an['keyframes']:
                       assert _uuid.match(_k['uuid'])
-                      assert _k['channel'] in ('rotation', 'position', 'scale',
-                                               'particle', 'sound', 'timeline')
+                      assert _k['channel'] in ('rotation', 'position', 'scale')
                       assert _k['data_points']
                       assert _k['interpolation'] in ('linear', 'catmullrom', 'bezier', 'step')
                   _kfs += len(_an['keyframes'])
-          assert _kfs >= 11000, _kfs
+          assert _kfs >= 12000, _kfs
           _channels = {_k['channel'] for _a in bb['animations']
                        for _an in _a['animators'].values()
                        for _k in _an['keyframes']}
-          assert _channels == {'rotation', 'position', 'scale', 'particle'}, _channels
+          assert _channels == {'rotation', 'position', 'scale'}, _channels
           # Curvas Bezier con tangentes analiticas: no mas interpolacion lineal.
           assert all(_k['interpolation'] == 'bezier'
                      for _a in bb['animations'] for _an in _a['animators'].values()
                      for _k in _an['keyframes']
                      if _k['channel'] in ('rotation', 'position', 'scale'))
-          # Emisor de particulas Snowstorm real, no solo geometria.
+          # rev. B: las partículas SON RUNTIME. El .bbmodel no lleva pista
+          # de efectos ni referencia JSONs externos; Blockbench abre limpio.
           import json as _json
-          _pe = _json.loads((root / 'docs/particles/capa_embers.json').read_text())
-          assert _pe['format_version'] == '1.10.0'
-          assert 'minecraft:emitter_rate_steady' in _pe['particle_effect']['components']
-          assert 'variable.ParticleAge' in str(_pe['particle_effect']['components']['minecraft:particle_appearance_tinting']['color'])
-          _pc = _json.loads((root / 'docs/particles/capa_embers_calm.json').read_text())
-          assert _pc['format_version'] == '1.10.0'
-          assert 'minecraft:emitter_rate_steady' in _pc['particle_effect']['components']
-          assert _pc['particle_effect']['description']['identifier'] == 'capatest:capa_embers_calm'
-          # Los CUATRO clips tienen pista de efectos y marcadores de timeline.
-          assert all('effects' in _a['animators']
-                     and len(_a['animators']['effects']['keyframes']) >= 2
-                     for _a in bb['animations'])
+          _bbtext = (root / 'docs/capa_v1170.bbmodel').read_text()
+          assert '"channel":"particle"' not in _bbtext
+          assert '"effects"' not in _bbtext and 'particles/' not in _bbtext
           assert all(len(_a.get('markers', [])) >= 2 for _a in bb['animations'])
-          _ids = {_k['data_points'][0]['effect'] for _a in bb['animations']
-                  for _k in _a['animators']['effects']['keyframes']}
-          assert len(_ids) == 3, _ids
+          _motion = (root / 'tools/cape_motion.py').read_text()
+          assert 'TRAVEL = 0.62' in _motion and 'def sample(' in _motion
+          # Java: onda coherente y SIN motas en la lista de huesos.
+          _armor_model = (root / 'src/main/java/com/capatest/client/CapaArmorModel.java').read_text()
+          assert 'motionParts(' in _armor_model and '0.62D * seg' in _armor_model
+          assert 'v17_mote_' not in _armor_model and 'v17_ash_' not in _armor_model
+          _item = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
+          assert 'sendParticles' in _item and 'NO son geomet' in _item
           # Retardo por tramo y respiracion de la capucha, no solo rotacion.
           _names = {_an['name']: _an for _a in bb['animations']
                     for _an in _a['animators'].values() if _an['type'] == 'bone'}
@@ -586,7 +605,7 @@ jobs:
           assert (root / 'tools/audit_model.py').is_file()
           assert '--check' in (root / 'tools/audit_model.py').read_text()
           assert 'tools/audit_model.py --check' in (root / '.github/workflows/build.yml').read_text()
-          print('OK: JSON/PNG sin JsonNull, item 36 huesos + animation.item, 286 huesos / 340 cubos, 16 jirones en ABANICO EN V trazados del PNG (6 tramos + punta) + 10 tejas solapadas, bufanda en U de alas rasgadas, 18 motas flotantes, 10 venas 3D emisivas con pulso, .bbmodel con 4 animaciones (11950 keyframes), atlas v1.18.0 = FOTO limpia de la referencia con UV locales por tramo y abanico radial, icono 2D visible, dobladillo deshilachado, yugo con pliegues, alas diagonales de hombro, icono remasterizado + backup byte-identico, glowmask del item, UV opacas y Curios back')
+          print('OK: JSON/PNG sin JsonNull, 254 huesos / 308 cubos SIN piezas flotantes (ni motas, ni ceniza, ni yugo, ni anclas visibles), 16 jirones radiales + 10 tejas + 10 venas, .bbmodel con 182 cubos y 4 animaciones (12624 keyframes C1) SIN Effects track, GeckoLib animando los 182 huesos de tela, curva unica cape_motion compartida con Java y visor, particulas SOLO en runtime spawnAura(), atlas v1.18.0 = FOTO limpia, icono 2D y backup byte-identico, UV opacas y Curios back')
           PY
 
       # v1220: la autoevaluacion MEDIDA se ejecuta AQUI, en GitHub Actions,
@@ -680,7 +699,7 @@ jobs:
             unzip -p "$jar" assets/capatest/animations/item/cape_folded.animation.json > /tmp/folded-anim.json
             python3 -c 'import json; a=json.load(open("/tmp/folded-anim.json"))["animations"]; assert len(a)==5 and "animation.item" in a; print("OK: 5 animaciones con animation.item dentro del jar")'
             unzip -p "$jar" assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json > /tmp/armor-geo.json
-            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==286 and sum(len(x.get("cubes",[])) for x in b)==340; print("OK: 286 huesos / 340 cubos dentro del jar")'
+            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==254 and sum(len(x.get("cubes",[])) for x in b)==308; print("OK: 254 huesos / 308 cubos dentro del jar")'
             echo "OK: clases, mods.toml, 3D item, animation.item, relieve 3D, glowmask, 2 sets de partículas y datos Curios presentes"
           done
           test "$found" -eq 1
@@ -713,7 +732,7 @@ jobs:
 
           ### Qué incluye
 
-          - `.bbmodel` con **214 cubos de capa** / 286 grupos, textura 128×128, 4 animaciones y 11950 keyframes. Sin maniquí ni armadura vieja: Blockbench muestra sólo la capa.
+          - `.bbmodel` con **182 cubos de capa** / 254 grupos, textura 128×128, 4 animaciones y 12624 keyframes Bézier C1. Sin maniquí, sin armadura vieja, SIN cubos flotantes y SIN pista de efectos: Blockbench abre sin buscar archivos de partículas.
           - Visor 3D autocontenido (sin red, sin servidor ni token) y comparativa
             con tu PNG de Blockbench.
           - **v1.18.0 — CAPA REHECHA DESDE CERO**: el atlas es la imagen
@@ -723,6 +742,13 @@ jobs:
             finos con huecos negros, capuchón integrado en la foto. Sin
             grano, Bayer, bloom ni paleta sintética. El test de CI exige
             fidelidad píxel a píxel con la referencia.
+          - **rev. B — sin cosas volando y animaciones mejoradas**: se
+            eliminaron 26 motas/ceniza 3D, 6 tiras de yugo y las 27 anclas
+            visibles; el reverso de la bufanda se integró al paño. Las
+            partículas ahora se GENERAN en runtime (`spawnAura`) al llevar
+            la capa. Una sola curva (`tools/cape_motion.py`) mueve la tela
+            en Blockbench, GeckoLib, Java y el visor: retardo por tramo,
+            vaivén de paso y barrido al correr.
           - **v1.17.2 — textura rehecha tras las capturas in-game**: el atlas
             ya NO samplea píxeles crudos del recorte (entraban brazo, arnés y
             fondo a cuadros) ni usa dithering Bayer. Paño construido desde la
@@ -739,7 +765,7 @@ jobs:
             color 74, silueta 1.29×).
           - Se conservan: los 72 huesos originales byte-idénticos, alfa prístino,
             1636 emisivos, UV opacas ≤128, 0 `JsonNull`, 0 mixins, `curios:back`,
-            286 huesos / 340 cubos y los 3 emisores de partículas.
+            254 huesos / 308 cubos y los 3 tipos de partículas en runtime.
 
           ### Requisitos
 

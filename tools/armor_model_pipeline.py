@@ -16,8 +16,10 @@ captura de Blockbench del usuario. Lo que SÍ está, medido en
     abajo (t=1.0). El dobladillo es una V / campana, NO una línea recta.
   * Degradado MEDIDO por filas: carmesí (58,25,37) -> rojo vivo (81,23,40)
     -> violeta (70,29,65) -> violeta desvaído (79,41,78) -> oscuro (61,32,56).
-  * 54 GRIETAS rosa CORTAS reales y 8 MOTAS FLOTANTES reales, sacadas de
-    los componentes conexos del magenta del PNG.
+  * 54 GRIETAS rosa CORTAS reales y 8 MOTAS FLOTANTES reales. REV. B:
+    las motas YA NO son geometría: se emiten como partículas en runtime
+    (`spawnAura`) cuando la capa está equipada. Metidas en el geo eran
+    cubos rosa suspendidos alrededor de la capa en Blockbench.
   * Agujeros NEGROS entre jirones (separaciones geométricas de verdad).
 
 ``tools/cape_shape.py`` es la fuente de verdad compartida: este módulo
@@ -54,20 +56,18 @@ def ribbon_thick(k: int) -> float:
 
 # Un solo texel oscuro para TODOS los cantos: sin filetes = sin rejilla.
 DARK = {"uv": [105.0, 0.0], "uv_size": [1.0, 48.0]}
-ASH = {"uv": [105.0, 18.0], "uv_size": [3.0, 2.0]}
-# v1.17.2: las motas muestreaban UN texel de color plano y en el juego
-# parecían BLOQUES BUGEADOS flotando. Ahora toman un sprite de 3x3 con
-# centro encendido y bordes apagados (pintado en paint_reserved_cloth_strips).
+# Sprite 3x3 con centro encendido y bordes apagados: lo usan las VENAS
+# 3D (relieve emisivo), no las motas. Las motas son partículas runtime.
 PINK = {"uv": [69.0, 109.0], "uv_size": [3.0, 3.0]}
-PINK_DIM = {"uv": [69.0, 119.0], "uv_size": [3.0, 3.0]}
 ASH_DARK = {"uv": [105.0, 0.0], "uv_size": [2.0, 2.0]}
 
 COWL_FRONT = 9
 COWL_BACK = 5
-YOKE_PIECES = 6
-MOTE_EXTRA = 10
-ASH_COUNT = 8
 SHINGLE_COUNT = 10
+# REV. B: YOKE_PIECES eliminado. Las 6 tiras grises eran el
+# arnés del MANIQUÍ de la foto, no tela: en Blockbench se veían
+# como 6 rayitas suspendidas encima de la capa.
+# REV. B: MOTE_EXTRA / ASH_COUNT eliminados. Ningún cubo suelto.
 # La mitad de los jirones NO acaba en aguja: en el PNG el dobladillo es
 # una cascada de extremos romos/deshilachados a alturas distintas.
 FADED_TIPS = {k for k in range(16) if (k * 7 + 3) % 16 < 8}
@@ -99,7 +99,7 @@ def foto_uv(cx: float, cy: float, w: float, h: float) -> dict:
     la foto correspondiente a su posición real: así el volumen 3D se
     construye ENCIMA de la imagen y el render la recompone.
     """
-    scale_x = 96.0 / 19.60                 # 9.8 unidades de semiancho
+    scale_x = 96.0 / 17.80                 # 8.9 unidades de semiancho (rev.B)
     scale_y = 48.0 / CS.HEIGHT
     uw = max(1.0, min(14.0, w * scale_x))
     vh = max(1.0, min(12.0, h * scale_y))
@@ -161,8 +161,8 @@ def build() -> dict:
     step = (gx1 - gx0) / 9.0
 
     # ------------------------------------------------------------------
-    # 1. 27 anclas de animación (`v15_cloth_*`). Son TIRAS FINÍSIMAS y casi
-    #    negras por DETRÁS del abanico: no dibujan nada, pero mantienen la
+    # 1. 27 anclas de animación (`v15_cloth_*`). REV. B: están DENTRO
+    #    del capuchón opaco, así que no dibujan NADA, pero mantienen la
     #    onda de tela de CapaArmorModel.java (panels[i]) y el fail-safe.
     # ------------------------------------------------------------------
     for si, section in enumerate(("cape_top", "cape_mid", "cape_bottom")):
@@ -175,12 +175,17 @@ def build() -> dict:
             # negros por encima del abanico; ahora sólo mantienen viva la
             # onda de tela de CapaArmorModel.panels[] (clothReady=true).
             sh = band(min(94.0, col * step + 2.0), 2.0, 45.0, 2.0)
+            # REV. B: ancla OCULTA de verdad. El capuchón frontal ocupa
+            # x=-5.9..5.9, y=19.7..23.3, z=4.07..4.97. Un cubo de 0.16 en
+            # su interior queda tapado por el z-buffer en frente, perfil,
+            # F5 y cenital: adiós a la línea de puntos flotante.
+            ax = max(-5.35, min(5.35, cx))
             bones.append(bone(
                 f"v15_cloth_{section}_{col}", section,
-                [cx, 24.0, 0.75],
+                [ax, 21.55, 4.48],
                 [0.0, 0.0, 0.0],
-                [cube16((cx - 0.12, 23.88, 0.60),
-                        (0.24, 0.24, 0.26), sh, sh, INFLATE[0])]))
+                [cube16((ax - 0.08, 21.47, 4.40),
+                        (0.16, 0.16, 0.16), sh, sh, INFLATE[0])]))
 
     # ------------------------------------------------------------------
     # 2. BUFANDA / CAPUCHA GRUESA. En la referencia es un CUENCO carmesí
@@ -196,7 +201,7 @@ def build() -> dict:
         # columnas en t=0.0), no alas separadas. Los lados siguen CORTOS
         # (height 1.25) para que la U gris del arnes siga visible: eso
         # fue exactamente lo que fallo en la "losa" de v1244.
-        x = fx * 5.90
+        x = fx * 5.20
         # Segun el recorte 4x: la tela cuelga MAS EN EL CENTRO (lóbulo
         # redondeado bajo la cabeza) y se recoge hacia los hombros.
         # El borde superior queda escondido por la cabeza del maniquí.
@@ -241,33 +246,28 @@ def build() -> dict:
                     (tw, tooth, 0.24), cowl_uv, DARK, INFLATE[1])]))
 
     # Reverso de la bufanda para la vista F5.
+    # REV. B: estaba en z=-2.30 (6 unidades DETRAS del paño) y en la
+    # vista de perfil aparecía como una BARRA FLOTANTE separada de la
+    # capa, exactamente lo que el usuario señaló en Blockbench. Ahora es
+    # una capa INTERNA de la misma bufanda: z=2.86..3.46, solapando los
+    # jirones (2.3..3.6) y justo detrás del frente del capuchón (4.1..5.0).
+    # Sigue siendo visible en F5 como pliegue, pero ya no flota.
     for i in range(COWL_BACK):
         fx = (i - (COWL_BACK - 1) / 2.0) / max(1.0, (COWL_BACK - 1) / 2.0)
         x = fx * 3.90
         height = 0.70 + 1.90 * (1.0 - abs(fx)) ** 1.35
-        y_top = 23.30 + 0.40 * abs(fx)
+        y_top = 22.90 + 0.30 * abs(fx)
         bones.append(bone(
             f"v17_cowl_back_{i}", "chestplate",
-            [x, y_top - height / 2.0, -1.90],
+            [x, y_top - height / 2.0, 3.16],
             [0.0, 0.0, -fx * 8.0],
-            [cube16((x - 1.05, y_top - height, -2.30),
-                    (2.10, height, 0.80), cowl_uv, DARK, INFLATE[2])]))
+            [cube16((x - 1.05, y_top - height, 2.86),
+                    (2.10, height, 0.60), cowl_uv, DARK, INFLATE[2])]))
 
-    # Banda gris fina que cruza bajo la bufanda (visible en la captura).
-    for i in range(YOKE_PIECES):
-        fx = (i - (YOKE_PIECES - 1) / 2.0) / ((YOKE_PIECES - 1) / 2.0)
-        x = fx * 4.00
-        # El arnés gris de la captura es una U: baja en el centro.
-        # U GRUESA y pronunciada: en el recorte 4x el arnes baja en el
-        # centro y sube hacia los hombros, y tiene grosor visible.
-        # v1212: la captura tiene UNA banda gris fina, no tres franjas
-        # escalonadas. La U se aplana y el cubo se adelgaza.
-        yy = 21.35 - 0.55 * (1.0 - abs(fx))
-        bones.append(bone(
-            f"v17_yoke_{i}", "chestplate", [x, yy + 0.21, 5.20],
-            [0.0, 0.0, fx * 2.0],
-            [cube16((x - 0.80, yy + 0.05, 5.00), (1.60, 0.10, 0.40),
-                    ASH_DARK, DARK, INFLATE[0])]))
+    # REV. B: la "banda gris" de la captura es el ARNÉS del maniquí,
+    # no la capa. Sus 6 `v17_yoke_*` eran tiras de 1.6x0.1 que, vistas de
+    # perfil, flotaban solas por encima de la bufanda. Se eliminan.
+    # (`ASH_DARK` sigue en uso en el borde del capuchón.)
 
     # ------------------------------------------------------------------
     # 3. EL ABANICO. 15 jirones x 6 tramos, cada tramo ROTADO para seguir
@@ -342,7 +342,7 @@ def build() -> dict:
             # sobresalian por ENCIMA del capuchon como antenas inclinadas.
             # Nacen mas abajo, mas cerca del cuerpo y son mas estrechas.
             t0, t1 = 0.06, 0.30
-            x0 = a * 5.10
+            x0 = a * 4.55
         # v1210: las tejas NO cruzaban la captura como tablones diagonales.
         # Se acortan a un pliegue cercano al hombro y se vuelven mas finas.
         x1 = a * (3.60 if i in (0, 1, 8, 9) else CS.silhouette(0.55) * 0.62)
@@ -371,37 +371,15 @@ def build() -> dict:
                     (w, h, CS.THICK), uv, DARK, INFLATE[1])]))
 
     # ------------------------------------------------------------------
-    # 4. MOTAS ROSA FLOTANTES. Las 8 medidas en el PNG + 28 más con la
-    #    misma distribución (más densas abajo). Son VÓXELES 3D separados,
-    #    del tamaño de los rectángulos rosa de la captura, no puntitos.
+    # 4. MOTAS: YA NO HAY GEOMETRÍA. (rev. B)
+    #    Antes había 18 `v17_mote_*` + 8 `v17_ash_*`: cubos rosas/grises
+    #    SUSPENDIDOS alrededor de la capa. En las capturas de Blockbench
+    #    parecían "cosas volando" y el usuario pidió que NO estuvieran en
+    #    el modelo. Las 8 motas medidas en `reference_profile.json` siguen
+    #    siendo la referencia de DISTRIBUCIÓN, pero ahora las genera
+    #    `CapaDeteriorerItem.spawnAura()` en el servidor, con los sprites
+    #    `capa_ember_*`, `capa_blight_mote_*` y `capa_shard_*`.
     # ------------------------------------------------------------------
-    rng = __import__("random").Random(20261111)
-    mote_specs = []
-    for m in CS.floating_motes():
-        mote_specs.append((m["x"] * 8.6,
-                           CS.Y_TOP - max(0.0, min(1.0, m["t"])) * CS.HEIGHT,
-                           max(0.14, min(0.45, m["w"] * 0.90)),
-                           max(0.28, min(1.20, m["h"] * 0.95))))
-    for i in range(MOTE_EXTRA):
-        t = rng.random() ** 0.45          # mas motas cerca del dobladillo
-        side = -1.0 if rng.random() < 0.5 else 1.0
-        x = side * (CS.silhouette(t) + rng.uniform(0.25, 1.25))
-        y = CS.Y_TOP - t * CS.HEIGHT + rng.uniform(-0.7, 0.7)
-        if i % 7 == 3:
-            w = rng.choice((0.32, 0.38, 0.44))
-            h = rng.uniform(0.65, 1.00)
-        else:
-            w = rng.choice((0.12, 0.16, 0.20, 0.24))
-            h = rng.uniform(0.28, 0.66)
-        mote_specs.append((x, y, w, h))
-    for i, (x, y, w, h) in enumerate(mote_specs):
-        z = 2.40 + 1.25 * (0.5 + 0.5 * math.sin(i * 2.17))
-        bones.append(bone(
-            f"v17_mote_{i}", "chestplate", [x, y, z],
-            [0.0, 0.0, 9.0 * math.sin(i * 1.7)],
-            [cube16((x - w / 2.0, y - h / 2.0, z),
-                    (w, h, 0.28), PINK if i < 8 else PINK_DIM,
-                    PINK if i < 8 else PINK_DIM, INFLATE[2])]))
 
     # ------------------------------------------------------------------
     # 5. VENAS 3D: 10 trazos rosa SACADOS de las grietas reales del PNG,
@@ -422,17 +400,6 @@ def build() -> dict:
             [cube16((x - vw / 2.0, y - vh / 2.0, z),
                     (vw, vh, 0.26), PINK, PINK, INFLATE[2])]))
 
-    # Ceniza gris: 8 fragmentos apagados.
-    for i in range(ASH_COUNT):
-        t = 0.42 + 0.55 * rng.random()
-        x = rng.uniform(-5.2, 5.2)
-        y = CS.Y_TOP - t * CS.HEIGHT
-        z = 3.55
-        bones.append(bone(
-            f"v17_ash_{i}", "chestplate", [x, y, z],
-            [0.0, 0.0, 12.0 * math.sin(i)],
-            [cube16((x, y, z), (0.22, 0.30, 0.26), ASH_DARK, DARK, INFLATE[1])]))
-
     # ---- descripción y garantías -------------------------------------
     geo["bones"] = bones
     desc = geo["description"]
@@ -441,14 +408,16 @@ def build() -> dict:
     desc["visible_bounds_offset"] = [0, 0.5, 0]
 
     assert geo["bones"][:72] == original_bones, "los 72 huesos originales cambiaron"
+    assert not any(b["name"].startswith(("v17_mote_", "v17_ash_",
+                                        "v16_mote_", "v16_ash_"))
+                   for b in bones), "vuelven los cubos flotantes"
     names = {b["name"] for b in bones}
     assert len(names) == len(bones), "nombres de hueso duplicados"
     for prefix, expected in (
             ("v15_cloth_", 27),
             ("v17_cowl_front_", COWL_FRONT), ("v17_cowl_tooth_", COWL_FRONT),
-            ("v17_cowl_back_", COWL_BACK), ("v17_yoke_", YOKE_PIECES),
+            ("v17_cowl_back_", COWL_BACK),
             ("v17_ribbon_", CS.RIBBONS * (CS.SEGS + 1)),
-            ("v17_mote_", len(mote_specs)), ("v17_ash_", ASH_COUNT),
             ("v17_vein_", 10), ("v17_shingle_", SHINGLE_COUNT),
             ("v17_ribbon_", CS.RIBBONS * (CS.SEGS + 1))):
         assert sum(1 for n in names if n.startswith(prefix)) == expected, prefix
@@ -460,7 +429,9 @@ def build() -> dict:
                 assert_opaque(f)
             assert 0.0 < c["inflate"] <= 0.05, c["inflate"]
     thick = [c["size"][2] for b in bones[72:] for c in b["cubes"]
-             if b["name"].startswith(("v17_ribbon_", "v15_cloth_"))]
+             if b["name"].startswith("v17_ribbon_")]
+    # REV. B: las anclas v15_cloth_ son cubos de 0.16 OCULTOS dentro del
+    # capuchón; el contrato de espesor es sólo para el paño visible.
     assert thick and all(0.25 <= t <= 0.50 for t in thick), (min(thick), max(thick))
     return data
 
@@ -473,8 +444,8 @@ def main() -> None:
     cubes = sum(len(b.get("cubes", [])) for b in geo["bones"])
     print(f"wrote {OUT.relative_to(ROOT)}: {len(geo['bones'])} bones, {cubes} cubes")
     print(f"  abanico {CS.RIBBONS} jirones x {CS.SEGS} tramos"
-          f" | capucha {COWL_FRONT + COWL_BACK} | motas "
-          f"{len(CS.floating_motes()) + MOTE_EXTRA}")
+          f" | capucha {COWL_FRONT + COWL_BACK} | SIN motas 3D "
+          f"(particulas solo en runtime)")
 
 
 if __name__ == "__main__":

@@ -30,6 +30,10 @@ ROOT = Path(__file__).resolve().parents[1]
 # umbral: media un atlas sintetico que ya no existe. El test ahora exige
 # que el atlas sea la foto del usuario y que la silueta siga cerrando.
 #
+# rev. B: se comprueba ademas que NO haya geometria de particulas
+# (motas/ceniza/yugo), que ningun cubo quede desprendido y que las 4
+# animaciones lleven la curva unica de tools/cape_motion.py.
+#
 # v1240: umbrales REAJUSTADOS tras la ronda de forma/energía/color. El
 # estado medido es total 139.0 (paño 73.5, energía 32.8, color 98,
 # silueta 1.41x); se deja ~15% de holgura para diferencias de versión de
@@ -115,12 +119,26 @@ def static_checks() -> None:
         ROOT / "tools" / "texture_pipeline.py").read_text()
     bb = json.loads((ROOT / "docs" / "CAPA_v1.17.0.bbmodel").read_text())
     assert len(bb["animations"]) == 4
-    ids = {k["data_points"][0]["effect"] for a in bb["animations"]
-           for k in a["animators"]["effects"]["keyframes"]}
-    assert len(ids) == 3, ids
+    # rev. B: NO puede haber animador `effects` ni canal `particle`: eran
+    # referencias a JSONs Snowstorm que Blockbench no encuentra al abrir
+    # el .bbmodel suelto. Las partículas son RUNTIME (spawnAura).
+    assert all("effects" not in a["animators"] for a in bb["animations"])
+    chans = {k["channel"] for a in bb["animations"]
+             for an in a["animators"].values() for k in an["keyframes"]}
+    assert chans == {"rotation", "position", "scale"}, chans
     kfs = sum(len(an["keyframes"]) for a in bb["animations"]
               for an in a["animators"].values())
-    assert kfs >= 11900, kfs
+    assert kfs >= 12000, kfs
+    motion = (ROOT / "tools" / "cape_motion.py").read_text()
+    assert "TRAVEL = 0.62" in motion and "def sample(" in motion
+    assert "def phase_of(" in motion and "STYLES" in motion
+    # GeckoLib: los 4 clips deben animar huesos v17_ de verdad (antes
+    # animaban SOLO huesos viejos ocultos por Java).
+    runtime_anim = json.loads((ROOT / "src/main/resources/assets/capatest"
+                               / "animations/item/armor"
+                               / "capa_deteriorer_evilsaiyan.animation.json").read_text())
+    for name, anim in runtime_anim["animations"].items():
+        assert any(b.startswith("v17_ribbon_") for b in anim["bones"]), name
     # v1240: forma y efectos de la ronda, verificados como contrato.
     tp = (ROOT / "tools" / "texture_pipeline.py").read_text()
     assert "def shape_energy_density" in tp
@@ -135,7 +153,31 @@ def static_checks() -> None:
     geo = json.loads((ROOT / "src/main/resources/assets/capatest/geo/item"
                       "/armor/capa_deteriorer_evilsaiyan.geo.json").read_text())
     bones = geo["minecraft:geometry"][0]["bones"]
-    assert len(bones) == 286 and sum(len(b.get("cubes", [])) for b in bones) == 340
+    assert len(bones) == 254 and sum(len(b.get("cubes", [])) for b in bones) == 308
+    forbidden = ("v17_mote_", "v17_ash_", "v17_yoke_",
+                 "v16_mote_", "v16_ash_")
+    assert not any(b["name"].startswith(forbidden) for b in bones), \
+        "vuelve la geometría de partículas"
+    # Nada desprendido: todo cubo visible tiene un vecino a < 2.2 u.
+    import preview_cloth as _PC
+    _hidden = _PC.effective_hidden(json.loads(
+        (ROOT / "src/main/resources/assets/capatest/geo/item/armor"
+         / "capa_deteriorer_evilsaiyan.geo.json").read_text())[
+             "minecraft:geometry"][0])
+    _pts = []
+    for _b in bones:
+        if _b["name"] in _hidden:
+            continue
+        for _c in _b.get("cubes", []):
+            _o, _z = _c["origin"], _c["size"]
+            _pts.append([_o[i] + _z[i] / 2 for i in range(3)])
+    _arr = np.asarray(_pts, float)
+    _worst = 0.0
+    for _i in range(len(_arr)):
+        _d = np.sqrt(((_arr - _arr[_i]) ** 2).sum(1))
+        _d[_i] = 1e9
+        _worst = max(_worst, float(_d.min()))
+    assert _worst < 2.2, ("cubo desprendido", _worst)
     # v1283: la V se verifica por PROPIEDADES, no por los numeros de una
     # ronda concreta. Todos los lobulos llegan al dobladillo (paño en
     # t=0.8), sus puntas son desiguales y la envolvente CIERRA de forma
@@ -170,7 +212,7 @@ def static_checks() -> None:
     # v1.17.3: regresión de la prueba real en Blockbench. El .bbmodel
     # NO puede volver a incluir el maniquí ni los cubos de armadura vieja.
     bb = json.loads((ROOT / 'docs/capa_v1170.bbmodel').read_text())
-    assert len(bb['elements']) == 214, len(bb['elements'])
+    assert len(bb['elements']) == 182, len(bb['elements'])
     assert bb['resolution'] == {'width': 128, 'height': 128}
     assert all(max(f['uv']) <= 128 for e in bb['elements']
                for f in e['faces'].values())
@@ -190,9 +232,17 @@ def static_checks() -> None:
     assert (particles / "particles/capa_shard.json").is_file()
     for i in range(3):
         assert (particles / f"textures/particle/capa_shard_{i}.png").is_file()
-    assert (ROOT / "docs/particles/capa_shards.json").is_file()
+    # rev. B: los JSON de Snowstorm (Bedrock) ya NO se entregan: no
+    # los usa el mod de Forge y Blockbench los buscaba al abrir el
+    # .bbmodel. Quedan SOLO las definiciones reales de partículas.
+    assert not (ROOT / "docs/particles").exists()
     java = (ROOT / "src/main/java/com/capatest/item/CapaDeteriorerItem.java").read_text()
     assert "spawnAura(Level level, Player player, boolean deterioro)" in java
+    assert "NO son geomet" in java or "NO es geomet" in java
+    armor_java = (ROOT / "src/main/java/com/capatest/client"
+                  / "CapaArmorModel.java").read_text()
+    assert "motionParts(" in armor_java and "0.62D * seg" in armor_java
+    assert not any(n in armor_java for n in ("v17_mote_", "v17_ash_"))
     curios = (ROOT / "src/main/java/com/capatest/compat/CuriosCompat.java").read_text()
     assert "spawnAura(player.level(), player, deterioro)" in curios
 
@@ -234,7 +284,8 @@ def main() -> None:
             print("FALLO: métricas fuera de umbral: " + ", ".join(bad),
                   file=sys.stderr)
             sys.exit(1)
-        print("OK: autoevaluación dentro de umbrales, icono y runtime intactos")
+        print("OK: autoevaluación dentro de umbrales, sin piezas volando, "
+          "partículas en runtime e icono intacto")
     else:
         print("(informe; usa --check para que falle como test de CI)")
 

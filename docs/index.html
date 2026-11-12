@@ -22,7 +22,7 @@
 <body>
 <main>
   <h1>Capa Deteriorer · v1.18.0</h1>
-  <p>Capa rehecha desde cero: el atlas ES tu imagen limpiada y cada tramo 3D muestrea su píxel. Abanico radial con cierre en V. Sin dependencias externas.</p>
+  <p>Rev. B: <b>sin piezas volando</b>. Se quitaron las motas/ceniza 3D, el yugo y las anclas visibles; el reverso de la bufanda quedó unido al paño. Las partículas se generan al llevar la capa puesta, no dentro del modelo. Animaciones rehechas con una sola curva compartida. El atlas sigue siendo tu imagen limpiada.</p>
   <div class="grid">
     <a href="capa_v1170_visor.html"><b>Ver el modelo en 3D (recomendado)</b>
        <span>Visor autocontenido: rota con el ratón, cambia de vista y reproduce las 4 animaciones.</span></a>
@@ -31,25 +31,25 @@
     <a href="capa_v1170_icon_compare.png"><b>Icono del item (ahora visible)</b>
        <span>El inventario usa el PNG 2D de 16×16 ampliado con NEAREST; el renderer 3D ya no lo tapa.</span></a>
     <a href="CAPA_v1.17.0.bbmodel" download><b>Descargar el .bbmodel para Blockbench</b>
-       <span>214 cubos de capa · 286 grupos · 4 animaciones · 11950 keyframes · textura 128×128 embebida · sin maniquí.</span></a>
+       <span>182 cubos de capa · 254 grupos · 4 animaciones · 12624 keyframes C1 · textura 128×128 embebida · sin maniquí, sin cubos sueltos y sin partículas externas.</span></a>
     <a href="capa_v1170_comparativa.png"><b>Comparativa con tu referencia</b>
        <span>Tu PNG de Blockbench a la izquierda, el modelo actual a la derecha.</span></a>
     <a href="capa_v1170_animaciones.png"><b>Hoja de animaciones</b>
-       <span>18 poses del ondeo, las motas y el pulso de las venas.</span></a>
+       <span>18 poses del ondeo por tramo y del pulso de las venas.</span></a>
     <a href="capa_v1170_animaciones.gif"><b>GIF animado</b>
-       <span>18 fotogramas en bucle del ondeo, las motas y las venas.</span></a>
-    <a href="particles/capa_shards.json"><b>Esquirlas de deterioro (3.º emisor)</b>
-       <span><code>capatest:capa_shards</code> · 3 sprites propios · se alternan con las brasas en el clip de deterioro.</span></a>
+       <span>18 fotogramas en bucle de la nueva curva C1.</span></a>
+    <a href="capa_v1170_particles.png"><b>Sprites de partículas (runtime)</b>
+       <span><code>capa_ember</code>, <code>capa_blight_mote</code> y <code>capa_shard</code>: 3 sprites cada uno. Aparecen SÓLO al equipar la capa; ya no hay JSON Snowstorm que Blockbench busque.</span></a>
     <a href="ICONO_APROBADO_BACKUP.png"><b>Backup del icono aprobado</b>
        <span>Byte-idéntico al icono anterior · <code>tools/restore_icon.py</code> lo restaura.</span></a>
-    <a href="particles/capa_embers_calm.json"><b>Rescoldo en reposo (2.º emisor)</b>
-       <span><code>capatest:capa_embers_calm</code> · marcadores y Effects track en los 4 clips · color por vida de partícula.</span></a>
+    <a href="capa_v1170_side_relief.png"><b>Vista de perfil (sin piezas sueltas)</b>
+       <span>Comprobación de que no queda ninguna barra ni punto flotando alrededor de la capa.</span></a>
     <a href="capa_v1170_silhouette_compare.png"><b>Autoevaluación visual</b>
        <span>Color calibrado por medición: cobertura, energía y silueta comparadas décima a décima con tu PNG.</span></a>
-    <a href="particles/capa_embers.json"><b>Emisor de partículas (Snowstorm)</b>
-       <span><code>capatest:capa_embers</code> · brasas rosa · referenciado por el Effects track del .bbmodel.</span></a>
+    <a href="capa_v1180_atlas_desde_imagen.png"><b>Atlas = tu imagen limpiada</b>
+       <span>96×48 sin checkerboard ni maniquí; cada tramo 3D muestrea su propio píxel (<code>foto_uv()</code>).</span></a>
   </div>
-  <p style="margin-top:26px;font-size:13px">Otros archivos:
+  <p style="margin-top:26px;font-size:13px">Rev. B en el workspace, sin JAR nuevo publicado hasta aprobación visual. Otros archivos:
      <code>capa_v1170_preview.png</code> (6 vistas),
      <code>capa_v1170_front_rig.png</code>,
      <code>capa_v1170_side_relief.png</code>,

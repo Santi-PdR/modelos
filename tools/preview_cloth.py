@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import argparse
 import copy
+
+import cape_motion as M
 import json
 import math
 import pathlib
@@ -208,63 +210,20 @@ def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27)):
 
 
 def posed(geo):
-    """Muestra estática de la onda Java (los ángulos del geo van en grados)."""
+    """Pose estática de la MISMA curva canónica (`cape_motion`).
+
+    Antes este render, el visor JS, Java y Blockbench tenían cuatro ondas
+    distintas. Ahora todos muestrean `cape_motion.sample()` y las motas
+    flotantes ya no existen como geometría.
+    """
     out = copy.deepcopy(geo)
-    secs = {"cape_top": 0, "cape_mid": 1, "cape_bottom": 2}
     for b in out["bones"]:
         n = b["name"]
-        if n.startswith("v15_cloth_"):
-            sec, col = n[len("v15_cloth_"):].rsplit("_", 1)
-            si, ci = secs[sec], int(col)
-            share = 0.30 + 0.35 * si
-            wave = math.sin(1.9 - si * 0.55 - ci * 0.030)
-            b["rotation"][0] -= 6.0 * share * (0.55 + 0.45 * wave)
-            b["rotation"][1] += (ci - 6) * 0.30 * share
-            b["rotation"][2] += math.sin(ci * 0.42) * 1.0 * share
-        elif n.startswith("v15_hem_"):
-            ci = int(n.rsplit("_", 1)[1])
-            b["rotation"][2] += math.sin(2.3 - ci * 0.55) * 2.2
-        elif n.startswith("v16_mote_") or n.startswith("v16_ash_"):
-            ci = int(n.rsplit("_", 1)[1])
-            b["rotation"][0] += math.sin(1.9 + ci * 0.37) * 7.0
-            b["rotation"][1] += math.cos(1.3 + ci) * 5.0
-            b["rotation"][2] += math.sin(2.4 + ci * 0.37) * 3.5
-        elif n.startswith("v16_collar_") or n.startswith("v16_yoke_"):
-            ci = int(n.rsplit("_", 1)[1])
-            b["rotation"][0] += math.sin(1.9 + ci * 0.37) * 1.6
-            b["rotation"][2] += math.sin(1.1 + ci) * 0.8
-        elif n.startswith("v16_vein_"):
-            ci = int(n.rsplit("_", 1)[1])
-            b["rotation"][2] += math.sin(3.2 + ci) * 2.4
-        elif n.startswith("v16_tatter_") or n.startswith("v16_shred_") \
-                or n.startswith("v16_fray_") or n.startswith("v16_hem_"):
-            ci = int(n.rsplit("_", 1)[1])
-            b["rotation"][0] += (2.0 + 4.0 * (ci % 5) / 5.0) * 0.8
-            b["rotation"][1] += math.sin(1.7 + ci) * 2.2
-            b["rotation"][2] += math.sin(1.4 + ci) * 2.6
-        elif n.startswith("v17_ribbon_"):
-            parts = n.rsplit("_", 3)
-            ci, seg = int(parts[2]), int(parts[3][3:])
-            b["rotation"][0] += (1.0 + seg * 0.55) * (0.6 + 0.4 * math.sin(ci * 0.9))
-            b["rotation"][2] += (math.sin(1.3 + ci * 0.7 + seg * 0.5)
-                                 * (0.8 + seg * 0.35)
-                                 + math.sin(3.1 + ci * 0.9 + seg * 0.4)
-                                 * (0.3 + 0.22 * seg))  # v1240 flutter
-        elif n.startswith("v17_vein_"):
-            ci = int(n.rsplit("_", 1)[1])
-            b["rotation"][2] += math.sin(3.2 + ci * 1.4) * 4.5
-            b["rotation"][0] += math.sin(2.1 + ci) * 1.5
-        elif n.startswith("v17_shingle_"):
-            ci = int(n.rsplit("_", 1)[1])
-            b["rotation"][0] += (1.4 + ci % 4) * 0.9
-            b["rotation"][2] += math.sin(1.8 + ci * 1.3) * 3.2
-        elif n.startswith("v17_mote_"):
-            ci = int(n.rsplit("_", 1)[1])
-            b["rotation"][0] += math.sin(2.1 + ci * 0.37) * 8.0
-            b["rotation"][2] += math.cos(1.4 + ci) * 6.0
-        elif n.startswith("v17_cowl_") or n.startswith("v17_yoke_"):
-            ci = int(n.rsplit("_", 1)[1])
-            b["rotation"][0] += math.sin(1.7 + ci * 0.4) * 1.4
+        if not n.startswith(("v15_cloth_", "v15_hem_", "v16_", "v17_")):
+            continue
+        pose = M.sample(n, "caminar", 0.31)
+        for axis in range(3):
+            b["rotation"][axis] += pose["rot"][axis]
     return out
 
 
@@ -353,8 +312,8 @@ def main():
     armor = load(ARMOR_GEO)
     folded = load(FOLDED_GEO)
     runtime_hidden = effective_hidden(armor)
-    # v1.17.0: la "piel nueva" son las anclas v15_* y TODO el abanico
-    # v17_* trazado de la referencia (capucha, jirones, motas, ceniza).
+    # rev. B: la "piel nueva" son las anclas v15_* y el abanico v17_*.
+    # NO hay motas ni ceniza: son partículas de runtime.
     cloth_only = {b["name"] for b in armor["bones"]
                   if not b["name"].startswith(("v15_", "v16_", "v17_"))}
     original_only = cloth_only | runtime_hidden

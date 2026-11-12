@@ -4,10 +4,32 @@ Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Capa equipada en `curios:back`, temática
 **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-> 📦 **Release vigente: `v1.18.0`** (JAR compilado en CI). v1.14.0, v1.15.0
-> y v1.16.0 fueron rechazadas visualmente y sus previews se han borrado del
-> repo. Los previews actuales son render **software**: la prueba in-game y
-> la aprobación visual siguen pendientes.
+> 📦 **Release publicada: `v1.18.0`** (JAR de la ronda anterior).
+> Esta rama contiene la **rev. B** (sin piezas volando + animaciones
+> rehechas), **todavía SIN publicar como JAR** hasta aprobación visual.
+> v1.14.0, v1.15.0 y v1.16.0 fueron rechazadas visualmente y sus previews
+> se borraron del repo. Los previews son render **software**.
+
+### Rev. B — «se ven cosas volando» y «mejora las animaciones»
+
+En las capturas de Blockbench había cubos rosa **dentro del modelo**, una
+barra desprendida arriba, una línea de puntos y un aviso de que no
+encontraba «todo lo que es partículas». Causas y arreglos:
+
+| Síntoma | Causa real | Arreglo |
+|---|---|---|
+| Cubos rosa/grises flotando alrededor de la capa | 18 `v17_mote_*` + 8 `v17_ash_*` eran **geometría** | eliminados del geo y del `.bbmodel`. Ahora los emite `spawnAura()` en runtime, a lo largo del paño, desde el servidor |
+| Blockbench «no encuentra las partículas» | animador `effects` de Bedrock con keyframes `particle` que apuntaban a `particles/*.json` (Snowstorm) inexistentes junto al `.bbmodel` | se eliminó el Effects track y los 3 JSON; el `.bbmodel` es autocontenido: 1 textura embebida y **0 referencias externas** |
+| Barra suelta arriba / línea de puntos | el reverso de la bufanda estaba 6 unidades **detrás** del cuerpo; 6 tiras `v17_yoke_*` (arnés del maniquí) y 27 anclas `v15_cloth_*` flotaban | reverso integrado al paño (z 2.86), yugo eliminado, anclas ocultas **dentro** del capuchón opaco (siguen existiendo para Java) |
+| La tela vibraba, no ondeaba | 4 ondas distintas; GeckoLib animaba **0** huesos `v17_*`; Java usaba `i*0.37` (índice global) | **`tools/cape_motion.py`**: una sola curva C1 con retardo real por tramo (`-0.62*seg + col*0.19`), vaivén de paso, barrido al correr y estremecimiento. La consumen el `.bbmodel`, `cape_animation_pipeline.py` (GeckoLib), `CapaArmorModel.java` y el visor |
+
+Resultado: **254 huesos / 308 cubos**, `.bbmodel` de **182 cubos** y
+**12624 keyframes** Bézier C1 en 4 clips, sin un solo cubo desprendido
+(test de vecino más cercano < 2.2 u en CI). Las partículas siguen siendo
+3 tipos reales (`capa_ember`, `capa_blight_mote`, `capa_shard`) pero
+**sólo aparecen al llevar la capa puesta**. Fidelidad con tu imagen
+1.239 y **silueta 1.00×** (antes 1.09×: el abanico radial se
+estrechó un 10% midiendo el PNG).
 
 ## Empecé de 0 usando TU referencia
 
@@ -40,8 +62,9 @@ en un dobladillo ancho de puntas desiguales.
 - **Color medido**: carmesí `(58,25,37)` → rojo vivo `(81,23,40)` →
   violeta `(70,29,65)` → violeta desvaído `(79,41,78)`. Agujeros negros
   y grietas rosa cortas salen del PNG, no de un generador aleatorio.
-- **18 motas rosa flotantes** como vóxeles 3D separados (las 8 medidas
-  en la captura + 10 con la misma distribución, más densas abajo).
+- **Las motas NO son geometría** (rev. B): las 8 medidas en la captura
+  son la guía de distribución de las partículas que `spawnAura()` genera
+  en runtime cuando la capa está equipada.
 - **10 tejas solapadas** que cruzan la campana por delante: rompen la
   regularidad de los rayos sin volver a la rejilla rechazada.
 - **10 venas 3D emisivas** sobre las grietas reales del PNG: `v17_vein_*`
@@ -100,12 +123,14 @@ geo+atlas reales y compara décima a décima con `REFERENCIA_CAPA.png`
 `numpy`/`Pillow` y **falla el build** si el error global supera 165
 (v1.18.0: el criterio pasa a ser la fidelidad píxel a píxel con tu imagen; ver abajo). Así la autoevaluación no depende de mi sandbox.
 
-Además, los keyframes `particle` del `.bbmodel` no se disparan solos en
-Java/GeckoLib: `CapaDeteriorerItem.spawnAura(..., deterioro)` replica los
-tres emisores en runtime (rescoldo en reposo, 2 brasas + estela al correr,
-3 brasas + 2 motas frías con el ítem dañado o vida baja), desde el servidor
-para que lo vean los demás jugadores. `CuriosCompat` usa el mismo estado.
-**La CI de GitHub compila este cambio con JDK 17 + Gradle 8.8.**
+**Rev. B:** el `.bbmodel` ya NO tiene keyframes `particle` ni pista
+`effects`: esos JSON de Snowstorm no existen junto al archivo y por eso
+Blockbench avisaba al abrirlo. Las partículas son **100% runtime**:
+`CapaDeteriorerItem.spawnAura(..., deterioro)` emite brasas a tres
+alturas del paño, estela al correr, esquirlas y motas frías (máximo 7
+por tick), desde el servidor para que las vean los demás jugadores.
+`CuriosCompat` usa el mismo estado. El visor las dibuja como overlay 2D,
+nunca como cubos. **La CI compila con JDK 17 + Gradle 8.8.**
 
 ### Icono remasterizado y tercer emisor (v1225)
 
@@ -210,19 +235,21 @@ Contrastando el PNG y el render a la misma escala, la autoevaluación pasó de
 - **Comparativa con tu referencia**:
   [`docs/capa_v1170_comparativa.png`](docs/capa_v1170_comparativa.png).
 - **Proyecto Blockbench**: [`docs/capa_v1170.bbmodel`](docs/capa_v1170.bbmodel),
-  4 animaciones en bucle con **11950 keyframes** y UUID canónicos:
-  curvas **Bézier** con tangentes analíticas (C1), marcadores de timeline,
-  parpadeo de motas, tirón por tramo, respiración de capucha y un
-  **Effects track en los 4 clips** con tres emisores Snowstorm
-  (`docs/particles/capa_embers.json`, `capa_embers_calm.json` y `capa_shards.json`).
+  182 cubos / 254 grupos, 4 animaciones en bucle con **12624 keyframes**
+  y UUID canónicos: curvas **Bézier** con tangentes analíticas (C1),
+  marcadores, retardo por tramo, vaivén de paso, barrido al correr,
+  respiración de capucha y pulso de venas. **Sin Effects track**, sin
+  partículas en el modelo y sin archivos externos: abre limpio en
+  Blockbench con la textura 128×128 embebida.
 - **Previews**: [`docs/capa_v1170_preview.png`](docs/capa_v1170_preview.png),
   [`docs/referencia_analizada.png`](docs/referencia_analizada.png).
 
 Se conservan: los **72 huesos originales byte-idénticos**, alfa prístino,
 **1636 emisivos**, UV opacas ≤128, `inflate` ≤0.05, espesor 0.25–0.50,
 0 `JsonNull`, 0 mixins, `animation.item`, radianes y fail-safes.
-**286 huesos / 340 cubos**. `CapaArmorModel.java` quedó regenerado para
-los 214 huesos `v15_*` / `v17_*` reales.
+**254 huesos / 308 cubos**. `CapaArmorModel.java` usa `motionParts()`
+para los 182 huesos de tela reales; la curva vive en
+[`tools/cape_motion.py`](tools/cape_motion.py).
 
 > PR #1: https://github.com/Santi-PdR/modelos/pull/1
 
@@ -304,5 +331,7 @@ píxel a píxel** entre el atlas del mod y
 `referencias/REFERENCIA_CAPA_atlas96.png` (error medio **1.24**, límite
 1.50), más el cierre de la silueta (1.12×, límite 1.60×).
 
-Se conservan 286 huesos / 340 cubos, 4 animaciones, 11950 keyframes,
-icono 2D, 3 emisores y los backups byte-idénticos del icono aprobado.
+Estado de esa ronda: 286 huesos / 340 cubos, 4 animaciones, 11950
+keyframes y 3 emisores. **La rev. B posterior** los deja en 254 / 308,
+12624 keyframes y partículas únicamente en runtime. Se conservan el
+icono 2D y los backups byte-idénticos del icono aprobado.

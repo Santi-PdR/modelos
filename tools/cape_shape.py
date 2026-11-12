@@ -177,7 +177,9 @@ def fan_x(k: int, t: float) -> float:
     """
     a = lateral(k)
     t = max(0.0, min(1.0, t))
-    rad = 0.70 + 9.10 * t
+    # rev. B: 9.10 -> 8.20. Medido contra el PNG: el render era
+    # 1.09x mas ancho en t=0.2..0.7; con 8.20 queda en 1.00x.
+    rad = 0.70 + 8.20 * t
     # La captura NO es un triangulo: abre hasta t~0.72 y CIERRA en V
     # hacia las puntas (los jirones exteriores se recogen).
     if t > 0.68:
@@ -312,6 +314,12 @@ def energy_marks() -> list[dict]:
 
 
 def floating_motes() -> list[dict]:
+    """Las 8 motas medidas en el PNG: GUÍA de distribución, NO geometría.
+
+    rev. B: `armor_model_pipeline.py` ya NO crea cubos con estos datos.
+    Las partículas las emite `CapaDeteriorerItem.spawnAura()` en runtime
+    y el visor las dibuja como overlay, cuando la capa está equipada.
+    """
     return PROFILE_DATA["floating_motes"]
 
 
