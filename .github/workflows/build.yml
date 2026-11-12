@@ -564,7 +564,9 @@ jobs:
                     for _d in _k['data_points'][0].values()]
               return round((sum(_x * _x for _x in _v) / len(_v)) ** 0.5, 2)
           assert len({_rms(_a) for _a in bb['animations']}) == 4
-          _visor = (root / 'preview/app.js').read_text()
+          # `preview/` NO se versiona: se valida el VISOR AUTOCONTENIDO,
+          # que es el entregable real y lleva el app.js embebido.
+          _visor = (root / 'docs/capa_v1170_visor.html').read_text()
           assert 'bend = Math.pow(segF,1.6)' in _visor, 'visor sin offset acumulado'
           assert 'b.offset || [0,0,0]' in _visor, 'visor ignora el canal position'
           assert 'let showPlayer = false' in _visor, 'maniqui blanco visible otra vez'
