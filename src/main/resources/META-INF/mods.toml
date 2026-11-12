@@ -9,6 +9,12 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.17.1: build del modelo mas reciente (rondas v1283 y v1331). Yugo del
+capuchon calibrado contra el PNG, guiones de energia alargados, dobladillo
+deshilachado por textura, alas diagonales de hombro y paño adelantado en
+t=0.4..0.8. Error de autoevaluacion 138.96 -> 77.20 -> 67.95. La Release
+v1.17.0 anterior contenia una build mas antigua; esta es la vigente.
+
 v1.17.0: EMPIEZA DE 0 USANDO LA REFERENCIA DEL USUARIO. El PNG de
 Blockbench se guarda en referencias/, tools/reference_trace.py mide la
 envolvente (31 puntos), la paleta por fila (21 filas) y 54 grietas rosa,

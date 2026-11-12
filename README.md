@@ -1,4 +1,4 @@
-# Mantle of the Blight Star — v1.17.0
+# Mantle of the Blight Star — v1.17.1
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Capa equipada en `curios:back`, temática
@@ -79,6 +79,17 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
+### Release vigente: v1.17.1
+
+El JAR **más reciente** se publica como Release
+[`v1.17.1`](https://github.com/Santi-PdR/modelos/releases/tag/v1.17.1):
+`capatest-1.17.1.jar`, compilado en CI con JDK 17 + Gradle 8.8 sobre el
+modelo de las rondas v1283/v1331. La Release `v1.17.0` queda como histórico
+(contiene una build anterior); no se sobreescribe. El workflow publica con
+`workflow_dispatch(publicar=true)` o con un commit marcado `[publicar]`, y
+lee la versión de `gradle.properties` para que el nombre del JAR nunca
+quede desincronizado.
+
 ### Tests en GitHub y efectos en runtime (v1220)
 
 `tools/audit_model.py` es un **test de regresión numérico**: renderiza el
@@ -86,7 +97,7 @@ geo+atlas reales y compara décima a décima con `REFERENCIA_CAPA.png`
 (mediana RGB, cobertura de paño, densidad de energía y silueta). El workflow
 `build.yml` lo ejecuta con `--check` **antes de compilar**, instala
 `numpy`/`Pillow` y **falla el build** si el error global supera 165
-(estado actual: 67.95). Así la autoevaluación no depende de mi sandbox.
+(estado actual: 69.47). Así la autoevaluación no depende de mi sandbox.
 
 Además, los keyframes `particle` del `.bbmodel` no se disparan solos en
 Java/GeckoLib: `CapaDeteriorerItem.spawnAura(..., deterioro)` replica los
@@ -170,14 +181,14 @@ Tras «mejora lo que falta», la autoevaluación pasó de **138.96 a 77.20**:
 ### Ronda v1331: mirando de nuevo la referencia principal
 
 Contrastando el PNG y el render a la misma escala, la autoevaluación pasó de
-**77.20 a 67.95**:
+**77.20 a 69.47**:
 
 - **Yugo sin calibrar**: capuchón y alas de hombro muestrean la región
   reservada `(57..71, 76..93)`, **fuera del canvas 96×48**. Su mediana era
   (106,37,60) frente a (58,17,29) del canvas, y eso explicaba la mitad del
   error cromático en `t=0.0/0.1`. Ahora se lleva al carmesí medido
   (75,22,32) con un **viraje a violeta** hacia el borde inferior
-  (60,29,45). Error de color **94 → 74**.
+  (60,29,45). Error de color **94 → 74** y cobertura **29.8 → 24.9 pp**.
 - **Grietas cuadradas**: cada guion conservado se extiende un texel en
   vertical cuando el siguiente texel pertenece al mismo trazo; dos de cada
   tres se alargan para mezclar cuchilladas y motas. Se recalibró la
@@ -187,7 +198,7 @@ Contrastando el PNG y el render a la misma escala, la autoevaluación pasó de
   inferior del atlas des-abanicado, sin tocar alfa ni los 1636 emisivos.
 - **Relleno adelantado**: la rampa de anchura empezaba en `f=0.64` y no
   alcanzaba `t=0.4..0.7`, donde la referencia tiene más paño. Ahora arranca
-  en `f=0.35`; cobertura **29.8 → 25.1 pp** sin volver a la falda.
+  en `f=0.35`; cobertura **29.8 → 24.9 pp** sin volver a la falda.
 - **Contratos**: CI verifica también la calibración del yugo y que los
   guiones de energía sigan siendo trazos alargados.
 

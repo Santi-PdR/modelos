@@ -505,11 +505,17 @@ jobs:
           curio = (root / 'src/main/java/com/capatest/client/CapaCurioRenderer.java').read_text()
           assert 'Exception | LinkageError' in glow_layer
           assert 'if (wearer == null)' in curio
-          assert 'mod_version=1.17.0' in (root / 'gradle.properties').read_text()
+          # v1.17.1: la version se lee de gradle.properties. Un numero
+          # hardcodeado aqui dejaria pasar un JAR con el nombre viejo.
+          props = (root / 'gradle.properties').read_text().splitlines()
+          ver = [l.split('=', 1)[1].strip() for l in props
+                 if l.startswith('mod_version=')][0]
+          assert len(ver.split('.')) == 3 and all(x.isdigit() for x in ver.split('.')), ver
+          assert f'mod_version={ver}' in (root / 'gradle.properties').read_text()
           assert 'curios_version=5.14.1+1.20.1' in (root / 'gradle.properties').read_text()
-          assert 'v1.17.0' in (root / 'src/main/resources/pack.mcmeta').read_text()
-          assert '1.17.0' in (root / 'src/main/resources/META-INF/mods.toml').read_text()
-          assert 'v1.17.0' in (root / 'README.md').read_text()
+          assert f'v{ver}' in (root / 'src/main/resources/pack.mcmeta').read_text()
+          assert ver in (root / 'src/main/resources/META-INF/mods.toml').read_text()
+          assert f'v{ver}' in (root / 'README.md').read_text()
           assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/en_us.json').read_text()
           assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/es_es.json').read_text()
           assert 'CAPA_BLIGHT_MOTE' in java
@@ -596,7 +602,7 @@ jobs:
       - name: List built jars
         run: ls -lh build/libs
 
-      - name: Verify jar contents (v1.17.0 resources)
+      - name: Verify jar contents (model resources)
         run: |
           set -euo pipefail
           found=0
@@ -654,334 +660,92 @@ jobs:
           test "$found" -eq 1
 
       # Entrega directa: un .jar crudo como Release asset, NO un ZIP de artifact.
-      # v1225: un `push` solo VALIDA Y COMPILA. La publicacion de una
-      # Release queda bajo disparo manual explicito, para no volver a
-      # publicar una version sin aprobacion visual del usuario.
+      # v1.17.1: la version y el TAG salen de gradle.properties, para que el
+      # nombre del JAR nunca quede desincronizado. El dispatch manual sigue
+      # disponible; ademas, un commit marcado [publicar] permite publicar
+      # cuando el token de integracion no tiene permiso actions:write (403).
       - name: Publish direct .jar release
-        if: github.event_name == 'workflow_dispatch' && inputs.publicar == true
+        if: >-
+          (github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar]')) ||
+          (github.event_name == 'workflow_dispatch' && inputs.publicar == true)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          JAR="build/libs/capatest-1.17.0.jar"
+          VER="$(sed -n 's/^mod_version=//p' gradle.properties | tr -d '[:space:]')"
+          test -n "$VER"
+          TAG="v$VER"
+          JAR="build/libs/capatest-$VER.jar"
           test -f "$JAR"
           NOTES=/tmp/release-notes.md
           cat > "$NOTES" <<'MD'
-          ## Mantle of the Blight Star v1.17.0 — EMPIEZA DE 0 USANDO TU IMAGEN
+          ## Mantle of the Blight Star __TAG__ — build más reciente
 
-          Dijiste: *«quiero que empieces de 0 con el modelo de la skin de la
-          capa, aún no te veo usando las referencias que hice para ti,
-          quiero que quede exactamente como en la imagen»*.
+          JAR compilado en CI (JDK 17 + Gradle 8.8, Forge 1.20.1-47.3.0) con el
+          modelo de las rondas **v1283** y **v1331**. La Release `v1.17.0`
+          anterior contiene una build más antigua y **no se sobreescribe**.
 
-          v1.14.0, v1.15.0 y v1.16.0 fueron **rechazadas**: se rediseñaban
-          a ojo y terminaban siendo un cilindro de tiras paralelas. Esta vez
-          el modelo se **MIDE del PNG que subiste**.
+          ### Qué incluye
 
-          ### La referencia ahora ES el pipeline
+          - `.bbmodel` con 346 cubos / 287 grupos, 4 animaciones y 11950 keyframes.
+          - Visor 3D autocontenido (sin red, sin servidor ni token) y comparativa
+            con tu PNG de Blockbench.
+          - Capuchón con la región `yoke` calibrada contra la referencia, grietas
+            como trazos alargados, dobladillo deshilachado por textura, alas
+            diagonales de hombro y paño adelantado en `t=0.4..0.8`.
+          - Autoevaluación medida décima a décima: error global
+            **138.96 → 77.20 → 69.47** (cobertura 24.9 pp, energía 19.9 pp,
+            color 74, silueta 1.29×).
+          - Se conservan: los 72 huesos originales byte-idénticos, alfa prístino,
+            1636 emisivos, UV opacas ≤128, 0 `JsonNull`, 0 mixins, `curios:back`,
+            286 huesos / 340 cubos y los 3 emisores de partículas.
 
-          | Artefacto | Qué hace |
-          |---|---|
-          | `referencias/REFERENCIA_CAPA.png` | Tu captura de Blockbench, guardada en el repo |
-          | `tools/reference_trace.py` | Segmenta paño/energía, mide **31 puntos de envolvente**, **21 filas de paleta**, **54 grietas rosa** y 8 motas flotantes |
-          | `tools/reference_profile.json` | Los datos medidos, consumidos por geometría y textura |
-          | `docs/referencia_analizada.png` | Prueba visual: recorte, máscara, envolvente y paleta |
-          | `tools/cape_shape.py` | Fuente de verdad del ABANICO compartida por geo y atlas |
-          | `tools/texture_pipeline.py` | **Des-abanica** el recorte limpio en el atlas 96×48: cada jirón lleva los colores que le tocan en tu captura |
+          ### Requisitos
 
-          La **cabeza blanca es sólo escala del maniquí** y no se modela.
-
-          ### Qué cambió de verdad
-
-          | | v1.16.0 (rechazada) | **v1.17.0** |
-          |---|---|---|
-          | Forma | cilindro de cintas paralelas | **CAMPANA**: 16 jirones + 10 tejas nacen estrechos, se abren hasta ±10 y vuelven a cerrarse en puntas desiguales |
-          | Rotación | signo de Z invertido (el abanico se cerraba al revés) | **corregido** (Blockbench niega X) |
-          | Color | degradado procedural inventado | **paleta MEDIDA**: carmesí (58,25,37) → rojo (81,23,40) → violeta (79,41,78) |
-          | Detalle | grietas aleatorias | **54 grietas y agujeros reales del PNG**, des-abanicados |
-          | Cuello | losa / corona de cajas | **capucha gruesa en cuenco** + 9 dientes rasgados + reverso para F5 |
-          | Motas | puntitos | **18 vóxeles rosa flotantes** del tamaño de los rectángulos de la captura |
-          | Huesos / cubos | 246 / 300 | **286 / 340** |
-
-          El **icono 64×64 fue remasterizado** contra la referencia; el aprobado
-          sigue BYTE-IDÉNTICO en `referencias/ICONO_APROBADO_BACKUP.png`.
-          Se conservan alfa prístino, 1636 emisivos, los 72 huesos originales
-          byte-idénticos, UV opacas ≤128, 0 `JsonNull`, 0 mixins.
-
-          ### ANIMACIONES REALES en Blockbench
-
-          El `.bbmodel` exporta **4 animaciones en bucle** —
-          `idle_respiracion`, `caminar`, `correr_saltar` y
-          `deterioro_particulas` — con **11950 keyframes de rotación/posición/escala
-          sobre 214 huesos** (capucha, los 112 tramos/puntas de jirón, 10 tejas, 10 venas, motas, ceniza
-          y los 27 paneles de paño). UUID canónicos 8-4-4-4-12, como exige
-          `Animation.extend()`; si no, los keyframes quedan huérfanos. El
-          maniquí Steve/Alex lleva cara, pelo y túnica.
-
-          ### Movimiento en el juego
-
-          `CapaArmorModel` resuelve los **214 huesos `v15_*`/`v17_*`** por nombre y
-          anima respiración del collar, ondeo de cintas con retardo, pulso de
-          venas y deriva de microvóxeles, en radianes y con fail-safe. El
-          icono conserva la forma 16×16 plana/`NEAREST` aprobada.
-
-          ### Se conserva íntegro
-
-          ID `capatest:capa_deteriorer_evilsaiyan`, `curios:back`, los 72
-          huesos originales byte-idénticos, `animation.item`, aura muda,
-          `visible_bounds` 6.0/5.6, raíz sin `parent`, 0 `JsonNull` y 0 mixins.
+          Forge 1.20.1 (47.3.0), Java 17, GeckoLib 4.8.x y Curios 5.14.1+1.20.1.
 
           ### Descargas de esta Release
 
           | Archivo | Para qué |
           |---|---|
-          | `capatest-1.17.0.jar` | El mod compilado (Forge 1.20.1) |
-          | `capa_v1170.bbmodel` | Proyecto editable de **Blockbench** con maniquí Steve/Alex |
-          | `capa_v1170_visor.html` | Visor 3D **autocontenido**: abrir con doble clic, sin servidor ni token |
-          | `capa_v1170_preview.png` | Comparativa de 6 vistas (render software) |
+          | `capatest-__VER__.jar` | El mod compilado |
+          | `capa_v1170.bbmodel` | Proyecto editable de Blockbench |
+          | `capa_v1170_visor.html` | Visor 3D offline |
+          | `capa_v1170_preview.png` | 6 vistas del render software |
+          | `capa_v1170_comparativa.png` | Tu referencia frente al modelo |
 
-          El sandbox de Arena tiene `allowPublicTraffic=false`: una URL
-          `https://8000-*.e2b.app` abierta fuera del *Live Preview* devuelve
-          **403 MISSING TRAFFIC ACCESS TOKEN**. Por eso el `.bbmodel` se
-          entrega desde GitHub y el visor funciona sin red.
-
-          Previews: `docs/capa_v1170_preview.png` (6 vistas),
-          `capa_v1170_side_relief.png`, `capa_v1170_icon_compare.png`,
-          `capa_v1170_silhouette_compare.png`, `capa_v1170_uv_test.png`.
-          Son render software: la prueba in-game queda para el próximo arranque.
-
-          ## Histórico v1.10.0 — icono pixel art 2D RPG y tela bordada
-
-          ### Icono: estilo de las dos referencias 16x16
-
-          El icono de v1.9.0 era una ilustración suave con degradados y halo: no era
-          lo que pediste. Las dos capas de referencia son **el mismo icono 16x16
-          recoloreado** (capucha, hombros, pliegues verticales, dobladillo, paleta
-          plana, contorno duro, sin antialiasing ni bloom). v1.10.0 recupera esa
-          silueta y esa técnica:
-
-          - `ICON_PIXEL_MAP` + `ICON_PALETTE`: 16x16 con 11 colores planos en violeta,
-            oro y cian; broche de 5 píxeles con núcleo claro, estrella cian de 4
-            puntas y vetas frías sueltas como las verdes de la referencia 2.
-          - **Ampliado 4x con `Image.NEAREST`** a 64x64: bloques de color definidos,
-            sin blur, degradado, halo ni bisel. Rim light de 1 píxel arriba/izquierda.
-          - `preview_cloth.py` amplía el icono con `NEAREST` para no falsear la
-            comparación: `docs/capa_v1170_icon_compare.png` (ref 1 / ref 2 / nuevo).
-
-          ### Textura: de líneas neón a paño tejido y bordado
-
-          v1.9.0 dibujaba un gran diamante magenta de líneas finas con bloom rosa
-          sobre fondo casi negro. v1.10.0 lo reemplaza por tela de verdad:
-
-          - **sarga con cuerpo**: trama, diagonal, urdimbre, grano y sombreado de los
-            3 pliegues anchos; el paño deja de ser un plano oscuro.
-          - **medallón relleno** con facetas oscuras, bisel y engarce dorado; núcleo
-            cian de Blight Star con 8 rayos cortos y órbita discontinua en oro.
-          - **bordado a puntadas** (`stitch()`) en yugo, doble ribete, constelación,
-            sigilos, valles de pliegue y dobladillo. Hilo oro/violeta en vez de líneas
-            luminosas continuas; estrellas y pespuntes en oro apagado; bloom reducido
-            a menos de la mitad; cian sólo en el núcleo.
-          - bulto plegado, hombreras y gema del broche reteñidos a la misma paleta
-            para que item y capa equipada combinen.
-          - **Intacto**: alfa base byte-idéntico, **1636 texels emisivos** sin ampliar
-            el glowmask de armadura, UV<=128, canvas 96x48, 648 caras UV nuevas en
-            zonas opacas, onda 2D/3D compartida y superficie lisa.
-
-          ### Se conserva íntegro lo anterior
-
-          Relieve 3D (**171 huesos / 234 cubos**: 9 nervios, 2 cortinas, 5 pesas,
-          cuello trasero, tirantes y arnés delantero con hombreras/cadenas/placa),
-          **`animation.item`** en GUI/hotbar/mano (36 huesos, 5 animaciones), glowmask
-          de dos tintas del item, aura de brasas + motas cian con presupuesto fijo de
-          7 partículas por tick de emisión, **sin `playSound` ni `SoundEvent` propio**,
-          fail-safes, radianes, cero `JsonNull`, cero mixins y Curios `back`.
-
-          El pixel art de v1.10.0 gustó por el estilo, pero su silueta era la de
-          las referencias; v1.17.0 la sustituye por la forma propia descrita arriba.
-          Los previews se versionaron de nuevo a `capa_v1170_*`; la prueba del trazado está en `docs/referencia_analizada.png`.
-
-          ## Histórico v1.9.0 — Blight Star, relieve, arnés y animación del item
-
-          Nombre **Mantle of the Blight Star** en inglés, lore traducido e ID interno
-          conservado. Medallón de estrella marchita, 4 fragmentos orbitales 3D,
-          esporas frías, segundo tipo de partículas (`capa_blight_mote`) y aura muda.
-          Relieve 3D y arnés delantero animado; bulto plegado de 36 huesos con
-          `animation.item`. Su icono de ilustración suave y su canvas de líneas
-          magenta quedaron reemplazados en v1.10.0.
-
-          ## Histórico v1.8.0 — bulto 3D, icono proporcionado y material
-
-          Item plegado rehecho como **bulto 3D de 34 huesos** con forro, 7 franjas,
-          yugo, cuello, broche de diamante, cadenas, tiras, 3 rollos y 5 puntas.
-          Fin del recorte: icono 64×64 y atlas 128×128 con proporción real
-          (`cloth_canvas_fitted` / `build_icon_artwork`), transforms ajustados y
-          `FULL_SKY` fuera de GUI. Nuevo `CapaItemGlowLayer` con
-          `cape_folded_glowmask.png` y `RenderType.eyes`. Capa equipada con
-          medallón completo, doble ribete, constelación, dobladillo de 4 texels y
-          5 estrellas 3D: **131 huesos / 185 cubos**, 354 caras UV nuevas.
-
-          ## Histórico v1.7.0 — pliegues anchos coherentes 2D/3D
-
-          `cloth_spec.FOLDS = 3` pasó a ser la única fuente de verdad: el
-          sombreado (`fold_wave`) y el relieve en Z de `panel_z()` muestrean la
-          misma onda coseno. 3 pliegues anchos, 9 creases 3D en los valles,
-          festón real, medallón con tercer anillo, pespuntes, desgaste discreto
-          y movimiento por pliegue en bloque. 126 huesos / 180 cubos.
-
-          ## Histórico v1.6.1 — corrige el crash al cargar el geo
-
-          **Fix del crash reportado in-game**: `GeckoLibException:
-          capatest:geo/item/cape_folded.geo.json: Error loading model file`
-          (juego cerrado mientras `Rendering overlay`). Esta vez **sí era
-          nuestro mod**.
-
-          - **Causa**: `tools/item_model_pipeline.py` escribía
-            `"parent": null` en el hueso raíz `cape` del geo plegado.
-            GeckoLib 4.8.x deserializa ese campo con
-            `GsonHelper.getAsString(obj, "parent", null)`. Como la clave está
-            presente, Gson obtiene un `JsonNull` y llama a `getAsString()`,
-            que lanza `UnsupportedOperationException`; GeckoLib lo envuelve
-            como "Error loading model file" durante el reload de recursos,
-            antes de poder renderizar el item en el inventario.
-          - **Corrección**: los huesos raíz **omiten** la clave `parent`, que
-            es el formato Bedrock correcto y lo que ya hacía el geo original
-            aprobado en sus 8 raíces. `GeometryTree.fromModel` sigue tratando
-            `parent == null` como raíz, así que la geometría no cambia en nada.
-          - **Defensa**: el pipeline ahora falla si el geo contiene cualquier
-            `null` o un padre inexistente; el CI escanea **todos** los JSON del
-            pack de recursos en busca de `JsonNull` y verifica que la raíz del
-            geo plegado no declare `parent`. El aspecto de la capa es idéntico
-            a v1.6.0.
-
-          Era un defecto latente desde v1.4.0 que no se había podido detectar:
-          el arranque anterior se caía antes por un conflicto de mixins ajeno
-          al mod, por lo que el juego nunca llegaba a cargar los recursos.
-
-          ## Base v1.6.0 — una sola pieza de tela
-
-          Prioridad de esa versión: **apariencia y calidad de la capa**.
-
-          - **Superficie realmente continua.** v1.5.1 calculaba los límites por
-            sección y repartía 13 columnas sobre cada una: la ilustración se
-            estiraba de forma distinta arriba, en el centro y abajo, y partía el
-            medallón. Ahora las tres secciones comparten **un único rectángulo
-            global** y el canvas 96×48 se divide en un mosaico **9×3** con
-            exactamente la misma escala en las 27 caras. Sin líneas de costura
-            pintadas: los pliegues son sombreado y un relieve suave en Z.
-          - **Menos cajas, más paño.** Se ocultan en runtime los **61 huesos
-            originales con cubos** que no pertenecen a la cadena
-            `chestplate → cape_top/mid/bottom` (placas, dedos, jirones,
-            faldones, hombreras y tiras). El geo prístino sigue byte-idéntico y
-            sus animaciones siguen accionando a los huesos padres; el aspecto
-            de "cajas apiladas" desaparece.
-          - **Geometría más ligera:** 123 huesos / 177 cubos frente a 168 / 235
-            de v1.5.1. 27 paneles, 6 creases, 6 ribetes laterales, 9 lengüetas
-            de dobladillo, 2 alas de cuello y un broche en diamante girado 45°.
-            Vuelo de campana del 1% y caída progresiva hacia atrás, sin romper
-            la línea continua del borde.
-          - **Mismo diseño en todas partes.** El icono de inventario y el item
-            3D plegado (7 pliegues) muestrean ahora el **mismo canvas** que la
-            capa equipada: un único medallón, la misma filigrana y el mismo
-            dobladillo. Antes llevaban una ilustración aparte con dos
-            medallones. Material algo más claro para que se lea en la espalda
-            con la luz del juego.
-          - **Herramienta de validación visual versionada.**
-            `tools/preview_cloth.py` genera previews de frente/3-4/espalda, tela
-            sola, detalle original y canvas; `--uv-test` pinta franjas de
-            colores para comprobar que el orden UV del mosaico es correcto y
-            que las filas quedan alineadas.
-
-          Garantías que se mantienen:
-
-          - **Estabilidad v1.5.1**: todos los ángulos se convierten con
-            `Math.toRadians` antes de `setRot*`; sin `getBakedModel()` en el hot
-            path; huesos resueltos una vez con caché; fail-safe cosmético que
-            registra el error y deja la capa estática en vez de tumbar el juego.
-          - **Movimiento**: onda con retardo de fase de hombros a dobladillo,
-            viento, giro, salto, agua, sigilo y sprint; animaciones
-            `idle/moving/sprint/air` intactas. Inspirado en WaveyCapes, Finery
-            y GlowberryClient #102/#106, sin portar código incompatible.
-          - **Assets**: alfa base byte-idéntico, cobertura emisiva de 1636
-            texels sin cambios, todas las UV nuevas en zonas ya opacas,
-            glowmask 128×128, icono 64×64, 3 sprites de 16×16, aura serena.
-          - Curios `5.14.1+1.20.1` opcional con slot `back`; sin Curios se
-            equipa en pecho y se ve en F5. Rarity EPIC, `fireResistant`, foil,
-            lore en_us/es_es y `/give @s capatest:capa_deteriorer_evilsaiyan`.
-
-          ### Si el juego no arranca con `MixinTransformerError`
-
-          Ese error **no lo causa este mod** y es distinto del
-          `GeckoLibException: Error loading model file` que corrigió v1.6.1.
-
-          `player_animation_library.mixins.json:firstPerson.ItemInHandRendererMixin`
-          pertenece a **Player Animation Library**, no a `capatest`. Su método
-          `cancelItemRender` es un `@Inject` sobre
-          `ItemInHandRenderer#renderItem` en el punto `INVOKE` de
-          `ItemRenderer.renderStatic(LivingEntity, ItemStack,
-          ItemDisplayContext, boolean, PoseStack, MultiBufferSource, Level,
-          int, int, int)`. Sirve para ocultar el item de la mano cuando una
-          animación dibuja el modelo en tercera persona.
-
-          `(0/1) succeeded. Scanned 1 target(s)` significa que Mixin **encontró
-          el método** `renderItem` pero **no encontró esa llamada concreta**
-          dentro de él, así que no pudo aplicar ni una inyección. Causas
-          típicas: otro mixin ya reescribió `renderItem` o cambió la firma de
-          `renderStatic`, o el `refmap` no coincide con el mapping SRG de este
-          Forge. Ocurre en `Initializing game` porque la transformación de
-          clases sucede al arrancar, cuando `Minecraft.<init>` construye el
-          `EntityRenderDispatcher` y se carga `ItemInHandRenderer` — antes de
-          cualquier mundo y de que exista una capa equipada. En el stack no
-          aparece ni una clase `com.capatest.*`: el mod no registra mixins
-          (verificado en CI).
-
-          **Cómo desatascarlo** (nombres del pack reportado):
-          1. Quitar `ImmediatelyFast-Forge-1.5.5+1.20.4.jar`: es una build de
-             **1.20.4 corriendo en 1.20.1** y toca precisamente el render de
-             items. Sustituirla por la build 1.20.1.
-          2. Quitar los snapshots `TRansition-1.0.21-...` y `TRender-1.0.15-...`,
-             que transforman el render de primera persona.
-          3. Actualizar `PlayerAnimationLibForge-1.2.8+1.20.1-all.jar` a una
-             build 1.20.1 compatible, o quitarlo **junto con sus dependientes**
-             (`fiskheroes`, `TRender`/`TRansition`).
-          4. Probar primero con Forge + GeckoLib + Curios + `capatest` y añadir
-             el resto por grupos. Quitar `capatest` no arregla este arranque.
-
-          El README trae el procedimiento completo y el enlace al código del
-          mixin.
-
-          Requiere Forge 1.20.1 (47.3.0), Java 17 y GeckoLib 4.8.1 (4.8.x).
-          **Descarga: el `.jar` directo de este Release**, no un ZIP de
-          artifact. Compilado y validado en CI. Los previews son software y no
-          sustituyen una prueba in-game; si algo falla, el mod registra
-          `Blight Star Mantle: ... desactivada` en el log en vez de propagarlo.
+          Los previews son render software: la prueba in-game sigue pendiente.
           MD
-          if gh release view v1.17.0 >/dev/null 2>&1; then
-            gh release upload v1.17.0 "$JAR" --clobber
+          sed -i "s/__TAG__/$TAG/g; s/__VER__/$VER/g" "$NOTES"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$JAR" --clobber
           else
-            gh release create v1.17.0 "$JAR" \
-              --title "Mantle of the Blight Star v1.17.0" \
+            gh release create "$TAG" "$JAR" \
+              --title "Mantle of the Blight Star $TAG" \
               --notes-file "$NOTES" \
               --target "$GITHUB_SHA"
           fi
-          # v1.17.0: el proyecto Blockbench y el visor offline se entregan
-          # TAMBIEN como assets de la Release. El sandbox tiene el trafico
-          # publico restringido (403 sin e2b-traffic-access-token), asi que
-          # un link al preview NO sirve para descargar: GitHub si.
+          # El proyecto Blockbench y el visor offline se entregan TAMBIEN
+          # como assets: el sandbox tiene el trafico publico restringido.
           test -f docs/capa_v1170.bbmodel
           test -f docs/capa_v1170_visor.html
-          gh release upload v1.17.0 \
+          test -f docs/capa_v1170_preview.png
+          test -f docs/capa_v1170_comparativa.png
+          gh release upload "$TAG" \
             docs/capa_v1170.bbmodel \
             docs/capa_v1170_visor.html \
             docs/capa_v1170_preview.png \
+            docs/capa_v1170_comparativa.png \
             --clobber
-          ASSETS="$(gh release view v1.17.0 --json assets --jq '.assets[].name')"
-          grep -qx 'capatest-1.17.0.jar' <<< "$ASSETS"
+          ASSETS="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
+          grep -qx "capatest-$VER.jar" <<< "$ASSETS"
           grep -qx 'capa_v1170.bbmodel' <<< "$ASSETS"
           grep -qx 'capa_v1170_visor.html' <<< "$ASSETS"
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.17.0/capatest-1.17.0.jar"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/capatest-$VER.jar"
           echo "### Descarga directa" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "[${URL}](${URL})" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "[Blockbench: capa_v1170.bbmodel](https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.17.0/capa_v1170.bbmodel)" >> "$GITHUB_STEP_SUMMARY"
+          echo "[Blockbench: capa_v1170.bbmodel](https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/capa_v1170.bbmodel)" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "[Visor offline: capa_v1170_visor.html](https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.17.0/capa_v1170_visor.html)" >> "$GITHUB_STEP_SUMMARY"
+          echo "[Visor offline: capa_v1170_visor.html](https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/capa_v1170_visor.html)" >> "$GITHUB_STEP_SUMMARY"
