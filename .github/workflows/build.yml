@@ -170,7 +170,12 @@ jobs:
           assert (root / 'referencias/REFERENCIA_CAPA_recorte.png').is_file()
           assert (root / 'docs/referencia_analizada.png').is_file()
           assert 'def nearest_ribbon' in (root / 'tools/cape_shape.py').read_text()
-          assert 'reference_point(k' in (root / 'tools/texture_pipeline.py').read_text()
+          texture_pipeline = (root / 'tools/texture_pipeline.py').read_text()
+          # v1.17.2: el atlas YA NO samplea pixeles crudos del recorte (asi
+          # entraban el brazo beige, el arnes gris y el fondo a cuadros).
+          assert 'CS.palette_at(float(x))' in texture_pipeline
+          assert 'clean_path' not in texture_pipeline, 'vuelve el confeti del recorte'
+          assert 'cuchillada(' in texture_pipeline, 'faltan las cuchilladas largas'
           armor_geo = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]
           orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
           assert armor_geo['bones'][:72] == orig_bones
@@ -247,8 +252,17 @@ jobs:
                                  for x0, y0, x1, y1 in opaque_rects), (bone['name'], face)
 
           model = json.loads((base / 'models/item/capa_deteriorer_evilsaiyan.json').read_text())
-          assert model['parent'] == 'builtin/entity'
+          # v1.17.2: el BEWLR 3D tapaba el icono 2D en el inventario.
+          # El item DEBE usar el modelo plano con layer0 = icono.
+          assert model['parent'] == 'minecraft:item/generated', model['parent']
+          assert model['textures']['layer0'] == 'capatest:item/capa_deteriorer_evilsaiyan'
           assert {'gui', 'ground', 'fixed', 'firstperson_righthand'} <= set(model['display'])
+          icon_bytes = (base / 'textures/item/capa_deteriorer_evilsaiyan.png').read_bytes()
+          assert icon_bytes[:8] == b'\x89PNG\r\n\x1a\n'
+          assert struct.unpack('>II', icon_bytes[16:24]) == (64, 64)
+          assert len(icon_bytes) > 800
+          item_java = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
+          assert 'getCustomRenderer' not in item_java, 'el BEWLR vuelve a ocultar el icono'
 
           # Garantía: capatest NO registra mixins. Un MixinTransformerError
           # en "Initializing game" (p. ej. player_animation_library) nunca
@@ -560,7 +574,7 @@ jobs:
           assert (root / 'tools/audit_model.py').is_file()
           assert '--check' in (root / 'tools/audit_model.py').read_text()
           assert 'tools/audit_model.py --check' in (root / '.github/workflows/build.yml').read_text()
-          print('OK: JSON/PNG sin JsonNull, item 36 huesos + animation.item, 286 huesos / 340 cubos, 16 jirones en ABANICO EN V trazados del PNG (6 tramos + punta) + 10 tejas solapadas, bufanda en U de alas rasgadas, 18 motas flotantes, 10 venas 3D emisivas con pulso, .bbmodel con 4 animaciones (11950 keyframes), canvas des-abanicado de la referencia, dobladillo deshilachado por textura, yugo calibrado, guiones de energia alargados, energia con mejor-perfil conservado, alas diagonales de hombro, icono remasterizado + backup byte-identico, glowmask del item, UV opacas y Curios back')
+          print('OK: JSON/PNG sin JsonNull, item 36 huesos + animation.item, 286 huesos / 340 cubos, 16 jirones en ABANICO EN V trazados del PNG (6 tramos + punta) + 10 tejas solapadas, bufanda en U de alas rasgadas, 18 motas flotantes, 10 venas 3D emisivas con pulso, .bbmodel con 4 animaciones (11950 keyframes), atlas limpio v1.17.2 sin pixeles crudos ni Bayer, cuchilladas diagonales largas, icono 2D visible, dobladillo deshilachado, yugo con pliegues, alas diagonales de hombro, icono remasterizado + backup byte-identico, glowmask del item, UV opacas y Curios back')
           PY
 
       # v1220: la autoevaluacion MEDIDA se ejecuta AQUI, en GitHub Actions,
@@ -690,9 +704,17 @@ jobs:
           - `.bbmodel` con 346 cubos / 287 grupos, 4 animaciones y 11950 keyframes.
           - Visor 3D autocontenido (sin red, sin servidor ni token) y comparativa
             con tu PNG de Blockbench.
-          - Capuchón con la región `yoke` calibrada contra la referencia, grietas
-            como trazos alargados, dobladillo deshilachado por textura, alas
-            diagonales de hombro y paño adelantado en `t=0.4..0.8`.
+          - **v1.17.2 — textura rehecha tras las capturas in-game**: el atlas
+            ya NO samplea píxeles crudos del recorte (entraban brazo, arnés y
+            fondo a cuadros) ni usa dithering Bayer. Paño construido desde la
+            paleta medida, pliegues radiales, huecos entre lóbulos y
+            cuchilladas diagonales largas en vez de confeti magenta.
+          - El **icono 2D ahora se ve en el inventario**: el item usa
+            `minecraft:item/generated` con `layer0`; se eliminó el BEWLR 3D
+            que lo ocultaba. Motas 3D y partículas con sprites degradados y
+            alpha limpio en los bordes (adiós a los bloques flotantes).
+          - Capuchón con pliegues radiales y borde rasgado, dobladillo
+            deshilachado por textura y alas diagonales de hombro.
           - Autoevaluación medida décima a décima: error global
             **138.96 → 77.20 → 69.47** (cobertura 24.9 pp, energía 19.9 pp,
             color 74, silueta 1.29×).

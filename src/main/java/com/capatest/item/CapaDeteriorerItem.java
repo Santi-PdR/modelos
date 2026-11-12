@@ -1,11 +1,9 @@
 package com.capatest.item;
 
 import com.capatest.client.CapaArmorRenderer;
-import com.capatest.client.CapaItemRenderer;
 import com.capatest.particle.CapaParticles;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.model.HumanoidModel;
-import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -58,7 +56,6 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
     public void initializeClient(Consumer<IClientItemExtensions> consumer) {
         consumer.accept(new IClientItemExtensions() {
             private GeoArmorRenderer<?> renderer;
-            private CapaItemRenderer itemRenderer;
 
             @Override
             public @NotNull HumanoidModel<?> getHumanoidArmorModel(
@@ -75,14 +72,10 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
                 return this.renderer;
             }
 
-            /** Modelo 3D real en inventario / mano / suelo (parent builtin/entity). */
-            @Override
-            public BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                if (this.itemRenderer == null) {
-                    this.itemRenderer = new CapaItemRenderer();
-                }
-                return this.itemRenderer;
-            }
+            // v1.17.2: NO se registra BEWLR. El renderer 3D plegado
+            // (builtin/entity) tapaba el icono 2D y el usuario no llegaba
+            // a verlo nunca en el inventario. Ahora el item usa
+            // minecraft:item/generated con layer0 = icono 16x16 -> 64x64.
         });
     }
 

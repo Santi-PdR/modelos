@@ -55,10 +55,12 @@ def ribbon_thick(k: int) -> float:
 # Un solo texel oscuro para TODOS los cantos: sin filetes = sin rejilla.
 DARK = {"uv": [105.0, 0.0], "uv_size": [1.0, 48.0]}
 ASH = {"uv": [105.0, 18.0], "uv_size": [3.0, 2.0]}
-PINK = {"uv": [69.0, 112.0], "uv_size": [1.0, 1.0]}
-# Las 8 motas MEDIDAS en el PNG son rosa vivo; las 18 de relleno son
-# rescoldo violeta apagado. En la captura no hay 26 bloques de neón.
-PINK_DIM = {"uv": [69.0, 122.0], "uv_size": [1.0, 1.0]}
+# v1.17.2: las motas muestreaban UN texel de color plano y en el juego
+# parecían BLOQUES BUGEADOS flotando. Ahora toman un sprite de 3x3 con
+# centro encendido y bordes apagados (pintado en paint_reserved_cloth_strips).
+PINK = {"uv": [69.0, 109.0], "uv_size": [3.0, 3.0]}
+PINK_DIM = {"uv": [69.0, 119.0], "uv_size": [3.0, 3.0]}
+ASH_DARK = {"uv": [105.0, 0.0], "uv_size": [2.0, 2.0]}
 
 COWL_FRONT = 9
 COWL_BACK = 5
@@ -409,7 +411,7 @@ def build() -> dict:
         bones.append(bone(
             f"v17_ash_{i}", "chestplate", [x, y, z],
             [0.0, 0.0, 12.0 * math.sin(i)],
-            [cube16((x, y, z), (0.22, 0.30, 0.26), ASH, DARK, INFLATE[1])]))
+            [cube16((x, y, z), (0.22, 0.30, 0.26), ASH_DARK, DARK, INFLATE[1])]))
 
     # ---- descripción y garantías -------------------------------------
     geo["bones"] = bones

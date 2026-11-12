@@ -9,6 +9,13 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.17.2: TEXTURA REHECHA tras las capturas in-game. El atlas ya NO samplea
+pixeles crudos del recorte (entraban el brazo, el arnes y el fondo a cuadros)
+ni usa dithering Bayer: se construye desde la paleta medida, con pliegues
+radiales y cuchilladas largas. El item usa minecraft:item/generated con el
+icono 2D, porque el renderer 3D plegado lo ocultaba en el inventario. Las
+motas 3D y las particulas pasan a sprites con degradado y alpha limpio.
+
 v1.17.1: build del modelo mas reciente (rondas v1283 y v1331). Yugo del
 capuchon calibrado contra el PNG, guiones de energia alargados, dobladillo
 deshilachado por textura, alas diagonales de hombro y paño adelantado en

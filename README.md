@@ -1,12 +1,13 @@
-# Mantle of the Blight Star — v1.17.1
+# Mantle of the Blight Star — v1.17.2
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Capa equipada en `curios:back`, temática
 **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-> ⚠️ **Trabajo local, SIN PUBLICAR.** v1.14.0, v1.15.0 y v1.16.0 fueron
-> rechazadas visualmente. Esta revisión espera aprobación en el visor antes
-> de commit, push, CI o Release. Los previews son render **software**.
+> 📦 **Release vigente: `v1.17.2`** (JAR compilado en CI). v1.14.0, v1.15.0
+> y v1.16.0 fueron rechazadas visualmente y sus previews se han borrado del
+> repo. Los previews actuales son render **software**: la prueba in-game y
+> la aprobación visual siguen pendientes.
 
 ## Empecé de 0 usando TU referencia
 
@@ -48,7 +49,7 @@ en un dobladillo ancho de puntas desiguales.
   Las cuchilladas rosa largas también viven en el glowmask (1636 emisivos).
 - **Icono 64×64 INTOCABLE**: **pixel art** 16×16 ampliado con NEAREST, con
   hombreras y silueta propia (no la de las referencias viejas). SHA-256
-  `25133aee71c2e46e3995855aa5df601827c26ae26b384394f2b696312d20151c`.
+  `c90670ba367557d7c7c003fa38dbe10c27cc88dcee1ef37fedc48f3a82820ee5`.
   El icono APROBADO anterior sigue intacto en
   [`referencias/ICONO_APROBADO_BACKUP.png`](referencias/ICONO_APROBADO_BACKUP.png)
   y `tools/originals/icono_aprobado_v1130.png` (SHA `e88ccec0…4840`);
@@ -79,12 +80,12 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Release vigente: v1.17.1
+### Release vigente: v1.17.2
 
 El JAR **más reciente** se publica como Release
-[`v1.17.1`](https://github.com/Santi-PdR/modelos/releases/tag/v1.17.1):
-`capatest-1.17.1.jar`, compilado en CI con JDK 17 + Gradle 8.8 sobre el
-modelo de las rondas v1283/v1331. La Release `v1.17.0` queda como histórico
+[`v1.17.2`](https://github.com/Santi-PdR/modelos/releases/tag/v1.17.2):
+`capatest-1.17.2.jar`, compilado en CI con JDK 17 + Gradle 8.8 sobre la
+**textura rehecha v1.17.2**. La Release `v1.17.0` queda como histórico
 (contiene una build anterior); no se sobreescribe. El workflow publica con
 `workflow_dispatch(publicar=true)` o con un commit marcado `[publicar]`, y
 lee la versión de `gradle.properties` para que el nombre del JAR nunca
@@ -97,7 +98,7 @@ geo+atlas reales y compara décima a décima con `REFERENCIA_CAPA.png`
 (mediana RGB, cobertura de paño, densidad de energía y silueta). El workflow
 `build.yml` lo ejecuta con `--check` **antes de compilar**, instala
 `numpy`/`Pillow` y **falla el build** si el error global supera 165
-(estado actual: 69.47). Así la autoevaluación no depende de mi sandbox.
+(estado actual: 100.3; la textura prioriza la lectura visual limpia sobre el número). Así la autoevaluación no depende de mi sandbox.
 
 Además, los keyframes `particle` del `.bbmodel` no se disparan solos en
 Java/GeckoLib: `CapaDeteriorerItem.spawnAura(..., deterioro)` replica los
@@ -225,3 +226,27 @@ los 214 huesos `v15_*` / `v17_*` reales.
 
 > PR #1: https://github.com/Santi-PdR/modelos/pull/1
 
+
+### Ronda v1.17.2: textura rehecha desde las capturas in-game
+
+Con las capturas reales del juego se vieron tres defectos que el render
+software no mostraba, y **todos eran de textura / recursos**:
+
+| Síntoma | Causa | Arreglo |
+|---|---|---|
+| «sigue sin verse el nuevo icono» | el item registraba un BEWLR 3D (`builtin/entity` + `CapaItemRenderer`): el PNG 2D jamás se renderizaba | modelo `minecraft:item/generated` con `layer0` = icono 64×64; se elimina `getCustomRenderer()` del item |
+| «la textura se ve muy mal», confeti magenta y manchas beige/gris | el atlas **des-abanicaba píxeles crudos** del recorte (incluía brazo, arnés y checkerboard) y añadía dithering Bayer + grano por píxel | atlas construido **sólo** desde `CS.palette_at()`: pliegues radiales, huecos entre lóbulos y sarga suave; cero píxeles crudos, cero Bayer |
+| «bloques/texturas bugeadas volando» | motas / venas / ceniza muestreaban texels 1×1 de color plano y los sprites de partícula tenían alpha residual en todo el borde | sprites 3×3 con centro encendido y bordes apagados, ceniza con texel oscuro y alpha de partícula **exactamente 0** en el borde |
+
+La energía deja de ser confeti: son **cuchilladas diagonales largas** (4–8
+texeles, discontinuas, con halo de 1 texel) situadas sobre las 54 grietas
+medidas del PNG y completadas por densidad por décima. El capuchón deja de
+ser una losa lisa: pliegues radiales, borde rasgado y carmesí medido.
+Se conservan alfa prístino, 1636 emisivos, 286 huesos / 340 cubos,
+11950 keyframes y los 3 emisores de partículas.
+
+**Limpieza:** se borraron 45 archivos obsoletos (19 MB): previews de
+v1.12/v1.14/v1.15/v1.16 —versiones rechazadas—, `entrega_para_claude.zip`,
+los dos Markdown del prompt viejo, el ZIP del mod original y el workflow
+`publicar-entrega-claude.yml` que publicaba en la Release v1.15.0. Los tres
+backups byte-idénticos del icono aprobado se mantienen intactos.

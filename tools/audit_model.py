@@ -38,7 +38,7 @@ LIMITS = {
     "energy": 55.0,
     "silhouette": 1.60,
 }
-ICON_SHA = "25133aee71c2e46e3995855aa5df601827c26ae26b384394f2b696312d20151c"
+ICON_SHA = "c90670ba367557d7c7c003fa38dbe10c27cc88dcee1ef37fedc48f3a82820ee5"
 ICON_BACKUP_SHA = "e88ccec0a0c67b1ad0982ed781f0d684ae4662660c545fa134574781967e4840"
 
 
@@ -149,6 +149,17 @@ def static_checks() -> None:
     # disparaba. Y los guiones de energia deben ser trazos, no cuadrados.
     assert 'v1306: el CAPUCHON' in tp, 'falta la calibracion del yugo'
     assert 'GUION ALARGADO' in tp, 'falta el trazo de energia alargado'
+    # v1.17.2: regresión de las capturas in-game. El atlas NO puede volver
+    # a samplear el recorte crudo (metia brazo/arnes/checkerboard en la tela)
+    # y el item NO puede volver a registrar un BEWLR que oculte el icono.
+    assert 'clean_path' not in tp, 'vuelve el confeti de pixeles crudos'
+    assert 'cuchillada(' in tp, 'faltan las cuchilladas diagonales largas'
+    item_model = json.loads((ROOT / 'src/main/resources/assets/capatest/models/item'
+                             '/capa_deteriorer_evilsaiyan.json').read_text())
+    assert item_model['parent'] == 'minecraft:item/generated', 'el icono 2D no se ve'
+    assert item_model['textures']['layer0'] == 'capatest:item/capa_deteriorer_evilsaiyan'
+    item_java = (ROOT / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
+    assert 'getCustomRenderer' not in item_java, 'el BEWLR 3D tapa el icono'
     icon = ROOT / "src/main/resources/assets/capatest/textures/item/capa_deteriorer_evilsaiyan.png"
     assert hashlib.sha256(icon.read_bytes()).hexdigest() == ICON_SHA, "icono alterado"
     # El icono APROBADO sigue disponible, byte-identico, por si la
