@@ -171,7 +171,7 @@ def build() -> dict:
         # columnas en t=0.0), no alas separadas. Los lados siguen CORTOS
         # (height 1.25) para que la U gris del arnes siga visible: eso
         # fue exactamente lo que fallo en la "losa" de v1244.
-        x = fx * 6.20
+        x = fx * 5.90
         # Segun el recorte 4x: la tela cuelga MAS EN EL CENTRO (lóbulo
         # redondeado bajo la cabeza) y se recoge hacia los hombros.
         # El borde superior queda escondido por la cabeza del maniquí.
@@ -317,7 +317,7 @@ def build() -> dict:
             # ARRIBA y AFUERA: paño real en t=0.0, sin losas ni piezas
             # flotantes, y con la misma UV continua del canvas.
             t0, t1 = -0.02, 0.27
-            x0 = a * 7.60
+            x0 = a * 6.60
         # v1210: las tejas NO cruzaban la captura como tablones diagonales.
         # Se acortan a un pliegue cercano al hombro y se vuelven mas finas.
         x1 = a * (4.20 if i in (0, 1, 8, 9) else CS.silhouette(0.55) * 0.62)

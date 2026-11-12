@@ -207,11 +207,11 @@ def ribbon_w(k: int, t: float) -> float:
         # tocar la envolvente exterior (la silueta de t=0.8/0.9 ya calza
         # 0.96x/0.97x). Rellena el 27% de paño del dobladillo, que en la
         # captura es 48%, sin volver a abrir la campana.
-        # v1283: 0.70 para TODOS los jirones (antes solo el centro, ya
-        # solapado). 0.90 unia las cintas en una falda; 0.52 dejaba el
-        # dobladillo corto. La masa extra la aportan las puntas largas,
-        # las alas de hombro y el deshilachado por textura.
-        fill = 1.0 + 0.70 * max(0.0, min(1.0, (f - 0.64) / 0.30))
+        # v1331: 0.78 para TODOS los jirones (antes solo el centro, ya
+        # solapado) y rampa desde f=0.35 en vez de 0.64: la referencia
+        # tiene mas paño que el modelo en t=0.4..0.7 y el relleno tardio
+        # no llegaba a esas decimas. 0.90 unia las cintas en una falda.
+        fill = 1.0 + 0.78 * max(0.0, min(1.0, (f - 0.35) / 0.55))
         return (0.86 + 0.88 * f) * scale * center * fill
     # v1283: el afilado final se retrasa al ultimo 6% y nunca baja de
     # 0.38 unidades. Antes las puntas exteriores se convertian en agujas

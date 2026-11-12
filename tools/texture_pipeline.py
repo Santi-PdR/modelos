@@ -151,7 +151,7 @@ def _blurred_noise(rng: np.random.Generator, shape: tuple[int, int], radius: flo
 # La ajusta tools/energy_calibration.py con un lazo cerrado y la aplica
 # shape_energy_density() al atlas YA compuesto (incluye el realce emisivo
 # y el bloom, que tambien crean pixeles rosa fuera de las grietas).
-ENERGY_GAIN = ((0.00, 3.104), (0.05, 3.104), (0.15, 2.115), (0.25, 2.592), (0.35, 0.633), (0.45, 2.230), (0.55, 0.217), (0.65, 0.385), (0.75, 0.243), (0.85, 0.601), (0.95, 0.505), (1.00, 0.505))
+ENERGY_GAIN = ((0.00, 1.622), (0.05, 1.622), (0.15, 2.193), (0.25, 2.067), (0.35, 1.147), (0.45, 1.597), (0.55, 0.782), (0.65, 0.203), (0.75, 0.146), (0.85, 0.590), (0.95, 0.348), (1.00, 0.348))
 
 
 def energy_gain(t: float) -> float:
@@ -722,12 +722,31 @@ def shape_energy_density(out: np.ndarray) -> np.ndarray:
         # queda una linea DISCONTINUA (como en la captura), sin damero, y
         # la respuesta al perfil es monotona y de baja varianza.
         seq = sorted(cells)
+        pos = {(y, x): i for i, (y, x) in enumerate(seq)}
         acc = ((v0 * 7 + u0 * 13 + len(cells)) % 7) / 7.0
-        kept = []
-        for y, x in seq:
+        keep_idx = set()
+        for i, (y, x) in enumerate(seq):
             acc += min(1.0, gain)
             if acc >= 1.0:
                 acc -= 1.0
+                keep_idx.add(i)
+        # v1323: GUION ALARGADO. La captura tiene cuchilladas finas de
+        # 2-3 texeles, no cuadrados aislados. Cada guion conservado se
+        # extiende un texel hacia abajo SI ese texel pertenece al mismo
+        # trazo, asi la grieta se lee como linea y no como confeti.
+        for i in list(keep_idx):
+            y, x = seq[i]
+            # v1327: dos de cada tres guiones se alargan: mezcla de
+            # cuchilladas cortas y motas, como en la captura, y evita
+            # duplicar la densidad de energia de golpe.
+            if (y * 31 + x * 17 + v0 * 7) % 3 == 0:
+                continue
+            j = pos.get((y + 1, x))
+            if j is not None:
+                keep_idx.add(j)
+        kept = []
+        for i, (y, x) in enumerate(seq):
+            if i in keep_idx:
                 kept.append((y, x))
             else:
                 c[y, x] = row_colour[y] * 0.88 + orig[y, x] * 0.12
@@ -887,6 +906,20 @@ def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
         out[0:48, 120:124, :3] += corr[:, None, :] * 0.45
         out[109:127, 69:75, :3] += corr[32:].mean(0) * 0.55
 
+    # v1306: el CAPUCHON y las alas de hombro muestrean la region
+    # reservada `yoke` (57..71, 76..93), NO el canvas 96x48. Ningun
+    # calibrador la tocaba: su mediana era (106,37,60) frente a
+    # (58,17,29) del canvas, y eso explicaba la mitad del error
+    # cromatico en t=0.0/0.1. Se lleva al carmesi oscuro MEDIDO y se
+    # anade el VIRAJE A VIOLETA hacia el borde inferior del capuchon
+    # (la referencia pasa de (75,22,32) a (60,29,45) en una decima).
+    # Solo RGB: alpha y las 1636 grietas emisivas quedan intactos.
+    yk = out[76:93, 57:71, :3]
+    yk *= np.array([0.93, 0.79, 0.70], np.float32)
+    grad = np.linspace(0.0, 1.0, 17, dtype=np.float32)[:, None, None]
+    yk += grad * np.array([-12.0, 14.0, 22.0], np.float32)
+    out[76:93, 57:71, :3] = yk
+
     # v1230: densidad de energía MEDIDA por altura (lazo cerrado).
     out = shape_energy_density(out)
     # v1264: deshilachado del dobladillo DESPUES de la energia, para no
@@ -932,6 +965,13 @@ def charred_hem(out: np.ndarray) -> np.ndarray:
             h = ((u * 37 + (u // 4) * 13 + v * 3 + (u // 7) * 29) % 101) / 101.0
             if h < frac and not energy[v, u] and c[v, u].mean() > 34.0:
                 c[v, u] = np.array([16.0, 9.0, 18.0], np.float32)
+    # v1324: costuras rasgadas entre lobulos en la mitad inferior.
+    for v in range(26, 43):
+        for k in (2, 5, 8, 11, 14):
+            u = min(95, int(round(k * 6.4)) + (1 if (v * 7 + k) % 11 < 3 else 0))
+            if (not energy[v, u] and c[v, u].mean() > 34.0
+                    and ((v * 13 + u * 7 + k) % 17) / 17.0 < 0.75):
+                c[v, u] = np.array([15.0, 9.0, 19.0], np.float32)
     return out
 
 

@@ -144,6 +144,11 @@ def static_checks() -> None:
     assert _CS.silhouette(1.0) < _CS.silhouette(0.9) * 1.02, 'la punta no se reabre'
     assert 'def charred_hem' in tp, 'falta el deshilachado del dobladillo'
     assert 'BEST-SO-FAR' in cal_e.read_text(), 'falta el mejor-perfil conservado'
+    # v1331: el capuchon muestrea la region `yoke`, fuera del canvas;
+    # sin su calibracion propia el error cromatico de t=0.0/0.1 se
+    # disparaba. Y los guiones de energia deben ser trazos, no cuadrados.
+    assert 'v1306: el CAPUCHON' in tp, 'falta la calibracion del yugo'
+    assert 'GUION ALARGADO' in tp, 'falta el trazo de energia alargado'
     icon = ROOT / "src/main/resources/assets/capatest/textures/item/capa_deteriorer_evilsaiyan.png"
     assert hashlib.sha256(icon.read_bytes()).hexdigest() == ICON_SHA, "icono alterado"
     # El icono APROBADO sigue disponible, byte-identico, por si la

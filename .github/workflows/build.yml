@@ -384,6 +384,8 @@ jobs:
           assert _CS.silhouette(0.9) < _CS.silhouette(0.733), 'cierra hacia el dobladillo'
           assert _CS.silhouette(1.0) < _CS.silhouette(0.9) * 1.02, 'la punta no se reabre'
           assert 'def charred_hem' in (root / 'tools/texture_pipeline.py').read_text(), 'falta el deshilachado del dobladillo'
+          assert 'v1306: el CAPUCHON' in (root / 'tools/texture_pipeline.py').read_text(), 'falta la calibracion del yugo'
+          assert 'GUION ALARGADO' in (root / 'tools/texture_pipeline.py').read_text(), 'falta el trazo de energia alargado'
           assert (root / 'tools/energy_calibration.py').is_file()
           _tp = (root / 'tools/texture_pipeline.py').read_text()
           assert 'def shape_energy_density' in _tp and 'ENERGY_GAIN' in _tp
@@ -552,7 +554,7 @@ jobs:
           assert (root / 'tools/audit_model.py').is_file()
           assert '--check' in (root / 'tools/audit_model.py').read_text()
           assert 'tools/audit_model.py --check' in (root / '.github/workflows/build.yml').read_text()
-          print('OK: JSON/PNG sin JsonNull, item 36 huesos + animation.item, 286 huesos / 340 cubos, 16 jirones en ABANICO EN V trazados del PNG (6 tramos + punta) + 10 tejas solapadas, bufanda en U de alas rasgadas, 18 motas flotantes, 10 venas 3D emisivas con pulso, .bbmodel con 4 animaciones (11950 keyframes), canvas des-abanicado de la referencia, dobladillo deshilachado por textura, energia con mejor-perfil conservado, alas diagonales de hombro, icono remasterizado + backup byte-identico, glowmask del item, UV opacas y Curios back')
+          print('OK: JSON/PNG sin JsonNull, item 36 huesos + animation.item, 286 huesos / 340 cubos, 16 jirones en ABANICO EN V trazados del PNG (6 tramos + punta) + 10 tejas solapadas, bufanda en U de alas rasgadas, 18 motas flotantes, 10 venas 3D emisivas con pulso, .bbmodel con 4 animaciones (11950 keyframes), canvas des-abanicado de la referencia, dobladillo deshilachado por textura, yugo calibrado, guiones de energia alargados, energia con mejor-perfil conservado, alas diagonales de hombro, icono remasterizado + backup byte-identico, glowmask del item, UV opacas y Curios back')
           PY
 
       # v1220: la autoevaluacion MEDIDA se ejecuta AQUI, en GitHub Actions,
