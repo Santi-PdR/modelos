@@ -1,12 +1,15 @@
-# Mantle of the Blight Star — v1.18.0
+# Mantle of the Blight Star — v1.19.0
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Capa equipada en `curios:back`, temática
 **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-> 📦 **Release publicada: `v1.18.0`** (JAR de la ronda anterior).
-> Esta rama contiene la **rev. B** (sin piezas volando + animaciones
-> rehechas), **todavía SIN publicar como JAR** hasta aprobación visual.
+> 📦 **Release vigente: `v1.19.0`** — `capatest-1.19.0.jar` compilado
+> en CI. Cada entrega cambia a una versión más nueva; `v1.18.0` y
+> anteriores quedan como histórico y no se sobreescriben.
+>
+> 🔗 **Link directo al `.bbmodel`**: [https://github.com/Santi-PdR/modelos/releases/download/v1.19.0/capa_v1170.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.19.0/capa_v1170.bbmodel)
+> (también en el workspace: [`docs/CAPA_v1.17.0.bbmodel`](docs/CAPA_v1.17.0.bbmodel)).
 > v1.14.0, v1.15.0 y v1.16.0 fueron rechazadas visualmente y sus previews
 > se borraron del repo. Los previews son render **software**.
 
@@ -103,16 +106,19 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Release vigente: v1.18.0
+### Release vigente: v1.19.0
 
-El JAR **más reciente** se publica como Release
-[`v1.18.0`](https://github.com/Santi-PdR/modelos/releases/tag/v1.18.0):
-`capatest-1.18.0.jar`, compilado en CI con JDK 17 + Gradle 8.8 sobre la
-**capa rehecha desde cero a partir de tu imagen**. La Release `v1.17.0` queda como histórico
-(contiene una build anterior); no se sobreescribe. El workflow publica con
-`workflow_dispatch(publicar=true)` o con un commit marcado `[publicar]`, y
-lee la versión de `gradle.properties` para que el nombre del JAR nunca
-quede desincronizado.
+El JAR se publica como Release [`v1.19.0`](https://github.com/Santi-PdR/modelos/releases/tag/v1.19.0):
+`capatest-1.19.0.jar`, compilado en CI con JDK 17 + Gradle 8.8.
+**Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.19.0/capa_v1170.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.19.0/capa_v1170.bbmodel)
+(el mismo archivo que `docs/CAPA_v1.17.0.bbmodel` y
+`docs/capa_v1170.bbmodel`, byte-idénticos).
+
+ Regla de entrega: **cada cambio sube `mod_version`** (aquí 1.18.0 →
+1.19.0) y **siempre se incluye el link del `.bbmodel`**. El workflow lee
+la versión de `gradle.properties` para que JAR, tag y assets nunca se
+desincronizen; publica con `workflow_dispatch(publicar=true)` o con un
+commit marcado `[publicar]`.
 
 ### Tests en GitHub y efectos en runtime (v1220)
 

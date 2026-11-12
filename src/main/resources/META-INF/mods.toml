@@ -9,6 +9,15 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.19.0: SIN PIEZAS VOLANDO + ANIMACIONES REHECHAS. Se eliminan del
+modelo las motas/ceniza 3D, el yugo y las anclas visibles; el reverso
+de la bufanda se integra al pano. Las particulas se generan en runtime
+con spawnAura() al equipar la capa, no como geometria. El .bbmodel ya
+no referencia JSONs de Snowstorm (Blockbench abre sin avisos). Una
+unica curva C1 (tools/cape_motion.py) mueve la tela en Blockbench,
+GeckoLib, Java y el visor. Abanico radial estrechado 10%: silueta
+1.00x frente al PNG y fidelidad de atlas 1.239.
+
 v1.18.0: CAPA REHECHA DESDE CERO a partir de la imagen. El atlas es la
 propia referencia limpiada (sin maniqui, arnes ni checkerboard) y cada
 tramo 3D muestrea por UV local el pixel que le corresponde; la geometria

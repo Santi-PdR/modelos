@@ -605,7 +605,7 @@ jobs:
           assert (root / 'tools/audit_model.py').is_file()
           assert '--check' in (root / 'tools/audit_model.py').read_text()
           assert 'tools/audit_model.py --check' in (root / '.github/workflows/build.yml').read_text()
-          print('OK: JSON/PNG sin JsonNull, 254 huesos / 308 cubos SIN piezas flotantes (ni motas, ni ceniza, ni yugo, ni anclas visibles), 16 jirones radiales + 10 tejas + 10 venas, .bbmodel con 182 cubos y 4 animaciones (12624 keyframes C1) SIN Effects track, GeckoLib animando los 182 huesos de tela, curva unica cape_motion compartida con Java y visor, particulas SOLO en runtime spawnAura(), atlas v1.18.0 = FOTO limpia, icono 2D y backup byte-identico, UV opacas y Curios back')
+          print('OK: v1.19.0, JSON/PNG sin JsonNull, 254 huesos / 308 cubos SIN piezas flotantes (ni motas, ni ceniza, ni yugo, ni anclas visibles), 16 jirones radiales + 10 tejas + 10 venas, .bbmodel con 182 cubos y 4 animaciones (12624 keyframes C1) SIN Effects track, GeckoLib animando los 182 huesos de tela, curva unica cape_motion compartida con Java y visor, particulas SOLO en runtime spawnAura(), atlas v1.18.0 = FOTO limpia, icono 2D y backup byte-identico, UV opacas y Curios back')
           PY
 
       # v1220: la autoevaluacion MEDIDA se ejecuta AQUI, en GitHub Actions,
@@ -723,12 +723,15 @@ jobs:
           JAR="build/libs/capatest-$VER.jar"
           test -f "$JAR"
           NOTES=/tmp/release-notes.md
+          BB_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/capa_v1170.bbmodel"
           cat > "$NOTES" <<'MD'
           ## Mantle of the Blight Star __TAG__ — build más reciente
 
-          JAR compilado en CI (JDK 17 + Gradle 8.8, Forge 1.20.1-47.3.0) con el
-          modelo de las rondas **v1283** y **v1331**. La Release `v1.17.0`
-          anterior contiene una build más antigua y **no se sobreescribe**.
+          JAR compilado en CI (JDK 17 + Gradle 8.8, Forge 1.20.1-47.3.0).
+          Cada entrega sube de versión: `v1.18.0` queda como histórico y
+          **no se sobreescribe**.
+
+          **Link directo del .bbmodel**: __BBURL__
 
           ### Qué incluye
 
@@ -783,7 +786,7 @@ jobs:
 
           Los previews son render software: la prueba in-game sigue pendiente.
           MD
-          sed -i "s/__TAG__/$TAG/g; s/__VER__/$VER/g" "$NOTES"
+          sed -i "s/__TAG__/$TAG/g; s/__VER__/$VER/g; s|__BBURL__|$BB_URL|g" "$NOTES"
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$JAR" --clobber
           else
