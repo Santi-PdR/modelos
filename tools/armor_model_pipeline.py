@@ -63,7 +63,7 @@ PINK_DIM = {"uv": [69.0, 122.0], "uv_size": [1.0, 1.0]}
 COWL_FRONT = 9
 COWL_BACK = 5
 YOKE_PIECES = 6
-MOTE_EXTRA = 18
+MOTE_EXTRA = 10
 ASH_COUNT = 8
 SHINGLE_COUNT = 10
 # La mitad de los jirones NO acaba en aguja: en el PNG el dobladillo es
@@ -269,16 +269,17 @@ def build() -> dict:
         th = 0.58 + 0.68 * abs(math.sin(k * 2.9 + 0.6))
         z = CS.ribbon_z(k) + 0.012 * CS.SEGS
         dep = ribbon_thick(k)
+        # v1232: TODAS las puntas son PAÑO. Antes la mitad usaba un texel
+        # casi negro y el dobladillo parecia un puñado de astillas negras;
+        # en la captura los remates son violeta-lavanda desvaido.
+        tip_uv = {"uv": [round(k * CS.BAND_W, 4),
+                         round(max(0.0, min(46.5, t * 48.0 - 1.5)), 4)],
+                  "uv_size": [round(CS.BAND_W, 4), 1.5]}
+        assert_opaque(tip_uv)
         if k in FADED_TIPS:
-            # Tope ROMO casi negro: no hay aguja, la cinta se deshace.
-            tip_uv = DARK
+            # Tope ROMO y deshilachado, pero del color de la tela.
             tw = 0.36 + 0.16 * abs(math.sin(k * 1.7))
             th = 0.40 + 0.42 * abs(math.sin(k * 2.9 + 0.6))
-        else:
-            tip_uv = {"uv": [round(k * CS.BAND_W, 4),
-                             round(max(0.0, min(46.5, t * 48.0 - 1.5)), 4)],
-                      "uv_size": [round(CS.BAND_W, 4), 1.5]}
-            assert_opaque(tip_uv)
         bones.append(bone(
             f"v17_ribbon_{k}_seg{CS.SEGS}", section_for_t(t),
             [x, y - th / 2.0, z + dep / 2.0],

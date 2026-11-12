@@ -246,7 +246,10 @@ def posed(geo):
             parts = n.rsplit("_", 3)
             ci, seg = int(parts[2]), int(parts[3][3:])
             b["rotation"][0] += (1.0 + seg * 0.55) * (0.6 + 0.4 * math.sin(ci * 0.9))
-            b["rotation"][2] += math.sin(1.3 + ci * 0.7 + seg * 0.5) * (0.8 + seg * 0.35)
+            b["rotation"][2] += (math.sin(1.3 + ci * 0.7 + seg * 0.5)
+                                 * (0.8 + seg * 0.35)
+                                 + math.sin(3.1 + ci * 0.9 + seg * 0.4)
+                                 * (0.3 + 0.22 * seg))  # v1240 flutter
         elif n.startswith("v17_vein_"):
             ci = int(n.rsplit("_", 1)[1])
             b["rotation"][2] += math.sin(3.2 + ci * 1.4) * 4.5

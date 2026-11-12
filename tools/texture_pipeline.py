@@ -147,6 +147,23 @@ def _blurred_noise(rng: np.random.Generator, shape: tuple[int, int], radius: flo
 # --------------------------------------------------------------------------
 # 1a. v1.5.1: one continuous high-resolution cloth illustration (96x48 UV)
 # --------------------------------------------------------------------------
+# Densidad de energia por altura, MEDIDA contra la captura del usuario.
+# La ajusta tools/energy_calibration.py con un lazo cerrado y la aplica
+# shape_energy_density() al atlas YA compuesto (incluye el realce emisivo
+# y el bloom, que tambien crean pixeles rosa fuera de las grietas).
+ENERGY_GAIN = ((0.00, 0.120), (0.05, 0.120), (0.15, 0.800), (0.25, 0.450), (0.35, 1.480), (0.45, 1.970), (0.55, 0.740), (0.65, 0.430), (0.75, 3.030), (0.85, 0.840), (0.95, 0.390), (1.00, 0.390))
+
+
+def energy_gain(t: float) -> float:
+    t = max(0.0, min(1.0, t))
+    for i in range(len(ENERGY_GAIN) - 1):
+        t0, g0 = ENERGY_GAIN[i]
+        t1, g1 = ENERGY_GAIN[i + 1]
+        if t <= t1:
+            return g0 + (g1 - g0) * (t - t0) / max(1e-6, t1 - t0)
+    return ENERGY_GAIN[-1][1]
+
+
 def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """DES-ABANICA la referencia del usuario en el atlas 96x48 (v1.17.0).
 
@@ -360,8 +377,11 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.nda
 
     # GRIETAS REALES de la referencia (una de cada tres, para no saturar).
     marks = [m for m in CS.energy_marks() if not m["floating"]]
-    # Los 8 trazos MAS LARGOS de la captura se redibujan como cuchilladas
-    # diagonales, no como puntitos: son la energia mas visible del modelo.
+    # v1230: las 62 grietas REALES de la captura se dibujan como GUIONES
+    # DIAGONALES FINOS (1 px), no como bloques de 2x2 ni lineas continuas.
+    # La DENSIDAD por altura ya NO se decide aqui: shape_energy_density()
+    # la aplica al atlas compuesto, de forma monótona y medible, para que
+    # el calibrador de lazo cerrado pueda converger.
     long_marks = sorted(range(len(marks)), key=lambda j: -marks[j]["h"])[:3]
     for j in long_marks:
         m = marks[j]
@@ -369,56 +389,42 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.nda
         k = CS.nearest_ribbon(t, m["x"])
         u = k * CS.BAND_W + CS.BAND_W * 0.5
         v = t * ch
-        # TRAZOS CORTOS y DISCONTINUOS, como la referencia: dos guiones
-        # con un hueco, en vez de una cuchillada continua de 13 texels.
         ln = min(7.0, 3.0 + m["h"] * 1.6)
-        for a, b in ((0.0, 0.42), (0.62, 1.0)):
-            seg = [(int(round(u - 1.0 + 2.2 * a)), int(round(v + ln * a))),
-                   (int(round(u - 1.0 + 2.2 * b)), int(round(v + ln * b)))]
+        for aa, bb in ((0.0, 0.42), (0.62, 1.0)):
+            seg = [(int(round(u - 1.0 + 2.2 * aa)), int(round(v + ln * aa))),
+                   (int(round(u - 1.0 + 2.2 * bb)), int(round(v + ln * bb)))]
             cd.line(seg, fill=96, width=4)
             d.line(seg, fill=(78, 12, 54, 170), width=2)
             d.line(seg, fill=(238, 76, 168, 250), width=1)
             gd.line(seg, fill=200, width=1)
+    # Codos en L: suben vertical y giran 2 texels, como en la captura.
     for j in long_marks[:2]:
         m = marks[j]
         t = max(0.0, min(0.90, m["t"]))
         k = CS.nearest_ribbon(t, m["x"])
         u = int(round(k * CS.BAND_W + CS.BAND_W * 0.5))
         v = int(round(t * ch))
-        # Codo en L: sube vertical y gira 2 texels, como en la captura.
         cd.line([(u, v), (u, v + 3), (u + 2, v + 3)], fill=100, width=4)
         d.line([(u, v), (u, v + 3), (u + 2, v + 3)], fill=HALO, width=2)
         d.line([(u, v), (u, v + 3), (u + 2, v + 3)], fill=CORE, width=1)
         gd.line([(u, v), (u, v + 3), (u + 2, v + 3)], fill=190, width=1)
+    # Guiones sueltos de 1 px: antes eran ladrillos rosa de 2x2.
     for i in range(0, len(marks), 12):
         m = marks[i]
         t = max(0.0, min(0.94, m["t"]))
         k = CS.nearest_ribbon(t, m["x"])
         u = int(round(k * CS.BAND_W + CS.BAND_W * (0.35 + 0.2 * (i % 3))))
         v = int(round(t * ch))
-        # v1213: trazo CORTO, no un bloque de 3x4 texels. En la captura
-        # la energia son guiones finos; los rectangulos grandes se leian
-        # como ladrillos rosa dentro de la tela.
-        d.rectangle([u, v, u + 1, v + 1], fill=HALO)
-        d.rectangle([u, v, u + 1, v + 1], fill=CORE)
-        gd.rectangle([u, v, u + 1, v + 1], fill=205)
+        seg = [(u, v), (u + 1, v + 2)]
+        d.line(seg, fill=HALO, width=1)
+        d.line(seg, fill=CORE, width=1)
+        gd.line(seg, fill=205, width=1)
     for i, m in enumerate(marks):
-        # Uno de cada cuatro se omite y el tercio superior se aclara:
-        # la energia real esta concentrada en el centro, no repartida.
-        # v1219: la energia del PNG esta concentrada en el centro, pero
-        # al des-abanicar los 62 trazos medidos quedaban DEMASIADOS en la
-        # mitad (t=0.5: 23% de energia vs 6% en la captura) y en las
-        # puntas. Se aclaran esas dos zonas sin tocar el cuello ni el halo.
-        if (i % 3 == 2 or (m["t"] < 0.22 and i % 2 == 1)
-                or (0.44 < m["t"] < 0.64 and i % 2 == 0)
-                or (m["t"] > 0.78 and i % 2 == 0)):
-            continue
-        # Todos los trazos medidos, pero en guiones de 2-4 texels.
-        t = max(0.0, min(0.975, m["t"]))
+        t = max(0.03, min(0.975, m["t"]))
         k = CS.nearest_ribbon(t, m["x"])
         u = k * CS.BAND_W + CS.BAND_W * (0.5 + 0.18 * math.sin(i * 2.31))
         v = t * ch
-        ln = max(1.3, min(2.8, m["h"] * 0.8 + (i % 3) * 0.2))
+        ln = max(1.2, min(2.8, m["h"] * 0.8 + (i % 3) * 0.2))
         slant = 2.2 * math.sin(i * 1.97)
         seg = [(int(round(u)), int(round(v))),
                (int(round(u + slant)), int(round(v + ln)))]
@@ -426,6 +432,21 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.nda
         d.line(seg, fill=HALO, width=1)
         d.line(seg, fill=CORE, width=1)
         gd.line(seg, fill=175, width=1)
+        # v1231: la captura tiene su PICO de energia en t=0.2 (11.5%)
+        # pero el perfil medido apenas contiene grietas ahi. Se anaden
+        # DOS guiones hermanos, mas cortos y con otra inclinacion, solo
+        # en el tercio superior: haces diagonales como los del PNG.
+        if t < 0.34:
+            for q in (1, 2):
+                u2 = u + 2.1 * math.sin(i * 0.91 + q * 1.7)
+                v2 = v + 0.8 * q
+                seg2 = [(int(round(u2)), int(round(v2))),
+                        (int(round(u2 - slant * (0.7 + 0.25 * q))),
+                         int(round(v2 + ln * (0.75 - 0.15 * q))))]
+                cd.line(seg2, fill=44, width=3)
+                d.line(seg2, fill=HALO, width=1)
+                d.line(seg2, fill=CORE, width=1)
+                gd.line(seg2, fill=150, width=1)
 
     # Motas de 1 px, ESCASAS, más densas hacia las puntas.
     for _ in range(9):
@@ -458,7 +479,10 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.nda
         hem[mid:, c0:c1] = ramp_mid[:, None]
         # Y se deshilacha del todo a una altura distinta.
         start = 36 + int(9.0 * (0.5 + 0.5 * math.sin(k * 2.13 + 0.4)))
-        ramp = np.linspace(1.0, 0.70, ch - start, dtype=np.float32)
+        # v1226: 0.70 hacia casi negro el paño del dobladillo; la
+        # referencia conserva tela violeta hasta las puntas (48% en
+        # t=0.8). El deshilachado sigue ahí, pero sin comerse la tela.
+        ramp = np.linspace(1.0, 0.84, ch - start, dtype=np.float32)
         for u in range(c0, c1):
             off = (u - c0) % 3
             s = min(ch - 1, start + off)
@@ -635,6 +659,78 @@ def _fit_emissive_mask(priority: np.ndarray, opaque: np.ndarray, target: int,
     return mask
 
 
+def _energy_strokes(mask: np.ndarray) -> list[list[tuple[int, int]]]:
+    """Componentes 8-conectados de la tinta rosa (sin scipy)."""
+    h, w = mask.shape
+    lab = np.zeros((h, w), np.int32)
+    out: list[list[tuple[int, int]]] = []
+    for v in range(h):
+        for u in range(w):
+            if not mask[v, u] or lab[v, u]:
+                continue
+            cur = len(out) + 1
+            lab[v, u] = cur
+            stack, cells = [(v, u)], []
+            while stack:
+                y, x = stack.pop()
+                cells.append((y, x))
+                for dy in (-1, 0, 1):
+                    for dx in (-1, 0, 1):
+                        ny, nx = y + dy, x + dx
+                        if (0 <= ny < h and 0 <= nx < w and mask[ny, nx]
+                                and not lab[ny, nx]):
+                            lab[ny, nx] = cur
+                            stack.append((ny, nx))
+            out.append(cells)
+    return out
+
+
+def shape_energy_density(out: np.ndarray) -> np.ndarray:
+    """Ajusta la DENSIDAD de energía por altura, TRAZO A TRAZO.
+
+    Se ejecuta al FINAL, sobre el atlas ya compuesto: así controla también
+    el realce emisivo, el bloom y el paño aclarado por `tip_glow`, que el
+    auditor cuenta como energía aunque no sean grietas dibujadas.
+
+    v1233: el adelgazamiento por PÍXEL con Bayer dejaba un DAMERO rosa en
+    el centro de la capa (confeti, ya rechazado antes). Ahora se etiquetan
+    los componentes 8-conectados y cada GUIÓN sobrevive o se apaga ENTERO
+    según un hash determinista de su posición: la energía queda en trazos
+    cortos y discontinuos, exactamente como en la captura, y la respuesta
+    al perfil sigue siendo monótona para el calibrador de lazo cerrado.
+    No toca alfa ni glowmask: los 1636 emisivos siguen intactos.
+    """
+    c = out[0:48, 0:96, :3]
+    r, g, b = c[..., 0], c[..., 1], c[..., 2]
+    em = (r > 105) & (b > 75) & (r > g + 48) & (b > g + 22)
+    orig = c.copy()
+    row_colour = []
+    for v in range(48):
+        good = ~em[v] & (c[v].mean(1) > 30)
+        row_colour.append(np.median(c[v][good], axis=0) if good.sum() >= 4
+                          else np.array([70.0, 32.0, 58.0], np.float32))
+    for cells in _energy_strokes(em):
+        v0 = min(y for y, _ in cells)
+        u0 = min(x for _, x in cells)
+        t = (sum(y for y, _ in cells) / len(cells) + 0.5) / 48.0
+        gain = energy_gain(t)
+        # Hash determinista, sin aleatoriedad entre ejecuciones.
+        rnd = ((v0 * 73856093) ^ (u0 * 19349663) ^ (len(cells) * 83492791))
+        rnd = (rnd % 100003) / 100003.0
+        keep = rnd < min(1.0, gain)
+        for y, x in cells:
+            c[y, x] = (orig[y, x] if keep
+                       else row_colour[y] * 0.88 + orig[y, x] * 0.12)
+        if keep and gain > 1.0:
+            extra = min(0.85, (gain - 1.0) * 0.60)
+            for y, x in cells:
+                y2, x2 = min(47, y + 1), min(95, x + 1)
+                if not em[y2, x2]:
+                    c[y2, x2] = (c[y2, x2] * (1.0 - extra)
+                                 + orig[y, x] * extra)
+    return out
+
+
 def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
     base = np.asarray(Image.open(ORIGINALS / "armor.png").convert("RGBA"), dtype=np.float32)
     glow = np.asarray(Image.open(ORIGINALS / "armor_glowmask.png").convert("RGBA"), dtype=np.float32)
@@ -781,6 +877,8 @@ def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
         out[0:48, 120:124, :3] += corr[:, None, :] * 0.45
         out[109:127, 69:75, :3] += corr[32:].mean(0) * 0.55
 
+    # v1230: densidad de energía MEDIDA por altura (lazo cerrado).
+    out = shape_energy_density(out)
     out = np.clip(out, 0, 255)
     out = np.where(opaque[..., None], out, rgb)  # never paint into transparent texels
     armor = np.dstack((out, alpha)).astype(np.uint8)

@@ -26,14 +26,17 @@ import preview_cloth as P
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Márgenes sobre el estado medido v1220 (total 190.8). Se deja holgura para
-# diferencias menores de versión de Pillow/numpy entre el sandbox y Ubuntu.
+# v1240: umbrales REAJUSTADOS tras la ronda de forma/energía/color. El
+# estado medido es total 139.0 (paño 73.5, energía 32.8, color 98,
+# silueta 1.41x); se deja ~15% de holgura para diferencias de versión de
+# Pillow/numpy entre el sandbox y Ubuntu. Antes el límite era 205 sobre
+# 190.8: ahora el test PROTEGE la mejora conseguida.
 LIMITS = {
-    "total": 205.0,
-    "color": 130.0,
-    "cloth": 110.0,
-    "energy": 90.0,
-    "silhouette": 1.75,
+    "total": 165.0,
+    "color": 120.0,
+    "cloth": 95.0,
+    "energy": 55.0,
+    "silhouette": 1.60,
 }
 ICON_SHA = "25133aee71c2e46e3995855aa5df601827c26ae26b384394f2b696312d20151c"
 ICON_BACKUP_SHA = "e88ccec0a0c67b1ad0982ed781f0d684ae4662660c545fa134574781967e4840"
@@ -113,7 +116,24 @@ def static_checks() -> None:
     assert len(ids) == 3, ids
     kfs = sum(len(an["keyframes"]) for a in bb["animations"]
               for an in a["animators"].values())
-    assert kfs >= 11000, kfs
+    assert kfs >= 11900, kfs
+    # v1240: forma y efectos de la ronda, verificados como contrato.
+    tp = (ROOT / "tools" / "texture_pipeline.py").read_text()
+    assert "def shape_energy_density" in tp
+    assert "def _energy_strokes" in tp
+    cal_e = ROOT / "tools" / "energy_calibration.py"
+    assert cal_e.is_file() and "ENERGY_GAIN" in cal_e.read_text()
+    import re as _re
+    knots = _re.findall(r"\(([\d.]+),\s*([\d.]+)\)",
+                        _re.search(r"ENERGY_GAIN = \((.*?)\)\n", tp,
+                                   _re.S).group(1))
+    assert len(knots) == 12, len(knots)
+    geo = json.loads((ROOT / "src/main/resources/assets/capatest/geo/item"
+                      "/armor/capa_deteriorer_evilsaiyan.geo.json").read_text())
+    bones = geo["minecraft:geometry"][0]["bones"]
+    assert len(bones) == 286 and sum(len(b.get("cubes", [])) for b in bones) == 340
+    import cape_shape as _CS
+    assert _CS.tip_t(0) < 0.80 and _CS.tip_t(7) > 0.95
     icon = ROOT / "src/main/resources/assets/capatest/textures/item/capa_deteriorer_evilsaiyan.png"
     assert hashlib.sha256(icon.read_bytes()).hexdigest() == ICON_SHA, "icono alterado"
     # El icono APROBADO sigue disponible, byte-identico, por si la

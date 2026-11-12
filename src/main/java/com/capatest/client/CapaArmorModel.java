@@ -635,12 +635,16 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
                 // Da la sensacion de tela pesada que no vuelve a la misma
                 // pose en cada ciclo, sin tocar los limites de seguridad.
                 double gust = Math.sin(phase * 0.23D + i * 0.07D) * 1.3D;
+                // v1240: flutter de las puntas, tercer armonico del ondeo.
+                // Crece con el tramo: la tela rasgada vibra mas que el yugo.
+                double flutter = Math.sin(phase * 3.1D + i * 0.9D)
+                        * (0.35D + 1.25D * seg);
                 b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
                         Mth.clamp(bend, -14.0D, 14.0D)));
                 b.setRotY(deterioroBase[i][1] + (float) Math.toRadians(
                         Mth.clamp(sway + gust * 0.5D, -9.0D, 9.0D)));
                 b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
-                        Mth.clamp(curl + gust, -8.0D, 8.0D)));
+                        Mth.clamp(curl + gust + flutter, -8.0D, 8.0D)));
             } else {
                 double seg = (i % 6) / 6.0D;
                 double wave = Math.sin(phase - seg * 1.8D);

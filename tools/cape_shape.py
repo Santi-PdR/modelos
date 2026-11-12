@@ -98,9 +98,16 @@ def silhouette(t: float) -> float:
     seno centrada en t=0.35, que vale CERO en el cuello y en el máximo.
     """
     h = _silhouette_raw(t)
-    q = (max(0.0, min(1.0, t)) - 0.04) / 0.62
+    # v1227: NO recoger el hombro con una campana. La envolvente del PNG
+    # crece de 0.21 a 0.32 de forma casi LINEAL: es un ABANICO RADIAL
+    # (los jirones salen del cuello ya inclinados). La campana de v1226
+    # aplanaba t=0.2..0.5 y las tiras se DOBLABAN en un codo a media
+    # altura. Ahora solo se escala la envolvente medida, preservando su
+    # pendiente: el modelo era 1.5x mas ancho por la escala del render.
+    h *= 0.82
+    q = (max(0.0, min(1.0, t)) - 0.02) / 0.30
     if 0.0 < q < 1.0:
-        h *= 1.0 - 0.17 * math.sin(math.pi * q)
+        h *= 1.0 - 0.10 * math.sin(math.pi * q)
     return h
 
 
@@ -123,8 +130,16 @@ def tip_t(k: int) -> float:
     # conserva ~9 unidades de anchura y solo se deshilacha en puntas
     # desiguales. Antes los exteriores morian a t=0.8 y la capa acababa
     # en un pico que la referencia no tiene.
-    base = 1.0 - 0.14 * abs(lateral(k)) ** 1.2
-    return min(1.0, max(0.88, base + 0.060 * math.sin(k * 3.31 + 0.7)))
+    # v1228: DOS NIVELES, como la captura. Las alas exteriores (rojo
+    # vivo) mueren a t~0.72 en punta diagonal; solo los jirones centrales
+    # (violeta) cuelgan hasta el suelo. Antes las 16 tiras llegaban abajo
+    # y la capa parecia una falda plisada en vez de un abanico rasgado.
+    a = abs(lateral(k))
+    # v1229: solo las 3-4 ALAS mas externas acortan; el centro (8-10
+    # jirones) sigue hasta el suelo. Con el exponente 1.15 el dobladillo
+    # quedaba en PICO de 2 tiras y la cobertura de t=0.8 cayo a 17%.
+    base = 1.0 - 0.30 * a ** 3.0
+    return min(1.0, max(0.72, base + 0.035 * math.sin(k * 3.31 + 0.7)))
 
 
 def ribbon_x(k: int, t: float) -> float:
@@ -134,13 +149,16 @@ def ribbon_x(k: int, t: float) -> float:
     # hasta t~0.73 y VUELVE A CERRARSE hacia las puntas (forma de campana).
     # Cerca del cuello se comprime para nacer bajo la bufanda.
     s = silhouette(min(1.0, max(0.0, t)))
-    neck = 0.60 + 0.40 * min(1.0, max(0.0, t) / 0.35)
+    # v1227: nacen MAS JUNTOS en el cuello y alcanzan la envolvente
+    # antes: asi los jirones exteriores ya salen inclinados desde arriba.
+    neck = 0.48 + 0.52 * min(1.0, max(0.0, t) / 0.28)
     # Deriva determinista por jiron: en la captura NO hay un abanico
     # perfectamente regular, las tiras estan rotas y desiguales.
     jitter = 0.16 * math.sin(k * 2.37 + 0.6)
     # TORCEDURA de la tela: crece hacia abajo, distinta por jiron.
     # Rompe la rectitud sin alterar la envolvente de campana medida.
-    wrinkle = 0.32 * t * math.sin(k * 1.71 + t * 8.3 + 0.4)
+    # v1227: torcedura suave, no un zigzag de codos por tramo.
+    wrinkle = 0.22 * t * math.sin(k * 1.71 + t * 4.1 + 0.4)
     asym = 1.0 + 0.075 * a
     return a * s * neck * (1.0 + jitter) * asym + wrinkle
 
@@ -154,15 +172,28 @@ def ribbon_w(k: int, t: float) -> float:
     # unidades) y solo en el ultimo 18% se rematan en punta corta.
     # Cada jiron tiene su propio grosor: en la captura NO son identicos.
     scale = 0.80 + 0.38 * (0.5 + 0.5 * math.sin(k * 2.71 + 1.2))
-    if f <= 0.82:
+    if f <= 0.90:
         # Lobos anchos abajo: en la captura los jirones bajos son paño,
         # no tiras estrechas.
         # FINOS en el cuello, ANCHOS en los lobos bajos: en la captura
         # arriba los jirones son hebras y abajo son paño.
         # v1210: +14% de paño. La referencia tiene MUCHA más tela que
         # huecos (t=0.8: 48% de cobertura); el render anterior solo 19%.
-        return (0.92 + 0.86 * f) * scale
-    return (1.05 * ((1.0 - f) / 0.18) + 0.22) * scale
+        # v1228: los jirones CENTRALES son los que llegan al suelo y
+        # deben aportar la masa de paño del dobladillo (48% en t=0.8).
+        # Los exteriores se mantienen finos para dejar huecos negros.
+        center = 1.0 + 0.62 * (1.0 - abs(lateral(k))) * min(1.0, f / 0.55)
+        # v1232: en el ultimo tercio los lobos CENTRALES se ensanchan sin
+        # tocar la envolvente exterior (la silueta de t=0.8/0.9 ya calza
+        # 0.96x/0.97x). Rellena el 27% de paño del dobladillo, que en la
+        # captura es 48%, sin volver a abrir la campana.
+        fill = 1.0 + 0.42 * (1.0 - abs(lateral(k))) * \
+            max(0.0, min(1.0, (f - 0.62) / 0.32))
+        return (0.86 + 0.88 * f) * scale * center * fill
+    # v1226: el remate se afila SOLO en el ultimo 10% y nunca baja de
+    # 0.38 unidades. Antes el dobladillo se convertia en 16 agujas con
+    # 26% de paño (la referencia tiene 48% en t=0.8).
+    return (1.05 * ((1.0 - f) / 0.10) + 0.38) * scale
 
 
 def ribbon_z(k: int) -> float:
@@ -187,9 +218,18 @@ def segment_geometry(k: int, n: int) -> dict:
     # signo CONTRARIO: si no, el abanico se cierra hacia adentro.
     # CADA tramo se desvia un poco: en la captura los jirones no son
     # tablones rectos, sino telas rasgadas que cambian de direccion.
+    # v1237: en la captura los jirones exteriores son ALAS diagonales
+    # (~35-45 grados), no tablones verticales. La envolvente medida ya
+    # calza, así que se inclina CADA CINTA por encima de la pendiente de
+    # su propia línea central: el centro no se mueve, solo gira el cubo.
+    a_k = lateral(k)
+    # Se desvanece hacia las puntas: en la captura las alas son
+    # diagonales arriba, pero los jirones bajos cuelgan casi rectos.
+    fan = -20.0 * a_k * (1.0 - min(1.0, tm)) ** 1.3
     theta = (-math.degrees(math.atan2(dx, dy))
              + 3.0 * math.sin(k * 1.83 + n * 2.41)
-             + 2.1 * math.sin(k * 0.91 + n * 2.73))
+             + 2.1 * math.sin(k * 0.91 + n * 2.73)
+             + fan)
     cx += 0.09 * math.sin(k * 2.11 + n * 1.37)
     cy += 0.07 * math.sin(k * 1.31 + n * 2.09)
     h = math.hypot(dx, dy) * 1.15   # solape: la cinta NO se parte en dados

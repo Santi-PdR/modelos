@@ -195,10 +195,16 @@ def kf(channel: str, t: float, x: float, y: float, z: float, key: str,
     }
 
 
-def _wave_derivative(f: float, phase: float) -> float:
-    """d(_wave)/df: tangente exacta de la onda, no una aproximacion."""
+def _wave_derivative(f: float, phase: float, flutter: float = 1.0) -> float:
+    """d(_wave)/df: tangente exacta de la onda, no una aproximacion.
+
+    v1240: tercer armonico (3 ciclos por bucle) = FLUTTER de las puntas.
+    Su derivada analitica mantiene la continuidad C1 en todos los kfs.
+    """
     return (0.75 * 2.0 * math.pi * math.cos(2.0 * math.pi * f + phase)
-            + 0.18 * 4.0 * math.pi * math.cos(4.0 * math.pi * f + phase * 1.7))
+            + 0.18 * 4.0 * math.pi * math.cos(4.0 * math.pi * f + phase * 1.7)
+            + 0.055 * flutter * 6.0 * math.pi
+            * math.cos(6.0 * math.pi * f + phase * 2.3))
 
 
 STYLE_GAIN = {
@@ -262,14 +268,20 @@ ANIMATION_SPECS = (
     ("deterioro_particulas", "loop", 3.0, "deterioro", 1.15),
 )
 
-WAVE_SAMPLES = 10             # 11 muestras por hueso: curva mas suave
+WAVE_SAMPLES = 11             # v1240: 12 muestras por hueso, C1 mas fino
 
 
-def _wave(f: float, phase: float) -> float:
-    """Onda periodica que VALE 0 en f=0 y f=1: el bucle no pega un salto."""
+def _wave(f: float, phase: float, flutter: float = 1.0) -> float:
+    """Onda periodica que VALE 0 en f=0 y f=1: el bucle no pega un salto.
+
+    `flutter` crece con el numero de tramo: los jirones bajos vibran mas
+    que la bufanda, como tela rasgada y ligera.
+    """
     return ((math.sin(2.0 * math.pi * f + phase) - math.sin(phase)) * 0.75
             + (math.sin(4.0 * math.pi * f + phase * 1.7)
-               - math.sin(phase * 1.7)) * 0.18)
+               - math.sin(phase * 1.7)) * 0.18
+            + (math.sin(6.0 * math.pi * f + phase * 2.3)
+               - math.sin(phase * 2.3)) * 0.055 * flutter)
 
 
 def build_animations(anim_bones: list[tuple[str, str]]) -> list[dict]:
@@ -280,11 +292,18 @@ def build_animations(anim_bones: list[tuple[str, str]]) -> list[dict]:
         for idx, (bname, guuid) in enumerate(anim_bones):
             ax, ay, az, phase = motion_for(bname, idx, style)
             ax, ay, az = ax * mult, ay * mult, az * mult
+            # v1240: el flutter es MAYOR en las puntas y en las motas.
+            flutter = 1.0
+            if bname.startswith("v17_ribbon_") and "seg" in bname:
+                seg = int(bname.split("_")[-1][3:])
+                flutter = 1.0 + 0.30 * seg
+            elif bname.startswith(("v17_mote_", "v17_vein_")):
+                flutter = 1.7
             keyframes = []
             for j in range(WAVE_SAMPLES + 1):
                 f = j / WAVE_SAMPLES
-                w = _wave(f, phase)
-                dw = _wave_derivative(f, phase) / WAVE_SAMPLES
+                w = _wave(f, phase, flutter)
+                dw = _wave_derivative(f, phase, flutter) / WAVE_SAMPLES
                 keyframes.append(kf("rotation", round(length * f, 4),
                                     ax * w, ay * w, az * w,
                                     f"{aname}/{bname}/r{j}",

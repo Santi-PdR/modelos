@@ -160,7 +160,7 @@ jobs:
               assert set(spec['bones']) <= folded_names, (anim_name, set(spec['bones']) - folded_names)
 
           # v1.17.0: la geometría se TRAZA del PNG del usuario. Los 72
-          # huesos originales siguen BYTE-IDÉNTICOS; encima, 222 huesos
+          # huesos originales siguen BYTE-IDÉNTICOS; encima, 214 huesos
           # nuevos reconstruyen el ABANICO medido en la referencia.
           profile = json.loads((root / 'tools/reference_profile.json').read_text())
           assert profile['source'].startswith('referencias/REFERENCIA_CAPA.png')
@@ -174,8 +174,8 @@ jobs:
           armor_geo = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]
           orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
           assert armor_geo['bones'][:72] == orig_bones
-          assert len(armor_geo['bones']) == 294
-          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 348
+          assert len(armor_geo['bones']) == 286
+          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 340
           new_bones = armor_geo['bones'][72:]
           new_names = {b['name'] for b in new_bones}
           assert {
@@ -183,7 +183,7 @@ jobs:
               'v17_ribbon_0_seg0', 'v17_ribbon_7_seg3', 'v17_ribbon_15_seg6',
               'v17_shingle_0', 'v17_shingle_9', 'v17_vein_0', 'v17_vein_9',
               'v17_cowl_front_0', 'v17_cowl_front_8', 'v17_cowl_tooth_8',
-              'v17_cowl_back_4', 'v17_yoke_5', 'v17_mote_25', 'v17_ash_7',
+              'v17_cowl_back_4', 'v17_yoke_5', 'v17_mote_17', 'v17_ash_7',
           } <= new_names
           assert sum(1 for n in new_names if n.startswith('v15_cloth_')) == 27
           assert sum(1 for n in new_names if n.startswith('v17_ribbon_')) == 112
@@ -191,7 +191,7 @@ jobs:
           assert sum(1 for n in new_names if n.startswith('v17_cowl_tooth_')) == 9
           assert sum(1 for n in new_names if n.startswith('v17_cowl_back_')) == 5
           assert sum(1 for n in new_names if n.startswith('v17_yoke_')) == 6
-          assert sum(1 for n in new_names if n.startswith('v17_mote_')) == 26
+          assert sum(1 for n in new_names if n.startswith('v17_mote_')) == 18
           assert sum(1 for n in new_names if n.startswith('v17_ash_')) == 8
           assert sum(1 for n in new_names if n.startswith('v17_shingle_')) == 10
           assert sum(1 for n in new_names if n.startswith('v17_vein_')) == 10
@@ -208,9 +208,13 @@ jobs:
           def _x(b): return b['cubes'][0]['origin'][0] + b['cubes'][0]['size'][0] / 2
           assert abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_0_seg3'))) > \
                  abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_0_seg0')))
-          # CAMPANA medida: la punta vuelve a cerrarse hacia el eje.
-          assert abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_0_seg6'))) < \
-                 abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_0_seg3')))
+          # v1240: ABANICO EN V de DOS NIVELES, medido en la captura. Las
+          # alas exteriores son las mas abiertas y mueren a media altura;
+          # los jirones interiores vuelven a cerrarse en el dobladillo.
+          assert abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_0_seg3'))) > \
+                 abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_7_seg3')))
+          assert abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_3_seg6'))) < \
+                 abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_3_seg3')))
           motes = [b for b in new_bones if b['name'].startswith('v17_mote_')]
           assert all(0.10 <= c['size'][0] <= 0.85 for b in motes for c in b['cubes'])
           # Ningún hueso de tela puede colgar de un detalle que se oculta.
@@ -367,9 +371,17 @@ jobs:
           # abierta. La envolvente medida DEBE cerrar hacia el dobladillo.
           import sys as _sys; _sys.path.insert(0, 'tools')
           import cape_shape as _CS
-          assert 9.0 < _CS.silhouette(0.733) < 11.0, 'apertura de campana'
-          assert _CS.silhouette(1.0) < 7.6, 'la campana no cierra'
+          # v1240: envolvente ESCALADA al ancho real del render (0.82x)
+          # y ABANICO EN V de dos niveles: las alas mueren a t~0.72-0.75
+          # y solo los jirones centrales llegan al dobladillo.
+          assert 7.5 < _CS.silhouette(0.733) < 9.5, 'apertura del abanico'
+          assert _CS.silhouette(1.0) < 6.5, 'el dobladillo no cierra'
           assert _CS.silhouette(1.0) < _CS.silhouette(0.733)
+          assert _CS.tip_t(0) < 0.80 and _CS.tip_t(7) > 0.95, 'dos niveles'
+          assert (root / 'tools/energy_calibration.py').is_file()
+          _tp = (root / 'tools/texture_pipeline.py').read_text()
+          assert 'def shape_energy_density' in _tp and 'ENERGY_GAIN' in _tp
+          assert _tp.count('def _energy_strokes') == 1
           geo_bones = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]['bones']
           assert sum(1 for b in geo_bones if b['name'].startswith('v17_ribbon_')) == 112
           assert all(0.25 <= c['size'][2] <= 0.50 for b in geo_bones
@@ -377,7 +389,7 @@ jobs:
           # Proyecto Blockbench REAL, con maniquí y UV por cara.
           bb = json.loads((root / 'docs/capa_v1170.bbmodel').read_text())
           assert bb['meta']['format_version'] == '5.0'
-          assert len(bb['elements']) == 348 + 6 and len(bb['groups']) >= 294
+          assert len(bb['elements']) == 340 + 6 and len(bb['groups']) >= 286
           assert any('Steve/Alex' in g['name'] for g in bb['groups'])
           assert all('faces' in e and e['faces'] for e in bb['elements'])
           assert bb['textures'][0]['source'].startswith('data:image/png;base64,')
@@ -534,7 +546,7 @@ jobs:
           assert (root / 'tools/audit_model.py').is_file()
           assert '--check' in (root / 'tools/audit_model.py').read_text()
           assert 'tools/audit_model.py --check' in (root / '.github/workflows/build.yml').read_text()
-          print('OK: JSON/PNG sin JsonNull, item 36 huesos + animation.item, 294 huesos / 348 cubos, 16 jirones en CAMPANA trazados del PNG (6 tramos + punta) + 10 tejas solapadas, bufanda en U de alas rasgadas, 26 motas flotantes, 10 venas 3D emisivas con pulso, .bbmodel con 4 animaciones (11638 keyframes), canvas des-abanicado de la referencia, icono pixel art aprobado, glowmask del item, UV opacas y Curios back')
+          print('OK: JSON/PNG sin JsonNull, item 36 huesos + animation.item, 286 huesos / 340 cubos, 16 jirones en ABANICO EN V trazados del PNG (6 tramos + punta) + 10 tejas solapadas, bufanda en U de alas rasgadas, 18 motas flotantes, 10 venas 3D emisivas con pulso, .bbmodel con 4 animaciones (11950 keyframes), canvas des-abanicado de la referencia, icono pixel art remasterizado + backup byte-identico, glowmask del item, UV opacas y Curios back')
           PY
 
       # v1220: la autoevaluacion MEDIDA se ejecuta AQUI, en GitHub Actions,
@@ -544,6 +556,11 @@ jobs:
         run: |
           python3 -m pip install --quiet numpy Pillow
           PYTHONPATH=tools python3 tools/audit_model.py --check
+          # v1240: el calibrador de energia es un lazo cerrado Jacobi; se
+          # comprueba que siga siendo importable y que el perfil medido
+          # (10 bandas) siga apuntando a la referencia del usuario.
+          python3 -m py_compile tools/energy_calibration.py
+          PYTHONPATH=tools python3 -c "import energy_calibration as E; t=E.target(); g=E.read_gains(); assert len(t)==10 and len(g)==12 and min(t)>0; print('OK: objetivo de energia por banda', [round(x,1) for x in t])"
 
       - name: Build
         id: build
@@ -623,7 +640,7 @@ jobs:
             unzip -p "$jar" assets/capatest/animations/item/cape_folded.animation.json > /tmp/folded-anim.json
             python3 -c 'import json; a=json.load(open("/tmp/folded-anim.json"))["animations"]; assert len(a)==5 and "animation.item" in a; print("OK: 5 animaciones con animation.item dentro del jar")'
             unzip -p "$jar" assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json > /tmp/armor-geo.json
-            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==294 and sum(len(x.get("cubes",[])) for x in b)==348; print("OK: 294 huesos / 348 cubos dentro del jar")'
+            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==286 and sum(len(x.get("cubes",[])) for x in b)==340; print("OK: 286 huesos / 340 cubos dentro del jar")'
             echo "OK: clases, mods.toml, 3D item, animation.item, relieve 3D, glowmask, 2 sets de partículas y datos Curios presentes"
           done
           test "$found" -eq 1
@@ -674,10 +691,11 @@ jobs:
           | Color | degradado procedural inventado | **paleta MEDIDA**: carmesí (58,25,37) → rojo (81,23,40) → violeta (79,41,78) |
           | Detalle | grietas aleatorias | **54 grietas y agujeros reales del PNG**, des-abanicados |
           | Cuello | losa / corona de cajas | **capucha gruesa en cuenco** + 9 dientes rasgados + reverso para F5 |
-          | Motas | puntitos | **26 vóxeles rosa flotantes** del tamaño de los rectángulos de la captura |
-          | Huesos / cubos | 246 / 300 | **294 / 348** |
+          | Motas | puntitos | **18 vóxeles rosa flotantes** del tamaño de los rectángulos de la captura |
+          | Huesos / cubos | 246 / 300 | **286 / 340** |
 
-          El **icono 64×64 sigue BYTE-IDÉNTICO** (aprobado por el usuario).
+          El **icono 64×64 fue remasterizado** contra la referencia; el aprobado
+          sigue BYTE-IDÉNTICO en `referencias/ICONO_APROBADO_BACKUP.png`.
           Se conservan alfa prístino, 1636 emisivos, los 72 huesos originales
           byte-idénticos, UV opacas ≤128, 0 `JsonNull`, 0 mixins.
 
@@ -685,15 +703,15 @@ jobs:
 
           El `.bbmodel` exporta **4 animaciones en bucle** —
           `idle_respiracion`, `caminar`, `correr_saltar` y
-          `deterioro_particulas` — con **11638 keyframes de rotación/posición/escala
-          sobre 222 huesos** (capucha, los 112 tramos/puntas de jirón, 10 tejas, 10 venas, motas, ceniza
+          `deterioro_particulas` — con **11950 keyframes de rotación/posición/escala
+          sobre 214 huesos** (capucha, los 112 tramos/puntas de jirón, 10 tejas, 10 venas, motas, ceniza
           y los 27 paneles de paño). UUID canónicos 8-4-4-4-12, como exige
           `Animation.extend()`; si no, los keyframes quedan huérfanos. El
           maniquí Steve/Alex lleva cara, pelo y túnica.
 
           ### Movimiento en el juego
 
-          `CapaArmorModel` resuelve los **222 huesos `v15_*`/`v17_*`** por nombre y
+          `CapaArmorModel` resuelve los **214 huesos `v15_*`/`v17_*`** por nombre y
           anima respiración del collar, ondeo de cintas con retardo, pulso de
           venas y deriva de microvóxeles, en radianes y con fail-safe. El
           icono conserva la forma 16×16 plana/`NEAREST` aprobada.

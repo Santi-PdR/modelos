@@ -32,15 +32,15 @@ trozos → rejilla. La referencia es una **CAMPANA** medida: nace estrecha en el
 cuello, se abre hasta ±10 unidades hacia t≈0.73 y vuelve a cerrarse
 en un dobladillo ancho de puntas desiguales.
 
-- **16 jirones** en campana, con 6 tramos y punta real, con banda UV vertical única; se
+- **16 jirones** en **abanico en V de dos niveles**, con 6 tramos y punta real, con banda UV vertical única; se
   ensanchan al bajar y rematan en punta corta (no agujas).
 - **Bufanda carmesí en U** con escote bajo la cabeza, alas inclinadas,
   9 dientes rasgados delante y 5 piezas detrás para la vista F5.
 - **Color medido**: carmesí `(58,25,37)` → rojo vivo `(81,23,40)` →
   violeta `(70,29,65)` → violeta desvaído `(79,41,78)`. Agujeros negros
   y grietas rosa cortas salen del PNG, no de un generador aleatorio.
-- **26 motas rosa flotantes** como vóxeles 3D separados (las 8 medidas
-  en la captura + 18 con la misma distribución, más densas abajo).
+- **18 motas rosa flotantes** como vóxeles 3D separados (las 8 medidas
+  en la captura + 10 con la misma distribución, más densas abajo).
 - **10 tejas solapadas** que cruzan la campana por delante: rompen la
   regularidad de los rayos sin volver a la rejilla rechazada.
 - **10 venas 3D emisivas** sobre las grietas reales del PNG: `v17_vein_*`
@@ -71,12 +71,13 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   ponderada por luminancia para no teñir los huecos. Sin franjas.
 - **Capucha en alas** y **una sola banda gris** de arnés (antes tres
   franjas escalonadas); costuras de hombro y pliegues cosidos a mano.
-- **Animaciones**: 10 muestras de onda por hueso, respiración de capucha,
+- **Animaciones**: 12 muestras de onda por hueso, respiración de capucha,
   tirón de gravedad por tramo (seg4/5/6), ráfaga lenta en Java, marcadores
-  en los **4 clips** y **dos emisores** Snowstorm (`capa_embers` al correr
-  y deteriorarse, `capa_embers_calm` en reposo y al caminar), con color que
-  se apaga con `variable.ParticleAge`. 11638 keyframes, tangentes C1 en
-  las 9768 curvas de rotación.
+  en los **4 clips** y **tres emisores** Snowstorm (`capa_embers` al correr
+  y deteriorarse, `capa_embers_calm` en reposo y al caminar, `capa_shards`
+  solo en deterioro), con color que
+  se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
+  las curvas de rotación.
 
 ### Tests en GitHub y efectos en runtime (v1220)
 
@@ -84,12 +85,12 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
 geo+atlas reales y compara décima a décima con `REFERENCIA_CAPA.png`
 (mediana RGB, cobertura de paño, densidad de energía y silueta). El workflow
 `build.yml` lo ejecuta con `--check` **antes de compilar**, instala
-`numpy`/`Pillow` y **falla el build** si el error global supera 205
-(estado actual: 179.30). Así la autoevaluación no depende de mi sandbox.
+`numpy`/`Pillow` y **falla el build** si el error global supera 165
+(estado actual: 138.96). Así la autoevaluación no depende de mi sandbox.
 
 Además, los keyframes `particle` del `.bbmodel` no se disparan solos en
 Java/GeckoLib: `CapaDeteriorerItem.spawnAura(..., deterioro)` replica los
-dos emisores en runtime (rescoldo en reposo, 2 brasas + estela al correr,
+tres emisores en runtime (rescoldo en reposo, 2 brasas + estela al correr,
 3 brasas + 2 motas frías con el ítem dañado o vida baja), desde el servidor
 para que lo vean los demás jugadores. `CuriosCompat` usa el mismo estado.
 **La CI de GitHub compila este cambio con JDK 17 + Gradle 8.8.**
@@ -105,10 +106,34 @@ para que lo vean los demás jugadores. `CuriosCompat` usa el mismo estado.
   ítem dañado o vida baja, y alternadas con las brasas en el Effects track
   de `deterioro_particulas`. El presupuesto sigue fijo (7 partículas/tick).
 - **Textura**: puntas y dobladillo aclarados, energía del canvas recortada en
-  mitad y puntas. Error global de la autoevaluación **190.84 → 179.30**
-  (cobertura 85.9, energía 57.1, color 109, silueta 1.54×).
+  mitad y puntas. Error global de la autoevaluación **190.84 → 179.30 → 138.96**
+  (cobertura 85.9→73.5, energía 57.1→32.8, color 109→98, silueta 1.54×→1.42×).
 - **Visor 3D**: especular suave y rim reforzado para que los pliegues tengan
   volumen; el cambio no toca el rasterizador que mide la CI.
+
+
+### Ronda v1240: forma, energía y movimiento calibrados
+
+- **Forma**: la envolvente medida del PNG se escaló al ancho real del render
+  (0.82×) y se sustituyó la campana por un **abanico radial en V de dos
+  niveles**: las alas exteriores nacen inclinadas desde el cuello, mueren a
+  `t≈0.72` y solo los jirones centrales cuelgan hasta el dobladillo. Las
+  puntas dejaron de ser astillas negras y ahora son paño violeta.
+- **Energía**: `tools/energy_calibration.py` es un **segundo lazo cerrado**
+  (Jacobiano medido de 10 bandas) que ajusta `ENERGY_GAIN` en
+  `texture_pipeline.py`. `shape_energy_density()` adelgaza la tinta **trazo a
+  trazo** (componentes 8-conectados), no píxel a píxel: sin damero, con
+  guiones discontinuos como los de la captura. Error de energía
+  **57.1 → 32.8 pp**.
+- **Color**: tres pasadas más de `tools/color_calibration.py` cerraron el
+  degradado (error 109 → 98) sin teñir los huecos.
+- **Animaciones**: tercer armónico de ondeo (`flutter`) con **derivada
+  analítica** en las tangentes Bézier, más vivo en las puntas que en el yugo,
+  replicado en Java, en el visor y en las 4 animaciones del `.bbmodel`;
+  `WAVE_SAMPLES=11` afina la continuidad C1 (11950 keyframes).
+- **Tests**: los umbrales de `audit_model.py --check` bajaron de 205 a 165
+  para que la CI **proteja** la mejora, y el workflow verifica el nuevo
+  calibrador, la V de dos niveles, los 286 huesos / 340 cubos y los 3 emisores.
 
 ## Ver el modelo
 
@@ -117,19 +142,19 @@ para que lo vean los demás jugadores. `CuriosCompat` usa el mismo estado.
 - **Comparativa con tu referencia**:
   [`docs/capa_v1170_comparativa.png`](docs/capa_v1170_comparativa.png).
 - **Proyecto Blockbench**: [`docs/capa_v1170.bbmodel`](docs/capa_v1170.bbmodel),
-  4 animaciones en bucle con **11638 keyframes** y UUID canónicos:
+  4 animaciones en bucle con **11950 keyframes** y UUID canónicos:
   curvas **Bézier** con tangentes analíticas (C1), marcadores de timeline,
   parpadeo de motas, tirón por tramo, respiración de capucha y un
-  **Effects track en los 4 clips** con dos emisores Snowstorm
-  (`docs/particles/capa_embers.json` y `capa_embers_calm.json`).
+  **Effects track en los 4 clips** con tres emisores Snowstorm
+  (`docs/particles/capa_embers.json`, `capa_embers_calm.json` y `capa_shards.json`).
 - **Previews**: [`docs/capa_v1170_preview.png`](docs/capa_v1170_preview.png),
   [`docs/referencia_analizada.png`](docs/referencia_analizada.png).
 
 Se conservan: los **72 huesos originales byte-idénticos**, alfa prístino,
 **1636 emisivos**, UV opacas ≤128, `inflate` ≤0.05, espesor 0.25–0.50,
 0 `JsonNull`, 0 mixins, `animation.item`, radianes y fail-safes.
-**294 huesos / 348 cubos**. `CapaArmorModel.java` quedó regenerado para
-los 222 huesos `v15_*` / `v17_*` reales.
+**286 huesos / 340 cubos**. `CapaArmorModel.java` quedó regenerado para
+los 214 huesos `v15_*` / `v17_*` reales.
 
 > PR #1: https://github.com/Santi-PdR/modelos/pull/1
 
