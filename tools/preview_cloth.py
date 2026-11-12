@@ -38,6 +38,12 @@ PARTICLE_DIR = ASSETS / "textures/particle"
 
 # Debe coincidir con CapaArmorModel.SECTIONS + HIDDEN_DETAILS.
 SECTION_BONES = {"cape_top", "cape_mid", "cape_bottom"}
+# v1.21.0: Java oculta el maniquí con setHidden(true) y el .bbmodel NO lo
+# incluye. El render software lo seguía dibujando (cubo blanco + brazos
+# violetas) y eso es justo lo que hacía ver "fea" la comparativa. La capa
+# se muestra SOLA, como se abre en Blockbench.
+MANNEQUIN = {"helmet", "chestplate", "rightArm", "leftArm",
+             "rightLeg", "leftLeg", "rightBoot", "leftBoot"}
 HIDDEN_DETAILS = {
     "arnes_frontal", "collar_dentado", "yugo",
     "espina_0", "espina_1", "espina_2",
@@ -240,11 +246,15 @@ def effective_hidden(geo):
     v15_*) siguen visibles.
     """
     parent = {b["name"]: b.get("parent") for b in geo["bones"]}
-    hidden = set(HIDDEN_DETAILS) | set(SECTION_BONES)
+    hidden = set(HIDDEN_DETAILS) | set(SECTION_BONES) | MANNEQUIN
+    # OJO: `chestplate` es PADRE de los huesos v17_* de la capa. Se ocultan
+    # SUS CUBOS, pero NO se propaga a los hijos: si no, desaparece la capa
+    # entera. La propagación sigue siendo sólo para HIDDEN_DETAILS.
+    roots = set(HIDDEN_DETAILS)
     for name in list(parent):
         cur = parent.get(name)
         while cur:
-            if cur in HIDDEN_DETAILS:
+            if cur in roots:
                 hidden.add(name)
                 break
             cur = parent.get(cur)

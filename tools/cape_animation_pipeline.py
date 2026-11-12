@@ -36,13 +36,16 @@ STYLE_BY_CLIP = {
     "animation.sprint": "correr",
     "animation.air": "correr",
 }
-SAMPLES = 8                     # 9 keyframes por hueso y clip
+# v1.21.0: 9 muestras con easeInOutSine PARABA la tela en cada keyframe
+# (la velocidad se anulaba 9 veces por ciclo). 17 muestras + interpolación
+# lineal siguen la curva analítica C1 sin pausas robóticas.
+SAMPLES = 16                    # 17 keyframes por hueso y clip
 GENERATED_PREFIXES = ("v17_", "v15_cloth_", "v15_hem_")
 
 
 def _vec(values) -> dict:
     return {"vector": [round(float(v), 4) for v in values],
-            "easing": "easeInOutSine"}
+            "easing": "linear"}
 
 
 def _time(length: float, f: float) -> str:
@@ -65,15 +68,22 @@ def build() -> dict:
         for old in [b for b in anim["bones"] if b.startswith(GENERATED_PREFIXES)]:
             del anim["bones"][old]
         for name in names:
-            rotation, scale = {}, {}
+            rotation, position, scale = {}, {}, {}
             for j in range(SAMPLES + 1):
                 f = j / SAMPLES
                 t = _time(length, f)
                 pose = M.sample(name, style, f)
                 rotation[t] = _vec(pose["rot"])
+                # v1.21.0: las puntas se DESPLAZAN, no sólo giran en el
+                # sitio. Antes GeckoLib perdía el canal `position` que sí
+                # tenía el .bbmodel y la capa se veía distinta en el juego.
+                if pose["has_pos"]:
+                    position[t] = _vec(pose["pos"])
                 if pose["has_scale"]:
                     scale[t] = _vec(pose["scale"])
             tracks = {"rotation": rotation}
+            if position:
+                tracks["position"] = position
             if scale:
                 tracks["scale"] = scale
             anim["bones"][name] = tracks
@@ -82,7 +92,7 @@ def build() -> dict:
 
 def main() -> None:
     data = build()
-    # Compacto: 8 muestras x 188 huesos x 4 clips llenarían >2 MB con
+    # Compacto: 17 muestras x 235 huesos x 4 clips llenarían varios MB con
     # indent=2. El runtime sólo necesita JSON válido y sin `null`.
     text = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
     assert "null" not in text, "JsonNull rompe GeckoLib"

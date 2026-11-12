@@ -71,6 +71,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@code tools/cape_motion.py}, el {@code .bbmodel}, el
  * {@code animation.json} de GeckoLib y el visor.</p>
  *
+ * <p>v1.21.0: Java NO vuelve a calcular esa onda. GeckoLib ya aplicó
+ * {@code sample()} cuando se ejecuta {@code setCustomAnimations}; este
+ * modelo sólo SUMA la respuesta al giro/salto/sprint del portador.
+ * Antes las dos curvas se pisaban y la capa temblaba distinto en el
+ * juego que en Blockbench.</p>
+ *
  * Referencias (ideas, no código portado): tr7zw/WaveyCapes, ismaildzf/finery,
  * GlowberryClient #102/#106, FabricExtras/ArmorModelAPI y GeckoLib 1.20.1.
  */
@@ -434,7 +440,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             chain.setRotZ(frontChainBaseZ[i] + (float) Math.toRadians(chainDeg));
         }
 
-        animateDeterioro(time, speed, lift, turn, airborne, sprint, wind, seed, amplitude);
+        animateDeterioro(time, speed, lift, turn, airborne, sprint, sneak, water, wind, seed);
     }
 
     /** Si la animación cosmética falla, devolvemos la pose original del geo. */
@@ -598,26 +604,23 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         }
     }
 
-    /** Onda de la tela: MISMA curva de 3 armonicos que cape_motion.py.
-     *  Todo en GRADOS convertido con Math.toRadians. No hay deriva de
-     *  microvoxeles: las particulas ya no viven en la geometria. */
+    /** v1.21.0: Java YA NO reimplementa la onda.
+     *  GeckoLib aplica {@code cape_motion.sample()} (la MISMA curva que
+     *  el {@code .bbmodel} y el visor) antes de este callback. Antes este
+     *  método calculaba otra onda con fase 0.45 y SOBRESCRIBÍA las
+     *  rotaciones: en Minecraft la capa se movía distinto que en
+     *  Blockbench, y las dos curvas sumadas daban un temblor. Ahora sólo
+     *  se SUMAN offsets de respuesta al portador, leyendo la rotación ya
+     *  animada de cada hueso. El retardo {@code -0.62*tramo} se conserva
+     *  en el offset para que la respuesta también baje por la tela. */
     private void animateDeterioro(double time, double speed, double lift,
                                   double turn, double airborne, double sprint,
-                                  double wind, double seed, double amplitude) {
+                                  double sneak, double water, double wind,
+                                  double seed) {
         if (deterioroBones == null || deterioroParts == null)
             return;
-        double gain = Mth.clamp(0.55D + speed * 1.25D + sprint * 0.85D
-                + airborne * 0.45D + amplitude * 0.08D, 0.35D, 2.60D);
-        double step = Mth.clamp(speed * 1.40D - sprint * 0.60D, 0.0D, 1.20D);
-        double flare = sprint * 0.90D + airborne * 0.60D;
-        double shiver = airborne * 0.35D;
-        double cycle = (time * (0.55D + speed * 1.10D + sprint * 0.60D)) % 1.0D;
-        if (cycle < 0.0D)
-            cycle += 1.0D;
-        double twoPiF = 2.0D * Math.PI * cycle;
-        // Rafaga LENTA: tela pesada que no repite exactamente la misma pose.
-        double gust = Math.sin(time * 0.23D + seed * 0.07D) * 1.3D;
-
+        double gust = Math.sin(time * 0.23D + seed * 0.07D);
+        double sweep = Math.sin(time * 0.41D + seed * 0.11D);
         for (int i = 0; i < deterioroBones.length; i++) {
             GeoBone b = deterioroBones[i];
             if (b == null)
@@ -627,48 +630,31 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             int seg = deterioroParts[i][2];
             double segF = Math.min(1.0D, seg / 6.0D);
             double lateral = (col - 7.5D) / 7.5D;
-            // TRAVEL = 0.62, COLUMN_PHASE = 0.19, fase base = 0.45 (caminar).
-            double phase = -0.62D * seg + col * 0.19D + 0.45D;
-            double h = (0.055D + 0.020D * sprint + 0.020D * airborne)
-                    * (1.0D + 0.30D * seg);
-            double w = 0.75D * (Math.sin(twoPiF + phase) - Math.sin(phase))
-                    + 0.18D * (Math.sin(2.0D * twoPiF + phase * 1.7D)
-                               - Math.sin(phase * 1.7D))
-                    + h * (Math.sin(3.0D * twoPiF + phase * 2.3D)
-                           - Math.sin(phase * 2.3D));
-            double rx, ry, rz;
-            if (family == 0) {
-                double amp = (2.2D + 6.5D * segF) * gain;
-                rx = amp * 0.5D * w
-                        - flare * 4.0D * (0.5D + 0.5D * Math.sin(twoPiF + phase));
-                ry = step * 3.0D * lateral * Math.sin(twoPiF) + turn * 1.2D
-                        + wind * 0.5D + gust * 0.35D;
-                rz = amp * w + gust
-                        + shiver * 3.0D * (0.30D + 0.70D * segF)
-                        * Math.sin(6.0D * twoPiF + col * 1.3D + seg * 0.9D);
-            } else if (family == 1) {
-                double amp = 1.4D * gain;
-                rx = amp * 0.45D * w + lift * 1.0D;
-                ry = 0.0D;
-                rz = amp * 0.30D * w + turn * 1.2D;
-            } else if (family == 2) {
-                double amp = 5.0D * gain;
-                rx = amp * 0.12D * w;
-                ry = 0.0D;
-                rz = amp * w
-                        + Math.sin(6.0D * twoPiF + col) * (0.6D + sprint * 1.4D);
-            } else {
-                double amp = 3.2D * gain;
-                rx = amp * 0.40D * w;
-                ry = 0.0D;
-                rz = amp * w;
+            // TRAVEL = 0.62 rad/tramo: la onda llega retardada desde
+            // GeckoLib; el offset se propaga con el MISMO retardo.
+            double lag = 0.62D * seg;
+            double response = 0.35D + 0.65D * segF;
+            double ripple = Math.sin(time * 1.7D - lag + seed * 0.05D)
+                    * 0.50D * response;
+            double offX = Mth.clamp(-(sprint * 2.2D + airborne * 1.6D
+                    + lift * 0.9D + speed * 0.6D) * response
+                    + (sneak + water) * 1.0D * response, -6.0D, 6.0D);
+            double offY = Mth.clamp(turn * 2.6D * response * lateral
+                    + wind * 0.55D * response + sweep * 0.45D * response,
+                    -5.0D, 5.0D);
+            double offZ = Mth.clamp((gust * 0.9D + wind * 0.35D) * response
+                    * (0.6D + 0.4D * Math.abs(lateral))
+                    + ripple + turn * 1.2D * lateral, -5.0D, 5.0D);
+            if (family == 1) {          // capuchón: casi rígido
+                offX *= 0.35D;
+                offY = 0.0D;
+                offZ *= 0.45D;
+            } else if (family == 2) {  // venas: siguen el estremecimiento
+                offZ *= 1.35D;
             }
-            b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
-                    Mth.clamp(rx, -15.0D, 15.0D)));
-            b.setRotY(deterioroBase[i][1] + (float) Math.toRadians(
-                    Mth.clamp(ry, -10.0D, 10.0D)));
-            b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
-                    Mth.clamp(rz, -12.0D, 12.0D)));
+            b.setRotX(b.getRotX() + (float) Math.toRadians(offX));
+            b.setRotY(b.getRotY() + (float) Math.toRadians(offY));
+            b.setRotZ(b.getRotZ() + (float) Math.toRadians(offZ));
         }
     }
 

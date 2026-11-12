@@ -1,20 +1,54 @@
-# Mantle of the Blight Star — v1.20.0
+# Mantle of the Blight Star — v1.21.0
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Capa equipada en `curios:back`, temática
 **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-> 📦 **Release vigente: `v1.20.0`** — `capatest-1.20.0.jar` compilado
+> 📦 **Release vigente: `v1.21.0`** — `capatest-1.21.0.jar` compilado
 > en CI. Cada entrega cambia a una versión más nueva; `v1.19.0` y
 > anteriores quedan como histórico y no se sobreescriben.
 >
-> 🔗 **Link directo al `.bbmodel` v1.20.0**: [https://github.com/Santi-PdR/modelos/releases/download/v1.20.0/CAPA_v1.20.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.20.0/CAPA_v1.20.0.bbmodel)
-> (también en el workspace: [`docs/CAPA_v1.20.0.bbmodel`](docs/CAPA_v1.20.0.bbmodel)).
+> 🔗 **Link directo al `.bbmodel` v1.21.0**: [https://github.com/Santi-PdR/modelos/releases/download/v1.21.0/CAPA_v1.21.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.21.0/CAPA_v1.21.0.bbmodel)
+> (también en el workspace: [`docs/CAPA_v1.21.0.bbmodel`](docs/CAPA_v1.21.0.bbmodel)).
 > **El archivo ahora SÍ se llama igual que la versión**: el exportador
 > lee `mod_version` y genera `docs/CAPA_v<versión>.bbmodel` con el
 > `name` interno y el asset de Release con esa misma versión.
 > v1.14.0, v1.15.0 y v1.16.0 fueron rechazadas visualmente y sus previews
 > se borraron del repo. Los previews son render **software**.
+
+### v1.21.0 — la animación deja de latir: onda viajera real
+
+Dijiste: *«la animacion esta fea btw, y sigue trabajando con el modelo»*.
+Diagnóstico: `cape_motion.wave()` restaba `sin(fase)` a cada armónico para
+forzar `w(0)=0`. Eso convertía el retardo por tramo en una AMPLITUD y hacía
+que los 182 huesos volvieran TODOS a la pose neutra al principio y al final
+de cada clip: un latido global con un parón en el bucle, no tela. Además
+`CapaArmorModel.java` calculaba una segunda onda con fase 0.45 y PISABA la
+de GeckoLib, así que Minecraft y Blockbench no coincidían.
+
+- **`tools/cape_motion.py` reescrito**: `sin(2πf+φ) + 0.28·sin(4πf+1.7φ)
+  + h·sin(6πf+2.3φ)`, frecuencias enteras ⇒ periódica y C1 en la costura
+  SIN anclar nada a cero. `φ = -0.62·tramo + col·0.19 + fase_clip` vuelve
+  a ser un retardo TEMPORAL: la onda baja por el jirón.
+- **Envolvente física**: amplitud `tramo^1.35`, aleteo mayor en las alas
+  exteriores, ráfaga común (`gust`), arrastre siempre positivo (`drag`),
+  vaivén de paso retardado y estremecimiento sólo en `deterioro`.
+- **Desplazamiento acumulado**: los 7 tramos son HERMANOS en el geo, así
+  que girar cada cubo sobre su centro sólo los hacía vibrar. Ahora cada
+  tramo recibe `position` con una curva `tramo^1.6`: el jirón se DEFORMA
+  como una tela. GeckoLib recibe ese canal (antes lo perdía) con 17
+  muestras e interpolación lineal, en vez de 9 muestras con
+  `easeInOutSine` que paraban la tela 9 veces por ciclo.
+- **Java ya no reimplementa la onda**: GeckoLib aplica `sample()` y
+  `setCustomAnimations` sólo SUMA la respuesta al giro, salto, sprint,
+  agache y agua leyendo `b.getRotX()` ya animado.
+- **Visor**: espejo exacto de la curva (verificado muestra a muestra),
+  soporta `offset` por hueso y NO dibuja el maniquí blanco por defecto:
+  se ve la capa sola, como en Blockbench.
+- **Forma**: barrido A..I medido contra tu PNG. Jirones ~16% más finos
+  (`fill 0.86 → 0.72`) y cierre del dobladillo `0.38 → 0.28`: huecos
+  negros reales y puntas separadas en vez de falda maciza. Silueta
+  `1.10× → 1.08×`, fidelidad con la imagen `1.239`.
 
 ### v1.20.0 — el `.bbmodel` versionado y la V de la referencia
 
@@ -135,16 +169,16 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Release vigente: v1.20.0
+### Release vigente: v1.21.0
 
-El JAR se publica como Release [`v1.20.0`](https://github.com/Santi-PdR/modelos/releases/tag/v1.20.0):
-`capatest-1.20.0.jar`, compilado en CI con JDK 17 + Gradle 8.8.
-**Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.20.0/CAPA_v1.20.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.20.0/CAPA_v1.20.0.bbmodel)
-(el mismo archivo que `docs/CAPA_v1.20.0.bbmodel` y el asset de la Release,
+El JAR se publica como Release [`v1.21.0`](https://github.com/Santi-PdR/modelos/releases/tag/v1.21.0):
+`capatest-1.21.0.jar`, compilado en CI con JDK 17 + Gradle 8.8.
+**Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.21.0/CAPA_v1.21.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.21.0/CAPA_v1.21.0.bbmodel)
+(el mismo archivo que `docs/CAPA_v1.21.0.bbmodel` y el asset de la Release,
 byte-idénticos; ya no existe el viejo `capa_v1170.bbmodel`).
 
  Regla de entrega: **cada cambio sube `mod_version`** (aquí 1.19.0 →
-1.20.0), **el `.bbmodel` cambia de nombre con esa versión** y
+1.21.0), **el `.bbmodel` cambia de nombre con esa versión** y
 **siempre se incluye el link del `.bbmodel`**. El workflow lee
 la versión de `gradle.properties` para que JAR, tag y assets nunca se
 desincronizen; publica con `workflow_dispatch(publicar=true)` o con un
@@ -270,7 +304,7 @@ Contrastando el PNG y el render a la misma escala, la autoevaluación pasó de
   (un solo `.html`, sin servidor, sin red, sin token).
 - **Comparativa con tu referencia**:
   [`docs/capa_v1170_comparativa.png`](docs/capa_v1170_comparativa.png).
-- **Proyecto Blockbench**: [`docs/CAPA_v1.20.0.bbmodel`](docs/CAPA_v1.20.0.bbmodel),
+- **Proyecto Blockbench**: [`docs/CAPA_v1.21.0.bbmodel`](docs/CAPA_v1.21.0.bbmodel),
   182 cubos / 254 grupos, 4 animaciones en bucle con **12624 keyframes**
   y UUID canónicos: curvas **Bézier** con tangentes analíticas (C1),
   marcadores, retardo por tramo, vaivén de paso, barrido al correr,

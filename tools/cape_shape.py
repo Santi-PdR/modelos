@@ -187,11 +187,14 @@ def fan_x(k: int, t: float) -> float:
     # v1.20.0: las ALAS exteriores abren mas deprisa (en la
     # captura salen del cuello a ~35 grados, no a ~15).
     rad *= 1.0 + 0.30 * abs(a)
+    # v1.21.0: cierre 0.38 -> 0.28. La V sigue (las alas mueren
+    # antes) pero las puntas NO se vuelven a juntar en un pico: en la
+    # captura los jirones bajos quedan separados por huecos negros.
     # La captura NO es un triangulo: abre hasta t~0.72 y CIERRA en V
     # hacia las puntas (los jirones exteriores se recogen).
     if t > 0.68:
         cierre = (t - 0.68) / 0.32
-        rad *= 1.0 - 0.38 * cierre ** 1.2
+        rad *= 1.0 - 0.28 * cierre ** 1.2
     # Torcedura y asimetria suaves: la captura no es un abanico perfecto.
     wrinkle = 0.20 * t * math.sin(k * 1.71 + t * 4.1 + 0.4)
     asym = 1.0 + 0.06 * a
@@ -237,7 +240,10 @@ def ribbon_w(k: int, t: float) -> float:
         # NEGROS entre jirones y puntas estrechas.
         # v1.20.0: -16% de paño por jiron => HUECOS NEGROS reales
         # entre cintas, como en la captura (antes falda maciza).
-        fill = 0.86 + 0.10 * max(0.0, min(1.0, (f - 0.35) / 0.55))
+        # v1.21.0: 0.86 -> 0.72 (barrido A..I medido). TOTAL informativo
+        # 446.8 -> 438.1 y silueta 1.10x -> 1.08x: jirones separados en
+        # vez de falda maciza, mas cercanos a la foto.
+        fill = 0.72 + 0.10 * max(0.0, min(1.0, (f - 0.35) / 0.55))
         return (0.58 + 0.55 * f) * scale * center * fill
     # v1283: el afilado final se retrasa al ultimo 6% y nunca baja de
     # 0.38 unidades. Antes las puntas exteriores se convertian en agujas

@@ -67,7 +67,7 @@ BB_NAME = f"CAPA_v{VER}.bbmodel"
 GEO = ROOT / "src/main/resources/assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json"
 ATLAS = ROOT / "src/main/resources/assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan.png"
 OUT = ROOT / "preview/assets/capa_deteriorer_evilsaiyan.bbmodel"
-DOC = ROOT / "docs" / BB_NAME     # ej. docs/CAPA_v1.20.0.bbmodel
+DOC = ROOT / "docs" / BB_NAME     # ej. docs/CAPA_v1.21.0.bbmodel
 
 FACES = ("north", "south", "east", "west", "up", "down")
 
