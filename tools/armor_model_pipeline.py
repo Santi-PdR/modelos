@@ -167,7 +167,11 @@ def build() -> dict:
     cowl_uv = S("yoke", du=1.0, dv=1.0, w=12.0, h=15.0)
     for i in range(COWL_FRONT):
         fx = (i - (COWL_FRONT - 1) / 2.0) / ((COWL_FRONT - 1) / 2.0)
-        x = fx * 4.20
+        # v1273: capuchon CONTINUO y ancho (la captura cubre ~13/20
+        # columnas en t=0.0), no alas separadas. Los lados siguen CORTOS
+        # (height 1.25) para que la U gris del arnes siga visible: eso
+        # fue exactamente lo que fallo en la "losa" de v1244.
+        x = fx * 6.20
         # Segun el recorte 4x: la tela cuelga MAS EN EL CENTRO (lóbulo
         # redondeado bajo la cabeza) y se recoge hacia los hombros.
         # El borde superior queda escondido por la cabeza del maniquí.
@@ -176,9 +180,12 @@ def build() -> dict:
         y_top = 24.45 + 0.42 * abs(fx) + 0.12 * math.sin(i * 2.7)
         # Arco parabolico: lóbulo central ancho y redondeado, alas que
         # se recogen deprisa hacia los hombros (recorte 4x de la captura).
-        height = 0.85 + 2.30 * (1.0 - abs(fx)) ** 1.35 + 0.14 * abs(math.sin(i * 2.3))
+        # Cuenco aplanado: lóbulo central redondeado y lados recogidos.
+        # Ni la campana de v1243 (solo colgaba el centro) ni la losa
+        # plana de v1244 (tapaba el arnes).
+        height = 1.25 + 2.55 * (1.0 - abs(fx)) ** 1.35 + 0.14 * abs(math.sin(i * 2.3))
         bottom = y_top - height + 0.16 * math.sin(i * 1.9 + 0.3)
-        w = 1.30 + 0.30 * (1.0 - abs(fx))
+        w = 1.85 + 0.36 * (1.0 - abs(fx))
         z = 3.55 + 0.52 * (1.0 - abs(fx))
         # Cada pieza muestrea una franja distinta del carmesí: relieve
         # suave por capas, SIN lineas diagonales (la rejilla fue rechazada).
@@ -193,7 +200,11 @@ def build() -> dict:
         # Dientes desiguales, MAS LARGOS en el lóbulo central.
         # La CAIDA de la bufanda la forman estos dientes ANCHOS y
         # solapados: un lóbulo central largo y alas mas cortas.
-        tooth = (0.40 + 1.45 * abs(math.sin(i * 2.7 + 0.4))) * (0.72 + 0.42 * (1.0 - abs(fx)))
+        # v1275: los dientes de los HOMBROS cuelgan mas: en la captura el
+        # carmesi baja hasta el arnes por los lados, llenando t=0.0 sin
+        # ninguna pieza flotante ni losa sobre la U gris.
+        hang = 1.75 if i in (0, 1, 7, 8) else 1.0
+        tooth = (0.45 + 1.70 * abs(math.sin(i * 2.7 + 0.4))) * (0.72 + 0.42 * (1.0 - abs(fx))) * hang
         tw = 0.92 + 0.50 * (1.0 - abs(fx)) + 0.18 * abs(math.cos(i * 1.9))
         zf = z + 0.92
         bones.append(bone(
@@ -299,9 +310,17 @@ def build() -> dict:
         t0 = 0.10 + 0.09 * (i % 3)
         t1 = 0.36 + 0.16 * ((i * 7) % 5) / 5.0
         x0 = a * (CS.X_NECK + 1.55 * (i % 2))
+        if i in (0, 1, 8, 9):
+            # v1276: ALAS DIAGONALES DEL HOMBRO. En la captura el carmesi
+            # baja desde los hombros (x~+-7.6) hasta el abanico, cruzando
+            # la primera decima. Cuatro tejas exteriores se alargan hacia
+            # ARRIBA y AFUERA: paño real en t=0.0, sin losas ni piezas
+            # flotantes, y con la misma UV continua del canvas.
+            t0, t1 = -0.02, 0.27
+            x0 = a * 7.60
         # v1210: las tejas NO cruzaban la captura como tablones diagonales.
         # Se acortan a un pliegue cercano al hombro y se vuelven mas finas.
-        x1 = a * CS.silhouette(0.55) * 0.62
+        x1 = a * (4.20 if i in (0, 1, 8, 9) else CS.silhouette(0.55) * 0.62)
         y0, y1 = CS.Y_TOP - t0 * CS.HEIGHT, CS.Y_TOP - t1 * CS.HEIGHT
         cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
         dy, dx = y0 - y1, x1 - x0
@@ -309,11 +328,19 @@ def build() -> dict:
         h = math.hypot(dx, dy) * 0.86
         # Capas de tela SOLAPADAS, no un escudo: anchura moderada y
         # profundidad distinta para que se lean como jirones separados.
-        w = 0.50 + 0.24 * abs(a) + 0.12 * abs(math.sin(i * 1.9))
+        w = (1.35 + 0.20 * abs(math.sin(i * 1.9))) if i in (0, 1, 8, 9) \
+            else (0.50 + 0.24 * abs(a) + 0.12 * abs(math.sin(i * 1.9)))
         z = 3.32 + 0.30 * (i % 3)
         near = CS.nearest_ribbon((t0 + t1) / 2.0, x0 / 8.6)
-        uv = {"uv": [round(near * CS.BAND_W, 4), round(t0 * 48.0, 4)],
-              "uv_size": [round(CS.BAND_W, 4), round((t1 - t0) * 48.0, 4)]}
+        if i in (0, 1, 8, 9):
+            # Carmesi LISO del yugo: en la captura los hombros son tela
+            # oscura y las grietas rosa viven en las MOTAS sueltas, no en
+            # una lluvia de guiones sobre el capuchon.
+            uv = S("yoke", du=0.5 + 0.5 * (i % 3), dv=0.5, w=12.0, h=15.0)
+        else:
+            uv = {"uv": [round(near * CS.BAND_W, 4), round(t0 * 48.0, 4)],
+                  "uv_size": [round(CS.BAND_W, 4),
+                              round((t1 - t0) * 48.0, 4)]}
         assert_opaque(uv)
         bones.append(bone(
             f"v17_shingle_{i}", "chestplate", [cx, cy, z + 0.15],

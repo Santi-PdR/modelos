@@ -83,9 +83,12 @@ def _silhouette_raw(t: float) -> float:
             f = (t - t0) / max(1e-6, t1 - t0)
             return max(1.0, h0 + (h1 - h0) * f)
     # Cola analitica: cierra, pero conserva un dobladillo ANCHO.
+    # v1283: 7.3 (ni 6.6 de v1240, que dejaba 27.9% de paño en t=0.8,
+    # ni 8.0 de v1241, que reabria la punta). Con el recorte de la
+    # envolvente mas abajo, silueta(1.0)=5.91 < silueta(0.9)=6.34.
     last = smooth[-1]
     f = (t - last[0]) / max(1e-6, 1.0 - last[0])
-    return max(1.0, last[1] * (1.0 - f) + 6.6 * f)
+    return max(1.0, last[1] * (1.0 - f) + 7.3 * f)
 
 
 def silhouette(t: float) -> float:
@@ -108,6 +111,21 @@ def silhouette(t: float) -> float:
     q = (max(0.0, min(1.0, t)) - 0.02) / 0.30
     if 0.0 < q < 1.0:
         h *= 1.0 - 0.10 * math.sin(math.pi * q)
+    # v1261: recoge el abanico medio (el render era 1.44x mas ancho que
+    # la captura) y devuelve anchura al dobladillo.
+    recoge = min(1.0, max(0.0, (t - 0.05) / 0.25))
+    devuelve = 0.70 * min(1.0, max(0.0, (t - 0.72) / 0.28))
+    h *= 1.0 - 0.12 * recoge * (1.0 - devuelve)
+    # El tercio inferior de la captura se ABRE de nuevo (perspectiva 3/4),
+    # pero solo hasta t=0.88; despues cede para que la V cierre.
+    if t > 0.72:
+        # v1283: el ensanchado 3/4 DEBE ceder en el ultimo tramo. Antes
+        # seguia creciendo hasta t=0.94 y la punta volvia a ABRIRSE
+        # (silueta 6.45 en t=0.9 -> 7.34 en t=1.0), justo lo contrario
+        # de la V de la captura. Pico en t=0.88, luego cae.
+        sube = min(1.0, (t - 0.72) / 0.16)
+        cede = 1.0 - 0.85 * min(1.0, max(0.0, (t - 0.88) / 0.12))
+        h *= 1.0 + 0.16 * sube * cede
     return h
 
 
@@ -135,11 +153,13 @@ def tip_t(k: int) -> float:
     # (violeta) cuelgan hasta el suelo. Antes las 16 tiras llegaban abajo
     # y la capa parecia una falda plisada en vez de un abanico rasgado.
     a = abs(lateral(k))
-    # v1229: solo las 3-4 ALAS mas externas acortan; el centro (8-10
-    # jirones) sigue hasta el suelo. Con el exponente 1.15 el dobladillo
-    # quedaba en PICO de 2 tiras y la cobertura de t=0.8 cayo a 17%.
-    base = 1.0 - 0.30 * a ** 3.0
-    return min(1.0, max(0.72, base + 0.035 * math.sin(k * 3.31 + 0.7)))
+    # v1283: TODOS los lobulos conservan paño hasta t>=0.90. Las alas
+    # cortas de v1240 (t~0.72) dejaban el dobladillo en 27.9% de paño
+    # frente al 48% del PNG; ahora se mide 41.3%. El 3/4 view hace que
+    # las puntas de la derecha cuelguen un poco mas (sweep).
+    base = 1.0 - 0.10 * a ** 3.0
+    sweep = 0.03 * max(0.0, a)
+    return min(1.0, max(0.88, base + 0.030 * math.sin(k * 3.31 + 0.7) + sweep))
 
 
 def ribbon_x(k: int, t: float) -> float:
@@ -172,7 +192,7 @@ def ribbon_w(k: int, t: float) -> float:
     # unidades) y solo en el ultimo 18% se rematan en punta corta.
     # Cada jiron tiene su propio grosor: en la captura NO son identicos.
     scale = 0.80 + 0.38 * (0.5 + 0.5 * math.sin(k * 2.71 + 1.2))
-    if f <= 0.90:
+    if f <= 0.94:
         # Lobos anchos abajo: en la captura los jirones bajos son paño,
         # no tiras estrechas.
         # FINOS en el cuello, ANCHOS en los lobos bajos: en la captura
@@ -187,13 +207,16 @@ def ribbon_w(k: int, t: float) -> float:
         # tocar la envolvente exterior (la silueta de t=0.8/0.9 ya calza
         # 0.96x/0.97x). Rellena el 27% de paño del dobladillo, que en la
         # captura es 48%, sin volver a abrir la campana.
-        fill = 1.0 + 0.42 * (1.0 - abs(lateral(k))) * \
-            max(0.0, min(1.0, (f - 0.62) / 0.32))
+        # v1283: 0.70 para TODOS los jirones (antes solo el centro, ya
+        # solapado). 0.90 unia las cintas en una falda; 0.52 dejaba el
+        # dobladillo corto. La masa extra la aportan las puntas largas,
+        # las alas de hombro y el deshilachado por textura.
+        fill = 1.0 + 0.70 * max(0.0, min(1.0, (f - 0.64) / 0.30))
         return (0.86 + 0.88 * f) * scale * center * fill
-    # v1226: el remate se afila SOLO en el ultimo 10% y nunca baja de
-    # 0.38 unidades. Antes el dobladillo se convertia en 16 agujas con
-    # 26% de paño (la referencia tiene 48% en t=0.8).
-    return (1.05 * ((1.0 - f) / 0.10) + 0.38) * scale
+    # v1283: el afilado final se retrasa al ultimo 6% y nunca baja de
+    # 0.38 unidades. Antes las puntas exteriores se convertian en agujas
+    # exactamente en t=0.8, que es donde la captura tiene MAS paño.
+    return (1.05 * ((1.0 - f) / 0.06) + 0.38) * scale
 
 
 def ribbon_z(k: int) -> float:

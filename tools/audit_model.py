@@ -132,8 +132,18 @@ def static_checks() -> None:
                       "/armor/capa_deteriorer_evilsaiyan.geo.json").read_text())
     bones = geo["minecraft:geometry"][0]["bones"]
     assert len(bones) == 286 and sum(len(b.get("cubes", [])) for b in bones) == 340
+    # v1283: la V se verifica por PROPIEDADES, no por los numeros de una
+    # ronda concreta. Todos los lobulos llegan al dobladillo (paño en
+    # t=0.8), sus puntas son desiguales y la envolvente CIERRA de forma
+    # monotona hasta t=1.0 en vez de reabrirse en abanico.
     import cape_shape as _CS
-    assert _CS.tip_t(0) < 0.80 and _CS.tip_t(7) > 0.95
+    tips = [_CS.tip_t(k) for k in range(16)]
+    assert min(tips) >= 0.90 and max(tips) - min(tips) > 0.03, tips
+    assert 6.5 < _CS.silhouette(0.733) < 8.5, 'apertura del abanico'
+    assert _CS.silhouette(0.9) < _CS.silhouette(0.733), 'cierra hacia el dobladillo'
+    assert _CS.silhouette(1.0) < _CS.silhouette(0.9) * 1.02, 'la punta no se reabre'
+    assert 'def charred_hem' in tp, 'falta el deshilachado del dobladillo'
+    assert 'BEST-SO-FAR' in cal_e.read_text(), 'falta el mejor-perfil conservado'
     icon = ROOT / "src/main/resources/assets/capatest/textures/item/capa_deteriorer_evilsaiyan.png"
     assert hashlib.sha256(icon.read_bytes()).hexdigest() == ICON_SHA, "icono alterado"
     # El icono APROBADO sigue disponible, byte-identico, por si la

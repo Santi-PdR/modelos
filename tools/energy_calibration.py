@@ -96,6 +96,9 @@ def main() -> None:
     args = ap.parse_args()
     tgt = target()
     g = read_gains()
+    # v1246: BEST-SO-FAR. El descarte por trazo es escalonado y el lazo
+    # puede oscilar; se conserva el perfil con menor error, no el ultimo.
+    best_g, best_err = g[:], float("inf")
     print("objetivo :", " ".join(f"{v:5.1f}" for v in tgt))
     for it in range(args.iters):
         rebuild()
@@ -135,7 +138,18 @@ def main() -> None:
         print(f"iter {it} nueva:", " ".join(f"{v:5.1f}" for v in e1),
               f"| error {np.abs(e1 - tgt).sum():5.1f} pp")
         print("  perfil :", " ".join(f"{v:.2f}" for v in g[1:-1]))
-    write_gains(g)
+        err1 = float(np.abs(e1 - tgt).sum())
+        if err1 < best_err:
+            best_g, best_err = g[:], err1
+    rebuild()
+    e2 = measured()
+    if float(np.abs(e2 - tgt).sum()) > best_err:
+        g = best_g
+        write_gains(g)
+        rebuild()
+        e2 = measured()
+    print(f"MEJOR perfil conservado: error {np.abs(e2 - tgt).sum():.1f} pp")
+    print("  ENERGY_GAIN:", " ".join(f"{v:.2f}" for v in g[1:-1]))
 
 
 if __name__ == "__main__":

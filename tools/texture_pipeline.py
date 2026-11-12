@@ -151,7 +151,7 @@ def _blurred_noise(rng: np.random.Generator, shape: tuple[int, int], radius: flo
 # La ajusta tools/energy_calibration.py con un lazo cerrado y la aplica
 # shape_energy_density() al atlas YA compuesto (incluye el realce emisivo
 # y el bloom, que tambien crean pixeles rosa fuera de las grietas).
-ENERGY_GAIN = ((0.00, 0.120), (0.05, 0.120), (0.15, 0.800), (0.25, 0.450), (0.35, 1.480), (0.45, 1.970), (0.55, 0.740), (0.65, 0.430), (0.75, 3.030), (0.85, 0.840), (0.95, 0.390), (1.00, 0.390))
+ENERGY_GAIN = ((0.00, 3.104), (0.05, 3.104), (0.15, 2.115), (0.25, 2.592), (0.35, 0.633), (0.45, 2.230), (0.55, 0.217), (0.65, 0.385), (0.75, 0.243), (0.85, 0.601), (0.95, 0.505), (1.00, 0.505))
 
 
 def energy_gain(t: float) -> float:
@@ -714,16 +714,26 @@ def shape_energy_density(out: np.ndarray) -> np.ndarray:
         u0 = min(x for _, x in cells)
         t = (sum(y for y, _ in cells) / len(cells) + 0.5) / 48.0
         gain = energy_gain(t)
-        # Hash determinista, sin aleatoriedad entre ejecuciones.
-        rnd = ((v0 * 73856093) ^ (u0 * 19349663) ^ (len(cells) * 83492791))
-        rnd = (rnd % 100003) / 100003.0
-        keep = rnd < min(1.0, gain)
-        for y, x in cells:
-            c[y, x] = (orig[y, x] if keep
-                       else row_colour[y] * 0.88 + orig[y, x] * 0.12)
-        if keep and gain > 1.0:
+        # v1247: DASH FRACCIONAL. La decision binaria por componente
+        # dejaba un SUELO de energia: las grietas se unen en bloques de
+        # 20-40 px y, con gain=0.3, el 30% de las veces sobrevivian TODAS.
+        # Ahora se conserva exactamente la fraccion `gain` de los pixeles,
+        # repartida a lo largo del trazo con un acumulador deterministico:
+        # queda una linea DISCONTINUA (como en la captura), sin damero, y
+        # la respuesta al perfil es monotona y de baja varianza.
+        seq = sorted(cells)
+        acc = ((v0 * 7 + u0 * 13 + len(cells)) % 7) / 7.0
+        kept = []
+        for y, x in seq:
+            acc += min(1.0, gain)
+            if acc >= 1.0:
+                acc -= 1.0
+                kept.append((y, x))
+            else:
+                c[y, x] = row_colour[y] * 0.88 + orig[y, x] * 0.12
+        if gain > 1.0:
             extra = min(0.85, (gain - 1.0) * 0.60)
-            for y, x in cells:
+            for y, x in kept:
                 y2, x2 = min(47, y + 1), min(95, x + 1)
                 if not em[y2, x2]:
                     c[y2, x2] = (c[y2, x2] * (1.0 - extra)
@@ -879,6 +889,9 @@ def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
 
     # v1230: densidad de energía MEDIDA por altura (lazo cerrado).
     out = shape_energy_density(out)
+    # v1264: deshilachado del dobladillo DESPUES de la energia, para no
+    # apagar las grietas que llegan hasta la punta.
+    out = charred_hem(out)
     out = np.clip(out, 0, 255)
     out = np.where(opaque[..., None], out, rgb)  # never paint into transparent texels
     armor = np.dstack((out, alpha)).astype(np.uint8)
@@ -893,6 +906,33 @@ def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
     glowmask = np.dstack((grgb, new_alpha)).astype(np.uint8)
 
     return Image.fromarray(armor, "RGBA"), Image.fromarray(glowmask, "RGBA")
+
+
+def charred_hem(out: np.ndarray) -> np.ndarray:
+    """v1264: HUECOS NEGROS del dobladillo, por textura.
+
+    La referencia tiene 48% de paño en t=0.8 pero solo 18% en t=0.9: los
+    lóbulos se deshilachan en negros antes de morir. Recortar la GEOMETRIA
+    no sirve (el ultimo tramo promedia su anchura y tambien vaciaba t=0.8),
+    asi que se carbonizan franjas verticales irregulares SOLO en las filas
+    v>=43 del canvas (t>=0.9). No se toca alpha ni el glowmask: los texels
+    siguen siendo opacos, solo quedan fuera de la mascara de paño.
+
+    Las grietas rosa se preservan: en la captura la energia sigue viva
+    hasta la punta, incluso cuando el paño ya se ha rasgado.
+    """
+    c = out[0:48, 0:96, :3]
+    r, g, b = c[..., 0], c[..., 1], c[..., 2]
+    energy = (r > 105) & (b > 75) & (r > g + 48) & (b > g + 22)
+    for v in range(43, 48):
+        frac = 0.10 + 0.13 * (v - 43)          # 10% .. 62% de huecos
+        for u in range(96):
+            # Estela vertical: el hueco se mantiene de una fila a la
+            # siguiente en vez de convertirse en confeti de píxeles.
+            h = ((u * 37 + (u // 4) * 13 + v * 3 + (u // 7) * 29) % 101) / 101.0
+            if h < frac and not energy[v, u] and c[v, u].mean() > 34.0:
+                c[v, u] = np.array([16.0, 9.0, 18.0], np.float32)
+    return out
 
 
 # --------------------------------------------------------------------------

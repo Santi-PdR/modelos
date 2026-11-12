@@ -86,7 +86,7 @@ geo+atlas reales y compara décima a décima con `REFERENCIA_CAPA.png`
 (mediana RGB, cobertura de paño, densidad de energía y silueta). El workflow
 `build.yml` lo ejecuta con `--check` **antes de compilar**, instala
 `numpy`/`Pillow` y **falla el build** si el error global supera 165
-(estado actual: 138.96). Así la autoevaluación no depende de mi sandbox.
+(estado actual: 77.20). Así la autoevaluación no depende de mi sandbox.
 
 Además, los keyframes `particle` del `.bbmodel` no se disparan solos en
 Java/GeckoLib: `CapaDeteriorerItem.spawnAura(..., deterioro)` replica los
@@ -119,6 +119,8 @@ para que lo vean los demás jugadores. `CuriosCompat` usa el mismo estado.
   niveles**: las alas exteriores nacen inclinadas desde el cuello, mueren a
   `t≈0.72` y solo los jirones centrales cuelgan hasta el dobladillo. Las
   puntas dejaron de ser astillas negras y ahora son paño violeta.
+  *(v1283 revisa este punto: las alas cortas vaciaban `t=0.8`; ahora todos
+  los lóbulos llegan a `t≥0.90` y la V cierra monótona.)*
 - **Energía**: `tools/energy_calibration.py` es un **segundo lazo cerrado**
   (Jacobiano medido de 10 bandas) que ajusta `ENERGY_GAIN` en
   `texture_pipeline.py`. `shape_energy_density()` adelgaza la tinta **trazo a
@@ -134,6 +136,36 @@ para que lo vean los demás jugadores. `CuriosCompat` usa el mismo estado.
 - **Tests**: los umbrales de `audit_model.py --check` bajaron de 205 a 165
   para que la CI **proteja** la mejora, y el workflow verifica el nuevo
   calibrador, la V de dos niveles, los 286 huesos / 340 cubos y los 3 emisores.
+
+### Ronda v1283: se cierran los huecos declarados
+
+Tras «mejora lo que falta», la autoevaluación pasó de **138.96 a 77.20**:
+
+- **Dobladillo** (`t=0.8`): 27.9% → **41.3%** de paño frente al 48% de la
+  captura. Las puntas exteriores dejaron de convertirse en agujas justo en
+  esa décima (`tip_t` ≥ 0.90 + afilado retrasado al 94% del jirón) y el
+  abanico medio se recogió: la silueta de `t=0.2..0.7` bajó de **1.44× a
+  1.27×** el ancho del PNG.
+- **Remate** (`t=0.9`): 36% → **19.3%** (objetivo 18.3%). `charred_hem()`
+  carboniza franjas verticales irregulares sólo en las filas `v≥43` del
+  canvas: huecos negros reales entre lóbulos, sin tocar geometría, alfa ni
+  las 1636 grietas emisivas. La envolvente ahora **cierra de forma
+  monotona** (7.42 → 6.34 → 5.91) en vez de reabrirse en la punta.
+- **Arranque / cuello** (`t=0.0`): 27.9% → **45.8%** (objetivo 41.6%).
+  Capuchón continuo más ancho, dientes de hombro largos y cuatro tejas
+  exteriores convertidas en **alas diagonales** con carmesí liso del yugo;
+  la U gris del arnés sigue visible (la «losa» de v1244 no vuelve).
+- **Energía rosa**: el descarte binario por componente dejaba un suelo de
+  ~35 pp. `shape_energy_density()` usa ahora un **dash fraccional a lo largo
+  del trazo** (monótono, sin damero) y `energy_calibration.py` conserva el
+  **mejor perfil** de todo el lazo. Error de energía **57.1 → 16.1 pp**;
+  el pico de `t=0.2` quedó en 11.3% frente al 11.5% del PNG.
+- **Color y energía acoplados**: `/tmp/joint_cal.py` alterna ambos lazos y
+  restaura el mejor par (perfil + tabla de color), porque corregir el color
+  mueve el umbral que clasifica la energía. Residual cromático 1.3 pp/banda.
+- **Contratos**: `audit_model.py` y el workflow dejan de fijar los números
+  de una ronda y verifican **propiedades** (puntas desiguales ≥0.90,
+  envolvente monótona, deshilachado presente, mejor-perfil conservado).
 
 ## Ver el modelo
 
