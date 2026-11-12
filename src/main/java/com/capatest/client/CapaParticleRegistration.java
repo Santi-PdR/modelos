@@ -25,5 +25,8 @@ public final class CapaParticleRegistration {
     public static void onRegisterParticleProviders(RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(CapaParticles.CAPA_EMBER.get(), CapaEmberParticle.Provider::new);
         event.registerSpriteSet(CapaParticles.CAPA_BLIGHT_MOTE.get(), CapaBlightParticle.Provider::new);
+        // v1224: el tercer SpriteSet reutiliza el provider de brasa (fade y
+        // deriva minima) pero con los cristales alargados de capa_shard_*.
+        event.registerSpriteSet(CapaParticles.CAPA_SHARD.get(), CapaEmberParticle.Provider::new);
     }
 }

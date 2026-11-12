@@ -191,7 +191,7 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
      * v1.9.0 añade MOTAS FRÍAS de Blight Star: una cada dos segundos en idle
      * (dos al correr), en una órbita minúscula alrededor de la espalda. Es un
      * aura MUDA y de presupuesto fijo: no se registran SoundEvent ni se llama
-     * a playSound, y el máximo son 6 partículas por tick de emisión.
+     * a playSound, y el máximo son 7 partículas por tick de emisión.
      */
     public static void spawnAura(Level level, Player player, boolean deterioro) {
         if (level.isClientSide || !(level instanceof ServerLevel server)) {
@@ -220,7 +220,7 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
                 count, spread, 0.10, spread, deterioro ? 0.004 : 0.001);
 
         // Estela detrás del jugador al correr o deteriorarse: un punto
-        // extra, dentro del presupuesto fijo de 6 particulas por tick.
+        // extra, dentro del presupuesto fijo de 7 particulas por tick.
         if (sprint || deterioro) {
             double sx = x - Math.sin(yaw) * 0.28D;
             double sz = z + Math.cos(yaw) * 0.28D;
@@ -230,6 +230,13 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
 
         // v1.9.0: mota cian en órbita lenta. Se emite con la mitad de
         // frecuencia que la brasa y siempre cerca del paño, nunca en el cielo.
+        // Esquirlas: SOLO en deterioro. Suben un instante y caen, como
+        // fragmentos de tela que se desprenden del dobladillo.
+        if (deterioro) {
+            server.sendParticles(CapaParticles.CAPA_SHARD.get(), x,
+                    y + 0.25D, z, 1, 0.10, 0.16, 0.10, 0.002);
+        }
+
         if (tick % BLIGHT_INTERVAL_TICKS == 0) {
             double angle = tick * 0.11D;
             double side = Math.cos(angle) * 0.20D;

@@ -3,6 +3,12 @@ name: Build Forge 1.20.1 + GeckoLib mod
 on:
   push:
   workflow_dispatch:
+    inputs:
+      publicar:
+        description: 'Publicar el .jar como Release (solo con aprobacion visual)'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -100,6 +106,18 @@ jobs:
 
           blight_particle = json.loads((base / 'particles/capa_blight_mote.json').read_text())
           assert len(blight_particle['textures']) == 3
+          # v1224: tercer tipo de particula (esquirlas de deterioro).
+          shard = json.loads((base / 'particles/capa_shard.json').read_text())
+          assert len(shard['textures']) == 3
+          for i in range(3):
+              p = base / 'textures/particle' / f'capa_shard_{i}.png'
+              assert p.is_file(), p
+              with p.open('rb') as fh:
+                  head = fh.read(24)
+              assert head[:8] == b'\x89PNG\r\n\x1a\n' \
+                  and struct.unpack('>II', head[16:24]) == (16, 16), p
+          ps = json.loads((root / 'docs/particles/capa_shards.json').read_text())
+          assert ps['particle_effect']['description']['identifier'] == 'capatest:capa_shards'
 
           # Geo plegado v1.9.0: bulto 3D de 36 huesos con 2 hombreras,
           # atlas 128 y ninguna UV fuera de rango. No es un abanico plano.
@@ -326,7 +344,14 @@ jobs:
           _m = _re.search(r'ICON_PIXEL_MAP = \((.*?)\)', texture_src, _re.S).group(1)
           _rows = _re.findall(r'"([.A-Z]{16})"', _m)
           assert len(_rows) == 16
-          assert sil == [''.join('#' if c != '.' else '.' for c in r) for r in _rows]
+          # v1221: la remasterizacion anade MOTAS FLOTANTES en huecos del
+          # mapa. La silueta esperada es el mapa aprobado MAS esas motas.
+          _grid = [list(r) for r in _rows]
+          _f = texture_src.split('ICON_FLOATING = (', 1)[1].split('ICON_CRACKS', 1)[0]
+          for _x, _y, _ch in _re.findall(r'\((\d+), (\d+), "([A-Z])"\)', _f):
+              if _grid[int(_y)][int(_x)] == '.':
+                  _grid[int(_y)][int(_x)] = _ch
+          assert sil == [''.join('#' if c != '.' else '.' for c in r) for r in _grid]
           # No es la silueta copiada de v1.10.0 (capucha de un pico).
           assert _rows[0] != '.......HKK......'
           # Tampoco es el icono RECHAZADO de v1.11.0.
@@ -403,7 +428,7 @@ jobs:
           assert all(len(_a.get('markers', [])) >= 2 for _a in bb['animations'])
           _ids = {_k['data_points'][0]['effect'] for _a in bb['animations']
                   for _k in _a['animators']['effects']['keyframes']}
-          assert len(_ids) == 2, _ids
+          assert len(_ids) == 3, _ids
           # Retardo por tramo y respiracion de la capucha, no solo rotacion.
           _names = {_an['name']: _an for _a in bb['animations']
                     for _an in _a['animators'].values() if _an['type'] == 'bone'}
@@ -582,6 +607,10 @@ jobs:
             for i in 0 1 2; do
               grep -qx "assets/capatest/textures/particle/capa_blight_mote_${i}.png" /tmp/jar-contents.txt
             done
+            grep -qx 'assets/capatest/particles/capa_shard.json' /tmp/jar-contents.txt
+            for i in 0 1 2; do
+              grep -qx "assets/capatest/textures/particle/capa_shard_${i}.png" /tmp/jar-contents.txt
+            done
             grep -qx 'data/curios/tags/items/back.json' /tmp/jar-contents.txt
             grep -qx 'data/capatest/curios/entities/player.json' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaCurioRenderer.class' /tmp/jar-contents.txt
@@ -600,7 +629,11 @@ jobs:
           test "$found" -eq 1
 
       # Entrega directa: un .jar crudo como Release asset, NO un ZIP de artifact.
+      # v1225: un `push` solo VALIDA Y COMPILA. La publicacion de una
+      # Release queda bajo disparo manual explicito, para no volver a
+      # publicar una version sin aprobacion visual del usuario.
       - name: Publish direct .jar release
+        if: github.event_name == 'workflow_dispatch' && inputs.publicar == true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -733,7 +766,7 @@ jobs:
           cuello trasero, tirantes y arnés delantero con hombreras/cadenas/placa),
           **`animation.item`** en GUI/hotbar/mano (36 huesos, 5 animaciones), glowmask
           de dos tintas del item, aura de brasas + motas cian con presupuesto fijo de
-          6 partículas por tick de emisión, **sin `playSound` ni `SoundEvent` propio**,
+          7 partículas por tick de emisión, **sin `playSound` ni `SoundEvent` propio**,
           fail-safes, radianes, cero `JsonNull`, cero mixins y Curios `back`.
 
           El pixel art de v1.10.0 gustó por el estilo, pero su silueta era la de

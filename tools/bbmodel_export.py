@@ -365,10 +365,16 @@ def build_animations(anim_bones: list[tuple[str, str]]) -> list[dict]:
                        else "particles/capa_embers_calm.json")
         fx = []
         for j, tt in enumerate(times):
+            # v1224: en `deterioro` se alternan brasas y ESQUIRLAS, para
+            # que el clip tenga su propio efecto y no sea una copia de correr.
+            if style == "deterioro" and j % 2 == 1:
+                eid, efile = "capatest:capa_shards", "particles/capa_shards.json"
+            else:
+                eid, efile = effect_id, effect_file
             fx.append(kf("particle", round(tt, 4), 0, 0, 0,
                          f"{aname}/effects/e{j}", interp="step",
-                         effect={"effect": effect_id, "locator": "",
-                                 "script": "", "file": effect_file,
+                         effect={"effect": eid, "locator": "",
+                                 "script": "", "file": efile,
                                  "bind_to_actor": True}))
         animators["effects"] = {
             "name": "Effects", "type": "effect", "keyframes": fx,

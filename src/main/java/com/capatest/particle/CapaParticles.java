@@ -20,6 +20,10 @@ public final class CapaParticles {
     public static final RegistryObject<SimpleParticleType> CAPA_BLIGHT_MOTE =
             PARTICLES.register("capa_blight_mote", () -> new SimpleParticleType(false));
 
+    /** v1224: esquirla de deterioro, 3 sprites en particles/capa_shard.json. */
+    public static final RegistryObject<SimpleParticleType> CAPA_SHARD =
+            PARTICLES.register("capa_shard", () -> new SimpleParticleType(false));
+
     private CapaParticles() {
     }
 

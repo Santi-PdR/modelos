@@ -48,7 +48,11 @@ en un dobladillo ancho de puntas desiguales.
   Las cuchilladas rosa largas también viven en el glowmask (1636 emisivos).
 - **Icono 64×64 INTOCABLE**: **pixel art** 16×16 ampliado con NEAREST, con
   hombreras y silueta propia (no la de las referencias viejas). SHA-256
-  `e88ccec0a0c67b1ad0982ed781f0d684ae4662660c545fa134574781967e4840`.
+  `25133aee71c2e46e3995855aa5df601827c26ae26b384394f2b696312d20151c`.
+  El icono APROBADO anterior sigue intacto en
+  [`referencias/ICONO_APROBADO_BACKUP.png`](referencias/ICONO_APROBADO_BACKUP.png)
+  y `tools/originals/icono_aprobado_v1130.png` (SHA `e88ccec0…4840`);
+  `python3 tools/restore_icon.py` lo restaura en un comando.
 
 ### Autoevaluación medida y acabado artesanal (v1214)
 
@@ -81,7 +85,7 @@ geo+atlas reales y compara décima a décima con `REFERENCIA_CAPA.png`
 (mediana RGB, cobertura de paño, densidad de energía y silueta). El workflow
 `build.yml` lo ejecuta con `--check` **antes de compilar**, instala
 `numpy`/`Pillow` y **falla el build** si el error global supera 205
-(estado actual: 190.84). Así la autoevaluación no depende de mi sandbox.
+(estado actual: 179.30). Así la autoevaluación no depende de mi sandbox.
 
 Además, los keyframes `particle` del `.bbmodel` no se disparan solos en
 Java/GeckoLib: `CapaDeteriorerItem.spawnAura(..., deterioro)` replica los
@@ -89,6 +93,22 @@ dos emisores en runtime (rescoldo en reposo, 2 brasas + estela al correr,
 3 brasas + 2 motas frías con el ítem dañado o vida baja), desde el servidor
 para que lo vean los demás jugadores. `CuriosCompat` usa el mismo estado.
 **La CI de GitHub compila este cambio con JDK 17 + Gradle 8.8.**
+
+### Icono remasterizado y tercer emisor (v1225)
+
+- **Icono**: conserva la silueta 16×16 aprobada, pero cada fila toma la
+  paleta MEDIDA del PNG (carmesí arriba → violeta abajo), con relieve 3D por
+  píxel, grietas cortas, costuras de jirón y 8 motas flotantes. Sigue siendo
+  pixel art duro (NEAREST, sin AA ni bloom). **Backup byte-idéntico** arriba.
+- **Tercer emisor**: `capatest:capa_shards` — esquirlas de deterioro con 3
+  sprites propios, `CAPA_SHARD` registrado en Java, disparadas solo con el
+  ítem dañado o vida baja, y alternadas con las brasas en el Effects track
+  de `deterioro_particulas`. El presupuesto sigue fijo (7 partículas/tick).
+- **Textura**: puntas y dobladillo aclarados, energía del canvas recortada en
+  mitad y puntas. Error global de la autoevaluación **190.84 → 179.30**
+  (cobertura 85.9, energía 57.1, color 109, silueta 1.54×).
+- **Visor 3D**: especular suave y rim reforzado para que los pliegues tengan
+  volumen; el cambio no toca el rasterizador que mide la CI.
 
 ## Ver el modelo
 

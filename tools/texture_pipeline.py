@@ -322,8 +322,8 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.nda
         for v in range(40, ch):
             f = (v - 40) / float(ch - 40)
             inset = int(1 + 2.4 * f)
-            rgb[v, c0:c0 + inset, :] *= 0.48
-            rgb[v, max(c0, c1 - inset):c1, :] *= 0.48
+            rgb[v, c0:c0 + inset, :] *= 0.66
+            rgb[v, max(c0, c1 - inset):c1, :] *= 0.66
 
     rng = np.random.default_rng(SEED + 77)
 
@@ -480,9 +480,11 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.nda
     tip_glow = np.clip((t_col - 0.84) / 0.16, 0.0, 1.0)[:, None]
     # v1210: el reflejo de puntas teñía TODO el dobladillo de rosa y
     # disparaba la energia medida (26% frente al 11% de la captura).
-    small[..., 0] += tip_glow * 15.0
-    small[..., 1] += tip_glow * 4.0
-    small[..., 2] += tip_glow * 10.0
+    # v1222: las puntas quedaban casi negras (t=0.9 daba [57,34,54] frente
+    # a [62,38,58] del PNG) y con solo 9% de paño. Se aclara el remate.
+    small[..., 0] += tip_glow * 22.0
+    small[..., 1] += tip_glow * 6.0
+    small[..., 2] += tip_glow * 15.0
     # La energia sobrevive algo mas que el paño: en la captura quedan
     # guiones rosa sueltos incluso dentro de los huecos.
     ink_small *= hem ** 0.80
@@ -941,40 +943,101 @@ ICON_PALETTE = {
 
 
 
+# Motas y chispas sueltas: la referencia tiene energía FLOTANDO alrededor
+# del paño. Se añaden en huecos del mapa, SIN tocar la silueta aprobada.
+ICON_FLOATING = (
+    (1, 2, "P"), (14, 3, "G"), (0, 8, "P"), (15, 10, "P"),
+    (2, 14, "C"), (13, 15, "G"), (0, 12, "P"), (15, 5, "P"),
+)
+
+# Grietas de energia en guiones CORTOS y costuras oscuras entre jirones:
+# la referencia no es un bloque liso, son hebras separadas con rosa dentro.
+ICON_CRACKS = (
+    (5, 8, "C"), (5, 9, "E"), (10, 9, "C"), (10, 10, "E"),
+    (4, 11, "C"), (11, 11, "C"), (6, 12, "E"), (9, 12, "C"),
+    (3, 13, "C"), (12, 13, "E"), (7, 14, "C"), (8, 14, "E"),
+    (6, 8, "H"), (6, 10, "H"), (9, 8, "H"), (9, 11, "H"),
+    (4, 14, "H"), (11, 14, "H"),
+)
+
+
+def _icon_row_palette(y: int) -> dict[str, tuple[int, int, int, int]]:
+    """Los 5 tonos del paño derivan de la MEDIANA MEDIDA del PNG por altura.
+
+    v1221: antes el icono usaba una paleta Rose fija; ahora cada fila toma
+    el carmesí -> violeta real de la referencia, así el icono y la capa 3D
+    cuentan el mismo color. Sigue siendo paleta PLANA, sin degradado suave.
+    """
+    base = np.asarray(CS.palette_at(y / 15.0), dtype=np.float32)
+
+    def tone(mul: float, add: tuple[int, int, int] = (0, 0, 0)):
+        col = np.clip(base * mul + np.array(add, np.float32), 0, 255)
+        return (int(col[0]), int(col[1]), int(col[2]), 255)
+
+    return {
+        ".": (0, 0, 0, 0),              # transparente
+        "K": (12, 5, 18, 255),          # contorno violeta-negro
+        "H": tone(0.62),                # carmesí en sombra
+        "D": tone(0.92, (0, 0, 6)),     # violeta desvaído
+        "M": tone(1.20),                # tono medio
+        "L": tone(1.62, (4, 2, 6)),     # luz del pliegue
+        "E": tone(0.80, (18, 0, 14)),   # veta de energía apagada
+        "P": (208, 62, 142, 255),       # mota / microvóxel
+        "G": (236, 92, 168, 255),       # rosa encendido
+        "W": (255, 214, 236, 255),      # núcleo del broche
+        "C": (226, 44, 146, 255),       # magenta de las grietas
+    }
+
+
 def build_icon_artwork(size: int = 64) -> Image.Image:
-    """Icono 64x64 de PIXEL ART DURO (16x16 -> 4x, Image.NEAREST).
+    """Icono 64x64 REMASTERIZADO v1221 (16x16 -> 4x, NEAREST).
 
-    v1.13.0 recupero la LOGICA VISUAL de la referencia 1: silueta organica,
-    5 tonos muy cercanos, contorno duro y acentos minimos. El usuario lo
-    APROBO. v1.14.0 conserva esa forma y solo la adapta a la capa nueva:
-    carmesi oscuro / morado desvaido / gris ceniza, grietas rosa y magenta,
-    dobladillo de 5 puntas y 4 microvoxeles. Sin oro ni cian.
+    Conserva EXACTAMENTE la silueta y el mapa de 16x16 que el usuario
+    aprobó (backup en tools/originals/icono_aprobado_v1130.png), pero:
 
-    Todo el detalle vive en ICON_PIXEL_MAP: no hay overlays, degradados,
-    antialiasing ni bloom. Solo un rim light discreto de UN pixel, aplicado
-    como suma por pixel (no cambia la silueta ni el alfa).
+      * cada fila usa la paleta MEDIDA en REFERENCIA_CAPA.png en vez de la
+        paleta Rose fija (carmesí arriba -> violeta abajo);
+      * relieve 3D por píxel: luz arriba-izquierda, sombra abajo-derecha,
+        para que los pliegues se lean como tela y no como un dibujo plano;
+      * 8 motas/chispas flotando alrededor, como en la captura;
+      * cero antialiasing, cero degradado continuo, cero bloom: todo el
+        detalle sigue viviendo en la rejilla de 16x16.
     """
     rows = ICON_PIXEL_MAP
     assert len(rows) == 16 and all(len(r) == 16 for r in rows), "icono base 16x16"
     grid = [list(r) for r in rows]
+    for x, y, ch in ICON_FLOATING:
+        if grid[y][x] == ".":
+            grid[y][x] = ch
+    for x, y, ch in ICON_CRACKS:
+        if grid[y][x] in ("H", "D", "M", "L", "E"):
+            grid[y][x] = ch
 
     px = np.zeros((16, 16, 4), dtype=np.uint8)
     for y in range(16):
+        pal = _icon_row_palette(y)
         for x in range(16):
-            px[y, x] = ICON_PALETTE[grid[y][x]]
+            px[y, x] = pal[grid[y][x]]
 
-    # Rim light de UN pixel en el borde superior/izquierdo del violeta.
-    # Se excluyen oro, cian, blanco y contorno para no blanquear el broche.
     opaque = px[..., 3] > 0
     for y in range(16):
         for x in range(16):
-            if not opaque[y, x] or grid[y][x] in (".", "K", "G", "W", "C", "E", "P"):
+            ch = grid[y][x]
+            if not opaque[y, x] or ch in (".", "K", "G", "W", "C", "P"):
                 continue
-            if x == 0 or y == 0 or not opaque[y, x - 1] or not opaque[y - 1, x]:
-                px[y, x, :3] = np.clip(
-                    px[y, x, :3].astype(np.int16) + np.array([24, 8, 22], dtype=np.int16),
-                    0, 255,
-                ).astype(np.uint8)
+            lift = 0.0
+            if x == 0 or not opaque[y, x - 1]:
+                lift += 11.0
+            if y == 0 or not opaque[y - 1, x]:
+                lift += 15.0
+            if x == 15 or not opaque[y, x + 1]:
+                lift -= 9.0
+            if y == 15 or not opaque[y + 1, x]:
+                lift -= 11.0
+            delta = np.array([lift, lift * 0.34, lift * 0.78], np.float32)
+            px[y, x, :3] = np.clip(
+                px[y, x, :3].astype(np.float32) + delta, 0, 255
+            ).astype(np.uint8)
 
     small = Image.fromarray(px, "RGBA")
     return small.resize((size, size), Image.NEAREST)
@@ -1207,6 +1270,41 @@ def build_particle_sprites() -> list[Image.Image]:
     return sprites
 
 
+def build_shard_sprites() -> list[Image.Image]:
+    """Tres esquirlas de DETERIORO: cristales alargados rosa -> violeta.
+
+    v1224: tercer tipo de particula. A diferencia de la brasa (redonda y
+    calida) es un rombo estirado que se apaga en tres frames; así el clip
+    `deterioro_particulas` tiene un efecto propio y reconocible.
+    """
+    s, out_s = 64, 16
+    yy, xx = np.mgrid[0:s, 0:s]
+    c = (s - 1) / 2.0
+    sprites = []
+    frames = [
+        (1.00, (246.0, 96.0, 178.0), 0.95),
+        (0.80, (206.0, 70.0, 164.0), 0.72),
+        (0.55, (150.0, 60.0, 140.0), 0.48),
+    ]
+    for scale, tint, power in frames:
+        dx = np.abs(xx - c) / (7.5 * scale)
+        dy = np.abs(yy - c) / (15.0 * scale)
+        shard = np.clip(1.0 - (dx + dy), 0.0, 1.0) ** 0.7
+        halo = np.exp(-((xx - c) ** 2 + (yy - c) ** 2)
+                      / (2.0 * (11.0 * scale) ** 2)) * 0.22
+        a = np.clip((shard * power + halo) * 0.90, 0.0, 1.0)
+        rgb = np.zeros((s, s, 3), np.float32)
+        for ch, base in enumerate((40.0, 12.0, 56.0)):
+            rgb[..., ch] = base + (tint[ch] - base) * shard
+        core = np.exp(-((xx - c) ** 2 + (yy - c) ** 2)
+                      / (2.0 * (3.0 * scale) ** 2))
+        rgb = np.clip(rgb + core[..., None] * 70.0, 0, 255)
+        img = Image.fromarray(
+            np.dstack((rgb, a * 255.0)).astype(np.uint8), "RGBA")
+        sprites.append(img.resize((out_s, out_s), Image.LANCZOS))
+    return sprites
+
+
 def build_blight_sprites() -> list[Image.Image]:
     """Tres sprites fríos de 16x16 para la mota orbital de Blight Star.
 
@@ -1284,6 +1382,15 @@ def main() -> None:
     print(f"blight mote sprites: {len(motes)} x {motes[0].size[0]}x{motes[0].size[1]}")
     blight_particle = json.loads((ASSETS / "particles/capa_blight_mote.json").read_text())
     assert len(blight_particle["textures"]) == 3
+
+    shards = build_shard_sprites()
+    for index, sprite in enumerate(shards):
+        assert sprite.size == (16, 16), sprite.size
+        sprite.save(particle_dir / f"capa_shard_{index}.png")
+    (ASSETS / "particles/capa_shard.json").write_text(json.dumps({
+        "textures": [f"capatest:capa_shard_{i}" for i in range(3)]
+    }, indent=2) + "\n")
+    print(f"shard sprites: {len(shards)} x {shards[0].size[0]}x{shards[0].size[1]}")
 
     # Sanity: glowmask must stay 128x128 and must not cover new texels.
     ga = np.asarray(Image.open(ORIGINALS / "armor_glowmask.png").convert("RGBA"))[..., 3]

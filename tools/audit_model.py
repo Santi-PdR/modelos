@@ -35,7 +35,8 @@ LIMITS = {
     "energy": 90.0,
     "silhouette": 1.75,
 }
-ICON_SHA = "e88ccec0a0c67b1ad0982ed781f0d684ae4662660c545fa134574781967e4840"
+ICON_SHA = "25133aee71c2e46e3995855aa5df601827c26ae26b384394f2b696312d20151c"
+ICON_BACKUP_SHA = "e88ccec0a0c67b1ad0982ed781f0d684ae4662660c545fa134574781967e4840"
 
 
 def cloth(a: np.ndarray) -> np.ndarray:
@@ -107,11 +108,27 @@ def static_checks() -> None:
         ROOT / "tools" / "texture_pipeline.py").read_text()
     bb = json.loads((ROOT / "docs" / "CAPA_v1.17.0.bbmodel").read_text())
     assert len(bb["animations"]) == 4
+    ids = {k["data_points"][0]["effect"] for a in bb["animations"]
+           for k in a["animators"]["effects"]["keyframes"]}
+    assert len(ids) == 3, ids
     kfs = sum(len(an["keyframes"]) for a in bb["animations"]
               for an in a["animators"].values())
     assert kfs >= 11000, kfs
     icon = ROOT / "src/main/resources/assets/capatest/textures/item/capa_deteriorer_evilsaiyan.png"
     assert hashlib.sha256(icon.read_bytes()).hexdigest() == ICON_SHA, "icono alterado"
+    # El icono APROBADO sigue disponible, byte-identico, por si la
+    # remasterizacion no convence: tools/restore_icon.py lo restaura.
+    for backup in ("referencias/ICONO_APROBADO_BACKUP.png",
+                   "tools/originals/icono_aprobado_v1130.png"):
+        bp = ROOT / backup
+        assert bp.is_file(), backup
+        assert hashlib.sha256(bp.read_bytes()).hexdigest() == ICON_BACKUP_SHA, backup
+    assert (ROOT / "tools/restore_icon.py").is_file()
+    particles = ROOT / "src/main/resources/assets/capatest"
+    assert (particles / "particles/capa_shard.json").is_file()
+    for i in range(3):
+        assert (particles / f"textures/particle/capa_shard_{i}.png").is_file()
+    assert (ROOT / "docs/particles/capa_shards.json").is_file()
     java = (ROOT / "src/main/java/com/capatest/item/CapaDeteriorerItem.java").read_text()
     assert "spawnAura(Level level, Player player, boolean deterioro)" in java
     curios = (ROOT / "src/main/java/com/capatest/compat/CuriosCompat.java").read_text()
