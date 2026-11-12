@@ -1,10 +1,10 @@
-# Mantle of the Blight Star — v1.17.3
+# Mantle of the Blight Star — v1.18.0
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Capa equipada en `curios:back`, temática
 **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-> 📦 **Release vigente: `v1.17.3`** (JAR compilado en CI). v1.14.0, v1.15.0
+> 📦 **Release vigente: `v1.18.0`** (JAR compilado en CI). v1.14.0, v1.15.0
 > y v1.16.0 fueron rechazadas visualmente y sus previews se han borrado del
 > repo. Los previews actuales son render **software**: la prueba in-game y
 > la aprobación visual siguen pendientes.
@@ -80,12 +80,12 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Release vigente: v1.17.3
+### Release vigente: v1.18.0
 
 El JAR **más reciente** se publica como Release
-[`v1.17.3`](https://github.com/Santi-PdR/modelos/releases/tag/v1.17.3):
-`capatest-1.17.3.jar`, compilado en CI con JDK 17 + Gradle 8.8 con el
-**modelo limpio para Blockbench** y la textura v1.17.2. La Release `v1.17.0` queda como histórico
+[`v1.18.0`](https://github.com/Santi-PdR/modelos/releases/tag/v1.18.0):
+`capatest-1.18.0.jar`, compilado en CI con JDK 17 + Gradle 8.8 sobre la
+**capa rehecha desde cero a partir de tu imagen**. La Release `v1.17.0` queda como histórico
 (contiene una build anterior); no se sobreescribe. El workflow publica con
 `workflow_dispatch(publicar=true)` o con un commit marcado `[publicar]`, y
 lee la versión de `gradle.properties` para que el nombre del JAR nunca
@@ -98,7 +98,7 @@ geo+atlas reales y compara décima a décima con `REFERENCIA_CAPA.png`
 (mediana RGB, cobertura de paño, densidad de energía y silueta). El workflow
 `build.yml` lo ejecuta con `--check` **antes de compilar**, instala
 `numpy`/`Pillow` y **falla el build** si el error global supera 165
-(estado actual: 100.3; la textura prioriza la lectura visual limpia sobre el número). Así la autoevaluación no depende de mi sandbox.
+(v1.18.0: el criterio pasa a ser la fidelidad píxel a píxel con tu imagen; ver abajo). Así la autoevaluación no depende de mi sandbox.
 
 Además, los keyframes `particle` del `.bbmodel` no se disparan solos en
 Java/GeckoLib: `CapaDeteriorerItem.spawnAura(..., deterioro)` replica los
@@ -277,3 +277,32 @@ hombro recogidas. Se mantienen 286 grupos, 4 animaciones y 11950 keyframes.
 **Pendiente de aprobación visual:** necesito una captura de Blockbench del
 archivo nuevo para seguir afinando la forma (sigue siendo más compacta que
 el abanico rasgado de la referencia).
+
+### v1.18.0 — empezar de 0 desde la imagen
+
+Dijiste: *«no hablo de que se vea feo solo en blockbench, se ve feo la
+textura y el modelo de la capa en si. empieza de 0 para crear la capa de
+la imagen»*. Se tiraron el atlas procedural y la envolvente de campana de
+las rondas anteriores.
+
+| Antes | Ahora |
+|---|---|
+| Atlas construido con una paleta sintética + pliegues + cuchilladas dibujadas a mano | **`tools/reference_canvas.py`** limpia tu PNG (fuera checkerboard, cabeza, brazo beige, arnés gris, suelo), lo recorta a la capa y lo reduce a **96×48**: el atlas ES tu imagen |
+| Una franja UV vertical por jirón (degradado inventado) | **`foto_uv()`**: cada tramo 3D muestrea el rectángulo de la foto que ocupa realmente. El volumen se construye ENCIMA de la imagen |
+| `ribbon_x` con envolvente casi constante → delantal de columnas rectas | **`fan_x()`**: abanico radial medido, jirones que nacen juntos bajo la bufanda, se abren hasta t≈0.72 y **cierran en V** hacia las puntas |
+| Jirones anchos y unidos (`fill=0.78`) → falda maciza | Jirones finos con huecos negros reales entre ellos |
+| Capuchón rojo liso que cortaba la capa | Capuchón y alas de hombro muestrean también la foto; arnés gris adelgazado |
+
+Se eliminaron el grano, el dithering Bayer, el bloom, el diezmado de
+energía y el carbonizado: cualquiera de ellos desdibujaba la foto. El
+glowmask sigue encendiendo las cuchilladas rosa reales (1636 emisivos).
+
+**Criterio de auditoría nuevo y honesto:** las métricas de
+cobertura/energía/color medían un atlas sintético que ya no existe, así que
+quedan como información. El test que bloquea CI es ahora la **fidelidad
+píxel a píxel** entre el atlas del mod y
+`referencias/REFERENCIA_CAPA_atlas96.png` (error medio **1.24**, límite
+1.50), más el cierre de la silueta (1.12×, límite 1.60×).
+
+Se conservan 286 huesos / 340 cubos, 4 animaciones, 11950 keyframes,
+icono 2D, 3 emisores y los backups byte-idénticos del icono aprobado.

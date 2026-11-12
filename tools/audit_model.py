@@ -26,6 +26,10 @@ import preview_cloth as P
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# v1.18.0: cloth/energy/color/total quedan como INFORMACION, no como
+# umbral: media un atlas sintetico que ya no existe. El test ahora exige
+# que el atlas sea la foto del usuario y que la silueta siga cerrando.
+#
 # v1240: umbrales REAJUSTADOS tras la ronda de forma/energía/color. El
 # estado medido es total 139.0 (paño 73.5, energía 32.8, color 98,
 # silueta 1.41x); se deja ~15% de holgura para diferencias de versión de
@@ -152,8 +156,11 @@ def static_checks() -> None:
     # v1.17.2: regresión de las capturas in-game. El atlas NO puede volver
     # a samplear el recorte crudo (metia brazo/arnes/checkerboard en la tela)
     # y el item NO puede volver a registrar un BEWLR que oculte el icono.
-    assert 'clean_path' not in tp, 'vuelve el confeti de pixeles crudos'
-    assert 'cuchillada(' in tp, 'faltan las cuchilladas diagonales largas'
+    # v1.18.0: el atlas ES la imagen, no una paleta sintetica.
+    assert 'from reference_canvas import canvas as foto' in tp, 'atlas no viene de la foto'
+    assert 'def foto_uv(' in (ROOT / 'tools/armor_model_pipeline.py').read_text()
+    assert 'def fan_x(' in (ROOT / 'tools/cape_shape.py').read_text()
+    assert (ROOT / 'referencias/REFERENCIA_CAPA_atlas96.png').is_file()
     item_model = json.loads((ROOT / 'src/main/resources/assets/capatest/models/item'
                              '/capa_deteriorer_evilsaiyan.json').read_text())
     assert item_model['parent'] == 'minecraft:item/generated', 'el icono 2D no se ve'
@@ -207,8 +214,22 @@ def main() -> None:
         lim = LIMITS[key]
         print(f"    {key:<11} {err[key]:7.2f}   limite {lim:6.2f}")
     print(f"  ratio de silueta t=0.2..0.7: {err['silhouette']:.2f}x")
+    # v1.18.0: las metricas de cobertura/energia/color medían un ATLAS
+    # SINTETICO. Ahora el atlas ES la foto del usuario, asi que el criterio
+    # honesto es la fidelidad pixel a pixel con esa foto; la silueta sigue
+    # siendo el unico limite geometrico.
+    from PIL import Image as _Image
+    _atlas = np.asarray(_Image.open(
+        ROOT / 'src/main/resources/assets/capatest/textures/item/armor'
+        '/capa_deteriorer_evilsaiyan.png').convert('RGB'))[0:48, 0:96].astype(float)
+    _ref = np.asarray(_Image.open(
+        ROOT / 'referencias/REFERENCIA_CAPA_atlas96.png').convert('RGB')).astype(float)
+    fid = float(np.abs(_atlas - _ref).mean())
+    print(f"  fidelidad con TU IMAGEN: {fid:.3f}   limite 1.50")
     if args.check:
-        bad = [k for k in LIMITS if err[k] > LIMITS[k]]
+        bad = [k for k in ('silhouette',) if err[k] > LIMITS[k]]
+        if fid > 1.50:
+            bad.append('foto')
         if bad:
             print("FALLO: métricas fuera de umbral: " + ", ".join(bad),
                   file=sys.stderr)

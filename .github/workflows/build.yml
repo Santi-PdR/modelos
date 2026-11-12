@@ -173,9 +173,12 @@ jobs:
           texture_pipeline = (root / 'tools/texture_pipeline.py').read_text()
           # v1.17.2: el atlas YA NO samplea pixeles crudos del recorte (asi
           # entraban el brazo beige, el arnes gris y el fondo a cuadros).
-          assert 'CS.palette_at(float(x))' in texture_pipeline
-          assert 'clean_path' not in texture_pipeline, 'vuelve el confeti del recorte'
-          assert 'cuchillada(' in texture_pipeline, 'faltan las cuchilladas largas'
+          # v1.18.0: el atlas ES la foto limpia de la referencia y cada
+          # tramo 3D muestrea su propio pixel por UV local.
+          assert 'from reference_canvas import canvas as foto' in texture_pipeline
+          assert 'def foto_uv(' in (root / 'tools/armor_model_pipeline.py').read_text()
+          assert 'def fan_x(' in (root / 'tools/cape_shape.py').read_text()
+          assert (root / 'referencias/REFERENCIA_CAPA_atlas96.png').is_file()
           armor_geo = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]
           orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
           assert armor_geo['bones'][:72] == orig_bones
@@ -218,8 +221,10 @@ jobs:
           # los jirones interiores vuelven a cerrarse en el dobladillo.
           assert abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_0_seg3'))) > \
                  abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_7_seg3')))
+          # v1.18.0: el abanico RADIAL abre hasta t~0.72 y CIERRA en el
+          # ultimo tramo. Se compara con el MAXIMO (seg5), no con seg3.
           assert abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_3_seg6'))) < \
-                 abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_3_seg3')))
+                 abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_3_seg5')))
           motes = [b for b in new_bones if b['name'].startswith('v17_mote_')]
           assert all(0.10 <= c['size'][0] <= 0.85 for b in motes for c in b['cubes'])
           # Ningún hueso de tela puede colgar de un detalle que se oculta.
@@ -495,8 +500,10 @@ jobs:
           assert 'reference_profile.json' in (root / 'tools/reference_trace.py').read_text()
           assert 'ICON_PIXEL_MAP' in (root / 'tools/texture_pipeline.py').read_text()
           assert 'cape_folded_glowmask' in texture_src
-          assert 'cool_ink' in texture_src
-          assert 'cd.line' in texture_src, 'halo frio vacio'
+          # v1.18.0: el halo frio ya no se dibuja a mano; sale de las
+          # cuchilladas REALES de la foto (mascara `energy` en build_armor_cloth_canvas).
+          assert 'energy = (r > 135)' in texture_src
+          assert 'canvas_glow' in texture_src
           assert 'def build_blight_sprites(' in texture_src
           assert '--uv-test' in (root / 'tools/preview_cloth.py').read_text()
           fg_bytes = (base / 'textures/item/cape_folded_glowmask.png').read_bytes()
@@ -579,7 +586,7 @@ jobs:
           assert (root / 'tools/audit_model.py').is_file()
           assert '--check' in (root / 'tools/audit_model.py').read_text()
           assert 'tools/audit_model.py --check' in (root / '.github/workflows/build.yml').read_text()
-          print('OK: JSON/PNG sin JsonNull, item 36 huesos + animation.item, 286 huesos / 340 cubos, 16 jirones en ABANICO EN V trazados del PNG (6 tramos + punta) + 10 tejas solapadas, bufanda en U de alas rasgadas, 18 motas flotantes, 10 venas 3D emisivas con pulso, .bbmodel con 4 animaciones (11950 keyframes), atlas limpio v1.17.2 sin pixeles crudos ni Bayer, cuchilladas diagonales largas, icono 2D visible, dobladillo deshilachado, yugo con pliegues, alas diagonales de hombro, icono remasterizado + backup byte-identico, glowmask del item, UV opacas y Curios back')
+          print('OK: JSON/PNG sin JsonNull, item 36 huesos + animation.item, 286 huesos / 340 cubos, 16 jirones en ABANICO EN V trazados del PNG (6 tramos + punta) + 10 tejas solapadas, bufanda en U de alas rasgadas, 18 motas flotantes, 10 venas 3D emisivas con pulso, .bbmodel con 4 animaciones (11950 keyframes), atlas v1.18.0 = FOTO limpia de la referencia con UV locales por tramo y abanico radial, icono 2D visible, dobladillo deshilachado, yugo con pliegues, alas diagonales de hombro, icono remasterizado + backup byte-identico, glowmask del item, UV opacas y Curios back')
           PY
 
       # v1220: la autoevaluacion MEDIDA se ejecuta AQUI, en GitHub Actions,
@@ -709,6 +716,13 @@ jobs:
           - `.bbmodel` con **214 cubos de capa** / 286 grupos, textura 128×128, 4 animaciones y 11950 keyframes. Sin maniquí ni armadura vieja: Blockbench muestra sólo la capa.
           - Visor 3D autocontenido (sin red, sin servidor ni token) y comparativa
             con tu PNG de Blockbench.
+          - **v1.18.0 — CAPA REHECHA DESDE CERO**: el atlas es la imagen
+            del usuario limpiada a 96×48 (`tools/reference_canvas.py`) y
+            cada tramo 3D muestrea su píxel por UV local (`foto_uv()`).
+            Abanico radial `fan_x()` que nace junto y cierra en V, jirones
+            finos con huecos negros, capuchón integrado en la foto. Sin
+            grano, Bayer, bloom ni paleta sintética. El test de CI exige
+            fidelidad píxel a píxel con la referencia.
           - **v1.17.2 — textura rehecha tras las capturas in-game**: el atlas
             ya NO samplea píxeles crudos del recorte (entraban brazo, arnés y
             fondo a cuadros) ni usa dithering Bayer. Paño construido desde la

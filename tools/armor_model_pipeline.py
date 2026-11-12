@@ -91,6 +91,26 @@ def band(u0: float, w: float, v0: float, h: float) -> dict:
     return s
 
 
+def foto_uv(cx: float, cy: float, w: float, h: float) -> dict:
+    """v1.18.0: UV LOCAL = el píxel de la FOTO de la capa que ocupa el cubo.
+
+    El atlas 96x48 ES la referencia limpia (no está des-abanicada). En vez
+    de una franja vertical por jirón, cada tramo muestrea el rectángulo de
+    la foto correspondiente a su posición real: así el volumen 3D se
+    construye ENCIMA de la imagen y el render la recompone.
+    """
+    scale_x = 96.0 / 19.60                 # 9.8 unidades de semiancho
+    scale_y = 48.0 / CS.HEIGHT
+    uw = max(1.0, min(14.0, w * scale_x))
+    vh = max(1.0, min(12.0, h * scale_y))
+    u = min(96.0 - uw, max(0.0, 48.0 + cx * scale_x - uw / 2.0))
+    v = min(48.0 - vh, max(0.0, (CS.Y_TOP - cy) * scale_y - vh / 2.0))
+    spec = {"uv": [round(u, 4), round(v, 4)],
+            "uv_size": [round(uw, 4), round(vh, 4)]}
+    assert_opaque(spec)
+    return spec
+
+
 def cube16(origin, size, front: dict, side: dict | None = None,
            inflate: float = 0.0) -> dict:
     """Cubo con espesor real; cantos = un texel casi negro, SIN filete."""
@@ -166,7 +186,10 @@ def build() -> dict:
     # 2. BUFANDA / CAPUCHA GRUESA. En la referencia es un CUENCO carmesí
     #    (más bajo en el centro), no un anillo de cajas ni una losa plana.
     # ------------------------------------------------------------------
-    cowl_uv = S("yoke", du=1.0, dv=1.0, w=12.0, h=15.0)
+    # v1.18.0: la bufanda toma el carmesi y las cuchilladas REALES de la
+    # parte superior de la foto; antes era un rectangulo liso que cortaba
+    # la capa por la mitad.
+    cowl_uv = foto_uv(0.0, 22.2, 8.0, 3.0)
     for i in range(COWL_FRONT):
         fx = (i - (COWL_FRONT - 1) / 2.0) / ((COWL_FRONT - 1) / 2.0)
         # v1273: capuchon CONTINUO y ancho (la captura cubre ~13/20
@@ -187,14 +210,13 @@ def build() -> dict:
         # Cuenco aplanado: lóbulo central redondeado y lados recogidos.
         # Ni la campana de v1243 (solo colgaba el centro) ni la losa
         # plana de v1244 (tapaba el arnes).
-        height = 1.00 + 2.05 * (1.0 - abs(fx)) ** 1.35 + 0.14 * abs(math.sin(i * 2.3))
+        height = 0.95 + 2.70 * (1.0 - abs(fx)) ** 1.20 + 0.14 * abs(math.sin(i * 2.3))
         bottom = y_top - height + 0.16 * math.sin(i * 1.9 + 0.3)
         w = 1.85 + 0.36 * (1.0 - abs(fx))
         z = 3.55 + 0.52 * (1.0 - abs(fx))
         # Cada pieza muestrea una franja distinta del carmesí: relieve
         # suave por capas, SIN lineas diagonales (la rejilla fue rechazada).
-        cowl_uv_i = S("yoke", du=float(i % 4) * 0.75, dv=1.0 + (i % 3),
-                      w=10.0, h=14.0)
+        cowl_uv_i = foto_uv(fx * 2.0, 22.0 + 0.4 * (i % 3), w, height)
         bones.append(bone(
             f"v17_cowl_front_{i}", "chestplate",
             [x, y_top - height / 2.0, z + 0.45],
@@ -244,8 +266,8 @@ def build() -> dict:
         bones.append(bone(
             f"v17_yoke_{i}", "chestplate", [x, yy + 0.21, 5.20],
             [0.0, 0.0, fx * 2.0],
-            [cube16((x - 1.05, yy, 5.00), (2.10, 0.20, 0.40),
-                    ASH, DARK, INFLATE[0])]))
+            [cube16((x - 0.80, yy + 0.05, 5.00), (1.60, 0.10, 0.40),
+                    ASH_DARK, DARK, INFLATE[0])]))
 
     # ------------------------------------------------------------------
     # 3. EL ABANICO. 15 jirones x 6 tramos, cada tramo ROTADO para seguir
@@ -257,8 +279,7 @@ def build() -> dict:
             g = CS.segment_geometry(k, n)
             dep = ribbon_thick(k)
             t = (CS.segment_bounds(k, n)[0] + CS.segment_bounds(k, n)[1]) / 2.0
-            front = {"uv": g["uv"], "uv_size": g["uv_size"]}
-            assert_opaque(front)
+            front = foto_uv(g["cx"], g["cy"], g["w"], g["h"])
             bones.append(bone(
                 f"v17_ribbon_{k}_seg{n}", section_for_t(t),
                 [g["cx"], g["cy"], g["z"] + 0.012 * n + dep / 2.0],
@@ -287,10 +308,7 @@ def build() -> dict:
         # v1232: TODAS las puntas son PAÑO. Antes la mitad usaba un texel
         # casi negro y el dobladillo parecia un puñado de astillas negras;
         # en la captura los remates son violeta-lavanda desvaido.
-        tip_uv = {"uv": [round(k * CS.BAND_W, 4),
-                         round(max(0.0, min(46.5, t * 48.0 - 1.5)), 4)],
-                  "uv_size": [round(CS.BAND_W, 4), 1.5]}
-        assert_opaque(tip_uv)
+        tip_uv = foto_uv(x, y - th / 2.0, tw, th)
         if k in FADED_TIPS:
             # Tope ROMO y deshilachado, pero del color de la tela.
             tw = 0.36 + 0.16 * abs(math.sin(k * 1.7))
@@ -343,12 +361,9 @@ def build() -> dict:
             # Carmesi LISO del yugo: en la captura los hombros son tela
             # oscura y las grietas rosa viven en las MOTAS sueltas, no en
             # una lluvia de guiones sobre el capuchon.
-            uv = S("yoke", du=0.5 + 0.5 * (i % 3), dv=0.5, w=12.0, h=15.0)
+            uv = foto_uv(cx, cy, w, h)
         else:
-            uv = {"uv": [round(near * CS.BAND_W, 4), round(t0 * 48.0, 4)],
-                  "uv_size": [round(CS.BAND_W, 4),
-                              round((t1 - t0) * 48.0, 4)]}
-        assert_opaque(uv)
+            uv = foto_uv(cx, cy, w, h)
         bones.append(bone(
             f"v17_shingle_{i}", "chestplate", [cx, cy, z + 0.15],
             [0.0, 0.0, theta],

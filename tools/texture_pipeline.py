@@ -165,153 +165,26 @@ def energy_gain(t: float) -> float:
 
 
 def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """ATLAS REHECHO v1.17.2: tela limpia, SIN des-abanicar píxeles crudos.
+    """v1.18.0: el atlas ES la capa de la IMAGEN, sin inventar nada.
 
-    El atlas anterior sampleaba el recorte del PNG texel a texel y le añadía
-    dithering Bayer, grano por píxel y 62 guiones recortados al azar. En el
-    juego eso se leía como CONFETI magenta y, lo peor, colaba el brazo beige,
-    el arnés gris y el fondo a cuadros dentro de la tela (los "bloques
-    bugeados" de las capturas in-game). Aquí la tela se CONSTRUYE desde la
-    paleta MEDIDA por `reference_profile.json`: ningún píxel del PNG entra
-    directamente. Sólo las POSICIONES de las grietas reales se usan para
-    colocar cuchilladas largas y diagonales, como las de la referencia.
+    Se limpia el PNG de referencia, se recorta a la capa y se reduce a
+    96x48 (`tools/reference_canvas.py`). No hay paleta sintética, ni grano,
+    ni Bayer, ni des-abanicado: cada tramo 3D toma por UV local el píxel
+    de esta foto que le corresponde (ver `armor_model_pipeline.py`).
 
-    Se conservan el alfa prístino, las 1636texels emisivos y las UV <=128.
-    Devuelve (RGB 48x96, tinta emisiva, tinta fría), igual que antes.
+    Devuelve también las tintas emisiva/fría derivadas de las cuchilladas
+    rosa REALES, para que el glowmask siga encendiendo la energía sin
+    alterar el RGB de la foto.
     """
-    import cape_shape as CS
-
-    ch, cw = 48, 96
-    vv = np.arange(ch, dtype=np.float32)
-    tt = (vv + 0.5) / ch
-    uu = np.arange(cw, dtype=np.float32)
-
-    # --- 1. PAÑO: paleta medida carmesí -> violeta, nunca píxeles crudos ---
-    pal = np.stack([CS.palette_at(float(x)) for x in tt]).astype(np.float32)
-    pal[:, 0] += 18.0 + 14.0 * np.clip(1.0 - tt / 0.30, 0.0, 1.0)
-    pal[:, 1] += 6.0
-    pal[:, 2] += 8.0
-    rgb = np.broadcast_to(pal[:, None, :], (ch, cw, 3)).copy()
-    low = np.clip((tt - 0.30) / 0.70, 0.0, 1.0)[:, None]
-    rgb[..., 0] += low * 4.0
-    rgb[..., 1] += low * 14.0
-    rgb[..., 2] += low * 12.0
-
-    # --- 2. RELIEVE POR LÓBULO: centro iluminado, bordes y pliegues oscuros.
-    #     Los pliegues se INCLINAN hacia afuera al bajar (abanico radial),
-    #     no son columnas rectas: eso era lo que parecía una falda.
-    for k in range(CS.RIBBONS):
-        c0 = int(round(k * CS.BAND_W)); c1 = int(round((k + 1) * CS.BAND_W))
-        fu = (uu[c0:c1] - c0) / CS.BAND_W - 0.5
-        ridge = np.cos(np.pi * fu) ** 2
-        rgb[:, c0:c1, :] *= (0.82 + 0.30 * ridge)[None, :, None]
-        side = 1.0 if CS.lateral(k) >= 0 else -1.0
-        for frac, strength in ((0.27, 0.17), (0.73, 0.11)):
-            centre = c0 + CS.BAND_W * frac + side * 1.9 * (tt - 0.25)
-            dist = np.abs(uu[c0:c1][None, :] - centre[:, None])
-            w = np.exp(-(dist / 0.80) ** 2)[..., None]
-            rgb[:, c0:c1, :] *= (1.0 - strength * w)
-        # Cada jirón tiene su propio tono: la captura NO es un degradado
-        # perfectamente regular, pero sin llegar al mosaico de antes.
-        rgb[:, c0:c1, :] *= (0.94 + 0.10 * (0.5 + 0.5 * math.sin(k * 2.71)))
-
-    # --- 3. HUECOS NEGROS entre lóbulos: se abren hacia el dobladillo ---
-    for k in range(CS.RIBBONS):
-        c0 = int(round(k * CS.BAND_W)); c1 = int(round((k + 1) * CS.BAND_W))
-        gap = np.clip((tt - 0.10) / 0.72, 0.0, 1.0) ** 1.15
-        dl = np.abs(uu[c0:c1] - c0)
-        dr = np.abs(uu[c0:c1] - (c1 - 1))
-        width = 0.30 + 0.45 * gap[:, None]
-        wl = np.exp(-(dl[None, :] / width) ** 2)[..., None]
-        wr = np.exp(-(dr[None, :] / width) ** 2)[..., None]
-        rgb[:, c0:c1, :] *= (1.0 - 0.30 * gap[:, None, None] * (wl + wr))
-
-    # --- 4. SARGA: ruido SUAVE de baja amplitud. SIN Bayer, SIN grano por
-    #     píxel, SIN ladrillos de color: el atlas anterior los tenía y en
-    #     el juego se veían como texturas rotas.
-    rng = np.random.default_rng(SEED + 1720)
-    coarse = rng.normal(0.0, 1.0, (6, 12)).astype(np.float32)
-    smooth = np.asarray(Image.fromarray(coarse, "F").resize(
-        (cw, ch), Image.BICUBIC), dtype=np.float32).copy()
-    smooth /= max(1e-6, float(np.std(smooth)))
-    rgb += smooth[..., None] * np.array([1.8, 1.2, 1.8], np.float32)
-    rgb += np.sin(uu[None, :] * 1.70)[..., None] * np.array(
-        [0.7, 0.4, 0.7], np.float32)
-
-    # --- 5. PUNTAS: triángulos oscuros por banda, no una franja negra ---
-    for k in range(CS.RIBBONS):
-        c0 = int(round(k * CS.BAND_W)); c1 = int(round((k + 1) * CS.BAND_W))
-        for v in range(40, ch):
-            f = (v - 40) / float(ch - 40)
-            inset = 1 + 2.2 * f
-            rgb[v, c0:c0 + int(inset), :] *= 0.92
-            rgb[v, max(c0, c1 - int(inset)):c1, :] *= 0.92
-
-    # CLAMP de gama: ningún texel puede volverse beige, gris o verde.
-    rgb = np.clip(rgb, 18.0, 205.0)
-
-    base_img = Image.fromarray(
-        np.clip(rgb, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
-    overlay = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
-    d = ImageDraw.Draw(overlay)
-    glow_ink = Image.new("L", (cw, ch), 0)
-    gd = ImageDraw.Draw(glow_ink)
-    cool_ink = Image.new("L", (cw, ch), 0)
-    cd = ImageDraw.Draw(cool_ink)
-
-    HALO = (74, 10, 48, 205)       # halo carmesí oscuro, no cuadrado rosa
-    CORE = (238, 72, 168, 255)
-    DIM = (188, 54, 142, 235)
-
-    def cuchillada(u0: float, v0: float, ln: float, slant: float,
-                   bright: bool = True, glow: int = 205) -> None:
-        """Guion diagonal LARGO y discontinuo, con halo de 1 texel."""
-        ln = max(2.0, min(ln, ch - v0 - 1.0))
-        for aa, bb in ((0.0, 0.46), (0.60, 1.0)):
-            p1 = (int(round(u0 + slant * aa)), int(round(v0 + ln * aa)))
-            p2 = (int(round(u0 + slant * bb)), int(round(v0 + ln * bb)))
-            cd.line([p1, p2], fill=40, width=2)
-            d.line([p1, p2], fill=HALO, width=1)
-            d.line([p1, p2], fill=CORE if bright else DIM, width=1)
-            gd.line([p1, p2], fill=glow if bright else 130, width=1)
-
-    # --- 6. ENERGÍA: las 54 grietas REALES del PNG, pero como CUCHILLADAS
-    #     de 4-8 texeles que siguen la inclinación de su jirón.
-    marks = [m for m in CS.energy_marks() if not m["floating"]]
-    for i, m in enumerate(marks):
-        t = max(0.02, min(0.90, m["t"]))
-        k = CS.nearest_ribbon(t, m["x"])
-        u0 = k * CS.BAND_W + CS.BAND_W * (0.34 + 0.30 * (
-            0.5 + 0.5 * math.sin(i * 2.31)))
-        v0 = t * ch
-        ln = 3.2 + 4.8 * min(1.0, m["h"] / 1.5)
-        side = 1.0 if CS.lateral(k) >= 0 else -1.0
-        slant = side * (1.5 + 1.7 * (0.5 + 0.5 * math.sin(i * 1.97)))
-        cuchillada(u0, v0, ln, slant, bright=(i % 4 != 0))
-
-    # El perfil medido tiene muy pocas grietas en t=0.0/0.1/0.4. Se
-    # completan con haces hermanos, distribuidos por la densidad REAL de
-    # la referencia (no al azar uniforme): así no queda confeti arriba.
-    densidad = (2.6, 1.0, 2.4, 0.8, 2.4, 0.4, 1.8, 1.2, 2.0, 2.0)
-    EXTRA_N = 2.2
-    for band in range(10):
-        n = int(round(densidad[band] * EXTRA_N))
-        for j in range(n):
-            t = (band + float(rng.uniform(0.08, 0.92))) / 10.0
-            k = int(rng.integers(0, CS.RIBBONS))
-            u0 = k * CS.BAND_W + float(rng.uniform(1.4, CS.BAND_W - 1.4))
-            v0 = t * ch
-            ln = float(rng.uniform(3.0, 7.0))
-            side = 1.0 if CS.lateral(k) >= 0 else -1.0
-            slant = side * float(rng.uniform(1.3, 2.9))
-            cuchillada(u0, v0, ln, slant,
-                       bright=(j % 3 != 0), glow=175)
-
-    img = Image.alpha_composite(base_img, overlay)
-    small = np.asarray(img, dtype=np.float32)[..., :3]
-    ink_small = np.asarray(glow_ink, dtype=np.float32) / 255.0
-    cool_small = np.asarray(cool_ink, dtype=np.float32) / 255.0
-    return small, ink_small, cool_small
+    from reference_canvas import canvas as foto
+    rgb = foto().astype(np.float32)
+    assert rgb.shape == (48, 96, 3), rgb.shape
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    energy = (r > 135) & (b > 85) & (r > g + 50) & (b > g + 18)
+    ink = energy.astype(np.float32) * 0.85
+    cool = np.asarray(Image.fromarray((energy * 110).astype(np.uint8)).filter(
+        ImageFilter.GaussianBlur(0.9)), dtype=np.float32) / 255.0
+    return rgb, ink, cool
 
 
 def paint_reserved_cloth_strips(out: np.ndarray, glow_alpha: np.ndarray) -> np.ndarray:
@@ -669,13 +542,14 @@ def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
         (np.clip(canvas_glow, 0, 1) * 255).astype(np.uint8)
     ).filter(ImageFilter.GaussianBlur(1.2))
     soft_arr = np.asarray(soft, dtype=np.float32) / 255.0
-    out[0:48, 0:96, :3] += soft_arr[..., None] * np.array([4.0, 1.0, 6.0])
+    # v1.18.0: la foto NO se realza; cualquier bloom la desdibuja.
+    # (soft_arr se sigue calculando para el glowmask, no para el RGB.)
     # v1.9.0: el segundo bloom, cian, se mantiene por debajo del violeta.
     cool_soft = Image.fromarray(
         (np.clip(canvas_cool, 0, 1) * 255).astype(np.uint8)
     ).filter(ImageFilter.GaussianBlur(0.8))
     cool_arr = np.asarray(cool_soft, dtype=np.float32) / 255.0
-    out[0:48, 0:96, :3] += cool_arr[..., None] * np.array([1.0, 5.0, 8.0])
+    # v1.18.0: sin bloom cian sobre el paño.
     out = paint_reserved_cloth_strips(out, glow[..., 3])
 
     # v1.14.0: las GRIETAS se vuelven emisivas. Se trasladan los 1636
@@ -703,7 +577,7 @@ def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
     # claros alrededor de cada trazo. El glowmask mantiene su cobertura
     # prístina (contrato GeckoLib / CI); el halo del color base queda oscuro.
     core = np.zeros((SIZE, SIZE), dtype=bool)
-    core[0:48, 0:96] = crack
+    core[0:48, 0:96] = False   # v1.18.0: la foto ya trae su propia luz
     out[..., 0] = np.where(core, out[..., 0] * 1.06 + 12.0, out[..., 0])
     out[..., 1] = np.where(core, out[..., 1] * 1.02 + 3.0, out[..., 1])
     out[..., 2] = np.where(core, out[..., 2] * 1.06 + 14.0, out[..., 2])
@@ -735,10 +609,10 @@ def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
         out[109:127, 69:75, :3] += corr[32:].mean(0) * 0.55
 
     # v1230: densidad de energía MEDIDA por altura (lazo cerrado).
-    out = shape_energy_density(out)
+    # v1.18.0: sin diezmado de energia (borraria cuchilladas reales).
     # v1264: deshilachado del dobladillo DESPUES de la energia, para no
     # apagar las grietas que llegan hasta la punta.
-    out = charred_hem(out)
+    # v1.18.0: sin carbonizado (la foto ya tiene los huecos negros).
     out = np.clip(out, 0, 255)
     out = np.where(opaque[..., None], out, rgb)  # never paint into transparent texels
     armor = np.dstack((out, alpha)).astype(np.uint8)

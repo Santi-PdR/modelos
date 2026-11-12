@@ -162,25 +162,37 @@ def tip_t(k: int) -> float:
     return min(1.0, max(0.88, base + 0.030 * math.sin(k * 3.31 + 0.7) + sweep))
 
 
+def fan_x(k: int, t: float) -> float:
+    """ABANICO RADIAL MEDIDO EN LA IMAGEN (v1.18.0, empezar de 0).
+
+    Los jirones nacen juntos bajo la bufanda (x~+-10 px) y se abren hasta
+    +-140 px en el dobladillo. En unidades del modelo (14.3 px/unidad):
+    0.7 -> 9.8. Esta MISMA formula la usa `reference_canvas.py` para
+    des-abanicar el PNG, de modo que textura y geometria se compensan
+    exactamente: el render recompone la captura.
+
+    No se usa la envolvente `silhouette()` de las rondas anteriores: era
+    una campana casi constante que convertia la capa en un delantal de
+    columnas verticales.
+    """
+    a = lateral(k)
+    t = max(0.0, min(1.0, t))
+    rad = 0.70 + 9.10 * t
+    # La captura NO es un triangulo: abre hasta t~0.72 y CIERRA en V
+    # hacia las puntas (los jirones exteriores se recogen).
+    if t > 0.68:
+        cierre = (t - 0.68) / 0.32
+        rad *= 1.0 - 0.38 * cierre ** 1.2
+    # Torcedura y asimetria suaves: la captura no es un abanico perfecto.
+    wrinkle = 0.20 * t * math.sin(k * 1.71 + t * 4.1 + 0.4)
+    asym = 1.0 + 0.06 * a
+    jitter = 1.0 + 0.07 * math.sin(k * 2.37 + 0.6)
+    return a * rad * asym * jitter + wrinkle
+
+
 def ribbon_x(k: int, t: float) -> float:
     """Centro de la cinta k a la altura t (0 = cuello, 1 = puntas)."""
-    a = lateral(k)
-    # LA ENVOLVENTE MEDIDA DEL PNG, no un abanico lineal: la capa se abre
-    # hasta t~0.73 y VUELVE A CERRARSE hacia las puntas (forma de campana).
-    # Cerca del cuello se comprime para nacer bajo la bufanda.
-    s = silhouette(min(1.0, max(0.0, t)))
-    # v1227: nacen MAS JUNTOS en el cuello y alcanzan la envolvente
-    # antes: asi los jirones exteriores ya salen inclinados desde arriba.
-    neck = 0.48 + 0.52 * min(1.0, max(0.0, t) / 0.28)
-    # Deriva determinista por jiron: en la captura NO hay un abanico
-    # perfectamente regular, las tiras estan rotas y desiguales.
-    jitter = 0.16 * math.sin(k * 2.37 + 0.6)
-    # TORCEDURA de la tela: crece hacia abajo, distinta por jiron.
-    # Rompe la rectitud sin alterar la envolvente de campana medida.
-    # v1227: torcedura suave, no un zigzag de codos por tramo.
-    wrinkle = 0.22 * t * math.sin(k * 1.71 + t * 4.1 + 0.4)
-    asym = 1.0 + 0.075 * a
-    return a * s * neck * (1.0 + jitter) * asym + wrinkle
+    return fan_x(k, t)
 
 
 def ribbon_w(k: int, t: float) -> float:
@@ -202,7 +214,7 @@ def ribbon_w(k: int, t: float) -> float:
         # v1228: los jirones CENTRALES son los que llegan al suelo y
         # deben aportar la masa de paño del dobladillo (48% en t=0.8).
         # Los exteriores se mantienen finos para dejar huecos negros.
-        center = 1.0 + 0.62 * (1.0 - abs(lateral(k))) * min(1.0, f / 0.55)
+        center = 1.0 + 0.25 * (1.0 - abs(lateral(k))) * min(1.0, f / 0.55)
         # v1232: en el ultimo tercio los lobos CENTRALES se ensanchan sin
         # tocar la envolvente exterior (la silueta de t=0.8/0.9 ya calza
         # 0.96x/0.97x). Rellena el 27% de paño del dobladillo, que en la
@@ -211,8 +223,11 @@ def ribbon_w(k: int, t: float) -> float:
         # solapado) y rampa desde f=0.35 en vez de 0.64: la referencia
         # tiene mas paño que el modelo en t=0.4..0.7 y el relleno tardio
         # no llegaba a esas decimas. 0.90 unia las cintas en una falda.
-        fill = 1.0 + 0.78 * max(0.0, min(1.0, (f - 0.35) / 0.55))
-        return (0.86 + 0.88 * f) * scale * center * fill
+        # v1.18.0: JIRONES FINOS. El fill 0.78 y la base 0.86+0.88f unian
+        # las 16 cintas en una falda maciza. La referencia tiene HUECOS
+        # NEGROS entre jirones y puntas estrechas.
+        fill = 1.0 + 0.14 * max(0.0, min(1.0, (f - 0.35) / 0.55))
+        return (0.58 + 0.55 * f) * scale * center * fill
     # v1283: el afilado final se retrasa al ultimo 6% y nunca baja de
     # 0.38 unidades. Antes las puntas exteriores se convertian en agujas
     # exactamente en t=0.8, que es donde la captura tiene MAS paño.
@@ -248,7 +263,7 @@ def segment_geometry(k: int, n: int) -> dict:
     a_k = lateral(k)
     # Se desvanece hacia las puntas: en la captura las alas son
     # diagonales arriba, pero los jirones bajos cuelgan casi rectos.
-    fan = -20.0 * a_k * (1.0 - min(1.0, tm)) ** 1.3
+    fan = -4.0 * a_k * (1.0 - min(1.0, tm)) ** 1.3
     theta = (-math.degrees(math.atan2(dx, dy))
              + 3.0 * math.sin(k * 1.83 + n * 2.41)
              + 2.1 * math.sin(k * 0.91 + n * 2.73)
