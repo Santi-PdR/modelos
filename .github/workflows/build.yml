@@ -1,0 +1,27 @@
+name: Build Forge mod
+on:
+  push:
+    branches: [arena/76d4b082-modelos]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Resource regression tests
+        run: python3 -m unittest discover -s tests -v
+      - name: Build reobfuscated Forge JAR
+        run: chmod +x gradlew && ./gradlew build --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: holo-relic-forge-1.20.1
+          path: build/libs/*.jar
+          if-no-files-found: error

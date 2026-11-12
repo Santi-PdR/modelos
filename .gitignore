@@ -1,0 +1,12 @@
+.gradle/
+build/
+run/
+runs/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+
+__pycache__/
+*.pyc

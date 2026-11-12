@@ -1,0 +1,32 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All Rights Reserved"
+[[mods]]
+modId="holorelic"
+version="1.0.0"
+displayName="Holographic Relic"
+description='''A cosmetic, animated holographic shoulder core for Curios.'''
+[[dependencies.holorelic]]
+modId="forge"
+mandatory=true
+versionRange="[47.4.8,48)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.holorelic]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.20.2)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.holorelic]]
+modId="curios"
+mandatory=true
+versionRange="[5.14.1,6)"
+ordering="AFTER"
+side="BOTH"
+[[dependencies.holorelic]]
+modId="geckolib"
+mandatory=true
+versionRange="[4.8.4,5)"
+ordering="AFTER"
+side="BOTH"
