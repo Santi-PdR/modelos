@@ -47,3 +47,12 @@ hay JDK y no se permite acceso a Maven Forge/Curios/Cloudsmith/Gradle. La ejecuc
 real de `./gradlew build` falla antes de iniciar Gradle por falta de Java.
 `runClient`, servidor dedicado y shaders quedan pendientes de ejecución en un
 entorno con Java 17, acceso a esos repositorios y, para el cliente, pantalla/OpenGL.
+
+## Actualización: compilación remota completada
+
+Se resolvió la limitación local ejecutando el wrapper en GitHub Actions con
+Temurin 17. `./gradlew build --stacktrace`, las pruebas de recursos y la
+reobfuscación finalizaron correctamente: [ejecución 43298239945](https://github.com/Santi-PdR/modelos/actions/runs/43298239945).
+El artefacto está en `deliverables/holo-relic-1.20.1-1.0.0.jar`. Se verificaron su
+SHA-256 y el bytecode Java 17 (major 61). Esto confirma compilación y resolución
+de dependencias, pero no sustituye las pruebas del juego ni de shaders.

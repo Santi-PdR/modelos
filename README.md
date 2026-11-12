@@ -22,11 +22,13 @@ En una instalación normal, colocar el JAR y las versiones Forge de Curios y
 GeckoLib indicadas en `mods/`, **tanto en servidor como en clientes**.
 Las dependencias no se incrustan en el JAR.
 
-**Estado de validación:** seis tests de recursos pasan y los nueve archivos Java
-pasan análisis sintáctico con Tree-sitter. `./gradlew build` se intentó y falló
-porque este entorno no tiene Java; además el acceso a Maven está restringido.
-No se ha verificado compilación, `runClient`, multijugador ni shaders. No se
-entrega un JAR supuestamente compilado.
+**Estado de validación:** compilación `./gradlew build --stacktrace` completada
+correctamente en GitHub Actions con Java 17, incluidas las seis pruebas de recursos
+y la tarea de reobfuscación. [Ejecución verificada](https://github.com/Santi-PdR/modelos/actions/runs/43298239945).
+JAR listo en **`deliverables/holo-relic-1.20.1-1.0.0.jar`**, con `SHA256SUMS`.
+Se comprobó integridad ZIP, presencia de clases compiladas y bytecode Java 17.
+No se ha ejecutado el juego: `runClient`, multijugador y shaders siguen pendientes.
+La compilación local de este sandbox carece de Java; el JAR se generó en CI.
 
 ## Uso
 
@@ -140,7 +142,8 @@ slot/tag Curios, tamaños PNG, paridad lang y wrapper JAR. **No sustituyen compi
 
 Checklist manual **pendiente**:
 
-- [ ] `build`, `runClient` y servidor dedicado sin cargar clases cliente en servidor.
+- [x] `build` y reobfuscación en CI con Java 17.
+- [ ] `runClient` y servidor dedicado sin cargar clases cliente en servidor.
 - [ ] Obtener por receta/creativo; equipar solo una reliquia; desequipar oculta.
 - [ ] Activación completa sin flash inicial; H y `/relic toggle`; persistencia dormant.
 - [ ] `/relic pulse`, glitch 20–60 s, bloqueo durante acciones; no glitch dormant.
