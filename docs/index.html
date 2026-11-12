@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Capa v1.17.0 — ver el modelo</title>
+<style>
+  body{margin:0;background:#0e0c14;color:#ece4f5;font:16px system-ui,sans-serif;
+       display:flex;min-height:100vh;align-items:center;justify-content:center}
+  main{max-width:760px;padding:32px}
+  h1{font-size:26px;margin:0 0 8px}
+  p{color:#a99fbb;line-height:1.5}
+  .grid{display:grid;gap:14px;margin-top:26px}
+  a{display:block;padding:18px 20px;border:1px solid #3a2c4c;border-radius:10px;
+    background:#1a1324;color:#f4e9ff;text-decoration:none;transition:.15s}
+  a:hover{border-color:#e64fa8;background:#241633}
+  a b{display:block;font-size:17px;margin-bottom:4px}
+  a span{color:#a99fbb;font-size:13px}
+  code{color:#f07ac2}
+</style>
+</head>
+<body>
+<main>
+  <h1>Capa Deteriorer · v1.17.0</h1>
+  <p>Modelo, textura, efectos y animaciones de la capa. Sin dependencias externas:
+     todo está dentro de esta carpeta.</p>
+  <div class="grid">
+    <a href="capa_v1170_visor.html"><b>Ver el modelo en 3D (recomendado)</b>
+       <span>Visor autocontenido: rota con el ratón, cambia de vista y reproduce las 4 animaciones.</span></a>
+    <a href="CAPA_v1.17.0.bbmodel" download><b>Descargar el .bbmodel para Blockbench</b>
+       <span>354 cubos · 295 grupos · 4 animaciones · 11638 keyframes · textura embebida.</span></a>
+    <a href="capa_v1170_comparativa.png"><b>Comparativa con tu referencia</b>
+       <span>Tu PNG de Blockbench a la izquierda, el modelo actual a la derecha.</span></a>
+    <a href="capa_v1170_animaciones.png"><b>Hoja de animaciones</b>
+       <span>18 poses del ondeo, las motas y el pulso de las venas.</span></a>
+    <a href="particles/capa_embers_calm.json"><b>Rescoldo en reposo (2.º emisor)</b>
+       <span><code>capatest:capa_embers_calm</code> · marcadores y Effects track en los 4 clips · color por vida de partícula.</span></a>
+    <a href="capa_v1170_silhouette_compare.png"><b>Autoevaluación visual</b>
+       <span>Color calibrado por medición: cobertura, energía y silueta comparadas décima a décima con tu PNG.</span></a>
+    <a href="particles/capa_embers.json"><b>Emisor de partículas (Snowstorm)</b>
+       <span><code>capatest:capa_embers</code> · brasas rosa · referenciado por el Effects track del .bbmodel.</span></a>
+  </div>
+  <p style="margin-top:26px;font-size:13px">Otros archivos:
+     <code>capa_v1170_preview.png</code> (6 vistas),
+     <code>capa_v1170_front_rig.png</code>,
+     <code>capa_v1170_side_relief.png</code>,
+     <code>capa_v1170_uv_test.png</code>,
+     <code>capa_v1170.bbmodel</code>.</p>
+</main>
+</body>
+</html>

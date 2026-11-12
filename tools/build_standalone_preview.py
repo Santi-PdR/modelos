@@ -21,7 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PREVIEW = ROOT / "preview"
 ASSETS = PREVIEW / "assets"
-OUT = ROOT / "docs/capa_v1150_visor.html"
+OUT = ROOT / "docs/capa_v1170_visor.html"
 
 
 def b64(path: Path) -> str:

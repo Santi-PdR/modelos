@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Exporta el .geo.json de la capa a un proyecto .bbmodel de Blockbench.
 
-v1.15.0: corrige DOS defectos graves de la entrega anterior.
+v1.17.0: corrige DOS defectos graves de la entrega anterior.
 
 1. UUID CANÓNICOS. Blockbench comprueba `isUUID()` (36 caracteres con
    guiones) para resolver los animadores de hueso. El exportador anterior
@@ -38,7 +38,7 @@ ROOT = Path(__file__).resolve().parents[1]
 GEO = ROOT / "src/main/resources/assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json"
 ATLAS = ROOT / "src/main/resources/assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan.png"
 OUT = ROOT / "preview/assets/capa_deteriorer_evilsaiyan.bbmodel"
-DOC = ROOT / "docs/capa_v1150.bbmodel"
+DOC = ROOT / "docs/capa_v1170.bbmodel"
 
 FACES = ("north", "south", "east", "west", "up", "down")
 PLAYER_V = 128
@@ -157,44 +157,101 @@ def make_group(name: str, pivot, rotation, children, key: str,
     }
 
 
-def kf(channel: str, t: float, x: float, y: float, z: float, key: str) -> dict:
-    """Keyframe de Blockbench. Los valores de molang se guardan como texto."""
+def kf(channel: str, t: float, x: float, y: float, z: float, key: str,
+       interp: str = "bezier", tangent: tuple[float, float, float] | None = None,
+       effect: dict | None = None) -> dict:
+    """Keyframe de Blockbench.
+
+    v1.17.0 v1205: la interpolacion `linear` producia ESQUINAS visibles
+    en la tela (la documentacion de Blockbench recomienda `catmullrom`
+    o `bezier` para movimiento organico). Se usan curvas Bezier cuyas
+    tangentes salen de la DERIVADA ANALITICA de la onda, asi la curva es
+    C1-continua en todos los keyframes y el bucle no tiene salto.
+    """
+    if effect is not None:
+        points = [dict(effect)]
+    else:
+        points = [{"x": str(round(x, 3)), "y": str(round(y, 3)),
+                   "z": str(round(z, 3))}]
+    if tangent is None:
+        lt, rt = [-0.30] * 3, [0.30] * 3
+        lv, rv = [0, 0, 0], [0, 0, 0]
+    else:
+        lt, rt = [-0.30] * 3, [0.30] * 3
+        rv = [round(v * 0.30, 3) for v in tangent]
+        lv = [round(-v * 0.30, 3) for v in tangent]
     return {
         "channel": channel,
-        "data_points": [{"x": str(round(x, 3)), "y": str(round(y, 3)),
-                         "z": str(round(z, 3))}],
+        "data_points": points,
         "uuid": uid(key),
         "time": round(t, 4),
         "color": -1,
-        "interpolation": "linear",
-        "bezier_linked": True,
-        "bezier_left_time": [-0.1, -0.1, -0.1],
-        "bezier_left_value": [0, 0, 0],
-        "bezier_right_time": [0.1, 0.1, 0.1],
-        "bezier_right_value": [0, 0, 0],
+        "interpolation": interp,
+        "bezier_linked": False,
+        "bezier_left_time": lt,
+        "bezier_left_value": lv,
+        "bezier_right_time": rt,
+        "bezier_right_value": rv,
     }
 
 
+def _wave_derivative(f: float, phase: float) -> float:
+    """d(_wave)/df: tangente exacta de la onda, no una aproximacion."""
+    return (0.75 * 2.0 * math.pi * math.cos(2.0 * math.pi * f + phase)
+            + 0.18 * 4.0 * math.pi * math.cos(4.0 * math.pi * f + phase * 1.7))
+
+
+STYLE_GAIN = {
+    # tela, motas, venas, cuello, tejas
+    "idle":      (0.55, 0.60, 0.70, 0.80, 0.55),
+    "caminar":   (1.00, 1.00, 1.00, 1.00, 1.00),
+    "correr":    (1.70, 1.60, 1.45, 1.40, 1.60),
+    "deterioro": (0.35, 1.80, 2.50, 0.45, 0.45),
+}
+
+# Cada animacion arranca con una fase DISTINTA: al cambiar de clip la
+# capa no salta desde la misma pose.
+STYLE_PHASE = {"idle": 0.0, "caminar": 0.45,
+               "correr": 0.95, "deterioro": 1.70}
+
+
 def motion_for(name: str, idx: int, style: str) -> tuple[float, float, float, float]:
-    """Amplitud (grados) por familia y estilo de animación."""
-    phase = idx * 0.37
-    if name.startswith(("v16_mote_", "v16_ash_")):
-        a = 14.0 if style == "correr" else (10.0 if style == "caminar" else 7.0)
+    """Amplitud (grados) y FASE por segmento/columna, por familia y estilo.
+
+    v1.17.0: antes habia una rama `v17_ribbon_` INALCANZABLE (otra rama
+    mas general la capturaba) y el estilo `deterioro` caia siempre en los
+    valores de `idle`. Ahora la fase sale del SEGMENTO REAL del nombre,
+    de modo que la onda baja por la capa en Java, visor y Blockbench.
+    """
+    g = STYLE_GAIN[style]
+    col, seg = idx % 16, 0
+    if name.startswith("v17_ribbon_"):
+        parts = name.split("_")
+        try:
+            col = int(parts[2])
+        except (ValueError, IndexError):
+            col = idx % 16
+        tail = parts[-1]
+        seg = int(tail[3:]) if tail.startswith("seg") else 0
+    phase = seg * 0.62 + col * 0.19 + STYLE_PHASE[style]
+    if name.startswith(("v17_mote_", "v17_ash_", "v16_mote_", "v16_ash_")):
+        a = 8.0 * g[1]
         return (a, a * 0.7, a * 0.5, phase)
-    if name.startswith("v16_collar_") or name.startswith("v16_yoke_"):
-        a = 3.2 if style == "correr" else (2.2 if style == "caminar" else 1.6)
+    if name.startswith(("v17_cowl_", "v17_yoke_", "v16_collar_", "v16_yoke_")):
+        a = 2.0 * g[3]
         return (a, 0.0, a * 0.6, phase * 0.4)
-    if name.startswith("v16_vein_"):
-        a = 6.0 if style == "correr" else 3.5
-        return (0.0, 0.0, a, phase * 2.0)
-    if name.startswith(("v16_fray_", "v16_hem_", "v16_shred_")):
-        a = 11.0 if style == "correr" else (7.0 if style == "caminar" else 4.0)
+    if name.startswith(("v17_vein_", "v16_vein_")):
+        a = 7.0 * g[2]
+        return (a * 0.25, 0.0, a, phase * 2.4)
+    if name.startswith("v17_shingle_"):
+        a = 4.0 * g[4]
+        return (a * 0.45, a * 0.20, a * 0.80, phase * 1.3)
+    if name.startswith(("v17_ribbon_", "v16_fray_", "v16_hem_",
+                        "v16_shred_", "v16_tatter_")):
+        # La onda CRECE hacia las puntas (seg/6), no i%5.
+        a = (2.2 + 6.5 * (seg / 6.0)) * g[0]
         return (a * 0.5, 0.0, a, phase)
-    if name.startswith("v16_tatter_"):
-        a = 9.0 if style == "correr" else (6.0 if style == "caminar" else 3.5)
-        return (a * 0.45, a * 0.30, a, phase)
-    # v15_cloth_* / v15_hem_*: onda del paño con retardo por columna.
-    a = 5.0 if style == "correr" else (3.2 if style == "caminar" else 1.8)
+    a = 2.4 * g[0]
     return (a * 0.5, 0.0, a, phase * 0.8)
 
 
@@ -202,40 +259,132 @@ ANIMATION_SPECS = (
     ("idle_respiracion", "loop", 4.0, "idle", 1.0),
     ("caminar", "loop", 1.2, "caminar", 1.0),
     ("correr_saltar", "loop", 0.8, "correr", 1.0),
-    ("deterioro_particulas", "loop", 3.0, "deterioro", 1.35),
+    ("deterioro_particulas", "loop", 3.0, "deterioro", 1.15),
 )
+
+WAVE_SAMPLES = 10             # 11 muestras por hueso: curva mas suave
+
+
+def _wave(f: float, phase: float) -> float:
+    """Onda periodica que VALE 0 en f=0 y f=1: el bucle no pega un salto."""
+    return ((math.sin(2.0 * math.pi * f + phase) - math.sin(phase)) * 0.75
+            + (math.sin(4.0 * math.pi * f + phase * 1.7)
+               - math.sin(phase * 1.7)) * 0.18)
 
 
 def build_animations(anim_bones: list[tuple[str, str]]) -> list[dict]:
-    """Un animador por hueso, 5 keyframes en bucle para cada animación."""
+    """4 animaciones diferenciadas: rotacion + posicion + ESCALA (venas)."""
     out = []
     for aname, loop, length, style, mult in ANIMATION_SPECS:
         animators = {}
         for idx, (bname, guuid) in enumerate(anim_bones):
             ax, ay, az, phase = motion_for(bname, idx, style)
             ax, ay, az = ax * mult, ay * mult, az * mult
-            keyframes = [
-                kf("rotation", 0.0, 0, 0, 0, f"{aname}/{bname}/0"),
-                kf("rotation", length * 0.25, ax, ay, az, f"{aname}/{bname}/1"),
-                kf("rotation", length * 0.50, 0, 0, 0, f"{aname}/{bname}/2"),
-                kf("rotation", length * 0.75, -ax, -ay, -az, f"{aname}/{bname}/3"),
-                kf("rotation", length, 0, 0, 0, f"{aname}/{bname}/4"),
-            ]
-            if bname.startswith(("v16_mote_", "v16_ash_")):
-                drift = 0.9 * mult
+            keyframes = []
+            for j in range(WAVE_SAMPLES + 1):
+                f = j / WAVE_SAMPLES
+                w = _wave(f, phase)
+                dw = _wave_derivative(f, phase) / WAVE_SAMPLES
+                keyframes.append(kf("rotation", round(length * f, 4),
+                                    ax * w, ay * w, az * w,
+                                    f"{aname}/{bname}/r{j}",
+                                    tangent=(ax * dw, ay * dw, az * dw)))
+            if bname.startswith(("v17_mote_", "v17_ash_",
+                                 "v16_mote_", "v16_ash_")):
+                drift = (1.6 if style == "deterioro" else 0.9) * mult
+                rise = drift * 1.8 if style == "deterioro" else -drift
                 keyframes += [
                     kf("position", 0.0, 0, 0, 0, f"{aname}/{bname}/p0"),
-                    kf("position", length * 0.5, drift, -drift, 0, f"{aname}/{bname}/p1"),
+                    kf("position", round(length * 0.5, 4),
+                       drift, rise, 0, f"{aname}/{bname}/p1"),
                     kf("position", length, 0, 0, 0, f"{aname}/{bname}/p2"),
+                ]
+            if bname.startswith(("v17_mote_", "v17_ash_",
+                                 "v16_mote_", "v16_ash_")):
+                # PARPADEO: las motas cambian de tamano, no solo giran.
+                blink = 0.42 if style == "deterioro" else 0.24
+                keyframes += [
+                    kf("scale", 0.0, 1, 1, 1, f"{aname}/{bname}/b0"),
+                    kf("scale", round(length * 0.5, 4),
+                       1 + blink, 1 + blink, 1 + blink,
+                       f"{aname}/{bname}/b1"),
+                    kf("scale", length, 1, 1, 1, f"{aname}/{bname}/b2"),
+                ]
+            if (bname.startswith("v17_ribbon_") and bname[-4:-1] == "seg"
+                    and bname[-1] in "456"):
+                # TIRON POR TRAMO: la gravedad baja por la tela en vez de
+                # actuar solo en la punta. La amplitud crece con el segmento.
+                seg = int(bname[-1])
+                pull = 0.055 * seg * mult
+                keyframes += [
+                    kf("position", 0.0, 0, 0, 0, f"{aname}/{bname}/t0"),
+                    kf("position", round(length * 0.5, 4),
+                       0, -pull, 0, f"{aname}/{bname}/t1"),
+                    kf("position", length, 0, 0, 0, f"{aname}/{bname}/t2"),
+                ]
+            if bname.startswith(("v17_cowl_", "v17_yoke_",
+                                 "v16_collar_", "v16_yoke_")):
+                # RESPIRACION: la bufanda se hincha y se relaja con un
+                # periodo LENTO y distinto del ondeo de los jirones.
+                breath = 0.045 if style == "deterioro" else 0.022
+                keyframes += [
+                    kf("scale", 0.0, 1, 1, 1, f"{aname}/{bname}/h0"),
+                    kf("scale", round(length * 0.5, 4),
+                       1 + breath, 1 + breath * 0.55, 1 + breath * 0.3,
+                       f"{aname}/{bname}/h1"),
+                    kf("scale", length, 1, 1, 1, f"{aname}/{bname}/h2"),
+                ]
+            if bname.startswith(("v17_vein_", "v16_vein_")):
+                pulse = 0.34 if style == "deterioro" else 0.18
+                keyframes += [
+                    kf("scale", 0.0, 1, 1, 1, f"{aname}/{bname}/s0"),
+                    kf("scale", round(length * 0.5, 4),
+                       1 + pulse, 1 + pulse, 1, f"{aname}/{bname}/s1"),
+                    kf("scale", length, 1, 1, 1, f"{aname}/{bname}/s2"),
                 ]
             animators[guuid] = {
                 "name": bname,
                 "type": "bone",
                 "keyframes": keyframes,
             }
+        # EffectAnimator: Blockbench usa la clave literal 'effects' y
+        # canales 'particle'/'sound'/'timeline' con data_points de efecto.
+        # EffectAnimator en los CUATRO clips. Dos emisores Snowstorm:
+        # brasas vivas al correr / deteriorarse y un rescoldo tenue en
+        # reposo y al caminar. Blockbench usa la clave literal 'effects'.
+        times = {
+            "idle": [0.0, length * 0.5],
+            "caminar": [0.0, length * 0.5],
+            "correr": [0.0, length * 0.5],
+            "deterioro": [0.0, length * 0.25, length * 0.5, length * 0.75],
+        }[style]
+        hot = style in ("correr", "deterioro")
+        effect_id = ("capatest:capa_embers" if hot
+                     else "capatest:capa_embers_calm")
+        effect_file = ("particles/capa_embers.json" if hot
+                       else "particles/capa_embers_calm.json")
+        fx = []
+        for j, tt in enumerate(times):
+            fx.append(kf("particle", round(tt, 4), 0, 0, 0,
+                         f"{aname}/effects/e{j}", interp="step",
+                         effect={"effect": effect_id, "locator": "",
+                                 "script": "", "file": effect_file,
+                                 "bind_to_actor": True}))
+        animators["effects"] = {
+            "name": "Effects", "type": "effect", "keyframes": fx,
+        }
+        marker_names = {
+            "idle": ["inhalar", "exhalar"],
+            "caminar": ["paso_izquierdo", "paso_derecho"],
+            "correr": ["brasas_1", "brasas_2"],
+            "deterioro": ["brasas_1", "brasas_2", "brasas_3", "brasas_4"],
+        }[style]
+        markers = [{"color": -1, "time": round(tt, 4), "name": nm}
+                   for tt, nm in zip(times, marker_names)]
         out.append({
             "uuid": uid(f"animation/{aname}"),
             "name": aname,
+            "markers": markers,
             "loop": loop,
             "override": False,
             "length": length,
@@ -268,7 +417,7 @@ def build() -> dict:
         groups.append(make_group(key, b.get("pivot") or [0, 0, 0],
                                  b.get("rotation") or [0, 0, 0],
                                  kids, gkey))
-        if key.startswith("v16_") or key.startswith(("v15_cloth_", "v15_hem_")):
+        if key.startswith(("v17_", "v16_")) or key.startswith(("v15_cloth_", "v15_hem_")):
             anim_bones.append((key, uid(gkey)))
 
     roots = []
@@ -351,12 +500,16 @@ def main() -> None:
         assert uuid_re.match(a["uuid"]), a["name"]
         assert a["loop"] == "loop" and a["length"] > 0
         for guuid, an in a["animators"].items():
-            assert uuid_re.match(guuid) and guuid in gids, (a["name"], guuid)
-            assert an["type"] == "bone" and an["keyframes"]
+            if guuid == "effects":
+                assert an["keyframes"]
+            else:
+                assert uuid_re.match(guuid) and guuid in gids, (a["name"], guuid)
+                assert an["type"] == "bone" and an["keyframes"]
             for k in an["keyframes"]:
                 assert uuid_re.match(k["uuid"])
-                assert k["channel"] in ("rotation", "position")
-                assert k["data_points"] and len(k["data_points"][0]) == 3
+                assert k["channel"] in ("rotation", "position", "scale",
+                                        "particle", "sound", "timeline")
+                assert k["data_points"]
             total += len(an["keyframes"])
     print(f"wrote {OUT.relative_to(ROOT)}: {len(model['elements'])} cubos, "
           f"{len(model['groups'])} grupos, {len(anims)} animaciones, "

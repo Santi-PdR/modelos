@@ -53,7 +53,9 @@ public final class CuriosCompat {
             @Override
             public void curioTick(SlotContext slotContext, ItemStack stack) {
                 if (slotContext.entity() instanceof Player player) {
-                    CapaDeteriorerItem.spawnAura(player.level(), player);
+                    boolean deterioro = stack.isDamaged()
+                            || player.getHealth() < player.getMaxHealth() * 0.5F;
+                    CapaDeteriorerItem.spawnAura(player.level(), player, deterioro);
                 }
             }
         });

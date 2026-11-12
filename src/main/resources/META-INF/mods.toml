@@ -9,6 +9,30 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.17.0: EMPIEZA DE 0 USANDO LA REFERENCIA DEL USUARIO. El PNG de
+Blockbench se guarda en referencias/, tools/reference_trace.py mide la
+envolvente (31 puntos), la paleta por fila (21 filas) y 54 grietas rosa,
+y tools/cape_shape.py define el ABANICO de 16 jirones que nacen estrechos
+en el cuello, se abren a +-9.2 unidades y acaban en puntas desiguales.
+tools/texture_pipeline.py DES-ABANICA el recorte limpio de la captura en
+el atlas 96x48: cada cinta lleva los colores que le corresponden en la
+imagen. Capucha carmesi gruesa con borde rasgado, agujeros negros, 26
+motas rosa flotantes. Se corrige ademas el signo de la rotacion Z
+(Blockbench niega X), que hacia que el abanico se cerrase al reves.
+Icono 64x64 BYTE-IDENTICO (aprobado). 246 huesos / 300 cubos, 4
+animaciones Blockbench con 3888 keyframes. La cabeza blanca del maniqui
+es solo escala y NO se modela.
+
+v1.16.0: LA SKIN, REHECHA DE VERDAD. Se corrige la causa de la rejilla:
+cantos claros en cada cubo (ahora un texel casi negro), UV a trozos (ahora
+una banda vertical continua por cinta) y emisivos en bloque (ahora anillos
+de distancia). Canvas carmesi -> violeta -> casi negro con ~60 grietas
+cortas aisladas, agujeros y sarga; 9 cintas anchas de 5 tramos con puntas
+escalonadas; capucha en cupula con hombreras inclinadas y 9 dientes;
+respaldo convertido en sombras finas para que se vean los huecos; item
+plegado unificado sin dorados ni cian. Icono 64x64 BYTE-IDENTICO (aprobado).
+206 huesos / 298 cubos, 4 animaciones Blockbench (2992 keyframes).
+
 v1.15.0: CORRECCION VISUAL Y ANIMACIONES. Se elimina la jaula de 78 tiras
 finas que no se parecia a la referencia: ahora hay 27 paneles de pano grueso,
 11 cintas anchas solapadas de 3 tramos, 18 flecos de dobladillo y una bufanda

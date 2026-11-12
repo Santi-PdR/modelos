@@ -86,6 +86,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
+import cape_shape as CS
 from cloth_spec import COLUMNS, FOLDS, OPAQUE_RECTS, UV as CLOTH_UV
 from fold_spec import PANELS, STRIP_OFFSETS, STRIP_WIDTHS, UV
 
@@ -147,246 +148,422 @@ def _blurred_noise(rng: np.random.Generator, shape: tuple[int, int], radius: flo
 # 1a. v1.5.1: one continuous high-resolution cloth illustration (96x48 UV)
 # --------------------------------------------------------------------------
 def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Canvas 96x48 v1.14.0: DETERIORO + EVIL SAIYAN ROSÉ.
+    """DES-ABANICA la referencia del usuario en el atlas 96x48 (v1.17.0).
 
-    Base de carmesí muy oscuro que cae a violeta-negro, parches de morado
-    desvaído y gris ceniza (desgaste), trama de sarga, pliegues anchos y
-    agujeros rasgados. Encima, una red de GRIETAS DE ENERGÍA con núcleo
-    rosa encendido, halo magenta y borde violeta-negro: recorren toda la
-    capa de los hombros al dobladillo, se ramifican y se vuelven más densas
-    abajo, donde la prenda se desintegra.
+    Para cada texel se calcula a qué JIRÓN pertenece, a qué altura ``t``
+    corresponde y dónde está su línea central en el RECORTE LIMPIO del PNG.
+    El color dominante es la PALETA MEDIDA por filas (carmesí -> violeta),
+    y el detalle de la captura se mezcla al 38%: así hay MASA DE TELA, no
+    un mosaico de confeti. Los agujeros negros y las grietas rosa reales
+    salen del PNG; las 20 grietas más representativas se redibujan nítidas.
 
-    Devuelve (RGB 96x48, tinta rosa, tinta fría). Las tintas alimentan el
-    bloom del color base y el glowmask del item plegado. El alfa base NO se
-    toca y la cobertura emisiva del atlas (1636 texels) se REDISTRIBUYE a
-    las grietas en build_armor(), sin crecer: así no se abren huecos.
+    El alfa base no se toca y el conteo de emisivos sigue siendo 1636.
     """
-    cw, ch = 96, 48
-    scale = 4
-    w, h = cw * scale, ch * scale
-    yy, xx = np.mgrid[0:h, 0:w]
-    u = xx / float(w - 1)
-    v = yy / float(h - 1)
-    rng = np.random.default_rng(SEED + 11)
+    import cape_shape as CS
 
-    n_fine = _blurred_noise(rng, (h, w), 0.7)
-    n_med = _blurred_noise(rng, (h, w), 2.6)
-    n_big = _blurred_noise(rng, (h, w), 8.0)
+    clean_path = ROOT / "referencias" / "REFERENCIA_CAPA_recorte.png"
+    clean = np.asarray(Image.open(clean_path).convert("RGB"), dtype=np.float32)
+    ch, cw = 48, 96
+    H, W = clean.shape[:2]
+    ppu = CS.PROFILE_DATA["px_per_unit"]
 
-    # Carmesí oscuro arriba -> violeta-negro abajo.
-    top = np.array([74.0, 17.0, 30.0], dtype=np.float32)
-    bot = np.array([19.0, 9.0, 30.0], dtype=np.float32)
-    rgb = top * (1.0 - v[..., None]) + bot * v[..., None]
+    # El rosa del PNG se atenúa: si no, al des-abanicar y volver a dibujar
+    # las grietas encima sale el doble de magenta del que tiene la captura.
+    pink = ((clean[..., 0] > 145) & (clean[..., 2] > 95)
+            & (clean[..., 1] < 140) & (clean[..., 0] > clean[..., 1] + 55))
+    clean = clean.copy()
+    clean[pink] *= 0.34
 
-    # Morado desvaído en parches grandes y gris ceniza de desgaste.
-    rgb += np.clip(n_big, 0.0, 1.4)[..., None] * np.array([18.0, 4.0, 22.0])
-    ash = np.clip(0.5 + 0.5 * n_med, 0.0, 1.0)[..., None]
-    rgb += ash * (0.30 + 0.50 * v)[..., None] * np.array([30.0, 28.0, 33.0])
+    detail = np.empty((ch, cw, 3), np.float32)
+    t_col = (np.arange(ch, dtype=np.float32) + 0.5) / ch
+    # Color DOMINANTE: la mediana real del paño por fila, medida en el PNG.
+    palette = np.stack([CS.palette_at(float(t)) for t in t_col])       # (48,3)
+    light = 1.52 - 0.12 * t_col
+    palette *= light[:, None]
+    palette[:, 2] += np.clip((t_col - 0.20) / 0.80, 0.0, 1.0) ** 1.3 * 16.0
+    palette[:, 1] += t_col ** 2 * 7.0
+    rgb = np.broadcast_to(palette[:, None, :], (ch, cw, 3)).copy()
 
-    # Tres pliegues anchos (misma onda que el relieve 3D) con sombreado.
-    fold = np.cos(2.0 * np.pi * FOLDS * u + 0.10 * np.sin(v * np.pi * 1.7))
-    rgb += (0.5 + 0.5 * fold)[..., None] * np.array([12.0, 2.0, 16.0])
-    rgb -= (0.5 - 0.5 * fold)[..., None] * np.array([13.0, 5.0, 14.0])
+    for k in range(CS.RIBBONS):
+        c0 = int(round(k * CS.BAND_W))
+        c1 = int(round((k + 1) * CS.BAND_W))
+        kt = np.minimum(t_col, CS.tip_t(k))
+        rx = np.empty(ch, np.float32)
+        ry = np.empty(ch, np.float32)
+        win = np.empty(ch, np.float32)
+        for v in range(ch):
+            px, py = CS.reference_point(k, float(kt[v]))
+            rx[v], ry[v] = px, py
+            win[v] = max(9.0, CS.ribbon_w(k, float(kt[v])) * ppu)
+        fu = (np.arange(c0, c1, dtype=np.float32) + 0.5 - k * CS.BAND_W) \
+            / CS.BAND_W - 0.5
+        src_x = rx[:, None] + fu[None, :] * win[:, None]
+        xs = np.clip(np.rint(src_x).astype(np.int32), 0, W - 1)
+        ys = np.clip(np.rint(ry).astype(np.int32), 0, H - 1)[:, None]
+        a = clean[ys, xs]
+        b = clean[np.clip(ys + 1, 0, H - 1), xs]
+        detail[:, c0:c1, :] = 0.65 * a + 0.35 * b
+        # Sombreado por cinta: cada jirón se lee como una capa de tela,
+        # con los bordes oscuros (NO un filete claro -> sin rejilla).
+        edge = 0.82 + 0.18 * np.sin(np.pi * (fu + 0.5))
+        layer = 0.84 + 0.32 * (0.5 + 0.5 * math.sin(k * 1.73))
+        rgb[:, c0:c1, :] *= (edge * layer)[None, :, None]
 
-    # Trama, sarga diagonal y grano de hilo viejo.
-    weave = np.sin(xx * np.pi / 2.0) * np.sin(yy * np.pi / 2.0) * 2.3
-    twill = np.sin((xx + yy) * np.pi / 3.3) * 1.7
-    rgb += (weave + twill + n_fine * 5.0)[..., None] * np.array([0.9, 0.8, 1.1])
+    # Los jirones de fuera están más iluminados en la captura (rojo vivo).
+    for k in range(CS.RIBBONS):
+        c0 = int(round(k * CS.BAND_W)); c1 = int(round((k + 1) * CS.BAND_W))
+        outer = abs(CS.lateral(k))
+        lift = ((0.5 + 0.5 * np.cos(t_col * math.pi * 1.6)) * outer)[:, None]
+        rgb[:, c0:c1, 0] += lift * 22.0
+        rgb[:, c0:c1, 1] += lift * 5.0
+        rgb[:, c0:c1, 2] += lift * 7.0
+    rgb = rgb * 0.62 + detail * 0.38
+    # PLIEGUES de tela: relieve carmesi en el INTERIOR de cada banda.
+    fold_hi = np.clip(1.0 - t_col / 0.58, 0.0, 1.0)[:, None]
+    for k in range(CS.RIBBONS):
+        c0 = int(round(k * CS.BAND_W)); c1 = int(round((k + 1) * CS.BAND_W))
+        ridge = (0.78 + 0.22 * np.sin(np.arange(ch) * 1.27 + k * 0.63))[:, None]
+        fold = fold_hi * ridge
+        for frac, gain in ((0.24, 12.0), (0.68, 8.0)):
+            col = min(c1 - 1, c0 + int(CS.BAND_W * frac))
+            rgb[:, col:col + 1, 0] += fold * gain
+            rgb[:, col:col + 1, 1] += fold * gain * 0.20
+            rgb[:, col:col + 1, 2] += fold * gain * 0.28
+        # HUECO oscuro entre jirones: separa capas sin dibujar una rejilla.
+        gap = np.clip((t_col - 0.08) / 0.25, 0.0, 1.0)[:, None]
+        rgb[:, c0:c0 + 1, :] *= (1.0 - 0.18 * gap)[..., None]
+    # Agujeros NEGROS reales: lo que en la captura era fondo se come la luz.
+    holes = detail.mean(2) < 16.0
+    holes[:12, :] = False
+    # AGUJEROS NEGROS, pero no un muro: arriba la tela sigue siendo roja.
+    rgb[holes] *= 0.72
+    # Bordes RASGADOS por fila: cada banda pierde 0-2 texels de canto de
+    # forma irregular, asi ningun jiron parece un tablon recto.
+    for k in range(CS.RIBBONS):
+        c0 = int(round(k * CS.BAND_W))
+        c1 = int(round((k + 1) * CS.BAND_W))
+        for v in range(16, ch):
+            tear = int(0.7 + 0.7 * (0.5 + 0.5 * math.sin(v * 1.71 + k * 2.37)))
+            if tear:
+                rgb[v, c0:c0 + tear, :] *= 0.76
+                rgb[v, max(c0, c1 - tear):c1, :] *= 0.76
+                if v % 9 == k % 9 and tear:
+                    rgb[v, min(c1 - 1, c0 + tear), :] *= 1.24
+    # COSTURAS DE HOMBRO cosidas a mano: el tercio superior de la captura
+    # tiene pliegues radiales que bajan desde la bufanda; antes era un
+    # triangulo liso. Sombra de un texel + ribete calido, ondulado por jiron.
+    for k in range(CS.RIBBONS):
+        c0 = int(round(k * CS.BAND_W)); c1 = int(round((k + 1) * CS.BAND_W))
+        for v in range(2, 20):
+            u = int(round(c0 + CS.BAND_W * (0.42 + 0.16 * math.sin(
+                v * 0.38 + k * 1.27))))
+            u = min(c1 - 2, max(c0 + 1, u))
+            fade = 1.0 - v / 20.0
+            rgb[v, u, :] *= 1.0 - 0.30 * fade
+            rgb[v, u + 1, 0] += 7.0 * fade
+            rgb[v, u + 1, 2] += 3.0 * fade
+        tint = 0.94 + 0.12 * (0.5 + 0.5 * math.sin(k * 2.19 + 0.8))
+        rgb[:18, c0:c1, :] *= (1.0 + np.clip(
+            1.0 - t_col / 0.34, 0.0, 1.0)[:18, None, None] * (tint - 1.0))
 
-    # Viñeta: los bordes de la tela se comen la luz.
-    vig = (np.exp(-((u - 0.015) / 0.055) ** 2)
-           + np.exp(-((u - 0.985) / 0.055) ** 2))[..., None]
-    rgb -= vig * np.array([16.0, 5.0, 18.0])
+    # En la referencia la mitad baja es VIOLETA / LAVANDA desvaido, mucho
+    # mas azul y mas claro que la parte carmesi. La mediana del PNG se
+    # queda corta porque incluye agujeros negros: aqui se restituye la luz.
+    v = t_col[:, None]
+    low = np.clip((v - 0.34) / 0.66, 0.0, 1.0)
+    hi = np.clip(1.0 - v / 0.42, 0.0, 1.0)
+    # VIOLETA / LAVANDA, no azul: R y B deben ir parejos, G por debajo.
+    rgb[..., 0] = rgb[..., 0] * (1.0 + 0.46 * low) + hi * 3.0 + low * 36.0
+    rgb[..., 1] = rgb[..., 1] * (1.0 + 0.84 * low) + low * 25.0
+    rgb[..., 2] = rgb[..., 2] * (1.0 + 0.62 * low) + low * 24.0
+    # CORRECCION MEDIDA: el bloom y el grano subian demasiado el violeta
+    # en t~0.78 (delta +22/+21/+28). Campana gaussiana local, sin tocar
+    # el cuello ni las puntas, que ya calzan con la referencia.
+    # CORRECCION MEDIDA v1208: el bloom y el grano subian demasiado el
+    # violeta en t~0.78. Campana gaussiana local, sin tocar el cuello ni
+    # las puntas. Se mantiene: al aumentar la masa de tela en v1209 el
+    # exceso de luz vuelve a aparecer si se retira.
+    mid_band = np.exp(-((t_col - 0.78) / 0.16) ** 2)[:, None, None]
+    rgb -= mid_band * np.array([20.0, 18.0, 24.0], np.float32)
 
+    # Los 8 LOBOS que sobreviven recuperan la luz violeta del PNG:
+    # los canales oscuros no deben dejar la capa casi negra.
+    faded = {k for k in range(CS.RIBBONS) if (k * 7 + 3) % 16 < 8}
+    lobe = np.clip((t_col - 0.26) / 0.60, 0.0, 1.0)[:, None]
+    for k in range(CS.RIBBONS):
+        if k in faded:
+            continue
+        c0 = int(round(k * CS.BAND_W)); c1 = int(round((k + 1) * CS.BAND_W))
+        rgb[:, c0:c1, :] *= (1.0 + 0.34 * lobe)[..., None]
+    dead = t_col[:, None] > np.array(
+        [CS.tip_t(k) for k in range(CS.RIBBONS)])[None, :]
+    # (las bandas muertas ya están oscurecidas por cape_shape; no se usan)
+
+    # ROTOS INTERNOS: la referencia tiene agujeros sueltos en MITAD de
+    # cada jiron, no solo bordes. Se siembran por fila de forma determinista
+    # y crecen hacia abajo; el alfa prístino no se toca.
+    tear_rng = np.random.default_rng(SEED + 91)
+    for k in range(CS.RIBBONS):
+        c0 = int(round(k * CS.BAND_W))
+        c1 = int(round((k + 1) * CS.BAND_W))
+        for v in range(28, ch):
+            chance = 0.025 + 0.045 * (v / ch)
+            if tear_rng.random() < chance:
+                u0 = c0 + int(tear_rng.integers(1, max(2, c1 - c0 - 1)))
+                ww = 1 + int(tear_rng.integers(0, 2))
+                rgb[v, u0:min(c1, u0 + ww), :] *= 0.56
+                if v + 1 < ch:
+                    rgb[v + 1, max(c0, u0 - 1):min(c1, u0 + ww), :] *= 0.74
+
+    # PUNTAS en el atlas: los ultimos 8 texels de cada banda se estrechan
+    # en triangulo oscuro, para que el remate 3D no parezca un dado.
+    for k in range(CS.RIBBONS):
+        c0 = int(round(k * CS.BAND_W)); c1 = int(round((k + 1) * CS.BAND_W))
+        for v in range(40, ch):
+            f = (v - 40) / float(ch - 40)
+            inset = int(1 + 2.4 * f)
+            rgb[v, c0:c0 + inset, :] *= 0.48
+            rgb[v, max(c0, c1 - inset):c1, :] *= 0.48
+
+    rng = np.random.default_rng(SEED + 77)
+
+    def vnoise(cy: int, cx: int) -> np.ndarray:
+        small = rng.normal(0.0, 1.0, (cy, cx)).astype(np.float32)
+        return np.asarray(Image.fromarray(small, "F").resize(
+            (cw, ch), Image.BICUBIC), dtype=np.float32)
+
+    # Tres octavas: fibra gruesa, tejido medio y mancha de tinte.
+    grain = (0.55 * vnoise(24, 48) + 0.30 * vnoise(8, 16)
+             + 0.15 * vnoise(3, 6))
+    grain /= (float(np.std(grain)) + 1e-6)
+    rgb += grain[..., None] * np.array([3.2, 2.2, 3.0])
+    # Hilos verticales y dithering de pixel art (sin banding).
+    weave = np.sin(np.arange(cw)[None, :] * 1.7
+                   + np.arange(ch)[:, None] * 0.21)
+    rgb += weave[..., None] * np.array([1.4, 0.9, 1.3])
+    bayer = np.array([[0, 8, 2, 10], [12, 4, 14, 6],
+                      [3, 11, 1, 9], [15, 7, 13, 5]], np.float32) / 16.0 - 0.5
+    dith = np.tile(bayer, (12, 24))[:ch, :cw]
+    rgb += dith[..., None] * 2.6
+    rgb += ((1.0 - t_col) ** 2 * 1.5)[:, None, None] * np.array([1.0, 0.55, 0.8])
     img = Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
 
-    # Agujeros y desgarros oscuros, más frecuentes hacia el dobladillo.
-    holes = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-    hd = ImageDraw.Draw(holes)
-    for _ in range(46):
-        hx = float(rng.uniform(2.0, 94.0))
-        hy = float(rng.uniform(6.0, 47.0))
-        rad = float(rng.uniform(0.5, 2.1)) * (0.5 + 0.9 * hy / 48.0)
-        hd.ellipse([int((hx - rad) * scale), int((hy - rad) * scale),
-                    int((hx + rad) * scale), int((hy + rad) * scale)],
-                   fill=(7, 4, 13, 235))
-    img = Image.alpha_composite(img, holes)
-
-    overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    overlay = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
     d = ImageDraw.Draw(overlay)
-    glow_ink = Image.new("L", (w, h), 0)
+    glow_ink = Image.new("L", (cw, ch), 0)
     gd = ImageDraw.Draw(glow_ink)
-    cool_ink = Image.new("L", (w, h), 0)
+    cool_ink = Image.new("L", (cw, ch), 0)
     cd = ImageDraw.Draw(cool_ink)
-    p = lambda x, y: (int(round(x * scale)), int(round(y * scale)))
 
-    ROSE = (236, 92, 168, 210)
-    ROSE_CORE = (248, 176, 214, 230)
-    MAGENTA = (168, 18, 104, 190)
-    MAGENTA_DARK = (72, 6, 46, 150)
+    HALO = (88, 14, 58, 150)
+    CORE = (218, 66, 150, 235)
 
-    # Bordes iluminados: un filete rosa de 1 px recorre ambos lados.
-    for ex in (0.7, 95.3):
-        d.line([p(ex, 0), p(ex, 47.9)], fill=(160, 26, 104, 110),
-               width=max(1, int(0.22 * scale)))
-        gd.line([p(ex, 0), p(ex, 47.9)], fill=80,
-                width=max(1, int(0.25 * scale)))
-
-    # 11 grietas principales con ramificaciones y nodos. Cada una serpentea
-    # desde el hombro hasta el dobladillo; el jitter crece hacia abajo para
-    # leer como energía inestable que desprende la tela.
-    for ci in range(4):
-        x = (12.0, 34.0, 61.0, 84.0)[ci] + float(rng.uniform(-2.0, 2.0))
-        pts = []
-        for j in range(24):
-            yv = -1.0 + j * 2.15
-            x += float(rng.uniform(-0.55, 0.55)) + 0.42 * math.sin(j * 0.55 + ci)
-            x += 0.24 * (j / 24.0) * math.sin(ci * 2.1)
-            x = max(1.0, min(95.0, x))
-            pts.append(p(x, yv))
-        # La grieta se DIBUJA A TROZOS: tramos que se encienden y se
-        # apagan. Una línea continua parecía un código de barras; los
-        # huecos la convierten en energía inestable sobre tela podrida.
-        # Menos del 45% de la grieta está encendida: el paño respira.
-        spans = ((0, 4), (9, 13), (17, 21))
-        for si, (a, b) in enumerate(spans):
-            seg = pts[a:b]
-            if len(seg) < 2:
-                continue
-            power = 0.85 if (ci + si) % 3 else 0.35
-            halo = MAGENTA_DARK if power > 0.8 else (72, 6, 48, 170)
-            d.line(seg, fill=halo, width=max(1, int(0.85 * scale * power)), joint="curve")
-            d.line(seg, fill=MAGENTA, width=max(1, int(0.38 * scale * power)), joint="curve")
-            d.line(seg, fill=ROSE, width=max(1, int(0.20 * scale)), joint="curve")
-            gd.line(seg, fill=int(180 * power), width=max(1, int(0.30 * scale)), joint="curve")
-            cd.line(seg, fill=45, width=max(1, int(0.22 * scale)), joint="curve")
-        # Ramas cortas que se abren en la mitad inferior.
-        for j in range(2):
-            k = 7 + j * 8
-            if k + 2 >= len(pts):
-                break
-            a = pts[k]
-            bx = pts[k + 1][0] + int(float(rng.uniform(2.5, 8.5)) * scale) * (1 if ci % 2 else -1)
-            by = pts[k + 1][1] + int(0.9 * scale)
-            d.line([a, (bx, by)], fill=MAGENTA, width=max(1, int(0.45 * scale)))
-            d.line([a, (bx, by)], fill=ROSE, width=max(1, int(0.20 * scale)))
-            gd.line([a, (bx, by)], fill=110, width=max(1, int(0.25 * scale)))
-        # Nodos de energía (chispas) a lo largo de la grieta.
-        for j in range(4, 24, 10):
-            qx, qy = pts[j]
-            r = max(1, int(0.50 * scale))
-            d.ellipse([qx - r, qy - r, qx + r, qy + r], fill=ROSE_CORE)
-            gd.ellipse([qx - r, qy - r, qx + r, qy + r], fill=255)
-
-    # Vettable diagonales secundarias: rompen la verticalidad y recuerdan
-    # los jirones de la referencia de Blockbench.
-    for di in range(2):
-        x0 = 22.0 + di * 44.0 + float(rng.uniform(-3.0, 3.0))
-        y0 = 6.0 + float(rng.uniform(0.0, 30.0))
-        dx = float(rng.uniform(4.0, 11.0)) * (1.0 if di % 2 else -1.0)
-        dy = float(rng.uniform(5.0, 12.0))
-        seg = [p(x0, y0), p(x0 + dx * 0.5, y0 + dy * 0.5), p(x0 + dx, y0 + dy)]
-        d.line(seg, fill=MAGENTA, width=max(1, int(0.50 * scale)), joint="curve")
-        d.line(seg, fill=ROSE, width=max(1, int(0.25 * scale)), joint="curve")
-        gd.line(seg, fill=165, width=max(1, int(0.35 * scale)), joint="curve")
-
-    # Ceniza / chispas sueltas: puntos de 1 px sin halo, deterministas.
-    for _ in range(64):
-        sx = float(rng.uniform(0.0, 96.0))
-        sy = float(rng.uniform(0.0, 48.0))
-        q = p(sx, sy)
-        if q[0] >= w or q[1] >= h:
+    # GRIETAS REALES de la referencia (una de cada tres, para no saturar).
+    marks = [m for m in CS.energy_marks() if not m["floating"]]
+    # Los 8 trazos MAS LARGOS de la captura se redibujan como cuchilladas
+    # diagonales, no como puntitos: son la energia mas visible del modelo.
+    long_marks = sorted(range(len(marks)), key=lambda j: -marks[j]["h"])[:3]
+    for j in long_marks:
+        m = marks[j]
+        t = max(0.0, min(0.90, m["t"]))
+        k = CS.nearest_ribbon(t, m["x"])
+        u = k * CS.BAND_W + CS.BAND_W * 0.5
+        v = t * ch
+        # TRAZOS CORTOS y DISCONTINUOS, como la referencia: dos guiones
+        # con un hueco, en vez de una cuchillada continua de 13 texels.
+        ln = min(7.0, 3.0 + m["h"] * 1.6)
+        for a, b in ((0.0, 0.42), (0.62, 1.0)):
+            seg = [(int(round(u - 1.0 + 2.2 * a)), int(round(v + ln * a))),
+                   (int(round(u - 1.0 + 2.2 * b)), int(round(v + ln * b)))]
+            cd.line(seg, fill=96, width=4)
+            d.line(seg, fill=(78, 12, 54, 170), width=2)
+            d.line(seg, fill=(238, 76, 168, 250), width=1)
+            gd.line(seg, fill=200, width=1)
+    for j in long_marks[:2]:
+        m = marks[j]
+        t = max(0.0, min(0.90, m["t"]))
+        k = CS.nearest_ribbon(t, m["x"])
+        u = int(round(k * CS.BAND_W + CS.BAND_W * 0.5))
+        v = int(round(t * ch))
+        # Codo en L: sube vertical y gira 2 texels, como en la captura.
+        cd.line([(u, v), (u, v + 3), (u + 2, v + 3)], fill=100, width=4)
+        d.line([(u, v), (u, v + 3), (u + 2, v + 3)], fill=HALO, width=2)
+        d.line([(u, v), (u, v + 3), (u + 2, v + 3)], fill=CORE, width=1)
+        gd.line([(u, v), (u, v + 3), (u + 2, v + 3)], fill=190, width=1)
+    for i in range(0, len(marks), 12):
+        m = marks[i]
+        t = max(0.0, min(0.94, m["t"]))
+        k = CS.nearest_ribbon(t, m["x"])
+        u = int(round(k * CS.BAND_W + CS.BAND_W * (0.35 + 0.2 * (i % 3))))
+        v = int(round(t * ch))
+        # v1213: trazo CORTO, no un bloque de 3x4 texels. En la captura
+        # la energia son guiones finos; los rectangulos grandes se leian
+        # como ladrillos rosa dentro de la tela.
+        d.rectangle([u, v, u + 1, v + 1], fill=HALO)
+        d.rectangle([u, v, u + 1, v + 1], fill=CORE)
+        gd.rectangle([u, v, u + 1, v + 1], fill=205)
+    for i, m in enumerate(marks):
+        # Uno de cada cuatro se omite y el tercio superior se aclara:
+        # la energia real esta concentrada en el centro, no repartida.
+        # v1219: la energia del PNG esta concentrada en el centro, pero
+        # al des-abanicar los 62 trazos medidos quedaban DEMASIADOS en la
+        # mitad (t=0.5: 23% de energia vs 6% en la captura) y en las
+        # puntas. Se aclaran esas dos zonas sin tocar el cuello ni el halo.
+        if (i % 3 == 2 or (m["t"] < 0.22 and i % 2 == 1)
+                or (0.44 < m["t"] < 0.64 and i % 2 == 0)
+                or (m["t"] > 0.78 and i % 2 == 0)):
             continue
-        hot = rng.random() < (0.10 + 0.22 * sy / 48.0)
-        d.point(q, fill=ROSE if hot else (96, 88, 100, 190))
+        # Todos los trazos medidos, pero en guiones de 2-4 texels.
+        t = max(0.0, min(0.975, m["t"]))
+        k = CS.nearest_ribbon(t, m["x"])
+        u = k * CS.BAND_W + CS.BAND_W * (0.5 + 0.18 * math.sin(i * 2.31))
+        v = t * ch
+        ln = max(1.3, min(2.8, m["h"] * 0.8 + (i % 3) * 0.2))
+        slant = 2.2 * math.sin(i * 1.97)
+        seg = [(int(round(u)), int(round(v))),
+               (int(round(u + slant)), int(round(v + ln)))]
+        cd.line(seg, fill=62, width=3)
+        d.line(seg, fill=HALO, width=1)
+        d.line(seg, fill=CORE, width=1)
+        gd.line(seg, fill=175, width=1)
+
+    # Motas de 1 px, ESCASAS, más densas hacia las puntas.
+    for _ in range(9):
+        sx = float(rng.uniform(0, cw))
+        sy = float(rng.uniform(0, ch))
+        q = (int(sx), int(sy))
+        hot = rng.random() < (0.06 + 0.22 * sy / ch)
+        d.point(q, fill=CORE if hot else (70, 52, 82, 160))
         if hot:
-            gd.point(q, fill=190)
+            gd.point(q, fill=150)
 
     img = Image.alpha_composite(img, overlay)
+    small = np.asarray(img, dtype=np.float32)[..., :3]
+    ink_small = np.asarray(glow_ink, dtype=np.float32) / 255.0
+    cool_small = np.asarray(cool_ink, dtype=np.float32) / 255.0
 
-    # Bloom rosa alrededor del núcleo: contraste alto sin tocar el alfa.
-    ink = np.asarray(glow_ink, dtype=np.float32) / 255.0
-    blur = np.asarray(
-        Image.fromarray((ink * 255).astype(np.uint8)).filter(
-            ImageFilter.GaussianBlur(1.7 * scale)), dtype=np.float32
-    ) / 255.0
-    arr = np.asarray(img, dtype=np.float32).copy()
-    arr[..., :3] += blur[..., None] * np.array([12.0, 2.0, 9.0])
-    arr[..., :3] += ink[..., None] * np.array([8.0, 2.0, 6.0])
-
-    cool = np.asarray(cool_ink, dtype=np.float32) / 255.0
-    cool_blur = np.asarray(
-        Image.fromarray((cool * 255).astype(np.uint8)).filter(
-            ImageFilter.GaussianBlur(1.4 * scale)), dtype=np.float32
-    ) / 255.0
-    arr[..., :3] += cool_blur[..., None] * np.array([6.0, 14.0, 26.0])
-
-    # Reducción 4x -> 96x48 (BOX conserva la media, no añade AA al icono).
-    small = np.asarray(
-        Image.fromarray(np.clip(arr[..., :3], 0, 255).astype(np.uint8), "RGB")
-        .resize((cw, ch), Image.BOX), dtype=np.float32
-    )
-    ink_small = np.asarray(glow_ink.resize((cw, ch), Image.BOX), dtype=np.float32) / 255.0
-    cool_small = np.asarray(cool_ink.resize((cw, ch), Image.BOX), dtype=np.float32) / 255.0
+    # DOBLADILLO RASGADO: en el PNG solo ~8 jirones llegan al suelo;
+    # los demas se deshilachan a alturas distintas. Ocho bandas se
+    # apagan con un borde irregular (columnas desfasadas), de modo que
+    # el borde inferior deja de ser un puntero de agujas regulares.
+    hem = np.ones((ch, cw), np.float32)
+    for k in range(CS.RIBBONS):
+        if (k * 7 + 3) % 16 >= 8:
+            continue
+        c0 = int(round(k * CS.BAND_W)); c1 = int(round((k + 1) * CS.BAND_W))
+        # CANAL OSCURO: desde la mitad, este jiron deja de ser paño y
+        # se convierte en el hueco negro entre los lobos vecinos.
+        mid = 18 + int(8.0 * (0.5 + 0.5 * math.sin(k * 2.13 + 0.4)))
+        ramp_mid = np.linspace(0.96, 0.84, ch - mid, dtype=np.float32)
+        hem[mid:, c0:c1] = ramp_mid[:, None]
+        # Y se deshilacha del todo a una altura distinta.
+        start = 36 + int(9.0 * (0.5 + 0.5 * math.sin(k * 2.13 + 0.4)))
+        ramp = np.linspace(1.0, 0.70, ch - start, dtype=np.float32)
+        for u in range(c0, c1):
+            off = (u - c0) % 3
+            s = min(ch - 1, start + off)
+            hem[s:, u] = np.minimum(hem[s:, u], ramp[:ch - s])
+    # Separacion de jirones desde ARRIBA: sin ella el tercio superior
+    # vuelve a ser un delantal rojo macizo.
+    chan = np.ones((ch, cw), np.float32)
+    for k in range(CS.RIBBONS):
+        if (k * 7 + 3) % 16 >= 8:
+            continue
+        c0 = int(round(k * CS.BAND_W)); c1 = int(round((k + 1) * CS.BAND_W))
+        top = 13 + int(4.0 * (0.5 + 0.5 * math.sin(k * 2.13)))
+        if 18 > top:
+            chan[top:18, c0:c1] = np.linspace(1.0, 0.90, 18 - top,
+                                              dtype=np.float32)[:, None]
+    small *= chan[..., None] * hem[..., None]
+    # REFLEJO ROSA-LAVANDA DE LAS PUNTAS, aplicado DESPUES del fade:
+    # antes el deshilachado se lo comia y el dobladillo quedaba negro.
+    tip_glow = np.clip((t_col - 0.84) / 0.16, 0.0, 1.0)[:, None]
+    # v1210: el reflejo de puntas teñía TODO el dobladillo de rosa y
+    # disparaba la energia medida (26% frente al 11% de la captura).
+    small[..., 0] += tip_glow * 15.0
+    small[..., 1] += tip_glow * 4.0
+    small[..., 2] += tip_glow * 10.0
+    # La energia sobrevive algo mas que el paño: en la captura quedan
+    # guiones rosa sueltos incluso dentro de los huecos.
+    ink_small *= hem ** 0.80
+    cool_small *= hem
     return small, ink_small, cool_small
 
 
 def paint_reserved_cloth_strips(out: np.ndarray, glow_alpha: np.ndarray) -> np.ndarray:
-    """Columnas reservadas v1.14.0: ceniza, forro y rampa de energía Rosé.
+    """Zonas reservadas v1.17.0: color SACADO DE LA REFERENCIA.
 
-    El atlas sigue teniendo EXACTAMENTE el mismo alfa. Lo que cambia es el
-    RGB de esas franjas ya opacas: los cantos de los jirones pasan a gris
-    ceniza / violeta, el ribete a una vena magenta y el parche emisivo a una
-    rampa rosa -> magenta -> violeta-negro de la que samplean los 56
-    microvóxeles. Cada partícula toma un sub-rectángulo de 2x2 distinto.
+    Cantos y forro: un solo tono casi negro (sin filetes -> sin rejilla).
+    Yugo / bufanda: recorte REAL del cuello carmesí de la captura.
+    Rampa de motas: rosa de los rectángulos flotantes del PNG.
+    El alfa del atlas sigue siendo EXACTAMENTE el prístino.
     """
-    y = np.arange(128, dtype=np.float32).reshape(128, 1, 1) / 127.0
+    import cape_shape as CS
 
-    # Gris ceniza y violeta apagado para los cantos con grosor real.
-    out[:, 105:107, :3] = np.array([56.0, 51.0, 60.0]) + y * np.array([10.0, 5.0, 16.0])
-    out[:, 107:109, :3] = np.array([82.0, 32.0, 88.0]) + y * np.array([16.0, 4.0, 22.0])
-    out[:, 120:122, :3] = np.array([34.0, 14.0, 44.0]) + y * np.array([14.0, 3.0, 18.0])
+    # Cantos / forro: un solo tono oscuro, sin degradado vertical.
+    edge_t = np.linspace(0.0, 1.0, 48, dtype=np.float32)[:, None, None]
+    edge_top = np.array([62.0, 22.0, 38.0], np.float32)
+    edge_bot = np.array([64.0, 32.0, 74.0], np.float32)
+    grad = edge_top * (1.0 - edge_t) + edge_bot * edge_t
+    out[0:48, 105:107, :3] = grad * 0.88
+    out[0:48, 107:109, :3] = grad * 0.58
+    # Gris del ARNES que cruza bajo la bufanda en la referencia: el
+    # texel "ash" deja de ser casi negro (antes parecia una raya negra).
+    # Bloque gris con degradado: el arnes 3D muestrea 3x2 texels.
+    grey = np.linspace(1.0, 0.58, 3, dtype=np.float32)[None, :, None]
+    out[18:21, 105:108, :3] = (
+        np.array([108.0, 104.0, 122.0], np.float32) * grey)
+    out[18:21, 108:109, :3] = np.array([78.0, 75.0, 92.0])
+    # COSTURAS de la bufanda: pliegues que bajan desde el cuello, con
+    # sombra de un texel. Sin ellos la capucha era un rectangulo liso.
+    for u in range(96, 110):
+        for v in range(0, 17):
+            if (u - 96 + int(2.4 * math.sin(v * 0.32))) % 4 == 0:
+                out[v, u, :3] *= 0.80
+                if u + 1 < 110:
+                    out[v, u + 1, 0] += 5.0
 
-    # Vena de energía vertical: rosa encendido arriba, magenta en el centro,
-    # violeta-negro abajo. Bézier cuadrática, NO un degradado suave en el
-    # icono (que sigue siendo pixel art plano).
-    t = y
-    hot = np.array([255.0, 122.0, 200.0], dtype=np.float32)
-    mag = np.array([206.0, 20.0, 132.0], dtype=np.float32)
-    dark = np.array([17.0, 8.0, 28.0], dtype=np.float32)
-    ramp = (hot * (1.0 - t) ** 2 + 2.0 * mag * t * (1.0 - t) + dark * t ** 2)
-    out[:, 122:124, :3] = ramp
+    out[0:48, 120:122, :3] = grad * 0.52
+    out[0:48, 122:124, :3] = grad * 0.34
+    for i in range(6):
+        y0 = 4 + i * 7
+        out[y0:y0 + 2, 122:124, :3] = np.array([238.0, 84.0, 172.0])
 
-    # Parche de los microvóxeles (6x18). Gradiente 2D: el eje X va de rosa a
-    # magenta y el eje Y se apaga a violeta-negro. Así 56 cubos de 1-2 px
-    # pueden tomar colores distintos con UV distintas.
-    ey = np.linspace(0.0, 1.0, 18, dtype=np.float32).reshape(18, 1, 1)
-    ex = np.linspace(0.0, 1.0, 6, dtype=np.float32).reshape(1, 6, 1)
-    energy = (hot * (1.0 - ey) * (1.0 - ex)
-              + mag * (1.0 - ey) * ex
-              + dark * ey)
-    energy[ey[..., 0, 0] > 0.78, ...] = np.array([26.0, 10.0, 38.0])
-    out[109:127, 69:75, :3] = energy
+    # Rampa de las MOTAS 3D: rosa vivo, como los rectángulos de la captura.
+    ramp = np.linspace(0.0, 1.0, 18, dtype=np.float32).reshape(18, 1, 1)
+    pink = (np.array([226.0, 82.0, 164.0], dtype=np.float32) * (1.0 - ramp)
+            + np.array([176.0, 36.0, 112.0], dtype=np.float32) * ramp)
+    out[109:127, 69:75, :3] = np.broadcast_to(pink, (18, 6, 3))
+    # Tramo FINAL de la rampa: rescoldo violeta para las motas de relleno.
+    dim = np.linspace(0.0, 1.0, 8, dtype=np.float32).reshape(8, 1, 1)
+    out[119:127, 69:75, :3] = (
+        np.array([112.0, 50.0, 104.0], np.float32) * (1.0 - dim)
+        + np.array([74.0, 34.0, 76.0], np.float32) * dim)
 
-    # Yugo / bufanda: carmesí oscuro con sombreado y desgaste. NO lleva
-    # franjas verticales regulares: en v1.14.0 cada segmento del collar
-    # muestreaba las mismas dos lineas magenta y el cuello parecia una reja
-    # de barrotes rosa. Ahora solo quedan tres vetas cortas e irregulares.
-    yoke = out[76:93, 57:71, :3]
-    yoke[...] = np.array([58.0, 15.0, 33.0]) + y[:17] * np.array([20.0, 5.0, 22.0])
-    shade = np.linspace(0.0, 1.0, 14, dtype=np.float32).reshape(1, 14, 1)
-    yoke -= shade * np.array([12.0, 3.0, 10.0])
-    for (x0, y0, length) in ((2, 3, 3), (9, 8, 2), (5, 13, 4)):
-        yoke[y0:y0 + length, x0:x0 + 1, :] = np.array([146.0, 26.0, 96.0])
+    # Yugo / bufanda: carmesí MEDIDO en la referencia, con sombreado
+    # horizontal suave. Sin franjas verticales: en v1.14 cada segmento
+    # repetía dos líneas magenta y el cuello parecía una corona de barrotes.
+    y = np.linspace(0.0, 1.0, 17, dtype=np.float32).reshape(17, 1, 1)
+    x = np.linspace(0.0, 1.0, 14, dtype=np.float32).reshape(1, 14, 1)
+    # CARMESI OSCURO medido: la bufanda de la captura NO es rojo brillante.
+    top = np.asarray(CS.palette_at(0.0), dtype=np.float32) * 2.00
+    low = np.asarray(CS.palette_at(0.22), dtype=np.float32) * 1.45
+    yoke = top * (1.0 - y) + low * y
+    yoke = np.broadcast_to(yoke, (17, 14, 3)).copy()
+    yoke += np.random.default_rng(SEED + 5).normal(
+        0.0, 2.0, (17, 14, 1)).astype(np.float32)
+    # Sin lineas diagonales: en v1.14 formaban una REJILLA rechazada.
+    # El relieve lo dan las 9 piezas 3D solapadas, no el atlas.
+    out[76:93, 57:71, :3] = yoke
     return out
 
 
 def assert_cloth_uvs() -> None:
-    """Ninguna UV v1.5.1 puede samplear un texel transparente."""
+    """Ninguna UV de la tela nueva puede samplear un texel transparente."""
     geometry = json.loads(GEO.read_text())["minecraft:geometry"][0]
     checked = 0
     for bone in geometry.get("bones", []):
-        if not bone["name"].startswith("v15_"):
+        if not bone["name"].startswith(("v15_", "v17_")):
             continue
         for cube_spec in bone.get("cubes", []):
             for face in cube_spec["uv"].values():
@@ -399,46 +576,60 @@ def assert_cloth_uvs() -> None:
                     for x0, y0, x1, y1 in OPAQUE_RECTS
                 ), f"UV nueva fuera de zona opaca: {face}"
                 checked += 1
-    assert checked > 250, checked
-    print(f"v1.5.1 cloth UV faces checked: {checked}")
+    assert checked > 300, checked
+    print(f"v1.17.0 cloth UV faces checked: {checked}")
 
 
-# --------------------------------------------------------------------------
-# 1. Armor texture: woven cloth, fold lighting, violet bloom, hot neon core
-# --------------------------------------------------------------------------
 def _fit_emissive_mask(priority: np.ndarray, opaque: np.ndarray, target: int,
                        allowed: np.ndarray | None = None) -> np.ndarray:
-    """Elige EXACTAMENTE `target` texels opacos, priorizando energía y grietas.
+    """Elige EXACTAMENTE `target` texels opacos cerca de las grietas.
 
-    GeckoLib borra del color base los pixeles marcados en el glowmask. Si la
-    cobertura creciera aparecerían agujeros en la capa; si decreciera, las
-    grietas no brillarían. Por eso se mantiene el conteo prístino (1636) y
-    sólo se trasladan a las nuevas grietas de energía.
+    v1.17.0: antes se rellenaba el resto en orden FILA POR FILA desde un
+    pool dilatado, lo que dibujaba RECTÁNGULOS claros sobre el paño (el
+    usuario los veía como parches). Ahora se expande en ANILLOS de
+    distancia alrededor de los núcleos de energía y, dentro de cada anillo,
+    se elige con un hash determinista: el halo rodea las grietas en vez de
+    apilarse en bloques. El conteo prístino (1636) no cambia, así que no se
+    abren huecos en la capa.
     """
-    mask = np.zeros((SIZE, SIZE), dtype=bool)
-    count = 0
-    for level in (2, 1):
-        ys, xs = np.nonzero((priority == level) & opaque & ~mask)
-        order = np.lexsort((xs, ys))
-        for i in order:
-            if count >= target:
+    permit = allowed if allowed is not None else np.ones_like(opaque)
+    cores = (priority == 2) & opaque & permit
+    cracks = (priority == 1) & opaque & permit
+    mask = np.zeros_like(opaque, dtype=bool)
+    mask |= cores
+    mask |= cracks
+    visited = mask.copy()
+    front = mask.copy()
+    for _ in range(10):
+        if int(mask.sum()) >= target:
+            break
+        ring = dilate(front, 1) & opaque & permit & ~visited
+        if not ring.any():
+            break
+        ys, xs = np.nonzero(ring)
+        # Orden disperso y determinista: evita el sesgo fila por fila.
+        key = ((ys.astype(np.int64) * 73856093)
+               ^ (xs.astype(np.int64) * 19349663)) % 1000003
+        for i in np.argsort(key):
+            if int(mask.sum()) >= target:
                 break
             mask[ys[i], xs[i]] = True
-            count += 1
-        if count >= target:
-            break
-    if count < target:
-        for radius in (1, 2, 3, 5):
-            pool = dilate(mask, radius) & opaque & ~mask & (allowed if allowed is not None else True)
-            ys, xs = np.nonzero(pool)
-            for i in np.lexsort((xs, ys)):
-                if count >= target:
-                    break
-                mask[ys[i], xs[i]] = True
-                count += 1
-            if count >= target:
+        visited |= ring
+        front = ring
+    # Recorta si los núcleos + grietas ya superaban el objetivo.
+    if int(mask.sum()) > target:
+        ys, xs = np.nonzero(mask & ~cores)
+        for i in np.argsort(((ys.astype(np.int64) * 73856093)
+                             ^ (xs.astype(np.int64) * 19349663)) % 1000003):
+            if int(mask.sum()) <= target:
                 break
-    assert count == target, (count, target)
+            mask[ys[i], xs[i]] = False
+    if int(mask.sum()) < target:
+        pool = opaque & permit & ~mask
+        ys, xs = np.nonzero(pool)
+        for i in range(min(target - int(mask.sum()), len(ys))):
+            mask[ys[i], xs[i]] = True
+    assert int(mask.sum()) == target, (int(mask.sum()), target)
     return mask
 
 
@@ -552,9 +743,41 @@ def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
     allowed[0:48, 122:124] = True
     emissive = _fit_emissive_mask(priority, opaque, target, allowed)
 
-    out[..., 0] = np.where(emissive, out[..., 0] * 1.12 + 38.0, out[..., 0])
-    out[..., 1] = np.where(emissive, out[..., 1] * 1.06 + 10.0, out[..., 1])
-    out[..., 2] = np.where(emissive, out[..., 2] * 1.12 + 40.0, out[..., 2])
+    # v1.17.0: realce SÓLO sobre los núcleos de grieta (`crack`), nunca
+    # sobre el halo de 1636 texels: teñir la dilatación dibujaba CUADRADOS
+    # claros alrededor de cada trazo. El glowmask mantiene su cobertura
+    # prístina (contrato GeckoLib / CI); el halo del color base queda oscuro.
+    core = np.zeros((SIZE, SIZE), dtype=bool)
+    core[0:48, 0:96] = crack
+    out[..., 0] = np.where(core, out[..., 0] * 1.10 + 22.0, out[..., 0])
+    out[..., 1] = np.where(core, out[..., 1] * 1.04 + 5.0, out[..., 1])
+    out[..., 2] = np.where(core, out[..., 2] * 1.10 + 26.0, out[..., 2])
+
+    # --- CALIBRACION CROMATICA MEDIDA (v1211) -------------------------
+    # tools/color_calibration.py mide la mediana del paño por décimas en el
+    # RENDER y en el PNG de referencia con la misma máscara, y acumula aqui
+    # la diferencia. Se interpola sobre las 48 filas del canvas: así el
+    # degradado sigue siendo continuo y no aparecen franjas horizontales.
+    cal = ROOT / "tools" / "color_calibration.json"
+    if cal.is_file():
+        rows = json.loads(cal.read_text())["rows"]
+        tc = (np.arange(48, dtype=np.float32) + 0.5) / 48.0
+        corr = np.stack([
+            np.interp(tc, [r[0] for r in rows],
+                      [r[1 + c] for r in rows]).astype(np.float32)
+            for c in range(3)], axis=1)                       # (48, 3)
+        # SOLO el paño recibe la corrección. Los canales oscuros y los
+        # agujeros quedan intactos: teñirlos los volvía negros y hacia
+        # desaparecer la masa de tela que tanto costó recuperar en v1210.
+        canvas = out[0:48, 0:96, :3]
+        weight = np.clip((canvas.mean(2) - 30.0) / 55.0,
+                         0.0, 1.0)[..., None]
+        canvas += corr[:, None, :] * weight
+        # Las venas laterales muestrean x=120..124 y las MOTAS 3D la rampa
+        # x=69..75, y=109..127: fuera del canvas. Sin la misma corrección
+        # quedaban más brillantes que el paño y dominaban la mediana.
+        out[0:48, 120:124, :3] += corr[:, None, :] * 0.45
+        out[109:127, 69:75, :3] += corr[32:].mean(0) * 0.55
 
     out = np.clip(out, 0, 255)
     out = np.where(opaque[..., None], out, rgb)  # never paint into transparent texels
@@ -589,8 +812,17 @@ def cloth_canvas_fitted(w: int, h: int) -> tuple[Image.Image, Image.Image]:
     )
     rgb, ink_small, cool_small = build_armor_cloth_canvas(glow[..., 3])
     canvas = Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
-    ink = Image.fromarray((np.clip(ink_small, 0, 1) * 255).astype(np.uint8), "L")
-    cool = Image.fromarray((np.clip(cool_small, 0, 1) * 255).astype(np.uint8), "L")
+    ink_arr = np.clip(ink_small, 0, 1) * 255.0
+    cool_arr = np.clip(cool_small, 0, 1) * 255.0
+    ink_base = Image.fromarray(ink_arr.astype(np.uint8), "L")
+    cool_base = Image.fromarray(cool_arr.astype(np.uint8), "L")
+    # Halos desenfocados: la energia deja de ser un filete de 1 pixel.
+    ink_blur = np.asarray(ink_base.filter(ImageFilter.GaussianBlur(2.0)),
+                          dtype=np.float32)
+    cool_blur = np.asarray(cool_base.filter(ImageFilter.GaussianBlur(2.6)),
+                           dtype=np.float32)
+    ink = Image.fromarray(np.clip(ink_arr + 0.60 * ink_blur, 0, 255).astype(np.uint8), "L")
+    cool = Image.fromarray(np.clip(cool_arr + 0.50 * cool_blur, 0, 255).astype(np.uint8), "L")
     cw, ch = canvas.size
     scale = min(w / float(cw), h / float(ch))
     fw, fh = max(1, int(round(cw * scale))), max(1, int(round(ch * scale)))
@@ -791,8 +1023,8 @@ def build_folded_texture() -> tuple[Image.Image, Image.Image]:
     for boundary in STRIP_OFFSETS[1:]:
         x = int(boundary * s / 128)
         d.line([(x, body0), (x, body1)], fill=(14, 5, 22, 220), width=2)
-        d.line([(x + 2, body0), (x + 2, body1)], fill=(84, 38, 128, 210), width=1)
-        gd.line([(x + 2, body0), (x + 2, body1)], fill=(150, 70, 200, 130), width=1)
+        d.line([(x + 2, body0), (x + 2, body1)], fill=(58, 22, 72, 190), width=1)
+        gd.line([(x + 2, body0), (x + 2, body1)], fill=(176, 44, 130, 110), width=1)
 
     # Tres pliegues HORIZONTALES suaves que cruzan las 7 franjas: refuerzan
     # la lectura de "capa doblada" sin partir la ilustración en costuras.
@@ -801,63 +1033,63 @@ def build_folded_texture() -> tuple[Image.Image, Image.Image]:
         d.line([(0, fy), (int(120 * s / 128), fy)],
                fill=(34, 14, 52, 150), width=max(2, int(2 * s / 128)))
         d.line([(0, fy + 2), (int(120 * s / 128), fy + 2)],
-               fill=(118, 54, 164, 95), width=1)
+               fill=(86, 28, 92, 85), width=1)
 
     # Yugo y dobladillo tejidos, más sobrios.
-    d.rectangle([0, 0, s - 1, int(9 * s / 128)], fill=(46, 22, 66, 255))
+    d.rectangle([0, 0, s - 1, int(9 * s / 128)], fill=(52, 14, 30, 255))
     d.line([(0, int(11 * s / 128)), (s - 1, int(11 * s / 128))],
-           fill=(188, 146, 98, 255), width=max(2, int(2 * s / 128)))
+           fill=(122, 34, 74, 255), width=max(2, int(2 * s / 128)))
     gd.line([(0, int(11 * s / 128)), (s - 1, int(11 * s / 128))],
-            fill=(206, 166, 112, 170), width=max(2, int(2 * s / 128)))
-    d.rectangle([0, s - int(9 * s / 128), s - 1, s - 1], fill=(26, 8, 30, 255))
+            fill=(196, 68, 140, 150), width=max(2, int(2 * s / 128)))
+    d.rectangle([0, s - int(9 * s / 128), s - 1, s - 1], fill=(14, 6, 20, 255))
     d.line([(0, s - int(2 * s / 128)), (s - 1, s - int(2 * s / 128))],
-           fill=(110, 56, 142, 255), width=max(1, int(s / 128)))
+           fill=(94, 26, 84, 255), width=max(1, int(s / 128)))
     gd.line([(0, s - int(2 * s / 128)), (s - 1, s - int(2 * s / 128))],
-            fill=(160, 92, 186, 150), width=max(1, int(s / 128)))
+            fill=(186, 58, 140, 130), width=max(1, int(s / 128)))
 
     # Tres rollos de tela en la región reservada `roll`.
     rx0, ry0 = int(96 * s / 128), int(48 * s / 128)
     rx1, ry1 = int(120 * s / 128), int(64 * s / 128)
-    d.rectangle([rx0, ry0, rx1, ry1], fill=(30, 12, 46, 255))
+    d.rectangle([rx0, ry0, rx1, ry1], fill=(24, 8, 28, 255))
     for j in range(3):
         ly = ry0 + int((j + 0.5) * (ry1 - ry0) / 3.0)
-        d.line([(rx0, ly), (rx1, ly)], fill=(150, 72, 198, 220),
+        d.line([(rx0, ly), (rx1, ly)], fill=(96, 34, 110, 200),
                width=max(1, int(0.8 * s / 128)))
-        gd.line([(rx0, ly), (rx1, ly)], fill=(190, 90, 230, 150),
+        gd.line([(rx0, ly), (rx1, ly)], fill=(180, 54, 136, 130),
                 width=max(1, int(0.8 * s / 128)))
 
     # Caras laterales (`edge`): neutro, para que no brillen.
     ex0, ey0 = int(96 * s / 128), int(64 * s / 128)
     ex1, ey1 = int(106 * s / 128), int(72 * s / 128)
-    d.rectangle([ex0, ey0, ex1, ey1], fill=(22, 10, 34, 255))
+    d.rectangle([ex0, ey0, ex1, ey1], fill=(16, 7, 22, 255))
 
     # v1.9.0: regiones de las hombreras del item plegado. Paño oscuro con
     # ribete cálido/cian y una gema central, en sus propias UV reservadas.
     px0, py0 = int(96 * s / 128), int(72 * s / 128)
     px1, py1 = int(120 * s / 128), int(88 * s / 128)
-    d.rectangle([px0, py0, px1, py1], fill=(32, 12, 48, 255))
-    d.line([(px0, py0 + 2), (px1, py0 + 2)], fill=(222, 178, 112, 230),
+    d.rectangle([px0, py0, px1, py1], fill=(34, 10, 34, 255))
+    d.line([(px0, py0 + 2), (px1, py0 + 2)], fill=(132, 36, 82, 230),
            width=max(1, int(0.9 * s / 128)))
-    d.line([(px0, py1 - 2), (px1, py1 - 2)], fill=(135, 225, 245, 210),
+    d.line([(px0, py1 - 2), (px1, py1 - 2)], fill=(222, 74, 158, 210),
            width=max(1, int(0.9 * s / 128)))
-    gd.line([(px0, py0 + 2), (px1, py0 + 2)], fill=(230, 190, 120, 170),
+    gd.line([(px0, py0 + 2), (px1, py0 + 2)], fill=(196, 68, 140, 150),
             width=max(1, int(0.9 * s / 128)))
-    gd.line([(px0, py1 - 2), (px1, py1 - 2)], fill=(135, 225, 245, 170),
+    gd.line([(px0, py1 - 2), (px1, py1 - 2)], fill=(222, 74, 158, 160),
             width=max(1, int(0.9 * s / 128)))
     for j in range(3):
         mx = px0 + int((j + 0.5) * (px1 - px0) / 3.0)
         my = py0 + int((py1 - py0) * 0.52)
         rad = max(1, int(1.2 * s / 128))
         d.ellipse([mx - rad, my - rad, mx + rad, my + rad],
-                  fill=(226, 186, 126, 220))
+                  fill=(238, 96, 178, 220))
         gd.ellipse([mx - rad, my - rad, mx + rad, my + rad],
-                   fill=(226, 176, 116, 190))
+                   fill=(238, 96, 178, 180))
     pr0, pr1 = int(96 * s / 128), int(88 * s / 128)
     pr2, pr3 = int(120 * s / 128), int(96 * s / 128)
-    d.rectangle([pr0, pr1, pr2, pr3], fill=(28, 10, 40, 255))
-    d.line([(pr0, pr1 + 1), (pr2, pr1 + 1)], fill=(150, 235, 255, 220),
+    d.rectangle([pr0, pr1, pr2, pr3], fill=(20, 7, 26, 255))
+    d.line([(pr0, pr1 + 1), (pr2, pr1 + 1)], fill=(216, 70, 152, 220),
            width=max(1, int(0.8 * s / 128)))
-    gd.line([(pr0, pr1 + 1), (pr2, pr1 + 1)], fill=(150, 235, 255, 170),
+    gd.line([(pr0, pr1 + 1), (pr2, pr1 + 1)], fill=(216, 70, 152, 160),
             width=max(1, int(0.8 * s / 128)))
 
     # Gema del broche: diamante con núcleo blanco, muy legible en la mano.
@@ -865,23 +1097,23 @@ def build_folded_texture() -> tuple[Image.Image, Image.Image]:
     gx1, gy1 = int(74 * s / 128), int(52 * s / 128)
     cx, cy = (gx0 + gx1) // 2, (gy0 + gy1) // 2
     half = min(gx1 - gx0, gy1 - gy0) // 2 - 4
-    d.rectangle([gx0, gy0, gx1, gy1], fill=(24, 10, 40, 255))
+    d.rectangle([gx0, gy0, gx1, gy1], fill=(30, 9, 34, 255))
     diamond = [(cx, cy - half), (cx + half, cy), (cx, cy + half), (cx - half, cy)]
-    d.polygon(diamond, fill=(42, 18, 58, 255))
-    d.line(diamond + [diamond[0]], fill=(226, 182, 116, 255),
+    d.polygon(diamond, fill=(40, 12, 38, 255))
+    d.line(diamond + [diamond[0]], fill=(150, 40, 96, 255),
            width=max(2, int(1.2 * s / 128)))
     inner = [(cx, cy - half // 2), (cx + half // 2, cy),
              (cx, cy + half // 2), (cx - half // 2, cy)]
-    d.line(inner + [inner[0]], fill=(206, 170, 128, 255),
+    d.line(inner + [inner[0]], fill=(214, 72, 152, 255),
            width=max(1, int(0.8 * s / 128)))
     core = max(2, int(3 * s / 128))
     d.ellipse([cx - core, cy - core, cx + core, cy + core],
-              fill=(255, 255, 255, 255))
-    gd.polygon(diamond, fill=(226, 170, 110, 190))
-    gd.line(diamond + [diamond[0]], fill=(240, 200, 140, 255),
+              fill=(255, 186, 224, 255))
+    gd.polygon(diamond, fill=(206, 60, 138, 170))
+    gd.line(diamond + [diamond[0]], fill=(240, 110, 190, 255),
             width=max(2, int(1.2 * s / 128)))
     gd.ellipse([cx - core, cy - core, cx + core, cy + core],
-               fill=(255, 255, 255, 255))
+               fill=(255, 186, 224, 255))
 
     # v1.9.0: ocho rayos cian salen del núcleo del broche. Van también al
     # glowmask del item, así que CapaItemGlowLayer los hace latir en frío.
@@ -891,14 +1123,14 @@ def build_folded_texture() -> tuple[Image.Image, Image.Image]:
         r0, r1 = core * 1.5, half * 0.72
         ray = [(cx + r0 * math.cos(a), cy + r0 * math.sin(a)),
                (cx + r1 * math.cos(a), cy + r1 * math.sin(a))]
-        d.line(ray, fill=(150, 240, 255, 235), width=ray_w)
-        gd.line(ray, fill=(150, 240, 255, 235), width=ray_w)
+        d.line(ray, fill=(238, 96, 178, 235), width=ray_w)
+        gd.line(ray, fill=(238, 96, 178, 235), width=ray_w)
     d.ellipse([cx - core // 2, cy - core // 2,
                cx + core // 2, cy + core // 2],
-              fill=(210, 255, 255, 255))
+              fill=(255, 168, 216, 255))
     gd.ellipse([cx - core // 2, cy - core // 2,
                 cx + core // 2, cy + core // 2],
-               fill=(210, 255, 255, 255))
+               fill=(255, 168, 216, 255))
 
     # Tres motas frías en la región reservada de los rollos de tela.
     for j in range(3):
@@ -906,9 +1138,9 @@ def build_folded_texture() -> tuple[Image.Image, Image.Image]:
         my = ry0 + int((ry1 - ry0) * (0.30 + 0.20 * j))
         rad = max(1, int(1.2 * s / 128))
         d.ellipse([mx - rad, my - rad, mx + rad, my + rad],
-                  fill=(130, 225, 245, 200))
+                  fill=(214, 64, 146, 200))
         gd.ellipse([mx - rad, my - rad, mx + rad, my + rad],
-                   fill=(130, 225, 245, 190))
+                   fill=(214, 64, 146, 190))
 
     # Columnas reservadas: forro oscuro y ribete violeta/neón.
     arr = np.asarray(out, dtype=np.float32).copy()

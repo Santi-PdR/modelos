@@ -488,50 +488,62 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
      *  geo, regenera esta lista; el resolvedor nunca inventa nombres y
      *  getBone() falla de forma silenciosa (null) si el modelo no está. */
     private static final String[] DETERIORO_NAMES = {
-            "v16_collar_outer_0", "v16_collar_outer_1", "v16_collar_outer_2", "v16_collar_outer_3",
-            "v16_collar_outer_4", "v16_collar_outer_5", "v16_collar_outer_6", "v16_collar_outer_7",
-            "v16_collar_outer_8", "v16_collar_outer_9", "v16_collar_outer_10", "v16_collar_outer_11",
-            "v16_collar_outer_12", "v16_collar_outer_13", "v16_collar_outer_14", "v16_collar_outer_15",
-            "v16_collar_inner_0", "v16_collar_inner_1", "v16_collar_inner_2", "v16_collar_inner_3",
-            "v16_collar_inner_4", "v16_collar_inner_5", "v16_collar_inner_6", "v16_collar_inner_7",
-            "v16_collar_inner_8", "v16_collar_inner_9", "v16_collar_inner_10", "v16_collar_inner_11",
-            "v16_collar_inner_12", "v16_collar_inner_13", "v16_collar_inner_14", "v16_collar_inner_15",
-            "v16_fray_0", "v16_fray_1", "v16_fray_2", "v16_fray_3",
-            "v16_fray_4", "v16_fray_5", "v16_fray_6", "v16_fray_7",
-            "v16_fray_8", "v16_fray_9", "v16_fray_10", "v16_fray_11",
-            "v16_fray_12", "v16_fray_13", "v16_fray_14", "v16_fray_15",
-            "v16_fray_16", "v16_fray_17", "v16_fray_18", "v16_fray_19",
-            "v16_fray_20", "v16_fray_21", "v16_fray_22", "v16_fray_23",
-            "v16_yoke_0", "v16_yoke_1", "v16_yoke_2", "v16_yoke_3",
-            "v16_yoke_4", "v16_tatter_0", "v16_tatter_1", "v16_tatter_2",
-            "v16_tatter_3", "v16_tatter_4", "v16_tatter_5", "v16_tatter_6",
-            "v16_tatter_7", "v16_tatter_8", "v16_tatter_9", "v16_tatter_10",
-            "v16_hem_0", "v16_hem_1", "v16_hem_2", "v16_hem_3",
-            "v16_hem_4", "v16_hem_5", "v16_hem_6", "v16_hem_7",
-            "v16_hem_8", "v16_hem_9", "v16_hem_10", "v16_hem_11",
-            "v16_hem_12", "v16_hem_13", "v16_hem_14", "v16_hem_15",
-            "v16_hem_16", "v16_hem_17", "v16_shred_L_0", "v16_shred_L_1",
-            "v16_shred_L_2", "v16_shred_L_3", "v16_shred_L_4", "v16_shred_R_0",
-            "v16_shred_R_1", "v16_shred_R_2", "v16_shred_R_3", "v16_shred_R_4",
-            "v16_vein_0", "v16_vein_1", "v16_vein_2", "v16_vein_3",
-            "v16_vein_4", "v16_vein_5", "v16_vein_6", "v16_vein_7",
-            "v16_vein_8", "v16_vein_9", "v16_vein_10", "v16_vein_11",
-            "v16_mote_0", "v16_mote_1", "v16_mote_2", "v16_mote_3",
-            "v16_mote_4", "v16_mote_5", "v16_mote_6", "v16_mote_7",
-            "v16_mote_8", "v16_mote_9", "v16_mote_10", "v16_mote_11",
-            "v16_mote_12", "v16_mote_13", "v16_mote_14", "v16_mote_15",
-            "v16_mote_16", "v16_mote_17", "v16_mote_18", "v16_mote_19",
-            "v16_mote_20", "v16_mote_21", "v16_mote_22", "v16_mote_23",
-            "v16_mote_24", "v16_mote_25", "v16_mote_26", "v16_mote_27",
-            "v16_mote_28", "v16_mote_29", "v16_mote_30", "v16_mote_31",
-            "v16_mote_32", "v16_mote_33", "v16_mote_34", "v16_mote_35",
-            "v16_mote_36", "v16_mote_37", "v16_mote_38", "v16_mote_39",
-            "v16_mote_40", "v16_mote_41", "v16_mote_42", "v16_mote_43",
-            "v16_mote_44", "v16_mote_45", "v16_mote_46", "v16_mote_47",
-            "v16_mote_48", "v16_mote_49", "v16_mote_50", "v16_mote_51",
-            "v16_mote_52", "v16_mote_53", "v16_mote_54", "v16_mote_55",
-            "v16_ash_0", "v16_ash_1", "v16_ash_2", "v16_ash_3",
-            "v16_ash_4", "v16_ash_5", "v16_ash_6", "v16_ash_7"
+            "v15_cloth_cape_top_0", "v15_cloth_cape_top_1", "v15_cloth_cape_top_2", "v15_cloth_cape_top_3",
+            "v15_cloth_cape_top_4", "v15_cloth_cape_top_5", "v15_cloth_cape_top_6", "v15_cloth_cape_top_7",
+            "v15_cloth_cape_top_8", "v15_cloth_cape_mid_0", "v15_cloth_cape_mid_1", "v15_cloth_cape_mid_2",
+            "v15_cloth_cape_mid_3", "v15_cloth_cape_mid_4", "v15_cloth_cape_mid_5", "v15_cloth_cape_mid_6",
+            "v15_cloth_cape_mid_7", "v15_cloth_cape_mid_8", "v15_cloth_cape_bottom_0", "v15_cloth_cape_bottom_1",
+            "v15_cloth_cape_bottom_2", "v15_cloth_cape_bottom_3", "v15_cloth_cape_bottom_4", "v15_cloth_cape_bottom_5",
+            "v15_cloth_cape_bottom_6", "v15_cloth_cape_bottom_7", "v15_cloth_cape_bottom_8", "v17_cowl_front_0",
+            "v17_cowl_tooth_0", "v17_cowl_front_1", "v17_cowl_tooth_1", "v17_cowl_front_2",
+            "v17_cowl_tooth_2", "v17_cowl_front_3", "v17_cowl_tooth_3", "v17_cowl_front_4",
+            "v17_cowl_tooth_4", "v17_cowl_front_5", "v17_cowl_tooth_5", "v17_cowl_front_6",
+            "v17_cowl_tooth_6", "v17_cowl_front_7", "v17_cowl_tooth_7", "v17_cowl_front_8",
+            "v17_cowl_tooth_8", "v17_cowl_back_0", "v17_cowl_back_1", "v17_cowl_back_2",
+            "v17_cowl_back_3", "v17_cowl_back_4", "v17_yoke_0", "v17_yoke_1",
+            "v17_yoke_2", "v17_yoke_3", "v17_yoke_4", "v17_yoke_5",
+            "v17_ribbon_0_seg0", "v17_ribbon_0_seg1", "v17_ribbon_0_seg2", "v17_ribbon_0_seg3",
+            "v17_ribbon_0_seg4", "v17_ribbon_0_seg5", "v17_ribbon_1_seg0", "v17_ribbon_1_seg1",
+            "v17_ribbon_1_seg2", "v17_ribbon_1_seg3", "v17_ribbon_1_seg4", "v17_ribbon_1_seg5",
+            "v17_ribbon_2_seg0", "v17_ribbon_2_seg1", "v17_ribbon_2_seg2", "v17_ribbon_2_seg3",
+            "v17_ribbon_2_seg4", "v17_ribbon_2_seg5", "v17_ribbon_3_seg0", "v17_ribbon_3_seg1",
+            "v17_ribbon_3_seg2", "v17_ribbon_3_seg3", "v17_ribbon_3_seg4", "v17_ribbon_3_seg5",
+            "v17_ribbon_4_seg0", "v17_ribbon_4_seg1", "v17_ribbon_4_seg2", "v17_ribbon_4_seg3",
+            "v17_ribbon_4_seg4", "v17_ribbon_4_seg5", "v17_ribbon_5_seg0", "v17_ribbon_5_seg1",
+            "v17_ribbon_5_seg2", "v17_ribbon_5_seg3", "v17_ribbon_5_seg4", "v17_ribbon_5_seg5",
+            "v17_ribbon_6_seg0", "v17_ribbon_6_seg1", "v17_ribbon_6_seg2", "v17_ribbon_6_seg3",
+            "v17_ribbon_6_seg4", "v17_ribbon_6_seg5", "v17_ribbon_7_seg0", "v17_ribbon_7_seg1",
+            "v17_ribbon_7_seg2", "v17_ribbon_7_seg3", "v17_ribbon_7_seg4", "v17_ribbon_7_seg5",
+            "v17_ribbon_8_seg0", "v17_ribbon_8_seg1", "v17_ribbon_8_seg2", "v17_ribbon_8_seg3",
+            "v17_ribbon_8_seg4", "v17_ribbon_8_seg5", "v17_ribbon_9_seg0", "v17_ribbon_9_seg1",
+            "v17_ribbon_9_seg2", "v17_ribbon_9_seg3", "v17_ribbon_9_seg4", "v17_ribbon_9_seg5",
+            "v17_ribbon_10_seg0", "v17_ribbon_10_seg1", "v17_ribbon_10_seg2", "v17_ribbon_10_seg3",
+            "v17_ribbon_10_seg4", "v17_ribbon_10_seg5", "v17_ribbon_11_seg0", "v17_ribbon_11_seg1",
+            "v17_ribbon_11_seg2", "v17_ribbon_11_seg3", "v17_ribbon_11_seg4", "v17_ribbon_11_seg5",
+            "v17_ribbon_12_seg0", "v17_ribbon_12_seg1", "v17_ribbon_12_seg2", "v17_ribbon_12_seg3",
+            "v17_ribbon_12_seg4", "v17_ribbon_12_seg5", "v17_ribbon_13_seg0", "v17_ribbon_13_seg1",
+            "v17_ribbon_13_seg2", "v17_ribbon_13_seg3", "v17_ribbon_13_seg4", "v17_ribbon_13_seg5",
+            "v17_ribbon_14_seg0", "v17_ribbon_14_seg1", "v17_ribbon_14_seg2", "v17_ribbon_14_seg3",
+            "v17_ribbon_14_seg4", "v17_ribbon_14_seg5", "v17_ribbon_15_seg0", "v17_ribbon_15_seg1",
+            "v17_ribbon_15_seg2", "v17_ribbon_15_seg3", "v17_ribbon_15_seg4", "v17_ribbon_15_seg5",
+            "v17_ribbon_0_seg6", "v17_ribbon_1_seg6", "v17_ribbon_2_seg6", "v17_ribbon_3_seg6",
+            "v17_ribbon_4_seg6", "v17_ribbon_5_seg6", "v17_ribbon_6_seg6", "v17_ribbon_7_seg6",
+            "v17_ribbon_8_seg6", "v17_ribbon_9_seg6", "v17_ribbon_10_seg6", "v17_ribbon_11_seg6",
+            "v17_ribbon_12_seg6", "v17_ribbon_13_seg6", "v17_ribbon_14_seg6", "v17_ribbon_15_seg6",
+            "v17_shingle_0", "v17_shingle_1", "v17_shingle_2", "v17_shingle_3",
+            "v17_shingle_4", "v17_shingle_5", "v17_shingle_6", "v17_shingle_7",
+            "v17_shingle_8", "v17_shingle_9", "v17_mote_0", "v17_mote_1",
+            "v17_mote_2", "v17_mote_3", "v17_mote_4", "v17_mote_5",
+            "v17_mote_6", "v17_mote_7", "v17_mote_8", "v17_mote_9",
+            "v17_mote_10", "v17_mote_11", "v17_mote_12", "v17_mote_13",
+            "v17_mote_14", "v17_mote_15", "v17_mote_16", "v17_mote_17",
+            "v17_mote_18", "v17_mote_19", "v17_mote_20", "v17_mote_21",
+            "v17_mote_22", "v17_mote_23", "v17_mote_24", "v17_mote_25",
+            "v17_vein_0", "v17_vein_1", "v17_vein_2", "v17_vein_3",
+            "v17_vein_4", "v17_vein_5", "v17_vein_6", "v17_vein_7",
+            "v17_vein_8", "v17_vein_9", "v17_ash_0", "v17_ash_1",
+            "v17_ash_2", "v17_ash_3", "v17_ash_4", "v17_ash_5",
+            "v17_ash_6", "v17_ash_7"
     };
 
     private void resolveDeterioro() {
@@ -564,7 +576,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
                 continue;
             String n = DETERIORO_NAMES[i];
             double phase = time * 2.4D + i * 0.37D + wind * 0.6D;
-            if (n.startsWith("v16_mote_") || n.startsWith("v16_ash_")) {
+            if (n.startsWith("v17_mote_") || n.startsWith("v17_ash_")) {
                 double fall = Math.sin(phase * 1.7D + seed * 0.03D);
                 double drift = Math.cos(phase * 0.9D + i);
                 double amp = 7.0D + speed * 9.0D + airborne * 5.0D + sprint * 4.0D;
@@ -574,18 +586,63 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
                         Mth.clamp(drift * amp * 0.70D, -14.0D, 14.0D)));
                 b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
                         Mth.clamp(Math.sin(phase) * amp * 0.50D, -12.0D, 12.0D)));
-            } else if (n.startsWith("v16_collar_") || n.startsWith("v16_yoke_")) {
+            } else if (n.startsWith("v17_cowl_tooth_")) {
+                double flutter = Math.sin(phase * 2.7D + i * 0.8D)
+                        * (1.8D + sprint * 1.6D);
+                b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
+                        Mth.clamp(flutter, -5.0D, 5.0D)));
+                b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
+                        Mth.clamp(flutter * 0.75D, -4.0D, 4.0D)));
+            } else if (n.startsWith("v17_cowl_") || n.startsWith("v17_yoke_")) {
                 double breathe = Math.sin(phase * 0.8D) * (1.2D + sprint * 1.0D);
                 b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
                         Mth.clamp(breathe + lift * 2.0D, -4.0D, 4.0D)));
                 b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
                         Mth.clamp(turn * 1.2D, -3.0D, 3.0D)));
-            } else if (n.startsWith("v16_vein_")) {
-                double pulse = Math.sin(phase * 3.1D) * (0.8D + sprint * 1.2D);
+            } else if (n.startsWith("v17_shingle_")) {
+                double ripple = Math.sin(phase * 1.3D + i) * (1.6D + sprint * 2.0D);
+                b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
+                        Mth.clamp(ripple, -6.0D, 6.0D)));
                 b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
-                        Mth.clamp(pulse * 2.0D, -5.0D, 5.0D)));
+                        Mth.clamp(ripple * 0.55D, -4.0D, 4.0D)));
+            } else if (n.startsWith("v17_vein_")) {
+                double pulse = Math.sin(phase * 3.1D) * (1.1D + sprint * 1.4D)
+                        + Math.sin(phase * 6.7D + i) * 0.5D;
+                b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
+                        Mth.clamp(pulse * 2.4D, -7.0D, 7.0D)));
+                b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
+                        Mth.clamp(pulse * 0.7D, -3.0D, 3.0D)));
+            } else if (n.startsWith("v17_ribbon_")) {
+                int under = n.lastIndexOf('_');
+                int segN = 0;
+                if (under > 3 && n.substring(under + 1).startsWith("seg")) {
+                    try {
+                        segN = Integer.parseInt(n.substring(under + 4));
+                    } catch (NumberFormatException ignored) {
+                        segN = 0;
+                    }
+                }
+                double seg = segN / 6.0D;
+                double ph = phase - seg * 1.8D;
+                double bend = amplitude * (0.30D + 0.70D * seg)
+                        * (0.45D + 0.55D * Math.sin(ph));
+                double sway = (turn * 2.2D + wind * 0.8D
+                        + Math.sin(phase * 0.7D + i) * 1.1D)
+                        * (0.30D + speed * 0.70D);
+                double curl = Math.sin(phase * 0.6D + i)
+                        * (1.2D + 2.6D * seg) + turn * 1.5D;
+                // v1214: rafaga LENTA superpuesta, periodo ~10x el ondeo.
+                // Da la sensacion de tela pesada que no vuelve a la misma
+                // pose en cada ciclo, sin tocar los limites de seguridad.
+                double gust = Math.sin(phase * 0.23D + i * 0.07D) * 1.3D;
+                b.setRotX(deterioroBase[i][0] + (float) Math.toRadians(
+                        Mth.clamp(bend, -14.0D, 14.0D)));
+                b.setRotY(deterioroBase[i][1] + (float) Math.toRadians(
+                        Mth.clamp(sway + gust * 0.5D, -9.0D, 9.0D)));
+                b.setRotZ(deterioroBase[i][2] + (float) Math.toRadians(
+                        Mth.clamp(curl + gust, -8.0D, 8.0D)));
             } else {
-                double seg = (i % 5) / 5.0D;
+                double seg = (i % 6) / 6.0D;
                 double wave = Math.sin(phase - seg * 1.8D);
                 double bend = amplitude * (0.35D + 0.65D * seg) * (0.40D + 0.60D * wave);
                 double sway = (turn * 2.2D + wind * 0.8D

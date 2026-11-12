@@ -163,7 +163,19 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
                 || player.getItemBySlot(EquipmentSlot.CHEST).getItem() != this) {
             return;
         }
-        spawnAura(level, player);
+        // v1220: el Effects track del .bbmodel distingue "rescoldo" en
+        // reposo, "brasas" al correr y "deterioro". En Java/GeckoLib los
+        // keyframes de particula NO se disparan solos: replicamos ese
+        // estado aqui, desde el servidor, para que el efecto exista de
+        // verdad en el juego y lo vean tambien los demas jugadores.
+        boolean deterioro = stack.isDamaged()
+                || player.getHealth() < player.getMaxHealth() * 0.5F;
+        spawnAura(level, player, deterioro);
+    }
+
+    /** Compatibilidad con la llamada antigua (sin estado de deterioro). */
+    public static void spawnAura(Level level, Player player) {
+        spawnAura(level, player, false);
     }
 
     /**
@@ -179,9 +191,9 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
      * v1.9.0 añade MOTAS FRÍAS de Blight Star: una cada dos segundos en idle
      * (dos al correr), en una órbita minúscula alrededor de la espalda. Es un
      * aura MUDA y de presupuesto fijo: no se registran SoundEvent ni se llama
-     * a playSound, y el máximo son 4 partículas por tick de emisión.
+     * a playSound, y el máximo son 6 partículas por tick de emisión.
      */
-    public static void spawnAura(Level level, Player player) {
+    public static void spawnAura(Level level, Player player, boolean deterioro) {
         if (level.isClientSide || !(level instanceof ServerLevel server)) {
             return;
         }
@@ -200,10 +212,21 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
         double x = player.getX() - Math.sin(yaw) * 0.30;   // detrás del jugador
         double z = player.getZ() + Math.cos(yaw) * 0.30;
         double y = player.getY() + 0.55 + ThreadLocalRandom.current().nextDouble() * 0.70;
-        int count = player.isSprinting() ? 2 : 1;
+        boolean sprint = player.isSprinting();
+        int count = deterioro ? 3 : (sprint ? 2 : 1);
+        double spread = deterioro ? 0.13 : 0.07;
 
         server.sendParticles(CapaParticles.CAPA_EMBER.get(), x, y, z,
-                count, 0.07, 0.10, 0.07, 0.001);
+                count, spread, 0.10, spread, deterioro ? 0.004 : 0.001);
+
+        // Estela detrás del jugador al correr o deteriorarse: un punto
+        // extra, dentro del presupuesto fijo de 6 particulas por tick.
+        if (sprint || deterioro) {
+            double sx = x - Math.sin(yaw) * 0.28D;
+            double sz = z + Math.cos(yaw) * 0.28D;
+            server.sendParticles(CapaParticles.CAPA_EMBER.get(), sx,
+                    y + 0.12D, sz, 1, 0.05, 0.06, 0.05, 0.001);
+        }
 
         // v1.9.0: mota cian en órbita lenta. Se emite con la mitad de
         // frecuencia que la brasa y siempre cerca del paño, nunca en el cielo.
@@ -215,7 +238,7 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
             double oz = z + Math.sin(yaw) * side + Math.cos(yaw) * depth;
             double oy = player.getY() + 0.88D
                     + ThreadLocalRandom.current().nextDouble() * 0.44D;
-            int motes = player.isSprinting() ? 2 : 1;
+            int motes = deterioro ? 2 : 1;
             server.sendParticles(CapaParticles.CAPA_BLIGHT_MOTE.get(), ox, oy, oz,
                     motes, 0.025, 0.035, 0.025, 0.001);
         }

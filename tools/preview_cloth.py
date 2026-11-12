@@ -242,6 +242,26 @@ def posed(geo):
             b["rotation"][0] += (2.0 + 4.0 * (ci % 5) / 5.0) * 0.8
             b["rotation"][1] += math.sin(1.7 + ci) * 2.2
             b["rotation"][2] += math.sin(1.4 + ci) * 2.6
+        elif n.startswith("v17_ribbon_"):
+            parts = n.rsplit("_", 3)
+            ci, seg = int(parts[2]), int(parts[3][3:])
+            b["rotation"][0] += (1.0 + seg * 0.55) * (0.6 + 0.4 * math.sin(ci * 0.9))
+            b["rotation"][2] += math.sin(1.3 + ci * 0.7 + seg * 0.5) * (0.8 + seg * 0.35)
+        elif n.startswith("v17_vein_"):
+            ci = int(n.rsplit("_", 1)[1])
+            b["rotation"][2] += math.sin(3.2 + ci * 1.4) * 4.5
+            b["rotation"][0] += math.sin(2.1 + ci) * 1.5
+        elif n.startswith("v17_shingle_"):
+            ci = int(n.rsplit("_", 1)[1])
+            b["rotation"][0] += (1.4 + ci % 4) * 0.9
+            b["rotation"][2] += math.sin(1.8 + ci * 1.3) * 3.2
+        elif n.startswith("v17_mote_"):
+            ci = int(n.rsplit("_", 1)[1])
+            b["rotation"][0] += math.sin(2.1 + ci * 0.37) * 8.0
+            b["rotation"][2] += math.cos(1.4 + ci) * 6.0
+        elif n.startswith("v17_cowl_") or n.startswith("v17_yoke_"):
+            ci = int(n.rsplit("_", 1)[1])
+            b["rotation"][0] += math.sin(1.7 + ci * 0.4) * 1.4
     return out
 
 
@@ -330,10 +350,10 @@ def main():
     armor = load(ARMOR_GEO)
     folded = load(FOLDED_GEO)
     runtime_hidden = effective_hidden(armor)
-    # v1.15.0: la "piel nueva" son v15_* (tela base / hems / orbitas /
-    # hombreras) y v16_* (collar, jirones, venas, microvoxeles).
+    # v1.17.0: la "piel nueva" son las anclas v15_* y TODO el abanico
+    # v17_* trazado de la referencia (capucha, jirones, motas, ceniza).
     cloth_only = {b["name"] for b in armor["bones"]
-                  if not b["name"].startswith(("v15_", "v16_"))}
+                  if not b["name"].startswith(("v15_", "v16_", "v17_"))}
     original_only = cloth_only | runtime_hidden
 
     if args.uv_test:
@@ -357,7 +377,7 @@ def main():
 
     views = [
         (render(folded, FOLDED_TEX, set(), yaw=-28, pitch=14, size=520),
-         "FOLDED ITEM 3D - bulto v1.15.0"),
+         "FOLDED ITEM 3D - bulto v1.17.0"),
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=0, pitch=8, size=520),
          "DETERIORO - frente"),
         (render(posed(armor), ARMOR_TEX, runtime_hidden, yaw=-28, pitch=10, size=520),
@@ -377,7 +397,7 @@ def main():
         args.out / "original_detail.png")
     Image.open(ARMOR_TEX).convert("RGBA").crop((0, 0, 96, 48)).resize(
         (768, 384), Image.LANCZOS).save(args.out / "canvas.png")
-    # v1.15.0: icono pixel art 16x16 conservando la forma aprobada, con
+    # v1.17.0: icono pixel art 16x16 conservando la forma aprobada, con
     # paleta Rosé, grietas, 5 puntas y microvóxeles; NEAREST sin AA.
     Image.open(ICON).convert("RGBA").resize(
         (256, 256), Image.NEAREST).save(args.out / "icon.png")
@@ -385,7 +405,7 @@ def main():
         (256, 256), Image.LANCZOS).save(args.out / "folded_glowmask.png")
     particle_sheet(args.out / "particles.png")
     visible = [b["name"] for b in armor["bones"]
-               if not b["name"].startswith(("v15_", "v16_"))
+               if not b["name"].startswith(("v15_", "v16_", "v17_"))
                and b["name"] not in runtime_hidden and b.get("cubes")]
     (args.out / "visible_original_bones.txt").write_text("\n".join(visible) + "\n")
     print(f"wrote {len(list(args.out.iterdir()))} files to {args.out}")
