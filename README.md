@@ -1,10 +1,10 @@
-# Mantle of the Blight Star — v1.17.2
+# Mantle of the Blight Star — v1.17.3
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Capa equipada en `curios:back`, temática
 **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-> 📦 **Release vigente: `v1.17.2`** (JAR compilado en CI). v1.14.0, v1.15.0
+> 📦 **Release vigente: `v1.17.3`** (JAR compilado en CI). v1.14.0, v1.15.0
 > y v1.16.0 fueron rechazadas visualmente y sus previews se han borrado del
 > repo. Los previews actuales son render **software**: la prueba in-game y
 > la aprobación visual siguen pendientes.
@@ -80,12 +80,12 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Release vigente: v1.17.2
+### Release vigente: v1.17.3
 
 El JAR **más reciente** se publica como Release
-[`v1.17.2`](https://github.com/Santi-PdR/modelos/releases/tag/v1.17.2):
-`capatest-1.17.2.jar`, compilado en CI con JDK 17 + Gradle 8.8 sobre la
-**textura rehecha v1.17.2**. La Release `v1.17.0` queda como histórico
+[`v1.17.3`](https://github.com/Santi-PdR/modelos/releases/tag/v1.17.3):
+`capatest-1.17.3.jar`, compilado en CI con JDK 17 + Gradle 8.8 con el
+**modelo limpio para Blockbench** y la textura v1.17.2. La Release `v1.17.0` queda como histórico
 (contiene una build anterior); no se sobreescribe. El workflow publica con
 `workflow_dispatch(publicar=true)` o con un commit marcado `[publicar]`, y
 lee la versión de `gradle.properties` para que el nombre del JAR nunca
@@ -250,3 +250,30 @@ v1.12/v1.14/v1.15/v1.16 —versiones rechazadas—, `entrega_para_claude.zip`,
 los dos Markdown del prompt viejo, el ZIP del mod original y el workflow
 `publicar-entrega-claude.yml` que publicaba en la Release v1.15.0. Los tres
 backups byte-idénticos del icono aprobado se mantienen intactos.
+
+### Ronda v1.17.3: lo que se veía al abrir el `.bbmodel` en Blockbench
+
+El usuario probó el archivo en Blockbench y lo rechazó. Al rasterizar el
+`.bbmodel` **en pose estática y aplicando la jerarquía de grupos** (que es
+lo que hace Blockbench, y que mi visor web no hacía) aparecieron tres
+elementos que en el visor pasaban desapercibidos:
+
+1. **Un maniquí Steve/Alex completo** — cabeza blanca, brazos amarillos,
+   torso y piernas — metido dentro del archivo como "referencia de escala",
+   con un parche de textura en las filas 128..143 de una imagen 128×144.
+   Tapaba literalmente la capa.
+2. **126 cubos de la armadura antigua** (dedos, manos, arnés, broches):
+   el renderer Java los oculta con `setHidden(true)`, pero Blockbench los
+   dibuja todos. Parecían antenas y chatarra alrededor del capuchón.
+3. **La bufanda flotando separada** del cuerpo, porque las 4 tejas de
+   hombro sobresalían por encima y el capuchón estaba 1.15 unidades alto.
+
+Arreglos: el `.bbmodel` exporta **sólo los 214 cubos de la capa**; los 72
+huesos prístinos se conservan como *grupos vacíos* para no perder pivotes
+ni rotaciones de la jerarquía. Textura 128×128, todas las UV ≤ 128, sin
+maniquí. Capuchón bajado y adelgazado para solapar con los jirones; alas de
+hombro recogidas. Se mantienen 286 grupos, 4 animaciones y 11950 keyframes.
+
+**Pendiente de aprobación visual:** necesito una captura de Blockbench del
+archivo nuevo para seguir afinando la forma (sigue siendo más compacta que
+el abanico rasgado de la referencia).

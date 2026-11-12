@@ -9,6 +9,10 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.17.3: el .bbmodel de Blockbench ya muestra SOLO la capa (se eliminaron
+el maniquí Steve/Alex y los 126 cubos de la armadura antigua que el juego
+ocultaba); capuchón solapado con los jirones y alas de hombro recogidas.
+
 v1.17.2: TEXTURA REHECHA tras las capturas in-game. El atlas ya NO samplea
 pixeles crudos del recorte (entraban el brazo, el arnes y el fondo a cuadros)
 ni usa dithering Bayer: se construye desde la paleta medida, con pliegues

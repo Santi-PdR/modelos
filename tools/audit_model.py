@@ -160,6 +160,15 @@ def static_checks() -> None:
     assert item_model['textures']['layer0'] == 'capatest:item/capa_deteriorer_evilsaiyan'
     item_java = (ROOT / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
     assert 'getCustomRenderer' not in item_java, 'el BEWLR 3D tapa el icono'
+    # v1.17.3: regresión de la prueba real en Blockbench. El .bbmodel
+    # NO puede volver a incluir el maniquí ni los cubos de armadura vieja.
+    bb = json.loads((ROOT / 'docs/capa_v1170.bbmodel').read_text())
+    assert len(bb['elements']) == 214, len(bb['elements'])
+    assert bb['resolution'] == {'width': 128, 'height': 128}
+    assert all(max(f['uv']) <= 128 for e in bb['elements']
+               for f in e['faces'].values())
+    assert not any(e['name'] in ('head', 'torso', 'arm_L', 'arm_R',
+                                 'leg_L', 'leg_R') for e in bb['elements'])
     icon = ROOT / "src/main/resources/assets/capatest/textures/item/capa_deteriorer_evilsaiyan.png"
     assert hashlib.sha256(icon.read_bytes()).hexdigest() == ICON_SHA, "icono alterado"
     # El icono APROBADO sigue disponible, byte-identico, por si la

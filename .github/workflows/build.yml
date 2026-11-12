@@ -411,8 +411,13 @@ jobs:
           # Proyecto Blockbench REAL, con maniquí y UV por cara.
           bb = json.loads((root / 'docs/capa_v1170.bbmodel').read_text())
           assert bb['meta']['format_version'] == '5.0'
-          assert len(bb['elements']) == 340 + 6 and len(bb['groups']) >= 286
-          assert any('Steve/Alex' in g['name'] for g in bb['groups'])
+          # v1.17.3: el .bbmodel de Blockbench muestra SOLO la capa: sin
+          # maniqui Steve/Alex y sin los 126 cubos de la armadura vieja.
+          assert len(bb['elements']) == 214 and len(bb['groups']) >= 286
+          assert not any('Steve/Alex' in g['name'] for g in bb['groups'])
+          assert bb['resolution'] == {'width': 128, 'height': 128}
+          assert all(max(f['uv']) <= 128 for e in bb['elements'] for f in e['faces'].values())
+          assert not any(e['name'] in ('head','torso','arm_L','arm_R','leg_L','leg_R') for e in bb['elements'])
           assert all('faces' in e and e['faces'] for e in bb['elements'])
           assert bb['textures'][0]['source'].startswith('data:image/png;base64,')
           _uuid = _re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
@@ -701,7 +706,7 @@ jobs:
 
           ### Qué incluye
 
-          - `.bbmodel` con 346 cubos / 287 grupos, 4 animaciones y 11950 keyframes.
+          - `.bbmodel` con **214 cubos de capa** / 286 grupos, textura 128×128, 4 animaciones y 11950 keyframes. Sin maniquí ni armadura vieja: Blockbench muestra sólo la capa.
           - Visor 3D autocontenido (sin red, sin servidor ni token) y comparativa
             con tu PNG de Blockbench.
           - **v1.17.2 — textura rehecha tras las capturas in-game**: el atlas

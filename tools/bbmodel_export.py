@@ -16,9 +16,12 @@ v1.17.0: corrige DOS defectos graves de la entrega anterior.
    huesos v16_* y los 27 paneles de paño: respiración del collar, ondeo de
    las cintas con retardo, pulso de las venas y deriva de las partículas.
 
-Además el maniquí Steve/Alex deja de ser un cubo blanco: lleva una textura
-16x16 con cara, pelo y túnica, incrustada en la MISMA textura del atlas
-(formato `bedrock` = `single_texture: true`, una sola imagen 128x144).
+v1.17.2: se ELIMINA el maniquí Steve/Alex. El exportador metía 6 cubos
+(cabeza, torso, brazos, piernas) con un parche de textura en las filas
+128..143 de una imagen 128x144. En el visor web pasaban desapercibidos, pero
+al abrir el `.bbmodel` en Blockbench TAPABAN LA CAPA: el usuario veía un
+muñeco blanco con brazos amarillos. Ahora hay una sola imagen 128x128 con
+el atlas real, todas las UV <= 128 y SOLO los cubos de la capa.
 
 Uso:  python3 tools/bbmodel_export.py
 """
@@ -32,7 +35,7 @@ import json
 import math
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 GEO = ROOT / "src/main/resources/assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json"
@@ -41,7 +44,6 @@ OUT = ROOT / "preview/assets/capa_deteriorer_evilsaiyan.bbmodel"
 DOC = ROOT / "docs/capa_v1170.bbmodel"
 
 FACES = ("north", "south", "east", "west", "up", "down")
-PLAYER_V = 128
 
 
 def uid(key: str) -> str:
@@ -74,46 +76,11 @@ def face_uv(spec) -> dict | None:
             "texture": 0}
 
 
-def player_patch() -> Image.Image:
-    """Textura 16x16 del maniquí: cabeza con cara (x 0-7) y túnica (x 8-15)."""
-    im = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    # Cabeza: piel pálida con pelo gris y sombreado a pixeles.
-    d.rectangle([0, 0, 7, 7], fill=(214, 211, 221, 255))
-    d.rectangle([0, 0, 7, 1], fill=(150, 147, 163, 255))
-    d.rectangle([0, 2, 7, 2], fill=(176, 172, 188, 255))
-    d.point((1, 0), fill=(126, 123, 140, 255))
-    d.point((5, 1), fill=(126, 123, 140, 255))
-    d.point((3, 0), fill=(236, 233, 242, 255))
-    # Ojos, cejas y boca.
-    d.rectangle([1, 3, 2, 3], fill=(38, 34, 52, 255))
-    d.rectangle([5, 3, 6, 3], fill=(38, 34, 52, 255))
-    d.point((2, 3), fill=(92, 122, 176, 255))
-    d.point((5, 3), fill=(92, 122, 176, 255))
-    d.rectangle([1, 4, 2, 4], fill=(188, 184, 198, 255))
-    d.rectangle([5, 4, 6, 4], fill=(188, 184, 198, 255))
-    d.rectangle([3, 5, 4, 5], fill=(128, 96, 112, 255))
-    d.point((0, 6), fill=(186, 182, 196, 255))
-    d.point((7, 6), fill=(186, 182, 196, 255))
-    # Túnica: violeta oscuro con cuello dorado y hombros (eco de la foto).
-    d.rectangle([8, 0, 15, 15], fill=(58, 38, 78, 255))
-    d.rectangle([8, 0, 15, 1], fill=(176, 128, 58, 255))
-    d.rectangle([8, 2, 15, 3], fill=(78, 50, 96, 255))
-    d.rectangle([8, 6, 9, 15], fill=(72, 46, 92, 255))
-    d.rectangle([14, 6, 15, 15], fill=(42, 28, 62, 255))
-    d.rectangle([10, 7, 13, 7], fill=(120, 30, 96, 255))
-    d.point((11, 10), fill=(150, 40, 116, 255))
-    d.point((12, 12), fill=(150, 40, 116, 255))
-    return im
-
-
-def combined_texture() -> Image.Image:
+def atlas_texture() -> Image.Image:
+    """Sólo el atlas real 128x128: nada de maniquí ni parches extra."""
     atlas = Image.open(ATLAS).convert("RGBA")
     assert atlas.size == (128, 128), atlas.size
-    im = Image.new("RGBA", (128, 144), (0, 0, 0, 0))
-    im.paste(atlas, (0, 0))
-    im.paste(player_patch(), (0, PLAYER_V))
-    return im
+    return atlas
 
 
 def make_element(bone: dict, ci: int, cube: dict, key: str) -> dict:
@@ -426,17 +393,28 @@ def build_animations(anim_bones: list[tuple[str, str]]) -> list[dict]:
 
 def build() -> dict:
     geo = json.loads(GEO.read_text())["minecraft:geometry"][0]
+    # v1.17.2: el geo del mod conserva los 72 huesos PRISTINOS de la
+    # armadura antigua (helmet, dedos, manos, arnes, broches) porque el
+    # renderer Java los oculta con setHidden(true). Blockbench NO oculta
+    # nada: al abrir el .bbmodel esos 126 cubos aparecian como CHATARRA
+    # alrededor de la capa. El archivo de Blockbench exporta SOLO los
+    # huesos de la capa nueva (v15_/v16_/v17_); el geo del mod no cambia.
     bones = geo["bones"]
+    CAPE_BONES = ("v15_", "v16_", "v17_")
 
     elements, groups, node_by_name = [], [], {}
     anim_bones: list[tuple[str, str]] = []
     for b in bones:
         key = b["name"]
         kids = []
-        for ci, c in enumerate(b.get("cubes", [])):
-            ek = f"{key}/cube/{ci}"
-            elements.append(make_element(b, ci, c, ek))
-            kids.append(uid(ek))
+        # Los 72 huesos pristinos se mantienen como GRUPOS VACIOS: aportan
+        # pivote y rotacion a la jerarquia (sin ellos el capuchon se
+        # separaba del cuerpo) pero NO aportan cubos visibles.
+        if key.startswith(CAPE_BONES):
+            for ci, c in enumerate(b.get("cubes", [])):
+                ek = f"{key}/cube/{ci}"
+                elements.append(make_element(b, ci, c, ek))
+                kids.append(uid(ek))
         gkey = key + "/group"
         node_by_name[key] = {"uuid": uid(gkey), "isOpen": False, "children": kids}
         groups.append(make_group(key, b.get("pivot") or [0, 0, 0],
@@ -454,45 +432,23 @@ def build() -> dict:
         else:
             roots.append(node)
 
-    player_parts = [
-        ("head",  [-4, 24, -4, 8, 8, 8],  [0, PLAYER_V, 8, PLAYER_V + 8]),
-        ("torso", [-4, 12, -2, 8, 12, 4], [8, PLAYER_V, 16, PLAYER_V + 8]),
-        ("arm_L", [-8, 12, -2, 4, 12, 4], [8, PLAYER_V, 16, PLAYER_V + 8]),
-        ("arm_R", [ 4, 12, -2, 4, 12, 4], [8, PLAYER_V, 16, PLAYER_V + 8]),
-        ("leg_L", [-4,  0, -2, 4, 12, 4], [8, PLAYER_V, 16, PLAYER_V + 8]),
-        ("leg_R", [ 0,  0, -2, 4, 12, 4], [8, PLAYER_V, 16, PLAYER_V + 8]),
-    ]
-    pkids = []
-    for name, (x0, y0, z0, w, h, d), uv in player_parts:
-        ek = f"player/{name}"
-        elements.append({
-            "name": name, "type": "cube", "uuid": uid(ek),
-            "from": [x0, y0, z0], "to": [x0 + w, y0 + h, z0 + d],
-            "origin": [x0 + w / 2, y0 + h / 2, z0 + d / 2],
-            "rotation": [0, 0, 0], "inflate": 0.0, "autouv": 0,
-            "color": 0, "visibility": True, "box_uv": False,
-            "faces": {fn: {"uv": list(uv), "texture": 0} for fn in FACES},
-        })
-        pkids.append(uid(ek))
-    pgkey = "player/group"
-    groups.append(make_group("PLAYER · Steve/Alex (referencia)", [0, 0, 0],
-                             [0, 0, 0], pkids, pgkey))
-    roots.append({"uuid": uid(pgkey), "isOpen": False, "children": pkids})
+    # v1.17.2: NO se añade ningún maniquí. Blockbench debe mostrar la capa
+    # y solamente la capa; los 340 cubos son los del geo del mod.
 
     texture = {
         "path": "", "name": "capa_deteriorer_evilsaiyan.png", "folder": "",
-        "namespace": "", "id": "0", "width": 128, "height": 144,
+        "namespace": "", "id": "0", "width": 128, "height": 128,
         "uv_scale": [1, 1], "particle": False, "render_mode": "default",
         "visible": True, "enabled": True, "saved": True,
-        "internal": True, "source": data_url(combined_texture()),
+        "internal": True, "source": data_url(atlas_texture()),
     }
 
     return {
         "meta": {"format_version": "5.0", "model_format": "bedrock", "box_uv": False},
-        "name": "capa_deteriorer_evilsaiyan_v1150",
+        "name": "capa_deteriorer_evilsaiyan_v1172",
         "model_identifier": "geometry.capa_deteriorer_evilsaiyan",
         "visible_box": [1, 1, 1],
-        "resolution": {"width": 128, "height": 144},
+        "resolution": {"width": 128, "height": 128},
         "elements": elements,
         "groups": groups,
         "outliner": roots,
@@ -518,6 +474,22 @@ def main() -> None:
     assert all(n["uuid"] in gids for n in model["outliner"])
     assert len(model["textures"]) == 1 and model["textures"][0]["source"].startswith(
         "data:image/png;base64,")
+    import re as _re
+    _raw = base64.b64decode(model["textures"][0]["source"].split(",", 1)[1])
+    _im = Image.open(io.BytesIO(_raw))
+    assert _im.size == (128, 128), ("textura del .bbmodel", _im.size)
+    assert model["resolution"] == {"width": 128, "height": 128}
+    assert len(model["elements"]) == 214, len(model["elements"])
+    assert not any(e["name"] in ("head", "torso", "arm_L", "arm_R", "leg_L", "leg_R")
+                   for e in model["elements"]), "vuelve el maniquí"
+    assert not any("Steve/Alex" in g["name"] for g in model["groups"])
+    _visible = {e["uuid"] for e in model["elements"]}
+    assert all(not ({c for c in g["children"] if isinstance(c, str)} & _visible)
+               or g["name"].startswith(("v15_", "v16_", "v17_"))
+               for g in model["groups"]), "un grupo viejo tiene cubos visibles"
+    for e in model["elements"]:
+        for f in e["faces"].values():
+            assert max(f["uv"]) <= 128, (e["name"], f["uv"])
     anims = model["animations"]
     assert len(anims) == 4, len(anims)
     total = 0

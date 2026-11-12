@@ -179,13 +179,15 @@ def build() -> dict:
         # El borde superior queda escondido por la cabeza del maniquí.
         # v1212: ALAS. En la captura la bufanda sube por los hombros y
         # cae en el centro; antes y_top era casi plano y parecía una losa.
-        y_top = 24.45 + 0.42 * abs(fx) + 0.12 * math.sin(i * 2.7)
+        # v1.17.2: baja 1.15 para SOLAPAR con los jirones; en
+        # Blockbench la bufanda quedaba como una banda flotante separada.
+        y_top = 23.30 + 0.42 * abs(fx) + 0.12 * math.sin(i * 2.7)
         # Arco parabolico: lóbulo central ancho y redondeado, alas que
         # se recogen deprisa hacia los hombros (recorte 4x de la captura).
         # Cuenco aplanado: lóbulo central redondeado y lados recogidos.
         # Ni la campana de v1243 (solo colgaba el centro) ni la losa
         # plana de v1244 (tapaba el arnes).
-        height = 1.25 + 2.55 * (1.0 - abs(fx)) ** 1.35 + 0.14 * abs(math.sin(i * 2.3))
+        height = 1.00 + 2.05 * (1.0 - abs(fx)) ** 1.35 + 0.14 * abs(math.sin(i * 2.3))
         bottom = y_top - height + 0.16 * math.sin(i * 1.9 + 0.3)
         w = 1.85 + 0.36 * (1.0 - abs(fx))
         z = 3.55 + 0.52 * (1.0 - abs(fx))
@@ -220,8 +222,8 @@ def build() -> dict:
     for i in range(COWL_BACK):
         fx = (i - (COWL_BACK - 1) / 2.0) / max(1.0, (COWL_BACK - 1) / 2.0)
         x = fx * 3.90
-        height = 0.78 + 2.25 * (1.0 - abs(fx)) ** 1.35
-        y_top = 24.45 + 0.40 * abs(fx)
+        height = 0.70 + 1.90 * (1.0 - abs(fx)) ** 1.35
+        y_top = 23.30 + 0.40 * abs(fx)
         bones.append(bone(
             f"v17_cowl_back_{i}", "chestplate",
             [x, y_top - height / 2.0, -1.90],
@@ -318,11 +320,14 @@ def build() -> dict:
             # la primera decima. Cuatro tejas exteriores se alargan hacia
             # ARRIBA y AFUERA: paño real en t=0.0, sin losas ni piezas
             # flotantes, y con la misma UV continua del canvas.
-            t0, t1 = -0.02, 0.27
-            x0 = a * 6.60
+            # v1.17.2: en Blockbench (pose estatica) estas 4 tejas
+            # sobresalian por ENCIMA del capuchon como antenas inclinadas.
+            # Nacen mas abajo, mas cerca del cuerpo y son mas estrechas.
+            t0, t1 = 0.06, 0.30
+            x0 = a * 5.10
         # v1210: las tejas NO cruzaban la captura como tablones diagonales.
         # Se acortan a un pliegue cercano al hombro y se vuelven mas finas.
-        x1 = a * (4.20 if i in (0, 1, 8, 9) else CS.silhouette(0.55) * 0.62)
+        x1 = a * (3.60 if i in (0, 1, 8, 9) else CS.silhouette(0.55) * 0.62)
         y0, y1 = CS.Y_TOP - t0 * CS.HEIGHT, CS.Y_TOP - t1 * CS.HEIGHT
         cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
         dy, dx = y0 - y1, x1 - x0
@@ -330,7 +335,7 @@ def build() -> dict:
         h = math.hypot(dx, dy) * 0.86
         # Capas de tela SOLAPADAS, no un escudo: anchura moderada y
         # profundidad distinta para que se lean como jirones separados.
-        w = (1.35 + 0.20 * abs(math.sin(i * 1.9))) if i in (0, 1, 8, 9) \
+        w = (1.02 + 0.14 * abs(math.sin(i * 1.9))) if i in (0, 1, 8, 9) \
             else (0.50 + 0.24 * abs(a) + 0.12 * abs(math.sin(i * 1.9)))
         z = 3.32 + 0.30 * (i % 3)
         near = CS.nearest_ribbon((t0 + t1) / 2.0, x0 / 8.6)
