@@ -877,6 +877,18 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.26.0 — LA CAPA YA NO SE INCLINA SIEMPRE HACIA EL MISMO LADO**:
+            el eje lateral es ahora `(columnas − 1) / 2` de cada familia,
+            medido sobre los pivotes X reales del geo (mechones 12 → 5.5,
+            paño 9 → 4.0, grietas 10 → 4.5, capucha 7 → 3.0, cuello 5 → 2.0,
+            cadena 8 → 3.5, hombreras 2 → 0.5). Antes TODO usaba un 7.5
+            heredado de 16 tiras: el sesgo lateral medio era −0.267 en los
+            mechones y hasta −0.933 en las hombreras, así que la capa se
+            inclinaba siempre hacia la izquierda. Se podan 42 nombres de
+            huesos que ya no existen y se incorporan los 10 `v18_chain_*` /
+            `v18_pad_*`, que hasta ahora no recibían respuesta del portador.
+            La CI valida el presupuesto de chispas por VALOR EFECTIVO
+            (8 ticks, 3 chispas) en vez de por un literal de un comentario.
           - **v1.25.0 — TU ICONO DE VUELTA, SIN FLOTANTES Y MÁS LUZ**: el arte
             que te gustaba restaurado **byte a byte** (SHA verificado por la
             auditoría, con `referencias/ICONO_PREFERIDO_BACKUP.png` como backup
@@ -897,7 +909,7 @@ jobs:
           - **FX que SÍ se ven, sin lag**: aura de polvo con escala real,
             halo de cuello con transición de color, motas por las tres
             alturas del paño y estela al correr/volar/caer. Techo duro de
-            8 partículas por tick de emisión, 2 emisiones por segundo,
+            3 chispas por tick de emisión, 1 emisión cada 8 ticks,
             SIN geometría, SIN sonidos y SIN pista `effects` en Blockbench.
           - **Anclaje y paño**: la capa ya no es una lámina a 3-5 unidades
             del cuerpo; nace pegada a los hombros, cae curvada en 3D y las
