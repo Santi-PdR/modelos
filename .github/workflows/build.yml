@@ -124,12 +124,9 @@ jobs:
           assert not (base / 'particles/capa_ember.json').exists()
           assert not (base / 'particles/capa_blight_mote.json').exists()
           assert not (base / 'particles/capa_shard.json').exists()
-          # El sprite es una BARRA VERTICAL con centro brillante.
-          import numpy as _np
-          from PIL import Image as _Im
-          _sp = _np.asarray(_Im.open(base / 'textures/particle/capa_spark_1.png').convert('RGBA'))
-          assert int((_sp[..., 3] > 0).sum()) < 100, 'chispa no es estrecha'
-          assert _sp[8, 7, 0] > 230 and _sp[8, 7, 2] > 200, 'falta centro brillante'
+          # (Las comprobaciones a PIXEL de la chispa, el degradado y el
+          # glowmask viven en tools/audit_model.py: este paso corre ANTES
+          # de instalar numpy/Pillow en CI y sólo usa stdlib.)
           # Java: ni rastro de DustParticleOptions (vanilla).
           _item = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
           assert 'DustParticleOptions' not in _item
@@ -267,16 +264,10 @@ jobs:
           def _bn(name): return next(b for b in ribbons if b['name'] == name)
           assert _y(_bn('v17_ribbon_0_seg6')) > _y(_bn('v17_ribbon_5_seg6')) + 2.0
           assert _y(_bn('v17_ribbon_11_seg6')) > _y(_bn('v17_ribbon_6_seg6')) + 2.0
-          # Atlas limpio + glowmask fullbright real.
-          _armor_tex = _np.asarray(_Im.open(
-              base / 'textures/item/armor/capa_deteriorer_evilsaiyan.png').convert('RGBA'))
-          assert (_armor_tex[..., 3] == 255).all(), 'atlas con huecos transparentes'
-          assert _armor_tex[2, 20, 0] > _armor_tex[70, 20, 0] + 40, \
-              'falta degradado carmesi -> morado'
-          _glow = _np.asarray(_Im.open(
-              base / 'textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png').convert('RGBA'))
-          _em = int((_glow[..., 3] > 0).sum())
-          assert 500 < _em < 128 * 128, ('glowmask', _em)
+          # Atlas limpio: sólo comprobaciones de FICHERO aquí (stdib).
+          # El degradado, el glowmask y la chispa se miden a pixel en
+          # tools/audit_model.py --check (paso con numpy/Pillow instalado).
+          assert (base / 'textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png').is_file()
           assert 'build_clean_atlas' in (root / 'tools/texture_pipeline.py').read_text()
 
           # REGRESIÓN rev. B: ningún cubo de la capa puede quedar

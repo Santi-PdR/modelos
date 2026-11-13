@@ -261,6 +261,13 @@ def static_checks() -> None:
                                  "capatest:capa_spark_2"]
     for i in range(3):
         assert (particles / f"textures/particle/capa_spark_{i}.png").is_file()
+    # Chispa a PIXEL: barra vertical ESTRECHA con centro casi blanco.
+    _sp = np.asarray(Image.open(
+        particles / "textures/particle/capa_spark_1.png").convert("RGBA"))
+    assert _sp.shape[:2] == (16, 16)
+    assert int((_sp[..., 3] > 0).sum()) < 100, "la chispa no es estrecha"
+    assert _sp[8, 7, 0] > 230 and _sp[8, 7, 2] > 200, "falta centro brillante"
+    assert int(_sp[..., 3].max()) >= 200, "chispa sin nucleo opaco"
     assert not (particles / "particles/capa_ember.json").exists()
     assert not (particles / "particles/capa_blight_mote.json").exists()
     assert not (particles / "particles/capa_shard.json").exists()
