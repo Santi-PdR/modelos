@@ -410,7 +410,7 @@ El JAR se publica como Release [`v1.27.1`](https://github.com/Santi-PdR/modelos/
 `capatest-1.27.1.jar`, compilado en CI con JDK 17 + Gradle 8.8.
 La `v1.27.0` queda como histórico, **sin sobrescribir**.
 
-**SHA-256 del JAR publicado**: `7b17c24b27eb5a579f55d98773b97f81c482ad9485bbc0735bc5a5763c24e5f2`
+**SHA-256 del JAR publicado**: `76ce609e7d54aedde648b95166b174c273c8ebd6a855609b60d99f0ff74f68d8`
 (477 988 bytes). La CI lo comprueba contra el JAR recién compilado en cada
 publicación y **falla si lo publicado no es lo compilado**.
 
@@ -425,7 +425,7 @@ Para verificar tu descarga:
 
 ```sh
 sha256sum capatest-1.27.1.jar
-# 7b17c24b27eb5a579f55d98773b97f81c482ad9485bbc0735bc5a5763c24e5f2
+# 76ce609e7d54aedde648b95166b174c273c8ebd6a855609b60d99f0ff74f68d8
 ```
 
 **Segunda vía de descarga (mismo binario)**: el JAR también está en la
