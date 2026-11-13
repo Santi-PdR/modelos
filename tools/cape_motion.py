@@ -328,7 +328,7 @@ def _self_test() -> None:
     assert sample(tip, "caer", 0.0)["rot"][0] > 3.0, "caer no eleva"
     assert sample(tip, "volar", 0.0)["pos"][1] > 0.25, "volar no levanta puntas"
     assert sample(tip, "agachado", 0.0)["pos"][2] < -0.20, "agache no recoge"
-    print("cape_motion v1.23.0: 8 ESTADOS con silueta propia, onda VIAJERA "
+    print("cape_motion v1.24.0: 8 ESTADOS con silueta propia, onda VIAJERA "
           "C1, retardo por tramo y offsets acumulados OK", rms)
 
 

@@ -5,39 +5,143 @@
   },
   "display": {
     "gui": {
-      "rotation": [0, 0, 0],
-      "translation": [0, 0, 0],
-      "scale": [1, 1, 1]
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
     },
     "ground": {
-      "rotation": [0, 0, 0],
-      "translation": [0, 0.15, 0],
-      "scale": [0.6, 0.6, 0.6]
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        0.15,
+        0
+      ],
+      "scale": [
+        0.6,
+        0.6,
+        0.6
+      ]
     },
     "fixed": {
-      "rotation": [0, 180, 0],
-      "translation": [0, 0, 0],
-      "scale": [1, 1, 1]
+      "rotation": [
+        0,
+        180,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
     },
     "thirdperson_righthand": {
-      "rotation": [0, 0, 0],
-      "translation": [0, 0, 0],
-      "scale": [0.75, 0.75, 0.75]
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.75,
+        0.75,
+        0.75
+      ]
     },
     "thirdperson_lefthand": {
-      "rotation": [0, 0, 0],
-      "translation": [0, 0, 0],
-      "scale": [0.75, 0.75, 0.75]
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.75,
+        0.75,
+        0.75
+      ]
     },
     "firstperson_righthand": {
-      "rotation": [0, 0, 0],
-      "translation": [0, 0, 0],
-      "scale": [0.8, 0.8, 0.8]
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.8,
+        0.8,
+        0.8
+      ]
     },
     "firstperson_lefthand": {
-      "rotation": [0, 0, 0],
-      "translation": [0, 0, 0],
-      "scale": [0.8, 0.8, 0.8]
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.8,
+        0.8,
+        0.8
+      ]
     }
-  }
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "capatest:frame": 0.25
+      },
+      "model": "capatest:item/capa_deteriorer_evilsaiyan_f1"
+    },
+    {
+      "predicate": {
+        "capatest:frame": 0.5
+      },
+      "model": "capatest:item/capa_deteriorer_evilsaiyan_f2"
+    },
+    {
+      "predicate": {
+        "capatest:frame": 0.75
+      },
+      "model": "capatest:item/capa_deteriorer_evilsaiyan_f3"
+    }
+  ]
 }

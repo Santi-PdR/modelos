@@ -374,7 +374,7 @@ def main():
         (256, 256), Image.LANCZOS).save(args.out / "folded_glowmask.png")
     particle_sheet(args.out / "particles.png")
     visible = [b["name"] for b in armor["bones"]
-               if not b["name"].startswith(("v15_", "v16_", "v17_"))
+               if not b["name"].startswith(("v15_", "v16_", "v17_", "v18_"))
                and b["name"] not in runtime_hidden and b.get("cubes")]
     (args.out / "visible_original_bones.txt").write_text("\n".join(visible) + "\n")
     print(f"wrote {len(list(args.out.iterdir()))} files to {args.out}")
