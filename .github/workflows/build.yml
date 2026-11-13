@@ -829,6 +829,19 @@ jobs:
           # baja la rama de artefactos (codeload), que es la unica via
           # que responde cuando el CDN de releases esta bloqueado, y
           # comprueba el SHA-256 contra el digest que devuelve la API.
+          # v1.27.1: el .jar tiene que ser REPRODUCIBLE (mismo codigo ->
+          # mismo binario), para que el SHA-256 publicado sirva para
+          # verificar la descarga. Sin preserveFileTimestamps=false el ZIP
+          # guarda la fecha de cada entrada y el digest cambia en cada
+          # republicacion.
+          _bg = (root / 'build.gradle').read_text()
+          assert 'preserveFileTimestamps = false' in _bg, \
+              'el .jar no es reproducible (timestamps del ZIP)'
+          assert 'reproducibleFileOrder = true' in _bg, \
+              'el orden de entradas del .jar no es reproducible'
+          assert 'Verify jar is reproducible' in \
+              (root / '.github/workflows/build.yml').read_text(), \
+              'la CI no comprueba que el .jar sea reproducible'
           _fetch = (root / 'tools/fetch_published_jar.py').read_text()
           assert 'codeload.github.com' in _fetch, 'la descarga no usa codeload'
           assert 'published_digest' in _fetch, 'no verifica contra la API'
@@ -857,6 +870,34 @@ jobs:
         run: |
           set -o pipefail
           gradle build --no-daemon --stacktrace 2>&1 | tee /tmp/gradle-build.log
+
+      # v1.27.1: EL JAR TIENE QUE SER REPRODUCIBLE. Sin esto, dos builds
+      # del mismo codigo dan .jar distintos (el ZIP guarda timestamps) y el
+      # SHA-256 publicado cambia en cada republicacion, con lo que no
+      # sirve para verificar nada. Se reconstruye el .jar y se compara.
+      #
+      # Va ANTES de publicar: solo se sube a la release y a la rama de
+      # artefactos un .jar ya verificado como reproducible.
+      - name: Verify jar is reproducible
+        run: |
+          set -euo pipefail
+          VER="$(sed -n 's/^mod_version=//p' gradle.properties | tr -d '[:space:]')"
+          JAR="build/libs/capatest-$VER.jar"
+          test -f "$JAR"
+          SHA1="$(sha256sum "$JAR" | cut -d' ' -f1)"
+          echo "sha256 del primer build : $SHA1"
+          # Se borra SOLO el .jar y se vuelve a empaquetar: las clases ya
+          # compiladas se reutilizan, asi que el segundo build es rapido.
+          rm -f "$JAR"
+          gradle jar reobfJar --no-daemon --console=plain 2>&1 | tail -5
+          test -f "$JAR"
+          SHA2="$(sha256sum "$JAR" | cut -d' ' -f1)"
+          echo "sha256 del segundo build: $SHA2"
+          if [ "$SHA1" != "$SHA2" ]; then
+            echo "::error::el .jar NO es reproducible ($SHA1 != $SHA2)"
+            exit 1
+          fi
+          echo "OK: el .jar es byte-identico entre builds (sha256:$SHA1)"
 
       # Los logs de Actions viven en un host que el sandbox no puede leer;
       # publicamos los errores de javac como anotaciones del run.

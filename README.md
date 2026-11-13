@@ -412,8 +412,16 @@ La `v1.27.0` queda como histórico, **sin sobrescribir**.
 
 **SHA-256 del JAR publicado**: `7b17c24b27eb5a579f55d98773b97f81c482ad9485bbc0735bc5a5763c24e5f2`
 (477 988 bytes). La CI lo comprueba contra el JAR recién compilado en cada
-publicación y **falla si lo publicado no es lo compilado**. Para verificar
-tu descarga:
+publicación y **falla si lo publicado no es lo compilado**.
+
+**El `.jar` es reproducible**: desde la v1.27.1 el empaquetado fija las
+marcas de tiempo y el orden de las entradas (`preserveFileTimestamps =
+false`, `reproducibleFileOrder = true`), así que **el mismo código produce
+siempre el mismo binario** y el SHA-256 publicado es estable entre
+publicaciones. La CI lo comprueba: reconstruye el `.jar` y compara los dos
+digests antes de publicar nada.
+
+Para verificar tu descarga:
 
 ```sh
 sha256sum capatest-1.27.1.jar

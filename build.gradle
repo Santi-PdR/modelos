@@ -89,6 +89,21 @@ tasks.named('processResources', ProcessResources).configure {
     }
 }
 
+// v1.27.1: JAR REPRODUCIBLE. Sin esto, dos builds del MISMO codigo
+// producen .jar distintos (el ZIP guarda la fecha de modificacion de
+// cada entrada), asi que el SHA-256 del .jar publicado cambia en cada
+// republicacion y no sirve para verificar nada. Con estas dos opciones
+// el .jar es byte-identico entre builds: el digest publicado es el mismo
+// que puede recomputar cualquiera.
+//
+// Se aplica a TODAS las tareas de archivo (no solo a `jar`), porque
+// ForgeGradle remapea el .jar en `reobfJar`, que es la que escribe
+// realmente build/libs/*.jar.
+tasks.withType(org.gradle.api.tasks.bundling.AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
 tasks.named('jar', Jar).configure {
     manifest {
         attributes([
