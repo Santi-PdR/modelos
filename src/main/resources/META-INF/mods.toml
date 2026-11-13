@@ -9,6 +9,14 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.27.1: PATCH DE ENTREGA. El modelo es IDENTICO a la v1.27.0 (mismo
+geo, misma textura, mismas animaciones): esta version existe para que el
+arreglo del visor (las 27 anclas de la onda que ya no se dibujan) quede
+publicado en su PROPIA release, sin sobrescribir la v1.27.0. Ademas el
+JAR se deja ahora en una rama de artefactos (artifacts/v1.27.1) ademas
+de la release, para poder descargarlo y verificar su SHA-256 donde el CDN
+de releases no es accesible.
+
 v1.27.0: MOTAS NEGRAS FUERA, HOMBRERA Y CADENA REHECHAS, ICONO LEGIBLE.
 El visor 3D de docs/ deja de pintar las 27 anclas de la onda (ya no lo
 hacia el runtime) y trae una casilla de diagnostico para verlas. Los

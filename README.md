@@ -1,20 +1,40 @@
-# Mantle of the Blight Star — v1.27.0
+# Mantle of the Blight Star — v1.27.1
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Capa equipada en `curios:back`, temática
 **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-> 📦 **Release vigente: `v1.27.0`** — `capatest-1.27.0.jar` compilado
-> en CI. Cada entrega cambia a una versión más nueva; `v1.19.0` y
-> anteriores quedan como histórico y no se sobreescriben.
+> 📦 **Release vigente: `v1.27.1`** — `capatest-1.27.1.jar` compilado
+> en CI. Cada entrega cambia a una versión más nueva; `v1.27.0` y
+> anteriores quedan como histórico y **no se sobreescriben**.
 >
-> 🔗 **Link directo al `.bbmodel` v1.27.0**: [https://github.com/Santi-PdR/modelos/releases/download/v1.27.0/CAPA_v1.27.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.27.0/CAPA_v1.27.0.bbmodel)
-> (también en el workspace: [`docs/CAPA_v1.27.0.bbmodel`](docs/CAPA_v1.27.0.bbmodel)).
+> 🔗 **Link directo al `.bbmodel` v1.27.1**: [https://github.com/Santi-PdR/modelos/releases/download/v1.27.1/CAPA_v1.27.1.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.27.1/CAPA_v1.27.1.bbmodel)
+> (también en el workspace: [`docs/CAPA_v1.27.1.bbmodel`](docs/CAPA_v1.27.1.bbmodel)).
 > **El archivo ahora SÍ se llama igual que la versión**: el exportador
 > lee `mod_version` y genera `docs/CAPA_v<versión>.bbmodel` con el
 > `name` interno y el asset de Release con esa misma versión.
 > v1.14.0, v1.15.0 y v1.16.0 fueron rechazadas visualmente y sus previews
 > se borraron del repo. Los previews son render **software**.
+
+### v1.27.1 — el arreglo del visor, en su propia release
+
+**Patch de entrega**: el modelo es **idéntico** a la v1.27.0 (mismo geo de
+222 huesos y 282 cubos, mismo atlas, mismas ocho animaciones). Lo que
+cambia es **dónde vive** el arreglo:
+
+- El visor de `docs/` (el `.html` autocontenido que se abre en doble clic)
+  **ya no dibuja las 27 anclas `v15_cloth_*`**. Antes el runtime Java y el
+  render software las ocultaban, pero el visor seguía pintándolas: el
+  entregable que se miraba enseñaba las motas negras que la v1.27.0
+  arreglaba. Ahora el hueso, la jerarquía y las ocho pistas se conservan
+  intactos y lo que se apaga es su render, también en el visor.
+- El **diagnóstico sigue disponible**: el visor cuenta las anclas y las
+  pinta si se activa la casilla `Anclas` (`showAnchors` / `l_anchors`).
+- La **v1.27.0 no se toca**: esta release es nueva y la anterior queda
+  como histórico, con su `.jar` y su `.bbmodel` intactos.
+- El `.jar` se deja además en la **rama de artefactos** `artifacts/v1.27.1`
+  (mismo binario, con su `SHA256SUMS.txt`), para poder descargarlo y
+  verificar su SHA-256 allí donde el CDN de releases no responde.
 
 ### v1.27.0 — las motas negras fuera, hombrera y cadena rehechas, icono legible
 
@@ -384,25 +404,26 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Release vigente: v1.27.0
+### Release vigente: v1.27.1
 
-El JAR se publica como Release [`v1.27.0`](https://github.com/Santi-PdR/modelos/releases/tag/v1.27.0):
-`capatest-1.27.0.jar`, compilado en CI con JDK 17 + Gradle 8.8.
+El JAR se publica como Release [`v1.27.1`](https://github.com/Santi-PdR/modelos/releases/tag/v1.27.1):
+`capatest-1.27.1.jar`, compilado en CI con JDK 17 + Gradle 8.8.
+La `v1.27.0` queda como histórico, **sin sobrescribir**.
 
-**SHA-256 del JAR publicado**: `e80bd1f43ff7f53617003b29f140320a1834b80a765596aab1a88c2bf7ed6f2d`
-(477 797 bytes). La CI lo comprueba contra el JAR recién compilado en cada
-publicación: si el asset subiría corrupto o de una versión vieja, el build
-fallaría. Para verificar tu descarga:
+**SHA-256 del JAR publicado**: se comprueba en cada publicación contra el
+JAR recién compilado y se publica en el resumen del build y en la nota de
+release. La CI falla si lo publicado no es lo compilado. Para verificar
+tu descarga:
 
 ```sh
-sha256sum capatest-1.27.0.jar
+sha256sum capatest-1.27.1.jar
 ```
-**Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.27.0/CAPA_v1.27.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.27.0/CAPA_v1.27.0.bbmodel)
-(el mismo archivo que `docs/CAPA_v1.27.0.bbmodel` y el asset de la Release,
+**Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.27.1/CAPA_v1.27.1.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.27.1/CAPA_v1.27.1.bbmodel)
+(el mismo archivo que `docs/CAPA_v1.27.1.bbmodel` y el asset de la Release,
 byte-idénticos; ya no existe el viejo `capa_v1170.bbmodel`).
 
- Regla de entrega: **cada cambio sube `mod_version`** (aquí 1.26.0 →
-1.27.0), **el `.bbmodel` cambia de nombre con esa versión** y
+ Regla de entrega: **cada cambio sube `mod_version`** (aquí 1.27.0 →
+1.27.1), **el `.bbmodel` cambia de nombre con esa versión** y
 **siempre se incluye el link del `.bbmodel`**. El workflow lee
 la versión de `gradle.properties` para que JAR, tag y assets nunca se
 desincronizen; publica con `workflow_dispatch(publicar=true)` o con un
@@ -528,7 +549,7 @@ Contrastando el PNG y el render a la misma escala, la autoevaluación pasó de
   (un solo `.html`, sin servidor, sin red, sin token).
 - **Comparativa con tu referencia**:
   [`docs/capa_v1170_comparativa.png`](docs/capa_v1170_comparativa.png).
-- **Proyecto Blockbench**: [`docs/CAPA_v1.27.0.bbmodel`](docs/CAPA_v1.27.0.bbmodel),
+- **Proyecto Blockbench**: [`docs/CAPA_v1.27.1.bbmodel`](docs/CAPA_v1.27.1.bbmodel),
   156 cubos / 222 grupos, 8 animaciones en bucle con **26208 keyframes**
   y UUID canónicos: curvas **Bézier** con tangentes analíticas (C1),
   marcadores, retardo por tramo, vaivén de paso, barrido al correr,
