@@ -64,20 +64,20 @@ STYLES: dict[str, dict] = {
                     bias=0.0, posbias=(0.0, 0.0, 0.0),
                     gain=dict(tela=1.00, cowl=0.68, vena=0.95, teja=1.00)),
     # Correr: barrida hacia atrás, aleteo de puntas y estela.
-    "correr": dict(length=0.8, phase=0.95, travel=0.48, flutter=0.115,
+    "correr": dict(length=0.8, phase=0.95, travel=0.56, flutter=0.115,
                    step=0.45, flare=1.00, shiver=0.00, pull=0.110,
                    breath=0.045, pulse=0.30, gust=1.25, sway=1.15,
                    bias=-1.5, posbias=(0.0, 0.05, 0.12),
                    gain=dict(tela=1.65, cowl=0.95, vena=1.35, teja=1.45)),
     # Volar / elytra: capa EXTENDIDA hacia atrás y arriba, aleteo lento
     # y amplio. La onda baja con menos retardo (el viento es parejo).
-    "volar": dict(length=1.5, phase=2.20, travel=0.44, flutter=0.135,
+    "volar": dict(length=1.5, phase=2.20, travel=0.60, flutter=0.135,
                   step=0.10, flare=1.55, shiver=0.00, pull=0.150,
                   breath=0.055, pulse=0.34, gust=1.45, sway=1.30,
                   bias=-7.0, posbias=(0.0, 0.42, 0.55),
                   gain=dict(tela=1.85, cowl=1.05, vena=1.55, teja=1.65)),
     # Caída libre: el aire LEVANTA la capa, puntas ondeando deprisa.
-    "caer": dict(length=0.9, phase=1.15, travel=0.55, flutter=0.150,
+    "caer": dict(length=0.9, phase=1.15, travel=0.68, flutter=0.150,
                  step=0.00, flare=0.00, shiver=0.30, pull=0.130,
                  breath=0.040, pulse=0.28, gust=1.10, sway=0.90,
                  bias=8.5, posbias=(0.0, 0.55, 0.10),
@@ -95,7 +95,7 @@ STYLES: dict[str, dict] = {
                  bias=-1.2, posbias=(0.0, 0.12, 0.18),
                  gain=dict(tela=0.72, cowl=0.48, vena=0.70, teja=0.75)),
     # Deterioro: estremecimiento de alta frecuencia y venas encendidas.
-    "deterioro": dict(length=3.0, phase=1.70, travel=TRAVEL, flutter=0.150,
+    "deterioro": dict(length=3.0, phase=1.70, travel=0.75, flutter=0.150,
                       step=0.00, flare=0.15, shiver=0.85, pull=0.025,
                       breath=0.012, pulse=0.45, gust=0.55, sway=0.40,
                       bias=0.0, posbias=(0.0, 0.0, 0.0),
@@ -136,7 +136,11 @@ def phase_of(name: str, style: str) -> float:
     """Fase espacial: el retardo por tramo es la clave del ondeo."""
     _fam, col, seg = parts(name)
     spec = STYLES[style]
-    return -spec["travel"] * seg + col * COLUMN_PHASE + spec["phase"]
+    # v1.25.0: además del retardo por tramo, cada columna lleva su fase
+    # (constante en el tiempo => sigue C1): los mechones dejan de ir todos
+    # en bloque y la tela se lee orgánica.
+    return (-spec["travel"] * seg + col * COLUMN_PHASE
+            + 0.23 * math.sin(col * 2.13 + 1.7) + spec["phase"])
 
 
 def _harm(f: float, k: int, p: float) -> tuple[float, float]:
@@ -183,11 +187,20 @@ def sample(name: str, style: str, f: float) -> dict:
     spec = STYLES[style]
     fam, col, seg = parts(name)
     seg_f = min(1.0, seg / 6.0)
-    lateral = (col - 7.5) / 7.5
+    # v1.25.0: con 12 MECHONES el eje es 5.5, no 7.5 (diseñado para 16):
+    # antes la mitad izquierda aleteaba más que la derecha y el vaivén de
+    # paso inclinaba la capa siempre hacia el mismo lado.
+    if fam == "ribbon":
+        lateral = (col - 5.5) / 5.5
+    else:
+        lateral = (col - 7.5) / 7.5
     edge = 0.62 + 0.38 * abs(lateral) ** 1.4
     phase = phase_of(name, style)
-    h = spec["flutter"] * (1.0 + 0.30 * seg) if fam in (
-        "ribbon", "cloth", "hem") else spec["flutter"]
+    # Amplitud propia de cada mechón (determinista, no aleatoria): un
+    # jirón no ondea igual que su vecino.
+    col_amp = 0.88 + 0.24 * (0.5 + 0.5 * math.sin(col * 1.93 + 0.6))
+    h = spec["flutter"] * (1.0 + 0.30 * seg) * col_amp if fam in (
+        "ribbon", "cloth", "hem") else spec["flutter"] * col_amp
 
     w, dw = wave(f, phase, h)
     gust, dgust, drag, ddrag = _flow(f, phase)
@@ -328,7 +341,7 @@ def _self_test() -> None:
     assert sample(tip, "caer", 0.0)["rot"][0] > 3.0, "caer no eleva"
     assert sample(tip, "volar", 0.0)["pos"][1] > 0.25, "volar no levanta puntas"
     assert sample(tip, "agachado", 0.0)["pos"][2] < -0.20, "agache no recoge"
-    print("cape_motion v1.24.0: 8 ESTADOS con silueta propia, onda VIAJERA "
+    print("cape_motion v1.25.0: 8 ESTADOS con silueta propia, onda VIAJERA "
           "C1, retardo por tramo y offsets acumulados OK", rms)
 
 

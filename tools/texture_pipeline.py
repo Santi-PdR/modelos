@@ -617,28 +617,24 @@ ICON_ALTERNATIVE = (
     "...KK.KKK.KK....",
 )
 
-# Icono ACTIVO v1.24.0 — MANTO legible a 16x16 («debe verse bien como item»).
-# Antes era un blob de confeti rosa: ahora se lee como una CAPA: arco de
-# cuello, BROCHE encendido en el centro, hombros anchos, costuras verticales
-# (H) que separan paneles, degradado carmesi -> violeta y CINCO puntas en el
-# dobladillo. La paleta sigue derivando de CS.palette_at() por fila.
+# Icono ACTIVO v1.14.0.
 ICON_PIXEL_MAP = (
-    "......KKKK......",
-    ".....KHHHHK.....",
-    "....KHGWWGHK....",
-    "...KHHLLLLLHHK..",
-    "..KHHLLLLLLLHHK.",
-    ".KHMLHLLLLHLMHK.",
-    ".KMLLHLLLLHLMHK.",
-    ".KMLLHLLLLHMMHK.",
-    ".KDMLHLLLLHMDHK.",
-    ".KDMLHLLELHMDHK.",
-    ".KDDMHLELLHDDHK.",
-    ".KDDDHELLLHDDHK.",
-    ".KDDDHDDLDHDDHK.",
-    ".KDDDDDDDDDDDDK.",
-    ".KD.KD.KD.KD.KD.",
-    ".KK.KD.KK.KD.KK.",
+    "..KKGG....GGKK..",
+    "...HGHHHKKHGH...",
+    ".P..HHHHHHKKK...",
+    "...HMLMGKKLLLK..",
+    "...HELGWGMLEDK..",
+    "...GDLLGMMLLGK..",
+    "...HELLMHLLELK..",
+    "...HCLLMHLLMLHK.",
+    "...HMLMCKLMPLDP.",
+    "..HEELECEHMDLDHK",
+    ".HDMLDMEKKMGEDDK",
+    "PHDMDDMDKHMLMDDK",
+    "KHMDPMLDKDMEDDDK",
+    "KHDDMDDHKLDDDDKP",
+    ".KK.HD.GKDH.GK..",
+    "..K.KK..K.K.K...",
 )
 
 ICON_CANDIDATES = {"aprobado_v1130": ICON_ALTERNATIVE, "rose_v1140": ICON_PIXEL_MAP}
@@ -664,20 +660,27 @@ ICON_PALETTE = {
 
 
 
-# v1.24.0: DOS motas (no ocho) y se ANIMAN: suben 2 px por frame. El icono
-# dejó de parecer confeti y gana un efecto de chispa flotante en la hotbar.
+# Motas y chispas sueltas: la referencia tiene energía FLOTANDO alrededor
+# del paño. Se añaden en huecos del mapa, SIN tocar la silueta aprobada.
 ICON_FLOATING = (
-    (0, 13, "P"), (15, 12, "G"),
+    (1, 2, "P"), (14, 3, "G"), (0, 8, "P"), (15, 10, "P"),
+    (2, 14, "C"), (13, 15, "G"), (0, 12, "P"), (15, 5, "P"),
 )
 
-# Grietas de energía = DOS TRAYECTOS que recorre el pulso viajero de las
-# 4 frames (ventana de 3 celdas en A, de 2 en B). La frame 0 enciende el
-# inicio de cada trayecto; el resto queda en veta apagada "E".
+# Grietas de energia en guiones CORTOS y costuras oscuras entre jirones:
+# la referencia no es un bloque liso, son hebras separadas con rosa dentro.
 ICON_CRACKS = (
-    ((7, 5), (8, 6), (8, 7), (9, 8), (9, 9)),     # A: centro -> derecha
-    ((3, 9), (4, 10), (4, 11)),                   # B: izquierda abajo
+    # Cuchilladas diagonales de 2-3 px: el icono cuenta lo mismo que
+    # la capa 3D nueva, no una lluvia de cuadrados magenta.
+    (4, 7, "C"), (5, 8, "C"), (5, 9, "E"), (6, 10, "C"),
+    (10, 7, "C"), (10, 8, "E"), (9, 9, "C"), (9, 10, "C"),
+    (3, 11, "C"), (4, 12, "E"), (12, 11, "C"), (12, 12, "E"),
+    (6, 12, "C"), (7, 13, "E"), (9, 12, "C"), (8, 13, "E"),
+    (3, 14, "C"), (12, 14, "C"), (11, 13, "C"), (5, 13, "E"),
+    # Costuras oscuras entre lóbulos.
+    (6, 8, "H"), (6, 10, "H"), (9, 8, "H"), (9, 11, "H"),
+    (4, 14, "H"), (11, 14, "H"),
 )
-ICON_CLASP = ((7, 2), (8, 2))                     # broche: pulso W <-> P
 
 
 def _icon_row_palette(y: int) -> dict[str, tuple[int, int, int, int]]:
@@ -708,32 +711,30 @@ def _icon_row_palette(y: int) -> dict[str, tuple[int, int, int, int]]:
     }
 
 
-def _icon_grid(frame: int) -> list[list[str]]:
-    """Rejilla 16x16 de la icono-frame `frame` (0..3), con EFECTOS.
+def build_icon_artwork(size: int = 64) -> Image.Image:
+    """Icono 64x64 REMASTERIZADO v1221 (16x16 -> 4x, NEAREST).
 
-    Efectos animados (v1.24.0):
-      * pulso VIAJERO por las grietas (ventana que avanza por los trayectos);
-      * broche que alterna casi-blanco (W) y rosa (P);
-      * DOS motas que SUBEN 2 px por frame (chispa flotando hacia arriba).
+    Conserva EXACTAMENTE la silueta y el mapa de 16x16 que el usuario
+    aprobó (backup en tools/originals/icono_aprobado_v1130.png), pero:
+
+      * cada fila usa la paleta MEDIDA en REFERENCIA_CAPA.png en vez de la
+        paleta Rose fija (carmesí arriba -> violeta abajo);
+      * relieve 3D por píxel: luz arriba-izquierda, sombra abajo-derecha,
+        para que los pliegues se lean como tela y no como un dibujo plano;
+      * 8 motas/chispas flotando alrededor, como en la captura;
+      * cero antialiasing, cero degradado continuo, cero bloom: todo el
+        detalle sigue viviendo en la rejilla de 16x16.
     """
-    grid = [list(r) for r in ICON_PIXEL_MAP]
-    for path, width in zip(ICON_CRACKS, (3, 2)):
-        for i, (x, y) in enumerate(path):
-            lit = any((frame + step) % len(path) == i for step in range(width))
-            if grid[y][x] in ("H", "D", "M", "L", "E"):
-                grid[y][x] = "C" if lit else "E"
-    clasp = "W" if frame % 2 == 0 else "P"
-    for x, y in ICON_CLASP:
-        grid[y][x] = clasp
-    for (mx, my, _pch), ch in zip(ICON_FLOATING, ("P", "G")):
-        y = my - 2 * frame
-        assert grid[y][mx] == ".", (mx, y, grid[y][mx])
-        grid[y][mx] = ch
-    return grid
+    rows = ICON_PIXEL_MAP
+    assert len(rows) == 16 and all(len(r) == 16 for r in rows), "icono base 16x16"
+    grid = [list(r) for r in rows]
+    for x, y, ch in ICON_FLOATING:
+        if grid[y][x] == ".":
+            grid[y][x] = ch
+    for x, y, ch in ICON_CRACKS:
+        if grid[y][x] in ("H", "D", "M", "L", "E"):
+            grid[y][x] = ch
 
-
-def render_icon_grid(grid: list[list[str]], size: int = 64) -> Image.Image:
-    """Paleta por fila (degradado medido) + relieve 3D por píxel, NEAREST."""
     px = np.zeros((16, 16, 4), dtype=np.uint8)
     for y in range(16):
         pal = _icon_row_palette(y)
@@ -760,31 +761,12 @@ def render_icon_grid(grid: list[list[str]], size: int = 64) -> Image.Image:
                 px[y, x, :3].astype(np.float32) + delta, 0, 255
             ).astype(np.uint8)
 
-    return Image.fromarray(px, "RGBA").resize((size, size), Image.NEAREST)
-
-
-def build_icon_artwork(size: int = 64) -> Image.Image:
-    """Frame 0 del icono v1.24.0 (la base, layer0 del modelo del item).
-
-    Silueta y paleta plana, sin antialiasing ni bloom: todo vive en la
-    rejilla de 16x16. Los efectos por frame van en build_icon_frames().
-    """
-    return render_icon_grid(_icon_grid(0), size)
+    small = Image.fromarray(px, "RGBA")
+    return small.resize((size, size), Image.NEAREST)
 
 
 def build_icon() -> Image.Image:
     return build_icon_artwork(64)
-
-
-def build_icon_frames(frames: int = 4) -> list[Image.Image]:
-    """Las 4 frames del icono animado de la hotbar (64x64 cada una).
-
-    Se sirven como texturas separadas + una propiedad de modelo
-    (`capatest:frame`) con overrides, igual que el compass de vanilla:
-    sin BEWLR, sin renderer 3D, sin tocar el modelo `item/generated`.
-    """
-    return [render_icon_grid(_icon_grid(k), 64) for k in range(frames)]
-
 
 
 def build_folded_texture() -> tuple[Image.Image, Image.Image]:
@@ -1140,13 +1122,6 @@ def main() -> None:
     icon = build_icon()
     icon.save(ICON)
     print("icon:", icon.size)
-    # v1.24.0: 3 frames extra para la animación de hotbar (f0 = base).
-    frames = build_icon_frames()
-    assert len(frames) == 4 and frames[0].tobytes() == icon.tobytes()
-    for i, fr in enumerate(frames[1:], start=1):
-        fr.save(ICON.with_name(f"capa_deteriorer_evilsaiyan_f{i}.png"))
-    print(f"icon frames: {len(frames)} x {frames[0].size[0]}x{frames[0].size[1]}"
-          " (grietas viajeras, broche pulsando, motas subiendo)")
 
     folded, folded_glow = build_folded_texture()
     folded.save(ASSETS / "textures/item/cape_folded.png")

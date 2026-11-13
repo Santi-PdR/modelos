@@ -81,8 +81,11 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
         boolean charged = wearer != null && wearer.isSprinting();
 
         double phase = (System.currentTimeMillis() % PERIOD_MS) / PERIOD_MS * Math.PI * 2.0;
-        float amplitude = charged ? 0.22F : 0.12F;
-        float brightness = 0.88F + amplitude * (float) Math.sin(phase);
+        // v1.25.0: más luz. Antes el latido iba 0.76-1.00 (casi siempre
+        // por debajo del pleno); ahora 0.82-1.22 con más ganancia al
+        // esprintar: la capa "respira" luz en la noche sin quemar color.
+        float amplitude = charged ? 0.26F : 0.14F;
+        float brightness = 0.96F + amplitude * (float) Math.sin(phase);
         float violet = 0.90F + 0.08F * (1.0F - brightness);
 
         // v1.9.0: al perder vida (o al correr) el aura no vira a rojo, sino a

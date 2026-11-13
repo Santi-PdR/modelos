@@ -51,8 +51,8 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
     /** v1.23.0: chispas SUTILES. Un tick de emisión cada 6 (~3.3/s) y
      *  como mucho 4 chispas en ese tick: 3-13 partículas por segundo,
      *  SIN geometría, SIN sonidos y SIN búsqueda de entidades. */
-    private static final int SPARK_INTERVAL_TICKS = 6;
-    private static final int MAX_SPARKS_PER_TICK = 4;
+    private static final int SPARK_INTERVAL_TICKS = 8;
+    private static final int MAX_SPARKS_PER_TICK = 3;
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
@@ -241,11 +241,14 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
         for (int i = 0; i < count; i++) {
             boolean tip = i % 2 == 0;
             double rnd = ThreadLocalRandom.current().nextDouble();
+            // v1.25.0: SOBRE el paño. La tela vive a z=0.09..0.21 bloques
+            // de la espalda; con 0.42-0.74 antes salían MÁS atrás que la
+            // capa y se leían como barras sueltas que no la seguían.
             double height = tip
-                    ? 0.12D + 0.30D * rnd            // puntas inferiores
-                    : 0.42D + 0.53D * rnd;           // bordes del paño
-            double side = (i % 2 == 0 ? -1.0D : 1.0D) * (0.34D + 0.12D * rnd);
-            double depth = 0.42D + (tip ? 0.24D : 0.06D) + 0.06D * rnd;
+                    ? 0.10D + 0.26D * rnd            // sobre las puntas
+                    : 0.30D + 0.34D * rnd;           // bordes del paño
+            double side = (i % 2 == 0 ? -1.0D : 1.0D) * (0.30D + 0.16D * rnd);
+            double depth = 0.10D + (tip ? 0.12D : 0.04D) + 0.06D * rnd;
             double x = player.getX() + backX * depth + sideX * side;
             double z = player.getZ() + backZ * depth + sideZ * side;
             server.sendParticles(CapaParticles.CAPA_SPARK.get(),

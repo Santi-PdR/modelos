@@ -281,14 +281,25 @@ def build() -> dict:
         k, t = m["k"], m["t"]
         x = CS.ribbon_x(k, t) + 0.12 * math.sin(i * 2.1)
         y = CS.Y_TOP - t * CS.HEIGHT
-        z = CS.ribbon_z(k, t) + 0.46
+        # v1.25.0: EMBEBIDA en el mechón (no flotando delante)...
+        z = CS.ribbon_z(k, t) + ribbon_thick(k) - 0.14
         vw = 0.12
         vh = 0.65 + 0.45 * abs(math.sin(i * 1.7 + 0.3))
+        # ...y HIJA del tramo del mechón que la sostiene: hereda su
+        # rotación y su position, así que viaja con la tela en vez de
+        # quedarse clavada en el aire cuando la capa se mueve.
+        seg = CS.SEGS - 1
+        for nseg in range(CS.SEGS):
+            t0, t1 = CS.segment_bounds(k, nseg)
+            if t0 <= t <= t1:
+                seg = nseg
+                break
+        parent = f"v17_ribbon_{k}_seg{seg}"
         bones.append(bone(
-            f"v17_vein_{i}", "chestplate",
+            f"v17_vein_{i}", parent,
             [x, y, z], [0.0, 0.0, m["angle"]],
             [cube16((x - vw / 2.0, y - vh / 2.0, z),
-                    (vw, vh, 0.10), NEON_UV, NEON_UV, INFLATE[2])]))
+                    (vw, vh, 0.20), NEON_UV, NEON_UV, INFLATE[2])]))
 
     # ---- descripción y garantías -------------------------------------
     geo["bones"] = bones

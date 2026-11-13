@@ -106,22 +106,6 @@ jobs:
           # v1.10.0/v1.17.0: un icono pixel art 16x16 ampliado con NEAREST comprime
           # en menos de 2 KB. El de v1.9.0 (ilustración suave) pesaba ~6.5 KB.
           assert 300 <= icon_path.stat().st_size < 2000, icon_path.stat().st_size
-          # v1.24.0: 3 frames extra + overrides por capatest:frame (sin BEWLR).
-          for i in (1, 2, 3):
-              fp = base / 'textures/item' / f'capa_deteriorer_evilsaiyan_f{i}.png'
-              w, h = struct.unpack('>II', fp.read_bytes()[16:24])
-              assert (w, h) == (64, 64), (fp, w, h)
-          item_root = json.loads((base / 'models/item/capa_deteriorer_evilsaiyan.json').read_text())
-          _ovr = item_root.get('overrides') or []
-          assert [o['predicate']['capatest:frame'] for o in _ovr] == [0.25, 0.5, 0.75], _ovr
-          for i in (1, 2, 3):
-              fm = json.loads((base / f'models/item/capa_deteriorer_evilsaiyan_f{i}.json').read_text())
-              assert fm['parent'] == 'minecraft:item/generated', fm['parent']
-              assert fm['textures']['layer0'] == f'capatest:item/capa_deteriorer_evilsaiyan_f{i}'
-              assert fm['display'] == item_root['display'], 'las frames cambian de tamaño'
-          _icon_java = (root / 'src/main/java/com/capatest/client/CapaIconAnimation.java').read_text()
-          assert 'ItemProperties.register' in _icon_java
-          assert 'getGameTime() / 4L' in _icon_java and 'FMLClientSetupEvent' in _icon_java
           w, h = struct.unpack('>II', (base / 'textures/item/cape_folded.png').read_bytes()[16:24])
           assert (w, h) == (128, 128), ('folded atlas', w, h)
           # v1.23.0: UNA partícula EXCLUSIVA, con textura propia. Se
@@ -430,9 +414,9 @@ jobs:
                              for x in range(16)) for y in range(16)]
           sil = icon_silhouette(icon_path)
           def runs(row): return len(_re.findall(r'[^.]+', row))
-          # v1.24.0: UN arco de cuello continuo con broche (antes dos
-          # picos: el icono no se leía como capa).
-          assert runs(sil[0]) == 1 and sil[0][6:10] == '####', sil[0]
+          # Dos picos de cuello separados por un escote en V abierto.
+          # (icono PREFERIDO por el usuario; v1.25.0 revirtió el v1.24.0)
+          assert runs(sil[0]) == 2 and sil[0][6:10] == '....', sil[0]
           # Dobladillo de CINCO puntas deshilachadas, no la hendidura central
           # de las referencias, que parte el borde inferior en dos patas.
           assert runs(sil[15]) == 5, sil[15]
@@ -717,7 +701,7 @@ jobs:
           assert 'tools/audit_model.py --check' in (root / '.github/workflows/build.yml').read_text()
           print('OK: v1.24.0, geometria rehecha (12 mechones anchos en 2 capas), '
                 'cuello alto + hombreras + cadena, atlas limpio con glowmask '
-                'fullbright, chispa EXCLUSIVA sin particulas vanilla, icono animado por frames en la hotbar y sin lag')
+                'fullbright, chispa EXCLUSIVA sin particulas vanilla, icono PREFERIDO revertido con backup byte-identico y sin lag')
           PY
 
       # v1220: la autoevaluacion MEDIDA se ejecuta AQUI, en GitHub Actions,
@@ -772,11 +756,6 @@ jobs:
             grep -qx 'com/capatest/CapaTestMod.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaGlowLayer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaSparkParticle.class' /tmp/jar-contents.txt
-            grep -qx 'com/capatest/client/CapaIconAnimation.class' /tmp/jar-contents.txt
-            for i in 1 2 3; do
-              grep -qx "assets/capatest/textures/item/capa_deteriorer_evilsaiyan_f${i}.png" /tmp/jar-contents.txt
-              grep -qx "assets/capatest/models/item/capa_deteriorer_evilsaiyan_f${i}.json" /tmp/jar-contents.txt
-            done
             grep -qx 'com/capatest/client/CapaItemRenderer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaItemGlowLayer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaArmorModel.class' /tmp/jar-contents.txt

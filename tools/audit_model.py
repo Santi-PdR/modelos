@@ -50,7 +50,7 @@ LIMITS = {
     "energy": 55.0,
     "silhouette": 1.60,
 }
-ICON_SHA = "a4866d693d54ca8803d2e9110d779556239a24dae39fff1f76f5bdc5bab4fb7a"  # v1.24.0
+ICON_SHA = "c90670ba367557d7c7c003fa38dbe10c27cc88dcee1ef37fedc48f3a82820ee5"  # v1.25.0: revert al preferido
 ICON_BACKUP_SHA = "e88ccec0a0c67b1ad0982ed781f0d684ae4662660c545fa134574781967e4840"
 
 
@@ -232,21 +232,15 @@ def static_checks() -> None:
                              '/capa_deteriorer_evilsaiyan.json').read_text())
     assert item_model['parent'] == 'minecraft:item/generated', 'el icono 2D no se ve'
     assert item_model['textures']['layer0'] == 'capatest:item/capa_deteriorer_evilsaiyan'
-    # v1.24.0: animación por PROPIEDAD de modelo (patrón compass), sin BEWLR.
-    ovr = item_model.get('overrides') or []
-    assert [o['predicate']['capatest:frame'] for o in ovr] == [0.25, 0.5, 0.75], ovr
-    mdir = ROOT / 'src/main/resources/assets/capatest/models/item'
-    for i in (1, 2, 3):
-        fm = json.loads((mdir / f'capa_deteriorer_evilsaiyan_f{i}.json').read_text())
-        assert fm['parent'] == 'minecraft:item/generated', fm['parent']
-        assert fm['textures']['layer0'] == f'capatest:item/capa_deteriorer_evilsaiyan_f{i}'
-        assert fm.get('display') == item_model.get('display'), 'las frames cambian de tamaño'
-        assert (ROOT / 'src/main/resources/assets/capatest/textures/item'
-                / f'capa_deteriorer_evilsaiyan_f{i}.png').is_file()
-    icon_client = (ROOT / 'src/main/java/com/capatest/client/CapaIconAnimation.java').read_text()
-    assert 'ItemProperties.register' in icon_client and '"frame"' in icon_client
-    assert 'getGameTime() / 4L' in icon_client
-    assert 'FMLClientSetupEvent' in icon_client
+    # v1.25.0: el usuario devolvió el icono anterior («el 1 era mucho
+    # mejor… no importa la animación»): ESTÁTICO, SIN overrides ni
+    # propiedad de modelo, y con un backup byte-idéntico obligatorio.
+    assert 'overrides' not in item_model, 'vuelven los frames del icono'
+    assert not (ROOT / 'src/main/java/com/capatest/client/CapaIconAnimation.java').exists()
+    pref = ROOT / 'referencias/ICONO_PREFERIDO_BACKUP.png'
+    assert pref.is_file(), 'falta el backup del icono preferido'
+    assert hashlib.sha256(pref.read_bytes()).hexdigest() == ICON_SHA, \
+        'el backup no es byte-idéntico al icono preferido'
     item_java = (ROOT / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
     assert 'getCustomRenderer' not in item_java, 'el BEWLR 3D tapa el icono'
     # v1.17.3: regresión de la prueba real en Blockbench. El .bbmodel
@@ -340,7 +334,7 @@ def main() -> None:
            + max(0.0, 1.8 - wid) / 1.8)
     print(f"  degradado carmesi->morado: {grad:.1f} | neón emissive: {neon:.2f}%"
           f" | mechón ancho: {wid:.2f}u")
-    print(f"  FIDELIDAD AL DISEÑO v1.24.0: {fid:.3f}   limite 1.00")
+    print(f"  FIDELIDAD AL DISEÑO v1.25.0: {fid:.3f}   limite 1.00")
 
     if args.check:
         bad = [k for k in ('silhouette',) if err[k] > LIMITS[k]]
@@ -350,7 +344,7 @@ def main() -> None:
             print("FALLO: métricas fuera de umbral: " + ", ".join(bad),
                   file=sys.stderr)
             sys.exit(1)
-        print("OK: diseño v1.24.0 dentro de umbrales, sin piezas volando, "
+        print("OK: diseño v1.25.0 dentro de umbrales, sin piezas volando, "
           "chispa exclusiva en runtime e icono intacto")
     else:
         print("(informe; usa --check para que falle como test de CI)")

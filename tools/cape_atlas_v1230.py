@@ -221,6 +221,8 @@ def build_clean_atlas():
     _wear_holes(rgb)
 
     core, hot, halo = _neon_masks()
+    halo2 = np.asarray(
+        Image.fromarray(core).filter(ImageFilter.MaxFilter(5)), dtype=np.uint8)
     # HALO: magenta oscuro alrededor del trazo.
     m = (halo > 0) & (core == 0)
     rgb[m, 0] = np.maximum(rgb[m, 0].astype(int), 122).astype(np.uint8)
@@ -235,11 +237,19 @@ def build_clean_atlas():
 
     # GLOWMASK: GeckoLib sólo lee el ALFA. El RGB queda coherente por si
     # alguna herramienta lo inspecciona.
+    # v1.25.0: la fuente del bloom en GeckoLib es el COLOR de la textura
+    # multiplicado por el alpha del glowmask. Se realza sólo el neón
+    # (núcleo + halo): el paño de alrededor queda intacto.
+    m = (halo > 0) & (core == 0)
+    rgb[m, :3] = np.clip(rgb[m, :3].astype(np.float32) * 1.10
+                         + np.array([18, 4, 16]), 0, 255).astype(np.uint8)
+
     glow = np.zeros((SIZE, SIZE, 4), dtype=np.uint8)
-    glow[..., 0], glow[..., 1], glow[..., 2] = 255, 120, 220
+    glow[..., 0], glow[..., 1], glow[..., 2] = 255, 130, 225
     glow[..., 3] = 0
-    glow[halo > 0, 3] = 70
-    glow[core > 0, 3] = 225
+    glow[(halo2 > 0) & (halo == 0), 3] = 48      # anillo externo suave
+    glow[halo > 0, 3] = 118                        # halo (antes 70)
+    glow[core > 0, 3] = 240                        # núcleo (antes 225)
     glow[hot > 0, 3] = 255
 
     assert (rgb[..., 3] == 255).all(), "atlas con texel transparente"

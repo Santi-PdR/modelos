@@ -1,20 +1,51 @@
-# Mantle of the Blight Star — v1.24.0
+# Mantle of the Blight Star — v1.25.0
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Capa equipada en `curios:back`, temática
 **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-> 📦 **Release vigente: `v1.24.0`** — `capatest-1.24.0.jar` compilado
+> 📦 **Release vigente: `v1.25.0`** — `capatest-1.25.0.jar` compilado
 > en CI. Cada entrega cambia a una versión más nueva; `v1.19.0` y
 > anteriores quedan como histórico y no se sobreescriben.
 >
-> 🔗 **Link directo al `.bbmodel` v1.24.0**: [https://github.com/Santi-PdR/modelos/releases/download/v1.24.0/CAPA_v1.24.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.24.0/CAPA_v1.24.0.bbmodel)
-> (también en el workspace: [`docs/CAPA_v1.24.0.bbmodel`](docs/CAPA_v1.24.0.bbmodel)).
+> 🔗 **Link directo al `.bbmodel` v1.25.0**: [https://github.com/Santi-PdR/modelos/releases/download/v1.25.0/CAPA_v1.25.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.25.0/CAPA_v1.25.0.bbmodel)
+> (también en el workspace: [`docs/CAPA_v1.25.0.bbmodel`](docs/CAPA_v1.25.0.bbmodel)).
 > **El archivo ahora SÍ se llama igual que la versión**: el exportador
 > lee `mod_version` y genera `docs/CAPA_v<versión>.bbmodel` con el
 > `name` interno y el asset de Release con esa misma versión.
 > v1.14.0, v1.15.0 y v1.16.0 fueron rechazadas visualmente y sus previews
 > se borraron del repo. Los previews son render **software**.
+
+### v1.25.0 — icono preferido de vuelta, sin flotantes y más luz
+
+Dijiste: *«el 1 era mucho mejor, cámbialo de vuelta… no importa la
+animación; arregla la mano; esas partículas/bloques flotando que no se
+mueven con la capa; mejora el bloom, la luz y la animación»*.
+
+- **Icono revertido BYTE A BYTE** al que te gustaba (el de la imagen 1):
+  mismo PNG, mismo SHA-256 (`c90670ba…`), estático, sin `overrides` ni
+  propiedad de modelo. Nuevo backup obligatorio:
+  `referencias/ICONO_PREFERIDO_BACKUP.png` (byte-idéntico, verificado por
+  la auditoría). Se eliminan las 3 texturas/frame, los 3 modelos y la clase
+  de animación del icono.
+- **Adiós a los bloques flotantes**: las 10 grietas 3D `v17_vein_*` eran
+  HIJAS de `chestplate`, así que cuando la capa se movía se quedaban
+  clavadas en el aire. Ahora cuelgan del **tramo del mechón** que las
+  lleva (heredan rotación Y posición) y van **embebidas** en el paño
+  (sólo ~0.06 de relieve).
+- **Chispas pegadas al dobladillo**: se emitían a 0.42–0.74 bloques de la
+  espalda mientras la tela vive a 0.09–0.21 → parecían barras sueltas.
+  Ahora nacen SOBRE el paño (0.10–0.30), cada 8 ticks, máximo 3.
+- **Mejor luz y bloom**: el halo del glowmask pasa a 3 anillos
+  (48/118/240/255 de alfa) con la fuente neón realzada +10 %, y el latido
+  emissive en juego sube de 0.76–1.00 a 0.82–1.22 (más brillo al correr).
+- **Animación más natural**: fase y amplitud PROPIAS de cada mechón
+  (determinista, sigue C1), simetría corregida a 12 columnas (antes el eje
+  seguía en 7.5 y la capa aleteaba más por un lado), más retardo en volar
+  (0.60), caer (0.68), correr (0.56) y deterioro (0.75) para que las
+  puntas arceden detrás en vez de salir como palos rectos.
+- **Mano**: el ítem plano salía gigante en tercera persona — escala
+  0.75→0.55 (y 0.80→0.65 en primera persona).
 
 ### v1.24.0 — icono ANIMADO en la hotbar y legible como item
 
@@ -265,16 +296,16 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Release vigente: v1.24.0
+### Release vigente: v1.25.0
 
-El JAR se publica como Release [`v1.24.0`](https://github.com/Santi-PdR/modelos/releases/tag/v1.24.0):
-`capatest-1.24.0.jar`, compilado en CI con JDK 17 + Gradle 8.8.
-**Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.24.0/CAPA_v1.24.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.24.0/CAPA_v1.24.0.bbmodel)
-(el mismo archivo que `docs/CAPA_v1.24.0.bbmodel` y el asset de la Release,
+El JAR se publica como Release [`v1.25.0`](https://github.com/Santi-PdR/modelos/releases/tag/v1.25.0):
+`capatest-1.25.0.jar`, compilado en CI con JDK 17 + Gradle 8.8.
+**Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.25.0/CAPA_v1.25.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.25.0/CAPA_v1.25.0.bbmodel)
+(el mismo archivo que `docs/CAPA_v1.25.0.bbmodel` y el asset de la Release,
 byte-idénticos; ya no existe el viejo `capa_v1170.bbmodel`).
 
  Regla de entrega: **cada cambio sube `mod_version`** (aquí 1.19.0 →
-1.24.0), **el `.bbmodel` cambia de nombre con esa versión** y
+1.25.0), **el `.bbmodel` cambia de nombre con esa versión** y
 **siempre se incluye el link del `.bbmodel`**. El workflow lee
 la versión de `gradle.properties` para que JAR, tag y assets nunca se
 desincronizen; publica con `workflow_dispatch(publicar=true)` o con un
@@ -400,7 +431,7 @@ Contrastando el PNG y el render a la misma escala, la autoevaluación pasó de
   (un solo `.html`, sin servidor, sin red, sin token).
 - **Comparativa con tu referencia**:
   [`docs/capa_v1170_comparativa.png`](docs/capa_v1170_comparativa.png).
-- **Proyecto Blockbench**: [`docs/CAPA_v1.24.0.bbmodel`](docs/CAPA_v1.24.0.bbmodel),
+- **Proyecto Blockbench**: [`docs/CAPA_v1.25.0.bbmodel`](docs/CAPA_v1.25.0.bbmodel),
   182 cubos / 254 grupos, 4 animaciones en bucle con **12624 keyframes**
   y UUID canónicos: curvas **Bézier** con tangentes analíticas (C1),
   marcadores, retardo por tramo, vaivén de paso, barrido al correr,
