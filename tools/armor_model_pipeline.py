@@ -71,8 +71,14 @@ def band(u0: float, w: float, v0: float, h: float) -> dict:
 
 # Cantos: un parche oscuro y opaco (carbón / sombra), sin filetes.
 DARK = band(120.0, 2.0, 100.0, 2.0)
-PAD_UV = band(97.0, 13.0, 1.0, 13.0)
-CHAIN_UV = band(113.0, 13.0, 1.0, 13.0)
+# v1.27.0: la hombrera y la cadena tienen parches PROPIOS. Antes ambas
+# muestreaban un gris carbón plano: la hombrera se leía como una masa
+# negra y la cadena como una fila de puntos.
+PAD_UV = band(97.0, 13.0, 1.0, 13.0)        # cara superior de la placa
+PAD_SIDE_UV = band(97.0, 13.0, 65.0, 13.0)  # lateral de la placa
+CREST_UV = band(113.0, 13.0, 65.0, 13.0)    # cresta exterior
+CHAIN_UV = band(113.0, 13.0, 1.0, 13.0)     # anillo del eslabón
+CHAIN_TOP_UV = band(97.0, 13.0, 81.0, 13.0)  # canto superior del eslabón
 COLLAR_UV = band(97.0, 28.0, 17.0, 21.0)
 NEON_UV = band(98.0, 28.0, 41.0, 21.0)
 
@@ -133,6 +139,24 @@ def cube16(origin, size, front: dict, side: dict | None = None,
                "up": dict(s), "down": dict(s)},
         "inflate": round(inflate, 4),
     }
+
+
+def cube_faces(origin, size, faces: dict, inflate: float = 0.0) -> dict:
+    """v1.27.0: cubo con UV POR CARA.
+
+    La hombrera necesita que su cara superior sea la placa de acero
+    iluminada y sus laterales el acero oscuro con filete: con el
+    `cube16()` antiguo (dos parches) era imposible.
+    """
+    missing = {"north", "south", "east", "west", "up", "down"} - set(faces)
+    assert not missing, f"faltan caras: {missing}"
+    out = {
+        "origin": [round(v, 4) for v in origin],
+        "size": [round(v, 4) for v in size],
+        "uv": {k: dict(v) for k, v in faces.items()},
+        "inflate": round(inflate, 4),
+    }
+    return out
 
 
 def bone(name: str, parent: str | None, pivot, rotation, cubes) -> dict:
@@ -218,25 +242,62 @@ def build() -> dict:
                     COLLAR_UV, INFLATE[2])]))
 
     # ------------------------------------------------------------------
-    # 3. HOMBRERAS CARBÓN + CADENA OSCURA en la parte alta de la espalda.
+    # 3. HOMBRERAS (pauldron de 3 piezas) + CADENA de 8 eslabones.
+    #
+    # v1.27.0: la hombrera era UN cubo 2.40x0.90x1.80 de gris carbón
+    # plano: en el juego se leía como una MASA NEGRA en el hombro. Ahora
+    # son tres piezas encajadas (placa + cresta exterior + labio
+    # delantero) con filete de luz en el borde: se lee como una
+    # hombrera de verdad. La cadena son ocho ANILLOS (no ocho motas)
+    # que se solapan y se cruzan, y van POR DETRÁS del cuello para que
+    # se lean como una cadena y no como puntos.
     # ------------------------------------------------------------------
     for i in range(PADS):
         side = -1.0 if i == 0 else 1.0
         x = side * 5.20
         bones.append(bone(
             f"v18_pad_{i}", "chestplate",
-            [x, 22.55, 2.60], [0.0, 0.0, side * -14.0],
-            [cube16((x - 1.20, 22.12, 1.85), (2.40, 0.90, 1.80),
-                    PAD_UV, PAD_UV, INFLATE[2])]))
+            [x, 23.10, 2.70], [0.0, 0.0, side * -16.0],
+            [
+                # PLACA base: la superficie del hombro.
+                cube_faces((x - 1.25, 22.70, 1.60), (2.50, 0.42, 2.10),
+                           {"up": PAD_UV, "north": PAD_SIDE_UV,
+                            "south": PAD_SIDE_UV, "east": PAD_SIDE_UV,
+                            "west": PAD_SIDE_UV, "down": PAD_SIDE_UV},
+                           INFLATE[0]),
+                # LAM superior: un escalón más arriba y más corto.
+                cube_faces((x - 1.09, 23.00, 1.76), (2.18, 0.34, 1.78),
+                           {"up": PAD_UV, "north": PAD_SIDE_UV,
+                            "south": PAD_SIDE_UV, "east": PAD_SIDE_UV,
+                            "west": PAD_SIDE_UV, "down": PAD_SIDE_UV},
+                           INFLATE[1]),
+                # FILO exterior: el canto que atrapa la luz del sol.
+                cube_faces((x + side * 0.95 - 0.21, 22.80, 1.68),
+                           (0.42, 0.52, 2.05),
+                           {"up": CREST_UV, "north": PAD_SIDE_UV,
+                            "south": PAD_SIDE_UV, "east": PAD_SIDE_UV,
+                            "west": PAD_SIDE_UV, "down": PAD_SIDE_UV},
+                           INFLATE[2]),
+                # LABIO delantero: el borde que baja hacia el pecho.
+                cube_faces((x - 1.08, 22.06, 1.42), (2.16, 0.74, 0.52),
+                           {"up": PAD_SIDE_UV, "north": PAD_SIDE_UV,
+                            "south": PAD_SIDE_UV, "east": PAD_SIDE_UV,
+                            "west": PAD_SIDE_UV, "down": PAD_SIDE_UV},
+                           INFLATE[0]),
+            ]))
 
     for i in range(CHAIN_LINKS):
-        x = -3.50 + i * 1.00
-        y = 22.65 - 0.18 * math.sin(i * 0.9)
+        x = -3.30 + i * 0.94
+        y = 22.52 - 0.13 * math.sin(i * 0.85)
+        z = 3.96 + (0.05 if i % 2 else -0.05)
         bones.append(bone(
             f"v18_chain_{i}", "chestplate",
-            [x, y, 3.78], [0.0, 0.0, 20.0 if i % 2 else -20.0],
-            [cube16((x - 0.40, y - 0.14, 3.67), (0.80, 0.28, 0.22),
-                    CHAIN_UV, CHAIN_UV, INFLATE[1])]))
+            [x, y, z], [0.0, 0.0, 14.0 if i % 2 else -14.0],
+            [cube_faces((x - 0.48, y - 0.19, z - 0.10), (0.96, 0.38, 0.20),
+                        {"north": CHAIN_UV, "south": CHAIN_UV,
+                         "up": CHAIN_TOP_UV, "down": CHAIN_TOP_UV,
+                         "east": CHAIN_TOP_UV, "west": CHAIN_TOP_UV},
+                        INFLATE[1])]))
 
     # ------------------------------------------------------------------
     # 4. 12 MECHONES ANCHOS, PLANOS, CURVADOS Y SUPERPUESTOS, EN 2 CAPAS.

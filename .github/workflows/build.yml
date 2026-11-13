@@ -231,7 +231,9 @@ jobs:
           orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
           assert armor_geo['bones'][:72] == orig_bones
           assert len(armor_geo['bones']) == 222
-          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 276
+          # v1.27.0: 282 cubos (los 6 nuevos son las hombreras:
+          # placa, lam, filo y labio en cada hombro).
+          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 282
           new_bones = armor_geo['bones'][72:]
           new_names = {b['name'] for b in new_bones}
           assert {
@@ -376,6 +378,40 @@ jobs:
                         'Math.toRadians', 'ConcurrentHashMap', 'CapaTestMod.LOGGER',
                         'Exception | LinkageError', 'private static final int COLUMNS = 9;'):
               assert token in armor_model, token
+          # v1.27.0: LAS 27 ANCLAS DE LA ONDA NO SE DIBUJAN. Son cubos
+          # de 0.16 que existen SÓLO para dar pose a la tela (los usan
+          # panels[] y el animation.json). El hueso se conserva; lo que se
+          # apaga es su RENDER, en Java y en el render software, para que
+          # el cuello no tenga motas negras.
+          assert 'hideClothAnchors' in armor_model, 'Java no oculta las anclas'
+          assert 'anchor.setHidden(!visible)' in armor_model
+          # CONTROLES de visibilidad: ver/ocultar y AISLAR pads o cadena.
+          for _tok in ('Visibilidad', 'ANCLAS', 'HOMBRERAS', 'CADENA',
+                       'capa.visibilidad', 'setVisibilidad', 'applyVisibilidad'):
+              assert _tok in armor_model, f'falta el control {_tok}'
+          _preview_src = (root / 'tools/preview_cloth.py').read_text()
+          assert 'def isolate(' in _preview_src, 'el preview no aísla pads/cadena'
+          assert '--isolate' in _preview_src and '--show-anchors' in _preview_src
+          # v1.27.0: los 27 huesos v15_cloth_* SIGUEN en el geo (no se
+          # borran: son las referencias de pose de la onda).
+          _anchors = [b for b in new_bones if b['name'].startswith('v15_cloth_')]
+          assert len(_anchors) == 27, len(_anchors)
+          assert all(b.get('cubes') for b in _anchors), 'anclas sin cubo'
+          # v1.27.0: al re-resolver los huesos, el modo de visibilidad se
+          # INVALIDA (visibilidadAplicada = null) o los modos de
+          # aislamiento nunca se aplicarían.
+          assert 'visibilidadAplicada = null;' in armor_model, \
+              'el modo de visibilidad no se reaplica al recargar el geo'
+          # v1.27.0: la hombrera son CUATRO piezas por hombro (placa, lam,
+          # filo y labio) y la cadena son ocho anillos.
+          _pads = [b for b in new_bones if b['name'].startswith('v18_pad_')]
+          assert len(_pads) == 2, len(_pads)
+          assert all(len(b.get('cubes', [])) == 4 for b in _pads), \
+              'la hombrera vuelve a ser un cubo'
+          _chains = [b for b in new_bones if b['name'].startswith('v18_chain_')]
+          assert len(_chains) == 8, len(_chains)
+          assert 'def cube_faces(' in (root / 'tools/armor_model_pipeline.py').read_text(), \
+              'falta el cubo con UV por cara de la hombrera'
           # Regresión del crash v1.5.0: nunca grados crudos en setRot*, ni
           # getBakedModel() en el hot path (puede reiniciar los snapshots).
           assert 'panel.setRotX(baseX[i] - bend)' not in armor_model
@@ -510,7 +546,8 @@ jobs:
           assert bb['meta']['format_version'] == '5.0'
           # v1.17.3: el .bbmodel de Blockbench muestra SOLO la capa: sin
           # maniqui Steve/Alex y sin los 126 cubos de la armadura vieja.
-          assert len(bb['elements']) == 150 and len(bb['groups']) >= 222
+          # v1.27.0: 156 cubos de capa (150 + 6 de las hombreras).
+          assert len(bb['elements']) == 156 and len(bb['groups']) >= 222
           assert not any('Steve/Alex' in g['name'] for g in bb['groups'])
           assert bb['resolution'] == {'width': 128, 'height': 128}
           assert all(max(f['uv']) <= 128 for e in bb['elements'] for f in e['faces'].values())
@@ -838,7 +875,7 @@ jobs:
             unzip -p "$jar" assets/capatest/animations/item/cape_folded.animation.json > /tmp/folded-anim.json
             python3 -c 'import json; a=json.load(open("/tmp/folded-anim.json"))["animations"]; assert len(a)==5 and "animation.item" in a; print("OK: 5 animaciones con animation.item dentro del jar")'
             unzip -p "$jar" assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json > /tmp/armor-geo.json
-            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==222 and sum(len(x.get("cubes",[])) for x in b)==276; print("OK: 222 huesos / 276 cubos dentro del jar")'
+            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==222 and sum(len(x.get("cubes",[])) for x in b)==282; print("OK: 222 huesos / 282 cubos dentro del jar")'
             echo "OK: clases, mods.toml, 3D item, animation.item, atlas limpio + glowmask, chispa exclusiva y datos Curios presentes"
           done
           test "$found" -eq 1
@@ -877,6 +914,20 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.27.0 — LAS MOTAS NEGRAS FUERA, HOMBRERA Y CADENA REHECHAS,
+            ICONO LEGIBLE**: las 27 anclas `v15_cloth_*` (cubos de 0.16 que
+            existen SÓLO para dar pose a la onda) ya NO se dibujan: el hueso,
+            la jerarquía y las ocho pistas se conservan intactos y lo que se
+            apaga es su render (Java y render software). La hombrera deja de
+            ser un cubo gris plano (que en el juego se leía como una masa
+            negra) y pasa a CUATRO piezas de acero por hombro con UV por
+            cara; la cadena pasa de ocho motas sueltas a ocho ANILLOS de
+            acero que se leen como cadena sobre la espalda. El icono 2D
+            mantiene la silueta aprobada (dos picos de cuello, faldón de
+            cinco puntas) pero con tres pliegues legibles, acero para
+            hombrera y cadena y sólo CUATRO píxeles magenta. Nuevo control
+            `capa.visibilidad` (normal|anclas|hombreras|cadena) para ver y
+            aislar cada pieza por separado.
           - **v1.26.0 — LA CAPA YA NO SE INCLINA SIEMPRE HACIA EL MISMO LADO**:
             el eje lateral es ahora `(columnas − 1) / 2` de cada familia,
             medido sobre los pivotes X reales del geo (mechones 12 → 5.5,
@@ -927,7 +978,7 @@ jobs:
             al portador. Visor sin maniquí por defecto. Forma: jirones más
             finos y puntas separadas (silueta 1.08x, fidelidad 1.239).
 
-          - `.bbmodel` con **150 cubos de capa** / 222 grupos, textura 128×128, 8 animaciones / 26208 keyframes (rotación, posición por tramo y escala, tangentes Bézier C1). Sin maniquí, sin armadura vieja, SIN cubos flotantes y SIN pista de efectos: Blockbench abre sin buscar archivos de partículas.
+          - `.bbmodel` con **156 cubos de capa** / 222 grupos, textura 128×128, 8 animaciones / 26208 keyframes (rotación, posición por tramo y escala, tangentes Bézier C1). Sin maniquí, sin armadura vieja, SIN cubos flotantes y SIN pista de efectos: Blockbench abre sin buscar archivos de partículas.
           - Visor 3D autocontenido (sin red, sin servidor ni token) y comparativa
             con tu PNG de Blockbench.
           - **v1.18.0 — CAPA REHECHA DESDE CERO**: el atlas es la imagen

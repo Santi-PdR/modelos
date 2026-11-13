@@ -1,20 +1,54 @@
-# Mantle of the Blight Star — v1.26.0
+# Mantle of the Blight Star — v1.27.0
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Capa equipada en `curios:back`, temática
 **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-> 📦 **Release vigente: `v1.26.0`** — `capatest-1.26.0.jar` compilado
+> 📦 **Release vigente: `v1.27.0`** — `capatest-1.27.0.jar` compilado
 > en CI. Cada entrega cambia a una versión más nueva; `v1.19.0` y
 > anteriores quedan como histórico y no se sobreescriben.
 >
-> 🔗 **Link directo al `.bbmodel` v1.26.0**: [https://github.com/Santi-PdR/modelos/releases/download/v1.26.0/CAPA_v1.26.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.26.0/CAPA_v1.26.0.bbmodel)
-> (también en el workspace: [`docs/CAPA_v1.26.0.bbmodel`](docs/CAPA_v1.26.0.bbmodel)).
+> 🔗 **Link directo al `.bbmodel` v1.27.0**: [https://github.com/Santi-PdR/modelos/releases/download/v1.27.0/CAPA_v1.27.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.27.0/CAPA_v1.27.0.bbmodel)
+> (también en el workspace: [`docs/CAPA_v1.27.0.bbmodel`](docs/CAPA_v1.27.0.bbmodel)).
 > **El archivo ahora SÍ se llama igual que la versión**: el exportador
 > lee `mod_version` y genera `docs/CAPA_v<versión>.bbmodel` con el
 > `name` interno y el asset de Release con esa misma versión.
 > v1.14.0, v1.15.0 y v1.16.0 fueron rechazadas visualmente y sus previews
 > se borraron del repo. Los previews son render **software**.
+
+### v1.27.0 — las motas negras fuera, hombrera y cadena rehechas, icono legible
+
+Tres defectos que se veían en las capturas y que esta entrega arregla de
+verdad, con la geometría, el atlas, el runtime y la auditoría cambiados.
+
+- **Las 27 anclas de la onda ya no se dibujan**: son cubos de 0.16 que
+  existen **sólo** para dar pose a la tela (los usa `panels[]` y las ocho
+  pistas del `animation.json`). El hueso, la jerarquía y la animación se
+  conservan **intactos**: lo que se apaga es su render, en Java
+  (`hideClothAnchors`) y en el render software, para que el cuello no
+  tenga motas negras.
+- **La hombrera deja de ser una masa negra**: era un único cubo
+  2.40×0.90×1.80 de gris carbón plano (luminancia ~34, sin volumen) que
+  en el juego se leía como una mancha en el hombro. Ahora son **cuatro
+  piezas de acero** por hombro (placa, lam, filo exterior y labio
+  delantero), con UV **por cara**, filo de luz arriba-izquierda, sombra
+  abajo-derecha, remaches y un filete carmesí que la ata al paño.
+- **La cadena deja de ser una fila de puntos**: el parche eran ocho motas
+  claras sobre fondo negro. Ahora cada eslabón es un **anillo de acero**
+  con hueco interior, brillo especular y sombra propia, y los ocho se
+  cruzan y se solapan sobre la espalda, por detrás del cuello.
+- **El icono 2D se lee en la hotbar**: mantiene la silueta aprobada (dos
+  picos de cuello y faldón de **cinco** puntas) pero con tres pliegues
+  legibles, acero para la hombrera y la cadena, broche blanco y sólo
+  **cuatro** píxeles magenta (antes quince chispas y ocho motas: ruido).
+  El icono de la v1.25.0 queda guardado como histórico.
+- **Controles de visibilidad**: `-Dcapa.visibilidad=normal|anclas|hombreras|cadena`
+  (y `CapaArmorModel.setVisibilidad(...)`) para ver u ocultar y **aislar**
+  cada pieza por separado; el render software acepta `--isolate` y
+  `--show-anchors`.
+- **Rótulos del preview corregidos**: en este geo el exterior de la capa
+  mira a +Z, así que la vista `yaw=0` es la **espalda (F5)** y `yaw=180`
+  el **interior**. Antes estaban cambiados.
 
 ### v1.26.0 — la capa ya no se inclina siempre hacia el mismo lado
 
@@ -330,16 +364,16 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Release vigente: v1.26.0
+### Release vigente: v1.27.0
 
-El JAR se publica como Release [`v1.26.0`](https://github.com/Santi-PdR/modelos/releases/tag/v1.26.0):
-`capatest-1.26.0.jar`, compilado en CI con JDK 17 + Gradle 8.8.
-**Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.26.0/CAPA_v1.26.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.26.0/CAPA_v1.26.0.bbmodel)
-(el mismo archivo que `docs/CAPA_v1.26.0.bbmodel` y el asset de la Release,
+El JAR se publica como Release [`v1.27.0`](https://github.com/Santi-PdR/modelos/releases/tag/v1.27.0):
+`capatest-1.27.0.jar`, compilado en CI con JDK 17 + Gradle 8.8.
+**Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.27.0/CAPA_v1.27.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.27.0/CAPA_v1.27.0.bbmodel)
+(el mismo archivo que `docs/CAPA_v1.27.0.bbmodel` y el asset de la Release,
 byte-idénticos; ya no existe el viejo `capa_v1170.bbmodel`).
 
- Regla de entrega: **cada cambio sube `mod_version`** (aquí 1.25.0 →
-1.26.0), **el `.bbmodel` cambia de nombre con esa versión** y
+ Regla de entrega: **cada cambio sube `mod_version`** (aquí 1.26.0 →
+1.27.0), **el `.bbmodel` cambia de nombre con esa versión** y
 **siempre se incluye el link del `.bbmodel`**. El workflow lee
 la versión de `gradle.properties` para que JAR, tag y assets nunca se
 desincronizen; publica con `workflow_dispatch(publicar=true)` o con un
@@ -465,7 +499,7 @@ Contrastando el PNG y el render a la misma escala, la autoevaluación pasó de
   (un solo `.html`, sin servidor, sin red, sin token).
 - **Comparativa con tu referencia**:
   [`docs/capa_v1170_comparativa.png`](docs/capa_v1170_comparativa.png).
-- **Proyecto Blockbench**: [`docs/CAPA_v1.26.0.bbmodel`](docs/CAPA_v1.26.0.bbmodel),
+- **Proyecto Blockbench**: [`docs/CAPA_v1.27.0.bbmodel`](docs/CAPA_v1.27.0.bbmodel),
   150 cubos / 222 grupos, 8 animaciones en bucle con **26208 keyframes**
   y UUID canónicos: curvas **Bézier** con tangentes analíticas (C1),
   marcadores, retardo por tramo, vaivén de paso, barrido al correr,

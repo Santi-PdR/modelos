@@ -346,7 +346,9 @@ def main() -> None:
     _im = Image.open(io.BytesIO(_raw))
     assert _im.size == (128, 128), ("textura del .bbmodel", _im.size)
     assert model["resolution"] == {"width": 128, "height": 128}
-    assert len(model["elements"]) == 150, len(model["elements"])
+    # v1.27.0: 156 cubos de capa (150 + 6 de las hombreras nuevas:
+    # placa, lam, filo y labio por cada hombro).
+    assert len(model["elements"]) == 156, len(model["elements"])
     assert not any(e["name"].startswith(("v17_mote_", "v17_ash_",
                                        "v16_mote_", "v16_ash_"))
                    for e in model["elements"]), "vuelven las motas 3D"

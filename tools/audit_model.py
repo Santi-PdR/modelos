@@ -50,7 +50,11 @@ LIMITS = {
     "energy": 55.0,
     "silhouette": 1.60,
 }
-ICON_SHA = "c90670ba367557d7c7c003fa38dbe10c27cc88dcee1ef37fedc48f3a82820ee5"  # v1.25.0: revert al preferido
+ICON_SHA = "1500c07312d04e86b289913abb7c168c380d15d300bea6e27b70d81e9b92952c"  # v1.27.0: icono rediseñado
+# v1.27.0: el icono PREFERIDO de la v1.25.0 se conserva como histórico
+# (era byte-idéntico al activo). Con el rediseño deja de ser el activo,
+# pero no se borra: está en referencias/ICONO_V125_PREFERIDO_BACKUP.png.
+ICON_V125_SHA = "c90670ba367557d7c7c003fa38dbe10c27cc88dcee1ef37fedc48f3a82820ee5"
 ICON_BACKUP_SHA = "e88ccec0a0c67b1ad0982ed781f0d684ae4662660c545fa134574781967e4840"
 
 
@@ -160,7 +164,10 @@ def static_checks() -> None:
     geo = json.loads((ROOT / "src/main/resources/assets/capatest/geo/item"
                       "/armor/capa_deteriorer_evilsaiyan.geo.json").read_text())
     bones = geo["minecraft:geometry"][0]["bones"]
-    assert len(bones) == 222 and sum(len(b.get("cubes", [])) for b in bones) == 276
+    # v1.27.0: 222 huesos (los mismos) y 282 cubos. Los 6 cubos nuevos son
+    # las hombreras: placa, lam, filo y labio en cada hombro (antes un
+    # único cubo gris que en el juego se leía como una masa negra).
+    assert len(bones) == 222 and sum(len(b.get("cubes", [])) for b in bones) == 282
     forbidden = ("v17_mote_", "v17_ash_", "v17_yoke_",
                  "v16_mote_", "v16_ash_")
     assert not any(b["name"].startswith(forbidden) for b in bones), \
@@ -241,13 +248,19 @@ def static_checks() -> None:
     assert pref.is_file(), 'falta el backup del icono preferido'
     assert hashlib.sha256(pref.read_bytes()).hexdigest() == ICON_SHA, \
         'el backup no es byte-idéntico al icono preferido'
+    # v1.27.0: el icono PREFERIDO de la v1.25.0 sigue guardado, pero ya no
+    # es el activo: es historial, no un respaldo del diseño de hoy.
+    v125 = ROOT / 'referencias/ICONO_V125_PREFERIDO_BACKUP.png'
+    assert v125.is_file(), 'falta el icono preferido de la v1.25.0'
+    assert hashlib.sha256(v125.read_bytes()).hexdigest() == ICON_V125_SHA, \
+        'el icono de la v1.25.0 no se conserva byte-idéntico'
     item_java = (ROOT / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
     assert 'getCustomRenderer' not in item_java, 'el BEWLR 3D tapa el icono'
     # v1.17.3: regresión de la prueba real en Blockbench. El .bbmodel
     # NO puede volver a incluir el maniquí ni los cubos de armadura vieja.
     assert (ROOT / 'docs' / f'CAPA_v{VER}.bbmodel').read_bytes() == BB.read_bytes()
     bb = json.loads(BB.read_text())
-    assert len(bb['elements']) == 150, len(bb['elements'])
+    assert len(bb['elements']) == 156, len(bb['elements'])
     assert bb['resolution'] == {'width': 128, 'height': 128}
     assert all(max(f['uv']) <= 128 for e in bb['elements']
                for f in e['faces'].values())
@@ -332,6 +345,70 @@ def static_checks() -> None:
                                 sorted(expected - names),
                                 sorted(names - expected))
     assert len(names) == 150, len(names)
+    # ------------------------------------------------------------------
+    # v1.27.0: LAS 27 ANCLAS NO SE DIBUJAN. Son cubos de 0.16 que existen
+    # sólo para dar pose a la onda (los usan panels[] y el animation.json).
+    # El hueso se conserva; lo que se apaga es su RENDER, en Java y en el
+    # render software, para que no queden motas negras en el cuello.
+    # ------------------------------------------------------------------
+    _anchors = [b for b in bones if b["name"].startswith("v15_cloth_")]
+    assert len(_anchors) == 27, len(_anchors)
+    assert all(len(b.get("cubes", [])) == 1 for b in _anchors), \
+        'las anclas deben seguir siendo UN cubo (no se tocan)'
+    _armor_java_all = (ROOT / 'src/main/java/com/capatest/client'
+                       / 'CapaArmorModel.java').read_text()
+    assert 'hideClothAnchors' in _armor_java_all, \
+        'Java no oculta las anclas de la onda'
+    assert 'anchor.setHidden(!visible)' in _armor_java_all, \
+        'las anclas no se ocultan por separado'
+    import preview_cloth as _PC
+    _hidden_runtime = _PC.effective_hidden(json.loads(
+        (ROOT / 'src/main/resources/assets/capatest/geo/item/armor'
+         / 'capa_deteriorer_evilsaiyan.geo.json').read_text())[
+             'minecraft:geometry'][0])
+    assert all(b['name'] in _hidden_runtime for b in _anchors), \
+        'el render software todavía pinta las anclas'
+    # Los controles de visibilidad existen y aíslan las piezas.
+    for _token in ('Visibilidad', 'ANCLAS', 'HOMBRERAS', 'CADENA',
+                   'capa.visibilidad'):
+        assert _token in _armor_java_all, f'falta el control {_token}'
+    assert 'def isolate(' in (ROOT / 'tools/preview_cloth.py').read_text(), \
+        'el preview no puede aislar pads/cadena/anclas'
+    # ------------------------------------------------------------------
+    # v1.27.0: LA HOMBRERA Y LA CADENA NO SON MASAS NEGRAS. Antes la
+    # hombrera era un rectángulo carbón plano y la cadena ocho motas:
+    # en el juego se leían como una mancha y como puntos. Ahora la
+    # hombrera tiene filo de luz y la cadena son anillos con hueco.
+    # ------------------------------------------------------------------
+    _atlas_rgb = atlas[..., :3]
+    _pad = _atlas_rgb[0:16, 96:112]
+    _chain = _atlas_rgb[0:16, 112:128]
+    assert float(_pad.mean()) > 40.0, 'la hombrera sigue siendo negra'
+    assert int(_pad.max()) > 150, 'la hombrera no tiene luz'
+    assert int(_chain.min()) < 60, 'el eslabón no tiene hueco'
+    assert int(_chain.max()) > 150, 'el eslabón no tiene brillo'
+    # La hombrera son 4 piezas por hombro, no un cubo.
+    _pads = [b for b in bones if b["name"].startswith("v18_pad_")]
+    assert len(_pads) == 2, len(_pads)
+    assert all(len(b.get("cubes", [])) == 4 for b in _pads), \
+        'la hombrera vuelve a ser un cubo'
+    _chains = [b for b in bones if b["name"].startswith("v18_chain_")]
+    assert len(_chains) == 8, len(_chains)
+    # ------------------------------------------------------------------
+    # v1.27.0: EL ICONO SE LEE EN LA HOTBAR. Cuatro pixeles magenta (no
+    # quince) y acero para la hombrera y la cadena.
+    # ------------------------------------------------------------------
+    _icon_src = (ROOT / 'tools/texture_pipeline.py').read_text()
+    _map_rows = _re.findall(r'"([.A-Z]{16})"',
+                             _re.search(r'ICON_PIXEL_MAP = \((.*?)\n\)',
+                                        _icon_src, _re.S).group(1))
+    assert len(_map_rows) == 16, len(_map_rows)
+    _flat = ''.join(_map_rows)
+    assert _flat.count('C') == 4, ('el icono vuelve a llenarse de magenta',
+                                   _flat.count('C'))
+    assert 'B' in _flat and 'S' in _flat, \
+        'el icono no muestra la hombrera ni la cadena'
+    assert _flat.count('S') >= 6, 'la cadena no se lee en el icono'
     # ------------------------------------------------------------------
     # v1.26.0: PRESUPUESTO DE CHISPAS POR VALOR EFECTIVO. La CI pedía
     # el literal 'MAX_SPARKS_PER_TICK = 4', que sólo sobrevivía en un

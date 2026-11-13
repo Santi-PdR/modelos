@@ -123,6 +123,49 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     /** Estado por portador; es una instancia del modelo, no un static global. */
     private final Map<Long, double[]> motion = new ConcurrentHashMap<>();
 
+    // ------------------------------------------------------------------
+    // v1.27.0 — CONTROLES DE VISIBILIDAD (diagnóstico y aislamiento).
+    //
+    // El usuario vio "motas" y "masas negras" en la parte alta de la
+    // espalda y no sabía de dónde venían. Estos interruptores permiten
+    // mirar POR PARTES lo que se dibuja: las anclas de la onda, la
+    // hombrera o la cadena, por separado.
+    //
+    //   normal     : todo lo de siempre (anclas OCULTAS).
+    //   anclas     : sólo las 27 anclas v15_cloth_* (el resto fuera).
+    //   hombreras  : sólo las hombreras v18_pad_*.
+    //   cadena     : sólo la cadena v18_chain_*.
+    //
+    // Se eligen con la propiedad del sistema `capa.visibilidad` y se
+    // pueden cambiar en caliente con setVisibilidad(...).
+    // ------------------------------------------------------------------
+    public enum Visibilidad { NORMAL, ANCLAS, HOMBRERAS, CADENA }
+
+    private static Visibilidad visibilidad = leerVisibilidad();
+
+    /** Modo aplicado al modelo; si cambia, se vuelve a aplicar. */
+    private Visibilidad visibilidadAplicada;
+
+    private static Visibilidad leerVisibilidad() {
+        String raw = System.getProperty("capa.visibilidad", "normal");
+        for (Visibilidad v : Visibilidad.values()) {
+            if (v.name().equalsIgnoreCase(raw))
+                return v;
+        }
+        return Visibilidad.NORMAL;
+    }
+
+    /** Modo de visibilidad actual (diagnóstico). */
+    public static Visibilidad getVisibilidad() {
+        return visibilidad;
+    }
+
+    /** Cambia el modo en caliente; se aplica en el siguiente frame. */
+    public static void setVisibilidad(Visibilidad modo) {
+        if (modo != null)
+            visibilidad = modo;
+    }
+
     private GeoBone cachedRoot;
     private GeoBone[] panels;
     private GeoBone[] hems;
@@ -159,6 +202,8 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             return;
         try {
             resolveBones();
+            // v1.27.0: si el interruptor de visibilidad cambió, se reaplica.
+            applyVisibilidad();
             if (clothReady)
                 applyClothWave(animatable, instanceId, state);
         } catch (Exception | LinkageError error) {
@@ -299,6 +344,88 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             if (detail != null)
                 detail.setHidden(true);   // oculta también a sus descendientes
         }
+        // v1.27.0: las 27 ANCLAS `v15_cloth_*` son cubos de 0.16 que
+        // existen SÓLO para dar pose a la onda (los usa panels[] y la
+        // animación). No se dibujan: se ocultan SIN borrar el hueso, la
+        // jerarquía ni ninguna pista del animation.json.
+        hideClothAnchors(false);
+        // Los huesos se acaban de resolver otra vez: hay que reaplicar el
+        // modo de visibilidad (puede que el geo se haya recargado y los
+        // huesos sean objetos nuevos, sin el estado de `hidden`).
+        visibilidadAplicada = null;
+    }
+
+    /**
+     * v1.27.0: las 27 anclas {@code v15_cloth_*} son cubos de 0.16 que
+     * existen SÓLO para dar pose a la onda (los usa {@code panels[]} y el
+     * animation.json). Se OCULTAN sin borrar el hueso, la jerarquía ni
+     * ninguna pista: el modelo sigue moviéndose igual, pero el cuello no
+     * tiene motas negras.
+     *
+     * @param visible true sólo para el modo de diagnóstico ANCLAS.
+     */
+    private void hideClothAnchors(boolean visible) {
+        for (String section : SECTIONS) {
+            for (int column = 0; column < COLUMNS; column++) {
+                GeoBone anchor = getBone("v15_cloth_" + section + "_" + column).orElse(null);
+                if (anchor != null)
+                    anchor.setHidden(!visible);
+            }
+        }
+    }
+
+    /**
+     * v1.27.0: aplica el modo de visibilidad (normal / anclas /
+     * hombreras / cadena). Se llama al resolver los huesos y cada vez
+     * que el interruptor cambia, para poder aislar una pieza y ver de
+     * verdad qué pinta en el juego.
+     */
+    private void applyVisibilidad() {
+        if (visibilidadAplicada == visibilidad && clothReady)
+            return;
+        // 1) Punto de partida: se restablece todo lo gestionado.
+        for (String section : SECTIONS) {
+            GeoBone slab = getBone(section).orElse(null);
+            if (slab != null) {
+                slab.setHidden(true);
+                slab.setChildrenHidden(false);
+            }
+        }
+        for (String name : HIDDEN_DETAILS) {
+            GeoBone detail = getBone(name).orElse(null);
+            if (detail != null)
+                detail.setHidden(true);
+        }
+        for (String name : DETERIORO_NAMES) {
+            GeoBone bone = getBone(name).orElse(null);
+            if (bone != null) {
+                bone.setHidden(false);
+                bone.setChildrenHidden(false);
+            }
+        }
+        // 2) Las anclas se ocultan siempre (salvo en modo ANCLAS): son
+        //    referencias de pose, no piezas visibles.
+        hideClothAnchors(visibilidad == Visibilidad.ANCLAS);
+        // 3) Aislamiento: fuera todo lo que no sea la familia elegida.
+        String familia = null;
+        if (visibilidad == Visibilidad.HOMBRERAS)
+            familia = "v18_pad_";
+        else if (visibilidad == Visibilidad.CADENA)
+            familia = "v18_chain_";
+        if (visibilidad == Visibilidad.ANCLAS)
+            familia = "v15_cloth_";
+        if (familia != null) {
+            for (String name : DETERIORO_NAMES) {
+                if (name.startsWith(familia))
+                    continue;
+                GeoBone bone = getBone(name).orElse(null);
+                if (bone != null) {
+                    bone.setHidden(true);
+                    bone.setChildrenHidden(true);
+                }
+            }
+        }
+        visibilidadAplicada = visibilidad;
     }
 
     private void applyClothWave(CapaDeteriorerItem animatable, long instanceId,

@@ -42,6 +42,12 @@ PAD = (96, 0, 112, 16)
 CHAIN = (112, 0, 128, 16)
 COLLAR = (96, 16, 128, 40)
 NEON = (96, 40, 128, 64)
+# v1.27.0: la hombrera y la cadena se rehicieron porque se leían como una
+# MASA NEGRA (la hombrera) y como PUNTOS sueltOS (la cadena). Los parches
+# nuevos viven en el bloque libre (u 96..128, v 64..128):
+PAD_SIDE = (96, 64, 112, 80)     # lateral de la placa de hombro
+CREST = (112, 64, 128, 80)       # cresta exterior: el filo que brilla
+LINK_TOP = (96, 80, 112, 96)      # canto superior del eslabón
 
 CRIMSON = (142, 24, 40)
 VIOLET = (62, 20, 74)
@@ -71,31 +77,118 @@ def _gradient_block(arr, box, top, bottom, folds=3.0, amplitude=7.0,
     arr[v0:v1, u0:u1, 3] = 255
 
 
-def _patches(arr) -> None:
-    """Hombreras carbón, cadena oscura, cuello carmesí y parche neón."""
-    # --- hombreras: carbón con vetas horizontales y remaches -------------
+def _steel(arr, box, top, bottom, diag=True) -> None:
+    """Acero: degradado diagonal de LUZ (arriba-izquierda) a SOMBRA."""
+    u0, v0, u1, v1 = box
+    h, w = v1 - v0, u1 - u0
+    for j in range(h):
+        for i in range(w):
+            if diag:
+                q = (i / max(1, w - 1) + j / max(1, h - 1)) / 2.0
+            else:
+                q = j / max(1, h - 1)
+            c = _mix(top, bottom, q)
+            arr[v0 + j, u0 + i] = (c[0], c[1], c[2], 255)
+
+
+def _pad_plate(arr) -> None:
+    """v1.27.0: la HOMBRERA deja de ser una caja gris.
+
+    Antes era un rectángulo carbón plano (luminancia ~34, sin volumen)
+    que en el juego se leía como una MASA NEGRA pegada al hombro. Ahora
+    es una placa de acero con filo de luz arriba-izquierda, sombra
+    abajo-derecha, remaches con su sombra y un filete carmesí que la
+    ata al paño de la capa.
+    """
     u0, v0, u1, v1 = PAD
-    for j in range(v1 - v0):
-        for i in range(u1 - u0):
-            v = 34 + 5 * math.sin(j * 0.9) + 3 * math.sin(i * 1.7 + j * 0.4)
-            arr[v0 + j, u0 + i] = (int(v), int(v + 1), int(v + 6), 255)
+    _steel(arr, PAD, (104, 106, 126), (34, 34, 46))
     img = Image.fromarray(arr, "RGBA")
     d = ImageDraw.Draw(img)
-    for x, y in ((99, 3), (109, 3), (99, 12), (109, 12)):
-        d.rectangle((x, y, x + 1, y + 1), fill=(86, 88, 100, 255))
-
-    # --- cadena: eslabones oscuros con realce metálico -------------------
-    u0, v0, u1, v1 = CHAIN
-    arr[v0:v1, u0:u1] = (20, 20, 27, 255)
-    img.paste(Image.fromarray(arr[v0:v1, u0:u1], "RGBA"), (u0, v0))
-    d = ImageDraw.Draw(img)
-    for row in range(4):
-        y = 1 + row * 4
-        for col in range(2):
-            x = u0 + 1 + col * 7
-            d.rectangle((x, y, x + 6, y + 2), outline=(50, 52, 64, 255))
-            d.point((x + 3, y + 1), fill=(84, 86, 102, 255))
+    d.line([(u0, v0), (u1 - 1, v0)], fill=(176, 178, 198, 255))
+    d.line([(u0, v0), (u0, v1 - 1)], fill=(168, 170, 190, 255))
+    d.line([(u0, v1 - 1), (u1 - 1, v1 - 1)], fill=(16, 16, 24, 255))
+    d.line([(u1 - 1, v0), (u1 - 1, v1 - 1)], fill=(22, 22, 32, 255))
+    for x, y in ((u0 + 3, v0 + 3), (u1 - 6, v0 + 3),
+                 (u0 + 3, v1 - 6), (u1 - 6, v1 - 6)):
+        d.rectangle((x, y, x + 1, y + 1), fill=(196, 198, 216, 255))
+        d.point((x + 1, y + 2), fill=(12, 12, 18, 255))
+    # FILETE carmesí: la hombrera está cosida al paño de la capa.
+    d.line([(u0, v1 - 2), (u1 - 1, v1 - 2)], fill=(126, 30, 48, 255))
     arr[...] = np.asarray(img, dtype=np.uint8)
+
+
+def _pad_side(arr) -> None:
+    """Lateral de la placa: acero más oscuro con el mismo filete."""
+    u0, v0, u1, v1 = PAD_SIDE
+    _steel(arr, PAD_SIDE, (62, 64, 82), (22, 22, 30), diag=False)
+    img = Image.fromarray(arr, "RGBA")
+    d = ImageDraw.Draw(img)
+    d.line([(u0, v0), (u1 - 1, v0)], fill=(120, 122, 142, 255))
+    d.line([(u0, v0 + 8), (u1 - 1, v0 + 8)], fill=(126, 30, 48, 255))
+    d.line([(u0, v1 - 1), (u1 - 1, v1 - 1)], fill=(14, 14, 20, 255))
+    arr[...] = np.asarray(img, dtype=np.uint8)
+
+
+def _crest(arr) -> None:
+    """Cresta exterior: el filo de la hombrera que ATRAPA la luz."""
+    u0, v0, u1, v1 = CREST
+    _steel(arr, CREST, (188, 190, 210), (58, 58, 76), diag=False)
+    img = Image.fromarray(arr, "RGBA")
+    d = ImageDraw.Draw(img)
+    d.line([(u0, v0), (u1 - 1, v0)], fill=(236, 238, 252, 255))
+    d.line([(u0, v0 + 1), (u1 - 1, v0 + 1)], fill=(214, 216, 234, 255))
+    d.line([(u0, v1 - 1), (u1 - 1, v1 - 1)], fill=(26, 26, 36, 255))
+    arr[...] = np.asarray(img, dtype=np.uint8)
+
+
+def _link(arr) -> None:
+    """v1.27.0: el ESLABÓN es un anillo, no un punto.
+
+    Antes el parche eran ocho motas claras sobre fondo negro y la
+    cadena se leía como una fila de PUNTOS. Ahora cada eslabón es un
+    anillo de acero con hueco interior, brillo especular arriba-
+    izquierda y sombra abajo-derecha.
+    """
+    u0, v0, u1, v1 = CHAIN
+    cx, cy = (u0 + u1 - 1) / 2.0, (v0 + v1 - 1) / 2.0
+    rx, ry = 6.8, 6.2
+    span = float((u1 - u0 - 1) + (v1 - v0 - 1))
+    for j in range(v1 - v0):
+        for i in range(u1 - u0):
+            dx = (u0 + i - cx) / rx
+            dy = (v0 + j - cy) / ry
+            r = math.sqrt(dx * dx + dy * dy)
+            if r < 0.52:
+                c = (12, 11, 18)              # HUECO del eslabón
+            elif r <= 1.0:
+                c = _mix((124, 126, 146), (48, 48, 62), (i + j) / span)
+                if r > 0.86 and dx < 0.0 and dy < 0.0:
+                    c = (226, 228, 244)      # brillo especular
+                elif r < 0.68:
+                    c = (30, 29, 40)          # sombra interior
+            else:
+                c = (18, 17, 25)              # fuera del anillo
+            arr[v0 + j, u0 + i] = (c[0], c[1], c[2], 255)
+
+
+def _link_top(arr) -> None:
+    """Canto superior del eslabón: barra de acero maciza."""
+    u0, v0, u1, v1 = LINK_TOP
+    _steel(arr, LINK_TOP, (150, 152, 172), (52, 52, 68), diag=False)
+    img = Image.fromarray(arr, "RGBA")
+    d = ImageDraw.Draw(img)
+    d.line([(u0, v0), (u1 - 1, v0)], fill=(206, 208, 226, 255))
+    d.line([(u0, v1 - 1), (u1 - 1, v1 - 1)], fill=(24, 24, 32, 255))
+    arr[...] = np.asarray(img, dtype=np.uint8)
+
+
+def _patches(arr) -> None:
+    """Hombrera, cadena, cuello carmesí y parche neón."""
+    _pad_plate(arr)
+    _pad_side(arr)
+    _crest(arr)
+    _link(arr)
+    _link_top(arr)
 
     # --- cuello alto: carmesí OSCURO con pliegues verticales -------------
     u0, v0, u1, v1 = COLLAR

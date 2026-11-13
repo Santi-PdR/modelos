@@ -257,9 +257,17 @@ def effective_hidden(geo):
     descendientes tampoco se renderizan. Pero las tres secciones se ocultan
     con setChildrenHidden(false): sus cubos desaparecen y sus hijos (la tela
     v15_*) siguen visibles.
+
+    v1.27.0: las 27 ANCLAS `v15_cloth_*` también se ocultan. Son cubos de
+    0.16 que existen sólo para dar pose a la onda (los usa `panels[]` y el
+    animation.json): el hueso se conserva, pero NO se dibuja. Antes el
+    render software los pintaba y el runtime también, así que las motas
+    negras de la parte alta podían venir de ahí.
     """
     parent = {b["name"]: b.get("parent") for b in geo["bones"]}
     hidden = set(HIDDEN_DETAILS) | set(SECTION_BONES) | MANNEQUIN
+    hidden |= {b["name"] for b in geo["bones"]
+               if b["name"].startswith("v15_cloth_")}
     # OJO: `chestplate` es PADRE de los huesos v17_* de la capa. Se ocultan
     # SUS CUBOS, pero NO se propaga a los hijos: si no, desaparece la capa
     # entera. La propagación sigue siendo sólo para HIDDEN_DETAILS.
@@ -271,6 +279,26 @@ def effective_hidden(geo):
                 hidden.add(name)
                 break
             cur = parent.get(cur)
+    return hidden
+
+
+def isolate(geo, family):
+    """Deja SÓLO una familia visible (diagnóstico).
+
+    `family` puede ser "pads", "chain", "anchors" o None (todo).
+    """
+    names = {b["name"] for b in geo["bones"]}
+    if not family:
+        return set()
+    prefixes = {"pads": "v18_pad_", "chain": "v18_chain_",
+                "anchors": "v15_cloth_"}
+    keep = prefixes[family]
+    hidden = set(effective_hidden(geo))
+    for name in names:
+        if name.startswith(keep):
+            hidden.discard(name)
+        else:
+            hidden.add(name)
     return hidden
 
 
@@ -326,12 +354,22 @@ def main():
     ap.add_argument("--out", default="/tmp/capa_preview", type=pathlib.Path)
     ap.add_argument("--uv-test", action="store_true",
                     help="pinta franjas de colores en el canvas para validar el orden UV")
+    ap.add_argument("--isolate", default="none",
+                    choices=("none", "pads", "chain", "anchors"),
+                    help="deja SÓLO esa familia visible (diagnóstico)")
+    ap.add_argument("--show-anchors", action="store_true",
+                    help="vuelve a pintar las 27 anclas v15_cloth_* (diagnóstico)")
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
 
     armor = load(ARMOR_GEO)
     folded = load(FOLDED_GEO)
     runtime_hidden = effective_hidden(armor)
+    if args.show_anchors:
+        # v1.27.0: las anclas están OCULTAS en runtime. Con esta bandera
+        # se vuelven a pintar para ver de dónde salían las motas.
+        runtime_hidden = {n for n in runtime_hidden
+                          if not n.startswith("v15_cloth_")}
     # rev. B: la "piel nueva" son las anclas v15_* y el abanico v17_*.
     # NO hay motas ni ceniza: son partículas de runtime.
     cloth_only = {b["name"] for b in armor["bones"]
@@ -360,12 +398,15 @@ def main():
     views = [
         (render(folded, FOLDED_TEX, set(), yaw=-28, pitch=14, size=520),
          f"FOLDED ITEM 3D - bulto v{mod_version()}"),
+        # v1.27.0: los rótulos estaban CAMBIADOS. En este geo el exterior
+        # de la capa mira a +Z (el arnés del pecho está a -Z), así que la
+        # vista yaw=0 es la ESPALDA (F5) y yaw=180 el INTERIOR de la capa.
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=0, pitch=8, size=520),
-         "DETERIORO - frente"),
+         "DETERIORO - espalda (F5)"),
         (render(posed(armor), ARMOR_TEX, runtime_hidden, yaw=-28, pitch=10, size=520),
          "DETERIORO - flujo de jirones 3/4"),
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=180, pitch=8, size=520),
-         "DETERIORO - espalda (F5)"),
+         "DETERIORO - interior (cara del pecho)"),
         (side_relief, "JIRONES 3D - perfil"),
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=205, pitch=14, size=520),
          "COLLAR + MICROVOXELES - 3/4"),
@@ -390,8 +431,18 @@ def main():
                if not b["name"].startswith(("v15_", "v16_", "v17_", "v18_"))
                and b["name"] not in runtime_hidden and b.get("cubes")]
     (args.out / "visible_original_bones.txt").write_text("\n".join(visible) + "\n")
+    # v1.27.0: AISLAMIENTO. Deja SÓLO una familia visible para ver qué
+    # pinta de verdad (la hombrera, la cadena o las anclas de la onda).
+    if args.isolate != "none":
+        iso_hidden = isolate(armor, args.isolate)
+        render(armor, ARMOR_TEX, iso_hidden, yaw=0, pitch=8, size=700).save(
+            args.out / f"isolate_{args.isolate}.png")
+        print(f"isolate {args.isolate}: {args.out / f'isolate_{args.isolate}.png'}")
     print(f"wrote {len(list(args.out.iterdir()))} files to {args.out}")
     print("visible original bones:", len(visible))
+    print("anclas v15_cloth_* ocultas:",
+          sum(1 for b in armor["bones"] if b["name"].startswith("v15_cloth_")
+              and b["name"] in runtime_hidden))
 
 
 if __name__ == "__main__":

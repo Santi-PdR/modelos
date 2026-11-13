@@ -9,6 +9,20 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.27.0: MOTAS NEGRAS FUERA, HOMBRERA Y CADENA REHECHAS, ICONO LEGIBLE.
+Las 27 anclas v15_cloth_* (cubos de 0.16 que existen solo para dar pose
+a la onda) ya NO se dibujan: el hueso, la jerarquia y las ocho pistas de
+animacion se conservan intactos, solo se apaga su render. La hombrera pasa
+de ser un cubo gris plano (que en el juego se leia como una masa negra) a
+cuatro piezas de acero por hombro con filo de luz y filete carmesi; la
+cadena pasa de ocho motas sueltas a ocho anillos de acero que se leen
+como cadena sobre la espalda. El icono 2D se redisena: mantiene la
+silueta aprobada (dos picos de cuello y faldon de cinco puntas) pero con
+tres pliegues legibles, acero para hombrera y cadena y solo CUATRO pixeles
+magenta, para que se lea en la hotbar. Nuevo: controles de visibilidad
+(capa.visibilidad=normal|anclas|hombreras|cadena) para ver y aislar cada
+pieza por separado.
+
 v1.26.0: EJES DE SIMETRIA Y LISTA DE HUESOS CORREGIDAS. El eje lateral
 de cada familia pasa a ser (columnas - 1) / 2 medido sobre el geo real
 (mechones 12 -> 5.5, pano de 9 columnas -> 4.0, grietas 10 -> 4.5,
