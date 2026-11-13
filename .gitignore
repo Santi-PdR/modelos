@@ -28,5 +28,12 @@ Thumbs.db
 .cache/
 tools/_deps/
 
-# Visor local de previsualizacion (no se versiona)
-preview/
+# Visor local de previsualizacion.
+#
+# v1.27.0: el CÓDIGO FUENTE del visor SI se versiona (preview/app.js y
+# preview/index.html, ~41 KB). Antes todo `preview/` estaba ignorado, así
+# que el visor publicado (docs/capa_v1170_visor.html, 14 MB) no se podía
+# reconstruir desde un clon limpio: sus fuentes no estaban en el repo.
+# Sólo se ignoran los ASSETS, que son salidas generadas.
+preview/assets/
+preview/*.raw

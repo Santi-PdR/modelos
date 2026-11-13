@@ -368,6 +368,19 @@ def static_checks() -> None:
              'minecraft:geometry'][0])
     assert all(b['name'] in _hidden_runtime for b in _anchors), \
         'el render software todavía pinta las anclas'
+    # v1.27.0: EL VISOR también tiene que ocultarlas. Antes el runtime
+    # Java y el render software las ocultaban, pero el visor (el
+    # entregable que mira el usuario) seguía pintándolas: enseñaba las
+    # motas negras que esta misma versión arregla.
+    _visor_js = (ROOT / 'preview/app.js').read_text()
+    assert "startsWith('v15_cloth_')) h.add(b.name)" in _visor_js, \
+        'el visor vuelve a dibujar las anclas'
+    assert 'l_anchors' in _visor_js, 'el visor no tiene el diagnóstico de anclas'
+    _visor_emb = (ROOT / 'docs/capa_v1170_visor.html').read_text()
+    assert "startsWith('v15_cloth_')) h.add(b.name)" in _visor_emb, \
+        'el visor autocontenido publicado dibuja las anclas'
+    assert 'l_anchors' in _visor_emb, \
+        'el visor autocontenido publicado no tiene el diagnóstico'
     # Los controles de visibilidad existen y aíslan las piezas.
     for _token in ('Visibilidad', 'ANCLAS', 'HOMBRERAS', 'CADENA',
                    'capa.visibilidad'):

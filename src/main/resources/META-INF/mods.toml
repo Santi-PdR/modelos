@@ -10,6 +10,9 @@ authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
 v1.27.0: MOTAS NEGRAS FUERA, HOMBRERA Y CADENA REHECHAS, ICONO LEGIBLE.
+El visor 3D de docs/ deja de pintar las 27 anclas de la onda (ya no lo
+hacia el runtime) y trae una casilla de diagnostico para verlas. Los
+entregables de docs/ son reproducibles con tools/build_deliverables.py.
 Las 27 anclas v15_cloth_* (cubos de 0.16 que existen solo para dar pose
 a la onda) ya NO se dibujan: el hueso, la jerarquia y las ocho pistas de
 animacion se conservan intactos, solo se apaga su render. La hombrera pasa

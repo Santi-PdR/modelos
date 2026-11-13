@@ -392,6 +392,31 @@ jobs:
           _preview_src = (root / 'tools/preview_cloth.py').read_text()
           assert 'def isolate(' in _preview_src, 'el preview no aísla pads/cadena'
           assert '--isolate' in _preview_src and '--show-anchors' in _preview_src
+          # v1.27.0: EL VISOR también tiene que ocultar las anclas. Antes
+          # el runtime Java y el render software las ocultaban, pero el
+          # visor seguía pintándolas: el entregable que mira el usuario
+          # enseñaba las motas negras que la v1.27.0 arregla.
+          _visor_js = (root / 'preview/app.js').read_text()
+          assert "startsWith('v15_cloth_')) h.add(b.name)" in _visor_js, \
+              'el visor vuelve a dibujar las anclas'
+          assert 'l_anchors' in _visor_js, 'el visor no tiene el diagnóstico'
+          _visor_emb = (root / 'docs/capa_v1170_visor.html').read_text()
+          assert "startsWith('v15_cloth_')) h.add(b.name)" in _visor_emb, \
+              'el visor autocontenido publicado dibuja las anclas'
+          assert 'l_anchors' in _visor_emb
+          # v1.27.0: los entregables de docs/ son REPRODUCIBLES: los
+          # scripts que generan el GIF y la hoja de estados están en el
+          # repo (antes vivían en /tmp y se perdían).
+          for _f in ('tools/make_anim_gifs.js', 'tools/make_state_sheet.js',
+                     'tools/build_deliverables.py', 'tools/make_reference_icons.py'):
+              assert (root / _f).is_file(), f'falta {_f}'
+          assert 'make_anim_gifs.js' in (root / 'tools/build_deliverables.py').read_text()
+          assert 'make_reference_icons.py' in (root / 'tools/build_deliverables.py').read_text()
+          # El CÓDIGO FUENTE del visor está versionado: antes todo
+          # `preview/` estaba ignorado y el visor publicado (14 MB) no se
+          # podía reconstruir desde un clon limpio.
+          for _f in ('preview/app.js', 'preview/index.html'):
+              assert (root / _f).is_file(), f'falta la fuente del visor {_f}'
           # v1.27.0: los 27 huesos v15_cloth_* SIGUEN en el geo (no se
           # borran: son las referencias de pose de la onda).
           _anchors = [b for b in new_bones if b['name'].startswith('v15_cloth_')]

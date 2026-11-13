@@ -49,6 +49,22 @@ verdad, con la geometría, el atlas, el runtime y la auditoría cambiados.
 - **Rótulos del preview corregidos**: en este geo el exterior de la capa
   mira a +Z, así que la vista `yaw=0` es la **espalda (F5)** y `yaw=180`
   el **interior**. Antes estaban cambiados.
+- **El visor deja de pintar las 27 anclas**: el runtime Java y el render
+  software ya las ocultaban, pero `preview/app.js` seguía dibujándolas, así
+  que el entregable que se mira enseñaba las mismas motas negras que esta
+  versión arregla. Ahora el visor las oculta y trae una casilla
+  **«Anclas (diagnóstico)»** para volver a verlas.
+- **Los entregables son REPRODUCIBLES**: `tools/build_deliverables.py`
+  reconstruye geo, atlas, icono, clips, `.bbmodel`, previews, GIF, hoja de
+  estados, comparativas y el visor autocontenido. Los scripts que hacían
+  el GIF y la hoja de estados vivían en `/tmp` (fuera del repo) y se
+  perdían: ahora están versionados (`tools/make_anim_gifs.js`,
+  `tools/make_state_sheet.js`, `tools/make_reference_icons.py`).
+- **El código fuente del visor está versionado**: `preview/app.js` y
+  `preview/index.html` (~41 KB). Antes todo `preview/` estaba en
+  `.gitignore`, así que el visor publicado (14 MB) **no se podía
+  reconstruir desde un clon limpio**: sus fuentes no estaban en el repo.
+  Sólo quedan fuera los assets, que son salidas generadas.
 
 ### v1.26.0 — la capa ya no se inclina siempre hacia el mismo lado
 
