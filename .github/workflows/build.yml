@@ -132,8 +132,9 @@ jobs:
           assert 'DustParticleOptions' not in _item
           assert 'DustColorTransitionOptions' not in _item
           assert 'CAPA_SPARK' in _item and 'MAX_SPARKS_PER_TICK = 4' in _item
-          assert 'SPARK_INTERVAL_TICKS = 6' in _item
-          assert '0.12D + 0.30D' in _item, 'chispas no nacen en las puntas'
+          assert 'SPARK_INTERVAL_TICKS = 8' in _item
+          assert '0.10D + 0.26D' in _item, 'chispas no nacen sobre el paño'
+          assert '0.10D + (tip ? 0.12D : 0.04D)' in _item, 'chispas no pegadas al dobladillo'
           _reg = (root / 'src/main/java/com/capatest/client/CapaParticleRegistration.java').read_text()
           assert 'CapaSparkParticle.Provider' in _reg
           _spark_java = (root / 'src/main/java/com/capatest/client/CapaSparkParticle.java').read_text()
@@ -658,7 +659,7 @@ jobs:
           assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/es_es.json').read_text()
           assert 'CAPA_SPARK' in java
           assert 'animation.item' in java and 'ITEM_ANIM' in java
-          assert 'SPARK_INTERVAL_TICKS = 6' in java
+          assert 'SPARK_INTERVAL_TICKS = 8' in java
           assert 'MAX_SPARKS_PER_TICK = 4' in java
           assert 'CapaSparkParticle.Provider' in (root / 'src/main/java/com/capatest/client/CapaParticleRegistration.java').read_text()
           # v1.9.0: icono rehecho desde las dos referencias 16x16 del usuario.
@@ -699,7 +700,7 @@ jobs:
           assert (root / 'tools/audit_model.py').is_file()
           assert '--check' in (root / 'tools/audit_model.py').read_text()
           assert 'tools/audit_model.py --check' in (root / '.github/workflows/build.yml').read_text()
-          print('OK: v1.24.0, geometria rehecha (12 mechones anchos en 2 capas), '
+          print('OK: v1.25.0, geometria rehecha (12 mechones anchos en 2 capas), '
                 'cuello alto + hombreras + cadena, atlas limpio con glowmask '
                 'fullbright, chispa EXCLUSIVA sin particulas vanilla, icono PREFERIDO revertido con backup byte-identico y sin lag')
           PY
