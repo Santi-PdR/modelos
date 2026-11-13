@@ -8,21 +8,22 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
+/**
+ * v1.23.0: UNA SOLA partícula, EXCLUSIVA de esta capa, con textura propia.
+ *
+ * Se retiran `capa_ember`, `capa_blight_mote` y `capa_shard`, y dejan de
+ * usarse `DustParticleOptions` / `DustColorTransitionOptions` (vanilla).
+ * El sprite `capatest:capa_spark_*` lo pinta
+ * tools/texture_pipeline.py::build_spark_sprites() y lo interpreta
+ * com.capatest.client.CapaSparkParticle con su propio SpriteSet.
+ */
 public final class CapaParticles {
     public static final DeferredRegister<ParticleType<?>> PARTICLES =
             DeferredRegister.create(ForgeRegistries.PARTICLE_TYPES, CapaTestMod.MOD_ID);
 
-    /** Brasa propia del mod: 3 sprites animados definidos en particles/capa_ember.json. */
-    public static final RegistryObject<SimpleParticleType> CAPA_EMBER =
-            PARTICLES.register("capa_ember", () -> new SimpleParticleType(false));
-
-    /** v1.9.0: mota fría y MUDA de Blight Star, 3 sprites en particles/capa_blight_mote.json. */
-    public static final RegistryObject<SimpleParticleType> CAPA_BLIGHT_MOTE =
-            PARTICLES.register("capa_blight_mote", () -> new SimpleParticleType(false));
-
-    /** v1224: esquirla de deterioro, 3 sprites en particles/capa_shard.json. */
-    public static final RegistryObject<SimpleParticleType> CAPA_SHARD =
-            PARTICLES.register("capa_shard", () -> new SimpleParticleType(false));
+    /** Chispa rectangular vertical magenta/rosa, centro brillante, sin gravedad. */
+    public static final RegistryObject<SimpleParticleType> CAPA_SPARK =
+            PARTICLES.register("capa_spark", () -> new SimpleParticleType(false));
 
     private CapaParticles() {
     }

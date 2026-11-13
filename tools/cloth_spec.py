@@ -101,6 +101,7 @@ UV = {
 # Rectángulos (x0, y0, x1, y1) donde el PNG prístino tiene alfa=255 en TODOS
 # sus texels. La CI comprueba que ninguna UV nueva se salga de aquí.
 OPAQUE_RECTS = (
+    (0.0, 0.0, 128.0, 128.0),   # v1.23.0: atlas limpio 100% opaco
     (0.0, 0.0, 96.0, 48.0),
     (105.0, 0.0, 109.0, 48.0),
     (120.0, 0.0, 124.0, 48.0),

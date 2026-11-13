@@ -118,7 +118,8 @@ def parts(name: str) -> tuple[str, int, int]:
         return "cloth", col, SECTION_SEG.get(sec, 0)
     if name.startswith("v15_hem_"):
         return "hem", int(TAIL_RE.search(name).group(1)), 6
-    if name.startswith(("v17_cowl_", "v17_yoke_", "v16_collar_", "v16_yoke_")):
+    if name.startswith(("v17_cowl_", "v17_yoke_", "v16_collar_", "v16_yoke_",
+                        "v18_pad_", "v18_chain_")):
         m2 = TAIL_RE.search(name)
         return "cowl", (int(m2.group(1)) if m2 else 0), 0
     if name.startswith(("v17_vein_", "v16_vein_")):
@@ -327,7 +328,7 @@ def _self_test() -> None:
     assert sample(tip, "caer", 0.0)["rot"][0] > 3.0, "caer no eleva"
     assert sample(tip, "volar", 0.0)["pos"][1] > 0.25, "volar no levanta puntas"
     assert sample(tip, "agachado", 0.0)["pos"][2] < -0.20, "agache no recoge"
-    print("cape_motion v1.22.0: 8 ESTADOS con silueta propia, onda VIAJERA "
+    print("cape_motion v1.23.0: 8 ESTADOS con silueta propia, onda VIAJERA "
           "C1, retardo por tramo y offsets acumulados OK", rms)
 
 

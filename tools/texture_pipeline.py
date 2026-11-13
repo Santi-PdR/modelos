@@ -84,6 +84,7 @@ import math
 from pathlib import Path
 
 import numpy as np
+from cape_atlas_v1230 import build_clean_atlas
 from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 import cape_shape as CS
@@ -290,7 +291,7 @@ def assert_cloth_uvs() -> None:
     geometry = json.loads(GEO.read_text())["minecraft:geometry"][0]
     checked = 0
     for bone in geometry.get("bones", []):
-        if not bone["name"].startswith(("v15_", "v17_")):
+        if not bone["name"].startswith(("v15_", "v16_", "v17_", "v18_")):
             continue
         for cube_spec in bone.get("cubes", []):
             for face in cube_spec["uv"].values():
@@ -462,171 +463,21 @@ def shape_energy_density(out: np.ndarray) -> np.ndarray:
 
 
 def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
-    base = np.asarray(Image.open(ORIGINALS / "armor.png").convert("RGBA"), dtype=np.float32)
-    glow = np.asarray(Image.open(ORIGINALS / "armor_glowmask.png").convert("RGBA"), dtype=np.float32)
+    """v1.23.0: atlas LIMPIO, creado a mano, con glowmask FULLBRIGHT.
 
-    rgb, alpha = base[..., :3], base[..., 3]
-    opaque = alpha > 0
-    h, w = alpha.shape
-    yy, xx = np.mgrid[0:h, 0:w]
-
-    rng = np.random.default_rng(SEED)
-    fine = _blurred_noise(rng, (h, w), 0.55)
-    medium = _blurred_noise(rng, (h, w), 2.4)
-
-    # Multi-scale fabric: plain weave + diagonal twill + broad cloth folds.
-    weave = np.sin(xx * np.pi / 2.0) * np.sin(yy * np.pi / 2.0)
-    twill = np.sin((xx + yy) * np.pi / 3.0)
-    folds = np.sin(xx * np.pi / 8.0 + np.sin(yy * np.pi / 30.0) * 0.6) * np.cos(yy * np.pi / 24.0)
-    grain = weave * 3.2 + twill * 1.6 + fine * 6.0 + medium * 8.0
-
-    luma = rgb[..., 0] * 0.2126 + rgb[..., 1] * 0.7152 + rgb[..., 2] * 0.0722
-    neon_raw = np.clip((luma - 52.0) / 112.0, 0.0, 1.0)
-    neon_w = neon_raw * opaque
-    cloth_w = np.where(opaque, 1.0 - neon_raw, 0.0)
-
-    out = rgb.copy()
-    vertical_light = (1.0 - yy / (h - 1) - 0.5) * 22.0
-    warm = np.clip((yy / (h - 1) - 0.45) / 0.55, 0.0, 1.0)[..., None]
-
-    # Cooler indigo at the shoulders, plum/crimson shadows toward the hem.
-    for channel, mul in enumerate((0.92, 0.90, 1.16)):
-        out[..., channel] = rgb[..., channel] * mul + cloth_w * (
-            grain + vertical_light + folds * 9.0
-        )
-    out[..., 0] += cloth_w * warm[..., 0] * 17.0
-    out[..., 1] += cloth_w * warm[..., 0] * 2.0
-    out[..., 2] += cloth_w * warm[..., 0] * 11.0
-
-    # Soft violet bloom bleeding from the neon veins into the surrounding cloth.
-    neon_core = (luma > 108) & opaque
-    bloom = np.asarray(
-        Image.fromarray((neon_core * 255).astype(np.uint8)).filter(
-            ImageFilter.GaussianBlur(2.3)
-        ),
-        dtype=np.float32,
-    ) / 255.0
-    halo = bloom * cloth_w
-    out[..., 0] += halo * 36.0
-    out[..., 1] += halo * 9.0
-    out[..., 2] += halo * 48.0
-
-    # Rim light along UV-island borders => the 126 cube faces read as real folds.
-    island_edge = used & dilate(~used, 2) & opaque
-    out[..., 0] += island_edge * 17.0
-    out[..., 1] += island_edge * 6.0
-    out[..., 2] += island_edge * 23.0
-
-    # Crimson core / violet edge on the trim itself.
-    boost = neon_w
-    out[..., 0] += boost * (rgb[..., 0] * 0.34 + 32.0)
-    out[..., 1] += boost * (rgb[..., 1] * 0.12 + 7.0)
-    out[..., 2] += boost * (rgb[..., 2] * 0.26 + 40.0)
-    hot = (luma > 176) & opaque
-    out[..., 0] += hot * 42.0
-    out[..., 1] += hot * 36.0
-    out[..., 2] += hot * 50.0
-
-    # v1.14.0: el realce emisivo se aplica DESPUÉS de pintar las grietas
-    # (más abajo), usando la máscara redistribuida, no la prístina.
-
-    # v1.5.1: sustituimos el mosaico de tres paneles cuadrados por UNA sola
-    # ilustración de tela. Se pinta después de los realces previos para que el
-    # atlas nuevo no herede las costuras del UV antiguo.
-    canvas, canvas_glow, canvas_cool = build_armor_cloth_canvas(glow[..., 3])
-    out[0:48, 0:96, :] = canvas
-    # La tinta nueva del bordado ya venía realzada; un bloom suave extra hace
-    # que constelación y medallón se lean incluso de noche, SIN tocar el alpha
-    # del glowmask prístino (no se abren huecos en la tela).
-    soft = Image.fromarray(
-        (np.clip(canvas_glow, 0, 1) * 255).astype(np.uint8)
-    ).filter(ImageFilter.GaussianBlur(1.2))
-    soft_arr = np.asarray(soft, dtype=np.float32) / 255.0
-    # v1.18.0: la foto NO se realza; cualquier bloom la desdibuja.
-    # (soft_arr se sigue calculando para el glowmask, no para el RGB.)
-    # v1.9.0: el segundo bloom, cian, se mantiene por debajo del violeta.
-    cool_soft = Image.fromarray(
-        (np.clip(canvas_cool, 0, 1) * 255).astype(np.uint8)
-    ).filter(ImageFilter.GaussianBlur(0.8))
-    cool_arr = np.asarray(cool_soft, dtype=np.float32) / 255.0
-    # v1.18.0: sin bloom cian sobre el paño.
-    out = paint_reserved_cloth_strips(out, glow[..., 3])
-
-    # v1.14.0: las GRIETAS se vuelven emisivas. Se trasladan los 1636
-    # texels del glowmask prístino (mismo conteo, cero agujeros nuevos) a
-    # los núcleos de energía, a la rampa de los microvóxeles y a las venas.
-    ga = glow[..., 3]
-    target = int((ga > 0).sum())
-    crack_blur = np.asarray(
-        Image.fromarray((np.clip(canvas_glow * 2.2, 0, 1) * 255).astype(np.uint8))
-        .filter(ImageFilter.GaussianBlur(1.1)), dtype=np.float32
-    ) / 255.0
-    crack = crack_blur > 0.16
-    priority = np.zeros((SIZE, SIZE), dtype=np.int8)
-    priority[109:127, 69:75] = 2          # rampa de microvóxeles
-    priority[0:48, 122:124] = 2          # vena de los bordes
-    priority[0:48, 0:96] = np.where(crack, 1, 0)
-    allowed = np.zeros((SIZE, SIZE), dtype=bool)
-    allowed[0:48, 0:96] = True
-    allowed[109:127, 69:75] = True
-    allowed[0:48, 122:124] = True
-    emissive = _fit_emissive_mask(priority, opaque, target, allowed)
-
-    # v1.17.0: realce SÓLO sobre los núcleos de grieta (`crack`), nunca
-    # sobre el halo de 1636 texels: teñir la dilatación dibujaba CUADRADOS
-    # claros alrededor de cada trazo. El glowmask mantiene su cobertura
-    # prístina (contrato GeckoLib / CI); el halo del color base queda oscuro.
-    core = np.zeros((SIZE, SIZE), dtype=bool)
-    core[0:48, 0:96] = False   # v1.18.0: la foto ya trae su propia luz
-    out[..., 0] = np.where(core, out[..., 0] * 1.06 + 12.0, out[..., 0])
-    out[..., 1] = np.where(core, out[..., 1] * 1.02 + 3.0, out[..., 1])
-    out[..., 2] = np.where(core, out[..., 2] * 1.06 + 14.0, out[..., 2])
-
-    # --- CALIBRACION CROMATICA MEDIDA (v1211) -------------------------
-    # tools/color_calibration.py mide la mediana del paño por décimas en el
-    # RENDER y en el PNG de referencia con la misma máscara, y acumula aqui
-    # la diferencia. Se interpola sobre las 48 filas del canvas: así el
-    # degradado sigue siendo continuo y no aparecen franjas horizontales.
-    cal = ROOT / "tools" / "color_calibration.json"
-    if cal.is_file():
-        rows = json.loads(cal.read_text())["rows"]
-        tc = (np.arange(48, dtype=np.float32) + 0.5) / 48.0
-        corr = np.stack([
-            np.interp(tc, [r[0] for r in rows],
-                      [r[1 + c] for r in rows]).astype(np.float32)
-            for c in range(3)], axis=1)                       # (48, 3)
-        # SOLO el paño recibe la corrección. Los canales oscuros y los
-        # agujeros quedan intactos: teñirlos los volvía negros y hacia
-        # desaparecer la masa de tela que tanto costó recuperar en v1210.
-        canvas = out[0:48, 0:96, :3]
-        weight = np.clip((canvas.mean(2) - 30.0) / 55.0,
-                         0.0, 1.0)[..., None]
-        canvas += corr[:, None, :] * weight
-        # Las venas laterales muestrean x=120..124 y las MOTAS 3D la rampa
-        # x=69..75, y=109..127: fuera del canvas. Sin la misma corrección
-        # quedaban más brillantes que el paño y dominaban la mediana.
-        out[0:48, 120:124, :3] += corr[:, None, :] * 0.45
-        out[109:127, 69:75, :3] += corr[32:].mean(0) * 0.55
-
-    # v1230: densidad de energía MEDIDA por altura (lazo cerrado).
-    # v1.18.0: sin diezmado de energia (borraria cuchilladas reales).
-    # v1264: deshilachado del dobladillo DESPUES de la energia, para no
-    # apagar las grietas que llegan hasta la punta.
-    # v1.18.0: sin carbonizado (la foto ya tiene los huecos negros).
-    out = np.clip(out, 0, 255)
-    out = np.where(opaque[..., None], out, rgb)  # never paint into transparent texels
-    armor = np.dstack((out, alpha)).astype(np.uint8)
-
-    # GeckoLib sólo lee el ALFA del glowmask; el RGB se deja coherente con
-    # el rosa encendido para que también se vea bien en editores externos.
-    grgb = np.broadcast_to(
-        np.array([255.0, 110.0, 190.0], dtype=np.float32), (SIZE, SIZE, 3)
-    ).copy()
-    grgb[~emissive] = np.array([14.0, 6.0, 22.0])
-    new_alpha = np.where(emissive, 255.0, 0.0)
-    glowmask = np.dstack((grgb, new_alpha)).astype(np.uint8)
-
-    return Image.fromarray(armor, "RGBA"), Image.fromarray(glowmask, "RGBA")
+    Hasta v1.22.0 `build_armor` recortaba la foto del usuario y le añadía
+    grano/twill/bloom: el ruido se leía como motas y cuadros en Blockbench.
+    Ahora `cape_atlas_v1230.build_clean_atlas()` pinta un degradado
+    carmesí -> morado oscuro definido, agujeros de desgaste en las puntas,
+    grietas y bordes neón, y un glowmask que GeckoLib renderiza emisivo.
+    El icono 2D y el item plegado siguen usando su arte propio.
+    """
+    atlas, glowmask = build_clean_atlas()
+    assert atlas.size == (SIZE, SIZE) and glowmask.size == (SIZE, SIZE)
+    # Cobertura de UV de la geometría nueva: se calcula para no perder la
+    # regresión de "ningún UV fuera del atlas".
+    assert used.shape == (SIZE, SIZE)
+    return atlas, glowmask
 
 
 def charred_hem(out: np.ndarray) -> np.ndarray:
@@ -1091,6 +942,37 @@ def build_folded_texture() -> tuple[Image.Image, Image.Image]:
     return atlas, glowmask
 
 
+def build_spark_sprites() -> list[Image.Image]:
+    """v1.23.0: 3 sprites de CHISPA rectangular vertical semi-transparente.
+
+    Barra estrecha (4x13) magenta/rosa con centro casi blanco y bordes
+    translúcidos. Tres frames con altura/alpha distintos para un parpadeo
+    suave. NO son partículas vanilla: `CapaSparkParticle` las usa con su
+    propio `SpriteSet` registrado en `CapaParticleRegistration`.
+    """
+    out = []
+    for frame in range(3):
+        img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+        px = img.load()
+        h = 12 - frame
+        y0 = (16 - h) // 2
+        for y in range(y0, y0 + h):
+            fade = 1.0 - abs(y - (y0 + h / 2.0)) / (h / 2.0 + 0.5)
+            for x in range(5, 11):
+                q = 1.0 - abs(x - 7.5) / 3.0
+                if x in (5, 10):
+                    a = int(70 * fade)
+                    px[x, y] = (236, 46, 178, a)
+                elif x in (6, 9):
+                    a = int(185 * fade)
+                    px[x, y] = (255, 96, 210, a)
+                else:
+                    a = int(235 * fade)
+                    px[x, y] = (255, 214, 244, a)
+        out.append(img)
+    return out
+
+
 def build_particle_sprites() -> list[Image.Image]:
     """Tres estados de brasa: núcleo cálido, destello frío y halo apagándose.
 
@@ -1248,39 +1130,28 @@ def main() -> None:
 
     particle_dir = ASSETS / "textures/particle"
     particle_dir.mkdir(parents=True, exist_ok=True)
-    embers = build_particle_sprites()
-    for index, sprite in enumerate(embers):
-        sprite.save(particle_dir / f"capa_ember_{index}.png")
-    print(f"ember sprites: {len(embers)} x {embers[0].size[0]}x{embers[0].size[1]}")
-
-    motes = build_blight_sprites()
-    for index, sprite in enumerate(motes):
+    # v1.23.0: UNA SOLA partícula exclusiva, con textura propia. Se
+    # retiran las brasas/motas/esquirlas y las partículas vanilla.
+    sparks = build_spark_sprites()
+    for index, sprite in enumerate(sparks):
         assert sprite.size == (16, 16), sprite.size
-        sprite.save(particle_dir / f"capa_blight_mote_{index}.png")
-    print(f"blight mote sprites: {len(motes)} x {motes[0].size[0]}x{motes[0].size[1]}")
-    blight_particle = json.loads((ASSETS / "particles/capa_blight_mote.json").read_text())
-    assert len(blight_particle["textures"]) == 3
-
-    shards = build_shard_sprites()
-    for index, sprite in enumerate(shards):
-        assert sprite.size == (16, 16), sprite.size
-        sprite.save(particle_dir / f"capa_shard_{index}.png")
-    (ASSETS / "particles/capa_shard.json").write_text(json.dumps({
-        "textures": [f"capatest:capa_shard_{i}" for i in range(3)]
+        sprite.save(particle_dir / f"capa_spark_{index}.png")
+    (ASSETS / "particles/capa_spark.json").write_text(json.dumps({
+        "textures": [f"capatest:capa_spark_{i}" for i in range(3)]
     }, indent=2) + "\n")
-    print(f"shard sprites: {len(shards)} x {shards[0].size[0]}x{shards[0].size[1]}")
+    print(f"spark sprites: {len(sparks)} x 16x16 (rectangulares, centro brillante)")
 
-    # Sanity: glowmask must stay 128x128 and must not cover new texels.
-    ga = np.asarray(Image.open(ORIGINALS / "armor_glowmask.png").convert("RGBA"))[..., 3]
-    gb = np.asarray(glowmask)[..., 3]
-    assert (ga > 0).sum() == (gb > 0).sum(), "glowmask coverage changed - would punch holes"
-    print(f"emissive texels unchanged: {(ga > 0).sum()}")
-    assert np.array_equal(
-        np.asarray(Image.open(ORIGINALS / "armor.png").convert("RGBA"))[..., 3],
-        np.asarray(armor)[..., 3],
-    ), "base alpha changed"
+    # El atlas es NUEVO: todo opaco, y el glowmask enciende SÓLO el neón.
+    armor_alpha = np.asarray(armor)[..., 3]
+    assert (armor_alpha == 255).all(), "atlas con texel transparente"
+    glow_alpha = np.asarray(glowmask)[..., 3]
+    emissive = int((glow_alpha > 0).sum())
+    assert 200 < emissive < SIZE * SIZE, emissive
+    assert np.asarray(armor)[0:48, 0:96, 0].mean() > \
+        np.asarray(armor)[48:96, 0:96, 0].mean(), "falta degradado carmesi->morado"
+    print(f"atlas limpio v1.23.0: {emissive} texels EMISSIVE (fullbright)")
 
-    # El glowmask del item es NUEVO y no modifica el atlas de armadura.
+    # El glowmask del item plegado sigue siendo independiente.
     fg = np.asarray(folded_glow)[..., 3]
     assert folded_glow.size == (SIZE, SIZE), folded_glow.size
     assert 0 < (fg > 0).sum() < SIZE * SIZE, "glowmask del item vacío o total"

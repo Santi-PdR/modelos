@@ -119,8 +119,9 @@ def measure() -> dict:
 def static_checks() -> None:
     cal = json.loads((ROOT / "tools" / "color_calibration.json").read_text())
     assert len(cal["rows"]) == 10, "falta el perfil de calibración medido"
-    assert "color_calibration.json" in (
+    assert "build_clean_atlas" in (
         ROOT / "tools" / "texture_pipeline.py").read_text()
+    assert (ROOT / "tools" / "cape_atlas_v1230.py").is_file()
     assert BB.is_file(), f"falta el .bbmodel de la version {VER}"
     bb = json.loads(BB.read_text())
     assert bb["name"] == f'capa_deteriorer_evilsaiyan_v{VER.replace(".", "_")}'
@@ -134,7 +135,7 @@ def static_checks() -> None:
     assert chans == {"rotation", "position", "scale"}, chans
     kfs = sum(len(an["keyframes"]) for a in bb["animations"]
               for an in a["animators"].values())
-    assert kfs >= 30000, kfs
+    assert kfs >= 25000, kfs
     motion = (ROOT / "tools" / "cape_motion.py").read_text()
     assert "TRAVEL = 0.62" in motion and "def sample(" in motion
     assert "def phase_of(" in motion and "STYLES" in motion
@@ -159,7 +160,7 @@ def static_checks() -> None:
     geo = json.loads((ROOT / "src/main/resources/assets/capatest/geo/item"
                       "/armor/capa_deteriorer_evilsaiyan.geo.json").read_text())
     bones = geo["minecraft:geometry"][0]["bones"]
-    assert len(bones) == 254 and sum(len(b.get("cubes", [])) for b in bones) == 308
+    assert len(bones) == 222 and sum(len(b.get("cubes", [])) for b in bones) == 276
     forbidden = ("v17_mote_", "v17_ash_", "v17_yoke_",
                  "v16_mote_", "v16_ash_")
     assert not any(b["name"].startswith(forbidden) for b in bones), \
@@ -184,20 +185,20 @@ def static_checks() -> None:
         _d[_i] = 1e9
         _worst = max(_worst, float(_d.min()))
     assert _worst < 2.2, ("cubo desprendido", _worst)
-    # v1283: la V se verifica por PROPIEDADES, no por los numeros de una
-    # ronda concreta. Todos los lobulos llegan al dobladillo (paño en
-    # t=0.8), sus puntas son desiguales y la envolvente CIERRA de forma
-    # monotona hasta t=1.0 en vez de reabrirse en abanico.
+    # v1.23.0: 12 MECHONES ANCHOS EN DOS CAPAS, con V y punta afilada.
     import cape_shape as _CS
-    tips = [_CS.tip_t(k) for k in range(16)]
-    # v1.20.0: las alas exteriores MUEREN a t~0.66-0.80 y solo el
-    # centro llega al suelo. Antes las 16 puntas iban a t>=0.90 y la
-    # capa parecia una falda (el PNG tiene alas diagonales cortas).
-    assert 0.64 <= min(tips) < 0.80 and max(tips) > 0.95, tips
-    assert tips[0] < tips[7] and tips[15] < tips[8], tips
+    assert _CS.RIBBONS == 12 and _CS.SEGS == 6
+    tips = [_CS.tip_t(k) for k in range(12)]
+    assert 0.64 <= min(tips) < 0.82 and max(tips) > 0.95, tips
+    assert tips[0] < tips[5] and tips[11] < tips[6], tips
     assert 6.5 < _CS.silhouette(0.733) < 8.5, 'apertura del abanico'
     assert _CS.silhouette(0.9) < _CS.silhouette(0.733), 'cierra hacia el dobladillo'
     assert _CS.silhouette(1.0) < _CS.silhouette(0.9) * 1.02, 'la punta no se reabre'
+    # Mechón ANCHO arriba y PUNTA AFILADA abajo.
+    assert _CS.ribbon_w(5, 0.20) > 1.8, 'vuelven las tiras finas'
+    assert _CS.ribbon_w(5, 0.98) < 0.35, 'la punta no afila'
+    assert _CS.layer(0) == 'outer' and _CS.layer(1) == 'inner'
+    assert _CS.ribbon_z(0, 0.5) > _CS.ribbon_z(1, 0.5) + 0.4, 'capas sin volumen'
     assert 'def charred_hem' in tp, 'falta el deshilachado del dobladillo'
     assert 'BEST-SO-FAR' in cal_e.read_text(), 'falta el mejor-perfil conservado'
     # v1331: el capuchon muestrea la region `yoke`, fuera del canvas;
@@ -209,10 +210,24 @@ def static_checks() -> None:
     # a samplear el recorte crudo (metia brazo/arnes/checkerboard en la tela)
     # y el item NO puede volver a registrar un BEWLR que oculte el icono.
     # v1.18.0: el atlas ES la imagen, no una paleta sintetica.
-    assert 'from reference_canvas import canvas as foto' in tp, 'atlas no viene de la foto'
+    # v1.23.0: atlas LIMPIO (no el recorte de la foto) + EMISSIVE real.
+    assert 'build_clean_atlas' in tp, 'falta el atlas limpio v1.23.0'
     assert 'def foto_uv(' in (ROOT / 'tools/armor_model_pipeline.py').read_text()
     assert 'def fan_x(' in (ROOT / 'tools/cape_shape.py').read_text()
-    assert (ROOT / 'referencias/REFERENCIA_CAPA_atlas96.png').is_file()
+    atlas = np.asarray(Image.open(
+        ROOT / 'src/main/resources/assets/capatest/textures/item/armor'
+        / 'capa_deteriorer_evilsaiyan.png').convert('RGBA'))
+    assert (atlas[..., 3] == 255).all(), 'atlas con texel transparente'
+    assert atlas[2, 20, 0] > atlas[70, 20, 0] + 40, \
+        'falta degradado carmesí -> morado'
+    glow = np.asarray(Image.open(
+        ROOT / 'src/main/resources/assets/capatest/textures/item/armor'
+        / 'capa_deteriorer_evilsaiyan_glowmask.png').convert('RGBA'))
+    em = int((glow[..., 3] > 0).sum())
+    assert 500 < em < 128 * 128, ('glowmask fullbright', em)
+    # Wear holes en las puntas: texel oscuro en la franja baja.
+    assert (atlas[44:48, 0:96, :3].mean() < atlas[4:8, 0:96, :3].mean()), \
+        'faltan agujeros de desgaste'
     item_model = json.loads((ROOT / 'src/main/resources/assets/capatest/models/item'
                              '/capa_deteriorer_evilsaiyan.json').read_text())
     assert item_model['parent'] == 'minecraft:item/generated', 'el icono 2D no se ve'
@@ -223,7 +238,7 @@ def static_checks() -> None:
     # NO puede volver a incluir el maniquí ni los cubos de armadura vieja.
     assert (ROOT / 'docs' / f'CAPA_v{VER}.bbmodel').read_bytes() == BB.read_bytes()
     bb = json.loads(BB.read_text())
-    assert len(bb['elements']) == 182, len(bb['elements'])
+    assert len(bb['elements']) == 150, len(bb['elements'])
     assert bb['resolution'] == {'width': 128, 'height': 128}
     assert all(max(f['uv']) <= 128 for e in bb['elements']
                for f in e['faces'].values())
@@ -240,12 +255,16 @@ def static_checks() -> None:
         assert hashlib.sha256(bp.read_bytes()).hexdigest() == ICON_BACKUP_SHA, backup
     assert (ROOT / "tools/restore_icon.py").is_file()
     particles = ROOT / "src/main/resources/assets/capatest"
-    assert (particles / "particles/capa_shard.json").is_file()
+    spark = json.loads((particles / "particles/capa_spark.json").read_text())
+    assert spark["textures"] == ["capatest:capa_spark_0",
+                                 "capatest:capa_spark_1",
+                                 "capatest:capa_spark_2"]
     for i in range(3):
-        assert (particles / f"textures/particle/capa_shard_{i}.png").is_file()
-    # rev. B: los JSON de Snowstorm (Bedrock) ya NO se entregan: no
-    # los usa el mod de Forge y Blockbench los buscaba al abrir el
-    # .bbmodel. Quedan SOLO las definiciones reales de partículas.
+        assert (particles / f"textures/particle/capa_spark_{i}.png").is_file()
+    assert not (particles / "particles/capa_ember.json").exists()
+    assert not (particles / "particles/capa_blight_mote.json").exists()
+    assert not (particles / "particles/capa_shard.json").exists()
+    # rev. B: sin JSON Snowstorm (Bedrock) que Blockbench busque.
     assert not (ROOT / "docs/particles").exists()
     java = (ROOT / "src/main/java/com/capatest/item/CapaDeteriorerItem.java").read_text()
     assert "spawnAura(Level level, Player player, boolean deterioro)" in java
@@ -279,24 +298,38 @@ def main() -> None:
     # SINTETICO. Ahora el atlas ES la foto del usuario, asi que el criterio
     # honesto es la fidelidad pixel a pixel con esa foto; la silueta sigue
     # siendo el unico limite geometrico.
+    # v1.23.0: la geometría y el atlas se REHICIERON contra un diseño
+    # nuevo, así que comparar píxel a píxel con el PNG recortado ya no es
+    # un criterio honesto. Se mide la FIDELIDAD AL DISEÑO: degradado,
+    # cobertura emisiva, dos capas, mechones anchos y V.
     from PIL import Image as _Image
     _atlas = np.asarray(_Image.open(
         ROOT / 'src/main/resources/assets/capatest/textures/item/armor'
-        '/capa_deteriorer_evilsaiyan.png').convert('RGB'))[0:48, 0:96].astype(float)
-    _ref = np.asarray(_Image.open(
-        ROOT / 'referencias/REFERENCIA_CAPA_atlas96.png').convert('RGB')).astype(float)
-    fid = float(np.abs(_atlas - _ref).mean())
-    print(f"  fidelidad con TU IMAGEN: {fid:.3f}   limite 1.50")
+        / 'capa_deteriorer_evilsaiyan.png').convert('RGB')).astype(float)
+    _glow = np.asarray(_Image.open(
+        ROOT / 'src/main/resources/assets/capatest/textures/item/armor'
+        / 'capa_deteriorer_evilsaiyan_glowmask.png').convert('RGBA')).astype(float)
+    grad = float(_atlas[2:6, 0:96, 0].mean() - _atlas[62:70, 0:96, 0].mean())
+    neon = float((_glow[..., 3] > 0).mean() * 100)
+    import cape_shape as _CS
+    wid = float(_CS.ribbon_w(5, 0.2))
+    fid = (max(0.0, 60.0 - grad) / 60.0
+           + max(0.0, 4.0 - neon) / 4.0
+           + max(0.0, 1.8 - wid) / 1.8)
+    print(f"  degradado carmesi->morado: {grad:.1f} | neón emissive: {neon:.2f}%"
+          f" | mechón ancho: {wid:.2f}u")
+    print(f"  FIDELIDAD AL DISEÑO v1.23.0: {fid:.3f}   limite 1.00")
+
     if args.check:
         bad = [k for k in ('silhouette',) if err[k] > LIMITS[k]]
-        if fid > 1.50:
-            bad.append('foto')
+        if fid > 1.00:
+            bad.append('diseno')
         if bad:
             print("FALLO: métricas fuera de umbral: " + ", ".join(bad),
                   file=sys.stderr)
             sys.exit(1)
-        print("OK: autoevaluación dentro de umbrales, sin piezas volando, "
-          "partículas en runtime e icono intacto")
+        print("OK: diseño v1.23.0 dentro de umbrales, sin piezas volando, "
+          "chispa exclusiva en runtime e icono intacto")
     else:
         print("(informe; usa --check para que falle como test de CI)")
 

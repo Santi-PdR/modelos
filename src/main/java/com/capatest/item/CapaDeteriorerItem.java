@@ -4,9 +4,6 @@ import com.capatest.client.CapaArmorRenderer;
 import com.capatest.particle.CapaParticles;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.model.HumanoidModel;
-import net.minecraft.core.particles.DustColorTransitionOptions;
-import net.minecraft.core.particles.DustParticleOptions;
-import org.joml.Vector3f;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -51,11 +48,11 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
     private static final RawAnimation DETERIORO_ANIM = RawAnimation.begin().thenLoop("animation.deterioro");
     // v1.9.0: animación dedicada del bulto plegado en GUI/hotbar/mano.
     private static final RawAnimation ITEM_ANIM = RawAnimation.begin().thenLoop("animation.item");
-    private static final int EMBER_INTERVAL_TICKS = 10;
-    private static final int BLIGHT_INTERVAL_TICKS = 20;
-    /** v1.22.0: TECHO DURO. Se emite 2 veces por segundo, como mucho 8
-     *  partículas por tick de emisión: ~16/s y CERO geometría nueva. */
-    private static final int MAX_AURA_PARTICLES_PER_TICK = 8;
+    /** v1.23.0: chispas SUTILES. Un tick de emisión cada 6 (~3.3/s) y
+     *  como mucho 4 chispas en ese tick: 3-13 partículas por segundo,
+     *  SIN geometría, SIN sonidos y SIN búsqueda de entidades. */
+    private static final int SPARK_INTERVAL_TICKS = 6;
+    private static final int MAX_SPARKS_PER_TICK = 4;
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
@@ -200,23 +197,23 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
     }
 
     /**
-     * Aura emitida desde el servidor para que también la vean otros
+     * Chispas emitidas desde el servidor para que también las vean otros
      * jugadores. La llaman inventoryTick (slot de pecho) y CuriosCompat
      * (slot back). El sello por tick evita duplicar el efecto.
      *
-     * <p>v1.22.0: las motas de 3x3 casi no se veían. Ahora hay un AURA de
-     * polvo con ESCALA real (1.8), un HALO de cuello con transición de
-     * color (2.2) y una ESTELA al correr/volar/caer, repartidos por las
-     * tres alturas del paño. Sigue siendo MUDA y de presupuesto FIJO:
-     * {@code MAX_AURA_PARTICLES_PER_TICK = 8}, 2 emisiones por segundo,
-     * sin geometría, sin sonidos y sin búsqueda de entidades. Las
-     * partículas NO son geometría: se generan al llevar la capa puesta.
+     * <p>v1.23.0: UNA partícula exclusiva ({@code capa_spark}) con textura
+     * propia, en vez de partículas vanilla. Chispas rectangulares,
+     * verticales, semitransparentes y con centro brillante; SIN gravedad,
+     * suben suavemente y se desvanecen. Nacen dispersas en los BORDES y
+     * las PUNTAS INFERIORES de la capa, no detrás de la cabeza. Presupuesto
+     * fijo de {@code MAX_SPARKS_PER_TICK = 4}, 1 emisión cada 6 ticks.
+     * Las partículas NO son geometría: se generan al llevar la capa puesta.
      */
     public static void spawnAura(Level level, Player player, boolean deterioro) {
         if (level.isClientSide || !(level instanceof ServerLevel server)) {
             return;
         }
-        if (player.tickCount % EMBER_INTERVAL_TICKS != 0) {
+        if (player.tickCount % SPARK_INTERVAL_TICKS != 0) {
             return;
         }
 
@@ -230,92 +227,30 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
         double yaw = Math.toRadians(player.getYRot());
         double backX = -Math.sin(yaw), backZ = Math.cos(yaw);
         double sideX = Math.cos(yaw), sideZ = Math.sin(yaw);
-        double x = player.getX() + backX * 0.30D;   // detrás del jugador
-        double z = player.getZ() + backZ * 0.30D;
 
         boolean sprint = player.isSprinting();
         boolean flying = player.isFallFlying();
         boolean falling = !player.onGround() && player.getDeltaMovement().y < -0.08D;
-        boolean inWater = player.isInWater();
-        double drift = inWater ? 0.02D : 0.07D;
-        int budget = MAX_AURA_PARTICLES_PER_TICK;
+        int count = deterioro ? 3 : ((sprint || flying || falling) ? 2 : 1);
+        count = Math.min(count, MAX_SPARKS_PER_TICK);
 
-        // v1.22.0: antes las motas eran sprites minúsculos de 3x3 que no
-        // se veían. `DustParticleOptions` / `DustColorTransitionOptions`
-        // permiten ESCALA REAL en el mundo (1.8 / 2.2): el aura se lee
-        // claramente con 1 sola partícula por punto, sin llenar el cielo.
-        DustParticleOptions glow = new DustParticleOptions(
-                new Vector3f(0.86F, 0.16F, 0.52F), 1.8F);
-        DustColorTransitionOptions halo = new DustColorTransitionOptions(
-                new Vector3f(0.95F, 0.22F, 0.62F),
-                new Vector3f(0.36F, 0.12F, 0.68F), 2.2F);
-
-        // 1) AURA por TODA la capa: tres alturas y ambos lados, como las
-        //    motas de la referencia (antes sólo y=0.55..1.15).
-        double[] heights = {0.42D, 0.98D, 1.54D};
-        for (int i = 0; i < heights.length && budget > 0; i++) {
-            double side = (i % 2 == 0 ? -1.0D : 1.0D) * (0.28D + 0.06D * i);
-            double hy = heights[i] + 0.05D * Math.sin(tick * 0.17D + i);
-            server.sendParticles(glow,
-                    x + sideX * side, player.getY() + hy, z + sideZ * side,
-                    1, 0.05D, drift, 0.05D, 0.0D);
-            budget--;
-        }
-
-        // 2) HALO DE CUELLO: dos destellos grandes a la altura de los
-        //    hombros. Es el FX que más se nota de lejos.
-        if (budget >= 2) {
-            for (int side = -1; side <= 1; side += 2) {
-                server.sendParticles(halo,
-                        x + sideX * (side * 0.34D), player.getY() + 1.42D,
-                        z + sideZ * (side * 0.34D),
-                        1, 0.03D, 0.04D, 0.03D, 0.0D);
-                budget--;
-            }
-        }
-
-        // 3) BRASAS propias y esquirlas: se reparten por todo el paño.
-        int embers = deterioro ? 2 : (sprint || flying || falling ? 2 : 1);
-        for (int i = 0; i < embers && budget > 0; i++) {
-            double side = (i - (embers - 1) * 0.5D) * 0.30D;
-            double height = 0.35D + 1.25D * ThreadLocalRandom.current().nextDouble();
-            server.sendParticles(CapaParticles.CAPA_EMBER.get(),
-                    x + sideX * side, player.getY() + height, z + sideZ * side,
-                    1, 0.09D, 0.12D, 0.09D, 0.001D);
-            budget--;
-        }
-
-        // 4) ESTELA DE MOVIMIENTO: dos puntos detrás al correr, volar o
-        //    caer. Se lee como un rastro, no como confeti.
-        if ((sprint || flying || falling) && budget >= 2) {
-            for (int i = 0; i < 2; i++) {
-                double d = 0.35D + i * 0.30D;
-                server.sendParticles(glow,
-                        x + backX * d, player.getY() + 0.75D + i * 0.22D,
-                        z + backZ * d, 1, 0.04D, 0.05D, 0.04D, 0.0D);
-                budget--;
-            }
-        }
-
-        // 5) MOTAS FRÍAS de Blight Star: órbita mínima, cada 20 ticks.
-        if (tick % BLIGHT_INTERVAL_TICKS == 0 && budget > 0) {
-            double angle = tick * 0.11D;
-            double side = Math.cos(angle) * 0.20D;
-            double depth = Math.sin(angle) * 0.07D;
-            double ox = x + Math.cos(yaw) * side - Math.sin(yaw) * depth;
-            double oz = z + Math.sin(yaw) * side + Math.cos(yaw) * depth;
-            double oy = player.getY() + 0.88D
-                    + ThreadLocalRandom.current().nextDouble() * 0.44D;
-            int motes = deterioro ? 2 : 1;
-            server.sendParticles(CapaParticles.CAPA_BLIGHT_MOTE.get(), ox, oy, oz,
-                    motes, 0.025, 0.035, 0.025, 0.001);
-            budget -= motes;
-        }
-
-        // 6) ESQUIRLAS: SOLO en deterioro, dentro del presupuesto.
-        if (deterioro && budget > 0) {
-            server.sendParticles(CapaParticles.CAPA_SHARD.get(), x,
-                    player.getY() + 0.40D, z, 1, 0.10D, 0.16D, 0.10D, 0.002D);
+        // v1.23.0: las chispas nacen en los BORDES y en las PUNTAS
+        // INFERIORES del paño (y=0.12..0.95), NUNCA detrás de la cabeza.
+        // Antes el aura de polvo vanilla se acumulaba en y=1.4 y tapaba
+        // la cabeza del jugador en las capturas.
+        for (int i = 0; i < count; i++) {
+            boolean tip = i % 2 == 0;
+            double rnd = ThreadLocalRandom.current().nextDouble();
+            double height = tip
+                    ? 0.12D + 0.30D * rnd            // puntas inferiores
+                    : 0.42D + 0.53D * rnd;           // bordes del paño
+            double side = (i % 2 == 0 ? -1.0D : 1.0D) * (0.34D + 0.12D * rnd);
+            double depth = 0.42D + (tip ? 0.24D : 0.06D) + 0.06D * rnd;
+            double x = player.getX() + backX * depth + sideX * side;
+            double z = player.getZ() + backZ * depth + sideZ * side;
+            server.sendParticles(CapaParticles.CAPA_SPARK.get(),
+                    x, player.getY() + height, z,
+                    1, 0.018D, 0.010D, 0.018D, 0.0D);
         }
         // Las partículas NO son geometría: el .bbmodel no lleva ni un cubo
         // suelto ni pista `effects`. Todo se genera aquí, en runtime.

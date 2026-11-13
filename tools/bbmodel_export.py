@@ -264,7 +264,7 @@ def build() -> dict:
     # alrededor de la capa. El archivo de Blockbench exporta SOLO los
     # huesos de la capa nueva (v15_/v16_/v17_); el geo del mod no cambia.
     bones = geo["bones"]
-    CAPE_BONES = ("v15_", "v16_", "v17_")
+    CAPE_BONES = ("v15_", "v16_", "v17_", "v18_")
 
     elements, groups, node_by_name = [], [], {}
     anim_bones: list[tuple[str, str]] = []
@@ -285,7 +285,7 @@ def build() -> dict:
         groups.append(make_group(key, b.get("pivot") or [0, 0, 0],
                                  b.get("rotation") or [0, 0, 0],
                                  kids, gkey))
-        if key.startswith(("v17_", "v16_")) or key.startswith(("v15_cloth_", "v15_hem_")):
+        if key.startswith(("v17_", "v16_", "v18_")) or key.startswith(("v15_cloth_", "v15_hem_")):
             anim_bones.append((key, uid(gkey)))
 
     roots = []
@@ -346,7 +346,7 @@ def main() -> None:
     _im = Image.open(io.BytesIO(_raw))
     assert _im.size == (128, 128), ("textura del .bbmodel", _im.size)
     assert model["resolution"] == {"width": 128, "height": 128}
-    assert len(model["elements"]) == 182, len(model["elements"])
+    assert len(model["elements"]) == 150, len(model["elements"])
     assert not any(e["name"].startswith(("v17_mote_", "v17_ash_",
                                        "v16_mote_", "v16_ash_"))
                    for e in model["elements"]), "vuelven las motas 3D"
@@ -355,7 +355,7 @@ def main() -> None:
     assert not any("Steve/Alex" in g["name"] for g in model["groups"])
     _visible = {e["uuid"] for e in model["elements"]}
     assert all(not ({c for c in g["children"] if isinstance(c, str)} & _visible)
-               or g["name"].startswith(("v15_", "v16_", "v17_"))
+               or g["name"].startswith(("v15_", "v16_", "v17_", "v18_"))
                for g in model["groups"]), "un grupo viejo tiene cubos visibles"
     for e in model["elements"]:
         for f in e["faces"].values():

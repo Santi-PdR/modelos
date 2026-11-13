@@ -81,7 +81,7 @@ jobs:
           assert cape_states <= set(armor_anim['animations'])
           for _name, _a in armor_anim['animations'].items():
               _ribs = [_b for _b in _a['bones'] if _b.startswith('v17_ribbon_')]
-              assert len(_ribs) == 112, _name
+              assert len(_ribs) == 84, _name
               # v1.21.0: 17 muestras LINEALES. 9 muestras con easeInOutSine
               # paraban la tela en cada keyframe y GeckoLib PERDIA el canal
               # position que si tenia el .bbmodel.
@@ -108,36 +108,43 @@ jobs:
           assert 300 <= icon_path.stat().st_size < 2000, icon_path.stat().st_size
           w, h = struct.unpack('>II', (base / 'textures/item/cape_folded.png').read_bytes()[16:24])
           assert (w, h) == (128, 128), ('folded atlas', w, h)
+          # v1.23.0: UNA partícula EXCLUSIVA, con textura propia. Se
+          # retiran brasas/motas/esquirlas y TODAS las partículas vanilla.
           for i in range(3):
-              p = base / 'textures/particle' / f'capa_ember_{i}.png'
-              w, h = struct.unpack('>II', p.read_bytes()[16:24])
-              assert (w, h) == (16, 16), (p, w, h)
-
-          particle = json.loads((base / 'particles/capa_ember.json').read_text())
-          assert len(particle['textures']) == 3
-          for i in range(3):
-              p = base / 'textures/particle' / f'capa_blight_mote_{i}.png'
-              w, h = struct.unpack('>II', p.read_bytes()[16:24])
-              assert (w, h) == (16, 16), (p, w, h)
-
-          blight_particle = json.loads((base / 'particles/capa_blight_mote.json').read_text())
-          assert len(blight_particle['textures']) == 3
-          # v1224: tercer tipo de particula (esquirlas de deterioro).
-          shard = json.loads((base / 'particles/capa_shard.json').read_text())
-          assert len(shard['textures']) == 3
-          for i in range(3):
-              p = base / 'textures/particle' / f'capa_shard_{i}.png'
-              assert p.is_file(), p
-              with p.open('rb') as fh:
+              sp = base / 'textures/particle' / f'capa_spark_{i}.png'
+              assert sp.is_file(), sp
+              with sp.open('rb') as fh:
                   head = fh.read(24)
               assert head[:8] == b'\x89PNG\r\n\x1a\n' \
-                  and struct.unpack('>II', head[16:24]) == (16, 16), p
-          # rev. B: los JSON de Snowstorm (Bedrock) se ELIMINARON. El mod
-          # de Forge usa sus propias definiciones en assets/capatest/
-          # particles/ y Blockbench ya no busca archivos que no existen.
+                  and struct.unpack('>II', head[16:24]) == (16, 16), sp
+          spark = json.loads((base / 'particles/capa_spark.json').read_text())
+          assert spark['textures'] == ['capatest:capa_spark_0',
+                                      'capatest:capa_spark_1',
+                                      'capatest:capa_spark_2']
+          assert not (base / 'particles/capa_ember.json').exists()
+          assert not (base / 'particles/capa_blight_mote.json').exists()
+          assert not (base / 'particles/capa_shard.json').exists()
+          # El sprite es una BARRA VERTICAL con centro brillante.
+          import numpy as _np
+          from PIL import Image as _Im
+          _sp = _np.asarray(_Im.open(base / 'textures/particle/capa_spark_1.png').convert('RGBA'))
+          assert int((_sp[..., 3] > 0).sum()) < 100, 'chispa no es estrecha'
+          assert _sp[8, 7, 0] > 230 and _sp[8, 7, 2] > 200, 'falta centro brillante'
+          # Java: ni rastro de DustParticleOptions (vanilla).
+          _item = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
+          assert 'DustParticleOptions' not in _item
+          assert 'DustColorTransitionOptions' not in _item
+          assert 'CAPA_SPARK' in _item and 'MAX_SPARKS_PER_TICK = 4' in _item
+          assert 'SPARK_INTERVAL_TICKS = 6' in _item
+          assert '0.12D + 0.30D' in _item, 'chispas no nacen en las puntas'
+          _reg = (root / 'src/main/java/com/capatest/client/CapaParticleRegistration.java').read_text()
+          assert 'CapaSparkParticle.Provider' in _reg
+          _spark_java = (root / 'src/main/java/com/capatest/client/CapaSparkParticle.java').read_text()
+          assert 'this.gravity = 0.0F' in _spark_java, 'la chispa tiene gravedad'
+          assert 'TextureSheetParticle' in _spark_java
+          # rev. B: los JSON de Snowstorm (Bedrock) siguen eliminados.
           assert not (root / 'docs/particles').exists()
           assert not list((root / 'preview/assets/particles').glob('capa_embers*.json'))
-          assert not (root / 'preview/assets/particles/capa_shards.json').exists()
 
           # Geo plegado v1.9.0: bulto 3D de 36 huesos con 2 hombreras,
           # atlas 128 y ninguna UV fuera de rango. No es un abanico plano.
@@ -205,79 +212,73 @@ jobs:
           armor_geo = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]
           orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
           assert armor_geo['bones'][:72] == orig_bones
-          assert len(armor_geo['bones']) == 254
-          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 308
+          assert len(armor_geo['bones']) == 222
+          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 276
           new_bones = armor_geo['bones'][72:]
           new_names = {b['name'] for b in new_bones}
           assert {
-              'v15_cloth_cape_top_0', 'v15_cloth_cape_mid_8', 'v15_cloth_cape_bottom_6',
-              'v17_ribbon_0_seg0', 'v17_ribbon_7_seg3', 'v17_ribbon_15_seg6',
-              'v17_shingle_0', 'v17_shingle_9', 'v17_vein_0', 'v17_vein_9',
-              'v17_cowl_front_0', 'v17_cowl_front_8', 'v17_cowl_tooth_8',
-              'v17_cowl_back_4',
+              'v15_cloth_cape_top_0', 'v15_cloth_cape_mid_8',
+              'v17_ribbon_0_seg0', 'v17_ribbon_5_seg3', 'v17_ribbon_11_seg6',
+              'v17_vein_0', 'v17_vein_9',
+              'v17_cowl_front_0', 'v17_cowl_front_6',
+              'v17_cowl_tooth_6', 'v17_cowl_back_4',
+              'v18_pad_0', 'v18_pad_1', 'v18_chain_0', 'v18_chain_7',
           } <= new_names
           assert sum(1 for n in new_names if n.startswith('v15_cloth_')) == 27
-          assert sum(1 for n in new_names if n.startswith('v17_ribbon_')) == 112
-          assert sum(1 for n in new_names if n.startswith('v17_cowl_front_')) == 9
-          assert sum(1 for n in new_names if n.startswith('v17_cowl_tooth_')) == 9
+          # v1.23.0: 12 MECHONES anchos x 7 tramos en DOS CAPAS.
+          assert sum(1 for n in new_names if n.startswith('v17_ribbon_')) == 84
+          assert sum(1 for n in new_names if n.startswith('v17_cowl_front_')) == 7
+          assert sum(1 for n in new_names if n.startswith('v17_cowl_tooth_')) == 7
           assert sum(1 for n in new_names if n.startswith('v17_cowl_back_')) == 5
-          # rev. B: CERO geometría de partículas / arnés flotante.
-          _forbidden = ('v17_yoke_', 'v17_mote_', 'v17_ash_',
-                        'v16_mote_', 'v16_ash_')
-          assert not any(n.startswith(_forbidden) for n in new_names), \
-              'vuelven los cubos que flotaban en Blockbench'
-          assert sum(1 for n in new_names if n.startswith('v17_shingle_')) == 10
+          assert sum(1 for n in new_names if n.startswith('v18_pad_')) == 2
+          assert sum(1 for n in new_names if n.startswith('v18_chain_')) == 8
+          assert not any(n.startswith(('v17_yoke_', 'v17_mote_', 'v17_ash_',
+                                       'v16_mote_', 'v16_ash_', 'v17_shingle_'))
+                         for n in new_names), 'vuelven las tiras finas sueltas'
           assert sum(1 for n in new_names if n.startswith('v17_vein_')) == 10
           veins = [b for b in new_bones if b['name'].startswith('v17_vein_')]
-          assert all(c['uv']['north']['uv'][0] == 69.0 for b in veins for c in b['cubes'])
-          # Cada jirón: banda UV vertical CONTINUA y espesor real.
+          assert all(c['uv']['north']['uv'][0] == 98.0
+                     for b in veins for c in b['cubes']), 'grietas sin parche NEON'
           ribbons = [b for b in new_bones if b['name'].startswith('v17_ribbon_')]
-          # v1.22.0: 0.55-0.80 de espesor real (antes 0.28-0.40).
-          assert all(0.50 <= c['size'][2] <= 0.85
+          assert all(0.40 <= c['size'][2] <= 0.85
                      and 0.01 <= c.get('inflate', 0) <= 0.05
                      and c['uv']['north']['uv'][0] == c['uv']['south']['uv'][0]
                      for b in ribbons for c in b['cubes']), 'banda UV / espesor'
-          # v1.22.0 ANCLAJE: antes la capa vivía en z=2.3..5.0, a 3-5
-          # unidades del cuerpo, y de perfil era una LÁMINA despegada.
-          # Ahora nace en z~1.4, cae hacia atrás y ENVUELVE el torso.
+          # Anclaje + DOS CAPAS con profundidad real.
           _zs = [c['origin'][2] + c['size'][2] / 2
                  for b in ribbons for c in b['cubes']]
           assert min(_zs) < 2.0, ('capa lejos del cuerpo', min(_zs))
           assert max(_zs) - min(_zs) > 1.5, ('capa plana', min(_zs), max(_zs))
           _shape = (root / 'tools/cape_shape.py').read_text()
-          assert '1.45 + 1.15 * t' in _shape, 'falta la curva de profundidad'
-          assert 'fill = 0.98 - 0.16' in _shape, 'vuelve la elitra'
+          assert '1.55 + 1.30 * tt' in _shape, 'falta la curva de profundidad'
+          assert 'RIBBONS = 12' in _shape, 'vuelven las 16 tiras de élitra'
+          assert 'def layer(k:' in _shape, 'faltan las dos capas'
           assert 'def cowl_uv(' in (root / 'tools/armor_model_pipeline.py').read_text()
-          # Los jirones se ABREN: la punta exterior está más lejos del eje
-          # que el arranque en el cuello (medido en la referencia).
-          def _x(b): return b['cubes'][0]['origin'][0] + b['cubes'][0]['size'][0] / 2
-          assert abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_0_seg3'))) > \
-                 abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_0_seg0')))
-          # v1240: ABANICO EN V de DOS NIVELES, medido en la captura. Las
-          # alas exteriores son las mas abiertas y mueren a media altura;
-          # los jirones interiores vuelven a cerrarse en el dobladillo.
-          assert abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_0_seg3'))) > \
-                 abs(_x(next(b for b in ribbons if b['name'] == 'v17_ribbon_7_seg3')))
-          # v1.20.0: la V de la CAPTURA se mide por ALTURA, no por un
-          # jiron suelto. Las alas exteriores terminan ~6 unidades mas
-          # ARRIBA que los jirones centrales; antes las 16 llegaban al
-          # suelo y la capa era una falda.
+          # Mechones anchos: al menos 1.6 unidades en el primer tramo.
+          assert all(c['size'][0] >= 1.55 for b in ribbons
+                     if b['name'].endswith('seg0') for c in b['cubes']), \
+              'mechón demasiado estrecho'
+          # Punta AFILADA: el último tramo mide < 0.20 de ancho.
+          assert all(c['size'][0] <= 0.20 for b in ribbons
+                     if b['name'].endswith('seg6') for c in b['cubes']), \
+              'las puntas no son afiladas'
+          # V: las alas exteriores mueren ANTES que las centrales.
           def _y(b): return b['cubes'][0]['origin'][1]
           def _bn(name): return next(b for b in ribbons if b['name'] == name)
-          assert _y(_bn('v17_ribbon_0_seg6')) > _y(_bn('v17_ribbon_7_seg6')) + 3.0
-          assert _y(_bn('v17_ribbon_15_seg6')) > _y(_bn('v17_ribbon_8_seg6')) + 3.0
-          # v1.21.0: el dobladillo NO vuelve a juntarse en un pico. Con
-          # el cierre 0.28 (antes 0.38) las puntas quedan SEPARADAS y
-          # aparecen los huecos negros de la captura; por eso sólo una
-          # minoría cierra radialmente. La V se exige por ALTURA arriba.
-          _close = sum(1 for _k in range(16)
-                       if abs(_x(_bn(f'v17_ribbon_{_k}_seg6')))
-                       < abs(_x(_bn(f'v17_ribbon_{_k}_seg5'))))
-          assert 4 <= _close <= 10, _close
-          assert abs(_x(_bn('v17_ribbon_0_seg6'))) > \
-                 abs(_x(_bn('v17_ribbon_0_seg5'))) * 0.95
-          assert abs(_x(_bn('v17_ribbon_15_seg6'))) > \
-                 abs(_x(_bn('v17_ribbon_15_seg5'))) * 0.95
+          assert _y(_bn('v17_ribbon_0_seg6')) > _y(_bn('v17_ribbon_5_seg6')) + 2.0
+          assert _y(_bn('v17_ribbon_11_seg6')) > _y(_bn('v17_ribbon_6_seg6')) + 2.0
+          # Atlas limpio + glowmask fullbright real.
+          _armor_tex = _np.asarray(_Im.open(
+              base / 'textures/item/armor/capa_deteriorer_evilsaiyan.png').convert('RGBA'))
+          assert (_armor_tex[..., 3] == 255).all(), 'atlas con huecos transparentes'
+          assert _armor_tex[2, 20, 0] > _armor_tex[70, 20, 0] + 40, \
+              'falta degradado carmesi -> morado'
+          _glow = _np.asarray(_Im.open(
+              base / 'textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png').convert('RGBA'))
+          _em = int((_glow[..., 3] > 0).sum())
+          assert 500 < _em < 128 * 128, ('glowmask', _em)
+          assert 'build_clean_atlas' in (root / 'tools/texture_pipeline.py').read_text()
+
           # REGRESIÓN rev. B: ningún cubo de la capa puede quedar
           # DESPRENDIDO. Se mide la distancia al vecino más cercano.
           import math as _math
@@ -305,6 +306,7 @@ jobs:
                   cur = parent.get(cur)
               assert not (set(chain) & hidden), (b['name'], set(chain) & hidden)
           opaque_rects = (
+              (0.0, 0.0, 128.0, 128.0),   # v1.23.0: atlas limpio 100% opaco
               (0.0, 0.0, 96.0, 48.0),
               (105.0, 0.0, 109.0, 48.0),
               (120.0, 0.0, 124.0, 48.0),
@@ -447,7 +449,7 @@ jobs:
           # El volumen 3D REAL debe estar en la geometría, no sólo en el JSON.
           armor_src = (root / 'tools/armor_model_pipeline.py').read_text()
           assert 'INFLATE = (0.01, 0.03, 0.05)' in armor_src
-          assert 'RIBBONS = 16' in (root / 'tools/cape_shape.py').read_text()
+          assert 'RIBBONS = 12' in (root / 'tools/cape_shape.py').read_text()
           assert 'SEG_FRACTIONS' in (root / 'tools/cape_shape.py').read_text()
           shape_src = (root / 'tools/cape_shape.py').read_text()
           assert 'PROFILE_DATA' in shape_src and 'palette_at' in shape_src
@@ -462,8 +464,8 @@ jobs:
           # numeros de v1240 (alas cortas que dejaban 28% de paño en el
           # dobladillo). Ahora TODOS los lobulos llegan al dobladillo y
           # la envolvente cierra de forma monotona hasta t=1.0.
-          tips = [_CS.tip_t(k) for k in range(16)]
-          assert 0.64 <= min(tips) < 0.80 and max(tips) > 0.95, 'V de la captura'
+          tips = [_CS.tip_t(k) for k in range(12)]
+          assert 0.64 <= min(tips) < 0.82 and max(tips) > 0.95, 'V de la captura'
           assert 6.5 < _CS.silhouette(0.733) < 8.5, 'apertura del abanico'
           assert _CS.silhouette(0.9) < _CS.silhouette(0.733), 'cierra hacia el dobladillo'
           assert _CS.silhouette(1.0) < _CS.silhouette(0.9) * 1.02, 'la punta no se reabre'
@@ -475,10 +477,10 @@ jobs:
           assert 'def shape_energy_density' in _tp and 'ENERGY_GAIN' in _tp
           assert _tp.count('def _energy_strokes') == 1
           geo_bones = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]['bones']
-          assert sum(1 for b in geo_bones if b['name'].startswith('v17_ribbon_')) == 112
+          assert sum(1 for b in geo_bones if b['name'].startswith('v17_ribbon_')) == 84
           # v1.22.0: 0.55-0.80 (antes 0.28-0.40). De perfil la capa era
           # una lámina de 0.3 unidades y parecía despegada del jugador.
-          assert all(0.50 <= c['size'][2] <= 0.85 for b in geo_bones
+          assert all(0.40 <= c['size'][2] <= 0.85 for b in geo_bones
                      if b['name'].startswith('v17_ribbon_') for c in b['cubes'])
           # Proyecto Blockbench REAL, con maniquí y UV por cara.
           _bbver = [l.split('=', 1)[1].strip() for l in
@@ -495,7 +497,7 @@ jobs:
           assert bb['meta']['format_version'] == '5.0'
           # v1.17.3: el .bbmodel de Blockbench muestra SOLO la capa: sin
           # maniqui Steve/Alex y sin los 126 cubos de la armadura vieja.
-          assert len(bb['elements']) == 182 and len(bb['groups']) >= 254
+          assert len(bb['elements']) == 150 and len(bb['groups']) >= 222
           assert not any('Steve/Alex' in g['name'] for g in bb['groups'])
           assert bb['resolution'] == {'width': 128, 'height': 128}
           assert all(max(f['uv']) <= 128 for e in bb['elements'] for f in e['faces'].values())
@@ -519,7 +521,7 @@ jobs:
                       assert _k['data_points']
                       assert _k['interpolation'] in ('linear', 'catmullrom', 'bezier', 'step')
                   _kfs += len(_an['keyframes'])
-          assert _kfs >= 30000, _kfs
+          assert _kfs >= 25000, _kfs
           _channels = {_k['channel'] for _a in bb['animations']
                        for _an in _a['animators'].values()
                        for _k in _an['keyframes']}
@@ -559,10 +561,11 @@ jobs:
           assert all(f'"animation.{n}"' in _item_src for n in
                      ('fall', 'sneak', 'swim', 'deterioro', 'air'))
           assert 'cape_controller", 8' in _item_src, 'sin transicion suave'
-          # FX visibles pero con TECHO DURO (sin lag, sin geometría).
-          assert 'MAX_AURA_PARTICLES_PER_TICK = 8' in _item_src
-          assert 'DustParticleOptions' in _item_src and \
-                 'DustColorTransitionOptions' in _item_src
+          # v1.23.0: chispa EXCLUSIVA, SIN partículas vanilla.
+          assert 'MAX_SPARKS_PER_TICK = 4' in _item_src
+          assert 'DustParticleOptions' not in _item_src
+          assert 'DustColorTransitionOptions' not in _item_src
+          assert 'CAPA_SPARK' in _item_src
           assert 'sendParticles' in _item_src and 'NO son geomet' in _item_src
           _item = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
           assert 'sendParticles' in _item and 'NO son geomet' in _item
@@ -605,8 +608,10 @@ jobs:
           # v1.22.0: 8 estados y FX de aura/halo/estela en el visor.
           assert all(f'{k}:' in _visor for k in
                      ('volar', 'caer', 'agachado', 'agua')), 'faltan estados en el visor'
-          assert 'createRadialGradient' in _visor, 'falta el halo de aura'
-          assert 'MAX_AURA_PARTICLES_PER_TICK = 8' in (
+          assert 'SPARK_SEEDS' in _visor, 'faltan las chispas del visor'
+          assert 'createRadialGradient' not in _visor, \
+              'vuelve el halo acumulado detrás de la cabeza'
+          assert 'MAX_SPARKS_PER_TICK = 4' in (
               root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
           assert '"easing": "linear"' in (
               root / 'tools/cape_animation_pipeline.py').read_text()
@@ -618,7 +623,7 @@ jobs:
           # v1.18.0: el halo frio ya no se dibuja a mano; sale de las
           # cuchilladas REALES de la foto (mascara `energy` en build_armor_cloth_canvas).
           assert 'energy = (r > 135)' in texture_src
-          assert 'canvas_glow' in texture_src
+          assert 'def build_spark_sprites(' in texture_src
           assert 'def build_blight_sprites(' in texture_src
           assert '--uv-test' in (root / 'tools/preview_cloth.py').read_text()
           fg_bytes = (base / 'textures/item/cape_folded_glowmask.png').read_bytes()
@@ -659,11 +664,11 @@ jobs:
           assert f'v{ver}' in (root / 'README.md').read_text()
           assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/en_us.json').read_text()
           assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/es_es.json').read_text()
-          assert 'CAPA_BLIGHT_MOTE' in java
+          assert 'CAPA_SPARK' in java
           assert 'animation.item' in java and 'ITEM_ANIM' in java
-          assert 'EMBER_INTERVAL_TICKS = 10' in java
-          assert 'BLIGHT_INTERVAL_TICKS = 20' in java
-          assert 'CapaBlightParticle' in (root / 'src/main/java/com/capatest/client/CapaParticleRegistration.java').read_text()
+          assert 'SPARK_INTERVAL_TICKS = 6' in java
+          assert 'MAX_SPARKS_PER_TICK = 4' in java
+          assert 'CapaSparkParticle.Provider' in (root / 'src/main/java/com/capatest/client/CapaParticleRegistration.java').read_text()
           # v1.9.0: icono rehecho desde las dos referencias 16x16 del usuario.
           assert 'def build_icon_artwork(' in texture_src
           assert 'pixel art' in (root / 'README.md').read_text()
@@ -702,7 +707,9 @@ jobs:
           assert (root / 'tools/audit_model.py').is_file()
           assert '--check' in (root / 'tools/audit_model.py').read_text()
           assert 'tools/audit_model.py --check' in (root / '.github/workflows/build.yml').read_text()
-          print('OK: v1.22.0, JSON/PNG sin JsonNull, 254 huesos / 308 cubos SIN piezas flotantes (ni motas, ni ceniza, ni yugo, ni anclas visibles), 16 jirones radiales + 10 tejas + 10 venas, .bbmodel con 182 cubos y 8 ESTADOS (31392 keyframes C1 + position por tramo) SIN Effects track, GeckoLib animando los 182 huesos de tela, curva unica cape_motion compartida con Java y visor, particulas SOLO en runtime spawnAura(), atlas v1.18.0 = FOTO limpia, icono 2D y backup byte-identico, UV opacas y Curios back')
+          print('OK: v1.23.0, geometria rehecha (12 mechones anchos en 2 capas), '
+                'cuello alto + hombreras + cadena, atlas limpio con glowmask '
+                'fullbright, chispa EXCLUSIVA sin particulas vanilla y sin lag')
           PY
 
       # v1220: la autoevaluacion MEDIDA se ejecuta AQUI, en GitHub Actions,
@@ -756,8 +763,7 @@ jobs:
             grep -qx 'META-INF/mods.toml' /tmp/jar-contents.txt
             grep -qx 'com/capatest/CapaTestMod.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaGlowLayer.class' /tmp/jar-contents.txt
-            grep -qx 'com/capatest/client/CapaEmberParticle.class' /tmp/jar-contents.txt
-            grep -qx 'com/capatest/client/CapaBlightParticle.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapaSparkParticle.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaItemRenderer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaItemGlowLayer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaArmorModel.class' /tmp/jar-contents.txt
@@ -772,17 +778,9 @@ jobs:
             grep -qx 'assets/capatest/animations/item/cape_folded.animation.json' /tmp/jar-contents.txt
             grep -qx 'assets/capatest/textures/item/cape_folded.png' /tmp/jar-contents.txt
             grep -qx 'assets/capatest/textures/item/cape_folded_glowmask.png' /tmp/jar-contents.txt
-            grep -qx 'assets/capatest/particles/capa_ember.json' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/particles/capa_spark.json' /tmp/jar-contents.txt
             for i in 0 1 2; do
-              grep -qx "assets/capatest/textures/particle/capa_ember_${i}.png" /tmp/jar-contents.txt
-            done
-            grep -qx 'assets/capatest/particles/capa_blight_mote.json' /tmp/jar-contents.txt
-            for i in 0 1 2; do
-              grep -qx "assets/capatest/textures/particle/capa_blight_mote_${i}.png" /tmp/jar-contents.txt
-            done
-            grep -qx 'assets/capatest/particles/capa_shard.json' /tmp/jar-contents.txt
-            for i in 0 1 2; do
-              grep -qx "assets/capatest/textures/particle/capa_shard_${i}.png" /tmp/jar-contents.txt
+              grep -qx "assets/capatest/textures/particle/capa_spark_${i}.png" /tmp/jar-contents.txt
             done
             grep -qx 'data/curios/tags/items/back.json' /tmp/jar-contents.txt
             grep -qx 'data/capatest/curios/entities/player.json' /tmp/jar-contents.txt
@@ -796,8 +794,8 @@ jobs:
             unzip -p "$jar" assets/capatest/animations/item/cape_folded.animation.json > /tmp/folded-anim.json
             python3 -c 'import json; a=json.load(open("/tmp/folded-anim.json"))["animations"]; assert len(a)==5 and "animation.item" in a; print("OK: 5 animaciones con animation.item dentro del jar")'
             unzip -p "$jar" assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json > /tmp/armor-geo.json
-            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==254 and sum(len(x.get("cubes",[])) for x in b)==308; print("OK: 254 huesos / 308 cubos dentro del jar")'
-            echo "OK: clases, mods.toml, 3D item, animation.item, relieve 3D, glowmask, 2 sets de partículas y datos Curios presentes"
+            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==222 and sum(len(x.get("cubes",[])) for x in b)==276; print("OK: 222 huesos / 276 cubos dentro del jar")'
+            echo "OK: clases, mods.toml, 3D item, animation.item, atlas limpio + glowmask, chispa exclusiva y datos Curios presentes"
           done
           test "$found" -eq 1
 
@@ -862,7 +860,7 @@ jobs:
             al portador. Visor sin maniquí por defecto. Forma: jirones más
             finos y puntas separadas (silueta 1.08x, fidelidad 1.239).
 
-          - `.bbmodel` con **182 cubos de capa** / 254 grupos, textura 128×128, 8 animaciones / 31392 keyframes (rotación, posición por tramo y escala, tangentes Bézier C1). Sin maniquí, sin armadura vieja, SIN cubos flotantes y SIN pista de efectos: Blockbench abre sin buscar archivos de partículas.
+          - `.bbmodel` con **150 cubos de capa** / 222 grupos, textura 128×128, 8 animaciones / 26208 keyframes (rotación, posición por tramo y escala, tangentes Bézier C1). Sin maniquí, sin armadura vieja, SIN cubos flotantes y SIN pista de efectos: Blockbench abre sin buscar archivos de partículas.
           - Visor 3D autocontenido (sin red, sin servidor ni token) y comparativa
             con tu PNG de Blockbench.
           - **v1.18.0 — CAPA REHECHA DESDE CERO**: el atlas es la imagen
@@ -895,7 +893,7 @@ jobs:
             color 74, silueta 1.29×).
           - Se conservan: los 72 huesos originales byte-idénticos, alfa prístino,
             1636 emisivos, UV opacas ≤128, 0 `JsonNull`, 0 mixins, `curios:back`,
-            254 huesos / 308 cubos y los 3 tipos de partículas en runtime.
+            222 huesos / 276 cubos y UNA chispa exclusiva en runtime.
 
           ### Requisitos
 

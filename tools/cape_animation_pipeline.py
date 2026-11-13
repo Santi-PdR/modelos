@@ -47,7 +47,7 @@ STYLE_BY_CLIP = {
 # (la velocidad se anulaba 9 veces por ciclo). 17 muestras + interpolación
 # lineal siguen la curva analítica C1 sin pausas robóticas.
 SAMPLES = 16                    # 17 keyframes por hueso y clip
-GENERATED_PREFIXES = ("v17_", "v15_cloth_", "v15_hem_")
+GENERATED_PREFIXES = ("v17_", "v18_", "v15_cloth_", "v15_hem_")
 
 
 def _vec(values) -> dict:
@@ -66,7 +66,7 @@ def build() -> dict:
              if b["name"].startswith(GENERATED_PREFIXES)
              and not b["name"].startswith(("v17_mote_", "v17_ash_",
                                           "v16_mote_", "v16_ash_"))]
-    assert len(names) == 182, len(names)
+    assert len(names) == 150, len(names)
 
     for clip, style in STYLE_BY_CLIP.items():
         if clip not in data["animations"]:

@@ -225,7 +225,7 @@ def posed(geo):
     out = copy.deepcopy(geo)
     for b in out["bones"]:
         n = b["name"]
-        if not n.startswith(("v15_cloth_", "v15_hem_", "v16_", "v17_")):
+        if not n.startswith(("v15_cloth_", "v15_hem_", "v16_", "v17_", "v18_")):
             continue
         pose = M.sample(n, "caminar", 0.31)
         for axis in range(3):
@@ -293,21 +293,18 @@ def compose(images, labels, cols, size, bg=(13, 11, 18)):
 
 
 def particle_sheet(path):
-    """Hoja de contacto de los 6 sprites: 3 brasas + 3 motas de Blight Star."""
-    names = ([f"capa_ember_{i}.png" for i in range(3)]
-             + [f"capa_blight_mote_{i}.png" for i in range(3)])
-    labels = ["EMBER 0", "EMBER 1", "EMBER 2",
-              "BLIGHT 0", "BLIGHT 1", "BLIGHT 2"]
+    """v1.23.0: los 3 sprites de la CHISPA exclusiva (16x16 ampliados)."""
+    names = [f"capa_spark_{i}.png" for i in range(3)]
+    labels = ["SPARK 0", "SPARK 1", "SPARK 2"]
     cell = 128
-    sheet = Image.new("RGB", (3 * (cell + 10) + 5, 2 * (cell + 28) + 5), (13, 11, 18))
+    sheet = Image.new("RGB", (3 * (cell + 10) + 5, cell + 33), (13, 11, 18))
     d = ImageDraw.Draw(sheet)
     for i, (name, label) in enumerate(zip(names, labels)):
         sprite = Image.open(PARTICLE_DIR / name).convert("RGBA").resize(
-            (cell, cell), Image.LANCZOS)
-        x = 5 + (i % 3) * (cell + 10)
-        y = 25 + (i // 3) * (cell + 28)
-        sheet.paste(sprite, (x, y), sprite)
-        d.text((x, y - 17), label, fill=(220, 235, 245))
+            (cell, cell), Image.NEAREST)
+        x = 5 + i * (cell + 10)
+        sheet.paste(sprite, (x, 28), sprite)
+        d.text((x, 8), label, fill=(220, 235, 245))
     sheet.save(path)
 
 
@@ -325,7 +322,7 @@ def main():
     # rev. B: la "piel nueva" son las anclas v15_* y el abanico v17_*.
     # NO hay motas ni ceniza: son partículas de runtime.
     cloth_only = {b["name"] for b in armor["bones"]
-                  if not b["name"].startswith(("v15_", "v16_", "v17_"))}
+                  if not b["name"].startswith(("v15_", "v16_", "v17_", "v18_"))}
     original_only = cloth_only | runtime_hidden
 
     if args.uv_test:

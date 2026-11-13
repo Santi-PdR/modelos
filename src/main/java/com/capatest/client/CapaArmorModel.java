@@ -579,7 +579,8 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
                 return new int[]{2, Integer.parseInt(tail), 0};
             if (name.startsWith("v17_shingle_"))
                 return new int[]{3, Integer.parseInt(tail), 0};
-            if (name.startsWith("v17_cowl_") || name.startsWith("v17_yoke_"))
+            if (name.startsWith("v17_cowl_") || name.startsWith("v17_yoke_")
+                    || name.startsWith("v18_pad_") || name.startsWith("v18_chain_"))
                 return new int[]{1, Integer.parseInt(tail), 0};
             return new int[]{0, Integer.parseInt(tail), 0};
         } catch (RuntimeException ignored) {
