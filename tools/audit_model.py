@@ -124,7 +124,7 @@ def static_checks() -> None:
     assert BB.is_file(), f"falta el .bbmodel de la version {VER}"
     bb = json.loads(BB.read_text())
     assert bb["name"] == f'capa_deteriorer_evilsaiyan_v{VER.replace(".", "_")}'
-    assert len(bb["animations"]) == 4
+    assert len(bb["animations"]) == 8  # v1.22.0: 8 estados
     # rev. B: NO puede haber animador `effects` ni canal `particle`: eran
     # referencias a JSONs Snowstorm que Blockbench no encuentra al abrir
     # el .bbmodel suelto. Las partículas son RUNTIME (spawnAura).
@@ -134,11 +134,11 @@ def static_checks() -> None:
     assert chans == {"rotation", "position", "scale"}, chans
     kfs = sum(len(an["keyframes"]) for a in bb["animations"]
               for an in a["animators"].values())
-    assert kfs >= 12000, kfs
+    assert kfs >= 30000, kfs
     motion = (ROOT / "tools" / "cape_motion.py").read_text()
     assert "TRAVEL = 0.62" in motion and "def sample(" in motion
     assert "def phase_of(" in motion and "STYLES" in motion
-    # GeckoLib: los 4 clips deben animar huesos v17_ de verdad (antes
+    # GeckoLib: los 8 clips deben animar huesos v17_ de verdad (antes
     # animaban SOLO huesos viejos ocultos por Java).
     runtime_anim = json.loads((ROOT / "src/main/resources/assets/capatest"
                                / "animations/item/armor"

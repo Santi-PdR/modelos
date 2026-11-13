@@ -184,22 +184,33 @@ def kf(channel: str, t: float, values, key: str,
 ANIMATION_SPECS = (
     ("idle_respiracion", "idle"),
     ("caminar", "caminar"),
-    ("correr_saltar", "correr"),
+    ("correr", "correr"),
+    ("volar_elytra", "volar"),
+    ("caida_libre", "caer"),
+    ("agacharse", "agachado"),
+    ("agua_flotar", "agua"),
     ("deterioro_tela", "deterioro"),
 )
 MARKERS = {
     "idle": ("inhalar", "exhalar"),
     "caminar": ("paso_izquierdo", "paso_derecho"),
     "correr": ("impulso", "recogida"),
+    "volar": ("extension", "aleteo"),
+    "caer": ("ascenso", "estela"),
+    "agachado": ("recogida", "reposo"),
+    "agua": ("deriva", "flote"),
     "deterioro": ("estremecimiento_1", "estremecimiento_2",
                   "estremecimiento_3", "estremecimiento_4"),
 }
 MARKER_TIMES = {"idle": (0.0, 0.5), "caminar": (0.0, 0.5),
-                "correr": (0.0, 0.5), "deterioro": (0.0, 0.25, 0.5, 0.75)}
+                "correr": (0.0, 0.5), "volar": (0.0, 0.5),
+                "caer": (0.0, 0.5), "agachado": (0.0, 0.5),
+                "agua": (0.0, 0.5),
+                "deterioro": (0.0, 0.25, 0.5, 0.75)}
 
 
 def build_animations(anim_bones: list[tuple[str, str]]) -> list[dict]:
-    """4 clips con rotación + posición en las puntas + escala de capucha/venas."""
+    """8 clips (uno por estado) con rotación, posición y escala C1."""
     out = []
     for aname, style in ANIMATION_SPECS:
         length = M.STYLES[style]["length"]
@@ -350,7 +361,7 @@ def main() -> None:
         for f in e["faces"].values():
             assert max(f["uv"]) <= 128, (e["name"], f["uv"])
     anims = model["animations"]
-    assert len(anims) == 4, len(anims)
+    assert len(anims) == 8, len(anims)
     total = 0
     for a in anims:
         assert uuid_re.match(a["uuid"]), a["name"]

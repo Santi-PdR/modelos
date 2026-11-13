@@ -243,7 +243,10 @@ def ribbon_w(k: int, t: float) -> float:
         # v1.21.0: 0.86 -> 0.72 (barrido A..I medido). TOTAL informativo
         # 446.8 -> 438.1 y silueta 1.10x -> 1.08x: jirones separados en
         # vez de falda maciza, mas cercanos a la foto.
-        fill = 0.72 + 0.10 * max(0.0, min(1.0, (f - 0.35) / 0.55))
+        # v1.22.0: la referencia tiene PAÑO CONTINUO bajo la bufanda y
+        # huecos NEGROS irregulares sólo hacia las puntas. 0.72 constante
+        # en toda la altura convertía las 16 cintas en una élitra.
+        fill = 0.98 - 0.16 * max(0.0, min(1.0, f))
         return (0.58 + 0.55 * f) * scale * center * fill
     # v1283: el afilado final se retrasa al ultimo 6% y nunca baja de
     # 0.38 unidades. Antes las puntas exteriores se convertian en agujas
@@ -251,9 +254,26 @@ def ribbon_w(k: int, t: float) -> float:
     return (1.05 * ((1.0 - f) / 0.06) + 0.38) * scale
 
 
-def ribbon_z(k: int) -> float:
-    """Tres planos de profundidad solapados, sin Z-fighting."""
-    return 2.30 + 1.05 * (0.5 + 0.5 * math.sin(k * 1.73 + 0.4))
+def ribbon_z(k: int, t: float = 0.0) -> float:
+    """PROFUNDIDAD 3D REAL (v1.22.0): la capa ENVUELVE el torso.
+
+    Antes era `2.30 + 1.05*sin(...)` CASI CONSTANTE: vista de perfil la
+    capa era una LINEA de 0.3 unidades y parecía flotar despegada del
+    jugador (captura 6 del usuario). Ahora el paño es una superficie
+    CURVA con ~2.2 unidades de relieve:
+
+      * nace PEGADA al cuerpo (z~1.4) bajo los hombros,
+      * cae hacia ATRÁS al bajar, por gravedad (`+1.15*t`),
+      * las alas exteriores se enrollan hacia DELANTE (z menor),
+      * el centro queda más atrás, sobre la espalda.
+
+    El yugo/capuchón se bajó a la misma z para que no haya un hueco de
+    aire entre el jugador y la tela. `t` es la altura normalizada.
+    """
+    a = abs(lateral(k))
+    t = max(0.0, min(1.0, t))
+    z = 1.45 + 1.15 * t + 0.62 * (1.0 - a) ** 1.3
+    return z + 0.20 * math.sin(k * 1.73 + 0.4)
 
 
 def segment_bounds(k: int, n: int) -> tuple[float, float]:
@@ -295,7 +315,7 @@ def segment_geometry(k: int, n: int) -> dict:
     w *= 0.96 + 0.08 * math.sin(k * 2.71 + n * 1.93)
     if n == SEGS - 1:
         w *= 0.90
-    z = ribbon_z(k) - 0.05 + 0.055 * math.sin(k * 1.31 + n * 0.92)
+    z = ribbon_z(k, tm) - 0.05 + 0.055 * math.sin(k * 1.31 + n * 0.92)
     return dict(
         cx=cx, cy=cy, z=z, w=w, h=h, theta=theta,
         uv=[round(k * BAND_W, 4), round(t0 * CANVAS_H, 4)],

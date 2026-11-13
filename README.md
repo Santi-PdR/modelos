@@ -1,20 +1,55 @@
-# Mantle of the Blight Star — v1.21.0
+# Mantle of the Blight Star — v1.22.0
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Capa equipada en `curios:back`, temática
 **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-> 📦 **Release vigente: `v1.21.0`** — `capatest-1.21.0.jar` compilado
+> 📦 **Release vigente: `v1.22.0`** — `capatest-1.22.0.jar` compilado
 > en CI. Cada entrega cambia a una versión más nueva; `v1.19.0` y
 > anteriores quedan como histórico y no se sobreescriben.
 >
-> 🔗 **Link directo al `.bbmodel` v1.21.0**: [https://github.com/Santi-PdR/modelos/releases/download/v1.21.0/CAPA_v1.21.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.21.0/CAPA_v1.21.0.bbmodel)
-> (también en el workspace: [`docs/CAPA_v1.21.0.bbmodel`](docs/CAPA_v1.21.0.bbmodel)).
+> 🔗 **Link directo al `.bbmodel` v1.22.0**: [https://github.com/Santi-PdR/modelos/releases/download/v1.22.0/CAPA_v1.22.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.22.0/CAPA_v1.22.0.bbmodel)
+> (también en el workspace: [`docs/CAPA_v1.22.0.bbmodel`](docs/CAPA_v1.22.0.bbmodel)).
 > **El archivo ahora SÍ se llama igual que la versión**: el exportador
 > lee `mod_version` y genera `docs/CAPA_v<versión>.bbmodel` con el
 > `name` interno y el asset de Release con esa misma versión.
 > v1.14.0, v1.15.0 y v1.16.0 fueron rechazadas visualmente y sus previews
 > se borraron del repo. Los previews son render **software**.
+
+### v1.22.0 — 8 estados de movimiento, FX visibles y capa pegada al cuerpo
+
+Dijiste: *«mejores la capa en nivel de animación… piensa en caminar, correr,
+volar… agrega o mejora los efectos, que se vea bonito claramente sin lag…
+parece que vuela despegada del jugador… tiene mucho espacio entre líneas,
+parece una élitra»*.
+
+- **Animación por estados (8 clips, no 4 clonados)**: reposo, caminar,
+  correr, **volar/elytra**, **caída libre**, **agacharse**, **agua** y
+  deterioro. Cada uno tiene su propia silueta: al volar la capa se
+  extiende hacia atrás y las puntas suben (`bias -7°`, `posbias +0.42`),
+  al caer el aire la levanta (`+8.5°`), al agacharse se recoge pegada al
+  cuerpo, en agua flota amortiguada. Antes `animation.air` era un CLON de
+  correr. El controlador Java elige el estado con **8 ticks de transición**
+  para que no haya saltos de pose, y el visor tiene un selector para verlos.
+- **FX claramente visibles, sin lag**: aura de polvo con ESCALA real en el
+  mundo (`DustParticleOptions` 1.8), halo de cuello con transición rosa→
+  violeta (`DustColorTransitionOptions` 2.2), motas repartidas por las tres
+  alturas del paño y **estela** al correr/volar/caer. Techo duro
+  `MAX_AURA_PARTICLES_PER_TICK = 8`, 2 emisiones/s, sin geometría, sin
+  sonidos, sin búsqueda de entidades. El overlay del visor pasó de
+  cuadraditos de 2 px a halo radial + tres capas de brillo.
+- **Anclaje (captura 6)**: la capa vivía en `z=2.3..5.0`, a 3–5 unidades
+  del cuerpo, y era una LÁMINA plana: de perfil parecía despegada. Ahora
+  `ribbon_z(k,t)` la curva en 3D (nace en `z~1.4`, cae hacia atrás, las
+  alas se enrollan hacia delante), el capuchón bajó a la misma z con
+  solapas que giran y abrazan los hombros, y el paño engrosó de 0.3 a
+  ~0.7 unidades. Las anclas siguen ocultas DENTRO del capuchón.
+- **De élitra a capa rasgada**: `fill` pasó de `0.72` constante a
+  `0.98 − 0.16·t` (paño continuo bajo la bufanda, huecos irregulares sólo
+  en las puntas) y tres jirones secundarios largos cruzan el abanico. El
+  capuchón ya no tiene cuadrados negros: toma el carmesí de las alas de la
+  propia foto (`cowl_uv()`), sin repintar el atlas. **Fidelidad con tu
+  imagen 1.239** (límite 1.50) y silueta 1.08×, intactas.
 
 ### v1.21.0 — la animación deja de latir: onda viajera real
 
@@ -169,16 +204,16 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Release vigente: v1.21.0
+### Release vigente: v1.22.0
 
-El JAR se publica como Release [`v1.21.0`](https://github.com/Santi-PdR/modelos/releases/tag/v1.21.0):
-`capatest-1.21.0.jar`, compilado en CI con JDK 17 + Gradle 8.8.
-**Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.21.0/CAPA_v1.21.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.21.0/CAPA_v1.21.0.bbmodel)
-(el mismo archivo que `docs/CAPA_v1.21.0.bbmodel` y el asset de la Release,
+El JAR se publica como Release [`v1.22.0`](https://github.com/Santi-PdR/modelos/releases/tag/v1.22.0):
+`capatest-1.22.0.jar`, compilado en CI con JDK 17 + Gradle 8.8.
+**Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.22.0/CAPA_v1.22.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.22.0/CAPA_v1.22.0.bbmodel)
+(el mismo archivo que `docs/CAPA_v1.22.0.bbmodel` y el asset de la Release,
 byte-idénticos; ya no existe el viejo `capa_v1170.bbmodel`).
 
  Regla de entrega: **cada cambio sube `mod_version`** (aquí 1.19.0 →
-1.21.0), **el `.bbmodel` cambia de nombre con esa versión** y
+1.22.0), **el `.bbmodel` cambia de nombre con esa versión** y
 **siempre se incluye el link del `.bbmodel`**. El workflow lee
 la versión de `gradle.properties` para que JAR, tag y assets nunca se
 desincronizen; publica con `workflow_dispatch(publicar=true)` o con un
@@ -304,7 +339,7 @@ Contrastando el PNG y el render a la misma escala, la autoevaluación pasó de
   (un solo `.html`, sin servidor, sin red, sin token).
 - **Comparativa con tu referencia**:
   [`docs/capa_v1170_comparativa.png`](docs/capa_v1170_comparativa.png).
-- **Proyecto Blockbench**: [`docs/CAPA_v1.21.0.bbmodel`](docs/CAPA_v1.21.0.bbmodel),
+- **Proyecto Blockbench**: [`docs/CAPA_v1.22.0.bbmodel`](docs/CAPA_v1.22.0.bbmodel),
   182 cubos / 254 grupos, 4 animaciones en bucle con **12624 keyframes**
   y UUID canónicos: curvas **Bézier** con tangentes analíticas (C1),
   marcadores, retardo por tramo, vaivén de paso, barrido al correr,

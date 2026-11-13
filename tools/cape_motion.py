@@ -44,25 +44,61 @@ COLUMN_PHASE = 0.19    # desfase entre columnas
 WAVE_SAMPLES = 11      # 12 muestras por hueso (0..WAVE_SAMPLES)
 TAU = 2.0 * math.pi
 
-# Cada clip tiene su propia fase, carácter y amplitudes. `gain` multiplica
-# la familia: tela / capucha / vena / teja. `gust` es la ráfaga común y
-# `sway` el barrido lateral; ninguno de los dos rompe el bucle.
+# v1.22.0 — OCHO ESTADOS, no cuatro. Cada uno tiene silueta PROPIA:
+# `bias` inclina la capa entera (grados, constante ⇒ no rompe C1) y
+# `posbias` eleva/recoge las puntas. Así volar NO es "correr más rápido",
+# caer no es saltar y agacharse no es idle: se VE el estado del jugador.
+# `gain` multiplica la familia tela / capucha / vena / teja; `gust` es la
+# ráfaga común y `sway` el barrido lateral.
 STYLES: dict[str, dict] = {
+    # Reposo: respiración lenta, capa colgando recta.
     "idle": dict(length=4.0, phase=0.00, travel=TRAVEL, flutter=0.045,
                  step=0.00, flare=0.00, shiver=0.00, pull=0.030,
                  breath=0.020, pulse=0.16, gust=0.35, sway=0.25,
+                 bias=0.0, posbias=(0.0, 0.0, 0.0),
                  gain=dict(tela=0.62, cowl=0.40, vena=0.60, teja=0.55)),
+    # Caminar: vaivén de paso con los lados en contrafase.
     "caminar": dict(length=1.2, phase=0.45, travel=TRAVEL, flutter=0.075,
                     step=1.00, flare=0.30, shiver=0.00, pull=0.060,
                     breath=0.028, pulse=0.22, gust=0.80, sway=0.85,
+                    bias=0.0, posbias=(0.0, 0.0, 0.0),
                     gain=dict(tela=1.00, cowl=0.68, vena=0.95, teja=1.00)),
+    # Correr: barrida hacia atrás, aleteo de puntas y estela.
     "correr": dict(length=0.8, phase=0.95, travel=0.48, flutter=0.115,
                    step=0.45, flare=1.00, shiver=0.00, pull=0.110,
                    breath=0.045, pulse=0.30, gust=1.25, sway=1.15,
+                   bias=-1.5, posbias=(0.0, 0.05, 0.12),
                    gain=dict(tela=1.65, cowl=0.95, vena=1.35, teja=1.45)),
+    # Volar / elytra: capa EXTENDIDA hacia atrás y arriba, aleteo lento
+    # y amplio. La onda baja con menos retardo (el viento es parejo).
+    "volar": dict(length=1.5, phase=2.20, travel=0.44, flutter=0.135,
+                  step=0.10, flare=1.55, shiver=0.00, pull=0.150,
+                  breath=0.055, pulse=0.34, gust=1.45, sway=1.30,
+                  bias=-7.0, posbias=(0.0, 0.42, 0.55),
+                  gain=dict(tela=1.85, cowl=1.05, vena=1.55, teja=1.65)),
+    # Caída libre: el aire LEVANTA la capa, puntas ondeando deprisa.
+    "caer": dict(length=0.9, phase=1.15, travel=0.55, flutter=0.150,
+                 step=0.00, flare=0.00, shiver=0.30, pull=0.130,
+                 breath=0.040, pulse=0.28, gust=1.10, sway=0.90,
+                 bias=8.5, posbias=(0.0, 0.55, 0.10),
+                 gain=dict(tela=1.55, cowl=0.90, vena=1.35, teja=1.40)),
+    # Agacharse: capa RECOGIDA y pegada al cuerpo, casi sin viento.
+    "agachado": dict(length=2.6, phase=0.80, travel=0.70, flutter=0.035,
+                     step=0.00, flare=-0.35, shiver=0.00, pull=0.018,
+                     breath=0.015, pulse=0.10, gust=0.20, sway=0.15,
+                     bias=2.5, posbias=(0.0, -0.18, -0.35),
+                     gain=dict(tela=0.48, cowl=0.32, vena=0.45, teja=0.50)),
+    # Agua: flota amortiguada, onda larga y lenta, deriva lateral.
+    "agua": dict(length=3.2, phase=2.75, travel=0.72, flutter=0.050,
+                 step=0.15, flare=0.20, shiver=0.00, pull=0.045,
+                 breath=0.030, pulse=0.20, gust=0.55, sway=0.60,
+                 bias=-1.2, posbias=(0.0, 0.12, 0.18),
+                 gain=dict(tela=0.72, cowl=0.48, vena=0.70, teja=0.75)),
+    # Deterioro: estremecimiento de alta frecuencia y venas encendidas.
     "deterioro": dict(length=3.0, phase=1.70, travel=TRAVEL, flutter=0.150,
                       step=0.00, flare=0.15, shiver=0.85, pull=0.025,
                       breath=0.012, pulse=0.45, gust=0.55, sway=0.40,
+                      bias=0.0, posbias=(0.0, 0.0, 0.0),
                       gain=dict(tela=0.90, cowl=0.55, vena=2.10, teja=0.75)),
 }
 
@@ -225,6 +261,16 @@ def sample(name: str, style: str, f: float) -> dict:
         rot = [amp * 0.5 * w, 0.0, amp * w]
         drot = [amp * 0.5 * dw, 0.0, amp * dw]
 
+    # v1.22.0: SILUETA DEL ESTADO. `lean` inclina toda la capa (más en
+    # las puntas) y `posbias` eleva/recoge el dobladillo. Son constantes
+    # en el tiempo ⇒ derivada cero ⇒ el bucle sigue siendo C1.
+    lean = spec["bias"] * (0.25 + 0.75 * seg_f)
+    rot[0] += lean
+    if has_pos:
+        bend = seg_f ** 1.6
+        for i in range(3):
+            pos[i] += spec["posbias"][i] * bend
+
     return {
         "rot": tuple(_r(v) for v in rot),
         "drot": tuple(_r(v) for v in drot),
@@ -273,9 +319,16 @@ def _self_test() -> None:
                    for n in names for s in STYLES)
     rms = [round(math.sqrt(sum(v * v for v in sample(
         "v17_ribbon_7_seg5", s, 0.31)["rot"]) / 3), 4) for s in STYLES]
-    assert len(set(rms)) == 4, rms
-    print("cape_motion v1.21.0: onda VIAJERA (sin anclaje a cero), C1, "
-          "retardo por tramo, rafaga/arrastre y 4 clips distintos OK", rms)
+    assert len(rms) == 8 and len(set(rms)) == 8, rms
+    # v1.22.0: los estados TIENEN que verse distintos, no sólo sonar
+    # distintos. Volar barre/levanta, caer eleva, agacharse recoge.
+    tip = "v17_ribbon_7_seg6"
+    assert sample(tip, "volar", 0.0)["rot"][0] < -4.0, "volar no barre"
+    assert sample(tip, "caer", 0.0)["rot"][0] > 3.0, "caer no eleva"
+    assert sample(tip, "volar", 0.0)["pos"][1] > 0.25, "volar no levanta puntas"
+    assert sample(tip, "agachado", 0.0)["pos"][2] < -0.20, "agache no recoge"
+    print("cape_motion v1.22.0: 8 ESTADOS con silueta propia, onda VIAJERA "
+          "C1, retardo por tramo y offsets acumulados OK", rms)
 
 
 if __name__ == "__main__":

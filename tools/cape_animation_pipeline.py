@@ -29,12 +29,19 @@ ANIM = (ROOT / "src/main/resources/assets/capatest/animations/item/armor"
 GEO = (ROOT / "src/main/resources/assets/capatest/geo/item/armor"
        / "capa_deteriorer_evilsaiyan.geo.json")
 
-# El controlador Java ya elige estos 4 nombres; no se añaden clips nuevos.
+# Un clip por estado del portador.
+# v1.22.0: el controlador Java elige entre OCHO estados reales. Antes
+# `animation.air` era un CLON de correr: saltar, caer y volar con elytra
+# se movían exactamente igual que esprintar en llano.
 STYLE_BY_CLIP = {
     "animation.idle": "idle",
     "animation.moving": "caminar",
     "animation.sprint": "correr",
-    "animation.air": "correr",
+    "animation.air": "volar",
+    "animation.fall": "caer",
+    "animation.sneak": "agachado",
+    "animation.swim": "agua",
+    "animation.deterioro": "deterioro",
 }
 # v1.21.0: 9 muestras con easeInOutSine PARABA la tela en cada keyframe
 # (la velocidad se anulaba 9 veces por ciclo). 17 muestras + interpolación
@@ -62,6 +69,14 @@ def build() -> dict:
     assert len(names) == 182, len(names)
 
     for clip, style in STYLE_BY_CLIP.items():
+        if clip not in data["animations"]:
+            # v1.22.0: los 4 estados nuevos no existían en el JSON
+            # aprobado. Se crean con su duración canónica; el pipeline
+            # rellena las pistas y es idempotente.
+            data["animations"][clip] = {
+                "animation_length": M.STYLES[style]["length"],
+                "bones": {},
+            }
         anim = data["animations"][clip]
         length = float(anim["animation_length"])
         # Idempotencia: descartar lo generado en una ejecución anterior.

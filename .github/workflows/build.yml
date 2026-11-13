@@ -75,8 +75,10 @@ jobs:
           # pistas reales de los jirones nuevos, con la curva unica.
           armor_anim_path = base / 'animations/item/armor/capa_deteriorer_evilsaiyan.animation.json'
           armor_anim = json.loads(armor_anim_path.read_text())
-          expected = {'animation.idle', 'animation.moving', 'animation.sprint', 'animation.air'}
-          assert expected <= set(armor_anim['animations'])
+          cape_states = {'animation.idle', 'animation.moving', 'animation.sprint',
+                         'animation.air', 'animation.fall', 'animation.sneak',
+                         'animation.swim', 'animation.deterioro'}
+          assert cape_states <= set(armor_anim['animations'])
           for _name, _a in armor_anim['animations'].items():
               _ribs = [_b for _b in _a['bones'] if _b.startswith('v17_ribbon_')]
               assert len(_ribs) == 112, _name
@@ -166,7 +168,10 @@ jobs:
                       assert 0 <= u and 0 <= v and u + uw <= 128 and v + vh <= 128, (bone['name'], face)
 
           folded_anim = json.loads((base / 'animations/item/cape_folded.animation.json').read_text())
-          assert expected <= set(folded_anim['animations'])
+          # El bulto plegado conserva SUS 4 clips originales; no
+          # se le exigen los 8 estados de la capa equipada.
+          assert {'animation.idle', 'animation.moving', 'animation.sprint',
+                  'animation.air'} <= set(folded_anim['animations'])
           # v1.9.0: animación PROPIA del item en GUI/hotbar/mano.
           assert 'animation.item' in folded_anim['animations']
           assert len(folded_anim['animations']) == 5
@@ -227,10 +232,22 @@ jobs:
           assert all(c['uv']['north']['uv'][0] == 69.0 for b in veins for c in b['cubes'])
           # Cada jirón: banda UV vertical CONTINUA y espesor real.
           ribbons = [b for b in new_bones if b['name'].startswith('v17_ribbon_')]
-          assert all(0.25 <= c['size'][2] <= 0.50
+          # v1.22.0: 0.55-0.80 de espesor real (antes 0.28-0.40).
+          assert all(0.50 <= c['size'][2] <= 0.85
                      and 0.01 <= c.get('inflate', 0) <= 0.05
                      and c['uv']['north']['uv'][0] == c['uv']['south']['uv'][0]
                      for b in ribbons for c in b['cubes']), 'banda UV / espesor'
+          # v1.22.0 ANCLAJE: antes la capa vivía en z=2.3..5.0, a 3-5
+          # unidades del cuerpo, y de perfil era una LÁMINA despegada.
+          # Ahora nace en z~1.4, cae hacia atrás y ENVUELVE el torso.
+          _zs = [c['origin'][2] + c['size'][2] / 2
+                 for b in ribbons for c in b['cubes']]
+          assert min(_zs) < 2.0, ('capa lejos del cuerpo', min(_zs))
+          assert max(_zs) - min(_zs) > 1.5, ('capa plana', min(_zs), max(_zs))
+          _shape = (root / 'tools/cape_shape.py').read_text()
+          assert '1.45 + 1.15 * t' in _shape, 'falta la curva de profundidad'
+          assert 'fill = 0.98 - 0.16' in _shape, 'vuelve la elitra'
+          assert 'def cowl_uv(' in (root / 'tools/armor_model_pipeline.py').read_text()
           # Los jirones se ABREN: la punta exterior está más lejos del eje
           # que el arranque en el cuello (medido en la referencia).
           def _x(b): return b['cubes'][0]['origin'][0] + b['cubes'][0]['size'][0] / 2
@@ -459,7 +476,9 @@ jobs:
           assert _tp.count('def _energy_strokes') == 1
           geo_bones = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]['bones']
           assert sum(1 for b in geo_bones if b['name'].startswith('v17_ribbon_')) == 112
-          assert all(0.25 <= c['size'][2] <= 0.50 for b in geo_bones
+          # v1.22.0: 0.55-0.80 (antes 0.28-0.40). De perfil la capa era
+          # una lámina de 0.3 unidades y parecía despegada del jugador.
+          assert all(0.50 <= c['size'][2] <= 0.85 for b in geo_bones
                      if b['name'].startswith('v17_ribbon_') for c in b['cubes'])
           # Proyecto Blockbench REAL, con maniquí y UV por cara.
           _bbver = [l.split('=', 1)[1].strip() for l in
@@ -485,7 +504,7 @@ jobs:
           assert bb['textures'][0]['source'].startswith('data:image/png;base64,')
           _uuid = _re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
           _gids = {g['uuid'] for g in bb['groups']}
-          assert len(bb['animations']) == 4, 'faltan animaciones'
+          assert len(bb['animations']) == 8, 'faltan estados de animacion'
           _kfs = 0
           for _a in bb['animations']:
               assert _uuid.match(_a['uuid']) and _a['loop'] == 'loop'
@@ -500,7 +519,7 @@ jobs:
                       assert _k['data_points']
                       assert _k['interpolation'] in ('linear', 'catmullrom', 'bezier', 'step')
                   _kfs += len(_an['keyframes'])
-          assert _kfs >= 12000, _kfs
+          assert _kfs >= 30000, _kfs
           _channels = {_k['channel'] for _a in bb['animations']
                        for _an in _a['animators'].values()
                        for _k in _an['keyframes']}
@@ -533,6 +552,18 @@ jobs:
           assert 'b.getRotX() +' in _armor_model, 'Java vuelve a pisar GeckoLib'
           assert '- Math.sin(phase)' not in _armor_model, 'onda duplicada en Java'
           assert 'v17_mote_' not in _armor_model and 'v17_ash_' not in _armor_model
+          # v1.22.0: OCHO estados reales, no cuatro clonados.
+          assert all(f'"{k}"' in _motion for k in
+                     ('volar', 'caer', 'agachado', 'agua'))
+          _item_src = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
+          assert all(f'"animation.{n}"' in _item_src for n in
+                     ('fall', 'sneak', 'swim', 'deterioro', 'air'))
+          assert 'cape_controller", 8' in _item_src, 'sin transicion suave'
+          # FX visibles pero con TECHO DURO (sin lag, sin geometría).
+          assert 'MAX_AURA_PARTICLES_PER_TICK = 8' in _item_src
+          assert 'DustParticleOptions' in _item_src and \
+                 'DustColorTransitionOptions' in _item_src
+          assert 'sendParticles' in _item_src and 'NO son geomet' in _item_src
           _item = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
           assert 'sendParticles' in _item and 'NO son geomet' in _item
           # Retardo por tramo y respiracion de la capucha, no solo rotacion.
@@ -563,13 +594,20 @@ jobs:
                     for _k in _an['keyframes']
                     for _d in _k['data_points'][0].values()]
               return round((sum(_x * _x for _x in _v) / len(_v)) ** 0.5, 2)
-          assert len({_rms(_a) for _a in bb['animations']}) == 4
+          _states = {_rms(_a) for _a in bb['animations']}
+          assert len(_states) == 8, ('estados con la misma amplitud', _states)
           # `preview/` NO se versiona: se valida el VISOR AUTOCONTENIDO,
           # que es el entregable real y lleva el app.js embebido.
           _visor = (root / 'docs/capa_v1170_visor.html').read_text()
           assert 'bend = Math.pow(segF,1.6)' in _visor, 'visor sin offset acumulado'
           assert 'b.offset || [0,0,0]' in _visor, 'visor ignora el canal position'
           assert 'let showPlayer = false' in _visor, 'maniqui blanco visible otra vez'
+          # v1.22.0: 8 estados y FX de aura/halo/estela en el visor.
+          assert all(f'{k}:' in _visor for k in
+                     ('volar', 'caer', 'agachado', 'agua')), 'faltan estados en el visor'
+          assert 'createRadialGradient' in _visor, 'falta el halo de aura'
+          assert 'MAX_AURA_PARTICLES_PER_TICK = 8' in (
+              root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
           assert '"easing": "linear"' in (
               root / 'tools/cape_animation_pipeline.py').read_text()
           assert '"easing": "easeInOutSine"' not in (
@@ -664,7 +702,7 @@ jobs:
           assert (root / 'tools/audit_model.py').is_file()
           assert '--check' in (root / 'tools/audit_model.py').read_text()
           assert 'tools/audit_model.py --check' in (root / '.github/workflows/build.yml').read_text()
-          print('OK: v1.21.0, JSON/PNG sin JsonNull, 254 huesos / 308 cubos SIN piezas flotantes (ni motas, ni ceniza, ni yugo, ni anclas visibles), 16 jirones radiales + 10 tejas + 10 venas, .bbmodel con 182 cubos y 4 animaciones (15696 keyframes C1 + position por tramo) SIN Effects track, GeckoLib animando los 182 huesos de tela, curva unica cape_motion compartida con Java y visor, particulas SOLO en runtime spawnAura(), atlas v1.18.0 = FOTO limpia, icono 2D y backup byte-identico, UV opacas y Curios back')
+          print('OK: v1.22.0, JSON/PNG sin JsonNull, 254 huesos / 308 cubos SIN piezas flotantes (ni motas, ni ceniza, ni yugo, ni anclas visibles), 16 jirones radiales + 10 tejas + 10 venas, .bbmodel con 182 cubos y 8 ESTADOS (31392 keyframes C1 + position por tramo) SIN Effects track, GeckoLib animando los 182 huesos de tela, curva unica cape_motion compartida con Java y visor, particulas SOLO en runtime spawnAura(), atlas v1.18.0 = FOTO limpia, icono 2D y backup byte-identico, UV opacas y Curios back')
           PY
 
       # v1220: la autoevaluacion MEDIDA se ejecuta AQUI, en GitHub Actions,
@@ -797,6 +835,24 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.22.0 — ANIMACIÓN POR ESTADOS**: 8 clips reales (reposo,
+            caminar, correr, volar/elytra, caída libre, agacharse, agua y
+            deterioro) con silueta propia: al volar la capa se extiende y
+            sube, al caer el aire la levanta, al agacharse se recoge. El
+            controlador Java elige el estado con 8 ticks de transición y
+            el visor tiene un selector para verlos todos.
+          - **FX que SÍ se ven, sin lag**: aura de polvo con escala real,
+            halo de cuello con transición de color, motas por las tres
+            alturas del paño y estela al correr/volar/caer. Techo duro de
+            8 partículas por tick de emisión, 2 emisiones por segundo,
+            SIN geometría, SIN sonidos y SIN pista `effects` en Blockbench.
+          - **Anclaje y paño**: la capa ya no es una lámina a 3-5 unidades
+            del cuerpo; nace pegada a los hombros, cae curvada en 3D y las
+            solapas del capuchón abrazan el torso (captura de perfil).
+            Más tela arriba y jirones secundarios largos: deja de parecer
+            una élitra. Capuchón sin agujeros negros, usando el carmesí de
+            la propia foto (fidelidad 1.239 intacta).
+
           - **v1.21.0 — ANIMACIÓN REHECHA**: la onda ya NO se ancla a cero
             en el bucle (antes los 182 huesos se congelaban juntos en f=0
             y f=1). Onda viajera periódica C1 con retardo real por tramo,
@@ -806,7 +862,7 @@ jobs:
             al portador. Visor sin maniquí por defecto. Forma: jirones más
             finos y puntas separadas (silueta 1.08x, fidelidad 1.239).
 
-          - `.bbmodel` con **182 cubos de capa** / 254 grupos, textura 128×128, 4 animaciones / 15696 keyframes (rotación, posición por tramo y escala, tangentes Bézier C1). Sin maniquí, sin armadura vieja, SIN cubos flotantes y SIN pista de efectos: Blockbench abre sin buscar archivos de partículas.
+          - `.bbmodel` con **182 cubos de capa** / 254 grupos, textura 128×128, 8 animaciones / 31392 keyframes (rotación, posición por tramo y escala, tangentes Bézier C1). Sin maniquí, sin armadura vieja, SIN cubos flotantes y SIN pista de efectos: Blockbench abre sin buscar archivos de partículas.
           - Visor 3D autocontenido (sin red, sin servidor ni token) y comparativa
             con tu PNG de Blockbench.
           - **v1.18.0 — CAPA REHECHA DESDE CERO**: el atlas es la imagen
