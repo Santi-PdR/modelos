@@ -824,6 +824,16 @@ jobs:
           assert (root / 'tools/audit_model.py').is_file()
           assert '--check' in (root / 'tools/audit_model.py').read_text()
           assert 'tools/audit_model.py --check' in (root / '.github/workflows/build.yml').read_text()
+          # v1.27.1: la descarga del JAR PUBLICADO tiene que ser
+          # REPRODUCIBLE y VERIFICABLE, no un `curl` a mano. El script
+          # baja la rama de artefactos (codeload), que es la unica via
+          # que responde cuando el CDN de releases esta bloqueado, y
+          # comprueba el SHA-256 contra el digest que devuelve la API.
+          _fetch = (root / 'tools/fetch_published_jar.py').read_text()
+          assert 'codeload.github.com' in _fetch, 'la descarga no usa codeload'
+          assert 'published_digest' in _fetch, 'no verifica contra la API'
+          assert 'SHA256SUMS.txt' in _fetch, 'no comprueba el SHA256SUMS'
+          assert 'capatest-{ver}.jar' in _fetch
           print(f'OK: v{ver}, geometria rehecha (12 mechones anchos en 2 capas), '
                 'cuello alto + hombreras + cadena, atlas limpio con glowmask '
                 'fullbright, chispa EXCLUSIVA sin particulas vanilla, icono PREFERIDO revertido con backup byte-identico y sin lag')

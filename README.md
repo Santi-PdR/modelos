@@ -410,14 +410,40 @@ El JAR se publica como Release [`v1.27.1`](https://github.com/Santi-PdR/modelos/
 `capatest-1.27.1.jar`, compilado en CI con JDK 17 + Gradle 8.8.
 La `v1.27.0` queda como histórico, **sin sobrescribir**.
 
-**SHA-256 del JAR publicado**: se comprueba en cada publicación contra el
-JAR recién compilado y se publica en el resumen del build y en la nota de
-release. La CI falla si lo publicado no es lo compilado. Para verificar
+**SHA-256 del JAR publicado**: `7b17c24b27eb5a579f55d98773b97f81c482ad9485bbc0735bc5a5763c24e5f2`
+(477 988 bytes). La CI lo comprueba contra el JAR recién compilado en cada
+publicación y **falla si lo publicado no es lo compilado**. Para verificar
 tu descarga:
 
 ```sh
 sha256sum capatest-1.27.1.jar
+# 7b17c24b27eb5a579f55d98773b97f81c482ad9485bbc0735bc5a5763c24e5f2
 ```
+
+**Segunda vía de descarga (mismo binario)**: el JAR también está en la
+rama de artefactos [`artifacts/v1.27.1`](https://github.com/Santi-PdR/modelos/tree/artifacts/v1.27.1),
+en `build/libs/`, junto a su `SHA256SUMS.txt`. Se baja con:
+
+```sh
+curl -L https://codeload.github.com/Santi-PdR/modelos/tar.gz/refs/heads/artifacts/v1.27.1 -o art.tgz
+tar xzf art.tgz
+sha256sum modelos-artifacts-v1.27.1/build/libs/capatest-1.27.1.jar
+```
+
+Existe porque el CDN de assets de release y el de artifacts de Actions no
+responden en algunos entornos (redes restringidas), mientras que
+`codeload.github.com` sí. El binario es **byte a byte el mismo** que el
+asset de la Release.
+
+En el repo hay un script que hace esa descarga **y la verifica** (compara
+el SHA-256 y el tamaño con el digest que devuelve la API de GitHub, y sólo
+escribe el `.jar` si todo cuadra):
+
+```sh
+python3 tools/fetch_published_jar.py --keep-sums
+# -> build/libs/capatest-1.27.1.jar  (sha256 7b17c24b…4e5f2)
+```
+
 **Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.27.1/CAPA_v1.27.1.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.27.1/CAPA_v1.27.1.bbmodel)
 (el mismo archivo que `docs/CAPA_v1.27.1.bbmodel` y el asset de la Release,
 byte-idénticos; ya no existe el viejo `capa_v1170.bbmodel`).
