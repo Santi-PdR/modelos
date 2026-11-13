@@ -92,10 +92,14 @@ mueven con la capa; mejora el bloom, la luz y la animación»*.
 
 - **Icono revertido BYTE A BYTE** al que te gustaba (el de la imagen 1):
   mismo PNG, mismo SHA-256 (`c90670ba…`), estático, sin `overrides` ni
-  propiedad de modelo. Nuevo backup obligatorio:
+  propiedad de modelo. Backup obligatorio:
   `referencias/ICONO_PREFERIDO_BACKUP.png` (byte-idéntico, verificado por
   la auditoría). Se eliminan las 3 texturas/frame, los 3 modelos y la clase
   de animación del icono.
+  > En la v1.27.0 el icono activo cambia, así que este PNG pasa a llamarse
+  > `referencias/ICONO_V125_PREFERIDO_BACKUP.png` (SHA `c90670ba…`, el
+  > mismo byte a byte) y `referencias/ICONO_PREFERIDO_BACKUP.png` vuelve a
+  > ser copia byte-idéntica del icono ACTIVO.
 - **Adiós a los bloques flotantes**: las 10 grietas 3D `v17_vein_*` eran
   HIJAS de `chestplate`, así que cuando la capa se movía se quedaban
   clavadas en el aire. Ahora cuelgan del **tramo del mechón** que las
@@ -500,7 +504,7 @@ Contrastando el PNG y el render a la misma escala, la autoevaluación pasó de
 - **Comparativa con tu referencia**:
   [`docs/capa_v1170_comparativa.png`](docs/capa_v1170_comparativa.png).
 - **Proyecto Blockbench**: [`docs/CAPA_v1.27.0.bbmodel`](docs/CAPA_v1.27.0.bbmodel),
-  150 cubos / 222 grupos, 8 animaciones en bucle con **26208 keyframes**
+  156 cubos / 222 grupos, 8 animaciones en bucle con **26208 keyframes**
   y UUID canónicos: curvas **Bézier** con tangentes analíticas (C1),
   marcadores, retardo por tramo, vaivén de paso, barrido al correr,
   respiración de capucha y pulso de venas. **Sin Effects track**, sin
@@ -512,7 +516,7 @@ Contrastando el PNG y el render a la misma escala, la autoevaluación pasó de
 Se conservan: los **72 huesos originales byte-idénticos**, alfa prístino,
 **1636 emisivos**, UV opacas ≤128, `inflate` ≤0.05, espesor 0.25–0.50,
 0 `JsonNull`, 0 mixins, `animation.item`, radianes y fail-safes.
-**222 huesos / 276 cubos**. `CapaArmorModel.java` usa `motionParts()`
+**222 huesos / 282 cubos**. `CapaArmorModel.java` usa `motionParts()`
 para los **150 huesos de tela reales** (los mismos que hay en el geo); la
 curva vive en
 [`tools/cape_motion.py`](tools/cape_motion.py).
