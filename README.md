@@ -466,7 +466,7 @@ Contrastando el PNG y el render a la misma escala, la autoevaluación pasó de
 - **Comparativa con tu referencia**:
   [`docs/capa_v1170_comparativa.png`](docs/capa_v1170_comparativa.png).
 - **Proyecto Blockbench**: [`docs/CAPA_v1.26.0.bbmodel`](docs/CAPA_v1.26.0.bbmodel),
-  182 cubos / 254 grupos, 4 animaciones en bucle con **12624 keyframes**
+  150 cubos / 222 grupos, 8 animaciones en bucle con **26208 keyframes**
   y UUID canónicos: curvas **Bézier** con tangentes analíticas (C1),
   marcadores, retardo por tramo, vaivén de paso, barrido al correr,
   respiración de capucha y pulso de venas. **Sin Effects track**, sin
@@ -478,8 +478,9 @@ Contrastando el PNG y el render a la misma escala, la autoevaluación pasó de
 Se conservan: los **72 huesos originales byte-idénticos**, alfa prístino,
 **1636 emisivos**, UV opacas ≤128, `inflate` ≤0.05, espesor 0.25–0.50,
 0 `JsonNull`, 0 mixins, `animation.item`, radianes y fail-safes.
-**254 huesos / 308 cubos**. `CapaArmorModel.java` usa `motionParts()`
-para los 182 huesos de tela reales; la curva vive en
+**222 huesos / 276 cubos**. `CapaArmorModel.java` usa `motionParts()`
+para los **150 huesos de tela reales** (los mismos que hay en el geo); la
+curva vive en
 [`tools/cape_motion.py`](tools/cape_motion.py).
 
 > PR #1: https://github.com/Santi-PdR/modelos/pull/1
