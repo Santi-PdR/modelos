@@ -388,6 +388,15 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
 
 El JAR se publica como Release [`v1.27.0`](https://github.com/Santi-PdR/modelos/releases/tag/v1.27.0):
 `capatest-1.27.0.jar`, compilado en CI con JDK 17 + Gradle 8.8.
+
+**SHA-256 del JAR publicado**: `e80bd1f43ff7f53617003b29f140320a1834b80a765596aab1a88c2bf7ed6f2d`
+(477 797 bytes). La CI lo comprueba contra el JAR recién compilado en cada
+publicación: si el asset subiría corrupto o de una versión vieja, el build
+fallaría. Para verificar tu descarga:
+
+```sh
+sha256sum capatest-1.27.0.jar
+```
 **Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.27.0/CAPA_v1.27.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.27.0/CAPA_v1.27.0.bbmodel)
 (el mismo archivo que `docs/CAPA_v1.27.0.bbmodel` y el asset de la Release,
 byte-idénticos; ya no existe el viejo `capa_v1170.bbmodel`).

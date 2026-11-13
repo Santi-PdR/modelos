@@ -864,6 +864,18 @@ jobs:
       - name: List built jars
         run: ls -lh build/libs
 
+      # v1.27.0: El JAR tambien se sube como ARTIFACT de Actions. La
+      # descarga del asset de Release rebota a release-assets.github.com,
+      # que esta bloqueado en el sandbox; el artifact se sirve por la API,
+      # que si es accesible. Ademas permite bajar el .jar exacto del run.
+      - name: Upload jar as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: capatest-jar
+          path: build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Verify jar contents (model resources)
         run: |
           set -euo pipefail
@@ -1049,6 +1061,12 @@ jobs:
 
           Forge 1.20.1 (47.3.0), Java 17, GeckoLib 4.8.x y Curios 5.14.1+1.20.1.
 
+          ### Verificar la descarga
+
+          El SHA-256 del `.jar` va en el resumen del build y en el README.
+          La CI lo compara con el JAR recién compilado: lo publicado es
+          byte a byte lo que se compiló.
+
           ### Descargas de esta Release
 
           | Archivo | Para qué |
@@ -1082,6 +1100,21 @@ jobs:
             docs/capa_v1170_preview.png \
             docs/capa_v1170_comparativa.png \
             --clobber
+          # v1.27.0: VERIFICAR QUE LO PUBLICADO ES LO COMPILADO. La API
+          # de GitHub devuelve el SHA-256 de cada asset: se compara con el
+          # del JAR recién compilado. Si el upload se corrompiese o subiese
+          # un binario viejo, aqui se ve.
+          LOCAL_SHA="$(sha256sum "$JAR" | cut -d' ' -f1)"
+          API_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/$TAG" \
+            --jq '.assets[] | select(.name=="capatest-'"$VER"'.jar") | .digest' \
+            | sed 's/^sha256://')"
+          test -n "$API_SHA"
+          test "$LOCAL_SHA" = "$API_SHA" || {
+            echo "::error::el JAR publicado (sha256:$API_SHA) NO es el compilado (sha256:$LOCAL_SHA)"
+            exit 1
+          }
+          echo "OK: el JAR publicado es byte-identico al compilado (sha256:$LOCAL_SHA)"
+          echo "sha256 del JAR: $LOCAL_SHA" >> "$GITHUB_STEP_SUMMARY"
           ASSETS="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
           grep -qx "capatest-$VER.jar" <<< "$ASSETS"
           grep -qx "CAPA_v$VER.bbmodel" <<< "$ASSETS"
