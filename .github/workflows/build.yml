@@ -762,6 +762,13 @@ jobs:
           props = (root / 'gradle.properties').read_text().splitlines()
           ver = [l.split('=', 1)[1].strip() for l in props
                  if l.startswith('mod_version=')][0]
+          # La pagina de entrada (docs/index.html) NO puede quedar
+          # desfasada: antes seguia anunciando la v1.25.0 y enlazaba a un
+          # .bbmodel que ya no existia.
+          _index = (root / 'docs/index.html').read_text()
+          assert f'CAPA_v{ver}.bbmodel' in _index, 'docs/index.html con bbmodel viejo'
+          assert f'releases/tag/v{ver}' in _index, 'docs/index.html con release vieja'
+          assert f'{ver}' in _index, 'docs/index.html sin la version vigente'
           assert len(ver.split('.')) == 3 and all(x.isdigit() for x in ver.split('.')), ver
           assert f'mod_version={ver}' in (root / 'gradle.properties').read_text()
           assert 'curios_version=5.14.1+1.20.1' in (root / 'gradle.properties').read_text()
