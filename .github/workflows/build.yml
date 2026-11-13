@@ -826,6 +826,17 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.25.0 — TU ICONO DE VUELTA, SIN FLOTANTES Y MÁS LUZ**: el arte
+            que te gustaba restaurado **byte a byte** (SHA verificado por la
+            auditoría, con `referencias/ICONO_PREFERIDO_BACKUP.png` como backup
+            del anterior), **estático** y sin overrides. Las grietas 3D ya no se
+            quedan clavadas en el aire: cuelgan del mechón que las lleva (heredan
+            su rotación y posición) y van embebidas en el paño. Las chispas nacen
+            SOBRE el dobladillo (antes salían a 0.42-0.74 bloques de la espalda,
+            más atrás que la propia capa, y se leían como barras sueltas). Bloom
+            con 3 anillos, latido emissive 0.82-1.22, animación con fase y
+            amplitud propias por mechón, simetría corregida a 12 columnas, más
+            retardo al volar/caer, y el ítem en la mano más pequeño.
           - **v1.22.0 — ANIMACIÓN POR ESTADOS**: 8 clips reales (reposo,
             caminar, correr, volar/elytra, caída libre, agacharse, agua y
             deterioro) con silueta propia: al volar la capa se extiende y
