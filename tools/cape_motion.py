@@ -5,7 +5,7 @@ v1.21.0 — POR QUÉ LA ANIMACIÓN ANTERIOR SE VEÍA FEA
 ---------------------------------------------------
 `wave()` restaba `sin(phase)` a cada armónico para forzar `w(0)=0`. Eso
 mataba el retardo: la fase espacial dejaba de ser un DESPLAZAMIENTO en el
-tiempo y pasaba a ser una AMPLITUD, y los 182 huesos volvían TODOS a la
+tiempo y pasaba a ser una AMPLITUD, y los 150 huesos volvían TODOS a la
 pose neutra al principio y al final de cada clip. Resultado: un latido
 global sincronizado, con un parón visible en la costura del bucle, en vez
 de una tela por la que baja una onda. En el juego además
@@ -43,12 +43,34 @@ TRAVEL = 0.62          # radianes de retardo por tramo de jirón
 COLUMN_PHASE = 0.19    # desfase entre columnas
 WAVE_SAMPLES = 11      # 12 muestras por hueso (0..WAVE_SAMPLES)
 TAU = 2.0 * math.pi
+# v1.26.0 — EJES DE SIMETRÍA POR FAMILIA. El eje NO es un número
+# global: cada familia tiene su propia anatomía de columnas y el eje
+# es (columnas - 1) / 2. Medido sobre los pivotes X del geo real:
+#   ribbon  12 -> X de -3.77 a +3.80   (eje 5.5)
+#   cloth    9 -> X de -3.80 a +3.80   (eje 4.0)
+#   vein    10 -> eje 4.5
+#   cowl front/tooth 7 -> 3.0 ; cowl back 5 -> 2.0
+#   chain    8 -> 3.5 ; pad 2 -> 0.5
+# El 7.5 heredado (16 tiras de la élitra) inclinaba toda la capa hacia
+# un lado: el paño izquierdo ondeaba el DOBLE que el derecho. Estos
+# MISMOS números viven en Java (`CapaArmorModel.motionAxis`) y en el
+# visor (`preview/app.js`); tools/audit_model.py comprueba que los tres
+# ficheros digan lo MISMO, porque si uno se queda atrás Minecraft vuelve
+# aaletear distinto que Blockbench.
+RIBBON_AXIS = 5.5      # 12 mechones (columnas 0..11)
+CLOTH_AXIS = 4.0       # 9 columnas de pano (columnas 0..8)
+VEIN_AXIS = 4.5        # 10 grietas
+COWL_AXIS = 3.0        # 7 piezas de capucha (front/tooth)
+COWL_BACK_AXIS = 2.0   # 5 piezas del cuello trasero
+CHAIN_AXIS = 3.5       # 8 eslabones
+PAD_AXIS = 0.5         # 2 hombreras
+DEFAULT_AXIS = 5.5     # hueso sin anatomia de columnas
 
 # v1.22.0 — OCHO ESTADOS, no cuatro. Cada uno tiene silueta PROPIA:
 # `bias` inclina la capa entera (grados, constante ⇒ no rompe C1) y
 # `posbias` eleva/recoge las puntas. Así volar NO es "correr más rápido",
 # caer no es saltar y agacharse no es idle: se VE el estado del jugador.
-# `gain` multiplica la familia tela / capucha / vena / teja; `gust` es la
+# `gain` multiplica la familia tela / capucha / vena; `gust` es la
 # ráfaga común y `sway` el barrido lateral.
 STYLES: dict[str, dict] = {
     # Reposo: respiración lenta, capa colgando recta.
@@ -56,50 +78,50 @@ STYLES: dict[str, dict] = {
                  step=0.00, flare=0.00, shiver=0.00, pull=0.030,
                  breath=0.020, pulse=0.16, gust=0.35, sway=0.25,
                  bias=0.0, posbias=(0.0, 0.0, 0.0),
-                 gain=dict(tela=0.62, cowl=0.40, vena=0.60, teja=0.55)),
+                 gain=dict(tela=0.62, cowl=0.40, vena=0.60)),
     # Caminar: vaivén de paso con los lados en contrafase.
     "caminar": dict(length=1.2, phase=0.45, travel=TRAVEL, flutter=0.075,
                     step=1.00, flare=0.30, shiver=0.00, pull=0.060,
                     breath=0.028, pulse=0.22, gust=0.80, sway=0.85,
                     bias=0.0, posbias=(0.0, 0.0, 0.0),
-                    gain=dict(tela=1.00, cowl=0.68, vena=0.95, teja=1.00)),
+                    gain=dict(tela=1.00, cowl=0.68, vena=0.95)),
     # Correr: barrida hacia atrás, aleteo de puntas y estela.
     "correr": dict(length=0.8, phase=0.95, travel=0.56, flutter=0.115,
                    step=0.45, flare=1.00, shiver=0.00, pull=0.110,
                    breath=0.045, pulse=0.30, gust=1.25, sway=1.15,
                    bias=-1.5, posbias=(0.0, 0.05, 0.12),
-                   gain=dict(tela=1.65, cowl=0.95, vena=1.35, teja=1.45)),
+                   gain=dict(tela=1.65, cowl=0.95, vena=1.35)),
     # Volar / elytra: capa EXTENDIDA hacia atrás y arriba, aleteo lento
     # y amplio. La onda baja con menos retardo (el viento es parejo).
     "volar": dict(length=1.5, phase=2.20, travel=0.60, flutter=0.135,
                   step=0.10, flare=1.55, shiver=0.00, pull=0.150,
                   breath=0.055, pulse=0.34, gust=1.45, sway=1.30,
                   bias=-7.0, posbias=(0.0, 0.42, 0.55),
-                  gain=dict(tela=1.85, cowl=1.05, vena=1.55, teja=1.65)),
+                  gain=dict(tela=1.85, cowl=1.05, vena=1.55)),
     # Caída libre: el aire LEVANTA la capa, puntas ondeando deprisa.
     "caer": dict(length=0.9, phase=1.15, travel=0.68, flutter=0.150,
                  step=0.00, flare=0.00, shiver=0.30, pull=0.130,
                  breath=0.040, pulse=0.28, gust=1.10, sway=0.90,
                  bias=8.5, posbias=(0.0, 0.55, 0.10),
-                 gain=dict(tela=1.55, cowl=0.90, vena=1.35, teja=1.40)),
+                 gain=dict(tela=1.55, cowl=0.90, vena=1.35)),
     # Agacharse: capa RECOGIDA y pegada al cuerpo, casi sin viento.
     "agachado": dict(length=2.6, phase=0.80, travel=0.70, flutter=0.035,
                      step=0.00, flare=-0.35, shiver=0.00, pull=0.018,
                      breath=0.015, pulse=0.10, gust=0.20, sway=0.15,
                      bias=2.5, posbias=(0.0, -0.18, -0.35),
-                     gain=dict(tela=0.48, cowl=0.32, vena=0.45, teja=0.50)),
+                     gain=dict(tela=0.48, cowl=0.32, vena=0.45)),
     # Agua: flota amortiguada, onda larga y lenta, deriva lateral.
     "agua": dict(length=3.2, phase=2.75, travel=0.72, flutter=0.050,
                  step=0.15, flare=0.20, shiver=0.00, pull=0.045,
                  breath=0.030, pulse=0.20, gust=0.55, sway=0.60,
                  bias=-1.2, posbias=(0.0, 0.12, 0.18),
-                 gain=dict(tela=0.72, cowl=0.48, vena=0.70, teja=0.75)),
+                 gain=dict(tela=0.72, cowl=0.48, vena=0.70)),
     # Deterioro: estremecimiento de alta frecuencia y venas encendidas.
     "deterioro": dict(length=3.0, phase=1.70, travel=0.75, flutter=0.150,
                       step=0.00, flare=0.15, shiver=0.85, pull=0.025,
                       breath=0.012, pulse=0.45, gust=0.55, sway=0.40,
                       bias=0.0, posbias=(0.0, 0.0, 0.0),
-                      gain=dict(tela=0.90, cowl=0.55, vena=2.10, teja=0.75)),
+                      gain=dict(tela=0.90, cowl=0.55, vena=2.10)),
 }
 
 RIBBON_RE = re.compile(r"^v17_ribbon_(\d+)_seg(\d+)$")
@@ -118,18 +140,38 @@ def parts(name: str) -> tuple[str, int, int]:
         return "cloth", col, SECTION_SEG.get(sec, 0)
     if name.startswith("v15_hem_"):
         return "hem", int(TAIL_RE.search(name).group(1)), 6
-    if name.startswith(("v17_cowl_", "v17_yoke_", "v16_collar_", "v16_yoke_",
-                        "v18_pad_", "v18_chain_")):
+    if name.startswith(("v17_cowl_", "v18_pad_", "v18_chain_")):
         m2 = TAIL_RE.search(name)
         return "cowl", (int(m2.group(1)) if m2 else 0), 0
-    if name.startswith(("v17_vein_", "v16_vein_")):
+    if name.startswith("v17_vein_"):
         m2 = TAIL_RE.search(name)
         return "vein", (int(m2.group(1)) if m2 else 0), 0
-    if name.startswith(("v17_shingle_", "v16_tatter_", "v16_shred_",
-                        "v16_fray_", "v16_hem_")):
-        m2 = TAIL_RE.search(name)
-        return "shingle", (int(m2.group(1)) if m2 else 0), 0
     return "other", 0, 0
+
+
+def axis_of(name: str) -> float:
+    """Eje de simetría de la familia del hueso: (columnas - 1) / 2.
+
+    v1.26.0: el eje se deriva de la anatomía REAL de cada familia (ver
+    las constantes de eje arriba), no de un 7.5 global. Con el eje
+    equivocado, `lateral` deja de ir de -1 a +1 y la capa se inclina
+    siempre hacia el mismo lado.
+    """
+    if name.startswith("v17_ribbon_"):
+        return RIBBON_AXIS
+    if name.startswith(("v15_cloth_cape_", "v15_hem_")):
+        return CLOTH_AXIS
+    if name.startswith("v17_vein_"):
+        return VEIN_AXIS
+    if name.startswith("v18_chain_"):
+        return CHAIN_AXIS
+    if name.startswith("v18_pad_"):
+        return PAD_AXIS
+    if name.startswith("v17_cowl_back_"):
+        return COWL_BACK_AXIS
+    if name.startswith("v17_cowl_"):
+        return COWL_AXIS
+    return DEFAULT_AXIS
 
 
 def phase_of(name: str, style: str) -> float:
@@ -187,13 +229,12 @@ def sample(name: str, style: str, f: float) -> dict:
     spec = STYLES[style]
     fam, col, seg = parts(name)
     seg_f = min(1.0, seg / 6.0)
-    # v1.25.0: con 12 MECHONES el eje es 5.5, no 7.5 (diseñado para 16):
-    # antes la mitad izquierda aleteaba más que la derecha y el vaivén de
-    # paso inclinaba la capa siempre hacia el mismo lado.
-    if fam == "ribbon":
-        lateral = (col - 5.5) / 5.5
-    else:
-        lateral = (col - 7.5) / 7.5
+    # v1.26.0: el eje depende de la FAMILIA (columnas reales / 2 - 0.5).
+    # Con el 7.5 global el paño de 9 columnas iba de -1.0 a +0.07: la
+    # izquierda ondeaba el doble que la derecha y el vaivén del paso
+    # inclinaba la capa siempre hacia el mismo lado.
+    axis = axis_of(name)
+    lateral = (col - axis) / axis
     edge = 0.62 + 0.38 * abs(lateral) ** 1.4
     phase = phase_of(name, style)
     # Amplitud propia de cada mechón (determinista, no aleatoria): un
@@ -266,10 +307,6 @@ def sample(name: str, style: str, f: float) -> dict:
         dp = spec["pulse"] * ddrag
         scale = [1 + p, 1 + p, 1.0]
         dscale = [dp, dp, 0.0]
-    elif fam == "shingle":
-        amp = 3.2 * g["teja"]
-        rot = [amp * 0.40 * w, 0.0, amp * w]
-        drot = [amp * 0.40 * dw, 0.0, amp * dw]
     else:
         amp = 2.4 * g["tela"]
         rot = [amp * 0.5 * w, 0.0, amp * w]
@@ -299,7 +336,7 @@ def sample(name: str, style: str, f: float) -> dict:
 
 def _self_test() -> None:
     names = ("v17_ribbon_0_seg0", "v17_ribbon_7_seg4", "v17_ribbon_15_seg6",
-             "v17_cowl_front_3", "v17_vein_2", "v17_shingle_5",
+             "v17_cowl_front_3", "v17_vein_2", "v18_chain_3",
              "v15_cloth_cape_bottom_8")
     for style in STYLES:
         for name in names:

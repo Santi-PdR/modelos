@@ -502,60 +502,68 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     // ------------------------------------------------------------------
     // v1.14.0 — DETERIORO / EVIL SAIYAN ROSÉ
     // ------------------------------------------------------------------
-    /** Nombres generados por tools/armor_model_pipeline.py. Si cambias el
-     *  geo, regenera esta lista; el resolvedor nunca inventa nombres y
-     *  getBone() falla de forma silenciosa (null) si el modelo no está. */
+    /** v1.26.0: EXACTAMENTE los 150 huesos de tela del geo.
+     *
+     * <p>Antes arrastraba 42 nombres que ya NO existen en el geo (cuatro
+     * mechones de más, diez tejas y cuatro piezas de capucha) y le
+     * faltaban los diez {@code v18_chain_*} / {@code v18_pad_*}: las
+     * hombreras y la cadena NO recibían la respuesta del portador.
+     * tools/audit_model.py comprueba que esta lista y el geo digan lo
+     * MISMO, para que la lista no vuelva a quedarse vieja.
+     *
+     * <p>Si cambias el geo, regenera esta lista: el resolvedor nunca
+     * inventa nombres y {@code getBone()} falla de forma silenciosa
+     * (null) si el modelo no está.
+     */
     private static final String[] DETERIORO_NAMES = {
-            "v15_cloth_cape_top_0", "v15_cloth_cape_top_1", "v15_cloth_cape_top_2", "v15_cloth_cape_top_3",
-            "v15_cloth_cape_top_4", "v15_cloth_cape_top_5", "v15_cloth_cape_top_6", "v15_cloth_cape_top_7",
-            "v15_cloth_cape_top_8", "v15_cloth_cape_mid_0", "v15_cloth_cape_mid_1", "v15_cloth_cape_mid_2",
+            // 27: 9 columnas x 3 tramos del pano legacy
+            "v15_cloth_cape_bottom_0", "v15_cloth_cape_bottom_1", "v15_cloth_cape_bottom_2", "v15_cloth_cape_bottom_3",
+            "v15_cloth_cape_bottom_4", "v15_cloth_cape_bottom_5", "v15_cloth_cape_bottom_6", "v15_cloth_cape_bottom_7",
+            "v15_cloth_cape_bottom_8", "v15_cloth_cape_mid_0", "v15_cloth_cape_mid_1", "v15_cloth_cape_mid_2",
             "v15_cloth_cape_mid_3", "v15_cloth_cape_mid_4", "v15_cloth_cape_mid_5", "v15_cloth_cape_mid_6",
-            "v15_cloth_cape_mid_7", "v15_cloth_cape_mid_8", "v15_cloth_cape_bottom_0", "v15_cloth_cape_bottom_1",
-            "v15_cloth_cape_bottom_2", "v15_cloth_cape_bottom_3", "v15_cloth_cape_bottom_4", "v15_cloth_cape_bottom_5",
-            "v15_cloth_cape_bottom_6", "v15_cloth_cape_bottom_7", "v15_cloth_cape_bottom_8", "v17_cowl_front_0",
-            "v17_cowl_tooth_0", "v17_cowl_front_1", "v17_cowl_tooth_1", "v17_cowl_front_2",
-            "v17_cowl_tooth_2", "v17_cowl_front_3", "v17_cowl_tooth_3", "v17_cowl_front_4",
-            "v17_cowl_tooth_4", "v17_cowl_front_5", "v17_cowl_tooth_5", "v17_cowl_front_6",
-            "v17_cowl_tooth_6", "v17_cowl_front_7", "v17_cowl_tooth_7", "v17_cowl_front_8",
-            "v17_cowl_tooth_8", "v17_cowl_back_0", "v17_cowl_back_1", "v17_cowl_back_2",
-            "v17_cowl_back_3", "v17_cowl_back_4",
+            "v15_cloth_cape_mid_7", "v15_cloth_cape_mid_8", "v15_cloth_cape_top_0", "v15_cloth_cape_top_1",
+            "v15_cloth_cape_top_2", "v15_cloth_cape_top_3", "v15_cloth_cape_top_4", "v15_cloth_cape_top_5",
+            "v15_cloth_cape_top_6", "v15_cloth_cape_top_7", "v15_cloth_cape_top_8",
+            // 84: 12 mechones x 7 tramos (la superficie articulada)
             "v17_ribbon_0_seg0", "v17_ribbon_0_seg1", "v17_ribbon_0_seg2", "v17_ribbon_0_seg3",
-            "v17_ribbon_0_seg4", "v17_ribbon_0_seg5", "v17_ribbon_1_seg0", "v17_ribbon_1_seg1",
-            "v17_ribbon_1_seg2", "v17_ribbon_1_seg3", "v17_ribbon_1_seg4", "v17_ribbon_1_seg5",
-            "v17_ribbon_2_seg0", "v17_ribbon_2_seg1", "v17_ribbon_2_seg2", "v17_ribbon_2_seg3",
-            "v17_ribbon_2_seg4", "v17_ribbon_2_seg5", "v17_ribbon_3_seg0", "v17_ribbon_3_seg1",
-            "v17_ribbon_3_seg2", "v17_ribbon_3_seg3", "v17_ribbon_3_seg4", "v17_ribbon_3_seg5",
+            "v17_ribbon_0_seg4", "v17_ribbon_0_seg5", "v17_ribbon_0_seg6", "v17_ribbon_1_seg0",
+            "v17_ribbon_1_seg1", "v17_ribbon_1_seg2", "v17_ribbon_1_seg3", "v17_ribbon_1_seg4",
+            "v17_ribbon_1_seg5", "v17_ribbon_1_seg6", "v17_ribbon_2_seg0", "v17_ribbon_2_seg1",
+            "v17_ribbon_2_seg2", "v17_ribbon_2_seg3", "v17_ribbon_2_seg4", "v17_ribbon_2_seg5",
+            "v17_ribbon_2_seg6", "v17_ribbon_3_seg0", "v17_ribbon_3_seg1", "v17_ribbon_3_seg2",
+            "v17_ribbon_3_seg3", "v17_ribbon_3_seg4", "v17_ribbon_3_seg5", "v17_ribbon_3_seg6",
             "v17_ribbon_4_seg0", "v17_ribbon_4_seg1", "v17_ribbon_4_seg2", "v17_ribbon_4_seg3",
-            "v17_ribbon_4_seg4", "v17_ribbon_4_seg5", "v17_ribbon_5_seg0", "v17_ribbon_5_seg1",
-            "v17_ribbon_5_seg2", "v17_ribbon_5_seg3", "v17_ribbon_5_seg4", "v17_ribbon_5_seg5",
-            "v17_ribbon_6_seg0", "v17_ribbon_6_seg1", "v17_ribbon_6_seg2", "v17_ribbon_6_seg3",
-            "v17_ribbon_6_seg4", "v17_ribbon_6_seg5", "v17_ribbon_7_seg0", "v17_ribbon_7_seg1",
-            "v17_ribbon_7_seg2", "v17_ribbon_7_seg3", "v17_ribbon_7_seg4", "v17_ribbon_7_seg5",
+            "v17_ribbon_4_seg4", "v17_ribbon_4_seg5", "v17_ribbon_4_seg6", "v17_ribbon_5_seg0",
+            "v17_ribbon_5_seg1", "v17_ribbon_5_seg2", "v17_ribbon_5_seg3", "v17_ribbon_5_seg4",
+            "v17_ribbon_5_seg5", "v17_ribbon_5_seg6", "v17_ribbon_6_seg0", "v17_ribbon_6_seg1",
+            "v17_ribbon_6_seg2", "v17_ribbon_6_seg3", "v17_ribbon_6_seg4", "v17_ribbon_6_seg5",
+            "v17_ribbon_6_seg6", "v17_ribbon_7_seg0", "v17_ribbon_7_seg1", "v17_ribbon_7_seg2",
+            "v17_ribbon_7_seg3", "v17_ribbon_7_seg4", "v17_ribbon_7_seg5", "v17_ribbon_7_seg6",
             "v17_ribbon_8_seg0", "v17_ribbon_8_seg1", "v17_ribbon_8_seg2", "v17_ribbon_8_seg3",
-            "v17_ribbon_8_seg4", "v17_ribbon_8_seg5", "v17_ribbon_9_seg0", "v17_ribbon_9_seg1",
-            "v17_ribbon_9_seg2", "v17_ribbon_9_seg3", "v17_ribbon_9_seg4", "v17_ribbon_9_seg5",
-            "v17_ribbon_10_seg0", "v17_ribbon_10_seg1", "v17_ribbon_10_seg2", "v17_ribbon_10_seg3",
-            "v17_ribbon_10_seg4", "v17_ribbon_10_seg5", "v17_ribbon_11_seg0", "v17_ribbon_11_seg1",
-            "v17_ribbon_11_seg2", "v17_ribbon_11_seg3", "v17_ribbon_11_seg4", "v17_ribbon_11_seg5",
-            "v17_ribbon_12_seg0", "v17_ribbon_12_seg1", "v17_ribbon_12_seg2", "v17_ribbon_12_seg3",
-            "v17_ribbon_12_seg4", "v17_ribbon_12_seg5", "v17_ribbon_13_seg0", "v17_ribbon_13_seg1",
-            "v17_ribbon_13_seg2", "v17_ribbon_13_seg3", "v17_ribbon_13_seg4", "v17_ribbon_13_seg5",
-            "v17_ribbon_14_seg0", "v17_ribbon_14_seg1", "v17_ribbon_14_seg2", "v17_ribbon_14_seg3",
-            "v17_ribbon_14_seg4", "v17_ribbon_14_seg5", "v17_ribbon_15_seg0", "v17_ribbon_15_seg1",
-            "v17_ribbon_15_seg2", "v17_ribbon_15_seg3", "v17_ribbon_15_seg4", "v17_ribbon_15_seg5",
-            "v17_ribbon_0_seg6", "v17_ribbon_1_seg6", "v17_ribbon_2_seg6", "v17_ribbon_3_seg6",
-            "v17_ribbon_4_seg6", "v17_ribbon_5_seg6", "v17_ribbon_6_seg6", "v17_ribbon_7_seg6",
-            "v17_ribbon_8_seg6", "v17_ribbon_9_seg6", "v17_ribbon_10_seg6", "v17_ribbon_11_seg6",
-            "v17_ribbon_12_seg6", "v17_ribbon_13_seg6", "v17_ribbon_14_seg6", "v17_ribbon_15_seg6",
-            "v17_shingle_0", "v17_shingle_1", "v17_shingle_2", "v17_shingle_3",
-            "v17_shingle_4", "v17_shingle_5", "v17_shingle_6", "v17_shingle_7",
-            "v17_shingle_8", "v17_shingle_9", "v17_vein_0", "v17_vein_1", "v17_vein_2", "v17_vein_3",
+            "v17_ribbon_8_seg4", "v17_ribbon_8_seg5", "v17_ribbon_8_seg6", "v17_ribbon_9_seg0",
+            "v17_ribbon_9_seg1", "v17_ribbon_9_seg2", "v17_ribbon_9_seg3", "v17_ribbon_9_seg4",
+            "v17_ribbon_9_seg5", "v17_ribbon_9_seg6", "v17_ribbon_10_seg0", "v17_ribbon_10_seg1",
+            "v17_ribbon_10_seg2", "v17_ribbon_10_seg3", "v17_ribbon_10_seg4", "v17_ribbon_10_seg5",
+            "v17_ribbon_10_seg6", "v17_ribbon_11_seg0", "v17_ribbon_11_seg1", "v17_ribbon_11_seg2",
+            "v17_ribbon_11_seg3", "v17_ribbon_11_seg4", "v17_ribbon_11_seg5", "v17_ribbon_11_seg6",
+            // 19: collar (7 front + 7 tooth + 5 back)
+            "v17_cowl_back_0", "v17_cowl_back_1", "v17_cowl_back_2", "v17_cowl_back_3",
+            "v17_cowl_back_4", "v17_cowl_front_0", "v17_cowl_front_1", "v17_cowl_front_2",
+            "v17_cowl_front_3", "v17_cowl_front_4", "v17_cowl_front_5", "v17_cowl_front_6",
+            "v17_cowl_tooth_0", "v17_cowl_tooth_1", "v17_cowl_tooth_2", "v17_cowl_tooth_3",
+            "v17_cowl_tooth_4", "v17_cowl_tooth_5", "v17_cowl_tooth_6",
+            // 10: grietas NEON
+            "v17_vein_0", "v17_vein_1", "v17_vein_2", "v17_vein_3",
             "v17_vein_4", "v17_vein_5", "v17_vein_6", "v17_vein_7",
-            "v17_vein_8", "v17_vein_9"
+            "v17_vein_8", "v17_vein_9",
+            // 10: hombreras y cadena (v1.26.0: antes NO recibían respuesta)
+            "v18_chain_0", "v18_chain_1", "v18_chain_2", "v18_chain_3",
+            "v18_chain_4", "v18_chain_5", "v18_chain_6", "v18_chain_7",
+            "v18_pad_0", "v18_pad_1"
     };
 
     /** Espejo de `tools/cape_motion.py::parts()`: familia 0=tela,
-     *  1=capucha, 2=vena, 3=teja. Sin esto la onda usaba el índice del
+     *  1=capucha, 2=vena. Sin esto la onda usaba el índice del
      *  array y dos jirones vecinos podían moverse en contrafase. */
     private static int[] motionParts(String name) {
         try {
@@ -577,8 +585,6 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
                 return new int[]{0, Integer.parseInt(tail), 6};
             if (name.startsWith("v17_vein_"))
                 return new int[]{2, Integer.parseInt(tail), 0};
-            if (name.startsWith("v17_shingle_"))
-                return new int[]{3, Integer.parseInt(tail), 0};
             if (name.startsWith("v17_cowl_") || name.startsWith("v17_yoke_")
                     || name.startsWith("v18_pad_") || name.startsWith("v18_chain_"))
                 return new int[]{1, Integer.parseInt(tail), 0};
@@ -586,6 +592,46 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         } catch (RuntimeException ignored) {
             return new int[]{0, 0, 0};
         }
+    }
+
+    /** v1.26.0: EJE DE SIMETRÍA POR FAMILIA = (columnas - 1) / 2.
+     *
+     * <p>Antes TODO usaba {@code (col - 7.5) / 7.5}, un 7.5 heredado
+     * de las 16 tiras de la élitra. Con 12 mechones eso iba de -1.0 a
+     * +0.47 y con 9 columnas de paño de -1.0 a +0.07: la capa se
+     * inclinaba SIEMPRE hacia el mismo lado y el paño izquierdo
+     * ondeaba el doble que el derecho. Los ejes se midieron sobre los
+     * pivotes X del geo real (simétricos respecto a 0).
+     *
+     * <p>Espejo exacto de {@code tools/cape_motion.py::axis_of()} y de
+     * {@code preview/app.js::motionAxis()}; la CI compara los tres
+     * ficheros número a número.
+     */
+    private static final double RIBBON_AXIS = 5.5D;      // 12 mechones
+    private static final double CLOTH_AXIS = 4.0D;        // 9 columnas de pano
+    private static final double VEIN_AXIS = 4.5D;         // 10 grietas
+    private static final double COWL_AXIS = 3.0D;         // 7 piezas de capucha
+    private static final double COWL_BACK_AXIS = 2.0D;    // 5 piezas del cuello
+    private static final double CHAIN_AXIS = 3.5D;        // 8 eslabones
+    private static final double PAD_AXIS = 0.5D;          // 2 hombreras
+    private static final double DEFAULT_AXIS = 5.5D;      // sin anatomia
+
+    private static double motionAxis(String name) {
+        if (name.startsWith("v17_ribbon_"))
+            return RIBBON_AXIS;
+        if (name.startsWith("v15_cloth_cape_") || name.startsWith("v15_hem_"))
+            return CLOTH_AXIS;
+        if (name.startsWith("v17_vein_"))
+            return VEIN_AXIS;
+        if (name.startsWith("v18_chain_"))
+            return CHAIN_AXIS;
+        if (name.startsWith("v18_pad_"))
+            return PAD_AXIS;
+        if (name.startsWith("v17_cowl_back_"))
+            return COWL_BACK_AXIS;
+        if (name.startsWith("v17_cowl_") || name.startsWith("v17_yoke_"))
+            return COWL_AXIS;
+        return DEFAULT_AXIS;
     }
 
     private void resolveDeterioro() {
@@ -630,7 +676,10 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             int col = deterioroParts[i][1];
             int seg = deterioroParts[i][2];
             double segF = Math.min(1.0D, seg / 6.0D);
-            double lateral = (col - 7.5D) / 7.5D;
+            // v1.26.0: el eje sale de la anatomía de la familia, no de
+            // un 7.5 global (ver motionAxis).
+            double axis = motionAxis(DETERIORO_NAMES[i]);
+            double lateral = (col - axis) / axis;
             // TRAVEL = 0.62 rad/tramo: la onda llega retardada desde
             // GeckoLib; el offset se propaga con el MISMO retardo.
             double lag = 0.62D * seg;

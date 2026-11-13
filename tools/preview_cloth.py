@@ -5,7 +5,7 @@ Uso:
     python -m pip install Pillow numpy
     python tools/preview_cloth.py --out /tmp/capa_preview
 
-Genera vistas del bulto plegado, la capa equipada v1.13.0 (frente/3-4/espalda),
+Genera vistas del bulto plegado, la capa equipada (frente/3-4/espalda),
 un perfil para el relieve 3D y el arnés delantero aislado, la superficie de
 tela, el canvas 96x48, el icono 64x64 ampliado, el glowmask del item, los seis
 sprites de partículas y el detalle original que queda visible. Sirve para
@@ -35,6 +35,19 @@ FOLDED_TEX = ASSETS / "textures/item/cape_folded.png"
 FOLDED_GLOW = ASSETS / "textures/item/cape_folded_glowmask.png"
 ICON = ASSETS / "textures/item/capa_deteriorer_evilsaiyan.png"
 PARTICLE_DIR = ASSETS / "textures/particle"
+
+
+def mod_version() -> str:
+    """La versión sale de gradle.properties, NO se hardcodea.
+
+    v1.26.0: el rótulo del composite decía "bulto v1.17.0" desde la
+    v1.17.0 y era la ÚNICA etiqueta de versión obsoleta que sobrevivía
+    en las previews: el resto ya se derivaba del fichero de versión.
+    """
+    for line in (ROOT / "gradle.properties").read_text().splitlines():
+        if line.startswith("mod_version="):
+            return line.split("=", 1)[1].strip()
+    raise RuntimeError("falta mod_version en gradle.properties")
 
 # Debe coincidir con CapaArmorModel.SECTIONS + HIDDEN_DETAILS.
 SECTION_BONES = {"cape_top", "cape_mid", "cape_bottom"}
@@ -346,7 +359,7 @@ def main():
 
     views = [
         (render(folded, FOLDED_TEX, set(), yaw=-28, pitch=14, size=520),
-         "FOLDED ITEM 3D - bulto v1.17.0"),
+         f"FOLDED ITEM 3D - bulto v{mod_version()}"),
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=0, pitch=8, size=520),
          "DETERIORO - frente"),
         (render(posed(armor), ARMOR_TEX, runtime_hidden, yaw=-28, pitch=10, size=520),

@@ -289,6 +289,66 @@ def static_checks() -> None:
                   / "CapaArmorModel.java").read_text()
     assert "motionParts(" in armor_java and "0.62D * seg" in armor_java
     assert not any(n in armor_java for n in ("v17_mote_", "v17_ash_"))
+    # ------------------------------------------------------------------
+    # v1.26.0: EJES DE SIMETRÍA. El eje lateral es (columnas - 1) / 2 de
+    # cada familia, medido sobre los pivotes X del geo. Con el 7.5 global
+    # (heredado de 16 tiras de la élitra) la capa se inclinaba siempre
+    # hacia el mismo lado y el paño izquierdo ondeaba el doble. Python,
+    # Java y el visor tienen que decir EXACTAMENTE lo mismo.
+    # ------------------------------------------------------------------
+    axes = {"RIBBON": 5.5, "CLOTH": 4.0, "VEIN": 4.5, "COWL": 3.0,
+            "COWL_BACK": 2.0, "CHAIN": 3.5, "PAD": 0.5}
+    visor = (ROOT / "docs" / "capa_v1170_visor.html").read_text()
+    for key, value in axes.items():
+        assert f"{key}_AXIS = {value}" in motion, f"eje {key} ausente en Python"
+        assert f"{key}_AXIS = {value}D" in armor_java, f"eje {key} ausente en Java"
+        assert f"{key.lower()}: {value}" in visor, f"eje {key} ausente en el visor"
+    assert "def axis_of(" in motion and "lateral = (col - axis) / axis" in motion
+    assert "motionAxis(" in armor_java
+    assert "double lateral = (col - axis) / axis;" in armor_java
+    assert "const lateral = (col - axis) / axis;" in visor
+    # El eje medido tiene que ser el de la anatomía REAL: (columnas-1)/2.
+    for prefix, cols in (("v17_ribbon_", 12), ("v15_cloth_cape_", 9),
+                         ("v17_vein_", 10), ("v17_cowl_front_", 7),
+                         ("v17_cowl_tooth_", 7), ("v17_cowl_back_", 5),
+                         ("v18_chain_", 8), ("v18_pad_", 2)):
+        got = {int(_re.search(r"(\d+)", b["name"][len(prefix):]).group(1))
+               for b in bones if b["name"].startswith(prefix)}
+        assert len(got) == cols, (prefix, len(got))
+        pivots = sorted(b["pivot"][0] for b in bones
+                        if b["name"].startswith(prefix))
+        assert pivots[0] < 0 < pivots[-1], (prefix, pivots[:2])
+    # ------------------------------------------------------------------
+    # v1.26.0: DETERIORO_NAMES == los huesos de tela del geo. Antes
+    # arrastraba 42 nombres inexistentes y le faltaban los 10 v18_*.
+    # ------------------------------------------------------------------
+    names = set(_re.findall(r'"(v\d{2}_[a-z0-9_]+)"',
+                             armor_java.split("DETERIORO_NAMES = {")[1]
+                             .split("};")[0]))
+    expected = {b["name"] for b in bones
+                if b["name"].startswith(("v15_cloth_", "v17_ribbon_",
+                                         "v17_cowl_", "v17_vein_", "v18_"))}
+    assert names == expected, ("lista de huesos desincronizada del geo",
+                                sorted(expected - names),
+                                sorted(names - expected))
+    assert len(names) == 150, len(names)
+    # ------------------------------------------------------------------
+    # v1.26.0: PRESUPUESTO DE CHISPAS POR VALOR EFECTIVO. La CI pedía
+    # el literal 'MAX_SPARKS_PER_TICK = 4', que sólo sobrevivía en un
+    # Javadoc viejo: el runtime hace 8 ticks y 3 chispas desde la
+    # v1.25.0. Ahora se parsea el código y se comprueba el valor real.
+    # ------------------------------------------------------------------
+    _item = (ROOT / "src/main/java/com/capatest/item"
+             / "CapaDeteriorerItem.java").read_text()
+    _int = _re.search(r"private static final int SPARK_INTERVAL_TICKS = (\d+);", _item)
+    _max = _re.search(r"private static final int MAX_SPARKS_PER_TICK = (\d+);", _item)
+    assert _int and _max, "no se encuentra el presupuesto de chispas"
+    assert int(_int.group(1)) == 8, ("intervalo de chispas", _int.group(1))
+    assert int(_max.group(1)) == 3, ("maximo de chispas", _max.group(1))
+    _ask = _re.search(r"int count = deterioro \? (\d+) :", _item)
+    assert _ask and int(_ask.group(1)) <= int(_max.group(1)), \
+        "el codigo pide mas chispas de las permitidas"
+    assert "MAX_SPARKS_PER_TICK = 4" not in _item, "literal obsoleto"
     curios = (ROOT / "src/main/java/com/capatest/compat/CuriosCompat.java").read_text()
     assert "spawnAura(player.level(), player, deterioro)" in curios
 
@@ -334,7 +394,7 @@ def main() -> None:
            + max(0.0, 1.8 - wid) / 1.8)
     print(f"  degradado carmesi->morado: {grad:.1f} | neón emissive: {neon:.2f}%"
           f" | mechón ancho: {wid:.2f}u")
-    print(f"  FIDELIDAD AL DISEÑO v1.25.0: {fid:.3f}   limite 1.00")
+    print(f"  FIDELIDAD AL DISEÑO v{VER}: {fid:.3f}   limite 1.00")
 
     if args.check:
         bad = [k for k in ('silhouette',) if err[k] > LIMITS[k]]
@@ -344,7 +404,7 @@ def main() -> None:
             print("FALLO: métricas fuera de umbral: " + ", ".join(bad),
                   file=sys.stderr)
             sys.exit(1)
-        print("OK: diseño v1.25.0 dentro de umbrales, sin piezas volando, "
+        print(f"OK: diseño v{VER} dentro de umbrales, sin piezas volando, "
           "chispa exclusiva en runtime e icono intacto")
     else:
         print("(informe; usa --check para que falle como test de CI)")

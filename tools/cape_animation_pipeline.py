@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera las pistas de los huesos `v17_*` en el animation.json de GeckoLib.
+"""Genera las pistas de los huesos `v17_*`/`v18_*` en el animation.json de GeckoLib.
 
 REGRESIÓN CORREGIDA (rev. B): el `animation.json` aprobado tenía 4 clips con
 53/38 huesos... pero TODOS eran huesos de la armadura vieja que Java oculta
@@ -8,10 +8,11 @@ tenía un solo keyframe: en el juego la capa nueva sólo se movía por el
 parche cosmético de `CapaArmorModel`, y si el fail-safe se activaba quedaba
 completamente rígida.
 
-Ahora los 4 clips llevan la MISMA curva `cape_motion.sample()` que el
-`.bbmodel`, el visor y (en espíritu) `CapaArmorModel`. Se conservan las
-pistas originales byte por byte en contenido: este script sólo AÑADE pistas
-nuevas y es idempotente (las regenera desde cero cada vez).
+Ahora los OCHO clips (uno por estado del portador) llevan la MISMA curva
+`cape_motion.sample()` que el `.bbmodel`, el visor y (en espíritu)
+`CapaArmorModel`. Se conservan las pistas originales byte por byte en
+contenido: este script sólo AÑADE pistas nuevas y es idempotente (las
+regenera desde cero cada vez).
 
 Uso:  PYTHONPATH=tools python3 tools/cape_animation_pipeline.py
 """
@@ -107,8 +108,8 @@ def build() -> dict:
 
 def main() -> None:
     data = build()
-    # Compacto: 17 muestras x 235 huesos x 4 clips llenarían varios MB con
-    # indent=2. El runtime sólo necesita JSON válido y sin `null`.
+    # Compacto: 17 muestras x todos los huesos x 8 clips llenarían varios
+    # MB con indent=2. El runtime sólo necesita JSON válido y sin `null`.
     text = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
     assert "null" not in text, "JsonNull rompe GeckoLib"
     ANIM.write_text(text + "\n")

@@ -1,20 +1,54 @@
-# Mantle of the Blight Star — v1.25.0
+# Mantle of the Blight Star — v1.26.0
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Capa equipada en `curios:back`, temática
 **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-> 📦 **Release vigente: `v1.25.0`** — `capatest-1.25.0.jar` compilado
+> 📦 **Release vigente: `v1.26.0`** — `capatest-1.26.0.jar` compilado
 > en CI. Cada entrega cambia a una versión más nueva; `v1.19.0` y
 > anteriores quedan como histórico y no se sobreescriben.
 >
-> 🔗 **Link directo al `.bbmodel` v1.25.0**: [https://github.com/Santi-PdR/modelos/releases/download/v1.25.0/CAPA_v1.25.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.25.0/CAPA_v1.25.0.bbmodel)
-> (también en el workspace: [`docs/CAPA_v1.25.0.bbmodel`](docs/CAPA_v1.25.0.bbmodel)).
+> 🔗 **Link directo al `.bbmodel` v1.26.0**: [https://github.com/Santi-PdR/modelos/releases/download/v1.26.0/CAPA_v1.26.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.26.0/CAPA_v1.26.0.bbmodel)
+> (también en el workspace: [`docs/CAPA_v1.26.0.bbmodel`](docs/CAPA_v1.26.0.bbmodel)).
 > **El archivo ahora SÍ se llama igual que la versión**: el exportador
 > lee `mod_version` y genera `docs/CAPA_v<versión>.bbmodel` con el
 > `name` interno y el asset de Release con esa misma versión.
 > v1.14.0, v1.15.0 y v1.16.0 fueron rechazadas visualmente y sus previews
 > se borraron del repo. Los previews son render **software**.
+
+### v1.26.0 — la capa ya no se inclina siempre hacia el mismo lado
+
+Una entrega de **arreglos**, sin tocar la forma 3D ni el atlas: cuatro
+defectos reales que sesgaban el movimiento y dejaban pasar la CI.
+
+- **Eje de simetría por familia (el bug visible)**: TODO usaba un `7.5`
+  global, heredado de las 16 tiras de la élitra. Con 12 mechones eso
+  iba de −1.0 a +0.47 y con las 9 columnas del paño de −1.0 a +0.07: la
+  capa se inclinaba **siempre** hacia el mismo lado, el paño izquierdo
+  ondeaba el **doble** que el derecho y el vaivén del paso no era simétrico.
+  Ahora el eje es `(columnas − 1) / 2` de cada familia, medido sobre los
+  pivotes X reales del geo: mechones 12 → **5.5**, paño 9 → **4.0**,
+  grietas 10 → **4.5**, capucha 7 → **3.0**, cuello 5 → **2.0**,
+  cadena 8 → **3.5**, hombreras 2 → **0.5**. Los MISMOS números viven
+  en Python (`cape_motion.py`), en Java (`CapaArmorModel.motionAxis`) y
+  en el visor, y la CI los compara fichero a fichero.
+- **Lista de huesos de deterioro podada**: `DETERIORO_NAMES` arrastraba
+  **42 nombres que ya no existen** en el geo (4 mechones de más, 10 tejas
+  y 4 piezas de capucha) y le faltaban los **10** huesos `v18_chain_*` /
+  `v18_pad_*`: las hombreras y la cadena **no recibían** respuesta del
+  portador. Ahora son exactamente los 150 huesos de tela del geo, y la CI
+  lo comprueba contra el propio fichero de geometría.
+- **La CI validaba un literal, no el código**: cuatro comprobaciones
+  buscaban la cadena `MAX_SPARKS_PER_TICK = 4`, que sólo sobrevivía en
+  un Javadoc viejo: el runtime hace **8 ticks y 3 chispas** desde la
+  v1.25.0 y la CI daba verde igual. Ahora la CI **parsea** las
+  declaraciones, comprueba los valores (8 y 3) y verifica que el código
+  no pida más chispas de las permitidas.
+- **Limpieza**: rótulo `bulto v1.17.0` → versión dinámica, docstrings que
+  aún decían «4 clips» / «4 animaciones» / «182 huesos», y las familias
+  fantasma `v16_*`, `v17_shingle_*` y `v17_yoke_*` (que el propio workflow
+  prohíbe) fuera del camino de animación. Sin tocar las familias
+  originales válidas ni el geo.
 
 ### v1.25.0 — icono preferido de vuelta, sin flotantes y más luz
 
@@ -296,16 +330,16 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Release vigente: v1.25.0
+### Release vigente: v1.26.0
 
-El JAR se publica como Release [`v1.25.0`](https://github.com/Santi-PdR/modelos/releases/tag/v1.25.0):
-`capatest-1.25.0.jar`, compilado en CI con JDK 17 + Gradle 8.8.
-**Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.25.0/CAPA_v1.25.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.25.0/CAPA_v1.25.0.bbmodel)
-(el mismo archivo que `docs/CAPA_v1.25.0.bbmodel` y el asset de la Release,
+El JAR se publica como Release [`v1.26.0`](https://github.com/Santi-PdR/modelos/releases/tag/v1.26.0):
+`capatest-1.26.0.jar`, compilado en CI con JDK 17 + Gradle 8.8.
+**Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.26.0/CAPA_v1.26.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.26.0/CAPA_v1.26.0.bbmodel)
+(el mismo archivo que `docs/CAPA_v1.26.0.bbmodel` y el asset de la Release,
 byte-idénticos; ya no existe el viejo `capa_v1170.bbmodel`).
 
- Regla de entrega: **cada cambio sube `mod_version`** (aquí 1.19.0 →
-1.25.0), **el `.bbmodel` cambia de nombre con esa versión** y
+ Regla de entrega: **cada cambio sube `mod_version`** (aquí 1.25.0 →
+1.26.0), **el `.bbmodel` cambia de nombre con esa versión** y
 **siempre se incluye el link del `.bbmodel`**. El workflow lee
 la versión de `gradle.properties` para que JAR, tag y assets nunca se
 desincronizen; publica con `workflow_dispatch(publicar=true)` o con un
@@ -431,7 +465,7 @@ Contrastando el PNG y el render a la misma escala, la autoevaluación pasó de
   (un solo `.html`, sin servidor, sin red, sin token).
 - **Comparativa con tu referencia**:
   [`docs/capa_v1170_comparativa.png`](docs/capa_v1170_comparativa.png).
-- **Proyecto Blockbench**: [`docs/CAPA_v1.25.0.bbmodel`](docs/CAPA_v1.25.0.bbmodel),
+- **Proyecto Blockbench**: [`docs/CAPA_v1.26.0.bbmodel`](docs/CAPA_v1.26.0.bbmodel),
   182 cubos / 254 grupos, 4 animaciones en bucle con **12624 keyframes**
   y UUID canónicos: curvas **Bézier** con tangentes analíticas (C1),
   marcadores, retardo por tramo, vaivén de paso, barrido al correr,

@@ -11,10 +11,10 @@ v1.17.0: corrige DOS defectos graves de la entrega anterior.
    8-4-4-4-12 en minúsculas.
 
 2. ANIMACIONES REALES. La entrega anterior tenía `animations: []`: el modelo
-   en Blockbench era estático. Se exportan 4 animaciones en bucle con
-   keyframes de rotación (y posición en los microvóxeles) sobre TODOS los
-   huesos v16_* y los 27 paneles de paño: respiración del collar, ondeo de
-   las cintas con retardo, pulso de las venas y deriva de las partículas.
+   en Blockbench era estático. Se exportan OCHO animaciones en bucle (una
+   por estado del portador) con keyframes de rotación (y posición en los
+   microvóxeles) sobre TODOS los huesos de tela: respiración del collar,
+   ondeo de las cintas con retardo y pulso de las venas.
 
 rev. B: se ELIMINAN las motas/ceniza 3D, el animador `effects` de
 Bedrock (referenciaba JSONs de partículas que Blockbench no encuentra)

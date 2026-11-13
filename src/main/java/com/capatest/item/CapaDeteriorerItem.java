@@ -48,9 +48,14 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
     private static final RawAnimation DETERIORO_ANIM = RawAnimation.begin().thenLoop("animation.deterioro");
     // v1.9.0: animación dedicada del bulto plegado en GUI/hotbar/mano.
     private static final RawAnimation ITEM_ANIM = RawAnimation.begin().thenLoop("animation.item");
-    /** v1.23.0: chispas SUTILES. Un tick de emisión cada 6 (~3.3/s) y
-     *  como mucho 4 chispas en ese tick: 3-13 partículas por segundo,
-     *  SIN geometría, SIN sonidos y SIN búsqueda de entidades. */
+    /** v1.23.0: chispas SUTILES. Un tick de emisión cada 8 (~1.25/s) y
+     *  como mucho 3 chispas en ese tick: 1.25-3.75 partículas por
+     *  segundo, SIN geometría, SIN sonidos y SIN búsqueda de entidades.
+     *  <p>v1.26.0: el comentario decía 6 ticks y 4 chispas desde
+     *  v1.25.0, cuando el código ya usaba 8 y 3. La CI validaba el
+     *  LITERAL del comentario, así que el desajuste pasaba inadvertido:
+     *  ahora la CI parsea estos DOS valores y comprueba que el código
+     *  no pida más chispas de las permitidas. */
     private static final int SPARK_INTERVAL_TICKS = 8;
     private static final int MAX_SPARKS_PER_TICK = 3;
 
@@ -205,8 +210,9 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
      * propia, en vez de partículas vanilla. Chispas rectangulares,
      * verticales, semitransparentes y con centro brillante; SIN gravedad,
      * suben suavemente y se desvanecen. Nacen dispersas en los BORDES y
-     * las PUNTAS INFERIORES de la capa, no detrás de la cabeza. Presupuesto
-     * fijo de {@code MAX_SPARKS_PER_TICK = 4}, 1 emisión cada 6 ticks.
+     * las PUNTAS INFERIORES de la capa, no detrás de la cabeza.
+     * Presupuesto fijo de 3 chispas por tick de emisión, 1 emisión cada
+     * 8 ticks.
      * Las partículas NO son geometría: se generan al llevar la capa puesta.
      */
     public static void spawnAura(Level level, Player player, boolean deterioro) {

@@ -42,7 +42,7 @@ jobs:
       - name: Validate resources
         run: |
           python3 - <<'PY'
-          import hashlib, json, pathlib, struct
+          import hashlib, json, pathlib, re, struct
           root = pathlib.Path('.')
           base = root / 'src/main/resources/assets/capatest'
 
@@ -131,8 +131,28 @@ jobs:
           _item = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
           assert 'DustParticleOptions' not in _item
           assert 'DustColorTransitionOptions' not in _item
-          assert 'CAPA_SPARK' in _item and 'MAX_SPARKS_PER_TICK = 4' in _item
-          assert 'SPARK_INTERVAL_TICKS = 8' in _item
+          assert 'CAPA_SPARK' in _item
+          # v1.26.0: PRESUPUESTO DE CHISPAS POR VALOR EFECTIVO.
+          # Antes la CI buscaba el LITERAL 'MAX_SPARKS_PER_TICK = 4', que
+          # solo sobrevivia en un Javadoc viejo: el runtime hacia 8 ticks
+          # y 3 chispas y la CI daba verde igual. Ahora se PARSEA la
+          # declaracion y se comprueba el valor real, mas la coherencia
+          # con lo que el codigo pide.
+          def spark_budget(src):
+              m_int = re.search(r'private static final int SPARK_INTERVAL_TICKS = (\d+);', src)
+              m_max = re.search(r'private static final int MAX_SPARKS_PER_TICK = (\d+);', src)
+              assert m_int, 'no se encuentra SPARK_INTERVAL_TICKS'
+              assert m_max, 'no se encuentra MAX_SPARKS_PER_TICK'
+              return int(m_int.group(1)), int(m_max.group(1))
+
+          _spark_interval, _spark_max = spark_budget(_item)
+          assert _spark_interval == 8, ('intervalo de chispas', _spark_interval)
+          assert _spark_max == 3, ('maximo de chispas', _spark_max)
+          _ask = re.search(r'int count = deterioro \? (\d+) :', _item)
+          assert _ask and int(_ask.group(1)) <= _spark_max, \
+              'el codigo pide mas chispas de las permitidas'
+          assert 'MAX_SPARKS_PER_TICK = 4' not in _item, 'literal obsoleto'
+          assert 'SPARK_INTERVAL_TICKS = 6' not in _item, 'literal obsoleto'
           assert '0.10D + 0.26D' in _item, 'chispas no nacen sobre el paño'
           assert '0.10D + (tip ? 0.12D : 0.04D)' in _item, 'chispas no pegadas al dobladillo'
           _reg = (root / 'src/main/java/com/capatest/client/CapaParticleRegistration.java').read_text()
@@ -188,7 +208,7 @@ jobs:
               assert set(spec['bones']) <= folded_names, (anim_name, set(spec['bones']) - folded_names)
 
           # v1.17.0: la geometría se TRAZA del PNG del usuario. Los 72
-          # huesos originales siguen BYTE-IDÉNTICOS; encima, 182 huesos
+          # huesos originales siguen BYTE-IDÉNTICOS; encima, 150 huesos
           # nuevos reconstruyen el ABANICO medido en la referencia.
           profile = json.loads((root / 'tools/reference_profile.json').read_text())
           assert profile['source'].startswith('referencias/REFERENCIA_CAPA.png')
@@ -534,7 +554,7 @@ jobs:
           _motion = (root / 'tools/cape_motion.py').read_text()
           assert 'TRAVEL = 0.62' in _motion and 'def sample(' in _motion
           # v1.21.0: PROHIBIDO volver a anclar la onda a cero. Restar
-          # sin(phase) congelaba los 182 huesos en f=0 y f=1: un latido
+          # sin(phase) congelaba los 150 huesos en f=0 y f=1: un latido
           # con paron en vez de una onda que baja por el jiron.
           assert '- math.sin(phase)' not in _motion
           assert '0.75 * (math.sin' not in _motion
@@ -547,6 +567,36 @@ jobs:
           assert 'b.getRotX() +' in _armor_model, 'Java vuelve a pisar GeckoLib'
           assert '- Math.sin(phase)' not in _armor_model, 'onda duplicada en Java'
           assert 'v17_mote_' not in _armor_model and 'v17_ash_' not in _armor_model
+          # v1.26.0: EJES DE SIMETRIA COHERENTES (Python, Java y visor).
+          # El eje de simetria es (columnas - 1) / 2 de cada familia. Con
+          # el 7.5 global (heredado de 16 tiras de la elitria) la capa se
+          # inclinaba siempre hacia un lado y el pano izquierdo ondeaba
+          # el doble que el derecho. Se comparan los TRES ficheros.
+          _AXES = {'RIBBON': 5.5, 'CLOTH': 4.0, 'VEIN': 4.5, 'COWL': 3.0,
+                   'COWL_BACK': 2.0, 'CHAIN': 3.5, 'PAD': 0.5}
+          _visor_html = (root / 'docs/capa_v1170_visor.html').read_text()
+          for _k, _v in _AXES.items():
+              assert f'{_k}_AXIS = {_v}' in _motion, f'eje {_k} ausente en Python'
+              assert f'{_k}_AXIS = {_v}D' in _armor_model, f'eje {_k} ausente en Java'
+              assert f'{_k.lower()}: {_v}' in _visor_html, f'eje {_k} ausente en el visor'
+          assert 'def axis_of(' in _motion, 'Python sin eje por familia'
+          assert 'lateral = (col - axis) / axis' in _motion
+          assert 'motionAxis(' in _armor_model, 'Java sin eje por familia'
+          assert 'double lateral = (col - axis) / axis;' in _armor_model
+          assert 'const lateral = (col - axis) / axis;' in _visor_html
+          # v1.26.0: DETERIORO_NAMES == huesos de tela del geo. Antes
+          # arrastraba 42 nombres que ya NO existen (4 mechones de mas,
+          # 10 tejas, 4 piezas de capucha) y le faltaban los 10 v18_*:
+          # las hombreras y la cadena NO recibian respuesta del portador.
+          _armor_names = set(re.findall(
+              r'"(v\d{2}_[a-z0-9_]+)"',
+              _armor_model.split('DETERIORO_NAMES = {')[1].split('};')[0]))
+          _expected = {n for n in new_names if n.startswith(
+              ('v15_cloth_', 'v17_ribbon_', 'v17_cowl_', 'v17_vein_', 'v18_'))}
+          assert _armor_names == _expected, (
+              'DETERIORO_NAMES desincronizado del geo',
+              sorted(_expected - _armor_names), sorted(_armor_names - _expected))
+          assert len(_armor_names) == 150, len(_armor_names)
           # v1.22.0: OCHO estados reales, no cuatro clonados.
           assert all(f'"{k}"' in _motion for k in
                      ('volar', 'caer', 'agachado', 'agua'))
@@ -555,7 +605,7 @@ jobs:
                      ('fall', 'sneak', 'swim', 'deterioro', 'air'))
           assert 'cape_controller", 8' in _item_src, 'sin transicion suave'
           # v1.23.0: chispa EXCLUSIVA, SIN partículas vanilla.
-          assert 'MAX_SPARKS_PER_TICK = 4' in _item_src
+          assert spark_budget(_item_src) == (8, 3), spark_budget(_item_src)
           assert 'DustParticleOptions' not in _item_src
           assert 'DustColorTransitionOptions' not in _item_src
           assert 'CAPA_SPARK' in _item_src
@@ -604,8 +654,9 @@ jobs:
           assert 'SPARK_SEEDS' in _visor, 'faltan las chispas del visor'
           assert 'createRadialGradient' not in _visor, \
               'vuelve el halo acumulado detrás de la cabeza'
-          assert 'MAX_SPARKS_PER_TICK = 4' in (
-              root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
+          assert spark_budget(
+              (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
+          ) == (8, 3), 'presupuesto de chispas'
           assert '"easing": "linear"' in (
               root / 'tools/cape_animation_pipeline.py').read_text()
           assert '"easing": "easeInOutSine"' not in (
@@ -660,7 +711,7 @@ jobs:
           assert 'CAPA_SPARK' in java
           assert 'animation.item' in java and 'ITEM_ANIM' in java
           assert 'SPARK_INTERVAL_TICKS = 8' in java
-          assert 'MAX_SPARKS_PER_TICK = 4' in java
+          assert spark_budget(java) == (8, 3), spark_budget(java)
           assert 'CapaSparkParticle.Provider' in (root / 'src/main/java/com/capatest/client/CapaParticleRegistration.java').read_text()
           # v1.9.0: icono rehecho desde las dos referencias 16x16 del usuario.
           assert 'def build_icon_artwork(' in texture_src
@@ -700,7 +751,7 @@ jobs:
           assert (root / 'tools/audit_model.py').is_file()
           assert '--check' in (root / 'tools/audit_model.py').read_text()
           assert 'tools/audit_model.py --check' in (root / '.github/workflows/build.yml').read_text()
-          print('OK: v1.25.0, geometria rehecha (12 mechones anchos en 2 capas), '
+          print(f'OK: v{ver}, geometria rehecha (12 mechones anchos en 2 capas), '
                 'cuello alto + hombreras + cadena, atlas limpio con glowmask '
                 'fullbright, chispa EXCLUSIVA sin particulas vanilla, icono PREFERIDO revertido con backup byte-identico y sin lag')
           PY
@@ -856,7 +907,7 @@ jobs:
             la propia foto (fidelidad 1.239 intacta).
 
           - **v1.21.0 — ANIMACIÓN REHECHA**: la onda ya NO se ancla a cero
-            en el bucle (antes los 182 huesos se congelaban juntos en f=0
+            en el bucle (antes los 150 huesos se congelaban juntos en f=0
             y f=1). Onda viajera periódica C1 con retardo real por tramo,
             envolvente física, ráfaga/arrastre y DESPLAZAMIENTO ACUMULADO
             que curva cada jirón. GeckoLib recibe `position` con 17 muestras

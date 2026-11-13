@@ -9,6 +9,18 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.26.0: EJES DE SIMETRIA Y LISTA DE HUESOS CORREGIDAS. El eje lateral
+de cada familia pasa a ser (columnas - 1) / 2 medido sobre el geo real
+(mechones 12 -> 5.5, pano de 9 columnas -> 4.0, grietas 10 -> 4.5,
+capucha 7 -> 3.0, cuello 5 -> 2.0, cadena 8 -> 3.5, hombreras 2 -> 0.5).
+Antes TODO usaba 7.5 (heredado de 16 tiras de la elitra): la capa se
+inclinaba siempre hacia el mismo lado y el pano izquierdo ondeaba el
+doble que el derecho. La lista de huesos de deterioro se poda (42
+nombres que ya no existen) e incorpora los 10 huesos v18_chain/v18_pad,
+que hasta ahora NO recibian respuesta del portador. La CI valida el
+PRESUPUESTO EFECTIVO de chispas (8 ticks, 3 por tick) parseando el
+codigo, en vez de buscar un literal en un comentario.
+
 v1.25.0: EL .BBMODEL TAMBIEN CAMBIA DE VERSION. El exportador lee
 mod_version y escribe docs/CAPA_v1.25.0.bbmodel, con `name` interno
 capa_deteriorer_evilsaiyan_v1_25_0 y asset de Release del mismo nombre.
