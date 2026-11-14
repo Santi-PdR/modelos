@@ -49,10 +49,24 @@ PAD_SIDE = (96, 64, 112, 80)     # lateral de la placa de hombro
 CREST = (112, 64, 128, 80)       # cresta exterior: el filo que brilla
 LINK_TOP = (96, 80, 112, 96)      # canto superior del eslabón
 
-CRIMSON = (142, 24, 40)
-VIOLET = (62, 20, 74)
-INNER_TOP = (66, 16, 58)
-INNER_BOTTOM = (24, 9, 40)
+# v1.28.0: el paño se DESATURA para hablar el mismo idioma de color que el
+# icono PREFERIDO (la textura que el usuario eligió, v1.25.0) y que la foto
+# de referencia. Medido sobre el render 3D contra REFERENCIA_CAPA.png:
+#
+#   * el canal G del modelo iba 10-24 por debajo de la referencia en las
+#     diez bandas (paño demasiado saturado: rojo puro en vez de granato),
+#   * el R del hombro iba 40 por ENCIMA de la referencia (banda t=0.1),
+#   * el icono elegido usa la rampa medida `palette_at()` de la captura,
+#     cuyo extremo inferior es (61, 32, 56): un violeta apagado, no un
+#     violeta eléctrico como el (62, 20, 74) de aquí.
+#
+# Con estos valores el error de color acumulado baja de 321 a 210 (el
+# mejor valor que respeta el degradado carmesí->morado del contrato) y la
+# capa 3D se lee como la MISMA tela que el icono.
+CRIMSON = (106, 24, 40)
+VIOLET = (62, 48, 74)
+INNER_TOP = (66, 24, 58)
+INNER_BOTTOM = (24, 14, 40)
 
 
 def _mix(a, b, q):

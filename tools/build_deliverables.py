@@ -209,7 +209,10 @@ def step_comparativas(ver: str) -> None:
     d = ImageDraw.Draw(ic)
     d.text((10, 12), "referencia 200x200", fill=(235, 228, 245))
     d.text((274, 12), "icono APROBADO (backup intocable)", fill=(235, 228, 245))
-    d.text((538, 12), f"icono v{ver} (acero, 4 pixeles magenta)", fill=(235, 228, 245))
+    # v1.28.0: el icono activo es el PREFERIDO de la v1.25.0 (el que eligio
+    # el usuario): no lleva acero ni el rediseño de la v1.27.0.
+    d.text((538, 12), f"icono v{ver} (PREFERIDO v1.25.0, byte a byte)",
+           fill=(235, 228, 245))
     ic.save(D / "capa_v1170_icon_compare.png")
     ic.save(D / "capa_v1170_icon_remaster.png")
     _ = np  # numpy ya importado: el render usa numpy por debajo

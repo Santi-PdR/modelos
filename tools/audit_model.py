@@ -50,11 +50,16 @@ LIMITS = {
     "energy": 55.0,
     "silhouette": 1.60,
 }
-ICON_SHA = "1500c07312d04e86b289913abb7c168c380d15d300bea6e27b70d81e9b92952c"  # v1.27.0: icono rediseñado
-# v1.27.0: el icono PREFERIDO de la v1.25.0 se conserva como histórico
-# (era byte-idéntico al activo). Con el rediseño deja de ser el activo,
-# pero no se borra: está en referencias/ICONO_V125_PREFERIDO_BACKUP.png.
+# v1.28.0: el icono PREFERIDO vuelve a ser el ACTIVO. El usuario comparo
+# el rediseño de la v1.27.0 con el de la v1.25.0 y se quedo con el de la
+# v1.25.0 ("era mejor el anterior, ese quiero"). El PNG activo es por
+# tanto byte-idéntico a aquel, y el pipeline lo regenera igual (mismo mapa,
+# misma paleta, mismo sombreado).
+ICON_SHA = "c90670ba367557d7c7c003fa38dbe10c27cc88dcee1ef37fedc48f3a82820ee5"
 ICON_V125_SHA = "c90670ba367557d7c7c003fa38dbe10c27cc88dcee1ef37fedc48f3a82820ee5"
+# El rediseño de la v1.27.0 no se borra: queda como histórico en
+# referencias/ICONO_V1270_REDISEÑO_BACKUP.png.
+ICON_V127_SHA = "1500c07312d04e86b289913abb7c168c380d15d300bea6e27b70d81e9b92952c"
 ICON_BACKUP_SHA = "e88ccec0a0c67b1ad0982ed781f0d684ae4662660c545fa134574781967e4840"
 
 
@@ -248,12 +253,17 @@ def static_checks() -> None:
     assert pref.is_file(), 'falta el backup del icono preferido'
     assert hashlib.sha256(pref.read_bytes()).hexdigest() == ICON_SHA, \
         'el backup no es byte-idéntico al icono preferido'
-    # v1.27.0: el icono PREFERIDO de la v1.25.0 sigue guardado, pero ya no
-    # es el activo: es historial, no un respaldo del diseño de hoy.
+    # v1.28.0: el icono de la v1.25.0 vuelve a ser el ACTIVO. Se conserva
+    # su propio backup byte-idéntico, y el rediseño de la v1.27.0 queda
+    # guardado como histórico (no se borra ningún icono).
     v125 = ROOT / 'referencias/ICONO_V125_PREFERIDO_BACKUP.png'
     assert v125.is_file(), 'falta el icono preferido de la v1.25.0'
     assert hashlib.sha256(v125.read_bytes()).hexdigest() == ICON_V125_SHA, \
         'el icono de la v1.25.0 no se conserva byte-idéntico'
+    v127 = ROOT / 'referencias/ICONO_V1270_REDISEÑO_BACKUP.png'
+    assert v127.is_file(), 'falta el rediseño de la v1.27.0'
+    assert hashlib.sha256(v127.read_bytes()).hexdigest() == ICON_V127_SHA, \
+        'el rediseño de la v1.27.0 no se conserva byte-idéntico'
     item_java = (ROOT / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
     assert 'getCustomRenderer' not in item_java, 'el BEWLR 3D tapa el icono'
     # v1.17.3: regresión de la prueba real en Blockbench. El .bbmodel
@@ -408,8 +418,11 @@ def static_checks() -> None:
     _chains = [b for b in bones if b["name"].startswith("v18_chain_")]
     assert len(_chains) == 8, len(_chains)
     # ------------------------------------------------------------------
-    # v1.27.0: EL ICONO SE LEE EN LA HOTBAR. Cuatro pixeles magenta (no
-    # quince) y acero para la hombrera y la cadena.
+    # v1.28.0: VUELVE EL ICONO PREFERIDO DE LA v1.25.0 (el usuario comparo
+    # el rediseño de la v1.27.0 con este y eligio este). El contrato ya no
+    # es "cuatro pixeles magenta y acero", sino el del icono elegido:
+    # tres pixeles magenta en el mapa base, ocho motas flotando y veinte
+    # grietas, con el nucleo blanco-rosa del broche (W).
     # ------------------------------------------------------------------
     _icon_src = (ROOT / 'tools/texture_pipeline.py').read_text()
     _map_rows = _re.findall(r'"([.A-Z]{16})"',
@@ -417,11 +430,21 @@ def static_checks() -> None:
                                         _icon_src, _re.S).group(1))
     assert len(_map_rows) == 16, len(_map_rows)
     _flat = ''.join(_map_rows)
-    assert _flat.count('C') == 4, ('el icono vuelve a llenarse de magenta',
+    assert _flat.count('C') == 3, ('el icono vuelve a llenarse de magenta',
                                    _flat.count('C'))
-    assert 'B' in _flat and 'S' in _flat, \
-        'el icono no muestra la hombrera ni la cadena'
-    assert _flat.count('S') >= 6, 'la cadena no se lee en el icono'
+    assert 'B' not in _flat and 'S' not in _flat, \
+        'vuelve el acero del rediseño de la v1.27.0'
+    assert 'W' in _flat, 'el icono pierde el núcleo brillante del broche'
+    _mot = _re.findall(r'\((\d+), (\d+), "([A-Z])"\)',
+                       _icon_src.split('ICON_FLOATING = (', 1)[1]
+                                   .split('ICON_CRACKS', 1)[0])
+    assert len(_mot) == 8, ('las motas flotantes no son las ocho '
+                            f'preferidas: {len(_mot)}')
+    _crk = _re.findall(r'\((\d+), (\d+), "([A-Z])"\)',
+                       _icon_src.split('ICON_CRACKS = (', 1)[1]
+                                   .split('\n)', 1)[0])
+    assert len(_crk) == 26, ('las grietas no son las veintiséis preferidas: '
+                             f'{len(_crk)}')
     # ------------------------------------------------------------------
     # v1.26.0: PRESUPUESTO DE CHISPAS POR VALOR EFECTIVO. La CI pedía
     # el literal 'MAX_SPARKS_PER_TICK = 4', que sólo sobrevivía en un

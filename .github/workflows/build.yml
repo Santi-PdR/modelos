@@ -1013,6 +1013,25 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.28.0 — TU ICONO DE VUELTA Y EL PAÑO DESATURADO**: el icono
+            2D vuelve a ser el PREFERIDO de la v1.25.0, byte a byte (SHA
+            `c90670ba...`), el que se eligio al compararlo con el rediseno
+            de la v1.27.0; ese rediseno queda guardado como historico en
+            `referencias/ICONO_V1270_REDISEÑO_BACKUP.png` y el pipeline lo
+            REGENERA igual (mismo mapa 16x16, ocho motas, veintiseis grietas
+            y cinco tonos). Ademas el atlas de la capa 3D se DESATURA para
+            hablar el mismo color que ese icono y que la foto de
+            referencia: el error de color medido baja de 321 a 210, que es
+            el mejor valor que respeta el degradado carmesi->morado del
+            contrato. La geometria (222 huesos, 282 cubos), las ocho
+            animaciones y las 27 anclas `v15_cloth_*` NO cambian: las
+            anclas siguen existiendo y lo que se apaga es SOLO su render,
+            tambien en el visor, con el diagnostico disponible. La v1.27.0
+            y la v1.27.1 NO se sobrescriben: quedan como historico. El
+            `.jar` EXACTO de la v1.27.0 se rescata de su artifact
+            historico (`14057282072`), se verifica contra el digest de la
+            API de la release y se deja en `artifacts/v1.27.0` con su
+            `SHA256SUMS.txt`.
           - **v1.27.1 — EL ARREGLO DEL VISOR, EN SU PROPIA RELEASE**: el
             modelo es IDENTICO a la v1.27.0 (mismo geo de 222 huesos y 282
             cubos, mismo atlas, mismas ocho animaciones). Lo que cambia es
@@ -1239,3 +1258,39 @@ jobs:
               push -f "https://github.com/${GITHUB_REPOSITORY}.git" \
               "HEAD:refs/heads/$BRANCH"
           echo "::notice::JAR publicado en la rama $BRANCH (sha256:$SHA)"
+
+      # v1.28.0: RESCATE DEL JAR EXACTO DE LA v1.27.0.
+      # La release v1.27.0 publico su .jar como asset y como artifact de
+      # Actions, pero los CDN de assets (release-assets.githubusercontent.com)
+      # y de artifacts (blob.core.windows.net) no son accesibles desde todos
+      # los entornos. Se baja el artifact HISTORICO 14057282072 (el build
+      # de la v1.27.0), se comprueba su SHA-256 contra el digest que publica
+      # la API de la release y se deja en artifacts/v1.27.0 con su
+      # SHA256SUMS.txt: asi el binario exacto de la v1.27.0 se puede
+      # descargar por codeload y verificar donde el CDN no responde.
+      - name: Materialize v1.27.0 jar on its artifacts branch
+        if: >-
+          (github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar]')) ||
+          (github.event_name == 'workflow_dispatch' && inputs.publicar == true)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 tools/materialize_artifact_jar.py \
+            --artifact 14057282072 --version 1.27.0 --out /tmp/art1270
+          SHA="$(cut -d' ' -f1 /tmp/art1270/SHA256SUMS.txt)"
+          TMP="$(mktemp -d)"
+          mkdir -p "$TMP/build/libs"
+          cp /tmp/art1270/capatest-1.27.0.jar "$TMP/build/libs/"
+          cp /tmp/art1270/SHA256SUMS.txt "$TMP/build/libs/"
+          cd "$TMP"
+          git init -q -b tmp
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "artefacto v1.27.0: capatest-1.27.0.jar (sha256:$SHA)"
+          AUTH="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $AUTH" \
+              push -f "https://github.com/${GITHUB_REPOSITORY}.git" \
+              "HEAD:refs/heads/artifacts/v1.27.0"
+          echo "::notice::JAR v1.27.0 publicado en artifacts/v1.27.0 (sha256:$SHA)"

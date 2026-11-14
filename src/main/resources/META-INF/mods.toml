@@ -9,6 +9,18 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.28.0: TU ICONO DE VUELTA Y EL PANO DESATURADO. El icono 2D es el
+PREFERIDO de la v1.25.0, byte a byte (SHA c90670ba...), como pediste al
+compararlo con el rediseno de la v1.27.0; el rediseño queda guardado
+como historico. El atlas de la capa 3D se DESATURA para hablar el mismo
+color que ese icono y que tu foto de referencia: el error de color medido
+contra la referencia baja de 321 a 210. La geometria, las ocho
+animaciones y las 27 anclas v15_cloth_* NO cambian: las anclas siguen
+existiendo y solo se apaga su render. La v1.27.0 y la v1.27.1 quedan
+como historico, sin sobrescribir. Ademas el JAR se deja en una rama de
+artefactos (artifacts/v1.28.0) ademas de la release, para poder
+descargarlo y verificar su SHA-256 donde el CDN de releases no responde.
+
 v1.27.1: PATCH DE ENTREGA. El modelo es IDENTICO a la v1.27.0 (mismo
 geo, misma textura, mismas animaciones): esta version existe para que el
 arreglo del visor (las 27 anclas de la onda que ya no se dibujan) quede

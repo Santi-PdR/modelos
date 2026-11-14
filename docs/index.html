@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Capa v1.27.1 — ver el modelo</title>
+<title>Capa v1.28.0 — ver el modelo</title>
 <style>
   body{margin:0;background:#0e0c14;color:#ece4f5;font:16px system-ui,sans-serif;
        display:flex;min-height:100vh;align-items:center;justify-content:center}
@@ -21,21 +21,21 @@
 </head>
 <body>
 <main>
-  <h1>Capa Deteriorer · v1.27.1</h1>
-  <p><b>v1.27.1</b> · <b>el arreglo del visor, en su propia release</b>: el modelo es idéntico a la v1.27.0, pero el visor 3D de abajo ya <b>tampoco dibuja las 27 anclas</b> de la onda (el hueso, la jerarquía y las ocho pistas se conservan intactos; sólo se apaga su render) y el diagnóstico sigue disponible. La v1.27.0 queda como histórico, sin sobrescribir.
+  <h1>Capa Deteriorer · v1.28.0</h1>
+  <p><b>v1.28.0</b> · <b>tu icono de vuelta y el paño desaturado</b>: el icono 2D vuelve a ser <b>el PREFERIDO de la v1.25.0, byte a byte</b> (SHA <code>c90670ba…</code>), el que elegiste al compararlo con el rediseño de la v1.27.0 — ese rediseño queda guardado como histórico en <code>referencias/ICONO_V1270_REDISEÑO_BACKUP.png</code>. Y el atlas de la capa 3D se <b>desatura</b> para hablar el mismo color que ese icono y que tu foto: el error de color medido contra tu referencia baja de <b>321 a 210</b>. La geometría, las ocho animaciones y las 27 anclas <code>v15_cloth_*</code> no cambian: las anclas siguen existiendo y sólo se apaga su render. La v1.27.0 y la v1.27.1 quedan como histórico, sin sobrescribir.
      <b>v1.27.0</b> · <b>las motas negras fuera</b>: las 27 anclas de la onda ya no se dibujan en el runtime (el hueso, la jerarquía y las ocho pistas se conservan intactos; sólo se apaga su render). La <b>hombrera</b> pasa de un cubo gris plano a cuatro piezas de acero y la <b>cadena</b> de ocho motas sueltas a ocho anillos. El <b>icono</b> mantiene tu silueta aprobada pero se lee en la hotbar: acero para hombrera y cadena y sólo cuatro píxeles magenta.</p>
   <div class="grid">
     <a href="capa_v1170_visor.html"><b>Ver el modelo en 3D (recomendado)</b>
        <span>Visor autocontenido: rota con el ratón, cambia de vista y reproduce los 8 estados y las chispas exclusivas.</span></a>
-    <a href="https://github.com/Santi-PdR/modelos/releases/tag/v1.27.1"><b>JAR v1.27.1 (Release vigente)</b>
+    <a href="https://github.com/Santi-PdR/modelos/releases/tag/v1.28.0"><b>JAR v1.28.0 (Release vigente)</b>
        <span>Forge 1.20.1 · JDK 17 + Gradle 8.8 · descarga directa.</span></a>
-    <a href="https://github.com/Santi-PdR/modelos/tree/artifacts/v1.27.1"><b>Segunda vía de descarga del JAR (mismo binario)</b>
-       <span>Rama <code>artifacts/v1.27.1</code> con el <code>.jar</code> y su <code>SHA256SUMS.txt</code>. Se baja por <code>codeload.github.com</code>, donde el CDN de releases no responde. El binario es byte a byte el mismo que el asset de la Release.</span></a>
-    <a href="https://github.com/Santi-PdR/modelos/releases/download/v1.27.1/CAPA_v1.27.1.bbmodel"><b>🔗 Link directo del .bbmodel (v1.27.1)</b>
+    <a href="https://github.com/Santi-PdR/modelos/tree/artifacts/v1.28.0"><b>Segunda vía de descarga del JAR (mismo binario)</b>
+       <span>Rama <code>artifacts/v1.28.0</code> con el <code>.jar</code> y su <code>SHA256SUMS.txt</code>. Se baja por <code>codeload.github.com</code>, donde el CDN de releases no responde. El binario es byte a byte el mismo que el asset de la Release.</span></a>
+    <a href="https://github.com/Santi-PdR/modelos/releases/download/v1.28.0/CAPA_v1.28.0.bbmodel"><b>🔗 Link directo del .bbmodel (v1.28.0)</b>
        <span>Asset de la Release: descarga estable para abrir en Blockbench. Igual al archivo local de abajo.</span></a>
     <a href="capa_v1170_icon_compare.png"><b>Icono del item (ahora visible)</b>
        <span>El inventario usa el PNG 2D de 16×16 ampliado con NEAREST; el renderer 3D ya no lo tapa.</span></a>
-    <a href="CAPA_v1.27.1.bbmodel" download><b>Descargar el .bbmodel para Blockbench</b>
+    <a href="CAPA_v1.28.0.bbmodel" download><b>Descargar el .bbmodel para Blockbench</b>
        <span>156 cubos de capa · 222 grupos · 8 animaciones · 26208 keyframes C1 · textura 128×128 embebida · sin maniquí, sin cubos sueltos y sin partículas externas.</span></a>
     <a href="capa_v1170_comparativa.png"><b>Comparativa con tu referencia</b>
        <span>Tu PNG de Blockbench a la izquierda, el modelo actual a la derecha.</span></a>
@@ -48,7 +48,7 @@
     <a href="capa_v1170_particles.png"><b>Sprites de partículas (runtime)</b>
        <span><code>capa_spark</code>: 3 sprites propios, chispa rectangular vertical con centro brillante. Aparece SÓLO al equipar la capa, en bordes y puntas. Sin partículas vanilla ni JSON Snowstorm.</span></a>
     <a href="ICONO_APROBADO_BACKUP.png"><b>Backup del icono aprobado (v1.13)</b>
-       <span>Byte-idéntico al icono histórico · <code>tools/restore_icon.py</code> lo restaura. El icono PREFERIDO de la v1.25.0 está en <code>referencias/ICONO_V125_PREFERIDO_BACKUP.png</code>.</span></a>
+       <span>Byte-idéntico al icono histórico · <code>tools/restore_icon.py</code> lo restaura. El icono PREFERIDO de la v1.25.0 (el activo) está en <code>referencias/ICONO_PREFERIDO_BACKUP.png</code> y en <code>referencias/ICONO_V125_PREFERIDO_BACKUP.png</code>.</span></a>
     <a href="capa_v1170_side_relief.png"><b>Vista de perfil (sin piezas sueltas)</b>
        <span>Comprobación de que no queda ninguna barra ni punto flotando alrededor de la capa.</span></a>
     <a href="capa_v1170_silhouette_compare.png"><b>Autoevaluación visual</b>
@@ -56,12 +56,12 @@
     <a href="capa_v1180_atlas_desde_imagen.png"><b>Atlas = tu imagen limpiada</b>
        <span>96×48 sin checkerboard ni maniquí; cada tramo 3D muestrea su propio píxel (<code>foto_uv()</code>).</span></a>
   </div>
-  <p style="margin-top:26px;font-size:13px">v1.27.1 publicada. Cada entrega sube de versión y mantiene este link del .bbmodel. Otros archivos:
+  <p style="margin-top:26px;font-size:13px">v1.28.0 publicada. Cada entrega sube de versión y mantiene este link del .bbmodel. Otros archivos:
      <code>capa_v1170_preview.png</code> (6 vistas),
      <code>capa_v1170_front_rig.png</code>,
      <code>capa_v1170_side_relief.png</code>,
      <code>capa_v1170_uv_test.png</code>,
-     <code>CAPA_v1.27.1.bbmodel</code>.</p>
+     <code>CAPA_v1.28.0.bbmodel</code>.</p>
 </main>
 </body>
 </html>

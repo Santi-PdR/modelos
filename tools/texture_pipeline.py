@@ -617,35 +617,32 @@ ICON_ALTERNATIVE = (
     "...KK.KKK.KK....",
 )
 
-# Icono ACTIVO v1.27.0.
+# Icono ACTIVO v1.28.0.
 #
-# REDISENO: el icono anterior era un bloque de 16x16 con quince chispas
-# magenta y ocho motas: en la hotbar (16 px reales) se leia como RUIDO, no
-# como una capa. Este mapa mantiene la silueta aprovada (dos picos de
-# cuello y faldon de CINCO puntas) pero la REPARTE:
+# v1.28.0: VUELVE EL ICONO PREFERIDO DE LA v1.25.0. El usuario comparo el
+# icono de la v1.27.0 (el rediseño con hombrera y cadena de acero) con
+# este, y se quedo con ESTE: "era mejor el anterior, ese quiero". El mapa
+# activo es por tanto el mismo de la v1.25.0 (rose_v1140), byte a byte.
 #
-#   * el cuello se lee como bufanda (G/H con filo K),
-#   * los hombros llevan hombrera de acero (B) con filo brillante (S) y la
-#     cadena (S) cruzando la espalda,
-#   * el pano tiene TRES pliegues simetricos (D/M/L) en vez de confeti,
-#   * la energia magenta son CUATRO pixeles, no quince.
+# La v1.27.0 no se borra: queda como histórico en
+# referencias/ICONO_V1270_REDISEÑO_BACKUP.png.
 ICON_PIXEL_MAP = (
     "..KKGG....GGKK..",
-    ".KGHGHK..KHGHGK.",
-    ".KHGGHHKKHHGGHK.",
-    ".BSKSSKWWKSSKSB.",
-    "..KDMLDHHDMLDK..",
-    "..KDMLDHHDMLDK..",
-    "...DMLDHHDMLD...",
-    "...DMLCHCDMLD...",
-    "...DMLDHHDMLD...",
-    "..KDMLDHHDMLDK..",
-    "..KDCLDHHDCLDK..",
-    ".KKDMLDHHDMLDKK.",
-    ".KKDMLDHHDMLDKK.",
-    ".KKDMLDHHDMLDKK.",
-    ".DK.HD.HD.DH.KD.",
-    "..K..K..K..K..K.",
+    "...HGHHHKKHGH...",
+    ".P..HHHHHHKKK...",
+    "...HMLMGKKLLLK..",
+    "...HELGWGMLEDK..",
+    "...GDLLGMMLLGK..",
+    "...HELLMHLLELK..",
+    "...HCLLMHLLMLHK.",
+    "...HMLMCKLMPLDP.",
+    "..HEELECEHMDLDHK",
+    ".HDMLDMEKKMGEDDK",
+    "PHDMDDMDKHMLMDDK",
+    "KHMDPMLDKDMEDDDK",
+    "KHDDMDDHKLDDDDKP",
+    ".KK.HD.GKDH.GK..",
+    "..K.KK..K.K.K...",
 )
 
 ICON_CANDIDATES = {"aprobado_v1130": ICON_ALTERNATIVE, "rose_v1140": ICON_PIXEL_MAP}
@@ -666,8 +663,6 @@ ICON_PALETTE = {
     "C": (214, 34, 138, 255),   # magenta Evil Saiyan
     "E": (96, 22, 72, 255),     # veta de energia apagada
     "P": (140, 20, 96, 255),    # microvoxel / chispa de ceniza
-    "B": (58, 60, 74, 255),     # acero de la hombrera
-    "S": (172, 176, 194, 255),  # filo de acero (cresta y cadena)
 }
 
 
@@ -676,19 +671,26 @@ ICON_PALETTE = {
 # Motas y chispas sueltas: la referencia tiene energía FLOTANDO alrededor
 # del paño. Se añaden en huecos del mapa, SIN tocar la silueta aprobada.
 ICON_FLOATING = (
-    # v1.27.0: TRES chispas, no ocho. Dos sueltas fuera del paño y una
-    # en el escote (entre los dos picos del cuello), que es donde la
-    # referencia tiene la energía concentrada.
-    (0, 9, "P"), (15, 6, "P"), (7, 1, "P"),
+    # v1.28.0: las ocho motas de la v1.25.0 (este es el icono que el
+    # usuario ha elegido). La v1.27.0 las redujo a tres: ya no aplica.
+    (1, 2, "P"), (14, 3, "G"), (0, 8, "P"), (15, 10, "P"),
+    (2, 14, "C"), (13, 15, "G"), (0, 12, "P"), (15, 5, "P"),
 )
 
 # Grietas de energia en guiones CORTOS y costuras oscuras entre jirones:
 # la referencia no es un bloque liso, son hebras separadas con rosa dentro.
 ICON_CRACKS = (
-    # v1.27.0: el mapa ya trae la energia magenta; aqui solo se apagan
-    # un par de vetas para que el pano no quede plano.
-    (5, 6, "E"), (10, 6, "E"), (6, 12, "E"), (9, 12, "E"),
-    (4, 9, "E"), (11, 9, "E"),
+    # v1.28.0: la lista de la v1.25.0 (el icono elegido por el usuario).
+    # Cuchilladas diagonales de 2-3 px: el icono cuenta lo mismo que
+    # la capa 3D, no una lluvia de cuadrados magenta.
+    (4, 7, "C"), (5, 8, "C"), (5, 9, "E"), (6, 10, "C"),
+    (10, 7, "C"), (10, 8, "E"), (9, 9, "C"), (9, 10, "C"),
+    (3, 11, "C"), (4, 12, "E"), (12, 11, "C"), (12, 12, "E"),
+    (6, 12, "C"), (7, 13, "E"), (9, 12, "C"), (8, 13, "E"),
+    (3, 14, "C"), (12, 14, "C"), (11, 13, "C"), (5, 13, "E"),
+    # Costuras oscuras entre lóbulos.
+    (6, 8, "H"), (6, 10, "H"), (9, 8, "H"), (9, 11, "H"),
+    (4, 14, "H"), (11, 14, "H"),
 )
 
 
@@ -708,22 +710,17 @@ def _icon_row_palette(y: int) -> dict[str, tuple[int, int, int, int]]:
     return {
         ".": (0, 0, 0, 0),              # transparente
         "K": (12, 5, 18, 255),          # contorno violeta-negro
-        # v1.27.0: más CONTRASTE entre pliegue y valle. El icono se ve
-        # a 16 px en la hotbar: con la paleta anterior (34..131) los
-        # pliegues se fundían en un bloque oscuro.
-        "H": tone(0.50),                # carmesí en sombra
-        "D": tone(0.95, (0, 0, 6)),     # violeta desvaído
-        "M": tone(1.35),                # tono medio
-        "L": tone(2.05, (6, 3, 8)),     # luz del pliegue
+        # v1.28.0: tonos de la v1.25.0 (el icono elegido por el usuario).
+        # El contraste extra de la v1.27.0 ya no aplica.
+        "H": tone(0.62),                # carmesí en sombra
+        "D": tone(0.92, (0, 0, 6)),     # violeta desvaído
+        "M": tone(1.20),                # tono medio
+        "L": tone(1.62, (4, 2, 6)),     # luz del pliegue
         "E": tone(0.80, (18, 0, 14)),   # veta de energía apagada
         "P": (208, 62, 142, 255),       # mota / microvóxel
         "G": (236, 92, 168, 255),       # rosa encendido
         "W": (255, 214, 236, 255),      # núcleo del broche
         "C": (226, 44, 146, 255),       # magenta de las grietas
-        # v1.27.0: la hombrera y la cadena del icono son ACERO, no tela:
-        # tonos fijos para que el metal no tome el degradado del paño.
-        "B": (58, 60, 74, 255),         # acero de la hombrera
-        "S": (172, 176, 194, 255),      # filo de acero (cresta y cadena)
     }
 
 
@@ -761,8 +758,7 @@ def build_icon_artwork(size: int = 64) -> Image.Image:
     for y in range(16):
         for x in range(16):
             ch = grid[y][x]
-            if not opaque[y, x] or ch in (".", "K", "G", "W", "C", "P",
-                                           "B", "S"):
+            if not opaque[y, x] or ch in (".", "K", "G", "W", "C", "P"):
                 continue
             lift = 0.0
             if x == 0 or not opaque[y, x - 1]:
