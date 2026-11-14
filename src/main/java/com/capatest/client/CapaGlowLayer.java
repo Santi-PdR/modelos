@@ -85,7 +85,13 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
         // por debajo del pleno); ahora 0.82-1.22 con más ganancia al
         // esprintar: la capa "respira" luz en la noche sin quemar color.
         float amplitude = charged ? 0.26F : 0.14F;
-        float brightness = 0.96F + amplitude * (float) Math.sin(phase);
+        float breathe = 0.96F + amplitude * (float) Math.sin(phase);
+        // v1.29.0: SHIMMER viajante. Sobre el latido global se suma una
+        // barreda lenta de luz (periodo 2x, fase distinta) para que el
+        // brillo no sea un pulso llano: parece una onda de energia que
+        // recorre el paño, no una bombilla encendida y apagada.
+        float shimmer = 0.05F * (float) Math.sin(phase * 0.5 + 1.2);
+        float brightness = breathe + shimmer;
         float violet = 0.90F + 0.08F * (1.0F - brightness);
 
         // v1.9.0: al perder vida (o al correr) el aura no vira a rojo, sino a

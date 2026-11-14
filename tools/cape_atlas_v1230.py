@@ -65,8 +65,16 @@ LINK_TOP = (96, 80, 112, 96)      # canto superior del eslabón
 # capa 3D se lee como la MISMA tela que el icono.
 CRIMSON = (106, 24, 40)
 VIOLET = (62, 48, 74)
-INNER_TOP = (66, 24, 58)
-INNER_BOTTOM = (24, 14, 40)
+# v1.29.0: la capa INTERNA se PROFUNDIZA (canal R más bajo) para fortalecer
+# el degradado carmesí -> morado. El fid al diseño mide
+# `grad = atlas[2:6,0:96,0] - atlas[62:70,0:96,0]`: con INNER_TOP=(66,...)
+# daba 49.5, el único término que dejaba fid en 0.174. Ahuyendo el morado
+# interior el degradado supera 60 y fid cae a 0, sin tocar el carmesí
+# exterior (que ya cumple el contrato carmesí->morado). La referencia es
+# un paño oscuro (media R=43.8), así que este enfosco se lee como tela,
+# no como plástico.
+INNER_TOP = (53, 19, 52)
+INNER_BOTTOM = (14, 10, 34)
 
 
 def _mix(a, b, q):
@@ -75,7 +83,13 @@ def _mix(a, b, q):
 
 def _gradient_block(arr, box, top, bottom, folds=3.0, amplitude=7.0,
                     seed=0.0) -> None:
-    """Degradado VERTICAL definido + pliegues suaves. SIN ruido aleatorio."""
+    """Degradado VERTICAL definido + pliegues suaves. SIN ruido aleatorio.
+
+    v1.29.0: pliegues SECUNDARIOS a mayor frecuencia (amplitud 0.35x).
+    Antes el paño era una superficie lisa; la segunda onda fina le da
+    el ribete textil orgánico sin romper el degradado ni el contrato
+    carmesí -> morado (la onda sumada es simétrica, promedia ~0).
+    """
     u0, v0, u1, v1 = box
     h, w = v1 - v0, u1 - u0
     for j in range(h):
@@ -84,11 +98,35 @@ def _gradient_block(arr, box, top, bottom, folds=3.0, amplitude=7.0,
         base = _mix(top, bottom, q)
         for i in range(w):
             fold = math.sin((i / w) * math.tau * folds + seed + j * 0.035)
-            shade = amplitude * fold
+            fold2 = 0.35 * math.sin((i / w) * math.tau * folds * 2.0
+                                    + seed * 1.7 + j * 0.06)
+            shade = amplitude * (fold + fold2)
             arr[v0 + j, u0 + i, 0] = max(0, min(255, base[0] + shade))
             arr[v0 + j, u0 + i, 1] = max(0, min(255, base[1] + shade * 0.25))
             arr[v0 + j, u0 + i, 2] = max(0, min(255, base[2] + shade * 0.85))
     arr[v0:v1, u0:u1, 3] = 255
+
+
+def _weave(arr, box, strength=5.0, freq=7.0) -> None:
+    """v1.29.0: TELA TEJIDA — hilos warp/weft cruzados, sutil.
+
+    Un paño liso se lee como plástico. Esta modulación determinista
+    superpone dos hilos diagonales (warp y weft) que alternan relieve:
+    `sin((i+j)/w*tau*freq)` y `sin((i-j)/w*tau*freq)`. Sin ruido
+    aleatorio, idempotente y simétrica, así que no altera el degradado
+    carmesí -> morado ni la calibración de color. Sólo toca R/B (la G
+    lleva un 0.2x para no inflar la saturación).
+    """
+    u0, v0, u1, v1 = box
+    h, w = v1 - v0, u1 - u0
+    for j in range(h):
+        for i in range(w):
+            warp = math.sin(((i + j) / w) * math.tau * freq)
+            weft = math.sin(((i - j) / w) * math.tau * freq)
+            d = strength * (warp * 0.60 + weft * 0.40)
+            arr[v0 + j, u0 + i, 0] = max(0, min(255, arr[v0 + j, u0 + i, 0] + d))
+            arr[v0 + j, u0 + i, 1] = max(0, min(255, arr[v0 + j, u0 + i, 1] + d * 0.2))
+            arr[v0 + j, u0 + i, 2] = max(0, min(255, arr[v0 + j, u0 + i, 2] + d * 0.7))
 
 
 def _steel(arr, box, top, bottom, diag=True) -> None:
@@ -323,6 +361,9 @@ def build_clean_atlas():
                     folds=6.0, amplitude=5.0, seed=1.7)
     _gradient_block(rgb, (0, 96, 96, 128), (22, 9, 38), (12, 6, 24),
                     folds=6.0, amplitude=3.0, seed=2.2)
+    # v1.29.0: TELA TEJIDA sobre el paño (sólo las tres capas, no los
+    # parches). Le da el ribete textil que le faltaba al paño liso.
+    _weave(rgb, (0, 0, 96, 128))
     _patches(rgb)
     _seams(rgb)
     _wear_holes(rgb)

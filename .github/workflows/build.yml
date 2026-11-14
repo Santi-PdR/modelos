@@ -1013,6 +1013,20 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.29.0 — TEXTURA TEJIDA, ANIMACION CON RIBete Y EFECTOS MAS VIVOS**:
+            el atlas de la capa 3D gana una TELA TEJIDA (hilos warp/weft
+            cruzados, `_weave` determinista) y PLIEGOS SECUNDARIOS finos,
+            y se profundiza la capa interna para que el degradado
+            carmesi->morado supere 60: la FIDELIDAD AL DISEÑO cae de
+            0.174 a 0.000. Las ocho animaciones suman un CUARTO armonico
+            (`k=4`, amplitud 0.10) a la onda viajante: el paño ondula
+            como tela al viento, sin romper la costura C1 (el self-test
+            de `cape_motion.py` lo comprueba). Los EFECTOS se vuelven mas
+            vivos: la capa emisiva suma un SHIMMER viajante sobre el
+            latido y la chispa parpadea (twinkle) como una brasa. El
+            icono 2D se mantiene byte a byte el PREFERIDO de la v1.25.0
+            (SHA `c90670ba...`) y las 27 anclas `v15_cloth_*` siguen
+            intactas, con su render oculto.
           - **v1.28.0 — TU ICONO DE VUELTA Y EL PAÑO DESATURADO**: el icono
             2D vuelve a ser el PREFERIDO de la v1.25.0, byte a byte (SHA
             `c90670ba...`), el que se eligio al compararlo con el rediseno

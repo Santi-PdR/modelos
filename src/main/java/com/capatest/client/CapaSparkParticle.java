@@ -68,8 +68,14 @@ public class CapaSparkParticle extends TextureSheetParticle {
         float progress = Math.min(1.0F, (float) this.age / (float) this.lifetime);
         float fadeIn = Math.min(1.0F, progress * 7.0F);
         float fadeOut = Math.min(1.0F, (1.0F - progress) * 3.2F);
-        this.alpha = 0.72F * fadeIn * fadeOut;      // semitransparente
-        this.quadSize = this.baseSize * (1.0F - 0.22F * progress);
+        // v1.29.0: PARPADEO (twinkle) de la chispa. Sobre el fadeIn/fadeOut
+        // se suma un parpadeo rápido de alta frecuencia y baja amplitud,
+        // para que no sea una partícula uniforme: parece una brasa viva
+        // en vez de un cuadrado de alpha constante.
+        float twinkle = 0.18F * (float) Math.sin(this.age * 0.9F);
+        float cover = fadeIn * fadeOut;
+        this.alpha = Math.min(1.0F, 0.72F * cover + twinkle * cover);   // semitransparente
+        this.quadSize = this.baseSize * (1.0F - 0.22F * progress + 0.08F * twinkle);
         this.setSpriteFromAge(this.sprites);
     }
 

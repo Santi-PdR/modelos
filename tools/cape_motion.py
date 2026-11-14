@@ -195,12 +195,19 @@ def wave(f: float, phase: float, h: float) -> tuple[float, float]:
     """Onda viajera periódica y su derivada. NO se resta `sin(phase)`.
 
     Compatibilidad con la API anterior: devuelve (valor, d/df). Al ser
-    frecuencias 1/2/3, `wave(0)==wave(1)` y la derivada también cierra.
+    frecuencias 1/2/3/4, `wave(0)==wave(1)` y la derivada también cierra.
+
+    v1.29.0: un CUARTO armónico (k=4, amplitud 0.10) con fase 3.1*φ.
+    Las tres primeras frecuencias daban una onda correcta pero algo
+    mecánica; el armónico extra fraccionario (pero con k entero, así
+    que sigue siendo periódica y C1) añade el ribete irisado que tiene
+    una tela al sol, sin anclar nada a cero ni romper la costura.
     """
     s1, d1 = _harm(f, 1, phase)
     s2, d2 = _harm(f, 2, phase * 1.7)
     s3, d3 = _harm(f, 3, phase * 2.3)
-    return s1 + 0.28 * s2 + h * s3, d1 + 0.28 * d2 + h * d3
+    s4, d4 = _harm(f, 4, phase * 3.1)
+    return s1 + 0.28 * s2 + h * s3 + 0.10 * s4, d1 + 0.28 * d2 + h * d3 + 0.10 * d4
 
 
 def _flow(f: float, phase: float) -> tuple[float, float, float, float]:

@@ -9,6 +9,17 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.29.0: TEXTURA TEJIDA, ANIMACION CON RIBete Y EFECTOS MAS VIVOS. El
+atlas de la capa 3D gana una TELA TEJIDA (hilos warp/weft cruzados) y
+PLIEGOS SECUNDARIOS finos, y se profundiza la capa interna para que el
+degradado carmesi -> morado supere 60 (la fidelidad al diseño cae a
+0.000). Las ocho animaciones suman un CUARTO armonico a la onda viajante
+(k=4, sigue periódica y C1): el paño ondula como tela al viento. Los
+efectos se vuelven mas vivos: la capa emisiva suma un SHIMMER viajante
+sobre el latido y la chispa parpadea (twinkle) como una brasa. El icono
+2D se mantiene byte a byte el PREFERIDO de la v1.25.0 (SHA c90670ba...) y
+las 27 anclas v15_cloth_* siguen intactas, con su render oculto.
+
 v1.28.0: TU ICONO DE VUELTA Y EL PANO DESATURADO. El icono 2D es el
 PREFERIDO de la v1.25.0, byte a byte (SHA c90670ba...), como pediste al
 compararlo con el rediseno de la v1.27.0; el rediseño queda guardado
