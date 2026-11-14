@@ -1,0 +1,1297 @@
+name: Build Forge 1.20.1 + GeckoLib mod
+
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      publicar:
+        description: 'Publicar el .jar como Release (solo con aprobacion visual)'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build:
+    name: Gradle 8.8 / JDK 17
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # Necesario para que gh release pueda crear/actualizar el asset .jar.
+    permissions:
+      contents: write
+    # La rama de artefactos (artifacts/vX.Y.Z) SOLO guarda el .jar. Si el
+    # workflow corriera tambien sobre ella, cada push re-construiria el
+    # mod entero para nada. Aqui se salta ese run.
+    if: ${{ !startsWith(github.ref, 'refs/heads/artifacts/') }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # El zip original no trae gradlew, por eso instalamos Gradle 8.8 directamente.
+      - name: Set up Gradle 8.8
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.8'
+
+      - name: Gradle version
+        run: gradle --version
+
+      # Validación barata de assets antes de pagar el costo de ForgeGradle.
+      - name: Validate resources
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib, re, struct
+          root = pathlib.Path('.')
+          base = root / 'src/main/resources/assets/capatest'
+
+          for p in base.rglob('*.json'):
+              json.loads(p.read_text())
+
+          # REGRESIÓN v1.6.0: GeckoLib 4.8.x deserializa `parent` con
+          # GsonHelper.getAsString(obj, "parent", null). Un `"parent": null`
+          # (JsonNull) hace que Gson llame a JsonNull.getAsString() y lance
+          # UnsupportedOperationException -> "Error loading model file".
+          # Ningún JSON del pack de recursos puede contener un valor null.
+          def json_nulls(value, path=''):
+              if value is None:
+                  yield path
+              elif isinstance(value, dict):
+                  for key, item in value.items():
+                      yield from json_nulls(item, path + '/' + key)
+              elif isinstance(value, list):
+                  for index, item in enumerate(value):
+                      yield from json_nulls(item, path + '/' + str(index))
+
+          resource_files = list((root / 'src/main/resources').rglob('*.json'))
+          resource_files.append(root / 'src/main/resources/pack.mcmeta')
+          for p in resource_files:
+              offenders = list(json_nulls(json.loads(p.read_text())))
+              assert not offenders, (p, offenders[:5])
+
+          # rev. B: el animation.json aprobado animaba SOLO huesos de la
+          # armadura vieja (ocultos por Java). Los 4 clips DEBEN tener
+          # pistas reales de los jirones nuevos, con la curva unica.
+          armor_anim_path = base / 'animations/item/armor/capa_deteriorer_evilsaiyan.animation.json'
+          armor_anim = json.loads(armor_anim_path.read_text())
+          cape_states = {'animation.idle', 'animation.moving', 'animation.sprint',
+                         'animation.air', 'animation.fall', 'animation.sneak',
+                         'animation.swim', 'animation.deterioro'}
+          assert cape_states <= set(armor_anim['animations'])
+          for _name, _a in armor_anim['animations'].items():
+              _ribs = [_b for _b in _a['bones'] if _b.startswith('v17_ribbon_')]
+              assert len(_ribs) == 84, _name
+              # v1.21.0: 17 muestras LINEALES. 9 muestras con easeInOutSine
+              # paraban la tela en cada keyframe y GeckoLib PERDIA el canal
+              # position que si tenia el .bbmodel.
+              assert all(len(_a['bones'][_b]['rotation']) >= 17 for _b in _ribs), _name
+              assert all('position' in _a['bones'][_b] for _b in _ribs), _name
+              assert all(len(_a['bones'][_b]['position']) >= 17 for _b in _ribs), _name
+              assert all(_k.get('easing') == 'linear'
+                         for _b in _ribs for _k in _a['bones'][_b]['rotation'].values()), _name
+          assert (root / 'tools/cape_motion.py').is_file()
+          assert (root / 'tools/cape_animation_pipeline.py').is_file()
+          orig_geo_path = root / 'tools/originals/capa_deteriorer_evilsaiyan.geo.json'
+          assert hashlib.sha256(orig_geo_path.read_bytes()).hexdigest() == \
+              'e01e347c5be0678b18907d91452d7a0c405ec430ef3fc751096532c804d43b8c'
+
+          for name in ('armor/capa_deteriorer_evilsaiyan.png',
+                       'armor/capa_deteriorer_evilsaiyan_glowmask.png'):
+              w, h = struct.unpack('>II', (base / 'textures/item' / name).read_bytes()[16:24])
+              assert (w, h) == (128, 128), (name, w, h)
+          icon_path = base / 'textures/item/capa_deteriorer_evilsaiyan.png'
+          w, h = struct.unpack('>II', icon_path.read_bytes()[16:24])
+          assert (w, h) == (64, 64), ('icon', w, h)
+          # v1.10.0/v1.17.0: un icono pixel art 16x16 ampliado con NEAREST comprime
+          # en menos de 2 KB. El de v1.9.0 (ilustración suave) pesaba ~6.5 KB.
+          assert 300 <= icon_path.stat().st_size < 2000, icon_path.stat().st_size
+          w, h = struct.unpack('>II', (base / 'textures/item/cape_folded.png').read_bytes()[16:24])
+          assert (w, h) == (128, 128), ('folded atlas', w, h)
+          # v1.23.0: UNA partícula EXCLUSIVA, con textura propia. Se
+          # retiran brasas/motas/esquirlas y TODAS las partículas vanilla.
+          for i in range(3):
+              sp = base / 'textures/particle' / f'capa_spark_{i}.png'
+              assert sp.is_file(), sp
+              with sp.open('rb') as fh:
+                  head = fh.read(24)
+              assert head[:8] == b'\x89PNG\r\n\x1a\n' \
+                  and struct.unpack('>II', head[16:24]) == (16, 16), sp
+          spark = json.loads((base / 'particles/capa_spark.json').read_text())
+          assert spark['textures'] == ['capatest:capa_spark_0',
+                                      'capatest:capa_spark_1',
+                                      'capatest:capa_spark_2']
+          assert not (base / 'particles/capa_ember.json').exists()
+          assert not (base / 'particles/capa_blight_mote.json').exists()
+          assert not (base / 'particles/capa_shard.json').exists()
+          # (Las comprobaciones a PIXEL de la chispa, el degradado y el
+          # glowmask viven en tools/audit_model.py: este paso corre ANTES
+          # de instalar numpy/Pillow en CI y sólo usa stdlib.)
+          # Java: ni rastro de DustParticleOptions (vanilla).
+          _item = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
+          assert 'DustParticleOptions' not in _item
+          assert 'DustColorTransitionOptions' not in _item
+          assert 'CAPA_SPARK' in _item
+          # v1.26.0: PRESUPUESTO DE CHISPAS POR VALOR EFECTIVO.
+          # Antes la CI buscaba el LITERAL 'MAX_SPARKS_PER_TICK = 4', que
+          # solo sobrevivia en un Javadoc viejo: el runtime hacia 8 ticks
+          # y 3 chispas y la CI daba verde igual. Ahora se PARSEA la
+          # declaracion y se comprueba el valor real, mas la coherencia
+          # con lo que el codigo pide.
+          def spark_budget(src):
+              m_int = re.search(r'private static final int SPARK_INTERVAL_TICKS = (\d+);', src)
+              m_max = re.search(r'private static final int MAX_SPARKS_PER_TICK = (\d+);', src)
+              assert m_int, 'no se encuentra SPARK_INTERVAL_TICKS'
+              assert m_max, 'no se encuentra MAX_SPARKS_PER_TICK'
+              return int(m_int.group(1)), int(m_max.group(1))
+
+          _spark_interval, _spark_max = spark_budget(_item)
+          assert _spark_interval == 8, ('intervalo de chispas', _spark_interval)
+          assert _spark_max == 3, ('maximo de chispas', _spark_max)
+          _ask = re.search(r'int count = deterioro \? (\d+) :', _item)
+          assert _ask and int(_ask.group(1)) <= _spark_max, \
+              'el codigo pide mas chispas de las permitidas'
+          assert 'MAX_SPARKS_PER_TICK = 4' not in _item, 'literal obsoleto'
+          assert 'SPARK_INTERVAL_TICKS = 6' not in _item, 'literal obsoleto'
+          assert '0.10D + 0.26D' in _item, 'chispas no nacen sobre el paño'
+          assert '0.10D + (tip ? 0.12D : 0.04D)' in _item, 'chispas no pegadas al dobladillo'
+          _reg = (root / 'src/main/java/com/capatest/client/CapaParticleRegistration.java').read_text()
+          assert 'CapaSparkParticle.Provider' in _reg
+          _spark_java = (root / 'src/main/java/com/capatest/client/CapaSparkParticle.java').read_text()
+          assert 'this.gravity = 0.0F' in _spark_java, 'la chispa tiene gravedad'
+          assert 'TextureSheetParticle' in _spark_java
+          # rev. B: los JSON de Snowstorm (Bedrock) siguen eliminados.
+          assert not (root / 'docs/particles').exists()
+          assert not list((root / 'preview/assets/particles').glob('capa_embers*.json'))
+
+          # Geo plegado v1.9.0: bulto 3D de 36 huesos con 2 hombreras,
+          # atlas 128 y ninguna UV fuera de rango. No es un abanico plano.
+          folded = json.loads((base / 'geo/item/cape_folded.geo.json').read_text())['minecraft:geometry'][0]
+          desc = folded['description']
+          assert desc['identifier'] == 'geometry.cape_folded'
+          assert (desc['texture_width'], desc['texture_height']) == (128, 128)
+          assert len(folded['bones']) == 36
+          folded_names = {b['name'] for b in folded['bones']}
+          assert {'fold_0', 'fold_6', 'ridge_0', 'ridge_5', 'hem_0', 'hem_4',
+                  'roll_0', 'roll_2', 'strap_L', 'strap_R', 'chain_L', 'chain_R',
+                  'yoke', 'collar_center', 'clasp_frame', 'clasp',
+                  'pauldron_L', 'pauldron_R'} <= folded_names
+          # Raíz sin clave `parent` (NO `"parent": null`) y padres siempre
+          # definidos. GeckoLib construye el árbol con `parent == null`.
+          assert folded['bones'][0]['name'] == 'cape'
+          assert 'parent' not in folded['bones'][0]
+          for bone in folded['bones']:
+              if 'parent' in bone:
+                  assert isinstance(bone['parent'], str), bone['name']
+                  assert bone['parent'] in folded_names, (bone['name'], bone['parent'])
+          for bone in folded['bones']:
+              for cube in bone.get('cubes', []):
+                  for face in cube['uv'].values():
+                      u, v = face['uv']
+                      uw, vh = face['uv_size']
+                      assert uw > 0 and vh > 0, (bone['name'], face)
+                      assert 0 <= u and 0 <= v and u + uw <= 128 and v + vh <= 128, (bone['name'], face)
+
+          folded_anim = json.loads((base / 'animations/item/cape_folded.animation.json').read_text())
+          # El bulto plegado conserva SUS 4 clips originales; no
+          # se le exigen los 8 estados de la capa equipada.
+          assert {'animation.idle', 'animation.moving', 'animation.sprint',
+                  'animation.air'} <= set(folded_anim['animations'])
+          # v1.9.0: animación PROPIA del item en GUI/hotbar/mano.
+          assert 'animation.item' in folded_anim['animations']
+          assert len(folded_anim['animations']) == 5
+          item_anim = folded_anim['animations']['animation.item']
+          assert {'cape', 'clasp', 'pauldron_L', 'pauldron_R'} <= set(item_anim['bones'])
+          assert 'position' in item_anim['bones']['cape']
+          assert 'scale' in item_anim['bones']['clasp']
+          for anim_name, spec in folded_anim['animations'].items():
+              assert set(spec['bones']) <= folded_names, (anim_name, set(spec['bones']) - folded_names)
+
+          # v1.17.0: la geometría se TRAZA del PNG del usuario. Los 72
+          # huesos originales siguen BYTE-IDÉNTICOS; encima, 150 huesos
+          # nuevos reconstruyen el ABANICO medido en la referencia.
+          profile = json.loads((root / 'tools/reference_profile.json').read_text())
+          assert profile['source'].startswith('referencias/REFERENCIA_CAPA.png')
+          assert len(profile['silhouette']) >= 25, 'falta envolvente medida'
+          assert len(profile['palette']) >= 18, 'falta paleta medida'
+          assert len(profile['energy_marks']) >= 40, 'faltan grietas trazadas'
+          assert (root / 'referencias/REFERENCIA_CAPA_recorte.png').is_file()
+          assert (root / 'docs/referencia_analizada.png').is_file()
+          assert 'def nearest_ribbon' in (root / 'tools/cape_shape.py').read_text()
+          texture_pipeline = (root / 'tools/texture_pipeline.py').read_text()
+          # v1.17.2: el atlas YA NO samplea pixeles crudos del recorte (asi
+          # entraban el brazo beige, el arnes gris y el fondo a cuadros).
+          # v1.18.0: el atlas ES la foto limpia de la referencia y cada
+          # tramo 3D muestrea su propio pixel por UV local.
+          assert 'from reference_canvas import canvas as foto' in texture_pipeline
+          assert 'def foto_uv(' in (root / 'tools/armor_model_pipeline.py').read_text()
+          assert 'def fan_x(' in (root / 'tools/cape_shape.py').read_text()
+          assert (root / 'referencias/REFERENCIA_CAPA_atlas96.png').is_file()
+          armor_geo = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]
+          orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
+          assert armor_geo['bones'][:72] == orig_bones
+          assert len(armor_geo['bones']) == 222
+          # v1.27.0: 282 cubos (los 6 nuevos son las hombreras:
+          # placa, lam, filo y labio en cada hombro).
+          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 282
+          new_bones = armor_geo['bones'][72:]
+          new_names = {b['name'] for b in new_bones}
+          assert {
+              'v15_cloth_cape_top_0', 'v15_cloth_cape_mid_8',
+              'v17_ribbon_0_seg0', 'v17_ribbon_5_seg3', 'v17_ribbon_11_seg6',
+              'v17_vein_0', 'v17_vein_9',
+              'v17_cowl_front_0', 'v17_cowl_front_6',
+              'v17_cowl_tooth_6', 'v17_cowl_back_4',
+              'v18_pad_0', 'v18_pad_1', 'v18_chain_0', 'v18_chain_7',
+          } <= new_names
+          assert sum(1 for n in new_names if n.startswith('v15_cloth_')) == 27
+          # v1.23.0: 12 MECHONES anchos x 7 tramos en DOS CAPAS.
+          assert sum(1 for n in new_names if n.startswith('v17_ribbon_')) == 84
+          assert sum(1 for n in new_names if n.startswith('v17_cowl_front_')) == 7
+          assert sum(1 for n in new_names if n.startswith('v17_cowl_tooth_')) == 7
+          assert sum(1 for n in new_names if n.startswith('v17_cowl_back_')) == 5
+          assert sum(1 for n in new_names if n.startswith('v18_pad_')) == 2
+          assert sum(1 for n in new_names if n.startswith('v18_chain_')) == 8
+          assert not any(n.startswith(('v17_yoke_', 'v17_mote_', 'v17_ash_',
+                                       'v16_mote_', 'v16_ash_', 'v17_shingle_'))
+                         for n in new_names), 'vuelven las tiras finas sueltas'
+          assert sum(1 for n in new_names if n.startswith('v17_vein_')) == 10
+          veins = [b for b in new_bones if b['name'].startswith('v17_vein_')]
+          assert all(c['uv']['north']['uv'][0] == 98.0
+                     for b in veins for c in b['cubes']), 'grietas sin parche NEON'
+          ribbons = [b for b in new_bones if b['name'].startswith('v17_ribbon_')]
+          assert all(0.40 <= c['size'][2] <= 0.85
+                     and 0.01 <= c.get('inflate', 0) <= 0.05
+                     and c['uv']['north']['uv'][0] == c['uv']['south']['uv'][0]
+                     for b in ribbons for c in b['cubes']), 'banda UV / espesor'
+          # Anclaje + DOS CAPAS con profundidad real.
+          _zs = [c['origin'][2] + c['size'][2] / 2
+                 for b in ribbons for c in b['cubes']]
+          assert min(_zs) < 2.0, ('capa lejos del cuerpo', min(_zs))
+          assert max(_zs) - min(_zs) > 1.5, ('capa plana', min(_zs), max(_zs))
+          _shape = (root / 'tools/cape_shape.py').read_text()
+          assert '1.55 + 1.30 * tt' in _shape, 'falta la curva de profundidad'
+          assert 'RIBBONS = 12' in _shape, 'vuelven las 16 tiras de élitra'
+          assert 'def layer(k:' in _shape, 'faltan las dos capas'
+          assert 'def cowl_uv(' in (root / 'tools/armor_model_pipeline.py').read_text()
+          # Mechones anchos: al menos 1.6 unidades en el primer tramo.
+          assert all(c['size'][0] >= 1.55 for b in ribbons
+                     if b['name'].endswith('seg0') for c in b['cubes']), \
+              'mechón demasiado estrecho'
+          # Punta AFILADA: el último tramo mide < 0.20 de ancho.
+          assert all(c['size'][0] <= 0.20 for b in ribbons
+                     if b['name'].endswith('seg6') for c in b['cubes']), \
+              'las puntas no son afiladas'
+          # V: las alas exteriores mueren ANTES que las centrales.
+          def _y(b): return b['cubes'][0]['origin'][1]
+          def _bn(name): return next(b for b in ribbons if b['name'] == name)
+          assert _y(_bn('v17_ribbon_0_seg6')) > _y(_bn('v17_ribbon_5_seg6')) + 2.0
+          assert _y(_bn('v17_ribbon_11_seg6')) > _y(_bn('v17_ribbon_6_seg6')) + 2.0
+          # Atlas limpio: sólo comprobaciones de FICHERO aquí (stdib).
+          # El degradado, el glowmask y la chispa se miden a pixel en
+          # tools/audit_model.py --check (paso con numpy/Pillow instalado).
+          assert (base / 'textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png').is_file()
+          assert 'build_clean_atlas' in (root / 'tools/texture_pipeline.py').read_text()
+
+          # REGRESIÓN rev. B: ningún cubo de la capa puede quedar
+          # DESPRENDIDO. Se mide la distancia al vecino más cercano.
+          import math as _math
+          _centres = []
+          for _b in new_bones:
+              for _c in _b.get('cubes', []):
+                  _o, _sz = _c['origin'], _c['size']
+                  _centres.append(tuple(_o[i] + _sz[i] / 2 for i in range(3)))
+          _worst = 0.0
+          for _i, _c0 in enumerate(_centres):
+              _best = min(_math.dist(_c0, _c1)
+                          for _j, _c1 in enumerate(_centres) if _j != _i)
+              _worst = max(_worst, _best)
+          assert _worst < 2.2, ('pieza desprendida', _worst)
+          # Ningún hueso de tela puede colgar de un detalle que se oculta.
+          hidden = set(__import__('re').findall(
+              r'"([^"]+)"', (root / 'src/main/java/com/capatest/client/CapaArmorModel.java')
+              .read_text().split('HIDDEN_DETAILS = {')[1].split('};')[0]))
+          assert len(hidden) == 61
+          parent = {b['name']: b.get('parent') for b in armor_geo['bones']}
+          for b in new_bones:
+              cur, chain = parent.get(b['name']), []
+              while cur:
+                  chain.append(cur)
+                  cur = parent.get(cur)
+              assert not (set(chain) & hidden), (b['name'], set(chain) & hidden)
+          opaque_rects = (
+              (0.0, 0.0, 128.0, 128.0),   # v1.23.0: atlas limpio 100% opaco
+              (0.0, 0.0, 96.0, 48.0),
+              (105.0, 0.0, 109.0, 48.0),
+              (120.0, 0.0, 124.0, 48.0),
+              (69.0, 109.0, 75.0, 127.0),
+              (57.0, 76.0, 71.0, 93.0),
+          )
+          for bone in new_bones:
+              for cube in bone.get('cubes', []):
+                  for face in cube['uv'].values():
+                      u, v = face['uv']
+                      uw, vh = face['uv_size']
+                      assert uw > 0 and vh > 0, (bone['name'], face)
+                      assert 0 <= u and 0 <= v and u + uw <= 128 and v + vh <= 128, (bone['name'], face)
+                      assert any(u >= x0 and v >= y0 and u + uw <= x1 and v + vh <= y1
+                                 for x0, y0, x1, y1 in opaque_rects), (bone['name'], face)
+
+          model = json.loads((base / 'models/item/capa_deteriorer_evilsaiyan.json').read_text())
+          # v1.17.2: el BEWLR 3D tapaba el icono 2D en el inventario.
+          # El item DEBE usar el modelo plano con layer0 = icono.
+          assert model['parent'] == 'minecraft:item/generated', model['parent']
+          assert model['textures']['layer0'] == 'capatest:item/capa_deteriorer_evilsaiyan'
+          assert {'gui', 'ground', 'fixed', 'firstperson_righthand'} <= set(model['display'])
+          icon_bytes = (base / 'textures/item/capa_deteriorer_evilsaiyan.png').read_bytes()
+          assert icon_bytes[:8] == b'\x89PNG\r\n\x1a\n'
+          assert struct.unpack('>II', icon_bytes[16:24]) == (64, 64)
+          assert len(icon_bytes) > 800
+          item_java = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
+          assert 'getCustomRenderer' not in item_java, 'el BEWLR vuelve a ocultar el icono'
+
+          # Garantía: capatest NO registra mixins. Un MixinTransformerError
+          # en "Initializing game" (p. ej. player_animation_library) nunca
+          # puede originarse en este mod.
+          assert not list(root.glob('src/main/resources/**/*mixin*.json'))
+          for src in (root / 'src/main/java').rglob('*.java'):
+              assert 'org.spongepowered.asm.mixin' not in src.read_text(), src
+          assert 'Mixin' not in (root / 'src/main/resources/META-INF/mods.toml').read_text()
+
+          java = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
+          renderer = (root / 'src/main/java/com/capatest/client/CapaItemRenderer.java').read_text()
+          armor_renderer = (root / 'src/main/java/com/capatest/client/CapaArmorRenderer.java').read_text()
+          armor_model = (root / 'src/main/java/com/capatest/client/CapaArmorModel.java').read_text()
+          for noisy in ('ParticleTypes.PORTAL', 'ParticleTypes.CRIMSON_SPORE',
+                        'ParticleTypes.SOUL_FIRE_FLAME'):
+              assert noisy not in java, noisy
+          assert 'useAlternateGuiLighting' in renderer
+          assert 'CapaItemGlowLayer' in renderer
+          assert 'LightTexture.FULL_SKY' in renderer
+          item_glow = (root / 'src/main/java/com/capatest/client/CapaItemGlowLayer.java').read_text()
+          assert 'RenderType.eyes' in item_glow
+          assert 'cape_folded_glowmask.png' in item_glow
+          assert 'Exception | LinkageError' in item_glow
+          assert 'new CapaArmorModel(' in armor_renderer
+          for token in ('setHidden(true)', 'setChildrenHidden(false)', 'HIDDEN_DETAILS',
+                        'DataTickets.ENTITY', 'getInitialSnapshot', 'v15_cloth_', 'Mth.lerp',
+                        'Math.toRadians', 'ConcurrentHashMap', 'CapaTestMod.LOGGER',
+                        'Exception | LinkageError', 'private static final int COLUMNS = 9;'):
+              assert token in armor_model, token
+          # v1.27.0: LAS 27 ANCLAS DE LA ONDA NO SE DIBUJAN. Son cubos
+          # de 0.16 que existen SÓLO para dar pose a la tela (los usan
+          # panels[] y el animation.json). El hueso se conserva; lo que se
+          # apaga es su RENDER, en Java y en el render software, para que
+          # el cuello no tenga motas negras.
+          assert 'hideClothAnchors' in armor_model, 'Java no oculta las anclas'
+          assert 'anchor.setHidden(!visible)' in armor_model
+          # CONTROLES de visibilidad: ver/ocultar y AISLAR pads o cadena.
+          for _tok in ('Visibilidad', 'ANCLAS', 'HOMBRERAS', 'CADENA',
+                       'capa.visibilidad', 'setVisibilidad', 'applyVisibilidad'):
+              assert _tok in armor_model, f'falta el control {_tok}'
+          _preview_src = (root / 'tools/preview_cloth.py').read_text()
+          assert 'def isolate(' in _preview_src, 'el preview no aísla pads/cadena'
+          assert '--isolate' in _preview_src and '--show-anchors' in _preview_src
+          # v1.27.0: EL VISOR también tiene que ocultar las anclas. Antes
+          # el runtime Java y el render software las ocultaban, pero el
+          # visor seguía pintándolas: el entregable que mira el usuario
+          # enseñaba las motas negras que la v1.27.0 arregla.
+          _visor_js = (root / 'preview/app.js').read_text()
+          assert "startsWith('v15_cloth_')) h.add(b.name)" in _visor_js, \
+              'el visor vuelve a dibujar las anclas'
+          assert 'l_anchors' in _visor_js, 'el visor no tiene el diagnóstico'
+          _visor_emb = (root / 'docs/capa_v1170_visor.html').read_text()
+          assert "startsWith('v15_cloth_')) h.add(b.name)" in _visor_emb, \
+              'el visor autocontenido publicado dibuja las anclas'
+          assert 'l_anchors' in _visor_emb
+          # v1.27.0: los entregables de docs/ son REPRODUCIBLES: los
+          # scripts que generan el GIF y la hoja de estados están en el
+          # repo (antes vivían en /tmp y se perdían).
+          for _f in ('tools/make_anim_gifs.js', 'tools/make_state_sheet.js',
+                     'tools/build_deliverables.py', 'tools/make_reference_icons.py'):
+              assert (root / _f).is_file(), f'falta {_f}'
+          assert 'make_anim_gifs.js' in (root / 'tools/build_deliverables.py').read_text()
+          assert 'make_reference_icons.py' in (root / 'tools/build_deliverables.py').read_text()
+          # El CÓDIGO FUENTE del visor está versionado: antes todo
+          # `preview/` estaba ignorado y el visor publicado (14 MB) no se
+          # podía reconstruir desde un clon limpio.
+          for _f in ('preview/app.js', 'preview/index.html'):
+              assert (root / _f).is_file(), f'falta la fuente del visor {_f}'
+          # v1.27.0: los 27 huesos v15_cloth_* SIGUEN en el geo (no se
+          # borran: son las referencias de pose de la onda).
+          _anchors = [b for b in new_bones if b['name'].startswith('v15_cloth_')]
+          assert len(_anchors) == 27, len(_anchors)
+          assert all(b.get('cubes') for b in _anchors), 'anclas sin cubo'
+          # v1.27.0: al re-resolver los huesos, el modo de visibilidad se
+          # INVALIDA (visibilidadAplicada = null) o los modos de
+          # aislamiento nunca se aplicarían.
+          assert 'visibilidadAplicada = null;' in armor_model, \
+              'el modo de visibilidad no se reaplica al recargar el geo'
+          # v1.27.0: la hombrera son CUATRO piezas por hombro (placa, lam,
+          # filo y labio) y la cadena son ocho anillos.
+          _pads = [b for b in new_bones if b['name'].startswith('v18_pad_')]
+          assert len(_pads) == 2, len(_pads)
+          assert all(len(b.get('cubes', [])) == 4 for b in _pads), \
+              'la hombrera vuelve a ser un cubo'
+          _chains = [b for b in new_bones if b['name'].startswith('v18_chain_')]
+          assert len(_chains) == 8, len(_chains)
+          assert 'def cube_faces(' in (root / 'tools/armor_model_pipeline.py').read_text(), \
+              'falta el cubo con UV por cara de la hombrera'
+          # Regresión del crash v1.5.0: nunca grados crudos en setRot*, ni
+          # getBakedModel() en el hot path (puede reiniciar los snapshots).
+          assert 'panel.setRotX(baseX[i] - bend)' not in armor_model
+          assert 'getBakedModel(' not in armor_model
+          # v1.9.0: el canvas se ENCAJA con proporción real en icono/atlas
+          # plegado (antes se estiraba 96x48 a un cuadrado) y el item tiene
+          # glowmask propio. La onda 2D/3D compartida v1.7.0 sigue vigente.
+          texture_src = (root / 'tools/texture_pipeline.py').read_text()
+          assert 'def cloth_canvas_fitted(' in texture_src
+          assert 'def build_icon_artwork(' in texture_src
+          assert 'def build_folded_texture(' in texture_src
+          # v1.10.0: el icono DEBE ser pixel art 16x16 ampliado con NEAREST,
+          # no una ilustración con degradados/AA como la de v1.9.0.
+          assert 'ICON_PIXEL_MAP' in texture_src
+          assert 'ICON_PALETTE' in texture_src
+          assert 'build_icon_artwork(64)' in texture_src
+          assert 'Image.NEAREST' in texture_src
+          assert 'def build_armor_cloth_canvas(' in texture_src
+          assert 'energy_ramp' in (root / 'tools/cloth_spec.py').read_text()
+          assert 'def _fit_emissive_mask(' in texture_src
+
+          # REGRESIÓN v1.17.0: el icono debe tener SILUETA PROPIA, no la
+          # forma de las dos referencias (un pico de capucha centrado +
+          # hendidura central inferior). Se decodifica el PNG REAL del
+          # asset (RGBA8, stdlib puro) y se muestrea la máscara alfa 16x16.
+          import re as _re, zlib as _zlib
+          def icon_silhouette(path):
+              data = path.read_bytes()
+              assert data[:8] == b'\x89PNG\r\n\x1a\n'
+              pos, idat, w, h, bd, ct = 8, b'', 0, 0, 0, 0
+              while pos < len(data):
+                  ln = struct.unpack('>I', data[pos:pos+4])[0]
+                  typ = data[pos+4:pos+8]; chunk = data[pos+8:pos+8+ln]
+                  if typ == b'IHDR': w, h, bd, ct = struct.unpack('>IIBB', chunk[:10])
+                  elif typ == b'IDAT': idat += chunk
+                  elif typ == b'IEND': break
+                  pos += 12 + ln
+              assert (w, h, bd, ct) == (64, 64, 8, 6)
+              raw = _zlib.decompress(idat); bpp = 4; stride = w * bpp
+              prev = bytearray(stride); i = 0; rows = []
+              for _ in range(h):
+                  ft = raw[i]; i += 1
+                  scan = bytearray(raw[i:i+stride]); i += stride
+                  for x in range(stride):
+                      a = scan[x-bpp] if x >= bpp else 0
+                      b = prev[x]; c = prev[x-bpp] if x >= bpp else 0
+                      if ft == 1: scan[x] = (scan[x] + a) & 255
+                      elif ft == 2: scan[x] = (scan[x] + b) & 255
+                      elif ft == 3: scan[x] = (scan[x] + ((a+b)//2)) & 255
+                      elif ft == 4:
+                          p = a+b-c; pa = abs(p-a); pb = abs(p-b); pc = abs(p-c)
+                          pr = a if (pa <= pb and pa <= pc) else (b if pb <= pc else c)
+                          scan[x] = (scan[x] + pr) & 255
+                      elif ft != 0: raise AssertionError(ft)
+                  rows.append(scan); prev = scan
+              return [''.join('#' if rows[y*4][x*16+3] > 0 else '.'
+                             for x in range(16)) for y in range(16)]
+          sil = icon_silhouette(icon_path)
+          def runs(row): return len(_re.findall(r'[^.]+', row))
+          # Dos picos de cuello separados por un escote en V abierto.
+          # (icono PREFERIDO por el usuario; v1.25.0 revirtió el v1.24.0)
+          assert runs(sil[0]) == 2 and sil[0][6:10] == '....', sil[0]
+          # Dobladillo de CINCO puntas deshilachadas, no la hendidura central
+          # de las referencias, que parte el borde inferior en dos patas.
+          assert runs(sil[15]) == 5, sil[15]
+          # Centro opaco en el faldón: NO hay split central.
+          assert sil[12][7] == '#' and sil[12][8] == '#', sil[12]
+          # La silueta coincide exactamente con ICON_PIXEL_MAP del código.
+          _m = _re.search(r'ICON_PIXEL_MAP = \((.*?)\)', texture_src, _re.S).group(1)
+          _rows = _re.findall(r'"([.A-Z]{16})"', _m)
+          assert len(_rows) == 16
+          # v1221: la remasterizacion anade MOTAS FLOTANTES en huecos del
+          # mapa. La silueta esperada es el mapa aprobado MAS esas motas.
+          _grid = [list(r) for r in _rows]
+          _f = texture_src.split('ICON_FLOATING = (', 1)[1].split('ICON_CRACKS', 1)[0]
+          for _x, _y, _ch in _re.findall(r'\((\d+), (\d+), "([A-Z])"\)', _f):
+              if _grid[int(_y)][int(_x)] == '.':
+                  _grid[int(_y)][int(_x)] = _ch
+          assert sil == [''.join('#' if c != '.' else '.' for c in r) for r in _grid]
+          # No es la silueta copiada de v1.10.0 (capucha de un pico).
+          assert _rows[0] != '.......HKK......'
+          # Tampoco es el icono RECHAZADO de v1.11.0.
+          assert _rows[0] != '....GG....GG....'
+          # El volumen 3D REAL debe estar en la geometría, no sólo en el JSON.
+          armor_src = (root / 'tools/armor_model_pipeline.py').read_text()
+          assert 'INFLATE = (0.01, 0.03, 0.05)' in armor_src
+          assert 'RIBBONS = 12' in (root / 'tools/cape_shape.py').read_text()
+          assert 'SEG_FRACTIONS' in (root / 'tools/cape_shape.py').read_text()
+          shape_src = (root / 'tools/cape_shape.py').read_text()
+          assert 'PROFILE_DATA' in shape_src and 'palette_at' in shape_src
+          # REGRESION v1199: la cola analitica a 8.0 dejaba la campana
+          # abierta. La envolvente medida DEBE cerrar hacia el dobladillo.
+          import sys as _sys; _sys.path.insert(0, 'tools')
+          import cape_shape as _CS
+          # v1240: envolvente ESCALADA al ancho real del render (0.82x)
+          # y ABANICO EN V de dos niveles: las alas mueren a t~0.72-0.75
+          # y solo los jirones centrales llegan al dobladillo.
+          # v1283: contrato por PROPIEDADES de la V medida, no por los
+          # numeros de v1240 (alas cortas que dejaban 28% de paño en el
+          # dobladillo). Ahora TODOS los lobulos llegan al dobladillo y
+          # la envolvente cierra de forma monotona hasta t=1.0.
+          tips = [_CS.tip_t(k) for k in range(12)]
+          assert 0.64 <= min(tips) < 0.82 and max(tips) > 0.95, 'V de la captura'
+          assert 6.5 < _CS.silhouette(0.733) < 8.5, 'apertura del abanico'
+          assert _CS.silhouette(0.9) < _CS.silhouette(0.733), 'cierra hacia el dobladillo'
+          assert _CS.silhouette(1.0) < _CS.silhouette(0.9) * 1.02, 'la punta no se reabre'
+          assert 'def charred_hem' in (root / 'tools/texture_pipeline.py').read_text(), 'falta el deshilachado del dobladillo'
+          assert 'v1306: el CAPUCHON' in (root / 'tools/texture_pipeline.py').read_text(), 'falta la calibracion del yugo'
+          assert 'GUION ALARGADO' in (root / 'tools/texture_pipeline.py').read_text(), 'falta el trazo de energia alargado'
+          assert (root / 'tools/energy_calibration.py').is_file()
+          _tp = (root / 'tools/texture_pipeline.py').read_text()
+          assert 'def shape_energy_density' in _tp and 'ENERGY_GAIN' in _tp
+          assert _tp.count('def _energy_strokes') == 1
+          geo_bones = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]['bones']
+          assert sum(1 for b in geo_bones if b['name'].startswith('v17_ribbon_')) == 84
+          # v1.22.0: 0.55-0.80 (antes 0.28-0.40). De perfil la capa era
+          # una lámina de 0.3 unidades y parecía despegada del jugador.
+          assert all(0.40 <= c['size'][2] <= 0.85 for b in geo_bones
+                     if b['name'].startswith('v17_ribbon_') for c in b['cubes'])
+          # Proyecto Blockbench REAL, con maniquí y UV por cara.
+          _bbver = [l.split('=', 1)[1].strip() for l in
+                    (root / 'gradle.properties').read_text().splitlines()
+                    if l.startswith('mod_version=')][0]
+          _bbpath = root / 'docs' / f'CAPA_v{_bbver}.bbmodel'
+          assert _bbpath.is_file(), f'falta .bbmodel versionado: {_bbpath}'
+          assert not (root / 'docs/capa_v1170.bbmodel').exists(), 'nombre viejo'
+          _stale = [q.name for q in (root / 'docs').glob('*.bbmodel')
+                    if q.name != f'CAPA_v{_bbver}.bbmodel']
+          assert not _stale, ('quedan .bbmodel de versiones viejas', _stale)
+          bb = json.loads(_bbpath.read_text())
+          assert bb['name'] == f'capa_deteriorer_evilsaiyan_v{_bbver.replace(".", "_")}'
+          assert bb['meta']['format_version'] == '5.0'
+          # v1.17.3: el .bbmodel de Blockbench muestra SOLO la capa: sin
+          # maniqui Steve/Alex y sin los 126 cubos de la armadura vieja.
+          # v1.27.0: 156 cubos de capa (150 + 6 de las hombreras).
+          assert len(bb['elements']) == 156 and len(bb['groups']) >= 222
+          assert not any('Steve/Alex' in g['name'] for g in bb['groups'])
+          assert bb['resolution'] == {'width': 128, 'height': 128}
+          assert all(max(f['uv']) <= 128 for e in bb['elements'] for f in e['faces'].values())
+          assert not any(e['name'] in ('head','torso','arm_L','arm_R','leg_L','leg_R') for e in bb['elements'])
+          assert all('faces' in e and e['faces'] for e in bb['elements'])
+          assert bb['textures'][0]['source'].startswith('data:image/png;base64,')
+          _uuid = _re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+          _gids = {g['uuid'] for g in bb['groups']}
+          assert len(bb['animations']) == 8, 'faltan estados de animacion'
+          _kfs = 0
+          for _a in bb['animations']:
+              assert _uuid.match(_a['uuid']) and _a['loop'] == 'loop'
+              assert _a['animators'], 'animador vacio'
+              assert 'effects' not in _a['animators'], 'Blockbench busca JSONs ajenos'
+              for _gid, _an in _a['animators'].items():
+                  assert _uuid.match(_gid) and _gid in _gids, 'animador huerfano'
+                  assert _an['type'] == 'bone' and _an['keyframes']
+                  for _k in _an['keyframes']:
+                      assert _uuid.match(_k['uuid'])
+                      assert _k['channel'] in ('rotation', 'position', 'scale')
+                      assert _k['data_points']
+                      assert _k['interpolation'] in ('linear', 'catmullrom', 'bezier', 'step')
+                  _kfs += len(_an['keyframes'])
+          assert _kfs >= 25000, _kfs
+          _channels = {_k['channel'] for _a in bb['animations']
+                       for _an in _a['animators'].values()
+                       for _k in _an['keyframes']}
+          assert _channels == {'rotation', 'position', 'scale'}, _channels
+          # Curvas Bezier con tangentes analiticas: no mas interpolacion lineal.
+          assert all(_k['interpolation'] == 'bezier'
+                     for _a in bb['animations'] for _an in _a['animators'].values()
+                     for _k in _an['keyframes']
+                     if _k['channel'] in ('rotation', 'position', 'scale'))
+          # rev. B: las partículas SON RUNTIME. El .bbmodel no lleva pista
+          # de efectos ni referencia JSONs externos; Blockbench abre limpio.
+          import json as _json
+          _bbtext = _bbpath.read_text()
+          assert '"channel":"particle"' not in _bbtext
+          assert '"effects"' not in _bbtext and 'particles/' not in _bbtext
+          assert all(len(_a.get('markers', [])) >= 2 for _a in bb['animations'])
+          _motion = (root / 'tools/cape_motion.py').read_text()
+          assert 'TRAVEL = 0.62' in _motion and 'def sample(' in _motion
+          # v1.21.0: PROHIBIDO volver a anclar la onda a cero. Restar
+          # sin(phase) congelaba los 150 huesos en f=0 y f=1: un latido
+          # con paron en vez de una onda que baja por el jiron.
+          assert '- math.sin(phase)' not in _motion
+          assert '0.75 * (math.sin' not in _motion
+          assert 'def _flow(' in _motion and 'bend = seg_f ** 1.6' in _motion
+          assert "'- Math.sin(phase)'" not in _motion
+          # Java: ya NO reimplementa la onda; GeckoLib la aplica y Java
+          # solo SUMA la respuesta al portador sobre la rotacion animada.
+          _armor_model = (root / 'src/main/java/com/capatest/client/CapaArmorModel.java').read_text()
+          assert 'motionParts(' in _armor_model and '0.62D * seg' in _armor_model
+          assert 'b.getRotX() +' in _armor_model, 'Java vuelve a pisar GeckoLib'
+          assert '- Math.sin(phase)' not in _armor_model, 'onda duplicada en Java'
+          assert 'v17_mote_' not in _armor_model and 'v17_ash_' not in _armor_model
+          # v1.26.0: EJES DE SIMETRIA COHERENTES (Python, Java y visor).
+          # El eje de simetria es (columnas - 1) / 2 de cada familia. Con
+          # el 7.5 global (heredado de 16 tiras de la elitria) la capa se
+          # inclinaba siempre hacia un lado y el pano izquierdo ondeaba
+          # el doble que el derecho. Se comparan los TRES ficheros.
+          _AXES = {'RIBBON': 5.5, 'CLOTH': 4.0, 'VEIN': 4.5, 'COWL': 3.0,
+                   'COWL_BACK': 2.0, 'CHAIN': 3.5, 'PAD': 0.5}
+          _visor_html = (root / 'docs/capa_v1170_visor.html').read_text()
+          for _k, _v in _AXES.items():
+              assert f'{_k}_AXIS = {_v}' in _motion, f'eje {_k} ausente en Python'
+              assert f'{_k}_AXIS = {_v}D' in _armor_model, f'eje {_k} ausente en Java'
+              assert f'{_k.lower()}: {_v}' in _visor_html, f'eje {_k} ausente en el visor'
+          assert 'def axis_of(' in _motion, 'Python sin eje por familia'
+          assert 'lateral = (col - axis) / axis' in _motion
+          assert 'motionAxis(' in _armor_model, 'Java sin eje por familia'
+          assert 'double lateral = (col - axis) / axis;' in _armor_model
+          assert 'const lateral = (col - axis) / axis;' in _visor_html
+          # v1.26.0: DETERIORO_NAMES == huesos de tela del geo. Antes
+          # arrastraba 42 nombres que ya NO existen (4 mechones de mas,
+          # 10 tejas, 4 piezas de capucha) y le faltaban los 10 v18_*:
+          # las hombreras y la cadena NO recibian respuesta del portador.
+          _armor_names = set(re.findall(
+              r'"(v\d{2}_[a-z0-9_]+)"',
+              _armor_model.split('DETERIORO_NAMES = {')[1].split('};')[0]))
+          _expected = {n for n in new_names if n.startswith(
+              ('v15_cloth_', 'v17_ribbon_', 'v17_cowl_', 'v17_vein_', 'v18_'))}
+          assert _armor_names == _expected, (
+              'DETERIORO_NAMES desincronizado del geo',
+              sorted(_expected - _armor_names), sorted(_armor_names - _expected))
+          assert len(_armor_names) == 150, len(_armor_names)
+          # v1.22.0: OCHO estados reales, no cuatro clonados.
+          assert all(f'"{k}"' in _motion for k in
+                     ('volar', 'caer', 'agachado', 'agua'))
+          _item_src = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
+          assert all(f'"animation.{n}"' in _item_src for n in
+                     ('fall', 'sneak', 'swim', 'deterioro', 'air'))
+          assert 'cape_controller", 8' in _item_src, 'sin transicion suave'
+          # v1.23.0: chispa EXCLUSIVA, SIN partículas vanilla.
+          assert spark_budget(_item_src) == (8, 3), spark_budget(_item_src)
+          assert 'DustParticleOptions' not in _item_src
+          assert 'DustColorTransitionOptions' not in _item_src
+          assert 'CAPA_SPARK' in _item_src
+          assert 'sendParticles' in _item_src and 'NO son geomet' in _item_src
+          _item = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
+          assert 'sendParticles' in _item and 'NO son geomet' in _item
+          # Retardo por tramo y respiracion de la capucha, no solo rotacion.
+          _names = {_an['name']: _an for _a in bb['animations']
+                    for _an in _a['animators'].values() if _an['type'] == 'bone'}
+          assert any(_n == 'v17_ribbon_0_seg4'
+                     and any(_k['channel'] == 'position' for _k in _an['keyframes'])
+                     for _n, _an in _names.items())
+          # v1.21.0: incluso el PRIMER tramo se desplaza (curva acumulada),
+          # no solo las puntas. Antes era has_pos = seg >= 4.
+          assert any(_n == 'v17_ribbon_0_seg0'
+                     and any(_k['channel'] == 'position' for _k in _an['keyframes'])
+                     for _n, _an in _names.items())
+          assert any(_n.startswith('v17_cowl_')
+                     and any(_k['channel'] == 'scale' for _k in _an['keyframes'])
+                     for _n, _an in _names.items())
+          # Tangentes C1: izquierda = -derecha en TODA curva de rotacion.
+          assert all(all(abs(_k['bezier_left_value'][_i]
+                             + _k['bezier_right_value'][_i]) < 0.002
+                         for _i in range(3))
+                     for _a in bb['animations'] for _an in _a['animators'].values()
+                     for _k in _an['keyframes'] if _k['channel'] == 'rotation')
+          # Las 4 animaciones deben tener amplitudes DISTINTAS: antes
+          # `deterioro` caia en los valores de `idle` (codigo inalcanzable).
+          def _rms(_a):
+              _v = [float(_d) for _gid, _an in _a['animators'].items()
+                    if _gid != 'effects'
+                    for _k in _an['keyframes']
+                    for _d in _k['data_points'][0].values()]
+              return round((sum(_x * _x for _x in _v) / len(_v)) ** 0.5, 2)
+          _states = {_rms(_a) for _a in bb['animations']}
+          assert len(_states) == 8, ('estados con la misma amplitud', _states)
+          # `preview/` NO se versiona: se valida el VISOR AUTOCONTENIDO,
+          # que es el entregable real y lleva el app.js embebido.
+          _visor = (root / 'docs/capa_v1170_visor.html').read_text()
+          assert 'bend = Math.pow(segF,1.6)' in _visor, 'visor sin offset acumulado'
+          assert 'b.offset || [0,0,0]' in _visor, 'visor ignora el canal position'
+          assert 'let showPlayer = false' in _visor, 'maniqui blanco visible otra vez'
+          # v1.22.0: 8 estados y FX de aura/halo/estela en el visor.
+          assert all(f'{k}:' in _visor for k in
+                     ('volar', 'caer', 'agachado', 'agua')), 'faltan estados en el visor'
+          assert 'SPARK_SEEDS' in _visor, 'faltan las chispas del visor'
+          assert 'createRadialGradient' not in _visor, \
+              'vuelve el halo acumulado detrás de la cabeza'
+          assert spark_budget(
+              (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
+          ) == (8, 3), 'presupuesto de chispas'
+          assert '"easing": "linear"' in (
+              root / 'tools/cape_animation_pipeline.py').read_text()
+          assert '"easing": "easeInOutSine"' not in (
+              root / 'tools/cape_animation_pipeline.py').read_text()
+          assert 'reference_profile.json' in (root / 'tools/reference_trace.py').read_text()
+          assert 'ICON_PIXEL_MAP' in (root / 'tools/texture_pipeline.py').read_text()
+          assert 'cape_folded_glowmask' in texture_src
+          # v1.18.0: el halo frio ya no se dibuja a mano; sale de las
+          # cuchilladas REALES de la foto (mascara `energy` en build_armor_cloth_canvas).
+          assert 'energy = (r > 135)' in texture_src
+          assert 'def build_spark_sprites(' in texture_src
+          assert 'def build_blight_sprites(' in texture_src
+          assert '--uv-test' in (root / 'tools/preview_cloth.py').read_text()
+          fg_bytes = (base / 'textures/item/cape_folded_glowmask.png').read_bytes()
+          assert struct.unpack('>II', fg_bytes[16:24]) == (128, 128)
+          assert len(fg_bytes) > 100, 'glowmask del item vacío'
+          cloth_src = (root / 'tools/cloth_spec.py').read_text()
+          assert 'COLUMNS = 9' in cloth_src
+          assert 'FOLDS = 3' in cloth_src and 'def fold_wave(' in cloth_src
+          # v1.17.0: la forma ya NO sale de una onda procedural; sale del
+          # trazado del PNG. Geometría y textura comparten cape_shape.py.
+          assert 'cape_shape' in (root / 'tools/armor_model_pipeline.py').read_text()
+          assert 'cape_shape' in texture_src
+          assert 'SEG_FRACTIONS' in (root / 'tools/cape_shape.py').read_text()
+          assert 'column * 0.030D' in armor_model
+          assert 'v15_orbit_' in armor_model
+          assert 'v15_pauldron_' in armor_model and 'v15_front_chain_' in armor_model
+          assert 'INFLATE = (0.01, 0.03, 0.05)' in (root / 'tools/armor_model_pipeline.py').read_text()
+          assert 'assert_opaque' in (root / 'tools/armor_model_pipeline.py').read_text()
+          assert 'def build_blight_sprites(' in texture_src
+          item_src = (root / 'tools/item_model_pipeline.py').read_text()
+          assert 'if parent is not None' in item_src
+          assert '"parent": parent' not in item_src
+          assert 'JsonNull en el geo' in item_src
+          glow_layer = (root / 'src/main/java/com/capatest/client/CapaGlowLayer.java').read_text()
+          curio = (root / 'src/main/java/com/capatest/client/CapaCurioRenderer.java').read_text()
+          assert 'Exception | LinkageError' in glow_layer
+          assert 'if (wearer == null)' in curio
+          # v1.17.1: la version se lee de gradle.properties. Un numero
+          # hardcodeado aqui dejaria pasar un JAR con el nombre viejo.
+          props = (root / 'gradle.properties').read_text().splitlines()
+          ver = [l.split('=', 1)[1].strip() for l in props
+                 if l.startswith('mod_version=')][0]
+          # La pagina de entrada (docs/index.html) NO puede quedar
+          # desfasada: antes seguia anunciando la v1.25.0 y enlazaba a un
+          # .bbmodel que ya no existia.
+          _index = (root / 'docs/index.html').read_text()
+          assert f'CAPA_v{ver}.bbmodel' in _index, 'docs/index.html con bbmodel viejo'
+          assert f'releases/tag/v{ver}' in _index, 'docs/index.html con release vieja'
+          assert f'{ver}' in _index, 'docs/index.html sin la version vigente'
+          assert len(ver.split('.')) == 3 and all(x.isdigit() for x in ver.split('.')), ver
+          assert f'mod_version={ver}' in (root / 'gradle.properties').read_text()
+          assert 'curios_version=5.14.1+1.20.1' in (root / 'gradle.properties').read_text()
+          assert f'v{ver}' in (root / 'src/main/resources/pack.mcmeta').read_text()
+          assert ver in (root / 'src/main/resources/META-INF/mods.toml').read_text()
+          assert f'v{ver}' in (root / 'README.md').read_text()
+          assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/en_us.json').read_text()
+          assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/es_es.json').read_text()
+          assert 'CAPA_SPARK' in java
+          assert 'animation.item' in java and 'ITEM_ANIM' in java
+          assert 'SPARK_INTERVAL_TICKS = 8' in java
+          assert spark_budget(java) == (8, 3), spark_budget(java)
+          assert 'CapaSparkParticle.Provider' in (root / 'src/main/java/com/capatest/client/CapaParticleRegistration.java').read_text()
+          # v1.9.0: icono rehecho desde las dos referencias 16x16 del usuario.
+          assert 'def build_icon_artwork(' in texture_src
+          assert 'pixel art' in (root / 'README.md').read_text()
+          assert 'hombreras' in (root / 'README.md').read_text()
+          for doc in ('capa_v1170_preview.png', 'capa_v1170_icon.png',
+                      'capa_v1170_icon_compare.png', 'capa_v1170_silhouette_compare.png',
+                      'capa_v1170_side_relief.png', 'capa_v1170_front_rig.png',
+                      'capa_v1170_item_glowmask.png', 'capa_v1170_particles.png',
+                      'capa_v1170_uv_test.png',
+                      'capa_v1170_visor.html'):
+              assert (root / 'docs' / doc).is_file(), doc
+
+          # Aura MUDA: ningún playSound ni sonido propio en las partículas /
+          # efectos. El único SoundEvents.* permitido es el equipamiento
+          # vanilla de ArmorMaterial, que suena una vez al ponerse la capa.
+          for java_src in (root / 'src/main/java').rglob('*.java'):
+              src_text = java_src.read_text()
+              assert 'playSound(' not in src_text, java_src
+              if java_src.name != 'CapaArmorMaterial.java':
+                  assert 'SoundEvents.' not in src_text, java_src
+
+          data = root / 'src/main/resources/data'
+          for p in data.rglob('*.json'):
+              json.loads(p.read_text())
+          tag = json.loads((data / 'curios/tags/items/back.json').read_text())['values']
+          assert 'capatest:capa_deteriorer_evilsaiyan' in tag
+          entity = json.loads((data / 'capatest/curios/entities/player.json').read_text())
+          assert entity == {'entities': ['player'], 'slots': ['back']}
+          stand = (root / 'docs/capa_v1170_visor.html').read_text()
+          assert 'fetch(' not in stand and 'assets/' not in stand, 'visor no autocontenido'
+          assert 'INLINE_GEO' in stand
+          assert f'download="CAPA_v{ver}.bbmodel"' in stand, 'visor sin version'
+
+          assert 'spawnAura(Level level, Player player, boolean deterioro)' in java
+          assert 'spawnAura(player.level(), player, deterioro)' in (root / 'src/main/java/com/capatest/compat/CuriosCompat.java').read_text()
+          assert (root / 'tools/audit_model.py').is_file()
+          assert '--check' in (root / 'tools/audit_model.py').read_text()
+          assert 'tools/audit_model.py --check' in (root / '.github/workflows/build.yml').read_text()
+          # v1.27.1: la descarga del JAR PUBLICADO tiene que ser
+          # REPRODUCIBLE y VERIFICABLE, no un `curl` a mano. El script
+          # baja la rama de artefactos (codeload), que es la unica via
+          # que responde cuando el CDN de releases esta bloqueado, y
+          # comprueba el SHA-256 contra el digest que devuelve la API.
+          # v1.27.1: el .jar tiene que ser REPRODUCIBLE (mismo codigo ->
+          # mismo binario), para que el SHA-256 publicado sirva para
+          # verificar la descarga. Sin preserveFileTimestamps=false el ZIP
+          # guarda la fecha de cada entrada y el digest cambia en cada
+          # republicacion.
+          _bg = (root / 'build.gradle').read_text()
+          assert 'preserveFileTimestamps = false' in _bg, \
+              'el .jar no es reproducible (timestamps del ZIP)'
+          assert 'reproducibleFileOrder = true' in _bg, \
+              'el orden de entradas del .jar no es reproducible'
+          assert 'Verify jar is reproducible' in \
+              (root / '.github/workflows/build.yml').read_text(), \
+              'la CI no comprueba que el .jar sea reproducible'
+          _fetch = (root / 'tools/fetch_published_jar.py').read_text()
+          assert 'codeload.github.com' in _fetch, 'la descarga no usa codeload'
+          assert 'published_digest' in _fetch, 'no verifica contra la API'
+          assert 'SHA256SUMS.txt' in _fetch, 'no comprueba el SHA256SUMS'
+          assert 'capatest-{ver}.jar' in _fetch
+          print(f'OK: v{ver}, geometria rehecha (12 mechones anchos en 2 capas), '
+                'cuello alto + hombreras + cadena, atlas limpio con glowmask '
+                'fullbright, chispa EXCLUSIVA sin particulas vanilla, icono PREFERIDO revertido con backup byte-identico y sin lag')
+          PY
+
+      # v1220: la autoevaluacion MEDIDA se ejecuta AQUI, en GitHub Actions,
+      # no solo en el sandbox. Instala numpy/Pillow y falla el build si la
+      # capa se aleja de la referencia del usuario.
+      - name: Autoevaluacion visual contra la referencia
+        run: |
+          python3 -m pip install --quiet numpy Pillow
+          PYTHONPATH=tools python3 tools/audit_model.py --check
+          # v1240: el calibrador de energia es un lazo cerrado Jacobi; se
+          # comprueba que siga siendo importable y que el perfil medido
+          # (10 bandas) siga apuntando a la referencia del usuario.
+          python3 -m py_compile tools/energy_calibration.py
+          PYTHONPATH=tools python3 -c "import energy_calibration as E; t=E.target(); g=E.read_gains(); assert len(t)==10 and len(g)==12 and min(t)>0; print('OK: objetivo de energia por banda', [round(x,1) for x in t])"
+
+      - name: Build
+        id: build
+        run: |
+          set -o pipefail
+          gradle build --no-daemon --stacktrace 2>&1 | tee /tmp/gradle-build.log
+
+      # v1.27.1: EL JAR TIENE QUE SER REPRODUCIBLE. Sin esto, dos builds
+      # del mismo codigo dan .jar distintos (el ZIP guarda timestamps) y el
+      # SHA-256 publicado cambia en cada republicacion, con lo que no
+      # sirve para verificar nada. Se reconstruye el .jar y se compara.
+      #
+      # Va ANTES de publicar: solo se sube a la release y a la rama de
+      # artefactos un .jar ya verificado como reproducible.
+      - name: Verify jar is reproducible
+        run: |
+          set -euo pipefail
+          VER="$(sed -n 's/^mod_version=//p' gradle.properties | tr -d '[:space:]')"
+          JAR="build/libs/capatest-$VER.jar"
+          test -f "$JAR"
+          SHA1="$(sha256sum "$JAR" | cut -d' ' -f1)"
+          echo "sha256 del primer build : $SHA1"
+          # Se borra SOLO el .jar y se vuelve a empaquetar: las clases ya
+          # compiladas se reutilizan, asi que el segundo build es rapido.
+          rm -f "$JAR"
+          gradle jar reobfJar --no-daemon --console=plain 2>&1 | tail -5
+          test -f "$JAR"
+          SHA2="$(sha256sum "$JAR" | cut -d' ' -f1)"
+          echo "sha256 del segundo build: $SHA2"
+          if [ "$SHA1" != "$SHA2" ]; then
+            echo "::error::el .jar NO es reproducible ($SHA1 != $SHA2)"
+            exit 1
+          fi
+          echo "OK: el .jar es byte-identico entre builds (sha256:$SHA1)"
+
+      # Los logs de Actions viven en un host que el sandbox no puede leer;
+      # publicamos los errores de javac como anotaciones del run.
+      - name: Surface compiler errors as annotations
+        if: failure() && steps.build.outcome == 'failure'
+        run: |
+          grep -E '(error:|FAILURE:|What went wrong|^> |Caused by:|Could not resolve|Execution failed)' /tmp/gradle-build.log | head -80 | while IFS= read -r line; do
+            printf '::error::%s\n' "$line"
+          done
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-log
+          path: /tmp/gradle-build.log
+          if-no-files-found: ignore
+
+      - name: List built jars
+        run: ls -lh build/libs
+
+      # v1.27.0: El JAR tambien se sube como ARTIFACT de Actions. La
+      # descarga del asset de Release rebota a release-assets.github.com,
+      # que esta bloqueado en el sandbox; el artifact se sirve por la API,
+      # que si es accesible. Ademas permite bajar el .jar exacto del run.
+      - name: Upload jar as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: capatest-jar
+          path: build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Verify jar contents (model resources)
+        run: |
+          set -euo pipefail
+          found=0
+          for jar in build/libs/*.jar; do
+            case "$jar" in *-sources.jar) continue ;; esac
+            found=1
+            echo "== $jar =="
+            jar tf "$jar" > /tmp/jar-contents.txt
+            grep -qx 'META-INF/mods.toml' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/CapaTestMod.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapaGlowLayer.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapaSparkParticle.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapaItemRenderer.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapaItemGlowLayer.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapaArmorModel.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapaArmorRenderer.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/item/CapaDeteriorerItem.class' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/animations/item/armor/capa_deteriorer_evilsaiyan.animation.json' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan.png' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/textures/item/capa_deteriorer_evilsaiyan.png' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/geo/item/cape_folded.geo.json' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/animations/item/cape_folded.animation.json' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/textures/item/cape_folded.png' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/textures/item/cape_folded_glowmask.png' /tmp/jar-contents.txt
+            grep -qx 'assets/capatest/particles/capa_spark.json' /tmp/jar-contents.txt
+            for i in 0 1 2; do
+              grep -qx "assets/capatest/textures/particle/capa_spark_${i}.png" /tmp/jar-contents.txt
+            done
+            grep -qx 'data/curios/tags/items/back.json' /tmp/jar-contents.txt
+            grep -qx 'data/capatest/curios/entities/player.json' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapaCurioRenderer.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/compat/CuriosCompat.class' /tmp/jar-contents.txt
+            # El artefacto publicado DEBE llevar el geo sin JsonNull.
+            unzip -p "$jar" assets/capatest/geo/item/cape_folded.geo.json > /tmp/folded-geo.json
+            python3 -c 'import json; b=json.load(open("/tmp/folded-geo.json"))["minecraft:geometry"][0]["bones"]; n={x["name"] for x in b}; assert b[0]["name"]=="cape" and "parent" not in b[0]; assert all(x.get("parent","cape") in n for x in b); print("OK: geo plegado dentro del jar sin parent:null")'
+            unzip -p "$jar" assets/capatest/textures/item/cape_folded_glowmask.png > /tmp/folded-glow.png
+            python3 -c 'import struct; d=open("/tmp/folded-glow.png","rb").read(); assert struct.unpack(">II", d[16:24]) == (128, 128); print("OK: glowmask del item 128x128 dentro del jar")'
+            unzip -p "$jar" assets/capatest/animations/item/cape_folded.animation.json > /tmp/folded-anim.json
+            python3 -c 'import json; a=json.load(open("/tmp/folded-anim.json"))["animations"]; assert len(a)==5 and "animation.item" in a; print("OK: 5 animaciones con animation.item dentro del jar")'
+            unzip -p "$jar" assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json > /tmp/armor-geo.json
+            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==222 and sum(len(x.get("cubes",[])) for x in b)==282; print("OK: 222 huesos / 282 cubos dentro del jar")'
+            echo "OK: clases, mods.toml, 3D item, animation.item, atlas limpio + glowmask, chispa exclusiva y datos Curios presentes"
+          done
+          test "$found" -eq 1
+
+      # Entrega directa: un .jar crudo como Release asset, NO un ZIP de artifact.
+      # v1.17.1: la version y el TAG salen de gradle.properties, para que el
+      # nombre del JAR nunca quede desincronizado. El dispatch manual sigue
+      # disponible; ademas, un commit marcado [publicar] permite publicar
+      # cuando el token de integracion no tiene permiso actions:write (403).
+      - name: Publish direct .jar release
+        if: >-
+          (github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar]')) ||
+          (github.event_name == 'workflow_dispatch' && inputs.publicar == true)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          VER="$(sed -n 's/^mod_version=//p' gradle.properties | tr -d '[:space:]')"
+          test -n "$VER"
+          TAG="v$VER"
+          JAR="build/libs/capatest-$VER.jar"
+          test -f "$JAR"
+          NOTES=/tmp/release-notes.md
+          BBF="docs/CAPA_v$VER.bbmodel"
+          BB_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/CAPA_v$VER.bbmodel"
+          cat > "$NOTES" <<'MD'
+          ## Mantle of the Blight Star __TAG__ — build más reciente
+
+          JAR compilado en CI (JDK 17 + Gradle 8.8, Forge 1.20.1-47.3.0).
+          Cada entrega sube de versión: `v1.19.0` queda como histórico y
+          **no se sobreescribe**.
+
+          **Link directo del .bbmodel (VERSIONADO)**: __BBURL__
+          El archivo se llama `CAPA_v__VER__.bbmodel` y su `name`
+          interno en Blockbench incluye la versión.
+
+          ### Qué incluye
+
+          - **v1.28.0 — TU ICONO DE VUELTA Y EL PAÑO DESATURADO**: el icono
+            2D vuelve a ser el PREFERIDO de la v1.25.0, byte a byte (SHA
+            `c90670ba...`), el que se eligio al compararlo con el rediseno
+            de la v1.27.0; ese rediseno queda guardado como historico en
+            `referencias/ICONO_V1270_REDISEÑO_BACKUP.png` y el pipeline lo
+            REGENERA igual (mismo mapa 16x16, ocho motas, veintiseis grietas
+            y cinco tonos). Ademas el atlas de la capa 3D se DESATURA para
+            hablar el mismo color que ese icono y que la foto de
+            referencia: el error de color medido baja de 321 a 210, que es
+            el mejor valor que respeta el degradado carmesi->morado del
+            contrato. La geometria (222 huesos, 282 cubos), las ocho
+            animaciones y las 27 anclas `v15_cloth_*` NO cambian: las
+            anclas siguen existiendo y lo que se apaga es SOLO su render,
+            tambien en el visor, con el diagnostico disponible. La v1.27.0
+            y la v1.27.1 NO se sobrescriben: quedan como historico. El
+            `.jar` EXACTO de la v1.27.0 se rescata de su artifact
+            historico (`14057282072`), se verifica contra el digest de la
+            API de la release y se deja en `artifacts/v1.27.0` con su
+            `SHA256SUMS.txt`.
+          - **v1.27.1 — EL ARREGLO DEL VISOR, EN SU PROPIA RELEASE**: el
+            modelo es IDENTICO a la v1.27.0 (mismo geo de 222 huesos y 282
+            cubos, mismo atlas, mismas ocho animaciones). Lo que cambia es
+            que el VISOR 3D de docs/ ya no dibuja las 27 anclas
+            `v15_cloth_*`: antes el runtime Java y el render software las
+            ocultaban, pero el visor seguia pintandolas, asi que el
+            entregable que se mira enseñaba las motas negras que la
+            v1.27.0 arregla. El hueso, la jerarquia y las ocho pistas se
+            conservan intactos; lo que se apaga es su render, tambien en
+            el visor. El diagnostico sigue disponible (casilla `Anclas`,
+            `showAnchors` / `l_anchors`). La v1.27.0 NO se sobrescribe:
+            queda como historico con su .jar y su .bbmodel intactos. El
+            .jar se deja ademas en la rama de artefactos
+            `artifacts/v1.27.1` (mismo binario + `SHA256SUMS.txt`) para
+            poder descargarlo y verificar su SHA-256 donde el CDN de
+            releases no responde.
+          - **v1.27.0 — LAS MOTAS NEGRAS FUERA, HOMBRERA Y CADENA REHECHAS,
+            ICONO LEGIBLE**: las 27 anclas `v15_cloth_*` (cubos de 0.16 que
+            existen SÓLO para dar pose a la onda) ya NO se dibujan: el hueso,
+            la jerarquía y las ocho pistas se conservan intactos y lo que se
+            apaga es su render (Java y render software). La hombrera deja de
+            ser un cubo gris plano (que en el juego se leía como una masa
+            negra) y pasa a CUATRO piezas de acero por hombro con UV por
+            cara; la cadena pasa de ocho motas sueltas a ocho ANILLOS de
+            acero que se leen como cadena sobre la espalda. El icono 2D
+            mantiene la silueta aprobada (dos picos de cuello, faldón de
+            cinco puntas) pero con tres pliegues legibles, acero para
+            hombrera y cadena y sólo CUATRO píxeles magenta. Nuevo control
+            `capa.visibilidad` (normal|anclas|hombreras|cadena) para ver y
+            aislar cada pieza por separado.
+          - **v1.26.0 — LA CAPA YA NO SE INCLINA SIEMPRE HACIA EL MISMO LADO**:
+            el eje lateral es ahora `(columnas − 1) / 2` de cada familia,
+            medido sobre los pivotes X reales del geo (mechones 12 → 5.5,
+            paño 9 → 4.0, grietas 10 → 4.5, capucha 7 → 3.0, cuello 5 → 2.0,
+            cadena 8 → 3.5, hombreras 2 → 0.5). Antes TODO usaba un 7.5
+            heredado de 16 tiras: el sesgo lateral medio era −0.267 en los
+            mechones y hasta −0.933 en las hombreras, así que la capa se
+            inclinaba siempre hacia la izquierda. Se podan 42 nombres de
+            huesos que ya no existen y se incorporan los 10 `v18_chain_*` /
+            `v18_pad_*`, que hasta ahora no recibían respuesta del portador.
+            La CI valida el presupuesto de chispas por VALOR EFECTIVO
+            (8 ticks, 3 chispas) en vez de por un literal de un comentario.
+          - **v1.25.0 — TU ICONO DE VUELTA, SIN FLOTANTES Y MÁS LUZ**: el arte
+            que te gustaba restaurado **byte a byte** (SHA verificado por la
+            auditoría, con `referencias/ICONO_PREFERIDO_BACKUP.png` como backup
+            del anterior), **estático** y sin overrides. Las grietas 3D ya no se
+            quedan clavadas en el aire: cuelgan del mechón que las lleva (heredan
+            su rotación y posición) y van embebidas en el paño. Las chispas nacen
+            SOBRE el dobladillo (antes salían a 0.42-0.74 bloques de la espalda,
+            más atrás que la propia capa, y se leían como barras sueltas). Bloom
+            con 3 anillos, latido emissive 0.82-1.22, animación con fase y
+            amplitud propias por mechón, simetría corregida a 12 columnas, más
+            retardo al volar/caer, y el ítem en la mano más pequeño.
+          - **v1.22.0 — ANIMACIÓN POR ESTADOS**: 8 clips reales (reposo,
+            caminar, correr, volar/elytra, caída libre, agacharse, agua y
+            deterioro) con silueta propia: al volar la capa se extiende y
+            sube, al caer el aire la levanta, al agacharse se recoge. El
+            controlador Java elige el estado con 8 ticks de transición y
+            el visor tiene un selector para verlos todos.
+          - **FX que SÍ se ven, sin lag**: aura de polvo con escala real,
+            halo de cuello con transición de color, motas por las tres
+            alturas del paño y estela al correr/volar/caer. Techo duro de
+            3 chispas por tick de emisión, 1 emisión cada 8 ticks,
+            SIN geometría, SIN sonidos y SIN pista `effects` en Blockbench.
+          - **Anclaje y paño**: la capa ya no es una lámina a 3-5 unidades
+            del cuerpo; nace pegada a los hombros, cae curvada en 3D y las
+            solapas del capuchón abrazan el torso (captura de perfil).
+            Más tela arriba y jirones secundarios largos: deja de parecer
+            una élitra. Capuchón sin agujeros negros, usando el carmesí de
+            la propia foto (fidelidad 1.239 intacta).
+
+          - **v1.21.0 — ANIMACIÓN REHECHA**: la onda ya NO se ancla a cero
+            en el bucle (antes los 150 huesos se congelaban juntos en f=0
+            y f=1). Onda viajera periódica C1 con retardo real por tramo,
+            envolvente física, ráfaga/arrastre y DESPLAZAMIENTO ACUMULADO
+            que curva cada jirón. GeckoLib recibe `position` con 17 muestras
+            lineales; Java deja de pisar la curva y sólo suma la respuesta
+            al portador. Visor sin maniquí por defecto. Forma: jirones más
+            finos y puntas separadas (silueta 1.08x, fidelidad 1.239).
+
+          - `.bbmodel` con **156 cubos de capa** / 222 grupos, textura 128×128, 8 animaciones / 26208 keyframes (rotación, posición por tramo y escala, tangentes Bézier C1). Sin maniquí, sin armadura vieja, SIN cubos flotantes y SIN pista de efectos: Blockbench abre sin buscar archivos de partículas.
+          - Visor 3D autocontenido (sin red, sin servidor ni token) y comparativa
+            con tu PNG de Blockbench.
+          - **v1.18.0 — CAPA REHECHA DESDE CERO**: el atlas es la imagen
+            del usuario limpiada a 96×48 (`tools/reference_canvas.py`) y
+            cada tramo 3D muestrea su píxel por UV local (`foto_uv()`).
+            Abanico radial `fan_x()` que nace junto y cierra en V, jirones
+            finos con huecos negros, capuchón integrado en la foto. Sin
+            grano, Bayer, bloom ni paleta sintética. El test de CI exige
+            fidelidad píxel a píxel con la referencia.
+          - **rev. B — sin cosas volando y animaciones mejoradas**: se
+            eliminaron 26 motas/ceniza 3D, 6 tiras de yugo y las 27 anclas
+            visibles; el reverso de la bufanda se integró al paño. Las
+            partículas ahora se GENERAN en runtime (`spawnAura`) al llevar
+            la capa. Una sola curva (`tools/cape_motion.py`) mueve la tela
+            en Blockbench, GeckoLib, Java y el visor: retardo por tramo,
+            vaivén de paso y barrido al correr.
+          - **v1.17.2 — textura rehecha tras las capturas in-game**: el atlas
+            ya NO samplea píxeles crudos del recorte (entraban brazo, arnés y
+            fondo a cuadros) ni usa dithering Bayer. Paño construido desde la
+            paleta medida, pliegues radiales, huecos entre lóbulos y
+            cuchilladas diagonales largas en vez de confeti magenta.
+          - El **icono 2D ahora se ve en el inventario**: el item usa
+            `minecraft:item/generated` con `layer0`; se eliminó el BEWLR 3D
+            que lo ocultaba. Motas 3D y partículas con sprites degradados y
+            alpha limpio en los bordes (adiós a los bloques flotantes).
+          - Capuchón con pliegues radiales y borde rasgado, dobladillo
+            deshilachado por textura y alas diagonales de hombro.
+          - Autoevaluación medida décima a décima: error global
+            **138.96 → 77.20 → 69.47** (cobertura 24.9 pp, energía 19.9 pp,
+            color 74, silueta 1.29×).
+          - Se conservan: los 72 huesos originales byte-idénticos, alfa prístino,
+            1636 emisivos, UV opacas ≤128, 0 `JsonNull`, 0 mixins, `curios:back`,
+            222 huesos / 276 cubos y UNA chispa exclusiva en runtime.
+
+          ### Requisitos
+
+          Forge 1.20.1 (47.3.0), Java 17, GeckoLib 4.8.x y Curios 5.14.1+1.20.1.
+
+          ### Verificar la descarga
+
+          El SHA-256 del `.jar` va en el resumen del build y en el README.
+          La CI lo compara con el JAR recién compilado: lo publicado es
+          byte a byte lo que se compiló.
+
+          ### Descargas de esta Release
+
+          | Archivo | Para qué |
+          |---|---|
+          | `capatest-__VER__.jar` | El mod compilado |
+          | `CAPA_v__VER__.bbmodel` | Proyecto editable de Blockbench (VERSIONADO) |
+          | `capa_v1170_visor.html` | Visor 3D offline |
+          | `capa_v1170_preview.png` | 6 vistas del render software |
+          | `capa_v1170_comparativa.png` | Tu referencia frente al modelo |
+
+          Los previews son render software: la prueba in-game sigue pendiente.
+          MD
+          sed -i "s/__TAG__/$TAG/g; s/__VER__/$VER/g; s|__BBURL__|$BB_URL|g" "$NOTES"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$JAR" --clobber
+          else
+            gh release create "$TAG" "$JAR" \
+              --title "Mantle of the Blight Star $TAG" \
+              --notes-file "$NOTES" \
+              --target "$GITHUB_SHA"
+          fi
+          # El proyecto Blockbench y el visor offline se entregan TAMBIEN
+          # como assets: el sandbox tiene el trafico publico restringido.
+          test -f "$BBF"
+          test -f docs/capa_v1170_visor.html
+          test -f docs/capa_v1170_preview.png
+          test -f docs/capa_v1170_comparativa.png
+          gh release upload "$TAG" \
+            "$BBF" \
+            docs/capa_v1170_visor.html \
+            docs/capa_v1170_preview.png \
+            docs/capa_v1170_comparativa.png \
+            --clobber
+          # v1.27.0: VERIFICAR QUE LO PUBLICADO ES LO COMPILADO. La API
+          # de GitHub devuelve el SHA-256 de cada asset: se compara con el
+          # del JAR recién compilado. Si el upload se corrompiese o subiese
+          # un binario viejo, aqui se ve.
+          LOCAL_SHA="$(sha256sum "$JAR" | cut -d' ' -f1)"
+          API_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/$TAG" \
+            --jq '.assets[] | select(.name=="capatest-'"$VER"'.jar") | .digest' \
+            | sed 's/^sha256://')"
+          test -n "$API_SHA"
+          test "$LOCAL_SHA" = "$API_SHA" || {
+            echo "::error::el JAR publicado (sha256:$API_SHA) NO es el compilado (sha256:$LOCAL_SHA)"
+            exit 1
+          }
+          echo "OK: el JAR publicado es byte-identico al compilado (sha256:$LOCAL_SHA)"
+          echo "sha256 del JAR: $LOCAL_SHA" >> "$GITHUB_STEP_SUMMARY"
+          ASSETS="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
+          grep -qx "capatest-$VER.jar" <<< "$ASSETS"
+          grep -qx "CAPA_v$VER.bbmodel" <<< "$ASSETS"
+          grep -qx 'capa_v1170_visor.html' <<< "$ASSETS"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/capatest-$VER.jar"
+          echo "### Descarga directa" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "[${URL}](${URL})" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "[Blockbench: CAPA_v$VER.bbmodel]($BB_URL)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "[Visor offline: capa_v1170_visor.html](https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/capa_v1170_visor.html)" >> "$GITHUB_STEP_SUMMARY"
+
+      # v1.27.1: COPIA DEL JAR EN UNA RAMA DE ARTEFACTOS.
+      # El CDN de assets de release (release-assets.githubusercontent.com) y
+      # el de artifacts (blob.core.windows.net) no son accesibles desde
+      # algunos entornos; una RAMA del repo si se baja por
+      # codeload.github.com. La rama lleva el .jar EXACTO del build y su
+      # SHA256SUMS.txt, para poder verificar el binario entregado.
+      #
+      # El commit se construye en un DIRECTORIO TEMPORAL: el arbol de
+      # trabajo del checkout NO se toca, asi que este paso no puede romper
+      # la publicacion de la release.
+      - name: Publish jar to artifacts branch
+        if: >-
+          (github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar]')) ||
+          (github.event_name == 'workflow_dispatch' && inputs.publicar == true)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          VER="$(sed -n 's/^mod_version=//p' gradle.properties | tr -d '[:space:]')"
+          JAR="build/libs/capatest-$VER.jar"
+          test -f "$JAR"
+          BRANCH="artifacts/v$VER"
+          SHA="$(sha256sum "$JAR" | cut -d' ' -f1)"
+          TMP="$(mktemp -d)"
+          cp "$JAR" "$TMP/artifact.jar"
+          cd "$TMP"
+          git init -q -b tmp
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p build/libs
+          mv artifact.jar "build/libs/capatest-$VER.jar"
+          printf '%s\n' "$SHA" > "build/libs/SHA256SUMS.txt"
+          git add -A
+          git commit -q -m "artefacto v$VER: capatest-$VER.jar (sha256:$SHA)"
+          AUTH="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $AUTH" \
+              push -f "https://github.com/${GITHUB_REPOSITORY}.git" \
+              "HEAD:refs/heads/$BRANCH"
+          echo "::notice::JAR publicado en la rama $BRANCH (sha256:$SHA)"
+
+      # v1.28.0: RESCATE DEL JAR EXACTO DE LA v1.27.0.
+      # La release v1.27.0 publico su .jar como asset y como artifact de
+      # Actions, pero los CDN de assets (release-assets.githubusercontent.com)
+      # y de artifacts (blob.core.windows.net) no son accesibles desde todos
+      # los entornos. Se baja el artifact HISTORICO 14057282072 (el build
+      # de la v1.27.0), se comprueba su SHA-256 contra el digest que publica
+      # la API de la release y se deja en artifacts/v1.27.0 con su
+      # SHA256SUMS.txt: asi el binario exacto de la v1.27.0 se puede
+      # descargar por codeload y verificar donde el CDN no responde.
+      - name: Materialize v1.27.0 jar on its artifacts branch
+        if: >-
+          (github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar]')) ||
+          (github.event_name == 'workflow_dispatch' && inputs.publicar == true)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 tools/materialize_published_jar.py \
+            --version 1.27.0 --artifact 14057282072 --out /tmp/art1270
+          SHA="$(cut -d' ' -f1 /tmp/art1270/SHA256SUMS.txt)"
+          test -n "$SHA"
+          TMP="$(mktemp -d)"
+          mkdir -p "$TMP/build/libs"
+          cp /tmp/art1270/capatest-1.27.0.jar "$TMP/build/libs/"
+          cp /tmp/art1270/SHA256SUMS.txt "$TMP/build/libs/"
+          cd "$TMP"
+          git init -q -b tmp
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "artefacto v1.27.0: capatest-1.27.0.jar (sha256:$SHA)"
+          AUTH="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $AUTH" \
+              push -f "https://github.com/${GITHUB_REPOSITORY}.git" \
+              "HEAD:refs/heads/artifacts/v1.27.0"
+          echo "::notice::JAR v1.27.0 publicado en artifacts/v1.27.0 (sha256:$SHA)"

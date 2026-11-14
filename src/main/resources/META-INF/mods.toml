@@ -1,0 +1,257 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="${mod_authors}"
+description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
+
+v1.28.0: TU ICONO DE VUELTA Y EL PANO DESATURADO. El icono 2D es el
+PREFERIDO de la v1.25.0, byte a byte (SHA c90670ba...), como pediste al
+compararlo con el rediseno de la v1.27.0; el rediseño queda guardado
+como historico. El atlas de la capa 3D se DESATURA para hablar el mismo
+color que ese icono y que tu foto de referencia: el error de color medido
+contra la referencia baja de 321 a 210. La geometria, las ocho
+animaciones y las 27 anclas v15_cloth_* NO cambian: las anclas siguen
+existiendo y solo se apaga su render. La v1.27.0 y la v1.27.1 quedan
+como historico, sin sobrescribir. Ademas el JAR se deja en una rama de
+artefactos (artifacts/v1.28.0) ademas de la release, para poder
+descargarlo y verificar su SHA-256 donde el CDN de releases no responde.
+
+v1.27.1: PATCH DE ENTREGA. El modelo es IDENTICO a la v1.27.0 (mismo
+geo, misma textura, mismas animaciones): esta version existe para que el
+arreglo del visor (las 27 anclas de la onda que ya no se dibujan) quede
+publicado en su PROPIA release, sin sobrescribir la v1.27.0. Ademas el
+JAR se deja ahora en una rama de artefactos (artifacts/v1.27.1) ademas
+de la release, para poder descargarlo y verificar su SHA-256 donde el CDN
+de releases no es accesible.
+
+v1.27.0: MOTAS NEGRAS FUERA, HOMBRERA Y CADENA REHECHAS, ICONO LEGIBLE.
+El visor 3D de docs/ deja de pintar las 27 anclas de la onda (ya no lo
+hacia el runtime) y trae una casilla de diagnostico para verlas. Los
+entregables de docs/ son reproducibles con tools/build_deliverables.py.
+Las 27 anclas v15_cloth_* (cubos de 0.16 que existen solo para dar pose
+a la onda) ya NO se dibujan: el hueso, la jerarquia y las ocho pistas de
+animacion se conservan intactos, solo se apaga su render. La hombrera pasa
+de ser un cubo gris plano (que en el juego se leia como una masa negra) a
+cuatro piezas de acero por hombro con filo de luz y filete carmesi; la
+cadena pasa de ocho motas sueltas a ocho anillos de acero que se leen
+como cadena sobre la espalda. El icono 2D se redisena: mantiene la
+silueta aprobada (dos picos de cuello y faldon de cinco puntas) pero con
+tres pliegues legibles, acero para hombrera y cadena y solo CUATRO pixeles
+magenta, para que se lea en la hotbar. Nuevo: controles de visibilidad
+(capa.visibilidad=normal|anclas|hombreras|cadena) para ver y aislar cada
+pieza por separado.
+
+v1.26.0: EJES DE SIMETRIA Y LISTA DE HUESOS CORREGIDAS. El eje lateral
+de cada familia pasa a ser (columnas - 1) / 2 medido sobre el geo real
+(mechones 12 -> 5.5, pano de 9 columnas -> 4.0, grietas 10 -> 4.5,
+capucha 7 -> 3.0, cuello 5 -> 2.0, cadena 8 -> 3.5, hombreras 2 -> 0.5).
+Antes TODO usaba 7.5 (heredado de 16 tiras de la elitra): la capa se
+inclinaba siempre hacia el mismo lado y el pano izquierdo ondeaba el
+doble que el derecho. La lista de huesos de deterioro se poda (42
+nombres que ya no existen) e incorpora los 10 huesos v18_chain/v18_pad,
+que hasta ahora NO recibian respuesta del portador. La CI valida el
+PRESUPUESTO EFECTIVO de chispas (8 ticks, 3 por tick) parseando el
+codigo, en vez de buscar un literal en un comentario.
+
+v1.25.0: EL .BBMODEL TAMBIEN CAMBIA DE VERSION. El exportador lee
+mod_version y escribe docs/CAPA_v1.25.0.bbmodel, con `name` interno
+capa_deteriorer_evilsaiyan_v1_25_0 y asset de Release del mismo nombre.
+Forma contra la captura: alas exteriores diagonalizadas que mueren a
+t~0.66-0.80, solo los jirones centrales llegan al suelo (V real),
+jirones un 16% mas finos para dejar huecos negros, y bufanda en cuenco
+sin cuernos. Silueta medida 1.10x, fidelidad de atlas 1.239.
+
+v1.19.0: SIN PIEZAS VOLANDO + ANIMACIONES REHECHAS. Se eliminan del
+modelo las motas/ceniza 3D, el yugo y las anclas visibles; el reverso
+de la bufanda se integra al pano. Las particulas se generan en runtime
+con spawnAura() al equipar la capa, no como geometria. El .bbmodel ya
+no referencia JSONs de Snowstorm (Blockbench abre sin avisos). Una
+unica curva C1 (tools/cape_motion.py) mueve la tela en Blockbench,
+GeckoLib, Java y el visor. Abanico radial estrechado 10%: silueta
+1.00x frente al PNG y fidelidad de atlas 1.239.
+
+v1.18.0: CAPA REHECHA DESDE CERO a partir de la imagen. El atlas es la
+propia referencia limpiada (sin maniqui, arnes ni checkerboard) y cada
+tramo 3D muestrea por UV local el pixel que le corresponde; la geometria
+pasa a un abanico radial que nace junto bajo la bufanda y cierra en V.
+
+v1.17.3: el .bbmodel de Blockbench ya muestra SOLO la capa (se eliminaron
+el maniquí Steve/Alex y los 126 cubos de la armadura antigua que el juego
+ocultaba); capuchón solapado con los jirones y alas de hombro recogidas.
+
+v1.17.2: TEXTURA REHECHA tras las capturas in-game. El atlas ya NO samplea
+pixeles crudos del recorte (entraban el brazo, el arnes y el fondo a cuadros)
+ni usa dithering Bayer: se construye desde la paleta medida, con pliegues
+radiales y cuchilladas largas. El item usa minecraft:item/generated con el
+icono 2D, porque el renderer 3D plegado lo ocultaba en el inventario. Las
+motas 3D y las particulas pasan a sprites con degradado y alpha limpio.
+
+v1.17.1: build del modelo mas reciente (rondas v1283 y v1331). Yugo del
+capuchon calibrado contra el PNG, guiones de energia alargados, dobladillo
+deshilachado por textura, alas diagonales de hombro y paño adelantado en
+t=0.4..0.8. Error de autoevaluacion 138.96 -> 77.20 -> 67.95. La Release
+v1.17.0 anterior contenia una build mas antigua; esta es la vigente.
+
+v1.17.0: EMPIEZA DE 0 USANDO LA REFERENCIA DEL USUARIO. El PNG de
+Blockbench se guarda en referencias/, tools/reference_trace.py mide la
+envolvente (31 puntos), la paleta por fila (21 filas) y 54 grietas rosa,
+y tools/cape_shape.py define el ABANICO de 16 jirones que nacen estrechos
+en el cuello, se abren a +-9.2 unidades y acaban en puntas desiguales.
+tools/texture_pipeline.py DES-ABANICA el recorte limpio de la captura en
+el atlas 96x48: cada cinta lleva los colores que le corresponden en la
+imagen. Capucha carmesi gruesa con borde rasgado, agujeros negros, 26
+motas rosa flotantes. Se corrige ademas el signo de la rotacion Z
+(Blockbench niega X), que hacia que el abanico se cerrase al reves.
+Icono 64x64 BYTE-IDENTICO (aprobado). 246 huesos / 300 cubos, 4
+animaciones Blockbench con 3888 keyframes. La cabeza blanca del maniqui
+es solo escala y NO se modela.
+
+v1.16.0: LA SKIN, REHECHA DE VERDAD. Se corrige la causa de la rejilla:
+cantos claros en cada cubo (ahora un texel casi negro), UV a trozos (ahora
+una banda vertical continua por cinta) y emisivos en bloque (ahora anillos
+de distancia). Canvas carmesi -> violeta -> casi negro con ~60 grietas
+cortas aisladas, agujeros y sarga; 9 cintas anchas de 5 tramos con puntas
+escalonadas; capucha en cupula con hombreras inclinadas y 9 dientes;
+respaldo convertido en sombras finas para que se vean los huecos; item
+plegado unificado sin dorados ni cian. Icono 64x64 BYTE-IDENTICO (aprobado).
+206 huesos / 298 cubos, 4 animaciones Blockbench (2992 keyframes).
+
+v1.15.0: CORRECCION VISUAL Y ANIMACIONES. Se elimina la jaula de 78 tiras
+finas que no se parecia a la referencia: ahora hay 27 paneles de pano grueso,
+11 cintas anchas solapadas de 3 tramos, 18 flecos de dobladillo y una bufanda
+de 2 anillos de 16 segmentos con borde dentado y 24 flecos (8 tiras largas).
+Textura mucho mas oscura: carmesi, morado desvaido y ceniza, con solo 12
+venas rosa. El .bbmodel exporta UUID canonicos y CUATRO animaciones reales
+de Blockbench (5008 keyframes sobre 212 huesos): idle, caminar, correr y
+deterioro; el maniqui Steve/Alex lleva cara y tunica. 290 huesos / 377 cubos.
+
+v1.14.0: DETERIORO / EVIL SAIYAN ROSE. Geometria rehecha con collar de dos
+anillos de 14 segmentos, 20 flecos, yugo de union, 78 jirones largos en 3
+capas (espesor 0.25-0.50 e inflate 0.01/0.03/0.05), 56 microvoxeles de 1-2
+px, 18 venas y 8 fragmentos de ceniza. Textura de carmesi oscuro, morado
+desvaido y gris ceniza con grietas rosa/magenta; 1636 emisivos
+redistribuidos. Animacion con fases independientes, radianes y fail-safe.
+Icono pixel art aprobado adaptado a la nueva paleta. 339 huesos / 484 cubos.
+
+v1.12.0: VOLUMEN 3D REAL E ICONO REDISENADO. La tela deja de ser una
+lamina de 0.10 y pasa a bloques de 0.85 con relieve de pliegues de 0.28;
+se anaden hombreras TRASERAS solidas, cuello levantado, placas escalonadas,
+cadenas 3D, medallon con cuerpo y gorget, todos visibles desde la espalda.
+Los cantos del atlas se aclaran para que el grosor se lea como sarga y no
+como barrotes. El icono pixel art 16x16 se redibuja por completo: hombreras
+con gemas, manto trapezoidal, broche diamante, bordado y feston de 3 puntas.
+Se conservan violeta + oro + cian. 193 huesos / 281 cubos.
+
+v1.11.0: ICONO CON SILUETA PROPIA. El icono pixel art 16x16 de v1.10.0
+gusto en ESTILO pero copiaba la forma de las dos referencias (que son el
+mismo icono recoloreado: un pico de capucha centrado, cuerpo cuadrado y
+hendidura central inferior en dos piernas). v1.11.0 mantiene la tecnica
+aprobada (paleta plana, contorno duro, Image.NEAREST, sin AA) pero dibuja
+una forma nueva y simetrica: cuello alto de DOS picos con escote en V,
+hombreras que sobresalen, cintura cenida, faldon acampanado, tres pliegues
+verticales, broche diamante en la garganta, estrella cian de Blight Star y
+dobladillo de TRES puntas (eco de FOLDS=3), NO la hendidura de las refs.
+Solo cambia el icono: todas las demas texturas quedan byte-identicas.
+v1.10.0: ICONO PIXEL ART 2D/RPG. Las dos referencias 16x16 del usuario son
+el mismo icono recoloreado (capucha, hombros, pliegues, dobladillo, paleta
+plana, contorno duro, sin antialiasing). Se recupera esa silueta en
+ICON_PIXEL_MAP/ICON_PALETTE (11 colores), se amplia 4x con Image.NEAREST a
+64x64 y se anaden broche de 5 pixeles, estrella cian y vetas frias. Fin de la
+ilustracion suave con degradados de v1.9.0.
+TEXTURA REWORKADA: el gran diamante magenta de lineas finas y el bloom rosa se
+sustituyen por sarga tejida (trama, diagonal, urdimbre, grano), medallon
+RELLENO con facetas y engarce dorado, bordado a puntadas (stitch) en yugo,
+doble ribete, constelacion, valles de pliegue y dobladillo, y cian solo en el
+nucleo de Blight Star. Item plegado, hombreras y gema retenidos a oro/violeta.
+Alfa base, 1636 texels emisivos, UV<=128, canvas 96x48 y 648 caras UV nuevas
+en zonas opacas SIN cambios. Se conservan relieve 3D (171 huesos / 234 cubos),
+arnes frontal, animation.item, aura muda de presupuesto fijo y fail-safes.
+
+Historico v1.9.0: combinacion del nombre cosmico anterior con el planeta Blight Star.
+El nombre visible queda en ingles en ambos idiomas; el lore sigue traducido.
+Icono rehecho desde dos referencias 16x16 (hombreras, cuello alto, broche
+calido, feston y ribete luminoso). Anade un motivo de estrella marchita en el
+medallon, icono y broche; 4 fragmentos orbitales 3D animados; RELIEVE 3D
+notorio (9 nervios en las crestas, 2 cortinas laterales continuas y 5 pesas
+de dobladillo); cuello trasero, tirantes y un ARNES DELANTERO con hombreras,
+tiras, cadenas, placa, bandas y faldillas animadas con giro/sprint. El item
+plegado sube a 36 huesos con dos hombreras y estrena animation.item (bob,
+apertura de pliegues, giro y pulso del broche) para GUI/hotbar/mano. Total:
+171 huesos / 234 cubos. Segundo tipo de particulas frias en orbita corta,
+presupuesto fijo de maximo 4 particulas por tick de emision y aura MUDA: sin
+playSound ni SoundEvent propio (solo el equipamiento vanilla). Destellos cian
+en los glow layers y brillo pulsante mas rico. Se conserva la tela lisa y
+continua de v1.7/v1.8, los 72 huesos originales, el canvas 96x48, el alfa
+base y los 1636 texels emisivos. Nombre interno
+capatest:capa_deteriorer_evilsaiyan conservado por compatibilidad con mundos,
+comandos, tag Curios, geometrias y texturas.
+v1.8.0: item plegado reconstruido como bulto 3D con grosor real (34 huesos),
+icono y atlas con proporcion correcta (fin del canvas estirado), canvas
+redisenado con medallon completo, doble ribete, constelacion, sigilos y
+dobladillo de 4 texels, 5 estrellas 3D emisivas, glowmask pulsante del item y
+efecto full-sky en mano. Nombre y descripcion neutros, sin referencia Saiyan.
+v1.7.0: pliegues anchos coherentes. FOLDS=3 es la unica fuente de verdad:
+el sombreado del canvas y el relieve 3D en Z muestrean la misma onda coseno,
+con 9 creases geometricas en los valles y 9 lenguetas de feston real.
+Medallon con engarces, pespuntes, desgaste sutil y movimiento por pliegue
+en bloque. 126 huesos / 180 cubos. Icono, item plegado y capa equipada
+siguen compartiendo el canvas 96x48; alfa y emisivos intactos.
+v1.6.1: corrige el crash al cargar geo/item/cape_folded.geo.json. El hueso
+raiz ya no declara "parent": null (Gson/GeckoLib 4.8.x no tolera JsonNull);
+el pipeline y el CI verifican que no quede ningun null en los recursos.
+Aspecto identico a v1.6.0.
+v1.6.0: UNA sola pieza de tela. Mosaico 9x3 sobre un unico rectangulo global
+con canvas 96x48 compartido por la capa equipada, el icono y el item 3D
+plegado; sin distorsion por seccion ni costuras pintadas. 61 huesos boxy
+originales ocultos en runtime, 123 huesos / 177 cubos, vuelo de campana del
+1% y caida progresiva. Se mantiene el fix de crash de v1.5.1: radianes,
+cache de huesos, sin getBakedModel() por frame y fail-safe cosmético.
+Los 72 huesos y las cuatro animaciones originales siguen intactos; alfa
+base y cobertura emisiva sin cambios. Descarga directa del .jar.
+v1.5.1: correccion del crash de rotacion de v1.5.0; superficie 13x3 con
+168 huesos / 235 cubos. v1.5.0 esta rota, no usar.
+v1.4.0: capa equipada con relieve real (98 huesos / 152 cubos) e item 3D
+plegado de 33 huesos con siete pliegues, yugo, cuello, broche y puntas.
+Animaciones originales, alfa y glowmask intactos. Descarga directa del .jar.
+v1.3.0: modelo 3D plegado de 8 huesos con atlas 128x128 continuo, texturas
+procedurales multicapa, aura de brasas propia mucho más tranquila y descarga
+directa del .jar desde GitHub Releases.
+v1.2.0: modelo 3D en inventario, partículas propias con sprites animados y
+compatibilidad opcional con el slot "back" de Curios API.
+v1.1.0: atlas de textura mejorado respetando el UV, icono 64x64, animaciones
+derivadas de sprint y salto sin alterar el idle/moving original, brillo emisivo
+pulsante y correcciones de renderizado.'''
+
+[[dependencies.${mod_id}]]
+modId="forge"
+mandatory=true
+versionRange="${forge_version_range}"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="minecraft"
+mandatory=true
+versionRange="${minecraft_version_range}"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="geckolib"
+mandatory=true
+versionRange="[4.8.1,)"
+ordering="NONE"
+side="BOTH"
+
+# Curios es OPCIONAL: sin él la capa se equipa en el pecho como siempre.
+[[dependencies.${mod_id}]]
+modId="curios"
+mandatory=false
+versionRange="[5.14.1,)"
+ordering="AFTER"
+side="BOTH"

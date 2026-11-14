@@ -1,0 +1,45 @@
+# Gradle / ForgeGradle
+.gradle/
+build/
+out/
+run/
+runs/
+
+# Python (herramientas de generación de assets)
+__pycache__/
+*.py[cod]
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+.vscode/
+bin/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencias y previews locales (no se versionan)
+.cache/
+tools/_deps/
+
+# Visor local de previsualizacion.
+#
+# v1.27.0: el CÓDIGO FUENTE del visor SI se versiona (preview/app.js y
+# preview/index.html, ~41 KB). Antes todo `preview/` estaba ignorado, así
+# que el visor publicado (docs/capa_v1170_visor.html, 14 MB) no se podía
+# reconstruir desde un clon limpio: sus fuentes no estaban en el repo.
+# Sólo se ignoran los ASSETS, que son salidas generadas.
+preview/assets/
+preview/*.raw
+
+# Copia local del JAR publicado (v1.27.1).
+# El binario NO se versiona: vive en la Release y en la rama de
+# artefactos `artifacts/v1.27.1` del repo, con su SHA256SUMS.txt.
+# Aqui solo se deja la descarga que se ha verificado contra el asset.
+entregables/
