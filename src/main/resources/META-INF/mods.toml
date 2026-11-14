@@ -9,6 +9,20 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.32.0: CUELLITO, CAPA PARA F5 Y TEXTURA/EFFECTOS MAS FINOS.
+Se sigue mejorando el modelo en todos sus aspectos. (0) F5: la capa
+se VOLTEA a -Z (detras del jugador): antes quedaba en +Z, el FRONT,
+y en la vista F5 (camara detras) se ocultaba por el cuerpo y se veia
+invisible. Ahora la capa + cuello renderizan detras, visibles en F5.
+(1) GEOMETRIA: se anade el CUELLITO (3 bloques chiquitos v19_* junto
+a la nuca) para que la capa parezca ATADA al jugador. (2) ANIMACION:
+la onda viajera suma un SEXTO armonico (k=6, amplitud 0.035) para el
+destello fino de los hilos mas finos al viento. (3) TEXTURA: el
+entramado tejido suma una TERCERA capa de hilos a frecuencia doble
+de la fina (freq*4.6, amplitud 0.22x). (4) EFECTOS: el shimmer emisivo
+suma un tercer componente y la chispa un tercer parpadeo, ambos a
+mayor frecuencia y fase distinta.
+
 v1.31.0: QUINTO ARMONICO, TELA TEJIDA FINA Y EFECTOS MAS ORGANICOS.
 Se sigue mejorando el modelo en todos sus aspectos. (1) ANIMACION:
 la onda viajera suma un QUINTO armonico (k=5, amplitud 0.06) a la

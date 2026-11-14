@@ -123,10 +123,17 @@ def _weave(arr, box, strength=5.0, freq=7.0) -> None:
     individuales, así el paño lee como tejido fino y no como una
     lámina de una sola frecuencia. Determinista y simétrica, igual que
     la capa gruesa: no toca la calibración de color.
+
+    v1.32.0: se suma una TERCERA capa de hilos a frecuencia doble de
+    la fina (freq*4.6, amplitud 0.22x) para el temblor de los hilos
+    más finos: el paño lee como un tejido de hilo estrecho y no como
+    una lámina de dos frecuencias. Idempotente, simétrica y sin ruido:
+    no toca el degradado carmesí->morado ni la calibración de color.
     """
     u0, v0, u1, v1 = box
     h, w = v1 - v0, u1 - u0
     freq2 = freq * 2.4
+    freq3 = freq * 4.6
     for j in range(h):
         for i in range(w):
             warp = math.sin(((i + j) / w) * math.tau * freq)
@@ -136,6 +143,10 @@ def _weave(arr, box, strength=5.0, freq=7.0) -> None:
             warp2 = math.sin(((i + j) / w) * math.tau * freq2)
             weft2 = math.sin(((i - j) / w) * math.tau * freq2)
             d += strength * 0.35 * (warp2 * 0.60 + weft2 * 0.40)
+            # v1.32.0: capa de hilos más finos a frecuencia doble.
+            warp3 = math.sin(((i + j) / w) * math.tau * freq3)
+            weft3 = math.sin(((i - j) / w) * math.tau * freq3)
+            d += strength * 0.22 * (warp3 * 0.60 + weft3 * 0.40)
             arr[v0 + j, u0 + i, 0] = max(0, min(255, arr[v0 + j, u0 + i, 0] + d))
             arr[v0 + j, u0 + i, 1] = max(0, min(255, arr[v0 + j, u0 + i, 1] + d * 0.2))
             arr[v0 + j, u0 + i, 2] = max(0, min(255, arr[v0 + j, u0 + i, 2] + d * 0.7))

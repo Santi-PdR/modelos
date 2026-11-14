@@ -48,6 +48,7 @@ INFLATE = (0.01, 0.03, 0.05)
 COLLAR_FRONT = 7
 COLLAR_FLAPS = 7
 COLLAR_BACK = 5
+CUEILLO = 3  # v1.32.0: 3 bloques chiquitos junto a la nuca (cuellito)
 PADS = 2
 CHAIN_LINKS = 8
 CRACKS = 10
@@ -81,6 +82,7 @@ CHAIN_UV = band(113.0, 13.0, 1.0, 13.0)     # anillo del eslabón
 CHAIN_TOP_UV = band(97.0, 13.0, 81.0, 13.0)  # canto superior del eslabón
 COLLAR_UV = band(97.0, 28.0, 17.0, 21.0)
 NEON_UV = band(98.0, 28.0, 41.0, 21.0)
+CUEILLO_UV = band(97.5, 28.0, 65.0, 13.0)  # parche del cuellito (ruff)
 
 
 def cowl_uv(w: float, h: float, i: int = 0) -> dict:
@@ -177,6 +179,32 @@ def section_for_t(t: float) -> str:
     return "cape_bottom"
 
 
+# Prefijos de huesos que conforman la CAPA (toda ella está en +Z, el FRONT
+# del jugador). En la vista F5 (cámara atrás) la capa queda oculta por el
+# cuerpo porque se renderiza delante. Voltear el Z de pivotes y cubos de
+# estos huesos refleja la capa completa a -Z (detrás del jugador) para que
+# sea visible en F5. El render type es double-sided, así que el culling no
+# afecta.
+CAPE_PREFIXES = ("cape_top", "cape_mid", "cape_bottom", "v15_cloth_",
+                 "v17_cowl_", "v18_pad_", "v18_chain_", "v17_ribbon_",
+                 "v17_vein_")
+
+
+def _flip_cape_z(data: dict) -> None:
+    """Refleja la capa (pivot Z + origin Z de cubos) a -Z para que quede
+    detrás del jugador y sea visible en la vista F5 (cámara desde atrás)."""
+    geo = data["minecraft:geometry"][0]
+    for b in geo["bones"]:
+        if not b["name"].startswith(CAPE_PREFIXES):
+            continue
+        pivot = b.get("pivot")
+        if pivot is not None:
+            pivot[2] = -pivot[2]
+        for c in b.get("cubes", []):
+            o = c["origin"]
+            o[2] = -o[2]
+
+
 def build() -> dict:
     data = json.loads(ORIGINAL.read_text())
     geo = data["minecraft:geometry"][0]
@@ -257,6 +285,26 @@ def build() -> dict:
             [cube16((x - 0.90, y_top - height, 1.15),
                     (1.80, height, 0.80), cowl_uv(1.8, height, i),
                     COLLAR_UV, INFLATE[2])]))
+
+    # ------------------------------------------------------------------
+    # 2b. CUELLITO (v1.32.0): 3 bloques chiquitos junto a la NUCA.
+    #
+    # Para que la capa parezca ATADA al jugador: un pequeño ruff de
+    # tres bloques detrás de la cabeza/cuello que engancha el cape_top
+    # (que queda en -Z tras el volteo para F5). Los bloques miran
+    # hacia atrás (-Z) y se distribuyen en X para lectura de ruff.
+    # ------------------------------------------------------------------
+    for i in range(CUEILLO):
+        fx = (i - (CUEILLO - 1) / 2.0) / max(1.0, (CUEILLO - 1) / 2.0)
+        x = fx * 1.60
+        y = 24.10
+        z = -1.95
+        bones.append(bone(
+            f"v19_cuellito_{i}", "chestplate",
+            [x, y, z], [0.0, 0.0, fx * -5.0],
+            [cube16((x - 0.45, y - 0.45, z - 0.30),
+                    (0.90, 0.90, 0.60), CUEILLO_UV,
+                    COLLAR_UV, INFLATE[1])]))
 
     # ------------------------------------------------------------------
     # 3. HOMBRERAS (pauldron de 3 piezas) + CADENA de 8 eslabones.
@@ -400,6 +448,7 @@ def build() -> dict:
             ("v17_cowl_tooth_", COLLAR_FLAPS),
             ("v17_cowl_back_", COLLAR_BACK),
             ("v18_pad_", PADS), ("v18_chain_", CHAIN_LINKS),
+            ("v19_cuellito_", CUEILLO),
             ("v17_ribbon_", CS.RIBBONS * (CS.SEGS + 1)),
             ("v17_vein_", CRACKS)):
         got = sum(1 for n in names if n.startswith(prefix))
@@ -414,6 +463,7 @@ def build() -> dict:
     thick = [c["size"][2] for b in new for c in b["cubes"]
              if b["name"].startswith("v17_ribbon_")]
     assert thick and all(0.40 <= v <= 0.85 for v in thick), (min(thick), max(thick))
+    _flip_cape_z(data)
     return data
 
 

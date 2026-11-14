@@ -274,11 +274,12 @@ jobs:
                   assert _nb_c == [], _ob['name']
               else:
                   assert _ob_c == _nb_c, _ob['name']
-          assert len(armor_geo['bones']) == 222
-          # v1.30.0: 267 cubos. Los 15 que faltan respecto a v1.27.0 son
+          assert len(armor_geo['bones']) == 225
+          # v1.32.0: 270 cubos. Los 15 que faltan respecto a v1.27.0 son
           # los 5 cubos de cada losa (cape_top/mid/bottom), anulados para
-          # el render en tercera persona de las tiras hijas.
-          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 267
+          # el render en tercera persona de las tiras hijas; se suman los
+          # 3 cubos del CUELLITO v19_cuellito_*.
+          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 270
           new_bones = armor_geo['bones'][72:]
           new_names = {b['name'] for b in new_bones}
           assert {
@@ -1015,7 +1016,7 @@ jobs:
             unzip -p "$jar" assets/capatest/animations/item/cape_folded.animation.json > /tmp/folded-anim.json
             python3 -c 'import json; a=json.load(open("/tmp/folded-anim.json"))["animations"]; assert len(a)==5 and "animation.item" in a; print("OK: 5 animaciones con animation.item dentro del jar")'
             unzip -p "$jar" assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json > /tmp/armor-geo.json
-            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==222 and sum(len(x.get("cubes",[])) for x in b)==267; print("OK: 222 huesos / 267 cubos (losas sin cubos) dentro del jar")'
+            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==225 and sum(len(x.get("cubes",[])) for x in b)==270; print("OK: 225 huesos / 270 cubos (losas sin cubos + cuellito) dentro del jar")'
             echo "OK: clases, mods.toml, 3D item, animation.item, atlas limpio + glowmask, chispa exclusiva y datos Curios presentes"
           done
           test "$found" -eq 1
@@ -1054,6 +1055,23 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.32.0 — CUELLITO, CAPA VISIBLE EN F5 Y TEXTURA/EFECTOS MAS FINOS**:
+            seguir mejorando el modelo en todos sus aspectos. (0) F5:
+            la capa se VOLTEA a `-Z` (detras del jugador): antes quedaba
+            en `+Z` (el FRONT) y en la vista F5 (camara detras) se
+            ocultaba por el cuerpo y se veia invisible; ahora la capa y
+            el cuello renderizan detras, visibles en F5 (el render type
+            es doble cara `armorCutoutNoCull`, sin culling). (1)
+            GEOMETRIA: se anade el CUELLITO (`v19_cuellito_*`), 3
+            bloques chiquitos junto a la nuca para que la capa parezca
+            ATADA al jugador. (2) ANIMACION: la onda viajante suma un
+            SEXTO armonico (`k=6`, amplitud `0.035`) para el destello
+            fino de los hilos mas finos al viento, sin romper la
+            periodicidad ni la costura C1. (3) TEXTURA: el entramado
+            `_weave` suma una TERCERA capa de hilos a frecuencia doble
+            de la fina (`freq*4.6`, amplitud `0.22x`). (4) EFECTOS: el
+            SHIMMER suma un tercer componente y la chispa un tercer
+            parpadeo, ambos a mayor frecuencia y fase distinta.
           - **v1.31.0 — QUINTO ARMONICO, TELA TEJIDA FINA Y EFECTOS MAS ORGANICOS**:
             seguir mejorando el modelo en todos sus aspectos. (1)
             ANIMACION: la onda viajante suma un QUINTO armonico
@@ -1198,7 +1216,7 @@ jobs:
             al portador. Visor sin maniquí por defecto. Forma: jirones más
             finos y puntas separadas (silueta 1.08x, fidelidad 1.239).
 
-          - `.bbmodel` con **156 cubos de capa** / 222 grupos, textura 128×128, 8 animaciones / 26208 keyframes (rotación, posición por tramo y escala, tangentes Bézier C1). Sin maniquí, sin armadura vieja, SIN cubos flotantes y SIN pista de efectos: Blockbench abre sin buscar archivos de partículas.
+          - `.bbmodel` con **270 cubos de capa** / 225 grupos, textura 128×128, 8 animaciones / 38609 keyframes (rotación, posición por tramo y escala, tangentes Bézier C1). Sin maniquí, sin armadura vieja, SIN cubos flotantes y SIN pista de efectos: Blockbench abre sin buscar archivos de partículas.
           - Visor 3D autocontenido (sin red, sin servidor ni token) y comparativa
             con tu PNG de Blockbench.
           - **v1.18.0 — CAPA REHECHA DESDE CERO**: el atlas es la imagen

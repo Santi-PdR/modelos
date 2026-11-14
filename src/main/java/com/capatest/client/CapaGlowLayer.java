@@ -95,6 +95,11 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
         // paño no sea una onda simple: tiene el temblor de la tela.
         float shimmer = 0.05F * (float) Math.sin(phase * 0.5 + 1.2)
                 + 0.03F * (float) Math.sin(phase * 1.7 + 0.4);
+        // v1.32.0: se suma un TERCER shimmer a frecuencia doble y muy
+        // baja amplitud, con fase distinta, para que el brillo recorriendo
+        // el paño tenga el temblor de los hilos finos: no es una onda
+        // lisa ni un pulso llano, es el resplandor de un tejido vivo.
+        shimmer += 0.02F * (float) Math.sin(phase * 3.3 + 2.1);
         float brightness = breathe + shimmer;
         float violet = 0.90F + 0.08F * (1.0F - brightness);
 
