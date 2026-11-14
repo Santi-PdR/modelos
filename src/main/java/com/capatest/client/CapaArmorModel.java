@@ -327,15 +327,26 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         hideOriginalSlabs();
     }
 
-    /** Oculta las losas planas y el detalle boxy; se ejecuta una sola vez. */
+    /**
+     * v1.30.0: las 3 losas (cape_top/mid/bottom) ya NO se ocultan.
+     *
+     * Antes se llamaba a setHidden(true) para tapar la masa plana/boxy,
+     * pero en tercera persona (F5) GeckoLib NO renderiza a los HIJOS de
+     * un hueso oculto: al ocultar la losa, desaparecian también las tiras
+     * v17_ribbon_* (sus hijas), y la capa se volvía invisible al mirarla
+     * desde atrás.
+     *
+     * Ahora el geo ya no tiene cubos en las losas (armor_model_pipeline
+     * los anuló), así que quedan visibles pero sin geometría: nada se
+     * dibuja de ellas y, al NO estar ocultas, sus hijas (las tiras)
+     * renderizan desde cualquier ángulo. Se setea visible explícitamente
+     * para cubrir cualquier recarga del geo.
+     */
     private void hideOriginalSlabs() {
         for (String section : SECTIONS) {
             GeoBone slab = getBone(section).orElse(null);
             if (slab != null) {
-                // setHidden(true) pone childrenHidden=true; lo revertimos para
-                // que los paneles v15_* (hijos) sigan renderizándose. En
-                // GeckoLib 4.8.1 setChildrenHidden NO propaga a los hijos.
-                slab.setHidden(true);
+                slab.setHidden(false);
                 slab.setChildrenHidden(false);
             }
         }
@@ -384,10 +395,12 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         if (visibilidadAplicada == visibilidad && clothReady)
             return;
         // 1) Punto de partida: se restablece todo lo gestionado.
+        // v1.30.0: las losas ya NO se ocultan (ver hideOriginalSlabs):
+        // ocultarlas volvía invisible a las tiras v17_ribbon_* en F5.
         for (String section : SECTIONS) {
             GeoBone slab = getBone(section).orElse(null);
             if (slab != null) {
-                slab.setHidden(true);
+                slab.setHidden(false);
                 slab.setChildrenHidden(false);
             }
         }

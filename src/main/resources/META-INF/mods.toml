@@ -9,6 +9,19 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.30.0: ARREGLO DE JUMP (NO TELETRANSPORTE) Y VISIBILIDAD EN F5.
+Dos correcciones de comportamiento: (1) la animacion de salto
+(animation.air / FLY_ANIM) ya NO teletransporta la capa: cada clip
+(salvo idle) arranca y termina en la pose de reposo de idle, así al
+entrar o salir del clip al saltar la tela interpola en vez de pegar un
+salto brusco de posicion/rotacion. (2) al ver la capa desde F5 (cámara
+trasera) ya NO se vuelve invisible: se anulan los cubos de las 3
+losas cape_top/mid/bottom y se dejan visibles (antes se ocultan con
+setHidden(true), y GeckoLib no renderiza a los hijos de un hueso
+oculto, lo que borraba tambien a las tiras v17_ribbon_*). La textura
+tejida, las animaciones de los ocho estados y los efectos (shimmer +
+twinkle) de la v1.29.0 se mantienen.
+
 v1.29.0: TEXTURA TEJIDA, ANIMACION CON RIBete Y EFECTOS MAS VIVOS. El
 atlas de la capa 3D gana una TELA TEJIDA (hilos warp/weft cruzados) y
 PLIEGOS SECUNDARIOS finos, y se profundiza la capa interna para que el

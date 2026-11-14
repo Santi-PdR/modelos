@@ -94,6 +94,35 @@ jobs:
               assert all(len(_a['bones'][_b]['position']) >= 17 for _b in _ribs), _name
               assert all(_k.get('easing') == 'linear'
                          for _b in _ribs for _k in _a['bones'][_b]['rotation'].values()), _name
+          # v1.30.0: LAS TRANSICIÕNES NO PEGAN SALTO (antigo "teletransporte").
+          # Cada clip (salvo idle) debe arrancar y terminar en la pose de
+          # reposo de idle, para que al entrar/salir (p. ej. saltar ->
+          # animation.air) la tela no dé un salto brusco de posición/rotación.
+          # Se comprueba solo en los huesos GENERADOS (v17_*/v18_*/v15_*),
+          # que son los que mueven la capa; los huesos originales
+          # (cape_top, yugo, ...) llevan sus pistas originales del JSON base.
+          _GEN = ('v17_', 'v18_', 'v15_cloth_', 'v15_hem_')
+          _idle = armor_anim['animations']['animation.idle']
+          for _clip, _a in armor_anim['animations'].items():
+              if _clip == 'animation.idle':
+                  continue
+              for _b in _a['bones']:
+                  if not _b.startswith(_GEN) or _b not in _idle['bones']:
+                      continue
+                  _ik = _idle['bones'][_b]
+                  _bk = _a['bones'][_b]
+                  if 'rotation' in _bk and 'rotation' in _ik:
+                      _rk = sorted(_bk['rotation'].keys(), key=float)
+                      _t0, _t1 = _rk[0], _rk[-1]
+                      assert _bk['rotation'][_t0]['vector'] == _ik['rotation'][_t0]['vector'], (_clip, _b, 'f=0 rot')
+                      assert _bk['rotation'][_t1]['vector'] == _ik['rotation'][_t0]['vector'], (_clip, _b, 'f=1 rot')
+                  if 'position' in _bk and 'position' in _ik:
+                      _pk = sorted(_bk['position'].keys(), key=float)
+                      _p0, _p1 = _pk[0], _pk[-1]
+                      _ikp = _idle['bones'][_b]['position']
+                      _ikp0 = sorted(_ikp.keys(), key=float)[0]
+                      assert _bk['position'][_p0]['vector'] == _ikp[_ikp0]['vector'], (_clip, _b, 'f=0 pos')
+                      assert _bk['position'][_p1]['vector'] == _ikp[_ikp0]['vector'], (_clip, _b, 'f=1 pos')
           assert (root / 'tools/cape_motion.py').is_file()
           assert (root / 'tools/cape_animation_pipeline.py').is_file()
           orig_geo_path = root / 'tools/originals/capa_deteriorer_evilsaiyan.geo.json'
@@ -233,11 +262,23 @@ jobs:
           assert (root / 'referencias/REFERENCIA_CAPA_atlas96.png').is_file()
           armor_geo = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]
           orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
-          assert armor_geo['bones'][:72] == orig_bones
+          # v1.29.0: los 72 huesos originales se conservan, EXCEPTO que las
+          # 3 losas (cape_top/mid/bottom) quedan SIN cubos: se anularon para
+          # que las tiras v17_ribbon_* (hijas) rendericen en tercera persona
+          # (GeckoLib no dibuja hijos de huesos ocultos).
+          for _ob, _nb in zip(orig_bones, armor_geo['bones'][:72]):
+              assert _ob['name'] == _nb['name']
+              _ob_c = _ob.get('cubes', [])
+              _nb_c = _nb.get('cubes', [])
+              if _ob['name'] in ('cape_top', 'cape_mid', 'cape_bottom'):
+                  assert _nb_c == [], _ob['name']
+              else:
+                  assert _ob_c == _nb_c, _ob['name']
           assert len(armor_geo['bones']) == 222
-          # v1.27.0: 282 cubos (los 6 nuevos son las hombreras:
-          # placa, lam, filo y labio en cada hombro).
-          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 282
+          # v1.30.0: 267 cubos. Los 15 que faltan respecto a v1.27.0 son
+          # los 5 cubos de cada losa (cape_top/mid/bottom), anulados para
+          # el render en tercera persona de las tiras hijas.
+          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 267
           new_bones = armor_geo['bones'][72:]
           new_names = {b['name'] for b in new_bones}
           assert {
@@ -974,7 +1015,7 @@ jobs:
             unzip -p "$jar" assets/capatest/animations/item/cape_folded.animation.json > /tmp/folded-anim.json
             python3 -c 'import json; a=json.load(open("/tmp/folded-anim.json"))["animations"]; assert len(a)==5 and "animation.item" in a; print("OK: 5 animaciones con animation.item dentro del jar")'
             unzip -p "$jar" assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json > /tmp/armor-geo.json
-            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==222 and sum(len(x.get("cubes",[])) for x in b)==282; print("OK: 222 huesos / 282 cubos dentro del jar")'
+            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==222 and sum(len(x.get("cubes",[])) for x in b)==267; print("OK: 222 huesos / 267 cubos (losas sin cubos) dentro del jar")'
             echo "OK: clases, mods.toml, 3D item, animation.item, atlas limpio + glowmask, chispa exclusiva y datos Curios presentes"
           done
           test "$found" -eq 1
@@ -1013,6 +1054,20 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.30.0 — ARREGLO DE JUMP (NO TELETRANSPORTE) Y VISIBILIDAD EN F5**:
+            dos correcciones de comportamiento. (1) La animación de salto
+            (`animation.air` / `FLY_ANIM`) ya NO teletransporta la capa:
+            cada clip (salvo `idle`) arranca y termina en la pose de reposo
+            de `idle`, así al entrar o salir del clip al saltar la tela
+            interpola en vez de pegar un salto brusco de posicion/rotacion
+            (antes `air` empezaba/terminaba en `(-0.57, 0.35, 0.90)` frente
+            a los `(-0.09, -0.28, -0.31)` de `idle`). (2) Al ver la capa
+            desde F5 (cámara trasera) ya NO se vuelve invisible: se anulan
+            los cubos de las 3 losas `cape_top/mid/bottom` y se dejan
+            visibles, porque GeckoLib no renderiza a los hijos de un hueso
+            oculto y antes eso borraba tambien a las tiras `v17_ribbon_*`.
+            Se mantiene la textura tejida, las ocho animaciones y los
+            efectos (shimmer + twinkle) de la v1.29.0.
           - **v1.29.0 — TEXTURA TEJIDA, ANIMACION CON RIBete Y EFECTOS MAS VIVOS**:
             el atlas de la capa 3D gana una TELA TEJIDA (hilos warp/weft
             cruzados, `_weave` determinista) y PLIEGOS SECUNDARIOS finos,

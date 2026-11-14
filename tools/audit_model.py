@@ -169,10 +169,12 @@ def static_checks() -> None:
     geo = json.loads((ROOT / "src/main/resources/assets/capatest/geo/item"
                       "/armor/capa_deteriorer_evilsaiyan.geo.json").read_text())
     bones = geo["minecraft:geometry"][0]["bones"]
-    # v1.27.0: 222 huesos (los mismos) y 282 cubos. Los 6 cubos nuevos son
-    # las hombreras: placa, lam, filo y labio en cada hombro (antes un
-    # único cubo gris que en el juego se leía como una masa negra).
-    assert len(bones) == 222 and sum(len(b.get("cubes", [])) for b in bones) == 282
+    # v1.30.0: 222 huesos (los mismos) y 267 cubos. Los 15 cubos que
+    # faltan respecto a v1.27.0 son los de las 3 losas (cape_top/mid/
+    # bottom): se ANULARON para que la capa (tiras v17_*, hijas de
+    # estas losas) renderice en tercera persona, donde GeckoLib no
+    # dibuja hijos de huesos ocultos. Quedan sin cubos, invisibles.
+    assert len(bones) == 222 and sum(len(b.get("cubes", [])) for b in bones) == 267
     forbidden = ("v17_mote_", "v17_ash_", "v17_yoke_",
                  "v16_mote_", "v16_ash_")
     assert not any(b["name"].startswith(forbidden) for b in bones), \

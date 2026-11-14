@@ -184,6 +184,23 @@ def build() -> dict:
     bones = list(original_bones)
 
     # ------------------------------------------------------------------
+    # v1.30.0: SE ANULA LOS CUBOS DE LAS LOSAS cape_top/mid/bottom.
+    #
+    # Las tiras v17_* (la capa nueva) son HIJAS de estas tres losas.
+    # Antes Java las ocultava con setHidden(true), pero en tercera
+    # persona (F5) GeckoLib NO renderiza a los hijos de un hueso
+    # oculto: la capa entera desaparecía al mirarla desde atrás.
+    #
+    # Ahora se quitan los cubos de la losa (queda visible, sin cubos)
+    # y Java NO las oculta. Las tiras, al ser hijas de un hueso
+    # visible, renderizan desde cualquier ángulo. La "masa negra" de
+    # la losa original tampoco se ve: no tiene cubos.
+    for _slab in ("cape_top", "cape_mid", "cape_bottom"):
+        for _b in bones:
+            if _b["name"] == _slab:
+                _b["cubes"] = []
+
+    # ------------------------------------------------------------------
     # 1. 27 anclas INVISIBLES: dentro del cuello grueso. Java las necesita
     #    para panels[]; en Blockbench quedan tapadas por el paño opaco.
     # ------------------------------------------------------------------

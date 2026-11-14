@@ -69,6 +69,25 @@ def build() -> dict:
                                           "v16_mote_", "v16_ash_"))]
     assert len(names) == 150, len(names)
 
+    # v1.30.0: POSE DE REPOSO PARA LAS TRANSICIONES.
+    #
+    # Cada clip (salvo idle) lleva `posbias`/`bias` constantes aplicados
+    # a TODOS sus keyframes, incluido f=0 y f=1. Así `animation.air`
+    # (volar) empezaba y terminaba en (-0.57, 0.35, 0.90) mientras
+    # `animation.idle` lo hacía en (-0.09, -0.28, -0.31): al entrar o
+    # salir del clip al saltar, la capa daba un salto brusco de ~1.2u
+    # en Z + rotación instantánea = el "teletransporte" que reportó el
+    # usuario.
+    #
+    # Fix: TODOS los clips (salvo idle) arrancan y terminan en la pose
+    # de reposo de idle. El movimiento propio del estado se desarrolla
+    # en el interior del clip; las transiciones entran/salen sin
+    # discontinuidad. Es la técnica estándar de animaciones loopables.
+    idle_rest = {}
+    for name in names:
+        p = M.sample(name, "idle", 0.0)
+        idle_rest[name] = p
+
     for clip, style in STYLE_BY_CLIP.items():
         if clip not in data["animations"]:
             # v1.22.0: los 4 estados nuevos no existían en el JSON
@@ -97,6 +116,20 @@ def build() -> dict:
                     position[t] = _vec(pose["pos"])
                 if pose["has_scale"]:
                     scale[t] = _vec(pose["scale"])
+            if clip != "animation.idle":
+                # Forzar los keyframes de borde (f=0, f=1) a la pose de
+                # reposo de idle para que ninguna transición pegue un
+                # salto. El movimiento propio vive en el interior.
+                t0, t1 = _time(length, 0.0), _time(length, 1.0)
+                rp = idle_rest[name]
+                rotation[t0] = _vec(rp["rot"])
+                rotation[t1] = _vec(rp["rot"])
+                if position:
+                    position[t0] = _vec(rp["pos"])
+                    position[t1] = _vec(rp["pos"])
+                if scale:
+                    scale[t0] = _vec(rp["scale"])
+                    scale[t1] = _vec(rp["scale"])
             tracks = {"rotation": rotation}
             if position:
                 tracks["position"] = position
