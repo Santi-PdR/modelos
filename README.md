@@ -491,13 +491,23 @@ python3 tools/fetch_published_jar.py --keep-sums
 ```
 
 El mismo rescate vale para una versión **anterior**: el JAR exacto de la
-`v1.27.0` se recupera de su artifact histórico (`14057282072`), se
-comprueba contra el digest de la API de la release y se publica en
-`artifacts/v1.27.0` con su `SHA256SUMS.txt`:
+`v1.27.0` se recupera de su artifact histórico (`14057282072`) o de su
+asset de release, se comprueba contra el digest de la API de la release y
+se publica en `artifacts/v1.27.0` con su `SHA256SUMS.txt`:
 
 ```sh
 python3 tools/materialize_published_jar.py --version 1.27.0 --artifact 14057282072
 ```
+
+✅ **Completado y verificado**: la CI republicó `artifacts/v1.27.0` y el
+tarball por `codeload` contiene el JAR exacto
+`477 797` bytes, `sha256:e80bd1f43ff7f53617003b29f140320a1834b80a765596aab1a88c2bf7ed6f2d`,
+byte a byte igual al asset de la Release v1.27.0, junto con su
+`SHA256SUMS.txt`.
+
+El script prueba **dos fuentes** (asset de release y artifact histórico)
+y exige el MISMO digest en ambas: si el binario no coincide byte a
+byte, no escribe nada.
 
 **Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.28.0/CAPA_v1.28.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.28.0/CAPA_v1.28.0.bbmodel)
 (el mismo archivo que `docs/CAPA_v1.28.0.bbmodel` y el asset de la Release,
