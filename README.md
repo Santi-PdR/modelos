@@ -496,7 +496,7 @@ comprueba contra el digest de la API de la release y se publica en
 `artifacts/v1.27.0` con su `SHA256SUMS.txt`:
 
 ```sh
-python3 tools/materialize_artifact_jar.py --artifact 14057282072 --version 1.27.0
+python3 tools/materialize_published_jar.py --version 1.27.0 --artifact 14057282072
 ```
 
 **Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.28.0/CAPA_v1.28.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.28.0/CAPA_v1.28.0.bbmodel)

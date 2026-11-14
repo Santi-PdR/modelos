@@ -1276,9 +1276,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          python3 tools/materialize_artifact_jar.py \
-            --artifact 14057282072 --version 1.27.0 --out /tmp/art1270
+          python3 tools/materialize_published_jar.py \
+            --version 1.27.0 --artifact 14057282072 --out /tmp/art1270
           SHA="$(cut -d' ' -f1 /tmp/art1270/SHA256SUMS.txt)"
+          test -n "$SHA"
           TMP="$(mktemp -d)"
           mkdir -p "$TMP/build/libs"
           cp /tmp/art1270/capatest-1.27.0.jar "$TMP/build/libs/"
