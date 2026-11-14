@@ -9,6 +9,21 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.31.0: QUINTO ARMONICO, TELA TEJIDA FINA Y EFECTOS MAS ORGANICOS.
+Se sigue mejorando el modelo en todos sus aspectos. (1) ANIMACION:
+la onda viajera suma un QUINTO armonico (k=5, amplitud 0.06) a la
+onda de la v1.29.0: el ribete de la tela gana el temblor fino de los
+hilos individuales al viento, sin romper la periodicidad ni la costura
+C1. (2) TEXTURA: el entramado tejido suma una SEGUNDA capa de hilos a
+mayor frecuencia (freq*2.4, amplitud 0.35x) sobre la capa gruesa,
+para que el paño lea como tejido fino y no como una lamina de una
+sola frecuencia. (3) EFECTOS: el shimmer de la capa emisiva suma un
+segundo componente a mayor frecuencia (luz que recorre el paño con
+temblor) y la chispa suma un segundo parpadeo a otra frecuencia y
+fase, para que la brasa sea irregular y viva. Se mantiene la
+correccion de jump (no teletransporte) y la visibilidad en F5 de la
+v1.30.0.
+
 v1.30.0: ARREGLO DE JUMP (NO TELETRANSPORTE) Y VISIBILIDAD EN F5.
 Dos correcciones de comportamiento: (1) la animacion de salto
 (animation.air / FLY_ANIM) ya NO teletransporta la capa: cada clip

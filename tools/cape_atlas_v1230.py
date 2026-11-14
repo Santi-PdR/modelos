@@ -108,7 +108,7 @@ def _gradient_block(arr, box, top, bottom, folds=3.0, amplitude=7.0,
 
 
 def _weave(arr, box, strength=5.0, freq=7.0) -> None:
-    """v1.29.0: TELA TEJIDA — hilos warp/weft cruzados, sutil.
+    """v1.31.0: TELA TEJIDA — hilos warp/weft cruzados + capa fina.
 
     Un paño liso se lee como plástico. Esta modulación determinista
     superpone dos hilos diagonales (warp y weft) que alternan relieve:
@@ -116,14 +116,26 @@ def _weave(arr, box, strength=5.0, freq=7.0) -> None:
     aleatorio, idempotente y simétrica, así que no altera el degradado
     carmesí -> morado ni la calibración de color. Sólo toca R/B (la G
     lleva un 0.2x para no inflar la saturación).
+
+    v1.31.0: se suma una SEGUNDA capa de hilos a mayor frecuencia
+    (freq*2.4, amplitud 0.35x). La capa gruesa (freq) da el relieve de
+    los hilos cruzados; la capa fina añade el temblor de los hilos
+    individuales, así el paño lee como tejido fino y no como una
+    lámina de una sola frecuencia. Determinista y simétrica, igual que
+    la capa gruesa: no toca la calibración de color.
     """
     u0, v0, u1, v1 = box
     h, w = v1 - v0, u1 - u0
+    freq2 = freq * 2.4
     for j in range(h):
         for i in range(w):
             warp = math.sin(((i + j) / w) * math.tau * freq)
             weft = math.sin(((i - j) / w) * math.tau * freq)
             d = strength * (warp * 0.60 + weft * 0.40)
+            # v1.31.0: capa fina de hilos a mayor frecuencia.
+            warp2 = math.sin(((i + j) / w) * math.tau * freq2)
+            weft2 = math.sin(((i - j) / w) * math.tau * freq2)
+            d += strength * 0.35 * (warp2 * 0.60 + weft2 * 0.40)
             arr[v0 + j, u0 + i, 0] = max(0, min(255, arr[v0 + j, u0 + i, 0] + d))
             arr[v0 + j, u0 + i, 1] = max(0, min(255, arr[v0 + j, u0 + i, 1] + d * 0.2))
             arr[v0 + j, u0 + i, 2] = max(0, min(255, arr[v0 + j, u0 + i, 2] + d * 0.7))

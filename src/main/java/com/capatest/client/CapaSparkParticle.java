@@ -72,7 +72,11 @@ public class CapaSparkParticle extends TextureSheetParticle {
         // se suma un parpadeo rápido de alta frecuencia y baja amplitud,
         // para que no sea una partícula uniforme: parece una brasa viva
         // en vez de un cuadrado de alpha constante.
-        float twinkle = 0.18F * (float) Math.sin(this.age * 0.9F);
+        // v1.31.0: se suma un SEGUNDO parpadeo a otra frecuencia y fase,
+        // así el brillo de la brasa es irregular y vivo, no un seno
+        // limpio y predecible.
+        float twinkle = 0.18F * (float) Math.sin(this.age * 0.9F)
+                + 0.08F * (float) Math.sin(this.age * 2.3F + 0.7F);
         float cover = fadeIn * fadeOut;
         this.alpha = Math.min(1.0F, 0.72F * cover + twinkle * cover);   // semitransparente
         this.quadSize = this.baseSize * (1.0F - 0.22F * progress + 0.08F * twinkle);

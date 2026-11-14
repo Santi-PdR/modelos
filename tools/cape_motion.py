@@ -202,12 +202,21 @@ def wave(f: float, phase: float, h: float) -> tuple[float, float]:
     mecánica; el armónico extra fraccionario (pero con k entero, así
     que sigue siendo periódica y C1) añade el ribete irisado que tiene
     una tela al sol, sin anclar nada a cero ni romper la costura.
+
+    v1.31.0: un QUINTO armónico (k=5, amplitud 0.06) con fase 4.7*φ.
+    El ribete de k=4 seguía siendo algo regular; un armónico de
+    frecuencia más alta y baja amplitud añade el temblor fino de los
+    hilos individuales de una tela al viento. k=5 es entero, así que
+    la onda sigue periódica (wave(0)==wave(1)) y C1, y el self-test
+    lo comprueba. No ancla nada a cero ni rompe la costura.
     """
     s1, d1 = _harm(f, 1, phase)
     s2, d2 = _harm(f, 2, phase * 1.7)
     s3, d3 = _harm(f, 3, phase * 2.3)
     s4, d4 = _harm(f, 4, phase * 3.1)
-    return s1 + 0.28 * s2 + h * s3 + 0.10 * s4, d1 + 0.28 * d2 + h * d3 + 0.10 * d4
+    s5, d5 = _harm(f, 5, phase * 4.7)
+    return (s1 + 0.28 * s2 + h * s3 + 0.10 * s4 + 0.06 * s5,
+            d1 + 0.28 * d2 + h * d3 + 0.10 * d4 + 0.06 * d5)
 
 
 def _flow(f: float, phase: float) -> tuple[float, float, float, float]:

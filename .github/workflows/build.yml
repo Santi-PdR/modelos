@@ -1054,6 +1054,23 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.31.0 — QUINTO ARMONICO, TELA TEJIDA FINA Y EFECTOS MAS ORGANICOS**:
+            seguir mejorando el modelo en todos sus aspectos. (1)
+            ANIMACION: la onda viajante suma un QUINTO armonico
+            (`k=5`, amplitud `0.06`) sobre el cuarto de la v1.29.0: el
+            ribete de la tela gana el temblor fino de los hilos
+            individuales al viento, sin romper la periodicidad ni la
+            costura C1 (el self-test de `cape_motion.py` lo comprueba).
+            (2) TEXTURA: el entramado `_weave` suma una SEGUNDA capa de
+            hilos a mayor frecuencia (`freq*2.4`, amplitud `0.35x`)
+            sobre la capa gruesa, para que el paño lea como tejido
+            fino y no como una lamina de una sola frecuencia, sin tocar
+            la calibracion de color (grad 60.4, fid 0.000). (3)
+            EFECTOS: el SHIMMER suma un segundo componente a mayor
+            frecuencia y la chispa un segundo parpadeo a otra frecuencia
+            y fase, para que la luz y la brasa sean organicas. Se
+            mantiene la correccion de jump y la visibilidad en F5 de la
+            v1.30.0.
           - **v1.30.0 — ARREGLO DE JUMP (NO TELETRANSPORTE) Y VISIBILIDAD EN F5**:
             dos correcciones de comportamiento. (1) La animación de salto
             (`animation.air` / `FLY_ANIM`) ya NO teletransporta la capa:

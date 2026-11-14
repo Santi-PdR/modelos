@@ -90,7 +90,11 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
         // barreda lenta de luz (periodo 2x, fase distinta) para que el
         // brillo no sea un pulso llano: parece una onda de energia que
         // recorre el paño, no una bombilla encendida y apagada.
-        float shimmer = 0.05F * (float) Math.sin(phase * 0.5 + 1.2);
+        // v1.31.0: se suma un SEGUNDO shimmer a mayor frecuencia y baja
+        // amplitud, con fase distinta, para que la luz recorriendo el
+        // paño no sea una onda simple: tiene el temblor de la tela.
+        float shimmer = 0.05F * (float) Math.sin(phase * 0.5 + 1.2)
+                + 0.03F * (float) Math.sin(phase * 1.7 + 0.4);
         float brightness = breathe + shimmer;
         float violet = 0.90F + 0.08F * (1.0F - brightness);
 
