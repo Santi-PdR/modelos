@@ -213,6 +213,13 @@ def wave(f: float, phase: float, h: float) -> tuple[float, float]:
     v1.32.0: un SEXTO armónico (k=6, amplitud 0.035) con fase 6.1*φ.
     El temblor de k=5 seguía regular; un armónico de frecuencia mayor
     y amplitud menor añade el destello fino de los hilos más finos.
+
+    v1.34.0: un SÉPTIMO armónico (k=7, amplitud 0.025) con fase 7.3*φ.
+    El temblor de k=6 seguía aún algo regular; un armónico de frecuencia
+    mayor y amplitud menor añade el destello casi microscópico de los
+    hilos más finos al viento, sin que la onda pierda su periodicidad
+    ni su costura C1. k=7 es entero, así que wave(0)==wave(1) y el
+    self-test lo comprueba. No ancla nada a cero ni rompe la costura.
     """
     s1, d1 = _harm(f, 1, phase)
     s2, d2 = _harm(f, 2, phase * 1.7)
@@ -226,8 +233,10 @@ def wave(f: float, phase: float, h: float) -> tuple[float, float]:
     # que la onda sigue periódica (wave(0)==wave(1)) y C1; el self-test
     # lo comprueba. No ancla nada a cero ni rompe la costura.
     s6, d6 = _harm(f, 6, phase * 6.1)
-    return (s1 + 0.28 * s2 + h * s3 + 0.10 * s4 + 0.06 * s5 + 0.035 * s6,
-            d1 + 0.28 * d2 + h * d3 + 0.10 * d4 + 0.06 * d5 + 0.035 * d6)
+    # v1.34.0: SÉPTIMO armónico (k=7, amplitud 0.025) con fase 7.3*φ.
+    s7, d7 = _harm(f, 7, phase * 7.3)
+    return (s1 + 0.28 * s2 + h * s3 + 0.10 * s4 + 0.06 * s5 + 0.035 * s6 + 0.025 * s7,
+            d1 + 0.28 * d2 + h * d3 + 0.10 * d4 + 0.06 * d5 + 0.035 * d6 + 0.025 * d7)
 
 
 def _flow(f: float, phase: float) -> tuple[float, float, float, float]:

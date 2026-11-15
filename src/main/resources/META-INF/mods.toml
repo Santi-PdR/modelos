@@ -9,6 +9,22 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.34.0: SÉPTIMO ARMONICO, CUARTO SHIMMER Y CUARTO PARPADEO.
+Se sigue mejorando el modelo en todos sus aspectos. (1) ANIMACION: la onda
+viajante suma un SÉPTIMO armonico (k=7, amplitud 0.025, fase 7.3*φ) a
+la onda de la v1.32.0: el destello de los hilos mas finos al viento se
+vuelve mas fina, sin romper la periodicidad ni la costura C1 (lo
+comprueba el self-test de cape_motion.py). (2) EFECTOS: el shimmer
+emisivo suma un CUARTO componente a mayor frecuencia y muy baja
+amplitud, con fase distinta, y la chispa suma un CUARTO parpadeo: la
+luz que recorre el paño y la brasa son mas vivas y irregulares, con el
+temblor casi microscópico de los hilos finos. Se mantienen la capa en
++Z (front), la corrección de la transparencia F5 (alpha fijo 1.0 del
+re-render emisivo, brillo al color), el cuellito, la onda viajante y
+la capa colgando sin intersectar el cuerpo. (3) La geometria (225
+huesos / 270 cubos), la textura (tercera capa de hilos) y las ocho
+animaciones (sin mirror) se regeneran.
+
 v1.33.0: CORRECCION F5 REAL (CAPA EN +Z, FIN DEL FANTASTA TRANSLUCIDO) Y EFECTOS REAFIMADOS.
 Se sigue mejorando el modelo en todos sus aspectos. (0) F5: se REVERTE
 el volteo a -Z de la v1.32.0, que fue INCORRECTO: la capa vuelve a su
