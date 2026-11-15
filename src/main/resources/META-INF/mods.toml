@@ -9,6 +9,21 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.40.0: CORRECCION DEL REGRESO (CAPA NO INTERSECTA AL JUGADOR).
+Se corrige el regreso introducido en la v1.39.0: la capa se veia
+"bugeada" dentro del jugador. La causa eran DOS cambios de movimiento
+espacial que empujaban el paño hacia delante, dentro del cuerpo: la
+TERCERA armonica de la rafaga (que alteraba la fuerza y la direccion
+del viento) y la SEGUNDA CRESTA VIAJANTE del dobladillo (una oscila-
+cion extra en Z). Ambos SE REVERTAN a la version verificada, para que
+la capa vuelva a colgar SIN intersectar el cuerpo. Se CONSERVAN las
+mejoras cosmeticas que NO mueven la capa: el DÉCIMASEGUNDO armonica
+(rotacion, amplitud 0.006, incapaz de meter la capa en el cuerpo), la
+TEXTURA (cuarta capa de hilos ultrafinos) y el BLOOM/EFECTOS (noveno
+shimmer, latido de dos tiempos, drift de matiz, shimmer del item,
+noveno parpadeo y pulso de tamaño de la chispa). Se mantiene la capa
+en +Z (front), la correccion F5 (alpha fijo 1.0) y el mirror revocado.
+
 v1.39.0: MEJORAS EN ANIMACION, TEXTURA, EFECTOS Y BLOOM.
 Se mejora el modelo en cuatro frentes, sin tocar la capa en +Z (front),
 la correccion de la transparencia F5 (alpha fijo 1.0 del re-render

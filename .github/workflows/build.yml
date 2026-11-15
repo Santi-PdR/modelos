@@ -1055,6 +1055,20 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.40.0 — CORRECCION DEL REGRESO (CAPA SIN INTERSECTAR)**:
+            corrige el regreso de la v1.39.0: la capa se veia "bugeada"
+            dentro del jugador. La causa eran dos cambios de movimiento
+            espacial que empujaban el panio hacia delante, dentro del
+            cuerpo: la TERCERA armonica de la rafaga y la SEGUNDA CRESTA
+            VIAJANTE del dobladillo. Ambos SE REVERTAN a la version
+            verificada, para que la capa vuelva a colgar SIN intersectar
+            el cuerpo. Se CONSERVAN las mejoras cosmeticas que NO mueven
+            la capa: el DECIMASEGUNDO armonico (rotacion, incapaz de
+            meter la capa en el cuerpo), la TEXTURA (cuarta capa de
+            hilos ultrafinos) y el BLOOM/EFECTOS (noveno shimmer, latido
+            de dos tiempos, drift de matiz, shimmer del item, noveno
+            parpadeo y pulso de tamaño). Se mantiene la capa en `+Z`
+            (front), la correccion F5 (alpha fijo 1.0) y el mirror.
           - **v1.39.0 — MEJORAS EN ANIMACION, TEXTURA, EFECTOS Y BLOOM**:
             mejora el modelo en cuatro frentes, sin tocar la capa en `+Z`
             (front), la correccion F5 (alpha fijo 1.0) ni el mirror. (1)
