@@ -235,8 +235,14 @@ def wave(f: float, phase: float, h: float) -> tuple[float, float]:
     s6, d6 = _harm(f, 6, phase * 6.1)
     # v1.34.0: SÉPTIMO armónico (k=7, amplitud 0.025) con fase 7.3*φ.
     s7, d7 = _harm(f, 7, phase * 7.3)
-    return (s1 + 0.28 * s2 + h * s3 + 0.10 * s4 + 0.06 * s5 + 0.035 * s6 + 0.025 * s7,
-            d1 + 0.28 * d2 + h * d3 + 0.10 * d4 + 0.06 * d5 + 0.035 * d6 + 0.025 * d7)
+    # v1.35.0: OCTAVO armónico (k=8, amplitud 0.02) con fase 8.5*φ.
+    # El destello de k=7 seguía algo regular; un armónico de frecuencia
+    # mayor y amplitud menor añade el temblor casi imperceptible de los
+    # hilos más finos, sin perder la periodicidad ni la costura C1. k=8
+    # es entero, así que wave(0)==wave(1) y el self-test lo comprueba.
+    s8, d8 = _harm(f, 8, phase * 8.5)
+    return (s1 + 0.28 * s2 + h * s3 + 0.10 * s4 + 0.06 * s5 + 0.035 * s6 + 0.025 * s7 + 0.02 * s8,
+            d1 + 0.28 * d2 + h * d3 + 0.10 * d4 + 0.06 * d5 + 0.035 * d6 + 0.025 * d7 + 0.02 * d8)
 
 
 def _flow(f: float, phase: float) -> tuple[float, float, float, float]:
