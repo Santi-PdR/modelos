@@ -94,7 +94,12 @@ public class CapaSparkParticle extends TextureSheetParticle {
                 // aún menor, con fase distinta: la chispa tiene el temblor
                 // casi microscópico de una brasa viva, no un seno limpio
                 // ni un temblor de dos frecuencias.
-                + 0.015F * (float) Math.sin(this.age * 8.3F + 4.4F);
+                + 0.015F * (float) Math.sin(this.age * 8.3F + 4.4F)
+                // v1.37.0: SÉPTIMO parpadeo a frecuencia mayor y amplitud
+                // aún menor, con fase distinta: la chispa tiene el temblor
+                // casi microscópico de una brasa viva, no un seno limpio
+                // ni un temblor de dos o tres frecuencias.
+                + 0.012F * (float) Math.sin(this.age * 9.5F + 5.5F);
         float cover = fadeIn * fadeOut;
         this.alpha = Math.min(1.0F, 0.72F * cover + twinkle * cover);   // semitransparente
         this.quadSize = this.baseSize * (1.0F - 0.22F * progress + 0.08F * twinkle);
