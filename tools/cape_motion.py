@@ -262,16 +262,29 @@ def wave(f: float, phase: float, h: float) -> tuple[float, float]:
     # C1. k=11 es entero, así que wave(0)==wave(1) y el self-test lo
     # comprueba. No ancla nada a cero ni rompe la costura.
     s11, d11 = _harm(f, 11, phase * 12.1)
-    return (s1 + 0.28 * s2 + h * s3 + 0.10 * s4 + 0.06 * s5 + 0.035 * s6 + 0.025 * s7 + 0.02 * s8 + 0.015 * s9 + 0.01 * s10 + 0.008 * s11,
-            d1 + 0.28 * d2 + h * d3 + 0.10 * d4 + 0.06 * d5 + 0.035 * d6 + 0.025 * d7 + 0.02 * d8 + 0.015 * d9 + 0.01 * d10 + 0.008 * d11)
+    # v1.39.0: DÉCIMASEGUNDO armónico (k=12, amplitud 0.006) con fase 13.3*φ.
+    # El temblor de k=11 seguía aún algo regular; un armónico de frecuencia
+    # mayor y amplitud menor añade el destello casi imperceptible de los
+    # hilos más finos al viento, sin perder la periodicidad ni la costura
+    # C1. k=12 es entero, así que wave(0)==wave(1) y el self-test lo
+    # comprueba. No ancla nada a cero ni rompe la costura.
+    s12, d12 = _harm(f, 12, phase * 13.3)
+    return (s1 + 0.28 * s2 + h * s3 + 0.10 * s4 + 0.06 * s5 + 0.035 * s6 + 0.025 * s7 + 0.02 * s8 + 0.015 * s9 + 0.01 * s10 + 0.008 * s11 + 0.006 * s12,
+            d1 + 0.28 * d2 + h * d3 + 0.10 * d4 + 0.06 * d5 + 0.035 * d6 + 0.025 * d7 + 0.02 * d8 + 0.015 * d9 + 0.01 * d10 + 0.008 * d11 + 0.006 * d12)
 
 
 def _flow(f: float, phase: float) -> tuple[float, float, float, float]:
     """Ráfaga común y arrastre (ambos periódicos), con derivadas."""
     g1, dg1 = _harm(f, 1, 0.55)
     g2, dg2 = _harm(f, 2, 1.10)
-    gust = 0.72 * g1 + 0.28 * g2
-    dgust = 0.72 * dg1 + 0.28 * dg2
+    # v1.39.0: TERCER armónico de la ráfaga. Dos senos (g1+g2) daban una
+    # ráfaga regular; un tercer componente de frecuencia mayor y baja
+    # amplitud, con fase distinta, hace que el viento que barre la capa
+    # sople de forma orgánica y entrecortada, como una corriente real en
+    # el aire, sin perder la periodicidad (k=3 entero) ni la costura C1.
+    g3, dg3 = _harm(f, 3, 1.65)
+    gust = 0.72 * g1 + 0.28 * g2 + 0.13 * g3
+    dgust = 0.72 * dg1 + 0.28 * dg2 + 0.13 * dg3
     # drag = 0.5 - 0.5*cos(2πf + phase - 0.8), siempre en [0, 1].
     c, dc = _harm(f, 1, phase - 0.8 + math.pi / 2.0)
     drag = 0.5 - 0.5 * c
@@ -345,12 +358,23 @@ def sample(name: str, style: str, f: float) -> dict:
             has_pos = True
             bend = seg_f ** 1.6
             swing = (0.35 + 0.85 * g["tela"] + 3.0 * pull) * bend * edge
+            # v1.39.0: SEGUNDA CRESTA VIAJANTE (drape ripple). La onda `w`
+            # ya baja por el jirón; sumar una segunda cresta a frecuencia
+            # distinta (k=2, fase lenta) y amplitud pequeña hace que el
+            # dobladillo no tenga un solo lomo, sino dos lomos que se
+            # cruzan y se desplazan: el paño cae como una tela real en
+            # lugar de una curva de una sola frecuencia. k=2 es entero,
+            # así que la derivada también cierra (C1) y el self-test lo
+            # comprueba.
+            s_drape, d_drape = _harm(f, 2, phase * 0.5 + 1.2)
             pos = [swing * w + gust_a * 0.55 * bend * gust,
                    -0.28 * bend * drag,
-                   flare * 0.10 * drag + 0.34 * bend * s_pull]
+                   flare * 0.10 * drag + 0.34 * bend * s_pull
+                   + 0.06 * bend * s_drape]
             dpos = [swing * dw + gust_a * 0.55 * bend * dgust,
                     -0.28 * bend * ddrag,
-                    flare * 0.10 * ddrag + 0.34 * bend * d_pull]
+                    flare * 0.10 * ddrag + 0.34 * bend * d_pull
+                    + 0.06 * bend * d_drape]
     elif fam == "cowl":
         amp = 1.4 * g["cowl"]
         rot = [amp * 0.45 * w + 0.30 * (drag - 0.5), 0.0,

@@ -134,6 +134,14 @@ def _weave(arr, box, strength=5.0, freq=7.0) -> None:
     h, w = v1 - v0, u1 - u0
     freq2 = freq * 2.4
     freq3 = freq * 4.6
+    # v1.39.0: cuarta capa de hilos ULTRAFINOS (grano microscópico).
+    # Tres capas dejaban el paño con el relieve de un tejido de hilo
+    # grueso; una cuarta a frecuencia casi triple (freq*8.5) y amplitud
+    # 0.14x añade el grano casi imperceptible de las fibras individuales,
+    # así el paño lee como una tela de hilo estrecho y real. Determinista
+    # y simétrica, igual que las demás: no toca el degradado carmesí->morado
+    # ni la calibración de color (sólo R/B, con G a 0.2x).
+    freq4 = freq * 8.5
     for j in range(h):
         for i in range(w):
             warp = math.sin(((i + j) / w) * math.tau * freq)
@@ -147,6 +155,10 @@ def _weave(arr, box, strength=5.0, freq=7.0) -> None:
             warp3 = math.sin(((i + j) / w) * math.tau * freq3)
             weft3 = math.sin(((i - j) / w) * math.tau * freq3)
             d += strength * 0.22 * (warp3 * 0.60 + weft3 * 0.40)
+            # v1.39.0: capa de grano ultrafino (fibras individuales).
+            warp4 = math.sin(((i + j) / w) * math.tau * freq4)
+            weft4 = math.sin(((i - j) / w) * math.tau * freq4)
+            d += strength * 0.14 * (warp4 * 0.60 + weft4 * 0.40)
             arr[v0 + j, u0 + i, 0] = max(0, min(255, arr[v0 + j, u0 + i, 0] + d))
             arr[v0 + j, u0 + i, 1] = max(0, min(255, arr[v0 + j, u0 + i, 1] + d * 0.2))
             arr[v0 + j, u0 + i, 2] = max(0, min(255, arr[v0 + j, u0 + i, 2] + d * 0.7))

@@ -88,7 +88,13 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
         // translúcido en F5); va en el COLOR (r,g,b), que se satura en el
         // pico del ciclo. El glowmask determina qué se dibuja (solo venas).
         float amplitude = charged ? 0.26F : 0.14F;
-        float breathe = 1.0F + amplitude * (float) Math.sin(phase);
+        // v1.39.0: RESPIRACON DE DOS TIEMPOS. Sobre el latido principal se
+        // suma una ola lenta y de baja amplitud (periodo ~8x) para que el
+        // brillo no tenga un solo pulso: tiene un rabano largo que se
+        // eleva y baja de fondo, como la energia acumulada y liberada de
+        // un tejido vivo, no una bombilla encendida y apagada.
+        float surge = 0.04F * (float) Math.sin(phase * 0.25 + 0.9);
+        float breathe = 1.0F + amplitude * (float) Math.sin(phase) + surge;
         // v1.29.0: SHIMMER viajante. Sobre el latido global se suma una
         // barreda lenta de luz (periodo 2x, fase distinta) para que el
         // brillo no sea un pulso llano: parece una onda de energia que
@@ -131,6 +137,12 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
         // finos: el brillo de un tejido vivo, no un pulso llano ni una
         // onda lisa.
         shimmer += 0.006F * (float) Math.sin(phase * 9.7 + 6.7);
+        // v1.39.0: se suma un NOVENO shimmer a frecuencia mayor y amplitud
+        // aún menor, con fase distinta, para que el resplandor recorriendo
+        // el paño tenga el temblor casi imperceptible de los hilos más
+        // finos: el brillo de un tejido vivo, no un pulso llano ni una
+        // onda lisa.
+        shimmer += 0.005F * (float) Math.sin(phase * 10.9 + 7.5);
         // v1.33.0: CORRECCIÓN DEL FANTASTA TRANSLÚCIDO EN F5.
         // Antes pasábamos `brightness` como ALPHA global del re-render. Ese
         // alpha se aplicaba a TODO el mesh (no solo a las venas emisivas),
@@ -142,7 +154,12 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
         // sobre el cuerpo y la capa sigue siendo opaca en F5. El brillo
         // pulsante (breathe + 3 shimmer) se mantiene sobre las venas.
         float brightness = breathe + shimmer;
-        float violet = 0.90F + 0.08F * (1.0F - brightness);
+        // v1.39.0: DRIFT DE MATIZ. El violet no es una constante: oscila
+        // lentamente entre el violeta puro y un magenta más hondo a lo
+        // largo del ciclo, para que la energia de Blight Star parezca
+        // viva y móvil, no un color fijo bajo el latido.
+        float hue = 0.90F + 0.05F * (float) Math.sin(phase * 0.35 + 0.4);
+        float violet = hue + 0.08F * (1.0F - brightness);
 
         // v1.9.0: al perder vida (o al correr) el aura no vira a rojo, sino a
         // un cian frío: es la luz "blight" del planeta, no una herida.

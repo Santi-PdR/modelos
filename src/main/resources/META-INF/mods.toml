@@ -9,6 +9,27 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.39.0: MEJORAS EN ANIMACION, TEXTURA, EFECTOS Y BLOOM.
+Se mejora el modelo en cuatro frentes, sin tocar la capa en +Z (front),
+la correccion de la transparencia F5 (alpha fijo 1.0 del re-render
+emisivo, brillo al color) ni el mirror revocado. (1) ANIMACION: la onda
+viajante suma un DÉCIMASEGUNDO armonico (k=12, amplitud 0.006, fase
+13.3*φ); la rafaga de viento suma un TERCER armonico para que sople de
+forma organica y entrecortada; y el dobladillo del jiron gana una
+SEGUNDA CRESTA VIAJANTE (k=2, fase lenta) para que caiga con dos lomos
+que se cruzan, no uno solo. Todo k entero: la periodicidad y la costura
+C1 se mantienen (lo comprueba el self-test de cape_motion.py). (2)
+TEXTURA: el entramado tejido suma una cuarta capa de hilos ULTRAFINOS
+(frecuencia casi triple, amplitud 0.14x) con el grano microscopico de
+las fibras individuales: el pano lee como tela de hilo estrecho. De-
+terminista y simétrica, sin tocar el degradado ni el alfa. (3) EFECTOS
+Y BLOOM: el shimmer emisivo suma un NOVENO componente; el latido pasa
+a ser de DOS TIEMPOS (onda lenta de fondo) con un DRIFT DE MATIZ
+violeta-magenta; el item plegado suma un shimmer y un segundo destello
+cian; y la chispa suma un NOVENO parpadeo y un pulso de tamaño de dos
+tiempos. (4) La geometria (225 huesos / 270 cubos) y las ocho
+animaciones (sin mirror) se regeneran.
+
 v1.38.0: UNDECIMMO ARMONICO, OCTAVO SHIMMER Y OCTAVO PARPADEO.
 Se sigue mejorando el modelo en todos sus aspectos. (1) ANIMACION: la onda
 viajante suma un UNDECIMMO armonico (k=11, amplitud 0.008, fase 12.1*φ) a

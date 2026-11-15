@@ -1055,6 +1055,23 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.39.0 — MEJORAS EN ANIMACION, TEXTURA, EFECTOS Y BLOOM**:
+            mejora el modelo en cuatro frentes, sin tocar la capa en `+Z`
+            (front), la correccion F5 (alpha fijo 1.0) ni el mirror. (1)
+            ANIMACION: la onda viajante suma un DECIMASEGUNDO armonico
+            (`k=12`, amplitud `0.006`, fase `13.3*φ`); la rafaga suma un
+            TERCER armonico (viento entrecortado); y el dobladillo del
+            jiron gana una SEGUNDA CRESTA VIAJANTE (`k=2`) con dos lomos
+            que se cruzan. Todo k entero: periodicidad y costura C1
+            (self-test de `cape_motion.py`). (2) TEXTURA: el entramado
+            suma una CUARTA capa de hilos ULTRAFINOS (frecuencia casi
+            triple, amplitud `0.14x`) con el grano microscopico de las
+            fibras. (3) EFECTOS Y BLOOM: el shimmer suma un NOVENO
+            componente; el latido pasa a DOS TIEMPOS con DRIFT DE MATIZ
+            violeta-magenta; el item suma un shimmer y un segundo
+            destello cian; la chispa suma un NOVENO parpadeo y un pulso
+            de tamaño. (4) La geometria (225 huesos / 270 cubos) y las
+            ocho animaciones (sin mirror) se regeneran.
           - **v1.38.0 — UNDECIMMO ARMONICO, OCTAVO SHIMMER Y OCTAVO PARPADEO**:
             seguir mejorando el modelo en todos sus aspectos. (1)
             ANIMACION: la onda viajante suma un UNDECIMMO armonico
