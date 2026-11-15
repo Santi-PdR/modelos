@@ -241,8 +241,15 @@ def wave(f: float, phase: float, h: float) -> tuple[float, float]:
     # hilos más finos, sin perder la periodicidad ni la costura C1. k=8
     # es entero, así que wave(0)==wave(1) y el self-test lo comprueba.
     s8, d8 = _harm(f, 8, phase * 8.5)
-    return (s1 + 0.28 * s2 + h * s3 + 0.10 * s4 + 0.06 * s5 + 0.035 * s6 + 0.025 * s7 + 0.02 * s8,
-            d1 + 0.28 * d2 + h * d3 + 0.10 * d4 + 0.06 * d5 + 0.035 * d6 + 0.025 * d7 + 0.02 * d8)
+    # v1.36.0: NOVENO armónico (k=9, amplitud 0.015) con fase 9.7*φ.
+    # El temblor de k=8 seguía aún algo regular; un armónico de frecuencia
+    # mayor y amplitud menor añade el destello casi microscópico de los
+    # hilos más finos al viento, sin perder la periodicidad ni la costura
+    # C1. k=9 es entero, así que wave(0)==wave(1) y el self-test lo
+    # comprueba. No ancla nada a cero ni rompe la costura.
+    s9, d9 = _harm(f, 9, phase * 9.7)
+    return (s1 + 0.28 * s2 + h * s3 + 0.10 * s4 + 0.06 * s5 + 0.035 * s6 + 0.025 * s7 + 0.02 * s8 + 0.015 * s9,
+            d1 + 0.28 * d2 + h * d3 + 0.10 * d4 + 0.06 * d5 + 0.035 * d6 + 0.025 * d7 + 0.02 * d8 + 0.015 * d9)
 
 
 def _flow(f: float, phase: float) -> tuple[float, float, float, float]:
