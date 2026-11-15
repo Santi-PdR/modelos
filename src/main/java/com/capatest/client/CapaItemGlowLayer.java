@@ -57,7 +57,11 @@ public class CapaItemGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
             // bulto plegado no sea un pulso llano: la energia recorre el
             // broche y los nervios como en la capa equipada.
             float shimmer = 0.05F * (float) Math.sin(phase * 0.6 + 1.1)
-                    + 0.025F * (float) Math.sin(phase * 1.9 + 2.3);
+                    + 0.025F * (float) Math.sin(phase * 1.9 + 2.3)
+                    // v1.41.0: tercer componente de shimmer, más lento y de
+                    // baja amplitud, para que el resplandor del bulto plegado
+                    // tenga un temblor de dos tiempos, no un pulso simple.
+                    + 0.018F * (float) Math.sin(phase * 0.35 + 0.6);
             float brightness = 0.72F + 0.28F * (float) Math.sin(phase) + shimmer;
             float violet = 0.88F + 0.10F * (1.0F - brightness);
             float cyan = 0.10F + 0.10F * (float) Math.cos(phase * 0.5D)

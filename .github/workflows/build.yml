@@ -1055,6 +1055,19 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.41.0 — MEJORAS SEGURAS (SIN REGRESO)**:
+            mejoras con cambios SEGUROS que NO mueven la capa hacia el
+            cuerpo (se evitan los cambios espaciales del regreso v1.39.0).
+            (1) ANIMACION: la onda viajante suma un DECIMATERCERO
+            armonico (`k=13`, amplitud `0.005`, fase `14.5*φ`), que es
+            ROTACION (oscilacion lateral minima) y NO toca la componente
+            Z del dobladillo: no puede empujar la capa dentro del
+            cuerpo. (2) TEXTURA: entramado suma una QUINTA capa de hilos
+            (`freq*12`, amplitud `0.10x`), grano sub-texel. (3) BLOOM:
+            shimmer suma un DECIMO componente; el item un tercer shimmer;
+            la chispa un DECIMO parpadeo y pulso de tamaño de dos
+            tiempos. Se mantiene la capa en `+Z` (front), la correccion
+            F5 (alpha fijo 1.0) y el mirror.
           - **v1.40.0 — CORRECCION DEL REGRESO (CAPA SIN INTERSECTAR)**:
             corrige el regreso de la v1.39.0: la capa se veia "bugeada"
             dentro del jugador. La causa eran dos cambios de movimiento
