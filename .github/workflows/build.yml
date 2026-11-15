@@ -1055,6 +1055,28 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.33.0 — CORRECCION F5 REAL (CAPA EN +Z, FIN DEL FANTASTA TRANSLUCIDO) Y EFECTOS REAFIMADOS**:
+            seguir mejorando el modelo en todos sus aspectos. (0) F5: se
+            REVERTE el volteo a `-Z` de la v1.32.0, que fue INCORRECTO:
+            la capa vuelve a `+Z` (el FRONT), su posicion original, y el
+            MIRROR que se añadió a la animación para compensar `-Z` se
+            REVUELVE por completo. Aparte, se correge la CAUSA REAL de
+            que en F5 la capa se veía TRANSPARENTE y "adentro" del
+            jugador: el brillo emisivo (`CapaGlowLayer`) pasaba
+            `brightness` como ALPHA global del re-render, translucía TODO
+            el mesh y lo dibujaba sobre el cuerpo en la vista trasera.
+            Ahora el alpha del re-render es FIJO `1.0` y el brillo
+            pulsante se aplica al COLOR (`r,g,b`): el glowmask tiene
+            alpha 0 fuera de las venas, así que esas regiones NO se
+            dibujan y no hay re-render fantasma sobre el cuerpo; la capa
+            sigue OPACA en F5. También se afirma el render type opaco
+            (`armorCutoutNoCull`) con test de profundidad. (1) EFECTOS:
+            el brillo vuelve a latir centrado en `1.0` (`0.86-1.14`) con
+            los TRES shimmer y el tercer parpadeo; se mantienen el
+            CUELLITO, la onda viajante y la capa colgando sin intersectar
+            el cuerpo. (2) TEXTURA: el atlas se regenera y se re-verifica;
+            la geometria (225 huesos / 270 cubos) y las ocho animaciones
+            (sin mirror) se regeneran en `+Z`.
           - **v1.32.0 — CUELLITO, CAPA VISIBLE EN F5 Y TEXTURA/EFECTOS MAS FINOS**:
             seguir mejorando el modelo en todos sus aspectos. (0) F5:
             la capa se VOLTEA a `-Z` (detras del jugador): antes quedaba

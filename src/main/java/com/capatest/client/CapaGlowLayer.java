@@ -82,10 +82,13 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
 
         double phase = (System.currentTimeMillis() % PERIOD_MS) / PERIOD_MS * Math.PI * 2.0;
         // v1.25.0: más luz. Antes el latido iba 0.76-1.00 (casi siempre
-        // por debajo del pleno); ahora 0.82-1.22 con más ganancia al
+        // por debajo del pleno); ahora 0.86-1.14 con más ganancia al
         // esprintar: la capa "respira" luz en la noche sin quemar color.
+        // v1.33.0: el brillo NO va en el alpha (lo fue, y causaba el fantasma
+        // translúcido en F5); va en el COLOR (r,g,b), que se satura en el
+        // pico del ciclo. El glowmask determina qué se dibuja (solo venas).
         float amplitude = charged ? 0.26F : 0.14F;
-        float breathe = 0.96F + amplitude * (float) Math.sin(phase);
+        float breathe = 1.0F + amplitude * (float) Math.sin(phase);
         // v1.29.0: SHIMMER viajante. Sobre el latido global se suma una
         // barreda lenta de luz (periodo 2x, fase distinta) para que el
         // brillo no sea un pulso llano: parece una onda de energia que
@@ -100,6 +103,16 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
         // el paño tenga el temblor de los hilos finos: no es una onda
         // lisa ni un pulso llano, es el resplandor de un tejido vivo.
         shimmer += 0.02F * (float) Math.sin(phase * 3.3 + 2.1);
+        // v1.33.0: CORRECCIÓN DEL FANTASTA TRANSLÚCIDO EN F5.
+        // Antes pasábamos `brightness` como ALPHA global del re-render. Ese
+        // alpha se aplicaba a TODO el mesh (no solo a las venas emisivas),
+        // así que en la vista trasera (F5) el re-render translúcido se
+        // dibujaba sobre el cuerpo: la capa parecía transparente y "adentro"
+        // del jugador. Ahora el alpha es FIJO 1.0 y el brillo pulsante se
+        // aplica al COLOR (r,g,b). Como el glowmask tiene alpha 0 fuera de
+        // las venas, esas regiones NO se dibujan: no hay re-render fantasma
+        // sobre el cuerpo y la capa sigue siendo opaca en F5. El brillo
+        // pulsante (breathe + 3 shimmer) se mantiene sobre las venas.
         float brightness = breathe + shimmer;
         float violet = 0.90F + 0.08F * (1.0F - brightness);
 
@@ -111,13 +124,13 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
         }
         float cool = 0.55F + 0.45F * health;
         float blight = (1.0F - health) * 0.22F + (charged ? 0.06F : 0.0F);
-        float red = 1.0F - blight * 0.30F;
-        float green = Math.min(1.0F, violet * cool + blight * 0.55F);
-        float blue = Math.min(1.0F, cool + blight * 0.40F);
+        float red = Math.min(1.0F, (1.0F - blight * 0.30F) * brightness);
+        float green = Math.min(1.0F, (Math.min(1.0F, violet * cool + blight * 0.55F)) * brightness);
+        float blue = Math.min(1.0F, (cool + blight * 0.40F) * brightness);
 
         getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, emissive,
                 bufferSource.getBuffer(emissive), partialTick,
                 LightTexture.FULL_SKY, OverlayTexture.NO_OVERLAY,
-                red, green, blue, brightness);
+                red, green, blue, 1.0F);
     }
 }

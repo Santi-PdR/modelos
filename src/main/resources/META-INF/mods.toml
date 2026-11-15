@@ -9,6 +9,29 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.33.0: CORRECCION F5 REAL (CAPA EN +Z, FIN DEL FANTASTA TRANSLUCIDO) Y EFECTOS REAFIMADOS.
+Se sigue mejorando el modelo en todos sus aspectos. (0) F5: se REVERTE
+el volteo a -Z de la v1.32.0, que fue INCORRECTO: la capa vuelve a su
+posicion original en +Z (FRONT), frente al jugador. EL MIRROR que se
+había añadido a la animación para compensar -Z se REVUELVE por completo:
+la animación vuelve a su estado original. Aparte, se correge la CAUSA
+REAL de que en F5 la capa se veía TRANSPARENTE y "adentro" del jugador:
+el brillo emisivo (CapaGlowLayer) pasaba `brightness` como ALPHA global
+del re-render, lo que translucía TODO el mesh y lo dibujaba sobre el
+cuerpo en la vista trasera. Ahora el alpha del re-render es FIJO 1.0 y
+el brillo pulsante se aplica al COLOR (r,g,b); como el glowmask tiene
+alpha 0 fuera de las venas, esas regiones no se dibujan: no hay re-
+render fantasma sobre el cuerpo y la capa sigue OPACA en F5. También se
+afrma el render type de la capa como OPACO (armorCutoutNoCull) con test
+de profundidad, para que la parte trasera se ocluya correctamente.
+(1) EFECTOS: el brillo emisivo vuelve a latir centrado en 1.0
+(0.86-1.14, con más ganancia al esprintar) con los TRES shimmer y el
+tercer parpadeo de la chispa; se mantienen el cuellito, la onda viajera
+y la capa colgando sin intersectar el cuerpo. (2) TEXTURA: el atlas se
+regenera (tercera capa de hilos tejidos) y se re-verifica. La geometria
+(225 huesos / 270 cubos) y las ocho animaciones (sin mirror) se
+regeneran en +Z.
+
 v1.32.0: CUELLITO, CAPA PARA F5 Y TEXTURA/EFFECTOS MAS FINOS.
 Se sigue mejorando el modelo en todos sus aspectos. (0) F5: la capa
 se VOLTEA a -Z (detras del jugador): antes quedaba en +Z, el FRONT,

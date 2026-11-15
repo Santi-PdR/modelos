@@ -291,8 +291,9 @@ def build() -> dict:
     #
     # Para que la capa parezca ATADA al jugador: un pequeño ruff de
     # tres bloques detrás de la cabeza/cuello que engancha el cape_top
-    # (que queda en -Z tras el volteo para F5). Los bloques miran
-    # hacia atrás (-Z) y se distribuyen en X para lectura de ruff.
+    # (v1.33.0: la capa vuelve a +Z; el ruff sigue en -Z, detrás de la
+    # nuca, como una goma que sujeta el paño por detrás). Los bloques
+    # se distribuyen en X para lectura de ruff.
     # ------------------------------------------------------------------
     for i in range(CUEILLO):
         fx = (i - (CUEILLO - 1) / 2.0) / max(1.0, (CUEILLO - 1) / 2.0)
