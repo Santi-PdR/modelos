@@ -1055,6 +1055,20 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.46.0 — MEJORAS SEGURAS EN ANIMACION, TEXTURA Y EFECTOS**:
+            se sigue la linea de mejoras verificadas, con amplitudes
+            TODAS MINUSCULAS y cambios de ROTACION o COSMETICOS (ningun
+            cambio de motion espacial: no se toca la fuerza/direccion
+            del viento ni la componente Z del dobladillo). (1)
+            Animacion: armonica k=15 (amplitud 0.0015, fase 17.3*φ),
+            rotacion lateral pura. (2) Textura: septima capa de hilos
+            (freq*20, amplitud 0.06x), solo color: el alfa sigue 255
+            en todo el atlas. (3) Efectos y bloom: decimaquinto shimmer
+            del glow (color solo, alfa fijo 1.0), decimaquinto
+            parpadeo de la chispa, cuarto shimmer del glow del item
+            (alfa clampado a 1.0) y segundo armonico de ROTACION en
+            la hombrera delantera (0.15 grados, solo RotZ). La capa
+            sigue colgando visible y sin intersectar el cuerpo.
           - **v1.45.0 — MEJORAS SEGURAS EN ANIMACION, TEXTURA Y EFECTOS**:
             se sigue la linea de mejoras verificadas, con amplitudes
             TODAS MINUSCULAS y cambios de ROTACION o COSMETICOS (ningun

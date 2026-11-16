@@ -153,6 +153,13 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
         // onda lisa. El brillo va SOLO en el COLOR (r,g,b): el alpha del
         // re-render sigue FIJO en 1.0 (corrección v1.33.0 intacta).
         shimmer += 0.002F * (float) Math.sin(phase * 13.3 + 9.1);
+        // v1.46.0: se suma un DÉCIMACINCO shimmer a frecuencia mayor y
+        // amplitud aún menor, con fase distinta, para que el resplandor
+        // recorriendo el paño tenga el temblor del grano extremo del
+        // tejido: el brillo de un tejido vivo, no un pulso llano ni una
+        // onda lisa. El brillo va SOLO en el COLOR (r,g,b): el alpha del
+        // re-render sigue FIJO en 1.0 (corrección v1.33.0 intacta).
+        shimmer += 0.0015F * (float) Math.sin(phase * 14.5 + 10.3);
         // v1.33.0: CORRECCIÓN DEL FANTASTA TRANSLÚCIDO EN F5.
         // Antes pasábamos `brightness` como ALPHA global del re-render. Ese
         // alpha se aplicaba a TODO el mesh (no solo a las venas emisivas),

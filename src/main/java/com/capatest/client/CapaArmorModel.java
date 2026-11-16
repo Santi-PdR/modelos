@@ -557,6 +557,12 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
                 continue;
             double padDeg = turn * 1.2D + sprint * 0.8D
                     + Math.sin(time * 1.7D + i * 1.9D + wind * 0.2D) * 0.45D;
+            // v1.46.0: se suma un segundo armónico de ROTACIÓN (amplitud
+            // 0.15 grados, fase distinta) para que la hombrera no cole
+            // con un vaivén regular: tiene el temblor de la pieza
+            // flotando. Sólo se toca RotZ: es rotación pura, no toca
+            // la posición del paño ni puede empujarlo al cuerpo.
+            padDeg += 0.15D * Math.sin(time * 2.9D + i * 2.3D);
             pad.setRotZ(pauldronBaseZ[i] + (float) Math.toRadians(padDeg));
         }
         // v1.13.0: ANIMACION de las hombreras traseras. RotX con retardo
