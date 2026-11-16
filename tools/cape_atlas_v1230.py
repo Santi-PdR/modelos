@@ -147,6 +147,15 @@ def _weave(arr, box, strength=5.0, freq=7.0) -> None:
     canal alfa (siempre 255), así que la capa sigue opaca y nunca
     se vuelve transparente. No altera el degradado carmesí->morado
     ni la calibración de color.
+
+    v1.45.0: se suma una SEXTA capa de hilos a frecuencia 1.33x de la
+    anterior (freq*16, amplitud 0.08x) para el temblor del grano
+    más denso: el paño lee como un tejido ultrafino y no como una
+    lámina de cinco frecuencias. Determinista, idempotente, simétrica
+    y sin ruido: sólo toca R/G/B, NO toca el canal alfa (siempre
+    255), así que la capa sigue opaca y nunca se vuelve transparente.
+    No altera el degradado carmesí->morado ni la calibración de
+    color.
     """
     u0, v0, u1, v1 = box
     h, w = v1 - v0, u1 - u0
@@ -154,6 +163,7 @@ def _weave(arr, box, strength=5.0, freq=7.0) -> None:
     freq3 = freq * 4.6
     freq4 = freq * 8.5
     freq5 = freq * 12.0
+    freq6 = freq * 16.0
     for j in range(h):
         for i in range(w):
             warp = math.sin(((i + j) / w) * math.tau * freq)
@@ -175,6 +185,10 @@ def _weave(arr, box, strength=5.0, freq=7.0) -> None:
             warp5 = math.sin(((i + j) / w) * math.tau * freq5)
             weft5 = math.sin(((i - j) / w) * math.tau * freq5)
             d += strength * 0.10 * (warp5 * 0.60 + weft5 * 0.40)
+            # v1.45.0: capa ultrafina, temblor de grano más denso.
+            warp6 = math.sin(((i + j) / w) * math.tau * freq6)
+            weft6 = math.sin(((i - j) / w) * math.tau * freq6)
+            d += strength * 0.08 * (warp6 * 0.60 + weft6 * 0.40)
             arr[v0 + j, u0 + i, 0] = max(0, min(255, arr[v0 + j, u0 + i, 0] + d))
             arr[v0 + j, u0 + i, 1] = max(0, min(255, arr[v0 + j, u0 + i, 1] + d * 0.2))
             arr[v0 + j, u0 + i, 2] = max(0, min(255, arr[v0 + j, u0 + i, 2] + d * 0.7))

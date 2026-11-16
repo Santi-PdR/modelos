@@ -61,9 +61,15 @@ public class CapaItemGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
             // amplitud aún menor, con fase distinta, para que el destello
             // tenga el temblor del grano del broche. También se CLAMPEA
             // a 1.0: el alpha del re-render emisivo NO supera el pleno.
+            // v1.45.0: se suma un TERCER shimmer a frecuencia mayor y
+            // amplitud aún menor, con fase distinta, para que el destello
+            // tenga el temblor del grano ultrafino del broche. También se
+            // CLAMPEA a 1.0: el alpha del re-render emisivo NO supera
+            // el pleno (el item sigue opaco).
             float brightness = Math.min(1.0F, 0.72F + 0.28F * (float) Math.sin(phase)
                     + 0.05F * (float) Math.sin(phase * 2.3D + 0.9D)
-                    + 0.04F * (float) Math.sin(phase * 3.7D + 1.8D));
+                    + 0.04F * (float) Math.sin(phase * 3.7D + 1.8D)
+                    + 0.03F * (float) Math.sin(phase * 4.9D + 2.7D));
             float violet = 0.88F + 0.10F * (1.0F - brightness);
             float cyan = 0.10F + 0.10F * (float) Math.cos(phase * 0.5D);
             float red = 1.0F - cyan * 0.12F;
