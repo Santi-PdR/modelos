@@ -262,35 +262,14 @@ def wave(f: float, phase: float, h: float) -> tuple[float, float]:
     # C1. k=11 es entero, así que wave(0)==wave(1) y el self-test lo
     # comprueba. No ancla nada a cero ni rompe la costura.
     s11, d11 = _harm(f, 11, phase * 12.1)
-    # v1.39.0: DÉCIMASEGUNDO armónico (k=12, amplitud 0.006) con fase 13.3*φ.
-    # El temblor de k=11 seguía aún algo regular; un armónico de frecuencia
-    # mayor y amplitud menor añade el destello casi imperceptible de los
-    # hilos más finos al viento, sin perder la periodicidad ni la costura
-    # C1. k=12 es entero, así que wave(0)==wave(1) y el self-test lo
-    # comprueba. No ancla nada a cero ni rompe la costura.
-    s12, d12 = _harm(f, 12, phase * 13.3)
-    # v1.41.0: DéCIMATERCERO armónico (k=13, amplitud 0.005) con fase 14.5*φ.
-    # Es ROTACIÓN (y una oscilacion lateral minima): no toca la componente Z
-    # del dobladillo, por lo que NO puede empujar la capa hacia delante,
-    # dentro del cuerpo (evita el regreso de la v1.39.0). k=13 es entero,
-    # así que wave(0)==wave(1) y la derivada cierra (C1); el self-test lo
-    # comprueba. No ancla nada a cero ni rompe la costura.
-    s13, d13 = _harm(f, 13, phase * 14.5)
-    return (s1 + 0.28 * s2 + h * s3 + 0.10 * s4 + 0.06 * s5 + 0.035 * s6 + 0.025 * s7 + 0.02 * s8 + 0.015 * s9 + 0.01 * s10 + 0.008 * s11 + 0.006 * s12 + 0.005 * s13,
-            d1 + 0.28 * d2 + h * d3 + 0.10 * d4 + 0.06 * d5 + 0.035 * d6 + 0.025 * d7 + 0.02 * d8 + 0.015 * d9 + 0.01 * d10 + 0.008 * d11 + 0.006 * d12 + 0.005 * d13)
+    return (s1 + 0.28 * s2 + h * s3 + 0.10 * s4 + 0.06 * s5 + 0.035 * s6 + 0.025 * s7 + 0.02 * s8 + 0.015 * s9 + 0.01 * s10 + 0.008 * s11,
+            d1 + 0.28 * d2 + h * d3 + 0.10 * d4 + 0.06 * d5 + 0.035 * d6 + 0.025 * d7 + 0.02 * d8 + 0.015 * d9 + 0.01 * d10 + 0.008 * d11)
 
 
 def _flow(f: float, phase: float) -> tuple[float, float, float, float]:
     """Ráfaga común y arrastre (ambos periódicos), con derivadas."""
     g1, dg1 = _harm(f, 1, 0.55)
     g2, dg2 = _harm(f, 2, 1.10)
-    # v1.40.0: se REVERTE el tercer armónico de la ráfaga que introdujo la
-    # v1.39.0. Ese componente alteraba la fuerza y la direccion del viento
-    # que barre la capa, lo que en algunos frames empujaba el paño hacia
-    # delante, dentro del cuerpo del jugador (capa "bugeada" dentro del
-    # jugador). Se vuelve al viento de dos senos (g1+g2) verificado para
-    # colgar la capa SIN intersectar el cuerpo. La periodicidad (k=1,2
-    # enteros) y la costura C1 se mantienen.
     gust = 0.72 * g1 + 0.28 * g2
     dgust = 0.72 * dg1 + 0.28 * dg2
     # drag = 0.5 - 0.5*cos(2πf + phase - 0.8), siempre en [0, 1].
@@ -366,14 +345,6 @@ def sample(name: str, style: str, f: float) -> dict:
             has_pos = True
             bend = seg_f ** 1.6
             swing = (0.35 + 0.85 * g["tela"] + 3.0 * pull) * bend * edge
-            # v1.40.0: se REVERTE la segunda cresta viajante (drape ripple)
-            # que introdujo la v1.39.0. Su oscilacion adicional en Z despla-
-            # caba el dobladillo hacia delante en algunos frames, metiendo
-            # el paño dentro del cuerpo del jugador (capa "bugeada" dentro
-            # del jugador). Se vuelve al desplazamiento Z verificado para
-            # colgar la capa SIN intersectar el cuerpo. k=2 era entero y
-            # la derivada cerro (C1), pero el movimiento espacial era el
-            # problema, no la periodicidad.
             pos = [swing * w + gust_a * 0.55 * bend * gust,
                    -0.28 * bend * drag,
                    flare * 0.10 * drag + 0.34 * bend * s_pull]

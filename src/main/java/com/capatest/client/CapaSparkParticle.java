@@ -104,26 +104,10 @@ public class CapaSparkParticle extends TextureSheetParticle {
                 // aún menor, con fase distinta: la chispa tiene el temblor
                 // casi microscópico de una brasa viva, no un seno limpio
                 // ni un temblor de dos, tres o cuatro frecuencias.
-                + 0.010F * (float) Math.sin(this.age * 10.7F + 6.6F)
-                // v1.39.0: NOVENO parpadeo a frecuencia mayor y amplitud
-                // aún menor, con fase distinta: la chispa tiene el temblor
-                // casi microscópico de una brasa viva, no un seno limpio
-                // ni un temblor de dos, tres o cuatro frecuencias.
-                + 0.008F * (float) Math.sin(this.age * 11.9F + 7.7F)
-                // v1.41.0: DÉCIMO parpadeo a frecuencia mayor y amplitud
-                // aún menor, con fase distinta: la chispa tiene el temblor
-                // casi microscópico de una brasa viva, no un seno limpio
-                // ni un temblor de dos, tres o cuatro frecuencias.
-                + 0.006F * (float) Math.sin(this.age * 13.1F + 8.8F);
+                + 0.010F * (float) Math.sin(this.age * 10.7F + 6.6F);
         float cover = fadeIn * fadeOut;
         this.alpha = Math.min(1.0F, 0.72F * cover + twinkle * cover);   // semitransparente
-        // v1.41.0: pulso de tamaño de dos tiempos (enriched). Sobre el
-        // desvanecimiento el tamaño oscila con un latido lento y otro
-        // medio, para que la chispa respire como una brasa viva, no como
-        // un cuadrado que se encoge linealmente.
-        float sizePulse = 0.03F * (float) Math.sin(this.age * 0.6F + 0.4F)
-                + 0.015F * (float) Math.sin(this.age * 1.4F + 2.1F);
-        this.quadSize = this.baseSize * (1.0F - 0.22F * progress + 0.08F * twinkle + sizePulse);
+        this.quadSize = this.baseSize * (1.0F - 0.22F * progress + 0.08F * twinkle);
         this.setSpriteFromAge(this.sprites);
     }
 

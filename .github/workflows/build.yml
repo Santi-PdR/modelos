@@ -1055,6 +1055,18 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.42.0 — REVERSION AL ESTADO CONOCIDO-BUENO (CAPA VISIBIL)**:
+            se REVERTE el comportamiento al de la v1.38.0, la ultima
+            version en que la capa se veia correctamente, para corregir
+            el regreso por el que la capa no se veia. Los cambios de la
+            v1.39.0, v1.40.0 y v1.41.0 (armonicas 12/13, capas de hilos
+            4/5, shimmers 9/10, parpadeos 9/10, pulso de tamaño, latido
+            de dos tiempos, drift de matiz) SE REVUELTEN todos,
+            restaurando exactamente el movimiento, la textura y los
+            efectos de la v1.38.0. La geometria (225 huesos / 270 cubos),
+            la capa en `+Z` (front), la correccion F5 (alpha fijo 1.0) y
+            el mirror se mantienen. La capa vuelve a colgar visible y
+            sin intersectar el cuerpo.
           - **v1.41.0 — MEJORAS SEGURAS (SIN REGRESO)**:
             mejoras con cambios SEGUROS que NO mueven la capa hacia el
             cuerpo (se evitan los cambios espaciales del regreso v1.39.0).
