@@ -184,6 +184,15 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
         float red = Math.min(1.0F, (1.0F - blight * 0.30F) * brightness);
         float green = Math.min(1.0F, (Math.min(1.0F, violet * cool + blight * 0.55F)) * brightness);
         float blue = Math.min(1.0F, (cool + blight * 0.40F) * brightness);
+        // v1.47.0: DRIFT DE MATIZ lento del resplandor. Un ciclo secundario
+        // muy lento desliza el balance entre el violeta y el cian, así el
+        // brillo no es un color fijo: es el resplandor de un tejido vivo.
+        // Sólo toca el COLOR (r,g,b); el alpha del re-render sigue FIJO
+        // en 1.0 (corrección v1.33.0 intacta).
+        float hueDrift = 0.06F * (float) Math.sin(phase * 0.27D + 2.1D);
+        red = Math.min(1.0F, red + hueDrift * 0.25F);
+        green = Math.min(1.0F, green + hueDrift * 0.10F);
+        blue = Math.min(1.0F, blue - hueDrift * 0.35F);
 
         getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, emissive,
                 bufferSource.getBuffer(emissive), partialTick,

@@ -1055,6 +1055,20 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.47.0 — MEJORAS SEGURAS EN ANIMACION Y EFECTOS**:
+            cambios de ROTACION o COLOR, sin tocar el motion espacial
+            (no se toca la fuerza/direccion del viento ni la
+            componente Z del desplazamiento). (1) Animacion: segundo
+            armonico del shiver por columna (k=13, amplitud 0.5x) en
+            la inclinacion Z de los jirones: temblor de grano,
+            rotacion pura. (2) Dobladillo: segundo armonico del
+            flutter (0.4 grados, RotZ). (3) Hombreras traseras:
+            segundos armonicos de rotacion (levantamiento RotX 0.3,
+            inclinacion RotZ 0.2). (4) Efectos y bloom: DRIFT DE
+            MATIZ lento del resplandor del glow y del glow del item
+            (COLOR solo: alfa del re-render emisivo fijo 1.0 /
+            clampado a 1.0). La capa sigue colgando visible y sin
+            intersectar el cuerpo.
           - **v1.46.0 — MEJORAS SEGURAS EN ANIMACION, TEXTURA Y EFECTOS**:
             se sigue la linea de mejoras verificadas, con amplitudes
             TODAS MINUSCULAS y cambios de ROTACION o COSMETICOS (ningun

@@ -527,6 +527,12 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
                 continue;
             double flutterDeg = Math.sin(time * 5.1D - column * 0.55D + wind * 0.7D)
                     * (0.7D + speed * 2.4D + airborne * 1.2D);
+            // v1.47.0: SEGUNDO armónico del flutter (amplitud 0.4 grados,
+            // frecuencia mayor, fase distinta por columna): el dobladillo
+            // tiene el temblor fino del borde del tejido, no un vaivén
+            // simple. Es ROTACIÓN (RotZ) pura: no toca la posición del
+            // paño ni puede empujarlo al cuerpo.
+            flutterDeg += 0.4D * Math.sin(time * 9.2D - column * 1.1D + wind * 0.3D);
             hem.setRotZ(hemBaseZ[column]
                     + (float) Math.toRadians(Mth.clamp(flutterDeg, -5.0D, 5.0D)));
         }
@@ -577,6 +583,13 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
                 double liftDeg = Math.sin(phase) * (0.8D + speed * 2.2D
                         + airborne * 1.6D + sprint * 1.1D);
                 double tiltDeg = turn * 1.6D + Math.sin(phase * 0.7D) * 0.6D;
+                // v1.47.0: SEGUNDOS armónicos de ROTACIÓN para la leva
+                // (RotX, 0.3 grados) y la inclinación (RotZ, 0.2 grados),
+                // con fase distinta: la hombrera trasera tiene el
+                // temblor fino de la pieza flotando, no un vaivén simple.
+                // Es rotación pura: no toca la posición del paño.
+                liftDeg += 0.3D * Math.sin(phase * 1.9D + i * 2.2D);
+                tiltDeg += 0.2D * Math.sin(phase * 2.3D + i * 1.5D);
                 pad.setRotX(rearPadBaseX[i] + (float) Math.toRadians(
                         Mth.clamp(liftDeg, -6.0D, 6.0D)));
                 pad.setRotZ((float) Math.toRadians(

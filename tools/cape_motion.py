@@ -346,6 +346,13 @@ def sample(name: str, style: str, f: float) -> dict:
     gust, dgust, drag, ddrag = _flow(f, phase)
     s_step, d_step = _harm(f, 1, phase * 0.5)
     s_shiv, d_shiv = _harm(f, 8, col * 1.3 + seg * 0.9)
+    # v1.47.0: SEGUNDO armónico del shiver (k=13, amplitud 0.5x) con
+    # fase distinta por columna/tramo. El temblor por columna lee el
+    # grano del tejido: es ROTACIÓN (inclinación Z de cada jirón),
+    # NO toca la posición (pos) ni la fuerza/dirección del viento
+    # (gust), así que no puede empujar el paño al cuerpo (evita el
+    # regreso de la v1.39.0/v1.40.0). k=13 es entero, C1 se mantiene.
+    s_shiv2, d_shiv2 = _harm(f, 13, col * 1.7 + seg * 1.1)
     s_pull, d_pull = _harm(f, 1, phase + 0.6)
     g = spec["gain"]
 
@@ -367,11 +374,13 @@ def sample(name: str, style: str, f: float) -> dict:
         rot = [amp * 0.42 * w - flare * (0.62 + 0.38 * drag)
                + gust_a * 1.20 * seg_f * gust,
                step * s_step + spec["sway"] * lateral * gust,
-               amp * w + gust_a * 2.20 * seg_f * gust + shiver * s_shiv]
+               amp * w + gust_a * 2.20 * seg_f * gust + shiver * s_shiv
+               + shiver * 0.5 * s_shiv2]
         drot = [amp * 0.42 * dw - flare * 0.38 * ddrag
                 + gust_a * 1.20 * seg_f * dgust,
                 step * d_step + spec["sway"] * lateral * dgust,
-                amp * dw + gust_a * 2.20 * seg_f * dgust + shiver * d_shiv]
+                amp * dw + gust_a * 2.20 * seg_f * dgust + shiver * d_shiv
+                + shiver * 0.5 * d_shiv2]
         if fam == "ribbon":
             # v1.21.0: los 7 tramos son HERMANOS en el geo, así que una
             # rotación aislada sólo hacía vibrar cada cubo sobre su centro.
