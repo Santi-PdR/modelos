@@ -608,6 +608,11 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             // flotando. Sólo se toca RotZ: es rotación pura, no toca
             // la posición del paño ni puede empujarlo al cuerpo.
             chainDeg += 0.2D * Math.sin(time * 3.3D + i * 2.1D);
+            // v1.48.0: TERCER armónico de ROTACIÓN (0.12 grados, fase
+            // distinta): el vaivén de la cadena lee el temblor fino de
+            // los eslabones. Sólo RotZ: rotación pura, sin tocar la
+            // posición del paño.
+            chainDeg += 0.12D * Math.sin(time * 4.7D + i * 2.9D);
             chain.setRotZ(frontChainBaseZ[i] + (float) Math.toRadians(chainDeg));
         }
 

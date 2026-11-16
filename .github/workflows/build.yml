@@ -1055,6 +1055,19 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.48.0 — MEJORAS SEGURAS EN ANIMACION Y EFECTOS**:
+            cambios de ROTACION o COLOR, sin tocar el motion espacial
+            (no se toca la fuerza/direccion del viento ni la
+            componente Z del desplazamiento). (1) Animacion: TERCER
+            armonico del shiver por columna (k=16, amplitud 0.35x) en
+            la inclinacion Z de los jirones: temblor de grano,
+            rotacion pura. (2) Cadena delantera: TERCER armonico de
+            rotacion (0.12 grados, RotZ). (3) Efectos y bloom:
+            SEGUNDO drift de matiz del resplandor del glow y del
+            glow del item (COLOR solo: alfa fijo 1.0 / clampado
+            a 1.0). (4) Chispa: micro-variacion de tamano (cosmetico).
+            La capa sigue colgando visible y sin intersectar el
+            cuerpo.
           - **v1.47.0 — MEJORAS SEGURAS EN ANIMACION Y EFECTOS**:
             cambios de ROTACION o COLOR, sin tocar el motion espacial
             (no se toca la fuerza/direccion del viento ni la

@@ -129,7 +129,12 @@ public class CapaSparkParticle extends TextureSheetParticle {
                 + 0.004F * (float) Math.sin(this.age * 15.5F + 11.1F);
         float cover = fadeIn * fadeOut;
         this.alpha = Math.min(1.0F, 0.72F * cover + twinkle * cover);   // semitransparente
-        this.quadSize = this.baseSize * (1.0F - 0.22F * progress + 0.08F * twinkle);
+        // v1.48.0: micro-variación de tamaño (amplitud 0.03) con fase
+        // distinta, para que la chispa no sea un rectángulo de tamaño
+        // uniforme: tiene el temblor de una brasa viva. Es COSMETICO
+        // (tamaño), no toca el alfa ni el color del sprite.
+        this.quadSize = this.baseSize * (1.0F - 0.22F * progress + 0.08F * twinkle
+                + 0.03F * (float) Math.sin(this.age * 4.7F + 1.9F));
         this.setSpriteFromAge(this.sprites);
     }
 
