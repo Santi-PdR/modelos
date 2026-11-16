@@ -1055,6 +1055,18 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.51.0 — MEJORAS SEGURAS EN ANIMACION Y EFECTOS**:
+            cambios de ROTACION o COLOR, sin tocar el motion espacial
+            (no se toca la fuerza/direccion del viento ni la
+            componente Z del desplazamiento). (1) Animacion: segundo
+            micro-armónico de la capucha (k=8, amplitud 3% de amp,
+            RotZ). (2) Halo orbital: CUARTO armonico de rotacion (0.06
+            grados, RotZ). (3) Cadena delantera: CUARTO armonico de
+            rotacion (0.06 grados, RotZ). (4) Efectos y bloom: CUARTO
+            drift de matiz del resplandor del glow y del glow del item
+            (COLOR solo: alfa fijo 1.0 / clampado a 1.0). (5) Chispa:
+            TERCER armonico de COLOR (matiz) (cosmetico). La capa
+            sigue colgando visible y sin intersectar el cuerpo.
           - **v1.50.0 — MEJORAS SEGURAS EN ANIMACION Y EFECTOS**:
             cambios de ROTACION o COLOR, sin tocar el motion espacial
             (no se toca la fuerza/direccion del viento ni la

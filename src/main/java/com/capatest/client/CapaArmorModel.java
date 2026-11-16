@@ -557,6 +557,11 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             // un vaivén de dos frecuencias. Sólo RotZ: rotación pura,
             // sin tocar la posición del paño ni empujarlo al cuerpo.
             spinDeg += 0.10D * Math.sin(time * 4.1D + i * 2.6D + seed * 0.04D);
+            // v1.51.0: CUARTO armónico de ROTACIÓN (0.06°, fase distinta):
+            // el halo lee el temblor ultrafino de los fragmentos, no un
+            // vaivén de tres frecuencias. Sólo RotZ: rotación pura,
+            // sin tocar la posición del paño ni empujarlo al cuerpo.
+            spinDeg += 0.06D * Math.sin(time * 5.3D + i * 3.1D + seed * 0.03D);
             shard.setRotZ(orbitBaseZ[i] + (float) Math.toRadians(spinDeg));
         }
 
@@ -631,6 +636,11 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             // los eslabones. Sólo RotZ: rotación pura, sin tocar la
             // posición del paño.
             chainDeg += 0.12D * Math.sin(time * 4.7D + i * 2.9D);
+            // v1.51.0: CUARTO armónico de ROTACIÓN (0.06°, fase distinta):
+            // la cadena lee el temblor ultrafino de los eslabones, no un
+            // vaivén de tres frecuencias. Sólo RotZ: rotación pura,
+            // sin tocar la posición del paño.
+            chainDeg += 0.06D * Math.sin(time * 5.5D + i * 3.3D);
             chain.setRotZ(frontChainBaseZ[i] + (float) Math.toRadians(chainDeg));
         }
 

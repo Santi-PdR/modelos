@@ -426,10 +426,19 @@ def sample(name: str, style: str, f: float) -> dict:
         # k=6 es entero, C1 se mantiene (wave(0)==wave(1)).
         s_cowl6, d_cowl6 = _harm(f, 6, phase * 1.7)
         cowlTrem = amp * 0.06
+        # v1.51.0: SEGUNDO micro-armónico de la capucha (k=8, amplitud
+        # 3% de amp, fase distinta). El gorro tiene el temblor ultrafino
+        # de la tela, no un seno de una frecuencia. Es ROTACIÓN pura
+        # (RotZ): no toca la posición ni el escalado. k=8 es entero,
+        # C1 se mantiene (wave(0)==wave(1)).
+        s_cowl8, d_cowl8 = _harm(f, 8, phase * 2.3)
+        cowlTrem2 = amp * 0.03
         rot = [amp * 0.45 * w + 0.30 * (drag - 0.5), 0.0,
-               amp * 0.30 * w + 0.25 * gust + cowlTrem * s_cowl6]
+               amp * 0.30 * w + 0.25 * gust + cowlTrem * s_cowl6
+               + cowlTrem2 * s_cowl8]
         drot = [amp * 0.45 * dw + 0.30 * ddrag, 0.0,
-                amp * 0.30 * dw + 0.25 * dgust + cowlTrem * d_cowl6]
+                amp * 0.30 * dw + 0.25 * dgust + cowlTrem * d_cowl6
+                + cowlTrem2 * d_cowl8]
         has_scale = True
         b = spec["breath"]
         scale = [1 + b * drag, 1 + b * drag * 0.55, 1 + b * drag * 0.30]
