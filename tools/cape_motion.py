@@ -271,8 +271,17 @@ def wave(f: float, phase: float, h: float) -> tuple[float, float]:
     # wave(0)==wave(1) y la derivada cierra (C1); el self-test lo
     # comprueba. No ancla nada a cero ni rompe la costura.
     s12, d12 = _harm(f, 12, phase * 13.7)
-    return (s1 + 0.28 * s2 + h * s3 + 0.10 * s4 + 0.06 * s5 + 0.035 * s6 + 0.025 * s7 + 0.02 * s8 + 0.015 * s9 + 0.01 * s10 + 0.008 * s11 + 0.004 * s12,
-            d1 + 0.28 * d2 + h * d3 + 0.10 * d4 + 0.06 * d5 + 0.035 * d6 + 0.025 * d7 + 0.02 * d8 + 0.015 * d9 + 0.01 * d10 + 0.008 * d11 + 0.004 * d12)
+    # v1.44.0: DÉCIMATERCERO armónico (k=13, amplitud 0.003) con fase
+    # 14.9*φ. Es ROTACIÓN: el balanceo del paño lee el temblor de los
+    # hilos más estrechos al viento, con amplitud menor que el k=12
+    # y fase distinta. La onda de rotación es lateral: no altera la
+    # componente Z del dobladillo ni empuja el paño hacia el cuerpo
+    # (evita el regreso de la v1.39.0/v1.40.0). k=13 es entero, así que
+    # wave(0)==wave(1) y la derivada cierra (C1); el self-test lo
+    # comprueba. No ancla nada a cero ni rompe la costura.
+    s13, d13 = _harm(f, 13, phase * 14.9)
+    return (s1 + 0.28 * s2 + h * s3 + 0.10 * s4 + 0.06 * s5 + 0.035 * s6 + 0.025 * s7 + 0.02 * s8 + 0.015 * s9 + 0.01 * s10 + 0.008 * s11 + 0.004 * s12 + 0.003 * s13,
+            d1 + 0.28 * d2 + h * d3 + 0.10 * d4 + 0.06 * d5 + 0.035 * d6 + 0.025 * d7 + 0.02 * d8 + 0.015 * d9 + 0.01 * d10 + 0.008 * d11 + 0.004 * d12 + 0.003 * d13)
 
 
 def _flow(f: float, phase: float) -> tuple[float, float, float, float]:

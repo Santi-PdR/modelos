@@ -540,6 +540,12 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             double spinDeg = Math.sin(time * (0.85D + speed * 0.65D)
                     + i * Math.PI / 2.0D + seed * 0.09D)
                     * (1.4D + sprint * 1.2D);
+            // v1.44.0: se suma un segundo armónico de ROTACIÓN (amplitud
+            // 0.25°, fase distinta) para que el halo no gire como un
+            // motor regular: tiene el temblor de los fragmentos
+            // flotando. Sólo se toca RotZ: es rotación pura, no toca
+            // la posición del paño ni puede empujarlo al cuerpo.
+            spinDeg += 0.25D * Math.sin(time * 2.4D + i * 1.7D + seed * 0.05D);
             shard.setRotZ(orbitBaseZ[i] + (float) Math.toRadians(spinDeg));
         }
 
