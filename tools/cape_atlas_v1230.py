@@ -129,11 +129,21 @@ def _weave(arr, box, strength=5.0, freq=7.0) -> None:
     más finos: el paño lee como un tejido de hilo estrecho y no como
     una lámina de dos frecuencias. Idempotente, simétrica y sin ruido:
     no toca el degradado carmesí->morado ni la calibración de color.
+
+    v1.43.0: se suma una CUARTA capa de hilos a frecuencia 1.2x de la
+    fina (freq*8.5, amplitud 0.14x) para el temblor casi microscópico
+    de los hilos más estrechos: el paño lee como un tejido de hilo
+    muy fino y no como una lámina de tres frecuencias. Determinista,
+    idempotente, simétrica y sin ruido: sólo toca R/G/B, NO toca el
+    canal alfa (siempre 255), así que la capa sigue opaca y nunca
+    se vuelve transparente. No altera el degradado carmesí->morado
+    ni la calibración de color.
     """
     u0, v0, u1, v1 = box
     h, w = v1 - v0, u1 - u0
     freq2 = freq * 2.4
     freq3 = freq * 4.6
+    freq4 = freq * 8.5
     for j in range(h):
         for i in range(w):
             warp = math.sin(((i + j) / w) * math.tau * freq)
@@ -147,6 +157,10 @@ def _weave(arr, box, strength=5.0, freq=7.0) -> None:
             warp3 = math.sin(((i + j) / w) * math.tau * freq3)
             weft3 = math.sin(((i - j) / w) * math.tau * freq3)
             d += strength * 0.22 * (warp3 * 0.60 + weft3 * 0.40)
+            # v1.43.0: capa de hilos más estrechos, temblor microscópico.
+            warp4 = math.sin(((i + j) / w) * math.tau * freq4)
+            weft4 = math.sin(((i - j) / w) * math.tau * freq4)
+            d += strength * 0.14 * (warp4 * 0.60 + weft4 * 0.40)
             arr[v0 + j, u0 + i, 0] = max(0, min(255, arr[v0 + j, u0 + i, 0] + d))
             arr[v0 + j, u0 + i, 1] = max(0, min(255, arr[v0 + j, u0 + i, 1] + d * 0.2))
             arr[v0 + j, u0 + i, 2] = max(0, min(255, arr[v0 + j, u0 + i, 2] + d * 0.7))

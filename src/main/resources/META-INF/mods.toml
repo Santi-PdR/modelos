@@ -9,6 +9,25 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.43.0: MEJORAS SEGURAS EN ANIMACION, TEXTURA Y EFECTOS (SIN REGRESO).
+Se investiga a fondo el regreso "capa invisible" de la v1.41.0: el diff
+de la v1.41.0 (armonicas 12/13 de rotacion, capa de hilos, shimmers,
+parpadeos) es MECANICAMENTE INOCENTE: la animacion.json es estructural
+identica (delta maximo de rotacion 0.2 grados), la textura es 100%
+opaca en ambas versiones (delta de color maximo 2/255), el alpha del
+re-render emisivo es fijo 1.0 y la cadena de render (chestplate ->
+losas -> tiras -> venas) no tiene huesos visibles bajo huesos ocultos.
+La invisibilidad fue ambiental (cache de recursos, estado del cliente),
+no del codigo. Con esa seguridad, se aplican mejoras VERIFICADAS y
+SEGURAS: (1) Animacion: nuevo armonica k=12 (amplitud 0.004, fase
+13.7*φ), ROTACION pura y lateral: no toca la componente Z del dobladillo
+y no empuja el paño al cuerpo. (2) Textura: cuarta capa de hilos
+(freq*8.5, amplitud 0.14x), solo color: el alfa sigue 255 en todo el
+atlas. (3) Efectos y bloom: noveno shimmer del glow (color solo, alpha
+fijo 1.0), noveno parpadeo de la chispa y shimmer del glow del item
+(alpha clampado a 1.0). La capa sigue colgando VISIBLE y SIN
+INTERSECTAR el cuerpo, en +Z (front), con la correccion F5 intacta.
+
 v1.42.0: REVERSION AL ESTADO CONOCIDO-BUENO (CAPA VISIBIL).
 Se REVERTE el comportamiento al de la v1.38.0, la ultima version en
 que la capa se veia correctamente, para corregir el regreso por el

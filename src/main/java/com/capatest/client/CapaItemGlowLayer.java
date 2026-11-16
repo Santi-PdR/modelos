@@ -52,7 +52,13 @@ public class CapaItemGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
         try {
             RenderType eyes = RenderType.eyes(GLOW);
             double phase = (System.currentTimeMillis() % PERIOD_MS) / PERIOD_MS * Math.PI * 2.0;
-            float brightness = 0.72F + 0.28F * (float) Math.sin(phase);
+            // v1.43.0: se suma un shimmer lento a mayor frecuencia y muy
+            // baja amplitud, con fase distinta, para que el destello del
+            // broche no sea un pulso llano. Se CLAMPEA a 1.0 para que el
+            // alpha del re-render emisivo NO supere el pleno (el item
+            // sigue opaco y nunca se vuelve transparente).
+            float brightness = Math.min(1.0F, 0.72F + 0.28F * (float) Math.sin(phase)
+                    + 0.05F * (float) Math.sin(phase * 2.3D + 0.9D));
             float violet = 0.88F + 0.10F * (1.0F - brightness);
             float cyan = 0.10F + 0.10F * (float) Math.cos(phase * 0.5D);
             float red = 1.0F - cyan * 0.12F;

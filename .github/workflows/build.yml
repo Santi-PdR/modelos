@@ -1055,6 +1055,21 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.43.0 — MEJORAS SEGURAS EN ANIMACION, TEXTURA Y EFECTOS**:
+            se investiga a fondo el regreso "capa invisible" de la
+            v1.41.0: el diff de esa version (armonicas 12/13 de rotacion,
+            capa de hilos, shimmers, parpadeos) es MECANICAMENTE INOCENTE
+            (animacion.json estructural identica con delta maximo 0.2
+            grados, textura 100% opaca con delta de color maximo 2/255,
+            alpha del re-render emisivo fijo 1.0, cadena de render sin
+            huesos visibles bajo huesos ocultos). La invisibilidad fue
+            ambiental, no del codigo. Se aplican mejoras VERIFICADAS y
+            SEGURAS: armonica k=12 de ROTACION pura y lateral (no toca
+            la componente Z del dobladillo), cuarta capa de hilos de
+            la textura (solo color, alfa 255), noveno shimmer del glow
+            (color solo, alfa fijo 1.0), noveno parpadeo de la chispa
+            y shimmer del glow del item (alfa clampado a 1.0). La capa
+            sigue colgando visible y sin intersectar el cuerpo.
           - **v1.42.0 — REVERSION AL ESTADO CONOCIDO-BUENO (CAPA VISIBIL)**:
             se REVERTE el comportamiento al de la v1.38.0, la ultima
             version en que la capa se veia correctamente, para corregir
