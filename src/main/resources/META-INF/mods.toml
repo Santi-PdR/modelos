@@ -9,6 +9,18 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.50.0: MEJORAS SEGURAS EN ANIMACION Y EFECTOS (SIN REGRESO).
+Cambios de ROTACION o COLOR, sin tocar el motion espacial (no se toca
+la fuerza/direccion del viento ni la componente Z del desplazamiento).
+(1) Animacion: micro-rotacion Z del dobladillo (armónico k=5, amplitud
+5% de amp, RotZ) y micro-rotacion Z de la vena (armónico k=5, amplitud
+8% de amp, RotZ): temblor fino de la tela y la energy, rotacion pura.
+(2) Efectos y bloom: TERCER drift de matiz del resplandor del glow y
+del glow del item (COLOR solo: alfa del re-render emisivo fijo 1.0 /
+clampeado a 1.0). (3) Chispa: SEGUNDO armónico de color (matiz)
+(cosmetico). La capa sigue colgando VISIBLE y SIN INTERSECTAR el
+cuerpo, en +Z (front), con la correccion F5 intacta.
+
 v1.49.0: MEJORAS SEGURAS EN ANIMACION Y EFECTOS (SIN REGRESO).
 Cambios de ROTACION o COLOR, sin tocar el motion espacial (no se toca
 la fuerza/direccion del viento ni la componente Z del desplazamiento).

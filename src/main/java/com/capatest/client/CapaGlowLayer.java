@@ -201,6 +201,15 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
         red = Math.min(1.0F, red + hueDrift2 * 0.3F);
         green = Math.min(1.0F, green - hueDrift2 * 0.15F);
         blue = Math.min(1.0F, blue + hueDrift2 * 0.25F);
+        // v1.50.0: TERCER drift de matiz, aún más lento y de amplitud
+        // menor, con fase distinta: el resplandor del paño tiene tres
+        // cycles lentos de color, no un matiz fijo ni de dos frecuencias.
+        // Sólo toca el COLOR (r,g,b); el alpha del re-render sigue FIJO
+        // en 1.0 (corrección v1.33.0 intacta).
+        float hueDrift3 = 0.025F * (float) Math.sin(phase * 0.07D + 5.5D);
+        red = Math.min(1.0F, red - hueDrift3 * 0.20F);
+        green = Math.min(1.0F, green + hueDrift3 * 0.25F);
+        blue = Math.min(1.0F, blue - hueDrift3 * 0.15F);
 
         getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, emissive,
                 bufferSource.getBuffer(emissive), partialTick,

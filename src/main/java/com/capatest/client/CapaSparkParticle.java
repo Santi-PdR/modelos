@@ -139,9 +139,15 @@ public class CapaSparkParticle extends TextureSheetParticle {
         // fase distinta por canal y amplitud muy pequeña: la brasa no
         // es un blanco fijo, tiene el temblor de color de una chispa
         // viva. Es COSMETICO (color): no toca el alfa ni el tamaño.
-        this.rCol = 1.0F - 0.05F * (float) Math.sin(this.age * 0.7F + 0.4F);
-        this.gCol = 1.0F - 0.06F * (float) Math.sin(this.age * 1.1F + 2.1F);
-        this.bCol = 1.0F - 0.04F * (float) Math.sin(this.age * 0.9F + 4.0F);
+        // v1.50.0: SEGUNDO armónico de color, con frecuencia y fase
+        // distintas y amplitud menor: la brasa tiene el temblor de
+        // color de una chispa viva, no un seno de una frecuencia.
+        this.rCol = 1.0F - 0.05F * (float) Math.sin(this.age * 0.7F + 0.4F)
+                - 0.025F * (float) Math.sin(this.age * 1.7F + 3.2F);
+        this.gCol = 1.0F - 0.06F * (float) Math.sin(this.age * 1.1F + 2.1F)
+                - 0.030F * (float) Math.sin(this.age * 2.1F + 1.5F);
+        this.bCol = 1.0F - 0.04F * (float) Math.sin(this.age * 0.9F + 4.0F)
+                - 0.020F * (float) Math.sin(this.age * 1.9F + 5.0F);
         this.setSpriteFromAge(this.sprites);
     }
 

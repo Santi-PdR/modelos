@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Capa v1.49.0 — ver el modelo</title>
+<title>Capa v1.50.0 — ver el modelo</title>
 <style>
   body{margin:0;background:#0e0c14;color:#ece4f5;font:16px system-ui,sans-serif;
        display:flex;min-height:100vh;align-items:center;justify-content:center}
@@ -21,20 +21,20 @@
 </head>
 <body>
 <main>
-  <h1>Capa Deteriorer · v1.49.0</h1>
-  <p><b>v1.49.0</b> · <b>mejoras seguras en animación y efectos (sin regreso)</b>: cambios de <b>rotación o color</b>, sin tocar el motion espacial (no se toca la fuerza/dirección del viento ni la componente Z del desplazamiento). (1) <b>Animación</b>: <b>micro-rotación Z de la capucha</b> (armónico k=6, amplitud 6% de amp, RotZ) — temblor fino del gorro, rotación pura. (2) <b>Halo orbital</b>: <b>tercer armónico de rotación</b> (<code>0.10°</code>, RotZ). (3) <b>Hombreras delanteras</b>: <b>tercer armónico de rotación</b> (<code>0.08°</code>, RotZ). (4) <b>Hombreras traseras</b>: <b>tercer armónico de rotación</b> (levantamiento RotX <code>0.12°</code>, inclinación RotZ <code>0.10°</code>). (5) <b>Chispa</b>: <b>micro-variación de color (matiz)</b> (cosmética). La <b>capa sigue colgando visible y sin intersectar el cuerpo</b>, en <b>+Z (front)</b>, con la <b>corrección F5</b> intacta, el <b>cuellito</b>, la <b>onda viajante</b> y la <b>corrección de jump</b>. El icono 2D se mantiene <b>byte a byte el PREFERIDO de la v1.25.0</b> (SHA <code>c90670ba…</code>) y las 27 anclas <code>v15_cloth_*</code> siguen intactas, con su render oculto. La v1.48.0, la v1.47.0, la v1.46.0, la v1.45.0, la v1.44.0, la v1.43.0, la v1.42.0, la v1.41.0, la v1.40.0, la v1.39.0, la v1.38.0, la v1.37.0, la v1.36.0, la v1.35.0, la v1.34.0, la v1.33.0, la v1.32.0, la v1.31.0, la v1.30.0, la v1.29.0, la v1.27.0 y la v1.27.1 quedan como histórico, sin sobrescribir.</p>
+  <h1>Capa Deteriorer · v1.50.0</h1>
+  <p><b>v1.50.0</b> · <b>mejoras seguras en animación y efectos (sin regreso)</b>: cambios de <b>rotación o color</b>, sin tocar el motion espacial (no se toca la fuerza/dirección del viento ni la componente Z del desplazamiento). (1) <b>Animación</b>: <b>micro-rotación Z del dobladillo</b> (armónico k=5, amplitud 5% de amp, RotZ) y <b>micro-rotación Z de la vena</b> (armónico k=5, amplitud 8% de amp, RotZ) — temblor fino de la tela y la energy, rotación pura. (2) <b>Efectos y bloom</b>: <b>tercer drift de matiz</b> del resplandor del glow y del glow del item (<b>color solo</b>: alpha del re-render emisivo fijo <code>1.0</code> / ≤<code>1.0</code>). (3) <b>Chispa</b>: <b>segundo armónico de color (matiz)</b> (cosmética). La <b>capa sigue colgando visible y sin intersectar el cuerpo</b>, en <b>+Z (front)</b>, con la <b>corrección F5</b> intacta, el <b>cuellito</b>, la <b>onda viajante</b> y la <b>corrección de jump</b>. El icono 2D se mantiene <b>byte a byte el PREFERIDO de la v1.25.0</b> (SHA <code>c90670ba…</code>) y las 27 anclas <code>v15_cloth_*</code> siguen intactas, con su render oculto. La v1.49.0, la v1.48.0, la v1.47.0, la v1.46.0, la v1.45.0, la v1.44.0, la v1.43.0, la v1.42.0, la v1.41.0, la v1.40.0, la v1.39.0, la v1.38.0, la v1.37.0, la v1.36.0, la v1.35.0, la v1.34.0, la v1.33.0, la v1.32.0, la v1.31.0, la v1.30.0, la v1.29.0, la v1.27.0 y la v1.27.1 quedan como histórico, sin sobrescribir.</p>
   <div class="grid">
     <a href="capa_v1170_visor.html"><b>Ver el modelo en 3D (recomendado)</b>
        <span>Visor autocontenido: rota con el ratón, cambia de vista y reproduce los 8 estados y las chispas exclusivas.</span></a>
-    <a href="https://github.com/Santi-PdR/modelos/releases/tag/v1.49.0"><b>JAR v1.49.0 (Release vigente)</b>
+    <a href="https://github.com/Santi-PdR/modelos/releases/tag/v1.50.0"><b>JAR v1.50.0 (Release vigente)</b>
        <span>Forge 1.20.1 · JDK 17 + Gradle 8.8 · descarga directa.</span></a>
-    <a href="https://github.com/Santi-PdR/modelos/tree/artifacts/v1.49.0"><b>Segunda vía de descarga del JAR (mismo binario)</b>
-       <span>Rama <code>artifacts/v1.49.0</code> con el <code>.jar</code> y su <code>SHA256SUMS.txt</code>. Se baja por <code>codeload.github.com</code>, donde el CDN de releases no responde. El binario es byte a byte el mismo que el asset de la Release.</span></a>
-    <a href="https://github.com/Santi-PdR/modelos/releases/download/v1.49.0/CAPA_v1.49.0.bbmodel"><b>🔗 Link directo del .bbmodel (v1.49.0)</b>
+    <a href="https://github.com/Santi-PdR/modelos/tree/artifacts/v1.50.0"><b>Segunda vía de descarga del JAR (mismo binario)</b>
+       <span>Rama <code>artifacts/v1.50.0</code> con el <code>.jar</code> y su <code>SHA256SUMS.txt</code>. Se baja por <code>codeload.github.com</code>, donde el CDN de releases no responde. El binario es byte a byte el mismo que el asset de la Release.</span></a>
+    <a href="https://github.com/Santi-PdR/modelos/releases/download/v1.50.0/CAPA_v1.50.0.bbmodel"><b>🔗 Link directo del .bbmodel (v1.50.0)</b>
        <span>Asset de la Release: descarga estable para abrir en Blockbench. Igual al archivo local de abajo.</span></a>
     <a href="capa_v1170_icon_compare.png"><b>Icono del item (ahora visible)</b>
        <span>El inventario usa el PNG 2D de 16×16 ampliado con NEAREST; el renderer 3D ya no lo tapa.</span></a>
-    <a href="CAPA_v1.49.0.bbmodel" download><b>Descargar el .bbmodel para Blockbench</b>
+    <a href="CAPA_v1.50.0.bbmodel" download><b>Descargar el .bbmodel para Blockbench</b>
        <span>156 cubos de capa · 222 grupos · 8 animaciones · 26208 keyframes C1 · textura 128×128 embebida · sin maniquí, sin cubos sueltos y sin partículas externas.</span></a>
     <a href="capa_v1170_comparativa.png"><b>Comparativa con tu referencia</b>
        <span>Tu PNG de Blockbench a la izquierda, el modelo actual a la derecha.</span></a>
@@ -55,12 +55,12 @@
     <a href="capa_v1180_atlas_desde_imagen.png"><b>Atlas = tu imagen limpiada</b>
        <span>96×48 sin checkerboard ni maniquí; cada tramo 3D muestrea su propio píxel (<code>foto_uv()</code>).</span></a>
   </div>
-  <p style="margin-top:26px;font-size:13px">v1.49.0 publicada. Cada entrega sube de versión y mantiene este link del .bbmodel. Otros archivos:
+  <p style="margin-top:26px;font-size:13px">v1.50.0 publicada. Cada entrega sube de versión y mantiene este link del .bbmodel. Otros archivos:
      <code>capa_v1170_preview.png</code> (6 vistas),
      <code>capa_v1170_front_rig.png</code>,
      <code>capa_v1170_side_relief.png</code>,
      <code>capa_v1170_uv_test.png</code>,
-     <code>CAPA_v1.49.0.bbmodel</code>.</p>
+     <code>CAPA_v1.50.0.bbmodel</code>.</p>
 </main>
 </body>
 </html>

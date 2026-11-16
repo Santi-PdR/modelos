@@ -1055,6 +1055,18 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.50.0 — MEJORAS SEGURAS EN ANIMACION Y EFECTOS**:
+            cambios de ROTACION o COLOR, sin tocar el motion espacial
+            (no se toca la fuerza/direccion del viento ni la
+            componente Z del desplazamiento). (1) Animacion: micro-rotacion
+            Z del dobladillo (armónico k=5, amplitud 5% de amp, RotZ) y
+            micro-rotacion Z de la vena (armónico k=5, amplitud 8% de
+            amp, RotZ): temblor fino de la tela y la energy, rotacion
+            pura. (2) Efectos y bloom: TERCER drift de matiz del
+            resplandor del glow y del glow del item (COLOR solo: alfa
+            fijo 1.0 / clampado a 1.0). (3) Chispa: SEGUNDO armonico de
+            COLOR (matiz) (cosmetico). La capa sigue colgando visible y
+            sin intersectar el cuerpo.
           - **v1.49.0 — MEJORAS SEGURAS EN ANIMACION Y EFECTOS**:
             cambios de ROTACION o COLOR, sin tocar el motion espacial
             (no se toca la fuerza/direccion del viento ni la

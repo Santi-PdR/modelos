@@ -391,6 +391,16 @@ def sample(name: str, style: str, f: float) -> dict:
                 step * d_step + spec["sway"] * lateral * dgust,
                 amp * dw + gust_a * 2.20 * seg_f * dgust + shiver * d_shiv
                 + shiver * 0.5 * d_shiv2 + shiver * 0.20 * d_shiv3]
+        # v1.50.0: micro-ROTACIÓN Z del dobladillo (armónico k=5, amplitud
+        # 5% de amp, fase distinta por hueso). El borde inferior no es una
+        # tira rigida: tiene el temblor fino de la tela en el dobladillo.
+        # Es ROTACIÓN pura (RotZ): no toca la posición del paño ni puede
+        # empujarlo al cuerpo. k=5 es entero, C1 se mantiene.
+        if fam == "hem":
+            _sh5, _dh5 = _harm(f, 5, phase * 2.1)
+            _hemTrem = amp * 0.02
+            rot[2] += _hemTrem * _sh5
+            drot[2] += _hemTrem * _dh5
         if fam == "ribbon":
             # v1.21.0: los 7 tramos son HERMANOS en el geo, así que una
             # rotación aislada sólo hacía vibrar cada cubo sobre su centro.
@@ -426,8 +436,15 @@ def sample(name: str, style: str, f: float) -> dict:
         dscale = [b * ddrag, b * ddrag * 0.55, b * ddrag * 0.30]
     elif fam == "vein":
         amp = 5.0 * g["vena"]
-        rot = [amp * 0.12 * w, 0.0, amp * w]
-        drot = [amp * 0.12 * dw, 0.0, amp * dw]
+        # v1.50.0: micro-ROTACIÓN Z de la vena (armónico k=5, amplitud
+        # 8% de amp, fase distinta). La vena encendida no es una línea
+        # rígida: tiene el temblor fino de la energy por la cape. Es
+        # ROTACIÓN pura (RotZ): no toca la posición ni el escalado (el
+        # pulso sigue por `drag`). k=5 es entero, C1 se mantiene.
+        _sv5, _dv5 = _harm(f, 5, phase * 2.4)
+        _veinTrem = amp * 0.03
+        rot = [amp * 0.12 * w, 0.0, amp * w + _veinTrem * _sv5]
+        drot = [amp * 0.12 * dw, 0.0, amp * dw + _veinTrem * _dv5]
         has_scale = True
         p = spec["pulse"] * drag
         dp = spec["pulse"] * ddrag
