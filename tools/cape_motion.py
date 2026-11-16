@@ -408,10 +408,18 @@ def sample(name: str, style: str, f: float) -> dict:
                     flare * 0.10 * ddrag + 0.34 * bend * d_pull]
     elif fam == "cowl":
         amp = 1.4 * g["cowl"]
+        # v1.49.0: micro-ROTACIÓN Z de la capucha (armónico k=6, amplitud
+        # 6% de amp, fase distinta por hueso). El gorro no es una pieza
+        # rigida: tiene el temblor fino de la tela. Es ROTACIÓN pura
+        # (RotZ): no toca la posición ni el escalado (la respiración
+        # sigue por `drag`), así que no puede empujar nada al cuerpo.
+        # k=6 es entero, C1 se mantiene (wave(0)==wave(1)).
+        s_cowl6, d_cowl6 = _harm(f, 6, phase * 1.7)
+        cowlTrem = amp * 0.06
         rot = [amp * 0.45 * w + 0.30 * (drag - 0.5), 0.0,
-               amp * 0.30 * w + 0.25 * gust]
+               amp * 0.30 * w + 0.25 * gust + cowlTrem * s_cowl6]
         drot = [amp * 0.45 * dw + 0.30 * ddrag, 0.0,
-                amp * 0.30 * dw + 0.25 * dgust]
+                amp * 0.30 * dw + 0.25 * dgust + cowlTrem * d_cowl6]
         has_scale = True
         b = spec["breath"]
         scale = [1 + b * drag, 1 + b * drag * 0.55, 1 + b * drag * 0.30]

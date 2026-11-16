@@ -135,6 +135,13 @@ public class CapaSparkParticle extends TextureSheetParticle {
         // (tamaño), no toca el alfa ni el color del sprite.
         this.quadSize = this.baseSize * (1.0F - 0.22F * progress + 0.08F * twinkle
                 + 0.03F * (float) Math.sin(this.age * 4.7F + 1.9F));
+        // v1.49.0: micro-variación de COLOR (matiz) de la chispa, con
+        // fase distinta por canal y amplitud muy pequeña: la brasa no
+        // es un blanco fijo, tiene el temblor de color de una chispa
+        // viva. Es COSMETICO (color): no toca el alfa ni el tamaño.
+        this.rCol = 1.0F - 0.05F * (float) Math.sin(this.age * 0.7F + 0.4F);
+        this.gCol = 1.0F - 0.06F * (float) Math.sin(this.age * 1.1F + 2.1F);
+        this.bCol = 1.0F - 0.04F * (float) Math.sin(this.age * 0.9F + 4.0F);
         this.setSpriteFromAge(this.sprites);
     }
 

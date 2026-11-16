@@ -552,6 +552,11 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             // flotando. Sólo se toca RotZ: es rotación pura, no toca
             // la posición del paño ni puede empujarlo al cuerpo.
             spinDeg += 0.25D * Math.sin(time * 2.4D + i * 1.7D + seed * 0.05D);
+            // v1.49.0: TERCER armónico de ROTACIÓN (0.10°, fase distinta):
+            // el halo lee el temblor fino de los fragmentos flotando, no
+            // un vaivén de dos frecuencias. Sólo RotZ: rotación pura,
+            // sin tocar la posición del paño ni empujarlo al cuerpo.
+            spinDeg += 0.10D * Math.sin(time * 4.1D + i * 2.6D + seed * 0.04D);
             shard.setRotZ(orbitBaseZ[i] + (float) Math.toRadians(spinDeg));
         }
 
@@ -569,6 +574,11 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             // flotando. Sólo se toca RotZ: es rotación pura, no toca
             // la posición del paño ni puede empujarlo al cuerpo.
             padDeg += 0.15D * Math.sin(time * 2.9D + i * 2.3D);
+            // v1.49.0: TERCER armónico de ROTACIÓN (0.08°, fase distinta):
+            // la hombrera delantera lee el temblor fino de la pieza
+            // flotando, no un vaivén de dos frecuencias. Sólo RotZ:
+            // rotación pura, sin tocar la posición del paño.
+            padDeg += 0.08D * Math.sin(time * 4.3D + i * 2.7D);
             pad.setRotZ(pauldronBaseZ[i] + (float) Math.toRadians(padDeg));
         }
         // v1.13.0: ANIMACION de las hombreras traseras. RotX con retardo
@@ -590,6 +600,14 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
                 // Es rotación pura: no toca la posición del paño.
                 liftDeg += 0.3D * Math.sin(phase * 1.9D + i * 2.2D);
                 tiltDeg += 0.2D * Math.sin(phase * 2.3D + i * 1.5D);
+                // v1.49.0: TERCER armónico de ROTACIÓN para la leva
+                // (RotX, 0.12 grados) y la inclinación (RotZ, 0.10
+                // grados), con fase distinta: la hombrera trasera lee el
+                // temblor ultrafino de la pieza flotando, no un vaivén de
+                // dos frecuencias. Es rotación pura: no toca la posición
+                // del paño ni puede empujarlo al cuerpo.
+                liftDeg += 0.12D * Math.sin(phase * 2.7D + i * 2.9D);
+                tiltDeg += 0.10D * Math.sin(phase * 3.1D + i * 2.5D);
                 pad.setRotX(rearPadBaseX[i] + (float) Math.toRadians(
                         Mth.clamp(liftDeg, -6.0D, 6.0D)));
                 pad.setRotZ((float) Math.toRadians(
