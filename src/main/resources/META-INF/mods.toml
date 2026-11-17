@@ -9,6 +9,15 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.55.0: NUEVA VERSIÓN (bump). Lleva la mejora BOLD del modelo y la
+textura de la v1.54.0 (collar dorsal + faldón frontal grandes y
+visibles; textura del paño rebuilt desde 0 con pliegues verticales,
+trama de hilo, degradado de caída y rim light), con la guía
+`docs/GUIA_MODELADO_ANIMACION.md` re-recordada antes de la actualizacion.
+Restricciones vigentes intactas: capa visible y sin intersectar el
+cuerpo en +Z (front), alpha glow fijo 1.0, motion espacial prohibido,
+icono byte a byte, 8 RMS distintos.
+
 v1.54.0: MEJORA DEL MODELO Y LA TEXTURA (GUIADA POR EL ESTUDIO).
 Revisada con `docs/GUIA_MODELADO_ANIMACION.md` (jerarquia de huesos
 ANTES de geometria; UUIDs estables; animar por rotacion, nunca por

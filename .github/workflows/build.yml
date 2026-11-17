@@ -1055,6 +1055,17 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.55.0 — NUEVA VERSIÓN (bump)**: lleva la mejora BOLD
+            del modelo y la textura de la v1.54.0 (collar dorsal
+            `v17_cowl_back_*` altura +56% con flare marcado; faldón
+            frontal `v17_cowl_tooth_*` altura +78%; textura del paño
+            rebuilt desde 0: pliegues verticales gruesas + trama de
+            hilo + degradado de caida + rim light). Guia
+            `docs/GUIA_MODELADO_ANIMACION.md` re-recordada antes de
+            la actualizacion. Restricciones vigentes intactas: capa
+            visible y sin intersectar el cuerpo en +Z (front), alpha
+            glow fijo 1.0, motion espacial prohibido, icono byte a
+            byte, 8 RMS distintos.
           - **v1.54.0 — MEJORA DEL MODELO Y LA TEXTURA (GUIADA POR EL ESTUDIO)**:
             guiada por `docs/GUIA_MODELADO_ANIMACION.md` (estudio
             de modelado/animacion/GeckoLib/texturas que se recuerda
