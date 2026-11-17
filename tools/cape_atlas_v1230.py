@@ -208,43 +208,46 @@ def _weave(arr, box, strength=5.0, freq=7.0) -> None:
             arr[v0 + j, u0 + i, 2] = max(0, min(255, arr[v0 + j, u0 + i, 2] + d * 0.7))
 
 
-def _cloth_folds(arr, box, folds=4.0, fold_amp=22.0, drop=16.0,
-                 rim=30.0, weave=9.0) -> None:
-    """v1.54.0b: TEXTURA DEL PANÓ 3D REBUILT FROM 0.
+def _cloth_weave_folds(arr, box, folds=4.0, fold_amp=30.0, drop=22.0,
+                       rim=40.0, warp_freq=6.0, weft_freq=6.0,
+                       thread=18.0) -> None:
+    """v1.54.0c: TEXTURA DEL PANÓ 3D — TEJA VISIBLE (REBUILT FROM 0).
 
-    Se reinicia la mejora de textura desde el baseline limpio: en vez de
-    acumular ajustes sutiles, se construye una estructura de TEJA VISIBLE
-    en una pasada limpia y vectorizada:
+    Se reinicia la textura desde el baseline limpio y se construye una
+    TEJA CLARAMENTE VISIBLE, no una modulación suave:
 
-    - PLIEGUES VERTICALES: el paño cuelga en V; los pliegues (constantes
-      a lo largo de la caída, variables a lo ancho) dan volumen y lectura
-      de tela DOBLADA colgando.
-    - TRAMA CRUZADA (warp/weft): urdimbre (hilos verticales) x trama
-      (horizontal) con contraste real, para que el paño lea como TEJIDO
-      y no como una lámina.
+    - PLIEGUES VERTICALES GRUESAS: el paño cuelga en V; pliegues de
+      alto contraste (claro/oscuro) que dan volumen y lectura de tela
+      DOBLADA colgando.
+    - TRAMA DE HILO: urdimbre (hilos verticales) x trama (horizontal)
+      con patrón de TEJIDO — cells claras donde los hilos se cruzan
+      arriba, oscuras abajo — para que el paño lea como TEJIDO y no
+      como una lámina lisa.
     - DEGRADADO DE CAÍDA: oscurece hacia la punta.
-    - RIM LIGHT: brillo frío en el canto superior, donde pega la luz.
+    - RIM LIGHT: brillo frío marcado en el canto superior.
 
-    Sólo R/G/B: el ALFA se fija a 255 (la capa sigue OPACA y nunca se
-    vuelve transparente). Determinista, idempotente, sin ruido. Se pinta
-    ANTES de los masks emisivos (neon), que se sobrescriben encima, así
-    que el glow no se altera. No toca la calibración carmesí->morado.
+    Sólo R/G/B: el ALFA se fija a 255 (la capa sigue OPACA). RGB con
+    contraste alto para que el cambio sea inequívocamente visible.
+    Determinista, idempotente, sin ruido. Se pinta ANTES de los masks
+    emisivos (neon), que se sobrescriben encima: el glow no se altera.
     """
     u0, v0, u1, v1 = box
     sub = arr[v0:v1, u0:u1]
     h, w = sub.shape[0], sub.shape[1]
     u = np.arange(w, dtype=np.float32) / max(1, w)
     v = np.arange(h, dtype=np.float32) / max(1, h)
-    # Pliegues verticales (varían con u, constantes con v).
-    pliegue = fold_amp * np.sin(u * math.tau * folds)            # (w,)
+    # Pliegues verticales gruesas (varían con u, constantes con v).
+    pliegue = fold_amp * np.sin(u * math.tau * folds)           # (w,)
     # Degradado de caída y rim light (varían con v).
-    drop_g = -drop * v                                           # (h,)
-    rim_g = rim * np.clip(1.0 - v / 0.16, 0.0, 1.0) ** 1.5       # (h,)
-    # Trama cruzada: urdimbre (vertical, warp) + trama (horizontal, weft).
-    warp = weave * np.sin(u * math.tau * 9.0)                   # (w,)
-    weft = weave * 0.7 * np.sin(v * math.tau * 7.0)              # (h,)
+    drop_g = -drop * v                                          # (h,)
+    rim_g = rim * np.clip(1.0 - v / 0.16, 0.0, 1.0) ** 1.5     # (h,)
+    # Trama de hilo: urdimbre (vertical) + trama (horizontal), patrón
+    # de tejido (cells claras/oscuras por el cruce de hilos).
+    warp = thread * np.sin(u * math.tau * warp_freq)           # (w,)
+    weft = thread * 0.85 * np.sin(v * math.tau * weft_freq)    # (h,)
+    weave = warp[None, :] + weft[:, None]                     # (h, w)
     d = (pliegue[None, :] + drop_g[:, None] + rim_g[:, None]
-         + warp[None, :] + weft[:, None])                       # (h, w)
+         + weave)
     out = sub[..., :3].astype(np.float32) + d[..., None] * np.array(
         [1.0, 0.2, 0.7], np.float32)
     out = np.clip(out, 0, 255).astype(np.uint8)
@@ -487,10 +490,10 @@ def build_clean_atlas():
     # v1.29.0: TELA TEJIDA sobre el paño (sólo las tres capas, no los
     # parches). Le da el ribete textil que le faltaba al paño liso.
     _weave(rgb, (0, 0, 96, 128))
-    # v1.54.0b: TEXTURA REBUILT FROM 0 — pliegues verticales + trama
-    # cruzada + degradado de caída + rim light (volumen visible, RGB
-    # solo, alfa 255, neon protegido).
-    _cloth_folds(rgb, (0, 0, 96, 128))
+    # v1.54.0c: TEXTURA REBUILT FROM 0 — TEJA VISIBLE (pliegues gruesas
+    # + trama de hilo + degradado de caída + rim light). RGB solo,
+    # alfa 255, neon protegido.
+    _cloth_weave_folds(rgb, (0, 0, 96, 128))
     _patches(rgb)
     _seams(rgb)
     _wear_holes(rgb)

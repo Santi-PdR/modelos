@@ -267,41 +267,38 @@ def build() -> dict:
             [cube16((x - w / 2.0, bottom, z), (w, height, depth),
                     cowl_uv(w, height, i), COLLAR_UV, INFLATE[i % 3])]))
         # Faldón ANCHO y solapado: el cuello se CONECTA con los mechones.
-        # v1.54.0b: SILUEETA VISIBLE del faldón. Se añade altura y anchura
-        # al faldón frontal para que la conexión collar->cintas sea un
-        # pliegue grande y claro (no una tira fina). Ajuste de
-        # parámetros: el hueso `v17_cowl_tooth_*` no se recrea (UUID
-        # estable, animaciones intactas).
-        fw = w * 1.20
-        fh = 2.05 + 0.60 * (1.0 - abs(fx))
+        # v1.54.0c: SILUEETA DEL FALDÓN FRONTAL — REBUILT FROM 0. Pliegue
+        # grande y claro, claramente visible, que conecta el collar con
+        # las cintas. Ajuste de parámetros: el hueso `v17_cowl_tooth_*`
+        # no se recrea (UUID estable, animaciones intactas). Altura
+        # 1.45-1.80 -> 2.60-3.00; anchura w*1.08 -> w*1.22.
+        fw = w * 1.22
+        fh = 2.60 + 0.60 * (1.0 - abs(fx))
         fz = z + depth + 0.05
         bones.append(bone(
             f"v17_cowl_tooth_{i}", f"v17_cowl_front_{i}",
             [x, bottom + fh / 2.0 - 0.15, fz + 0.40],
             [0.0, 0.0, fx * 5.0],
             [cube16((x - fw / 2.0, bottom - fh + 0.10, fz),
-                    (fw, fh, 0.90), cowl_uv(fw, fh, i + 2),
+                    (fw, fh, 0.95), cowl_uv(fw, fh, i + 2),
                     COLLAR_UV, INFLATE[1])]))
 
     for i in range(COLLAR_BACK):
         fx = (i - (COLLAR_BACK - 1) / 2.0) / max(1.0, (COLLAR_BACK - 1) / 2.0)
         x = fx * 3.70
-        # v1.54.0: SILUEETA DEL COLAR (VISIBLE). Se añade altura y una
-        # inclinación de flare marcada (rotación Z mayor) para que el
-        # dorso del gorro envuelva mejor el cuello y siga la curva
-        # natural de la bufanda, en vez de una placa recta. Es un
-        # ajuste de parámetros (los huesos `v17_cowl_back_*` no se
-        # recrean: los UUIDs se mantienen y las animaciones no se
-        # rompen). La altura pasa de 2.05-2.50 a 2.90-3.20 (collar
-        # alto visible) y el flare se incrementa.
-        height = 2.90 + 0.60 * (1.0 - abs(fx))
+        # v1.54.0c: SILUEETA DEL COLAR DORSAL — REBUILT FROM 0. Collar
+        # alto y con flare marcado, claramente visible, para que el dorso
+        # del gorro envuelva el cuello. Ajuste de parámetros: el hueso
+        # `v17_cowl_back_*` no se recrea (UUID estable, animaciones
+        # intactas). Altura 2.05-2.50 -> 3.40-3.90; flare -fx*6 -> -fx*12.
+        height = 3.40 + 0.50 * (1.0 - abs(fx))
         y_top = 24.72
         bones.append(bone(
             f"v17_cowl_back_{i}", "chestplate",
             [x, y_top - height / 2.0, 1.35],
-            [0.0, 0.0, -fx * 11.0],
-            [cube16((x - 0.96, y_top - height, 1.16),
-                    (1.92, height, 0.86), cowl_uv(1.8, height, i),
+            [0.0, 0.0, -fx * 12.0],
+            [cube16((x - 1.00, y_top - height, 1.20),
+                    (2.00, height, 0.90), cowl_uv(1.8, height, i),
                     COLLAR_UV, INFLATE[2])]))
 
     # ------------------------------------------------------------------
