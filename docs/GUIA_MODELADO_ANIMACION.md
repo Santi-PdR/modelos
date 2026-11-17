@@ -1,0 +1,83 @@
+# Guía de referencia — modelado, animación, GeckoLib y texturas
+
+_Estudio estructurado hecho antes de la mejora v1.54.0. Se RECUERDA antes
+de cada actualización del modelo. Distillado de la documentación oficial
+de Blockbench, el spec del formato `.bbmodel`, las skills de modelado/
+animación y la documentación de GeckoLib._
+
+## 1. Modelado (Blockbench / .bbmodel)
+
+- **Jerarquía de huesos ANTES de la geometría.** Los groups (huesos)
+  definen el pivote; la geometría (cubos/elementos) se parenta al hueso
+  que la debe mover. Los huesos decorativos se parentan al body/head.
+- **Pivotes en las articulaciones reales** (hombro, cadera, cuello) para
+  que la rotación gire sobre el punto correcto.
+- **UUID estables: NO crear/borrar huesos que tengan animación.** Si se
+  borra y recrea un hueso, su UUID cambia y los animators quedan huérfanos.
+  Preferir EDITAR la posición/rotación del hueso existente.
+- **Densidad de polígonos acorde al tamaño visible y la deformación.**
+  No añadir cubos para arreglar textura stretching: arreglar las UV.
+- **Siluetas y proporciones ANTES del detalle.** Bloquear la silueta y las
+  proporciones antes de UV, textura y detalle superficial.
+- **Cubos para estilo Minecraft; mesh para formas orgánicas.** Cubos son
+  más simples y apropiados para estilo voxel.
+- **Orden de transformación:** trasladar al origen → rotar → trasladar
+  de vuelta. El orden de rotación es siempre XYZ.
+
+## 2. Animación
+
+- **Hierarquía de huesos limpia antes de keyframes.** En GeckoLib/Bedrock
+  TODO cubos animado debe vivir bajo un hueso.
+- **Interpolación:** `catmullrom`/`bezier` para movimiento orgánico y
+  suave; `linear` para movimiento mecánico/snappy; `step` para cambios
+  instantáneos. **No usar lineal para movimiento natural** (vértices
+  angulosos, speed constante = artificial).
+- **Primer y último keyframe deben coincidir en pose** para bucles
+  (loop). Para movimiento de vaivén repetitivo, usar seno
+  (`Math.sin(anim_time * 180) * amp`).
+- **Animar un lado y reflejar** para rigs simétricos (save de trabajo y
+  consistencia). El offset de tiempo en walk mejora el ritmo.
+- **Pivotes en articulaciones** simplifican la rigging y hacen que la
+  rotación sea correcta.
+
+## 3. GeckoLib (render de huesos y glow)
+
+- **Render de huesos es RECURSIVO:** se aplica transform en cada nivel y
+  se recorren los hijos.
+- **`setHidden(true)` oculta el hueso Y sus hijos no renderizan en tercera
+  persona (F5).** → NO ocultar los huesos padre de la capa (caería la
+  capa entera al mirar desde atrás). Esta es la causa del regreso v1.30.0.
+- **`setChildrenHidden`** oculta solo los hijos. La visibilidad del hueso
+  se hereda; `GeoArmorRenderer` hereda visibilidad de
+  `HumanoidArmorLayer#setPartVisibility`.
+- **Glowmask:** GeckoLib usa una imagen `glowmask.png` separada (no mcmeta
+  en 5.x). `AutoGlowingTexture` usa el glowmask; el alpha del glowmask es
+  el brillo (blanco = 100% fullbright, negro = 0). El glowmask debe ser
+  la misma resolución que la textura; píxeles transparentes = sin glow.
+- **Para este proyecto:** brillo en COLOR, **alpha del re-render FIJO
+  1.0** (corrección v1.33.0). No modular el alpha del glow.
+
+## 4. Texturas, atlas y UV
+
+- **Densidad de texel consistente**: no estirar el mismo swatch del atlas
+  sobre caras de distinto tamaño. Alinear UV y densidad de texel.
+- **Emitir/glow:** la máscara emisiva se define con ALFA (blanco = brillo
+  máximo). Mipmapping cuidadoso para evitar bleeding de glow a zonas no
+  emisivas en LOD bajo.
+- **Atlas:** empaquetar compacto; la máscara emisiva se define con ALFA
+  (blanco = brillo máximo).
+- **Para este proyecto:** el glowmask es separado; alpha del paño FIJO
+  (brillo en color). Las mejoras de textura son **RGB-only**, sin tocar
+  alfa ni glowmask.
+
+## 5. Restricciones VIGENTES de este proyecto (no revivir)
+
+- La capa **visible**, **sin intersectar el cuerpo**, en **+Z (front)**.
+- **Motion espacial PROHIBIDO** (fuerza/dirección del viento, oscilación
+  en Z, cresta en Z): solo **rotación** o **cosmético**.
+- **Alpha del glow FIJO 1.0**; brillo en COLOR.
+- **NO ocultar los huesos padre** (cape_top/mid/bottom) → rompe el render
+  de hijos en F5.
+- **8 RMS distintos** por clip (validación). Cualquier edit debe
+  preservarlos.
+- **Icono 2D byte a byte** el PREFERIDO (SHA `c90670ba…`).

@@ -206,6 +206,27 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.nda
     rng = np.random.default_rng(0x53)
     grain = 1.0 + rng.standard_normal(rgb.shape).astype(np.float32) * 0.012
     rgb = np.clip(rgb * grain, 0.0, 255.0)
+
+    # v1.54.0: TRAMA DE TELA (warp/weft) + RESALTE DE BORDE (rim).
+    # Gracias al estudio de UV/atlas: la densidad de texel debe ser
+    # CONSISTENTE y alineada al sentido de las cintas (las cintas
+    # caen en V; la trama vertical sigue esa dirección). Sólo RGB:
+    # alfa y glowmask intactos.
+    # Trama vertical: hilos de urdimbre (verticales, a lo largo del
+    # paño) y trama (horizontales) con contraste sutil, protegiendo
+    # la energia emisiva para no apagar el glow.
+    _shade = ((1.0 - energy.astype(np.float32)) * 0.80 + 0.20)[..., None]
+    warp = 1.0 - 0.030 * np.sin(np.arange(96, dtype=np.float32) * 1.4)
+    weft = 1.0 - 0.022 * np.sin(np.arange(48, dtype=np.float32) * 1.1)
+    rgb = rgb * (warp[None, :, None] * _shade + (1.0 - _shade))
+    rgb = rgb * (weft[:, None, None] * _shade + (1.0 - _shade))
+    # Resalte de borde (rim light): un brillo frío en el canto superior
+    # del paño (donde la luz debackground pega), para volumen. Sólo
+    # en las primeras filas y protegiendo la energia.
+    _full = np.linspace(0.0, 1.0, 48, dtype=np.float32)
+    _rim = np.clip(1.0 - _full / 0.10, 0.0, 1.0)   # (48,) 1..0 en 10 filas
+    rim = 1.0 + (_rim[:, None, None] * 0.10) * (1.0 - energy.astype(np.float32))[..., None]
+    rgb = np.clip(rgb * rim, 0.0, 255.0)
     return rgb, ink, cool
 
 

@@ -1055,6 +1055,21 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.54.0 — MEJORA DEL MODELO Y LA TEXTURA (GUIADA POR EL ESTUDIO)**:
+            guiada por `docs/GUIA_MODELADO_ANIMACION.md` (jestudia
+            de modelado/animacion/GeckoLib/texturas que se recuerda
+            ANTES de cada actualizacion: jerarquia de huesos antes de
+            geometria, UUIDs estables, rotar en vez de mover).
+            (1) MODELO: refinamiento de SILUETA del collar/cuello
+            (huesos `v17_cowl_back_*`): se aumenta la altura y la
+            inclinacion de flare para que el dorso del gorro envuelva
+            mejor el cuello; ajuste de PARAMETROS, los huesos no se
+            recrean (UUIDs y animaciones intactos). (2) TEXTURA: se
+            anade TRAMA DE TELA (warp/weft) alineada al sentido de las
+            cintas y un RESALTE DE BORDE (rim light) al paño (RGB
+            solo; alfa/glowmask intactos, energia emisiva protegida).
+            La capa sigue colgando visible y sin intersectar el
+            cuerpo, con las 8 animaciones con RMS distintos intactas.
           - **v1.53.0 — REFORMA DEL MODELO (BASE + TEXTURA)**:
             (1) Geometria: los 27 cubos `bottom`/`mid` del paño
             (`v15_cloth_*`) quedaban apilados y SUELTOS FLOTANDO en la
