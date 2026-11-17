@@ -1,31 +1,15 @@
 #!/usr/bin/env python3
-"""v1.23.0 — ATLAS LIMPIO Y EMISSIVE, CREADO A MANO.
+"""Atlas 128×128 de la capa equipada. No se usa para el item plegado.
 
-El usuario pidió: «Limpia el ruido de la textura dejando un degradado
-definido de rojo carmesí a morado oscuro con agujeros de desgaste en las
-puntas, y añade grietas y bordes en rosa/magenta neón con renderizado
-brillante (emissive / fullbright)».
+v1.56: paño pintado desde cero, en carmesí de brasa y ciruela. Cada franja
+vertical de 16 texels corresponde a un mechón; su cresta, sombra y galón
+siguen la misma altura de UV desde el hombro hasta la punta. El cuello
+usa paneles propios a densidad constante. Desgaste y costuras son RGB.
 
-El atlas anterior era el PNG de la referencia recortado: traía la cabeza
-blanca del maniquí, el arnés, el checkerboard y ruido de compresión que,
-una vez mapeado a cubos, se leía como motas y cuadrados.
-
-Este módulo pinta un atlas 128x128 NUEVO y determinista:
-
-  * u=0..96, v=0..48   : capa EXTERNA. Degradado carmesí -> violeta.
-  * u=0..96, v=48..96  : capa INTERNA. Morado oscuro, más frío y apagado.
-  * u=0..96, v=96..128 : puntas / desgaste.
-  * u=96..128          : parches para hombreras carbón, cadena, cuello
-                         carmesí oscuro y el parche NEÓN de las grietas 3D.
-  * Grietas y bordes neón: trazos con HALO + NÚCLEO + CENTRO BLANCO,
-    dibujados con ImageDraw (sin ruido aleatorio). Se exporta además un
-    ``*_glowmask.png`` cuya ALFA enciende exactamente esos texels: el
-    ``AutoGlowingGeoLayer`` de GeckoLib los renderiza a luz llena.
-  * Agujeros de desgaste: muescas y boquetes oscuros irregulares en el
-    tercio inferior, alineados con los bordes de cada mechón.
-
-Todo el atlas es OPACO (alpha=255): los agujeros son COLOR, no transparencia,
-para que ningún UV de la geometría pueda samplear un texel vacío.
+Los parches metálicos y el diseño de energía anterior se conservan. La
+máscara de brillo se genera con los trazos originales; el RGB de todo
+texel con glow se conserva, incluso en el halo que antes dependía del
+color del paño. Alfa del atlas fijo a 255.
 """
 from __future__ import annotations
 
@@ -34,6 +18,8 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
+
+from cloth_spec import COWL_TILES
 
 SIZE = 128
 
@@ -49,210 +35,98 @@ PAD_SIDE = (96, 64, 112, 80)     # lateral de la placa de hombro
 CREST = (112, 64, 128, 80)       # cresta exterior: el filo que brilla
 LINK_TOP = (96, 80, 112, 96)      # canto superior del eslabón
 
-# v1.28.0: el paño se DESATURA para hablar el mismo idioma de color que el
-# icono PREFERIDO (la textura que el usuario eligió, v1.25.0) y que la foto
-# de referencia. Medido sobre el render 3D contra REFERENCIA_CAPA.png:
-#
-#   * el canal G del modelo iba 10-24 por debajo de la referencia en las
-#     diez bandas (paño demasiado saturado: rojo puro en vez de granato),
-#   * el R del hombro iba 40 por ENCIMA de la referencia (banda t=0.1),
-#   * el icono elegido usa la rampa medida `palette_at()` de la captura,
-#     cuyo extremo inferior es (61, 32, 56): un violeta apagado, no un
-#     violeta eléctrico como el (62, 20, 74) de aquí.
-#
-# Con estos valores el error de color acumulado baja de 321 a 210 (el
-# mejor valor que respeta el degradado carmesí->morado del contrato) y la
-# capa 3D se lee como la MISMA tela que el icono.
-CRIMSON = (106, 24, 40)
-VIOLET = (62, 48, 74)
-# v1.29.0: la capa INTERNA se PROFUNDIZA (canal R más bajo) para fortalecer
-# el degradado carmesí -> morado. El fid al diseño mide
-# `grad = atlas[2:6,0:96,0] - atlas[62:70,0:96,0]`: con INNER_TOP=(66,...)
-# daba 49.5, el único término que dejaba fid en 0.174. Ahuyendo el morado
-# interior el degradado supera 60 y fid cae a 0, sin tocar el carmesí
-# exterior (que ya cumple el contrato carmesí->morado). La referencia es
-# un paño oscuro (media R=43.8), así que este enfosco se lee como tela,
-# no como plástico.
-INNER_TOP = (53, 19, 52)
-INNER_BOTTOM = (14, 10, 34)
+# De arriba abajo: triples (sombra profunda, cuerpo del pliegue, cresta).
+# La base de la capa externa pasa de brasa a ciruela; el forro es frío.
+OUTER_YARN = (
+    (0,  ((52, 13, 32), (147, 36, 61), (224, 112, 116))),
+    (20, ((49, 14, 34), (134, 38, 66), (206, 97, 117))),
+    (33, ((32, 12, 38), (103, 43, 79), (170, 91, 132))),
+    (47, ((22, 11, 34), (58, 30, 76), (117, 78, 131))),
+)
+INNER_YARN = (
+    (0,  ((27, 13, 39), (88, 48, 104), (167, 110, 168))),
+    (22, ((24, 12, 37), (71, 36, 92), (149, 95, 154))),
+    (47, ((16, 9, 30), (45, 24, 67), (103, 65, 119))),
+)
+# RGB congelado de la textura v1.55.0 (sólo texels cubiertos por el glow).
+ENERGY_RGB = Path(__file__).resolve().parent / "originals" / "capa_glow_rgb.png"
 
 
 def _mix(a, b, q):
     return tuple(round(a[i] + (b[i] - a[i]) * q) for i in range(3))
 
 
-def _gradient_block(arr, box, top, bottom, folds=3.0, amplitude=7.0,
-                    seed=0.0) -> None:
-    """Degradado VERTICAL definido + pliegues suaves. SIN ruido aleatorio.
-
-    v1.29.0: pliegues SECUNDARIOS a mayor frecuencia (amplitud 0.35x).
-    Antes el paño era una superficie lisa; la segunda onda fina le da
-    el ribete textil orgánico sin romper el degradado ni el contrato
-    carmesí -> morado (la onda sumada es simétrica, promedia ~0).
-    """
-    u0, v0, u1, v1 = box
-    h, w = v1 - v0, u1 - u0
-    for j in range(h):
-        q = j / max(1, h - 1)
-        q = q * q * (3.0 - 2.0 * q)      # transición suave, no lineal
-        base = _mix(top, bottom, q)
-        for i in range(w):
-            fold = math.sin((i / w) * math.tau * folds + seed + j * 0.035)
-            fold2 = 0.35 * math.sin((i / w) * math.tau * folds * 2.0
-                                    + seed * 1.7 + j * 0.06)
-            shade = amplitude * (fold + fold2)
-            arr[v0 + j, u0 + i, 0] = max(0, min(255, base[0] + shade))
-            arr[v0 + j, u0 + i, 1] = max(0, min(255, base[1] + shade * 0.25))
-            arr[v0 + j, u0 + i, 2] = max(0, min(255, base[2] + shade * 0.85))
-    arr[v0:v1, u0:u1, 3] = 255
+def _yarn_at(rows, v):
+    for (v0, p0), (v1, p1) in zip(rows, rows[1:]):
+        if v <= v1:
+            return tuple(_mix(a, b, (v - v0) / (v1 - v0)) for a, b in zip(p0, p1))
+    return rows[-1][1]
 
 
-def _weave(arr, box, strength=5.0, freq=7.0) -> None:
-    """v1.31.0: TELA TEJIDA — hilos warp/weft cruzados + capa fina.
-
-    Un paño liso se lee como plástico. Esta modulación determinista
-    superpone dos hilos diagonales (warp y weft) que alternan relieve:
-    `sin((i+j)/w*tau*freq)` y `sin((i-j)/w*tau*freq)`. Sin ruido
-    aleatorio, idempotente y simétrica, así que no altera el degradado
-    carmesí -> morado ni la calibración de color. Sólo toca R/B (la G
-    lleva un 0.2x para no inflar la saturación).
-
-    v1.31.0: se suma una SEGUNDA capa de hilos a mayor frecuencia
-    (freq*2.4, amplitud 0.35x). La capa gruesa (freq) da el relieve de
-    los hilos cruzados; la capa fina añade el temblor de los hilos
-    individuales, así el paño lee como tejido fino y no como una
-    lámina de una sola frecuencia. Determinista y simétrica, igual que
-    la capa gruesa: no toca la calibración de color.
-
-    v1.32.0: se suma una TERCERA capa de hilos a frecuencia doble de
-    la fina (freq*4.6, amplitud 0.22x) para el temblor de los hilos
-    más finos: el paño lee como un tejido de hilo estrecho y no como
-    una lámina de dos frecuencias. Idempotente, simétrica y sin ruido:
-    no toca el degradado carmesí->morado ni la calibración de color.
-
-    v1.43.0: se suma una CUARTA capa de hilos a frecuencia 1.2x de la
-    fina (freq*8.5, amplitud 0.14x) para el temblor casi microscópico
-    de los hilos más estrechos: el paño lee como un tejido de hilo
-    muy fino y no como una lámina de tres frecuencias. Determinista,
-    idempotente, simétrica y sin ruido: sólo toca R/G/B, NO toca el
-    canal alfa (siempre 255), así que la capa sigue opaca y nunca
-    se vuelve transparente. No altera el degradado carmesí->morado
-    ni la calibración de color.
-
-    v1.44.0: se suma una QUINTA capa de hilos a frecuencia 1.4x de la
-    anterior (freq*12, amplitud 0.10x) para el temblor sub-texel de
-    los hilos más finos: el paño lee como un tejido de grano muy
-    denso y no como una lámina de cuatro frecuencias. Determinista,
-    idempotente, simétrica y sin ruido: sólo toca R/G/B, NO toca el
-    canal alfa (siempre 255), así que la capa sigue opaca y nunca
-    se vuelve transparente. No altera el degradado carmesí->morado
-    ni la calibración de color.
-
-    v1.45.0: se suma una SEXTA capa de hilos a frecuencia 1.33x de la
-    anterior (freq*16, amplitud 0.08x) para el temblor del grano
-    más denso: el paño lee como un tejido ultrafino y no como una
-    lámina de cinco frecuencias. Determinista, idempotente, simétrica
-    y sin ruido: sólo toca R/G/B, NO toca el canal alfa (siempre
-    255), así que la capa sigue opaca y nunca se vuelve transparente.
-    No altera el degradado carmesí->morado ni la calibración de
-    color.
-
-    v1.46.0: se suma una SÉPTIMA capa de hilos a frecuencia 1.25x de
-    la anterior (freq*20, amplitud 0.06x) para el temblor del grano
-    más fino: el paño lee como un tejido de grano extremo y no como
-    una lámina de seis frecuencias. Determinista, idempotente,
-    simétrica y sin ruido: sólo toca R/G/B, NO toca el canal alfa
-    (siempre 255), así que la capa sigue opaca y nunca se vuelve
-    transparente. No altera el degradado carmesí->morado ni la
-    calibración de color.
-    """
-    u0, v0, u1, v1 = box
-    h, w = v1 - v0, u1 - u0
-    freq2 = freq * 2.4
-    freq3 = freq * 4.6
-    freq4 = freq * 8.5
-    freq5 = freq * 12.0
-    freq6 = freq * 16.0
-    freq7 = freq * 20.0
-    for j in range(h):
-        for i in range(w):
-            warp = math.sin(((i + j) / w) * math.tau * freq)
-            weft = math.sin(((i - j) / w) * math.tau * freq)
-            d = strength * (warp * 0.60 + weft * 0.40)
-            # v1.31.0: capa fina de hilos a mayor frecuencia.
-            warp2 = math.sin(((i + j) / w) * math.tau * freq2)
-            weft2 = math.sin(((i - j) / w) * math.tau * freq2)
-            d += strength * 0.35 * (warp2 * 0.60 + weft2 * 0.40)
-            # v1.32.0: capa de hilos más finos a frecuencia doble.
-            warp3 = math.sin(((i + j) / w) * math.tau * freq3)
-            weft3 = math.sin(((i - j) / w) * math.tau * freq3)
-            d += strength * 0.22 * (warp3 * 0.60 + weft3 * 0.40)
-            # v1.43.0: capa de hilos más estrechos, temblor microscópico.
-            warp4 = math.sin(((i + j) / w) * math.tau * freq4)
-            weft4 = math.sin(((i - j) / w) * math.tau * freq4)
-            d += strength * 0.14 * (warp4 * 0.60 + weft4 * 0.40)
-            # v1.44.0: capa sub-texel, temblor de grano muy denso.
-            warp5 = math.sin(((i + j) / w) * math.tau * freq5)
-            weft5 = math.sin(((i - j) / w) * math.tau * freq5)
-            d += strength * 0.10 * (warp5 * 0.60 + weft5 * 0.40)
-            # v1.45.0: capa ultrafina, temblor de grano más denso.
-            warp6 = math.sin(((i + j) / w) * math.tau * freq6)
-            weft6 = math.sin(((i - j) / w) * math.tau * freq6)
-            d += strength * 0.08 * (warp6 * 0.60 + weft6 * 0.40)
-            # v1.46.0: capa de grano extremo, temblor más fino.
-            warp7 = math.sin(((i + j) / w) * math.tau * freq7)
-            weft7 = math.sin(((i - j) / w) * math.tau * freq7)
-            d += strength * 0.06 * (warp7 * 0.60 + weft7 * 0.40)
-            arr[v0 + j, u0 + i, 0] = max(0, min(255, arr[v0 + j, u0 + i, 0] + d))
-            arr[v0 + j, u0 + i, 1] = max(0, min(255, arr[v0 + j, u0 + i, 1] + d * 0.2))
-            arr[v0 + j, u0 + i, 2] = max(0, min(255, arr[v0 + j, u0 + i, 2] + d * 0.7))
+def _drape(arr, v0, rows, *, lining=False) -> None:
+    """Paño nuevo: pliegues sesgados de 4–7 texels y doble galón tejido en V."""
+    for v in range(48):
+        shadow, body, crest = _yarn_at(rows, v)
+        tones = (shadow, _mix(shadow, body, 0.55), body, _mix(body, crest, 0.62), crest)
+        for u in range(96):
+            panel, x = divmod(u, 16)
+            pleat = 6.0 + 1.4 * math.sin(v * 0.13 + panel * 1.21 + lining * 1.4)
+            # La cara iluminada es ancha, la sombra termina en un canto
+            # abrupto. No es una onda suave sobre el atlas anterior.
+            d = x - pleat
+            tone = (4 if -0.8 <= d <= 1.7 else 3 if -2.4 <= d <= 3.0
+                    else 2 if -4.6 <= d <= 4.0 else 1 if -5.8 <= d <= 6.3 else 0)
+            color = tones[tone]
+            # Trabajo de telar a escala de juego: una arista pespunteada
+            # y el galón atraviesan varias filas, no añaden ruido por píxel.
+            if x in (1, 14) and (v + panel) % 5 < 3 and v < 42:
+                color = _mix(shadow, crest, 0.47 if x == 1 else 0.32)
+            braid_y = 14 + round(9 * (1 - abs((u + 0.5) / 48 - 1)))
+            offset = v - braid_y - (3 if lining else 0)
+            braid = (166, 121, 164) if lining else (218, 141, 114)
+            if offset in (-1, 2, 6):
+                color = _mix(color, shadow, 0.68)
+            elif offset in (0, 1, 5):
+                # Una pasada larga de hilo y otra fina, con el relieve
+                # del pliegue todavía visible por debajo del bordado.
+                color = _mix(color, braid, (0.52 if offset == 5 else 0.69) + 0.04 * tone)
+            arr[v0 + v, u, :3] = color
 
 
-def _cloth_weave_folds(arr, box, folds=4.0, fold_amp=30.0, drop=22.0,
-                       rim=40.0, warp_freq=6.0, weft_freq=6.0,
-                       thread=18.0) -> None:
-    """v1.54.0c: TEXTURA DEL PANÓ 3D — TEJA VISIBLE (REBUILT FROM 0).
-
-    Se reinicia la textura desde el baseline limpio y se construye una
-    TEJA CLARAMENTE VISIBLE, no una modulación suave:
-
-    - PLIEGUES VERTICALES GRUESAS: el paño cuelga en V; pliegues de
-      alto contraste (claro/oscuro) que dan volumen y lectura de tela
-      DOBLADA colgando.
-    - TRAMA DE HILO: urdimbre (hilos verticales) x trama (horizontal)
-      con patrón de TEJIDO — cells claras donde los hilos se cruzan
-      arriba, oscuras abajo — para que el paño lea como TEJIDO y no
-      como una lámina lisa.
-    - DEGRADADO DE CAÍDA: oscurece hacia la punta.
-    - RIM LIGHT: brillo frío marcado en el canto superior.
-
-    Sólo R/G/B: el ALFA se fija a 255 (la capa sigue OPACA). RGB con
-    contraste alto para que el cambio sea inequívocamente visible.
-    Determinista, idempotente, sin ruido. Se pinta ANTES de los masks
-    emisivos (neon), que se sobrescriben encima: el glow no se altera.
-    """
-    u0, v0, u1, v1 = box
-    sub = arr[v0:v1, u0:u1]
-    h, w = sub.shape[0], sub.shape[1]
-    u = np.arange(w, dtype=np.float32) / max(1, w)
-    v = np.arange(h, dtype=np.float32) / max(1, h)
-    # Pliegues verticales gruesas (varían con u, constantes con v).
-    pliegue = fold_amp * np.sin(u * math.tau * folds)           # (w,)
-    # Degradado de caída y rim light (varían con v).
-    drop_g = -drop * v                                          # (h,)
-    rim_g = rim * np.clip(1.0 - v / 0.16, 0.0, 1.0) ** 1.5     # (h,)
-    # Trama de hilo: urdimbre (vertical) + trama (horizontal), patrón
-    # de tejido (cells claras/oscuras por el cruce de hilos).
-    warp = thread * np.sin(u * math.tau * warp_freq)           # (w,)
-    weft = thread * 0.85 * np.sin(v * math.tau * weft_freq)    # (h,)
-    weave = warp[None, :] + weft[:, None]                     # (h, w)
-    d = (pliegue[None, :] + drop_g[:, None] + rim_g[:, None]
-         + weave)
-    out = sub[..., :3].astype(np.float32) + d[..., None] * np.array(
-        [1.0, 0.2, 0.7], np.float32)
-    out = np.clip(out, 0, 255).astype(np.uint8)
-    sub[..., :3] = out
-    sub[..., 3] = 255
+def _paint_cowl_panels(arr) -> None:
+    palettes = {
+        "dorsal": ((52, 13, 32), (126, 34, 55), (184, 70, 87), (225, 134, 113)),
+        "base": ((37, 13, 31), (93, 27, 47), (144, 60, 73), (173, 94, 88)),
+        "faldon": ((43, 13, 37), (112, 31, 60), (169, 64, 96), (203, 114, 111)),
+        "canto": ((33, 12, 29), (73, 24, 45), (107, 46, 68), (143, 71, 80)),
+    }
+    for name, (u0, v0, u1, v1) in COWL_TILES.items():
+        shadow, body, crest, piping = palettes["faldon" if name == "estrella" else name]
+        w, h = u1 - u0, v1 - v0
+        for y in range(h):
+            for x in range(w):
+                xrel = (x + 0.5) / w
+                crease = 1 - min(1.0, abs(xrel - 0.39) / 0.55)
+                color = _mix(body, crest, crease * 0.92)
+                color = _mix(color, shadow, 0.49 * (y / (h - 1)) + 0.19 * (1 - crease))
+                if y in (1, 2):
+                    color = _mix(piping, color, 0.11 + 0.18 * (1 - crease))
+                elif y == 4:
+                    color = shadow
+                elif name != "canto" and 6 <= y <= 19 and x == w // 2 - 3 - y // 10:
+                    if y % 4 < 2:
+                        color = _mix(color, piping, 0.36)
+                if name == "estrella":
+                    # Estrella de ceniza bordada en el pliegue principal.
+                    # Los cuatro rayos y su borde se leen a escala de juego.
+                    dx, dy = abs(x - w // 2), abs(y - 13)
+                    if (dx <= 1 and dy <= 6) or (dy <= 1 and dx <= 4) or dx + dy <= 4:
+                        color = shadow
+                    if (dx == 0 and dy <= 5) or (dy == 0 and dx <= 3) or dx + dy <= 2:
+                        color = piping if x <= w // 2 else _mix(piping, crest, 0.52)
+                    if dx + dy <= 1:
+                        color = (223, 161, 133)
+                arr[v0 + y, u0 + x, :3] = color
 
 
 def _steel(arr, box, top, bottom, diag=True) -> None:
@@ -383,14 +257,6 @@ def _patches(arr) -> None:
                               fill=(26, 6, 12, 255), width=2)
     arr[...] = np.asarray(img2, dtype=np.uint8)
 
-    # --- parche NEÓN para las grietas 3D ---------------------------------
-    u0, v0, u1, v1 = NEON
-    for j in range(v1 - v0):
-        for i in range(u1 - u0):
-            q = 1.0 - min(1.0, abs(i - (u1 - u0) / 2) / ((u1 - u0) / 2))
-            c = _mix((196, 28, 128), (255, 214, 246), q ** 2)
-            arr[v0 + j, u0 + i] = (c[0], c[1], c[2], 255)
-
 
 def _wear_holes(arr) -> None:
     """Agujeros de desgaste en las PUNTAS: muescas + boquetes irregulares."""
@@ -444,17 +310,6 @@ def _neon_paths():
     return edges, cracks
 
 
-def _seams(arr) -> None:
-    """Costura oscura de 1 texel entre mechones: se LEEN como capas."""
-    img = Image.fromarray(arr, "RGBA")
-    d = ImageDraw.Draw(img)
-    for k in range(6):
-        u = k * 16
-        for v0, v1 in ((2, 18), (23, 38), (41, 47)):
-            d.line((u, v0, u, v1), fill=(28, 8, 30, 255), width=1)
-    arr[...] = np.asarray(img, dtype=np.uint8)
-
-
 def _neon_masks():
     core = Image.new("L", (SIZE, SIZE), 0)
     hot = Image.new("L", (SIZE, SIZE), 0)
@@ -477,60 +332,29 @@ def _neon_masks():
 
 def build_clean_atlas():
     """Devuelve (atlas RGBA, glowmask RGBA) 128x128, deterministas."""
-    rgb = np.zeros((SIZE, SIZE, 4), dtype=np.uint8)
-    rgb[...] = (26, 10, 36, 255)
-
-    # Dos capas de tela + franja de puntas.
-    _gradient_block(rgb, (0, 0, 96, 48), CRIMSON, VIOLET,
-                    folds=6.0, amplitude=8.0, seed=0.4)
-    _gradient_block(rgb, (0, 48, 96, 96), INNER_TOP, INNER_BOTTOM,
-                    folds=6.0, amplitude=5.0, seed=1.7)
-    _gradient_block(rgb, (0, 96, 96, 128), (22, 9, 38), (12, 6, 24),
-                    folds=6.0, amplitude=3.0, seed=2.2)
-    # v1.29.0: TELA TEJIDA sobre el paño (sólo las tres capas, no los
-    # parches). Le da el ribete textil que le faltaba al paño liso.
-    _weave(rgb, (0, 0, 96, 128))
-    # v1.54.0c: TEXTURA REBUILT FROM 0 — TEJA VISIBLE (pliegues gruesas
-    # + trama de hilo + degradado de caída + rim light). RGB solo,
-    # alfa 255, neon protegido.
-    _cloth_weave_folds(rgb, (0, 0, 96, 128))
-    _patches(rgb)
-    _seams(rgb)
-    _wear_holes(rgb)
+    atlas = np.empty((SIZE, SIZE, 4), dtype=np.uint8)
+    atlas[...] = (26, 10, 36, 255)
+    _drape(atlas, 0, OUTER_YARN)
+    _drape(atlas, 48, INNER_YARN, lining=True)
+    _patches(atlas)
+    _paint_cowl_panels(atlas)
+    _wear_holes(atlas)
 
     core, hot, halo = _neon_masks()
-    halo2 = np.asarray(
-        Image.fromarray(core).filter(ImageFilter.MaxFilter(5)), dtype=np.uint8)
-    # HALO: magenta oscuro alrededor del trazo.
-    m = (halo > 0) & (core == 0)
-    rgb[m, 0] = np.maximum(rgb[m, 0].astype(int), 122).astype(np.uint8)
-    rgb[m, 1] = np.maximum(rgb[m, 1].astype(int), 18).astype(np.uint8)
-    rgb[m, 2] = np.maximum(rgb[m, 2].astype(int), 96).astype(np.uint8)
-    # NÚCLEO: rosa/magenta neón.
-    m = core > 0
-    rgb[m] = (244, 74, 190, 255)
-    # CENTRO BRILLANTE: casi blanco rosado.
-    m = hot > 0
-    rgb[m] = (255, 204, 240, 255)
-
-    # GLOWMASK: GeckoLib sólo lee el ALFA. El RGB queda coherente por si
-    # alguna herramienta lo inspecciona.
-    # v1.25.0: la fuente del bloom en GeckoLib es el COLOR de la textura
-    # multiplicado por el alpha del glowmask. Se realza sólo el neón
-    # (núcleo + halo): el paño de alrededor queda intacto.
-    m = (halo > 0) & (core == 0)
-    rgb[m, :3] = np.clip(rgb[m, :3].astype(np.float32) * 1.10
-                         + np.array([18, 4, 16]), 0, 255).astype(np.uint8)
-
-    glow = np.zeros((SIZE, SIZE, 4), dtype=np.uint8)
-    glow[..., 0], glow[..., 1], glow[..., 2] = 255, 130, 225
-    glow[..., 3] = 0
-    glow[(halo2 > 0) & (halo == 0), 3] = 48      # anillo externo suave
-    glow[halo > 0, 3] = 118                        # halo (antes 70)
-    glow[core > 0, 3] = 240                        # núcleo (antes 225)
+    halo2 = np.asarray(Image.fromarray(core).filter(ImageFilter.MaxFilter(5)))
+    glow = np.empty_like(atlas)
+    glow[...] = (255, 130, 225, 0)
+    glow[(halo2 > 0) & (halo == 0), 3] = 48
+    glow[halo > 0, 3] = 118
+    glow[core > 0, 3] = 240
     glow[hot > 0, 3] = 255
 
-    assert (rgb[..., 3] == 255).all(), "atlas con texel transparente"
-    count = int((glow[..., 3] > 0).sum())
-    assert 200 < count < SIZE * SIZE, count
-    return Image.fromarray(rgb, "RGBA"), Image.fromarray(glow, "RGBA")
+    # Restaurar también el RGB bajo el halo de 2 texels (alpha 48), no
+    # sólo las líneas principales: el re-render multiplica por ese RGB.
+    with Image.open(ENERGY_RGB) as image:
+        energy = np.asarray(image.convert("RGBA"))
+    emissive = glow[..., 3] > 0
+    assert np.array_equal(energy[..., 3] == 255, emissive), "cambió la cobertura del neón"
+    atlas[emissive, :3] = energy[emissive, :3]
+    assert (atlas[..., 3] == 255).all(), "atlas con texel transparente"
+    return Image.fromarray(atlas), Image.fromarray(glow)

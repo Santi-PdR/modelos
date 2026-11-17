@@ -96,7 +96,7 @@ def main() -> None:
     # --- 5. Aviso de que no requiere red ----------------------------------
     html = html.replace(
         '<span class="badge">SIN COMPILAR · SIN PUBLICAR</span>',
-        '<span class="badge">SIN COMPILAR · SIN PUBLICAR</span>\n'
+        f'<span class="badge">v{mod_version()} · RENDER SOFTWARE</span>\n'
         '    <span class="badge" style="border-color:#6ed8f0;color:#6ed8f0">'
         'OFFLINE · SIN SERVIDOR NI TOKEN</span>', 1)
     html = html.replace("<title>", "<!-- Autocontenido: sin fetch, sin servidor, sin token -->\n<title>", 1)

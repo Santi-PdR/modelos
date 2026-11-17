@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       publicar:
-        description: 'Publicar el .jar como Release (solo con aprobacion visual)'
+        description: 'Preparar un borrador de Release con el JAR verificado'
         required: false
         default: false
         type: boolean
@@ -313,7 +313,9 @@ jobs:
           # Anclaje + DOS CAPAS con profundidad real.
           _zs = [c['origin'][2] + c['size'][2] / 2
                  for b in ribbons for c in b['cubes']]
-          assert min(_zs) < 2.0, ('capa lejos del cuerpo', min(_zs))
+          # En v1.56 el torso acaba en Z=2 y el paño está en +Z.
+          # La prueba con rotaciones e inflate está en verify_v1560.py.
+          assert 2.0 < min(_zs) < 3.2, ('anclaje del paño en +Z', min(_zs))
           assert max(_zs) - min(_zs) > 1.5, ('capa plana', min(_zs), max(_zs))
           _shape = (root / 'tools/cape_shape.py').read_text()
           assert '1.55 + 1.30 * tt' in _shape, 'falta la curva de profundidad'
@@ -901,6 +903,9 @@ jobs:
         run: |
           python3 -m pip install --quiet numpy Pillow
           PYTHONPATH=tools python3 tools/audit_model.py --check
+          if grep -qx 'mod_version=1.56.0' gradle.properties; then
+            python3 tools/verify_v1560.py
+          fi
           # v1240: el calibrador de energia es un lazo cerrado Jacobi; se
           # comprueba que siga siendo importable y que el perfil medido
           # (10 bandas) siga apuntando a la referencia del usuario.
@@ -918,8 +923,7 @@ jobs:
       # SHA-256 publicado cambia en cada republicacion, con lo que no
       # sirve para verificar nada. Se reconstruye el .jar y se compara.
       #
-      # Va ANTES de publicar: solo se sube a la release y a la rama de
-      # artefactos un .jar ya verificado como reproducible.
+      # Sólo se adjunta al borrador un .jar ya verificado como reproducible.
       - name: Verify jar is reproducible
         run: |
           set -euo pipefail
@@ -1021,12 +1025,9 @@ jobs:
           done
           test "$found" -eq 1
 
-      # Entrega directa: un .jar crudo como Release asset, NO un ZIP de artifact.
-      # v1.17.1: la version y el TAG salen de gradle.properties, para que el
-      # nombre del JAR nunca quede desincronizado. El dispatch manual sigue
-      # disponible; ademas, un commit marcado [publicar] permite publicar
-      # cuando el token de integracion no tiene permiso actions:write (403).
-      - name: Publish direct .jar release
+      # [publicar] prepara una release verificable sin escribir a otras
+      # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.
+      - name: Stage verified release (draft)
         if: >-
           (github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar]')) ||
           (github.event_name == 'workflow_dispatch' && inputs.publicar == true)
@@ -1039,21 +1040,29 @@ jobs:
           TAG="v$VER"
           JAR="build/libs/capatest-$VER.jar"
           test -f "$JAR"
-          NOTES=/tmp/release-notes.md
+          NOTES="$RUNNER_TEMP/release-notes.md"
           BBF="docs/CAPA_v$VER.bbmodel"
           BB_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/CAPA_v$VER.bbmodel"
           cat > "$NOTES" <<'MD'
           ## Mantle of the Blight Star __TAG__ — build más reciente
 
           JAR compilado en CI (JDK 17 + Gradle 8.8, Forge 1.20.1-47.3.0).
-          Cada entrega sube de versión: `v1.19.0` queda como histórico y
-          **no se sobreescribe**.
+          v1.55.0 y las anteriores quedan como histórico y no se sobrescriben.
 
           **Link directo del .bbmodel (VERSIONADO)**: __BBURL__
           El archivo se llama `CAPA_v__VER__.bbmodel` y su `name`
           interno en Blockbench incluye la versión.
 
           ### Qué incluye
+
+          - **v1.56.0 — Paño 3D y cuello rediseñados**: carmesí de brasa y
+            ciruela, doble galón en V y estrella bordada. Cambian **6.470**
+            texels del paño equipado, no del item plegado. El pliegue dorsal
+            central mide 5,20 u (antes 3,90) y el faldón 5,50 u (antes 3,20).
+            Mismo icono, glowmasks, RGB emisivo, UUIDs y ocho clips. El modelo
+            queda en +Z y conserva la holgura en las poses muestreadas.
+            La comparativa `capa_v1560_antes_despues.png` usa la misma cámara
+            y escala para ambas versiones.
 
           - **v1.55.0 — NUEVA VERSIÓN (bump)**: lleva la mejora BOLD
             del modelo y la textura de la v1.54.0 (collar dorsal
@@ -1596,9 +1605,8 @@ jobs:
 
           ### Verificar la descarga
 
-          El SHA-256 del `.jar` va en el resumen del build y en el README.
-          La CI lo compara con el JAR recién compilado: lo publicado es
-          byte a byte lo que se compiló.
+          `SHA256SUMS.txt` lista los digests del JAR y el proyecto Blockbench.
+          CI compara ambos con los assets subidos antes de publicar.
 
           ### Descargas de esta Release
 
@@ -1609,132 +1617,45 @@ jobs:
           | `capa_v1170_visor.html` | Visor 3D offline |
           | `capa_v1170_preview.png` | 6 vistas del render software |
           | `capa_v1170_comparativa.png` | Tu referencia frente al modelo |
+          | `capa_v1560_antes_despues.png` | Modelo equipado v1.55.0 y v1.56.0 a la misma escala |
 
           Los previews son render software: la prueba in-game sigue pendiente.
           MD
           sed -i "s/__TAG__/$TAG/g; s/__VER__/$VER/g; s|__BBURL__|$BB_URL|g" "$NOTES"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$JAR" --clobber
+          if gh release view "$TAG" --json isDraft,targetCommitish > "$RUNNER_TEMP/release.json"; then
+            # Reintentos del mismo SHA sí; nunca escribir sobre lo publicado.
+            jq -e --arg commit "$GITHUB_SHA" \
+              '.isDraft and .targetCommitish == $commit' "$RUNNER_TEMP/release.json"
           else
-            gh release create "$TAG" "$JAR" \
+            gh release create "$TAG" --draft \
               --title "Mantle of the Blight Star $TAG" \
               --notes-file "$NOTES" \
               --target "$GITHUB_SHA"
           fi
-          # El proyecto Blockbench y el visor offline se entregan TAMBIEN
-          # como assets: el sandbox tiene el trafico publico restringido.
-          test -f "$BBF"
-          test -f docs/capa_v1170_visor.html
-          test -f docs/capa_v1170_preview.png
-          test -f docs/capa_v1170_comparativa.png
-          gh release upload "$TAG" \
-            "$BBF" \
-            docs/capa_v1170_visor.html \
-            docs/capa_v1170_preview.png \
-            docs/capa_v1170_comparativa.png \
-            --clobber
-          # v1.27.0: VERIFICAR QUE LO PUBLICADO ES LO COMPILADO. La API
-          # de GitHub devuelve el SHA-256 de cada asset: se compara con el
-          # del JAR recién compilado. Si el upload se corrompiese o subiese
-          # un binario viejo, aqui se ve.
-          LOCAL_SHA="$(sha256sum "$JAR" | cut -d' ' -f1)"
-          API_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/$TAG" \
-            --jq '.assets[] | select(.name=="capatest-'"$VER"'.jar") | .digest' \
-            | sed 's/^sha256://')"
-          test -n "$API_SHA"
-          test "$LOCAL_SHA" = "$API_SHA" || {
-            echo "::error::el JAR publicado (sha256:$API_SHA) NO es el compilado (sha256:$LOCAL_SHA)"
-            exit 1
-          }
-          echo "OK: el JAR publicado es byte-identico al compilado (sha256:$LOCAL_SHA)"
-          echo "sha256 del JAR: $LOCAL_SHA" >> "$GITHUB_STEP_SUMMARY"
-          ASSETS="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
-          grep -qx "capatest-$VER.jar" <<< "$ASSETS"
-          grep -qx "CAPA_v$VER.bbmodel" <<< "$ASSETS"
-          grep -qx 'capa_v1170_visor.html' <<< "$ASSETS"
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/capatest-$VER.jar"
-          echo "### Descarga directa" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "[${URL}](${URL})" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "[Blockbench: CAPA_v$VER.bbmodel]($BB_URL)" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          echo "[Visor offline: capa_v1170_visor.html](https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/capa_v1170_visor.html)" >> "$GITHUB_STEP_SUMMARY"
+          SUMS="$RUNNER_TEMP/SHA256SUMS.txt"
+          for ASSET in "$JAR" "$BBF"; do
+            printf '%s  %s\n' "$(sha256sum "$ASSET" | cut -d' ' -f1)" "$(basename "$ASSET")"
+          done > "$SUMS"
+          ASSETS=("$JAR" "$BBF" "$SUMS" docs/capa_v1170_visor.html
+                  docs/capa_v1170_preview.png docs/capa_v1170_comparativa.png)
+          COMPARISON="docs/capa_v${VER//./}_antes_despues.png"
+          if [ -f "$COMPARISON" ]; then ASSETS+=("$COMPARISON"); fi
+          gh release upload "$TAG" "${ASSETS[@]}" --clobber
 
-      # v1.27.1: COPIA DEL JAR EN UNA RAMA DE ARTEFACTOS.
-      # El CDN de assets de release (release-assets.githubusercontent.com) y
-      # el de artifacts (blob.core.windows.net) no son accesibles desde
-      # algunos entornos; una RAMA del repo si se baja por
-      # codeload.github.com. La rama lleva el .jar EXACTO del build y su
-      # SHA256SUMS.txt, para poder verificar el binario entregado.
-      #
-      # El commit se construye en un DIRECTORIO TEMPORAL: el arbol de
-      # trabajo del checkout NO se toca, asi que este paso no puede romper
-      # la publicacion de la release.
-      - name: Publish jar to artifacts branch
-        if: >-
-          (github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar]')) ||
-          (github.event_name == 'workflow_dispatch' && inputs.publicar == true)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          VER="$(sed -n 's/^mod_version=//p' gradle.properties | tr -d '[:space:]')"
-          JAR="build/libs/capatest-$VER.jar"
-          test -f "$JAR"
-          BRANCH="artifacts/v$VER"
-          SHA="$(sha256sum "$JAR" | cut -d' ' -f1)"
-          TMP="$(mktemp -d)"
-          cp "$JAR" "$TMP/artifact.jar"
-          cd "$TMP"
-          git init -q -b tmp
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          mkdir -p build/libs
-          mv artifact.jar "build/libs/capatest-$VER.jar"
-          printf '%s\n' "$SHA" > "build/libs/SHA256SUMS.txt"
-          git add -A
-          git commit -q -m "artefacto v$VER: capatest-$VER.jar (sha256:$SHA)"
-          AUTH="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
-          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $AUTH" \
-              push -f "https://github.com/${GITHUB_REPOSITORY}.git" \
-              "HEAD:refs/heads/$BRANCH"
-          echo "::notice::JAR publicado en la rama $BRANCH (sha256:$SHA)"
-
-      # v1.28.0: RESCATE DEL JAR EXACTO DE LA v1.27.0.
-      # La release v1.27.0 publico su .jar como asset y como artifact de
-      # Actions, pero los CDN de assets (release-assets.githubusercontent.com)
-      # y de artifacts (blob.core.windows.net) no son accesibles desde todos
-      # los entornos. Se baja el artifact HISTORICO 14057282072 (el build
-      # de la v1.27.0), se comprueba su SHA-256 contra el digest que publica
-      # la API de la release y se deja en artifacts/v1.27.0 con su
-      # SHA256SUMS.txt: asi el binario exacto de la v1.27.0 se puede
-      # descargar por codeload y verificar donde el CDN no responde.
-      - name: Materialize v1.27.0 jar on its artifacts branch
-        if: >-
-          (github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar]')) ||
-          (github.event_name == 'workflow_dispatch' && inputs.publicar == true)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          python3 tools/materialize_published_jar.py \
-            --version 1.27.0 --artifact 14057282072 --out /tmp/art1270
-          SHA="$(cut -d' ' -f1 /tmp/art1270/SHA256SUMS.txt)"
-          test -n "$SHA"
-          TMP="$(mktemp -d)"
-          mkdir -p "$TMP/build/libs"
-          cp /tmp/art1270/capatest-1.27.0.jar "$TMP/build/libs/"
-          cp /tmp/art1270/SHA256SUMS.txt "$TMP/build/libs/"
-          cd "$TMP"
-          git init -q -b tmp
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -q -m "artefacto v1.27.0: capatest-1.27.0.jar (sha256:$SHA)"
-          AUTH="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
-          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $AUTH" \
-              push -f "https://github.com/${GITHUB_REPOSITORY}.git" \
-              "HEAD:refs/heads/artifacts/v1.27.0"
-          echo "::notice::JAR v1.27.0 publicado en artifacts/v1.27.0 (sha256:$SHA)"
+          # Un borrador aún no tiene tag disponible para consultas anónimas.
+          DRAFT_ID="$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate \
+            --jq '.[] | select(.draft and .tag_name == "'"$TAG"'" and .target_commitish == "'"$GITHUB_SHA"'") | .id')"
+          test -n "$DRAFT_ID"
+          gh api "repos/$GITHUB_REPOSITORY/releases/$DRAFT_ID/assets" > "$RUNNER_TEMP/assets.json"
+          for ASSET in "${ASSETS[@]}"; do
+            LOCAL_SHA="$(sha256sum "$ASSET" | cut -d' ' -f1)"
+            API_DIGEST="$(jq -er --arg name "$(basename "$ASSET")" \
+              '.[] | select(.name == $name and .state == "uploaded").digest' "$RUNNER_TEMP/assets.json")"
+            if [ "sha256:$LOCAL_SHA" != "$API_DIGEST" ]; then
+              echo "::error::Digest distinto del compilado: $ASSET ($API_DIGEST)"
+              exit 1
+            fi
+          done
+          echo "### Borrador $TAG verificado (publicar después de CI SUCCESS)" >> "$GITHUB_STEP_SUMMARY"
+          cat "$SUMS" >> "$GITHUB_STEP_SUMMARY"

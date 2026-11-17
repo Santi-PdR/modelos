@@ -231,13 +231,18 @@ def static_checks() -> None:
         ROOT / 'src/main/resources/assets/capatest/textures/item/armor'
         / 'capa_deteriorer_evilsaiyan.png').convert('RGBA'))
     assert (atlas[..., 3] == 255).all(), 'atlas con texel transparente'
-    assert atlas[2, 20, 0] > atlas[70, 20, 0] + 40, \
-        'falta degradado carmesí -> morado'
     glow = np.asarray(Image.open(
         ROOT / 'src/main/resources/assets/capatest/textures/item/armor'
         / 'capa_deteriorer_evilsaiyan_glowmask.png').convert('RGBA'))
-    em = int((glow[..., 3] > 0).sum())
+    emissive = glow[..., 3] > 0
+    em = int(emissive.sum())
     assert 500 < em < 128 * 128, ('glowmask fullbright', em)
+    # Una sola coordenada puede caer sobre el nuevo galón/parche claro.
+    # Promediar el hilo no emisivo de cada banda mide el degradado real.
+    red = atlas[..., 0]
+    upper = red[2:6, :96][~emissive[2:6, :96]].mean()
+    lower = red[62:70, :96][~emissive[62:70, :96]].mean()
+    assert upper - lower > 40, ('falta degradado carmesí -> morado', upper, lower)
     # Wear holes en las puntas: texel oscuro en la franja baja.
     assert (atlas[44:48, 0:96, :3].mean() < atlas[4:8, 0:96, :3].mean()), \
         'faltan agujeros de desgaste'

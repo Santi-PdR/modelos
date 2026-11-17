@@ -1,45 +1,36 @@
-# Mantle of the Blight Star — v1.55.0
+# Mantle of the Blight Star — v1.56.0
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Capa equipada en `curios:back`, temática
 **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-> 📦 **Release vigente: `v1.55.0`** — `capatest-1.55.0.jar` compilado
-> en CI. Cada entrega cambia a una versión más nueva; `v1.54.0`,
-> `v1.53.0`,
-> `v1.52.0`,
-> `v1.51.0`,
-> `v1.50.0`,
-> `v1.49.0`,
-> `v1.48.0`,
-> `v1.47.0`,
-> `v1.46.0`,
-> `v1.45.0`,
-> `v1.44.0`,
-> `v1.43.0`,
-> `v1.42.0`,
-> `v1.41.0`,
-> `v1.40.0`,
-> `v1.39.0`,
-> `v1.38.0`,
-> `v1.37.0`,
-> `v1.36.0`,
-> `v1.35.0`,
-> `v1.34.0`,
-> `v1.33.0`,
-> `v1.32.0`,
-> `v1.31.0`,
-> `v1.30.0`, `v1.29.0`,
-> `v1.28.0`, `v1.27.1`, `v1.27.0` y anteriores quedan como histórico y **no se
-> sobreescriben**.
->
-> 🔗 **Link directo al `.bbmodel` v1.55.0**: [https://github.com/Santi-PdR/modelos/releases/download/v1.55.0/CAPA_v1.55.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.55.0/CAPA_v1.55.0.bbmodel)
-> (también en el workspace: [`docs/CAPA_v1.55.0.bbmodel`](docs/CAPA_v1.55.0.bbmodel)).
-> **El archivo ahora SÍ se llama igual que la versión**: el exportador
-> lee `mod_version` y genera `docs/CAPA_v<versión>.bbmodel` con el
-> `name` interno y el asset de Release con esa misma versión.
-> v1.14.0, v1.15.0 y v1.16.0 fueron rechazadas visualmente y sus previews
-> se borraron del repo. Los previews son render **software**.
+> **Release vigente: [v1.56.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.56.0)**
+> · [JAR Forge](https://github.com/Santi-PdR/modelos/releases/download/v1.56.0/capatest-1.56.0.jar)
+> · [Proyecto Blockbench](docs/CAPA_v1.56.0.bbmodel)
+> · [Visor 3D offline](docs/capa_v1170_visor.html).
+> Las versiones v1.55.0 y anteriores quedan como histórico, sin sobrescribir.
+
+### v1.56.0 — paño 3D y cuello rediseñados
+
+![Capa equipada de v1.55.0 y v1.56.0 a la misma escala](docs/capa_v1560_antes_despues.png)
+
+- **Paño equipado**: atlas 128×128 pintado desde cero. Pliegues de brasa y
+  ciruela, doble galón en V y una estrella de ceniza bordada. Cambian **6.470
+  de 9.216 texels** del paño y forro; **4.494** cambian al menos 32/255 en
+  un canal RGB. No se repinta el item plegado.
+- **Silueta**: dorso abierto en abanico y faldones de caída escalonada.
+  Las piezas centrales pasan de **3,90 a 5,20 u** (dorso) y de **3,20 a
+  5,50 u** (faldón). El cuello tiene UV propias a 4 texels/u. Se corrige
+  la inversión de Z del modelo anterior y se comprueba la holgura en +Z
+  en reposo y en 33 muestras de cada clip.
+- **Preservado**: alfa del atlas 255, icono y glowmasks byte a byte, RGB de
+  los 3.380 texels de energía, jerarquía, UUID y los **8 clips**; no se
+  añaden pistas ni offsets animados.
+
+Respaldo anterior a la edición: [`docs/respaldos/v1.55.0b/`](docs/respaldos/v1.55.0b/).
+`python3 tools/verify_v1560.py --candidate` comprueba los candidatos antes
+del rebuild; sin `--candidate` comprueba los archivos finales.
+La comparativa es un render software, no una captura de Minecraft.
 
 ### v1.55.0 — nueva versión (bump)
 
@@ -672,55 +663,22 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Release vigente: v1.55.0
+### Release vigente: v1.56.0
 
-El JAR se publica como Release [`v1.55.0`](https://github.com/Santi-PdR/modelos/releases/tag/v1.55.0):
-`capatest-1.55.0.jar`, compilado en CI con JDK 17 + Gradle 8.8.
-La `v1.54.0`, la `v1.53.0`, la `v1.52.0`, la `v1.51.0`, la `v1.50.0`, la `v1.49.0`, la `v1.48.0`, la `v1.47.0`, la `v1.46.0`, la `v1.45.0`, la `v1.44.0`, la `v1.43.0`, la `v1.42.0`, la `v1.41.0`, la `v1.40.0`, la `v1.39.0`, la `v1.38.0`, la `v1.37.0`, la `v1.36.0`, la `v1.35.0`, la `v1.34.0`, la `v1.33.0`, la `v1.32.0`, la `v1.29.0`, la `v1.27.1` y la `v1.27.0` quedan como histórico, **sin sobrescribir**.
+La [release v1.56.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.56.0)
+incluye `capatest-1.56.0.jar` (Forge 1.20.1, compilado con JDK 17 y Gradle 8.8),
+`CAPA_v1.56.0.bbmodel` y los renders. CI reconstruye el JAR, comprueba que
+ambas compilaciones son byte a byte iguales y coteja los digests del JAR y
+el `.bbmodel` subidos al borrador. El borrador se publica tras CI exitosa.
 
-**SHA-256 del JAR publicado**: lo publica la CI en el `SHA256SUMS.txt` de
-la rama de artefactos y en el asset de la Release (la API de GitHub lo
-devuelve como `digest`). La CI lo comprueba contra el JAR recién
-compilado en cada publicación y **falla si lo publicado no es lo
-compilado**.
-
-**El `.jar` es reproducible**: desde la v1.27.1 el empaquetado fija las
-marcas de tiempo y el orden de las entradas (`preserveFileTimestamps =
-false`, `reproducibleFileOrder = true`), así que **el mismo código produce
-siempre el mismo binario** y el SHA-256 publicado es estable entre
-publicaciones. La CI lo comprueba: reconstruye el `.jar` y compara los dos
-digests antes de publicar nada.
-
-Para verificar tu descarga:
+Verificar ambos archivos descargados junto con `SHA256SUMS.txt` de la release:
 
 ```sh
-sha256sum capatest-1.55.0.jar
-# el digest exacto está en el SHA256SUMS.txt de la rama de artefactos
+sha256sum -c SHA256SUMS.txt
 ```
 
-**Segunda vía de descarga (mismo binario)**: el JAR también está en la
-rama de artefactos [`artifacts/v1.55.0`](https://github.com/Santi-PdR/modelos/tree/artifacts/v1.55.0),
-en `build/libs/`, junto a su `SHA256SUMS.txt`. Se baja con:
-
-```sh
-curl -L https://codeload.github.com/Santi-PdR/modelos/tar.gz/refs/heads/artifacts/v1.55.0 -o art.tgz
-tar xzf art.tgz
-sha256sum modelos-artifacts-v1.55.0/build/libs/capatest-1.55.0.jar
-```
-
-Existe porque el CDN de assets de release y el de artifacts de Actions no
-responden en algunos entornos (redes restringidas), mientras que
-`codeload.github.com` sí. El binario es **byte a byte el mismo** que el
-asset de la Release.
-
-En el repo hay un script que hace esa descarga **y la verifica** (compara
-el SHA-256 y el tamaño con el digest que devuelve la API de GitHub, y sólo
-escribe el `.jar` si todo cuadra):
-
-```sh
-python3 tools/fetch_published_jar.py --keep-sums
-# -> build/libs/capatest-1.53.0.jar  (sha256 el del SHA256SUMS.txt)
-```
+Para versiones históricas con copia en `artifacts/vX.Y.Z`, sigue disponible
+`python3 tools/fetch_published_jar.py --version 1.55.0 --keep-sums`.
 
 El mismo rescate vale para una versión **anterior**: el JAR exacto de la
 `v1.27.0` se recupera de su artifact histórico (`14057282072`) o de su

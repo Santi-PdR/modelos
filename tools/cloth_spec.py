@@ -98,6 +98,17 @@ UV = {
     "ash": {"uv": [105.0, 0.0], "uv_size": [2.0, 48.0]},
 }
 
+# Atlas v1.56: parches del cuello en filas reservadas por debajo del
+# forro (v < 96), fuera de los UV de neón y de los cantos del paño.
+COWL_TILES = {
+    "dorsal": (24, 102, 40, 128),
+    "base": (42, 102, 54, 128),
+    "faldon": (56, 102, 70, 128),
+    "canto": (72, 102, 88, 128),
+    "estrella": (89, 102, 105, 128),
+}
+COWL_TEXELS_PER_UNIT = 4.0
+
 # Rectángulos (x0, y0, x1, y1) donde el PNG prístino tiene alfa=255 en TODOS
 # sus texels. La CI comprueba que ninguna UV nueva se salga de aquí.
 OPAQUE_RECTS = (

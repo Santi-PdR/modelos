@@ -9,6 +9,13 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.56.0: PAÑO 3D NUEVO Y CUELLO EN V. Nuevo atlas del modelo equipado:
+pliegues anchos en carmesí y ciruela, doble galón y estrella de ceniza
+bordada. Cinco pliegues dorsales y siete faldones escalonados, con UV
+propias a 4 texels/u. El paño queda en +Z, fuera del torso en las poses
+muestreadas. Los 8 clips y UUIDs no cambian. Alfa base 255; icono,
+glowmasks y RGB de neón y halo iguales a v1.55.0.
+
 v1.55.0: NUEVA VERSIÓN (bump). Lleva la mejora BOLD del modelo y la
 textura de la v1.54.0 (collar dorsal + faldón frontal grandes y
 visibles; textura del paño rebuilt desde 0 con pliegues verticales,

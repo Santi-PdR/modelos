@@ -256,8 +256,12 @@ def build_animations(anim_bones: list[tuple[str, str]]) -> list[dict]:
     return out
 
 
-def build() -> dict:
-    geo = json.loads(GEO.read_text())["minecraft:geometry"][0]
+def build(geo: dict | None = None, atlas: Image.Image | None = None) -> dict:
+    """Admite geometría y atlas en memoria para comparar antes de exportar."""
+    if geo is None:
+        geo = json.loads(GEO.read_text())["minecraft:geometry"][0]
+    if atlas is None:
+        atlas = atlas_texture()
     # v1.17.2: el geo del mod conserva los 72 huesos PRISTINOS de la
     # armadura antigua (helmet, dedos, manos, arnes, broches) porque el
     # renderer Java los oculta con setHidden(true). Blockbench NO oculta
@@ -307,7 +311,7 @@ def build() -> dict:
         "namespace": "", "id": "0", "width": 128, "height": 128,
         "uv_scale": [1, 1], "particle": False, "render_mode": "default",
         "visible": True, "enabled": True, "saved": True,
-        "internal": True, "source": data_url(atlas_texture()),
+        "internal": True, "source": data_url(atlas),
     }
 
     return {

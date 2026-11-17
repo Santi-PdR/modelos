@@ -156,7 +156,7 @@ def collect(geo, hidden):
     return faces
 
 
-def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27)):
+def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27), *, frame=None):
     faces = collect(geo, hidden)
     atlas = np.asarray(Image.open(atlas_path).convert("RGBA"))
     AH, AW = atlas.shape[:2]
@@ -174,11 +174,13 @@ def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27)):
             shade = 0.40 + 0.60 * abs(float(np.dot(n, light)))
         prepared.append((pv, uvs, shade))
         pts_all.append(pv)
-    allv = np.concatenate(pts_all, axis=0)
-    x0, x1 = allv[:, 0].min(), allv[:, 0].max()
-    y0, y1 = allv[:, 1].min(), allv[:, 1].max()
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    scale = min((size - 46) / (x1 - x0), (size - 46) / (y1 - y0))
+    if frame is None:
+        allv = np.concatenate(pts_all, axis=0)
+        x0, x1 = allv[:, 0].min(), allv[:, 0].max()
+        y0, y1 = allv[:, 1].min(), allv[:, 1].max()
+        frame = ((x0 + x1) / 2, (y0 + y1) / 2,
+                 (size - 46) / max(x1 - x0, y1 - y0))
+    cx, cy, scale = frame
 
     def proj(p):
         return np.array([size / 2 + (p[0] - cx) * scale, size / 2 - (p[1] - cy) * scale])

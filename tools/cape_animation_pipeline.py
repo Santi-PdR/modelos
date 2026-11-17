@@ -20,6 +20,7 @@ Uso:  PYTHONPATH=tools python3 tools/cape_animation_pipeline.py
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 import cape_motion as M
@@ -139,8 +140,21 @@ def build() -> dict:
     return data
 
 
+def ribbon_rms(data: dict) -> dict[str, float]:
+    """RMS de rotación en grados sobre los keyframes de los 84 mechones."""
+    result = {}
+    for clip in STYLE_BY_CLIP:
+        angles = [angle for name, tracks in data["animations"][clip]["bones"].items()
+                  if name.startswith("v17_ribbon_")
+                  for keyframe in tracks["rotation"].values() for angle in keyframe["vector"]]
+        result[clip] = math.sqrt(math.fsum(a * a for a in angles) / len(angles))
+    assert len(result) == len({round(rms, 4) for rms in result.values()}) == 8, result
+    return result
+
+
 def main() -> None:
     data = build()
+    rms = ribbon_rms(data)
     # Compacto: 17 muestras x todos los huesos x 8 clips llenarían varios
     # MB con indent=2. El runtime sólo necesita JSON válido y sin `null`.
     text = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
@@ -149,7 +163,8 @@ def main() -> None:
     for clip in STYLE_BY_CLIP:
         a = data["animations"][clip]
         n = sum(len(ch) for b in a["bones"].values() for ch in b.values())
-        print(f"  {clip:20s} {len(a['bones']):3d} huesos, {n:5d} keyframes")
+        print(f"  {clip:20s} {len(a['bones']):3d} huesos, {n:5d} keyframes"
+              f" | RMS rotación {rms[clip]:.4f}°")
     print(f"wrote {ANIM.relative_to(ROOT)}: {len(text):,} bytes")
 
 
