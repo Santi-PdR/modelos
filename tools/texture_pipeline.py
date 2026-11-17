@@ -207,38 +207,25 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.nda
     grain = 1.0 + rng.standard_normal(rgb.shape).astype(np.float32) * 0.012
     rgb = np.clip(rgb * grain, 0.0, 255.0)
 
-    # v1.54.0: TRAMA DE TELA (warp/weft) + RESALTE DE BORDE (rim).
-    # Gracias al estudio de UV/atlas: la densidad de texel debe ser
-    # CONSISTENTE y alineada al sentido de las cintas (las cintas
-    # caen en V; la trama vertical sigue esa dirección). Sólo RGB:
-    # alfa y glowmask intactos. LAS ZONAS DE ENERGÍA EMISIVA SE
-    # PROTEGEN (no se apaga el glow).
-    #
-    # TRAMA VISIBLE: hilos de urdimbre (verticales, a lo largo del
-    # paño, eje Y) y trama (horizontales, eje X) con contraste real,
-    # más una sombra cruzada donde los hilos se intersecan (el cruce
-    # de urdimbre y trama genera una sombra diminuta). Esto da una
-    # textura de TEJA DOBLE visible en 3D, no un color plano.
+    # v1.54.0b: TEXTURA DEL ITEM PLEGADO REBUILT FROM 0 — pliegues
+    # verticales + trama cruzada (warp/weft) + degradado de caída +
+    # rim light. Sólo RGB; alfa y glowmask intactos; las zonas de
+    # ENERGIA EMISIVA se protegen (no se apaga el glow). Determinista,
+    # sin ruido, alineado al sentido de las cintas (guía §4).
     _shade = ((1.0 - energy.astype(np.float32)) * 0.88 + 0.12)[..., None]
-    # Urdimbre (warp): hilos verticales, a lo largo de la caída del paño.
-    warp = 1.0 - 0.130 * np.sin(np.arange(48, dtype=np.float32) * 1.5)
-    # Trama (weft): hilos horizontales, a lo ancho del paño.
-    weft = 1.0 - 0.100 * np.sin(np.arange(96, dtype=np.float32) * 1.1)
-    # Sombra del cruce: donde ambos hilos bajan, una sombra extra.
-    cross = 1.0 - 0.070 * (
-        (0.5 - 0.5 * np.sin(np.arange(48, dtype=np.float32) * 1.5))[:, None]
-        * (0.5 - 0.5 * np.sin(np.arange(96, dtype=np.float32) * 1.1))[None, :]
-    )[..., None]
-    weave = (warp[:, None, None] * weft[None, :, None] * cross
-             * _shade + (1.0 - _shade))
-    rgb = rgb * weave
-    # Resalte de borde (rim light): brillo frío en el canto superior del
-    # paño (donde pega la luz de fondo), para volumen. Visible, con
-    # caída suave, protegiendo la energia emisiva.
-    _y = np.linspace(0.0, 1.0, 48, dtype=np.float32)
-    _rim = np.clip(1.0 - _y / 0.18, 0.0, 1.0) ** 1.5   # (48,) 1..0 en ~9 filas
-    rim = 1.0 + (_rim[:, None, None] * 0.20) * (1.0 - energy.astype(np.float32))[..., None]
-    rgb = np.clip(rgb * rim, 0.0, 255.0)
+    _u = np.arange(96, dtype=np.float32) / 96.0
+    _v = np.arange(48, dtype=np.float32) / 48.0
+    pliegue = 20.0 * np.sin(_u * math.tau * 4.0)              # (96,)
+    drop_g = -14.0 * _v                                        # (48,)
+    rim_g = 26.0 * np.clip(1.0 - _v / 0.16, 0.0, 1.0) ** 1.5  # (48,)
+    warp = 8.0 * np.sin(_u * math.tau * 9.0)                  # (96,)
+    weft = 5.6 * np.sin(_v * math.tau * 7.0)                  # (48,)
+    _d = (pliegue[None, :] + drop_g[:, None] + rim_g[:, None]
+          + warp[None, :] + weft[:, None])                    # (48,96)
+    rgb = rgb + _d[..., None] * (
+        _shade * np.array([1.0, 0.2, 0.7], np.float32)
+        + (1.0 - _shade))
+    rgb = np.clip(rgb, 0.0, 255.0)
     return rgb, ink, cool
 
 

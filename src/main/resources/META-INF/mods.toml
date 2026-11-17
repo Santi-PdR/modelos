@@ -12,19 +12,17 @@ description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 v1.54.0: MEJORA DEL MODELO Y LA TEXTURA (GUIADA POR EL ESTUDIO).
 Revisada con `docs/GUIA_MODELADO_ANIMACION.md` (jerarquia de huesos
 ANTES de geometria; UUIDs estables; animar por rotacion, nunca por
-posicion). (1) MODELO: refinamiento de SILUETA del COLAR/CUELLO
-(huesos `v17_cowl_back_*`): se aumenta la altura y la inclinacion
-de flare para que el dorso del gorro envuelva mejor el cuello y siga
-la curva natural de la bufanda. Es un ajuste de PARAMETROS: los
-huesos no se recrean (los UUIDs se mantienen y las animaciones no se
-rompen). (2) TEXTURA DEL PAÑO 3D (`capa_deteriorer_evilsaiyan.png`,
-la que se ve en juego): se añade VOLUMEN VISIBLE (RGB solo; alfa/
-glowmask intactos, neon protegido): PLIEGUES VERTICALES (el paño
-cuelga en V), DEGRADADO DE CAÍDA (oscurece hacia la punta), RESALTE
-DE BORDE (rim light) en el canto superior y TRAMA DE HILO
-intensificada (warp/weft). La capa sigue colgando VISIBLE y SIN
-INTERSECTAR el cuerpo, en +Z (front), con la correccion F5, el
-cuellito y las 8 animaciones con RMS distintos intactos.
+posicion). (1) MODELO: refinamiento de SILUETA del COLAR — DORSAL
+(`v17_cowl_back_*`): altura y flare marcado; FALDÓN FRONTAL
+(`v17_cowl_tooth_*`): altura +46% y anchura +11% (pliegue grande que
+conecta collar con cintas). Se EDITAN huesos (no se recrean): UUIDs
+y animaciones intactos. (2) TEXTURA REBUILT FROM 0 (reset al baseline
+limpio v1.53.0): el paño 3D y el item plegado se reconstruyen con
+estructura de TELA VISIBLE: PLIEGUES VERTICALES, TRAMA CRUZADA
+(warp/weft), DEGRADADO DE CAIDA y RESALTE DE BORDE (rim light).
+RGB solo; alfa/glowmask intactos, neon protegido. La capa sigue
+colgando VISIBLE y SIN INTERSECTAR el cuerpo, en +Z (front), con la
+correccion F5, el cuellito y las 8 animaciones con RMS distintos.
 
 v1.53.0: REFORMA DEL MODELO (BASE + TEXTURA). (1) Geometria: los
 27 cubos `bottom`/`mid` del paño (`v15_cloth_*`) quedaban apilados

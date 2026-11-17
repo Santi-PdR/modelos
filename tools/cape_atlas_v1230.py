@@ -208,34 +208,48 @@ def _weave(arr, box, strength=5.0, freq=7.0) -> None:
             arr[v0 + j, u0 + i, 2] = max(0, min(255, arr[v0 + j, u0 + i, 2] + d * 0.7))
 
 
-def _cloth_drape(arr, box, folds=5.0, amplitude=14.0, drop=10.0,
-                 rim=22.0) -> None:
-    """v1.54.0: VOLUMEN VISIBLE DEL PANÓ 3D — pliegues verticales +
-    degradado de caída + resalte de borde (rim light).
+def _cloth_folds(arr, box, folds=4.0, fold_amp=22.0, drop=16.0,
+                 rim=30.0, weave=9.0) -> None:
+    """v1.54.0b: TEXTURA DEL PANÓ 3D REBUILT FROM 0.
 
-    El paño cuelga en V; los pliegues verticales (constantes a lo largo
-    de la caída, variables a lo ancho) le dan la sensacion de TEJA
-    DOBLADA colgando. El degradado oscurece hacia la punta (caída). El
-    rim light ilumina el canto superior, donde pega la luz de fondo.
+    Se reinicia la mejora de textura desde el baseline limpio: en vez de
+    acumular ajustes sutiles, se construye una estructura de TEJA VISIBLE
+    en una pasada limpia y vectorizada:
 
-    Sólo R/G/B (alfa siempre 255): la capa sigue OPACA y nunca se vuelve
-    transparente. Determinista, idempotente y sin ruido. NO toca el
-    degradado carmesi->morado ni la calibracion de color (suma/resta
-    controlada), y se pinta ANTES de los masks emisivos (neon), que se
-    sobrescriben encima, así que el glow no se altera.
+    - PLIEGUES VERTICALES: el paño cuelga en V; los pliegues (constantes
+      a lo largo de la caída, variables a lo ancho) dan volumen y lectura
+      de tela DOBLADA colgando.
+    - TRAMA CRUZADA (warp/weft): urdimbre (hilos verticales) x trama
+      (horizontal) con contraste real, para que el paño lea como TEJIDO
+      y no como una lámina.
+    - DEGRADADO DE CAÍDA: oscurece hacia la punta.
+    - RIM LIGHT: brillo frío en el canto superior, donde pega la luz.
+
+    Sólo R/G/B: el ALFA se fija a 255 (la capa sigue OPACA y nunca se
+    vuelve transparente). Determinista, idempotente, sin ruido. Se pinta
+    ANTES de los masks emisivos (neon), que se sobrescriben encima, así
+    que el glow no se altera. No toca la calibración carmesí->morado.
     """
     u0, v0, u1, v1 = box
-    h, w = v1 - v0, u1 - u0
-    for j in range(h):
-        vfrac = j / max(1, h - 1)
-        drape = -drop * vfrac
-        rim_v = rim * max(0.0, 1.0 - vfrac / 0.12) ** 1.5
-        for i in range(w):
-            pliegue = amplitude * math.sin((i / w) * math.tau * folds)
-            d = pliegue + drape + rim_v
-            arr[v0 + j, u0 + i, 0] = max(0, min(255, arr[v0 + j, u0 + i, 0] + d))
-            arr[v0 + j, u0 + i, 1] = max(0, min(255, arr[v0 + j, u0 + i, 1] + d * 0.2))
-            arr[v0 + j, u0 + i, 2] = max(0, min(255, arr[v0 + j, u0 + i, 2] + d * 0.7))
+    sub = arr[v0:v1, u0:u1]
+    h, w = sub.shape[0], sub.shape[1]
+    u = np.arange(w, dtype=np.float32) / max(1, w)
+    v = np.arange(h, dtype=np.float32) / max(1, h)
+    # Pliegues verticales (varían con u, constantes con v).
+    pliegue = fold_amp * np.sin(u * math.tau * folds)            # (w,)
+    # Degradado de caída y rim light (varían con v).
+    drop_g = -drop * v                                           # (h,)
+    rim_g = rim * np.clip(1.0 - v / 0.16, 0.0, 1.0) ** 1.5       # (h,)
+    # Trama cruzada: urdimbre (vertical, warp) + trama (horizontal, weft).
+    warp = weave * np.sin(u * math.tau * 9.0)                   # (w,)
+    weft = weave * 0.7 * np.sin(v * math.tau * 7.0)              # (h,)
+    d = (pliegue[None, :] + drop_g[:, None] + rim_g[:, None]
+         + warp[None, :] + weft[:, None])                       # (h, w)
+    out = sub[..., :3].astype(np.float32) + d[..., None] * np.array(
+        [1.0, 0.2, 0.7], np.float32)
+    out = np.clip(out, 0, 255).astype(np.uint8)
+    sub[..., :3] = out
+    sub[..., 3] = 255
 
 
 def _steel(arr, box, top, bottom, diag=True) -> None:
@@ -472,13 +486,11 @@ def build_clean_atlas():
                     folds=6.0, amplitude=3.0, seed=2.2)
     # v1.29.0: TELA TEJIDA sobre el paño (sólo las tres capas, no los
     # parches). Le da el ribete textil que le faltaba al paño liso.
-    # v1.54.0: la trama se intensifica (strength 5->7) para que el tejido
-    # sea claramente visible, y se añade _cloth_drape: pliegues verticales
-    # + degradado de caída + rim light (volumen visible del paño 3D,
-    # RGB solo, alfa intacto, neon protegido).
-    _weave(rgb, (0, 0, 96, 128), strength=10.0)
-    _cloth_drape(rgb, (0, 0, 96, 128), folds=5.0, amplitude=24.0,
-                 drop=18.0, rim=34.0)
+    _weave(rgb, (0, 0, 96, 128))
+    # v1.54.0b: TEXTURA REBUILT FROM 0 — pliegues verticales + trama
+    # cruzada + degradado de caída + rim light (volumen visible, RGB
+    # solo, alfa 255, neon protegido).
+    _cloth_folds(rgb, (0, 0, 96, 128))
     _patches(rgb)
     _seams(rgb)
     _wear_holes(rgb)

@@ -1060,18 +1060,17 @@ jobs:
             de modelado/animacion/GeckoLib/texturas que se recuerda
             ANTES de cada actualizacion: jerarquia de huesos antes de
             geometria, UUIDs estables, rotar en vez de mover).
-            (1) MODELO: refinamiento de SILUETA del collar/cuello
-            (huesos `v17_cowl_back_*`): se aumenta la altura y la
-            inclinacion de flare para que el dorso del gorro envuelva
-            mejor el cuello; ajuste de PARAMETROS, los huesos no se
-            recrean (UUIDs y animaciones intactos). (2) TEXTURA DEL
-            PANO 3D (`capa_deteriorer_evilsaiyan.png`, la que se ve
-            en juego): VOLUMEN VISIBLE (RGB solo; alfa/glowmask
-            intactos, neon protegido): PLIEGUES VERTICALES, DEGRADADO
-            DE CAIDA, RESALTE DE BORDE (rim light) y TRAMA DE HILO
-            intensificada. La capa sigue colgando visible y sin
-            intersectar el cuerpo, con las 8 animaciones con RMS
-            distintos intactas.
+            (1) MODELO: refinamiento de SILUETA del collar — DORSAL
+            (`v17_cowl_back_*`, altura+flare) y FALDÓN FRONTAL
+            (`v17_cowl_tooth_*`, altura +46% / anchura +11%). Se
+            EDITAN huesos: UUIDs y animaciones intactos. (2) TEXTURA
+            REBUILT FROM 0 (reset al baseline v1.53.0): paño 3D y
+            item plegado reconstruidos con TELA VISIBLE: PLIEGUES
+            VERTICALES, TRAMA CRUZADA (warp/weft), DEGRADADO DE
+            CAIDA y RESALTE DE BORDE (rim light). RGB solo; alfa/
+            glowmask intactos, neon protegido. La capa sigue colgando
+            visible y sin intersectar el cuerpo, con las 8 animaciones
+            con RMS distintos intactas.
           - **v1.53.0 — REFORMA DEL MODELO (BASE + TEXTURA)**:
             (1) Geometria: los 27 cubos `bottom`/`mid` del paño
             (`v15_cloth_*`) quedaban apilados y SUELTOS FLOTANDO en la

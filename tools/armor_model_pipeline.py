@@ -267,15 +267,20 @@ def build() -> dict:
             [cube16((x - w / 2.0, bottom, z), (w, height, depth),
                     cowl_uv(w, height, i), COLLAR_UV, INFLATE[i % 3])]))
         # Faldón ANCHO y solapado: el cuello se CONECTA con los mechones.
-        fw = w * 1.08
-        fh = 1.45 + 0.35 * (1.0 - abs(fx))
+        # v1.54.0b: SILUEETA VISIBLE del faldón. Se añade altura y anchura
+        # al faldón frontal para que la conexión collar->cintas sea un
+        # pliegue grande y claro (no una tira fina). Ajuste de
+        # parámetros: el hueso `v17_cowl_tooth_*` no se recrea (UUID
+        # estable, animaciones intactas).
+        fw = w * 1.20
+        fh = 2.05 + 0.60 * (1.0 - abs(fx))
         fz = z + depth + 0.05
         bones.append(bone(
             f"v17_cowl_tooth_{i}", f"v17_cowl_front_{i}",
             [x, bottom + fh / 2.0 - 0.15, fz + 0.40],
             [0.0, 0.0, fx * 5.0],
             [cube16((x - fw / 2.0, bottom - fh + 0.10, fz),
-                    (fw, fh, 0.85), cowl_uv(fw, fh, i + 2),
+                    (fw, fh, 0.90), cowl_uv(fw, fh, i + 2),
                     COLLAR_UV, INFLATE[1])]))
 
     for i in range(COLLAR_BACK):
