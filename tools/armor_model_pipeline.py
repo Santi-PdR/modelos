@@ -281,20 +281,22 @@ def build() -> dict:
     for i in range(COLLAR_BACK):
         fx = (i - (COLLAR_BACK - 1) / 2.0) / max(1.0, (COLLAR_BACK - 1) / 2.0)
         x = fx * 3.70
-        # v1.54.0: SILUEETA DEL COLAR. Se añade altura y una inclinación
-        # de flare sutil (rotación Z mayor) para que el dorso del gorro
-        # envuelva mejor el cuello y siga la curva natural de la bufanda,
-        # en vez de una placa recta. Es un ajuste de parámetros (los
-        # huesos `v17_cowl_back_*` no se recrean: los UUIDs se mantienen
-        # y las animaciones no se rompen).
-        height = 2.20 + 0.50 * (1.0 - abs(fx))
-        y_top = 24.66
+        # v1.54.0: SILUEETA DEL COLAR (VISIBLE). Se añade altura y una
+        # inclinación de flare marcada (rotación Z mayor) para que el
+        # dorso del gorro envuelva mejor el cuello y siga la curva
+        # natural de la bufanda, en vez de una placa recta. Es un
+        # ajuste de parámetros (los huesos `v17_cowl_back_*` no se
+        # recrean: los UUIDs se mantienen y las animaciones no se
+        # rompen). La altura pasa de 2.05-2.50 a 2.90-3.20 (collar
+        # alto visible) y el flare se incrementa.
+        height = 2.90 + 0.60 * (1.0 - abs(fx))
+        y_top = 24.72
         bones.append(bone(
             f"v17_cowl_back_{i}", "chestplate",
             [x, y_top - height / 2.0, 1.35],
-            [0.0, 0.0, -fx * 7.5],
-            [cube16((x - 0.92, y_top - height, 1.13),
-                    (1.84, height, 0.82), cowl_uv(1.8, height, i),
+            [0.0, 0.0, -fx * 11.0],
+            [cube16((x - 0.96, y_top - height, 1.16),
+                    (1.92, height, 0.86), cowl_uv(1.8, height, i),
                     COLLAR_UV, INFLATE[2])]))
 
     # ------------------------------------------------------------------

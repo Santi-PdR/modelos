@@ -476,8 +476,9 @@ def build_clean_atlas():
     # sea claramente visible, y se añade _cloth_drape: pliegues verticales
     # + degradado de caída + rim light (volumen visible del paño 3D,
     # RGB solo, alfa intacto, neon protegido).
-    _weave(rgb, (0, 0, 96, 128), strength=7.0)
-    _cloth_drape(rgb, (0, 0, 96, 128))
+    _weave(rgb, (0, 0, 96, 128), strength=10.0)
+    _cloth_drape(rgb, (0, 0, 96, 128), folds=5.0, amplitude=24.0,
+                 drop=18.0, rim=34.0)
     _patches(rgb)
     _seams(rgb)
     _wear_holes(rgb)
