@@ -145,15 +145,23 @@ public class CapaSparkParticle extends TextureSheetParticle {
         // v1.51.0: TERCER armónico de color, con frecuencia mayor y
         // amplitud aún menor: la brasa tiene el temblor sub-texel de
         // color de una chispa viva, no un seno de dos frecuencias.
+        // v1.52.0: CUARTO armónico de color, con frecuencia mayor y
+        // amplitud aún menor, fase distinta: la brasa tiene el
+        // temblor sub-texel de color de una chispa viva, no un seno
+        // de tres frecuencias. Es COSMETICO (color): no toca el alfa
+        // ni el tamaño.
         this.rCol = 1.0F - 0.05F * (float) Math.sin(this.age * 0.7F + 0.4F)
                 - 0.025F * (float) Math.sin(this.age * 1.7F + 3.2F)
-                - 0.015F * (float) Math.sin(this.age * 2.9F + 0.6F);
+                - 0.015F * (float) Math.sin(this.age * 2.9F + 0.6F)
+                - 0.010F * (float) Math.sin(this.age * 4.1F + 5.1F);
         this.gCol = 1.0F - 0.06F * (float) Math.sin(this.age * 1.1F + 2.1F)
                 - 0.030F * (float) Math.sin(this.age * 2.1F + 1.5F)
-                - 0.018F * (float) Math.sin(this.age * 3.3F + 4.4F);
+                - 0.018F * (float) Math.sin(this.age * 3.3F + 4.4F)
+                - 0.012F * (float) Math.sin(this.age * 4.7F + 0.9F);
         this.bCol = 1.0F - 0.04F * (float) Math.sin(this.age * 0.9F + 4.0F)
                 - 0.020F * (float) Math.sin(this.age * 1.9F + 5.0F)
-                - 0.012F * (float) Math.sin(this.age * 2.7F + 2.8F);
+                - 0.012F * (float) Math.sin(this.age * 2.7F + 2.8F)
+                - 0.008F * (float) Math.sin(this.age * 3.9F + 1.7F);
         this.setSpriteFromAge(this.sprites);
     }
 

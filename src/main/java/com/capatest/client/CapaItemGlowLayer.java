@@ -115,6 +115,15 @@ public class CapaItemGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
             red = Math.min(1.0F, red + drift4 * 0.20F);
             green = Math.min(1.0F, green - drift4 * 0.16F);
             blue = Math.min(1.0F, blue + drift4 * 0.18F);
+            // v1.52.0: QUINTO drift de matiz, aún más lento y de amplitud
+            // menor, con fase distinta: el destello del broche tiene
+            // cinco cycles lentos de color, no un matiz fijo ni de
+            // cuatro frecuencias. Sólo toca el COLOR (r,g,b); el alpha
+            // sigue CLAMPEADO a 1.0 (corrección v1.33.0 intacta).
+            float drift5 = 0.011F * (float) Math.sin(phase * 0.035D + 2.0D);
+            red = Math.min(1.0F, red - drift5 * 0.18F);
+            green = Math.min(1.0F, green + drift5 * 0.22F);
+            blue = Math.min(1.0F, blue - drift5 * 0.16F);
             getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, eyes,
                     bufferSource.getBuffer(eyes), partialTick,
                     LightTexture.FULL_SKY, OverlayTexture.NO_OVERLAY,
