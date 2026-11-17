@@ -9,6 +9,16 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.53.0: REFORMA DEL MODELO (BASE + TEXTURA). (1) Geometria: los
+27 cubos `bottom`/`mid` del paño (`v15_cloth_*`) quedaban apilados
+y SUELTOS FLOTANDO en la parte superior del paño; ahora son
+INVISIBLES en Blockbench (los huesos se preservan para Java).
+(2) Textura: se añade VOLUMEN al paño (RGB solo, alfa/glowmask
+intactos): degradado de caída vertical, pliegues horizontales y
+grano de tela, protegiendo las zonas de energia emisiva. La capa
+sigue colgando VISIBLE y SIN INTERSECTAR el cuerpo, en +Z (front),
+con la correccion F5 intacta.
+
 v1.52.0: MEJORAS SEGURAS EN ANIMACION Y EFECTOS (SIN REGRESO).
 Cambios de ROTACION o COLOR, sin tocar el motion espacial (no se toca
 la fuerza/direccion del viento ni la componente Z del desplazamiento).

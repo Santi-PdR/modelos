@@ -9840,7 +9840,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_top"
@@ -9931,7 +9932,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_top"
@@ -10022,7 +10024,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_top"
@@ -10113,7 +10116,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_top"
@@ -10204,7 +10208,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_top"
@@ -10295,7 +10300,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_top"
@@ -10386,7 +10392,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_top"
@@ -10477,7 +10484,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_top"
@@ -10568,7 +10576,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_top"
@@ -10659,7 +10668,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_mid"
@@ -10750,7 +10760,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_mid"
@@ -10841,7 +10852,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_mid"
@@ -10932,7 +10944,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_mid"
@@ -11023,7 +11036,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_mid"
@@ -11114,7 +11128,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_mid"
@@ -11205,7 +11220,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_mid"
@@ -11296,7 +11312,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_mid"
@@ -11387,7 +11404,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_mid"
@@ -11478,7 +11496,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_bottom"
@@ -11569,7 +11588,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_bottom"
@@ -11660,7 +11680,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_bottom"
@@ -11751,7 +11772,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_bottom"
@@ -11842,7 +11864,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_bottom"
@@ -11933,7 +11956,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_bottom"
@@ -12024,7 +12048,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_bottom"
@@ -12115,7 +12140,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_bottom"
@@ -12206,7 +12232,8 @@
                   ]
                 }
               },
-              "inflate": 0.01
+              "inflate": 0.01,
+              "visibility": false
             }
           ],
           "parent": "cape_bottom"

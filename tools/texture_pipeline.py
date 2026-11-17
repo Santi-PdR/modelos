@@ -185,6 +185,27 @@ def build_armor_cloth_canvas(glow_alpha: np.ndarray) -> tuple[np.ndarray, np.nda
     ink = energy.astype(np.float32) * 0.85
     cool = np.asarray(Image.fromarray((energy * 110).astype(np.uint8)).filter(
         ImageFilter.GaussianBlur(0.9)), dtype=np.float32) / 255.0
+
+    # v1.53.0: VOLUMEN DEL PANÓ. La foto de referencia es un recorte
+    # 2D; en 3D el paño pierde la sensación de tela colgando. Añadimos
+    # SÓLO RGB (alfa y glowmask intactos): un degradado vertical de
+    # caída (el paño se oscurece hacia la punta), pliegues horizontales
+    # sutiles y un grano de tela muy fino. Las zonas ENERGÍA (las
+    # cuchilladas emisivas) se protegen para no apagar el glow.
+    v = np.linspace(0.0, 1.0, 48, dtype=np.float32)[:, None, None]
+    # Degradado de caída: más oscuro hacia abajo, débil en la energía.
+    drape = 1.0 - 0.10 * v
+    shade_mask = ((1.0 - energy.astype(np.float32)) * 0.85 + 0.15)[..., None]
+    rgb = rgb * (drape * shade_mask + (1.0 - shade_mask))
+    # Pliegues horizontales: ondulaciones de tela cada 6 texels.
+    fold = 1.0 - 0.045 * np.sin(np.linspace(0.0, 34.0 * np.pi, 48,
+                                            dtype=np.float32))[:, None, None]
+    rgb = rgb * (fold * shade_mask + (1.0 - shade_mask))
+    # Grano de tela muy fino (determinista, no aleatorio): añade
+    # textura sin alterar los colores de forma apreciable.
+    rng = np.random.default_rng(0x53)
+    grain = 1.0 + rng.standard_normal(rgb.shape).astype(np.float32) * 0.012
+    rgb = np.clip(rgb * grain, 0.0, 255.0)
     return rgb, ink, cool
 
 

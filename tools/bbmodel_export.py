@@ -132,7 +132,8 @@ def make_element(bone: dict, ci: int, cube: dict, key: str) -> dict:
         "name": f"{bone['name']}_{ci}", "type": "cube", "uuid": uid(key),
         "from": f, "to": t, "origin": origin, "rotation": rot,
         "inflate": round(float(cube.get("inflate", 0.0)), 4),
-        "autouv": 0, "color": 0, "visibility": True,
+        "autouv": 0, "color": 0,
+        "visibility": bool(cube.get("visibility", True)),
         "faces": faces, "box_uv": False,
     }
 

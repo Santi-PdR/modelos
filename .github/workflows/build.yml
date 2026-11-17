@@ -1055,6 +1055,16 @@ jobs:
 
           ### Qué incluye
 
+          - **v1.53.0 — REFORMA DEL MODELO (BASE + TEXTURA)**:
+            (1) Geometria: los 27 cubos `bottom`/`mid` del paño
+            (`v15_cloth_*`) quedaban apilados y SUELTOS FLOTANDO en la
+            parte superior del paño; ahora son INVISIBLES en
+            Blockbench (los huesos se preservan para Java). (2)
+            Textura: se añade VOLUMEN al paño (RGB solo, alfa/glowmask
+            intactos): degradado de caida vertical, pliegues
+            horizontales y grano de tela, protegiendo las zonas de
+            energia emisiva. La capa sigue colgando visible y sin
+            intersectar el cuerpo.
           - **v1.52.0 — MEJORAS SEGURAS EN ANIMACION Y EFECTOS**:
             cambios de ROTACION o COLOR, sin tocar el motion espacial
             (no se toca la fuerza/direccion del viento ni la

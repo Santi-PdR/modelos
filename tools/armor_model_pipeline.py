@@ -230,17 +230,22 @@ def build() -> dict:
 
     # ------------------------------------------------------------------
     # 1. 27 anclas INVISIBLES: dentro del cuello grueso. Java las necesita
-    #    para panels[]; en Blockbench quedan tapadas por el paño opaco.
+    #    para panels[]. v1.53.0: se ponen VISIBLE=FALSE en Blockbench:
+    #    antes quedaban apiladas en la parte superior del paño (los
+    #    cubos `bottom`/`mid` flotando sueltos donde no deberían verse).
+    #    Los huesos SE PRESERVAN (Java los sigue necesitando para
+    #    panels[]); solo se oculta la geometría del cubo en Blockbench.
     # ------------------------------------------------------------------
     for si, section in enumerate(("cape_top", "cape_mid", "cape_bottom")):
         for col in range(9):
             ax = (col - 4) * 0.95
+            _anchor = cube16((ax - 0.08, 23.52, 2.32), (0.16, 0.16, 0.16),
+                             band(2.0 + col * 2.0, 2.0, 100.0, 2.0),
+                             DARK, INFLATE[0])
+            _anchor["visibility"] = False
             bones.append(bone(
                 f"v15_cloth_{section}_{col}", section,
-                [ax, 23.60, 2.40], [0.0, 0.0, 0.0],
-                [cube16((ax - 0.08, 23.52, 2.32), (0.16, 0.16, 0.16),
-                        band(2.0 + col * 2.0, 2.0, 100.0, 2.0),
-                        DARK, INFLATE[0])]))
+                [ax, 23.60, 2.40], [0.0, 0.0, 0.0], [_anchor]))
 
     # ------------------------------------------------------------------
     # 2. CUELLO ALTO Y GRUESO (bufanda carmesí oscuro) en forma de U.
