@@ -95,8 +95,10 @@ def check_editor(old, bb, geo, atlas, runtime):
         curr = {e['name']: e['uuid'] for e in bb[part]}
         assert all(curr.get(name) == uid for name, uid in prev.items()), f"UUID cambiado ({part})"
         assert len(set(curr.values())) == len(curr) == len(bb[part])
-    assert len(bb["groups"]) == 225 and len(bb["elements"]) == 159
+    assert len(bb['groups']) == len(geo['bones'])
     hidden = P.effective_hidden(geo)
+    n_visible = sum(len(b.get('cubes', ())) for b in geo['bones'] if b['name'] not in hidden)
+    assert len(bb['elements']) == n_visible + 27
     assert {e["name"] for e in bb["elements"] if e["visibility"]} == {
         '{}_{}'.format(*G.legacy_element(b['name'], i)) for b in geo['bones']
         if b['name'] not in hidden for i in range(len(b.get('cubes', ())))}
@@ -142,7 +144,7 @@ def check_editor(old, bb, geo, atlas, runtime):
     image = Image.open(io.BytesIO(data)).convert('RGBA')
     assert image.size == (128,128) and np.array_equal(np.asarray(image), np.asarray(atlas))
     assert bb == B.build(geo, atlas, runtime), "el export no es reproducible"
-    print("Blockbench: 132 cubos visibles como en el GEO, 27 anclas ocultas, UV/signos/pivotes y UUIDs verificados")
+    print(f"Blockbench: {n_visible} cubos visibles como en el GEO, 27 anclas ocultas, UV/signos/pivotes y UUIDs verificados")
 
 
 def check_tracks(runtime, base, bb):

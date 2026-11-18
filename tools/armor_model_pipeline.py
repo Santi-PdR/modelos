@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GEO equipo v1.60: cuello continuo, placas de carbón y jirones trazados.
+"""GEO equipado: cuello escalonado, costura, placas y jirones con relieve.
 
 Conserva huesos/UUID, geometría oculta e identificador de GeckoLib. El
 relieve procede de cubos orientados; la cámara de la referencia sólo fija
@@ -8,6 +8,8 @@ la costura y el contorno, no es una textura plana.
 from __future__ import annotations
 
 import json
+from copy import deepcopy
+from functools import lru_cache
 import math
 from pathlib import Path
 
@@ -51,8 +53,10 @@ COWL_BANDS = (
       (535.0, 225.0, 5.68), (556.0, 220.0, 5.77), (579.0, 205.0, 5.46), (597.0, 198.0, 4.98)),
      (1.21, 1.81, 1.81, 1.71, 1.64, 1.54, 1.19), 0.88, 0.28, 0.0),
 )
-SEAM_PATH = ((465.0, 184.0, 5.45), (481.0, 184.0, 6.21), (504.0, 203.0, 6.6), (519.0, 214.0, 6.91), (537.0, 220.0, 7.05), (559.0, 217.0, 6.9), (576.0, 204.0, 6.87), (587.0, 191.0, 6.42), (599.0, 183.0, 5.68))
-SEAM_HEIGHTS = (.55,.67,.85,.74,.58,.63,.58,.52)
+SEAM_PATH = ((464.2, 184.0, 5.603), (481.55, 184.0, 6.295), (504.0, 201.75, 6.838),
+             (519.0, 213.0, 6.757), (535.45, 221.8, 6.918), (558.2, 218.8, 6.947),
+             (575.0, 203.75, 6.67), (587.0, 192.4, 6.547), (596.85, 184.7, 5.68))
+SEAM_HEIGHTS = (0.55, 0.623, 0.85, 0.693, 0.512, 0.524, 0.448, 0.418)
 
 # Correcciones de borde en u de modelo: (traslado X/Y, ancho, alto).
 # Afinan las puntas y el canto inferior de las placas a la misma escala
@@ -102,8 +106,48 @@ def trim_edge(cube, adjustment):
     cube['size'][1] = round(cube['size'][1] + height, 4)
 
 
+FIT_BONE = "cape_wearer_fit"
+# Long-radius rotation: clears the head without threading the lower hem
+# through the torso. Neutral in both GEO and Blockbench; Forge/visor pose it.
+FIT_PIVOT = (0., 4.6, 5.6)
+
+
+@lru_cache(maxsize=1)
+def relief():
+    return json.loads((ROOT / 'tools/cape_relief.json').read_text())
+
+
+def apply_relief(geo):
+    """Local sculpting corrections in true GEO units, never alpha cutouts."""
+    by_name = {b['name']: b for b in geo['bones']}
+    shape = relief()
+    for key, box in shape['boxes'].items():
+        name, ci = key.split(':')
+        by_name[name]['cubes'][int(ci)].update(deepcopy(box))
+    for name, parts in shape['fragments'].items():
+        cubes = by_name[name]['cubes']
+        originals = tuple(cubes)
+        for part in parts:
+            assert 0 <= part['source'] < len(originals), (name, part)
+            fragment = deepcopy(originals[part['source']])
+            fragment.update({k: deepcopy(v) for k,v in part.items() if k != 'source'})
+            cubes.append(fragment)
+
+
+def source_cube(name: str, cube_index: int) -> int:
+    """Original section supplying the material and joint of a split part."""
+    parts = relief()['fragments'].get(name)
+    if parts is not None:
+        base = 3 if name.endswith(f'_seg{TAIL_JOINT}') else 1
+        if cube_index >= base:
+            return parts[cube_index-base]['source']
+    return cube_index
+
+
 def legacy_element(bone_name: str, cube_index: int) -> tuple[str, int]:
     """Nombre original del elemento en Blockbench tras coser la punta."""
+    if source_cube(bone_name, cube_index) != cube_index:
+        return bone_name + "_relieve", cube_index
     if bone_name.startswith("v17_ribbon_") and bone_name.endswith(f"_seg{TAIL_JOINT}"):
         return bone_name.rsplit("_seg", 1)[0] + f"_seg{TAIL_JOINT + cube_index}", 0
     return bone_name, cube_index
@@ -390,6 +434,17 @@ def build_base() -> dict:
     thick = [c["size"][2] for b in new for c in b["cubes"]
              if b["name"].startswith("v17_ribbon_")]
     assert thick and all(0.40 <= v <= 0.85 for v in thick), (min(thick), max(thick))
+
+    apply_relief(geo)
+    # Add one empty correction parent; there is no extra animation track.
+    # A zero angle leaves every authored pose and local pivot untouched.
+    for b in bones:
+        if b['name'] == 'cape_top' or b['name'].startswith(
+                ('v17_cowl_', 'v19_cuellito_', 'v18_pad_', 'v18_chain_')):
+            assert b['parent'] == 'chestplate'
+            b['parent'] = FIT_BONE
+    # The first 72 records still keep their historical indices.
+    bones.insert(72, bone(FIT_BONE, 'chestplate', FIT_PIVOT, (0,0,0), []))
     return data
 
 

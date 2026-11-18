@@ -2,7 +2,7 @@
 """Contratos de recursos y comparación registrada con la imagen original.
 
 `--check` exige una mejora de silueta y color con la misma cámara para
-las dos versiones. verify_v1600 hace además la prueba de ajuste y rig.
+las dos versiones. verify_v1610 hace además la prueba de ajuste y rig.
 """
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ def static_checks() -> None:
     cal = json.loads((ROOT / "tools" / "color_calibration.json").read_text())
     assert len(cal["rows"]) == 10, "falta el perfil de calibración medido"
     assert (ROOT / 'tools/cape_surface.py').is_file()
-    assert (ROOT / 'docs/capa_v1600_registro.png').is_file()
+    assert (ROOT / f"docs/capa_v{VER.replace('.', '')}_registro.png").is_file()
     assert BB.is_file(), f"falta el .bbmodel de la version {VER}"
     bb = json.loads(BB.read_text())
     assert bb["name"] == f'capa_deteriorer_evilsaiyan_v{VER.replace(".", "_")}'
@@ -77,11 +77,11 @@ def static_checks() -> None:
     geo = json.loads((ROOT / "src/main/resources/assets/capatest/geo/item"
                       "/armor/capa_deteriorer_evilsaiyan.geo.json").read_text())
     bones = geo["minecraft:geometry"][0]["bones"]
-    # v1.32.0: 225 huesos y 270 cubos. Los 15 cubos que faltan respecto
-    # a v1.27.0 son los de las 3 losas (cape_top/mid/bottom): se ANULARON
-    # para que la capa (tiras v17_*, hijas de estas losas) renderice en
-    # tercera persona. v1.32.0 añade el CUELLITO (3 huesos/cubos v19_*).
-    assert len(bones) == 225 and sum(len(b.get("cubes", [])) for b in bones) == 270
+    from armor_model_pipeline import FIT_BONE, relief
+    n_fragments = sum(map(len, relief()['fragments'].values()))
+    assert len(bones) == 226 and sum(len(b.get('cubes', [])) for b in bones) == 270+n_fragments
+    rig = next(b for b in bones if b['name'] == FIT_BONE)
+    assert rig['parent'] == 'chestplate' and not rig['cubes']
     forbidden = ("v17_mote_", "v17_ash_", "v17_yoke_",
                  "v16_mote_", "v16_ash_")
     assert not any(b["name"].startswith(forbidden) for b in bones), \
@@ -128,7 +128,7 @@ def static_checks() -> None:
     # NO puede volver a incluir el maniquí ni los cubos de armadura vieja.
     assert (ROOT / 'docs' / f'CAPA_v{VER}.bbmodel').read_bytes() == BB.read_bytes()
     bb = json.loads(BB.read_text())
-    assert len(bb['elements']) == 159 and sum(e['visibility'] for e in bb['elements']) == 132
+    assert len(bb['elements']) == 159+n_fragments and sum(e['visibility'] for e in bb['elements']) == 132+n_fragments
     assert bb['resolution'] == {'width': 128, 'height': 128}
     assert all(max(f['uv']) <= 128 for e in bb['elements']
                for f in e['faces'].values())
@@ -167,12 +167,11 @@ def static_checks() -> None:
     assert "spawnAura(Level level, Player player, ItemStack equipped)" in java
     armor_java = (ROOT / "src/main/java/com/capatest/client"
                   / "CapaArmorModel.java").read_text()
-    assert "motionParts(" in armor_java and "0.62D * seg" in armor_java
+    assert "applyClothResponse(" in armor_java and "0.62D * seg" in armor_java
     assert not any(n in armor_java for n in ("v17_mote_", "v17_ash_"))
     # ------------------------------------------------------------------
     # El eje Python se deriva de la familia. El visor consume el bake y
     # sólo Java conserva su respuesta adicional al giro del portador.
-    assert "motionAxis(" in armor_java
     # El eje medido tiene que ser el de la anatomía REAL: (columnas-1)/2.
     for prefix, cols in (("v17_ribbon_", 12), ("v15_cloth_cape_", 9),
                          ("v17_vein_", 10), ("v17_cowl_front_", 7),
@@ -184,20 +183,9 @@ def static_checks() -> None:
         pivots = sorted(b["pivot"][0] for b in bones
                         if b["name"].startswith(prefix))
         assert pivots[0] < 0 < pivots[-1], (prefix, pivots[:2])
-    # ------------------------------------------------------------------
-    # v1.26.0: DETERIORO_NAMES == los huesos de tela del geo. Antes
-    # arrastraba 42 nombres inexistentes y le faltaban los 10 v18_*.
-    # ------------------------------------------------------------------
-    names = set(_re.findall(r'"(v\d{2}_[a-z0-9_]+)"',
-                             armor_java.split("DETERIORO_NAMES = {")[1]
-                             .split("};")[0]))
-    expected = {b["name"] for b in bones
-                if b["name"].startswith(("v15_cloth_", "v17_ribbon_",
-                                         "v17_cowl_", "v17_vein_", "v18_"))}
-    assert names == expected, ("lista de huesos desincronizada del geo",
-                                sorted(expected - names),
-                                sorted(names - expected))
-    assert len(names) == 150, len(names)
+    assert 'RIBBONS = 12' in armor_java and 'LAST_SEGMENT = 4' in armor_java
+    assert 'b.getRotX() +' in armor_java and not _re.search(r'\bsetPos[XYZ]\(', armor_java)
+    assert 'rearPadBaseX' not in armor_java, 'la onda antigua sobreescribe la hombrera'
     # ------------------------------------------------------------------
     # v1.27.0: LAS 27 ANCLAS NO SE DIBUJAN. Son cubos de 0.16 que existen
     # sólo para dar pose a la onda (los usan panels[] y el animation.json).
@@ -292,18 +280,18 @@ def static_checks() -> None:
 
 
 def main() -> None:
-    from verify_v1600 import BASE_GEO, check_similarity, registered_metrics
+    from verify_v1610 import OLD_GEO, OLD_TEX, registered_metrics, visual
 
     ap=argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--check',action='store_true',help='aplica los mínimos de fidelidad')
     args=ap.parse_args()
     static_checks()
-    old,now=P.load(BASE_GEO),P.load(P.ARMOR_GEO)
+    now=P.load(P.ARMOR_GEO)
     if args.check:
-        check_similarity(old,now,P.ARMOR_TEX)
+        visual(now,P.ARMOR_TEX)
         print(f'OK: contorno y color registrados de v{VER}; recursos protegidos')
     else:
-        (a,b),pink=registered_metrics(old,now,P.ARMOR_TEX)
+        (a,b),pink=registered_metrics(P.load(OLD_GEO),now,P.ARMOR_TEX,baseline_atlas=OLD_TEX)
         print(f"IoU: {a['all']:.1%} → {b['all']:.1%}; RGB {a['mae']:.1f} → {b['mae']:.1f}; "
               f"rosa intenso: {b['pink']:.1%} (referencia {pink:.1%})")
 

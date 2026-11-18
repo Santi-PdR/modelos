@@ -38,13 +38,13 @@ def iou(m1,m2):
     return np.count_nonzero(m1&m2) / np.count_nonzero(m1|m2)
 
 
-def registered_metrics(old, new, atlas):
+def registered_metrics(old, new, atlas, *, baseline_atlas=S.ATLAS_FILE):
     src, labels, pink = (crop(x) for x in R.reference())
     truth = labels > 0
     size,frame,box = R.render_frame()
     coverage = []
     diff = []
-    for geo,img in ((old,S.ATLAS_FILE),(new,atlas)):
+    for geo,img in ((old,baseline_atlas),(new,atlas)):
         faces, owner = S.visible_faces(geo)
         mask = owner >= 0
         family = np.where(mask, np.array([f['family'] for f in faces])[owner], 0)

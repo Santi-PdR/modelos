@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import math
 
+from armor_model_pipeline import source_cube
+
 import numpy as np
 from PIL import Image
 
@@ -40,7 +42,10 @@ SWATCHES = dict(red=(10,19), violet=(8,22), reverse=(8,42), seam=(16,6),
 
 def spec(box):
     x,y,w,h = box
-    return dict(uv=[x+.03125, y+.03125], uv_size=[w-.0625, h-.0625])
+    # The equipped cutout uses nearest sampling, without mipmaps. Inset by
+    # half a texel on every side instead of packing duplicate edge padding.
+    # Even the interval between plotted texel centres stays in the card.
+    return dict(uv=[x+.5, y+.5], uv_size=[w-1., h-1.])
 
 
 def label_for(name):
@@ -75,12 +80,12 @@ def swatch(name, w, h, phase=0):
 
 
 def pack(lock, requests):
-    """Colocación determinista, con un texel de guarda en cada cara."""
+    """Colocación sin solapes; las UV se limitan a centros de texel."""
     occupied = lock.copy()
     slots = {}
     # Rectángulos mayores antes de que el espacio quede fragmentado.
-    for key, width, height in sorted(requests, key=lambda i: (max(i[1:]), i[1]*i[2]), reverse=True):
-        w,h = width+2,height+2
+    for key, width, height in sorted(requests, key=lambda i: (i[1]*i[2], max(i[1:])), reverse=True):
+        w,h = width,height
         integral = np.pad(occupied.astype(np.int16),((1,0),(1,0))).cumsum(0).cumsum(1)
         sums = integral[h:,w:] - integral[:-h,w:] - integral[h:,:-w] + integral[:-h,:-w]
         ys,xs = np.where(sums == 0)
@@ -91,7 +96,7 @@ def pack(lock, requests):
         k = int(np.argmin(ys+xs))
         x,y = int(xs[k]), int(ys[k])
         occupied[y:y+h,x:x+w] = True
-        slots[key] = (x+1,y+1,width,height)
+        slots[key] = (x,y,width,height)
     return slots
 
 
@@ -156,8 +161,8 @@ def photograph(f, ix, owner, w, h):
         return np.uint8(np.round(fallback.reshape(h,w,3)))
     u,v=u[pick],v[pick]
     uv=np.linalg.solve(np.stack((xu,yv),axis=1),np.stack((u-p[1,0],v-p[1,1])))
-    tx=np.clip(np.floor(.03125+uv[0]*(w-.0625)).astype(int),0,w-1)
-    ty=np.clip(np.floor(.03125+uv[1]*(h-.0625)).astype(int),0,h-1)
+    tx=np.clip(np.floor(.5+uv[0]*(w-1.)).astype(int),0,w-1)
+    ty=np.clip(np.floor(.5+uv[1]*(h-1.)).astype(int),0,h-1)
     index=ty*w+tx
     c=im[v,u].astype(float)
     # Agrupar por huella del texel en esa cara. La mediana de zona evita
@@ -221,9 +226,9 @@ def map_surface(geometry, *, paint=False):
     counts=np.bincount(owner[owner>=0], minlength=len(faces))
     # Una carta propia para el exterior. Añade el canto visible si es
     # suficiente para mostrar píxeles en la cámara calibrada.
-    ids=[k for k,f in enumerate(faces) if (f['fn']=='south' and counts[k] > 3)
-         or (counts[k]>57 and f['fn']!='north')]
-    for scale in (1.0,.95,.90,.85,.82):
+    ids=[k for k,f in enumerate(faces) if (f['fn']=='south' and counts[k] > 5)
+         or (counts[k]>32 and f['fn']!='north')]
+    for scale in (1.25, 1.20, 1.15, 1.10, 1.08, 1.05, 1.0):
         req=[(name,w,h) for name,(w,h) in SWATCHES.items()]
         for k in ids:
             f=faces[k]; p=f['pts']; density=DENSITIES[f['family']]*scale
@@ -244,11 +249,11 @@ def map_surface(geometry, *, paint=False):
         if code == R.CLOTH and fn == 'north':
             # Una franja continua por altura del forro; no se repite el
             # dibujo completo en cada tramo de la espalda interior.
-            col, seg = int(name.split('_')[2]), int(name.rsplit('seg',1)[1])+f['ci']
+            col, seg = int(name.split('_')[2]), int(name.rsplit('seg',1)[1])+source_cube(name, f['ci'])
             start,end=shape.segment_bounds(col,seg) if seg<shape.SEGS else (shape.tip_t(col)-.027,shape.tip_t(col))
             x,y,w,h=slots[mat]
-            f['c']['uv'][fn]=dict(uv=[x+.03125,round(y+.04+(h-1)*start,4)],
-                                  uv_size=[w-.0625,round(max(.65,(h-1)*(end-start)),4)])
+            f['c']['uv'][fn]=dict(uv=[x+.5,round(y+.5+(h-1)*start,4)],
+                                  uv_size=[w-1.,round(max(.50,(h-1)*(end-start)),4)])
     placed_cracks(geometry,faces,owner)
     if not paint:
         return proof
@@ -257,8 +262,8 @@ def map_surface(geometry, *, paint=False):
     for key,(x,y,w,h) in slots.items():
         sample=(np.uint8(np.clip(np.round(swatch(key,w,h)),0,255)) if isinstance(key,str)
                 else photograph(faces[key],key,owner,w,h))
-        assert not locked[y-1:y+h+1,x-1:x+w+1].any(), key
-        base[y-1:y+h+1,x-1:x+w+1,:3]=np.pad(sample,((1,1),(1,1),(0,0)),mode='edge')
+        assert not locked[y:y+h,x:x+w].any(), key
+        base[y:y+h,x:x+w,:3]=sample
     return Image.fromarray(base), glow, proof
 
 

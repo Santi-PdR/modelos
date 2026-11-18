@@ -1,11 +1,45 @@
-# Mantle of the Blight Star — v1.60.0
+# Mantle of the Blight Star — v1.61.0
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
 [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench](docs/CAPA_v1.60.0.bbmodel)
+· [Proyecto Blockbench](docs/CAPA_v1.61.0.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
+
+### v1.61.0 — contorno, materiales y ajuste equipado
+
+![Original, v1.60.0 y v1.61.0. Cámara y escala fijas](docs/capa_v1610_antes_despues.png)
+
+- **Modelo:** se afinan el canto y el asiento de las placas, la cresta granate
+  y los ocho tramos de la costura en U. Las raíces del paño se apoyan en el cuello
+  durante los cambios de estado. Los desgarros y las puntas escalonadas
+  son volúmenes unidos a sus gajos; no se simulan con transparencia.
+- **Material:** 185 cartas UV; el paño pasa de 2,55 a 3,45 texels por unidad.
+  El atlas sigue opaco, con los dos glowmasks, 3.380 texels emisivos,
+  icono y item plegado intactos.
+- **Forge y Curios:** misma corrección rotacional a partir de la cabeza y el
+  torso que está renderizando el portador. Curios ya no suma otra inclinación
+  al agacharse. Las hombreras conservan sus ángulos y clips originales en
+  lugar de recibir una segunda animación. Se conserva la prioridad de pecho.
+- **Blockbench:** mismos cubos y atlas que el mod, ocho clips sin cambios y
+  UUIDs anteriores conservados. La bisagra por portador está neutra en el editor.
+  Se puede ensayar moviendo la cabeza en **Ajuste al portador** en el visor.
+
+Comparación con el trazado fijo: **91,0 → 93,7 %** de silueta, **88,3 → 92,7 %**
+en la zona alta y **71,3 → 88,9 %** de costura (IoU). El error medio RGB
+pasa de **8,50 a 6,96 / 255** en los píxeles comunes a las tres máscaras.
+Persisten diferencias en el borde de las placas, el cuello alto y algunas
+puntas. El pelo, la ropa y las motas libres se excluyen del trazado.
+
+[Registro de silueta](docs/capa_v1610_registro.png) ·
+[Ocho estados](docs/capa_v1170_estados.png) · [GIF](docs/capa_v1170_animaciones.gif) ·
+[Respaldo íntegro de los recursos v1.60.0](docs/respaldos/v1.60.0/).
+
+`python3 tools/verify_v1610.py` comprueba export, atlas, solapes y holgura con
+841 poses, 504 mezclas, giros de cabeza y torso de pie y agachado. Es un
+ensayo geométrico con la cabeza vanilla ampliada 0,25 unidades; no valida
+cascos grandes, poses de otros mods ni sustituye una prueba F5 en Forge.
 
 ### v1.60.0 — volver a la referencia original
 
@@ -758,10 +792,10 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Descargas v1.60.0
+### Descargas v1.61.0
 
 El [workflow de Forge](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-compila `capatest-1.60.0.jar` con JDK 17 y Gradle 8.8. Abre el run de la
+compila `capatest-1.61.0.jar` con JDK 17 y Gradle 8.8. Abre el run de la
 rama de este rediseño y baja **capatest-jar** en Artifacts. El ZIP incluye
 `SHA256SUMS.txt`: sólo se sube tras comparar dos builds y verificar los
 recursos exactos dentro del JAR. La [v1.59.0 publicada](https://github.com/Santi-PdR/modelos/releases/tag/v1.59.0)
@@ -793,7 +827,7 @@ El script prueba **dos fuentes** (asset de release y artifact histórico)
 y exige el MISMO digest en ambas: si el binario no coincide byte a
 byte, no escribe nada.
 
-**Modelo de Blockbench:** [CAPA_v1.60.0.bbmodel](docs/CAPA_v1.60.0.bbmodel),
+**Modelo de Blockbench:** [CAPA_v1.61.0.bbmodel](docs/CAPA_v1.61.0.bbmodel),
 byte a byte igual a la descarga que ofrece el visor offline.
 
 Regla de entrega: **el `.bbmodel` cambia de nombre con `mod_version`** y

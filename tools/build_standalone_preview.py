@@ -25,7 +25,7 @@ def main() -> None:
     html = (PREVIEW / "index.html").read_text().replace("Desarrollo local", f"v{VER} · Offline")
     app = (PREVIEW / "app.js").read_text()
     loader = """async function loadJson(name) {
-  return name === 'armor.geo.json' ? INLINE_GEO : INLINE_ANIMATIONS;
+  return {'armor.geo.json': INLINE_GEO, 'armor.animation.json': INLINE_ANIMATIONS, 'fit.json': INLINE_FIT}[name];
 }
 function assetUrl(name) { return INLINE_IMAGES[name]; }"""
     app, n = re.subn(r"/\* BEGIN LOCAL LOADER \*/.*?/\* END LOCAL LOADER \*/", loader, app, flags=re.S)
@@ -33,6 +33,7 @@ function assetUrl(name) { return INLINE_IMAGES[name]; }"""
     inline = {
         "INLINE_GEO": json.loads((ASSETS / "armor.geo.json").read_text()),
         "INLINE_ANIMATIONS": json.loads((ASSETS / "armor.animation.json").read_text()),
+        "INLINE_FIT": json.loads((ASSETS / "fit.json").read_text()),
         "INLINE_IMAGES": {name: data(ASSETS / name)
                           for name in ("armor.png", "armor_glowmask.png", "capa_spark_1.png")},
     }

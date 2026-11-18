@@ -2,23 +2,27 @@ package com.capatest.client;
 
 import com.capatest.CapaTestMod;
 import com.capatest.item.CapaDeteriorerItem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
+import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.renderer.GeoArmorRenderer;
+import software.bernie.geckolib.util.RenderUtils;
 
 public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
+    private float wearerFold;
+
     public CapaArmorRenderer() {
         // Apunta a:
         // assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json
         // assets/capatest/animations/item/armor/capa_deteriorer_evilsaiyan.animation.json
         // assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan.png
         // y *_glowmask.png (GeckoLib 4.8 usa el sufijo "_glowmask").
-        // CapaArmorModel oculta las losas originales y anima los paneles
-        // continuos v15_*, el arnés delantero y los detalles 3D v1.9.0,
-        // sin tocar el geo aprobado.
         super(new CapaArmorModel(
                 new ResourceLocation(CapaTestMod.MOD_ID, "armor/capa_deteriorer_evilsaiyan")
         ));
@@ -44,6 +48,36 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                                     @Nullable MultiBufferSource bufferSource,
                                     float partialTick) {
         return RenderType.armorCutoutNoCull(texture);
+    }
+
+    @Override
+    protected void applyBaseTransformations(HumanoidModel<?> model) {
+        super.applyBaseTransformations(model);
+        wearerFold = (float) CapeFit.foldDegrees(model.body.xRot, model.body.yRot,
+                model.head.xRot, model.head.yRot);
+    }
+
+    @Override
+    public void renderRecursively(PoseStack poseStack, CapaDeteriorerItem animatable, GeoBone bone,
+                                  RenderType renderType, MultiBufferSource buffers, VertexConsumer buffer,
+                                  boolean isReRender, float partialTick, int light, int overlay,
+                                  float red, float green, float blue, float alpha) {
+        boolean fit = wearerFold != 0 && CapeFit.BONE.equals(bone.getName());
+        if (fit) {
+            // A rigid, common rotation about the GEO pivot, in both passes.
+            // No animation snapshot or pose from another wearer is changed.
+            poseStack.pushPose();
+            RenderUtils.translateToPivotPoint(poseStack, bone);
+            poseStack.mulPose(Axis.XP.rotationDegrees(wearerFold));
+            RenderUtils.translateAwayFromPivotPoint(poseStack, bone);
+        }
+        try {
+            super.renderRecursively(poseStack, animatable, bone, renderType, buffers, buffer,
+                    isReRender, partialTick, light, overlay, red, green, blue, alpha);
+        } finally {
+            if (fit)
+                poseStack.popPose();
+        }
     }
 
     private GeoBone bone(String name) {

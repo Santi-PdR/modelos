@@ -57,22 +57,20 @@ public class CapaCurioRenderer implements ICurioRenderer {
         // z-fighting y el doble glow, con la misma prioridad que el aura.
         if (wearer.getItemBySlot(EquipmentSlot.CHEST).is(stack.getItem()))
             return;
-        poseStack.pushPose();
-        ICurioRenderer.translateIfSneaking(poseStack, wearer);
-        ICurioRenderer.rotateIfSneaking(poseStack, wearer);
-
-        // CHEST: es el slot que muestra los huesos chestplate/rightArm/leftArm
-        // (donde viven los 126 cubos de la capa).
+        // GeckoLib already copies the pitched/lowered HumanoidModel body.
+        // Applying Curios' sneak helpers on top tilted and lowered it twice.
+        // Both slots use exactly the same wearer fit and glow pass.
         this.cape.prepForRender(wearer, stack, EquipmentSlot.CHEST, humanoid);
-
-        // Usamos el MultiBufferSource que entrega Curios (no el global del
-        // LevelRenderer) y el mismo RenderType/folia que el render de armadura.
         RenderType renderType = this.cape.getRenderType(
                 animatable, this.cape.getTextureLocation(animatable), buffer, partialTicks);
         VertexConsumer vertexConsumer = ItemRenderer.getArmorFoilBuffer(
                 buffer, renderType, false, stack.hasFoil());
-        this.cape.defaultRender(poseStack, animatable, buffer, renderType,
-                vertexConsumer, 0, partialTicks, light);
-        poseStack.popPose();
+        poseStack.pushPose();
+        try {
+            this.cape.defaultRender(poseStack, animatable, buffer, renderType,
+                    vertexConsumer, 0, partialTicks, light);
+        } finally {
+            poseStack.popPose();
+        }
     }
 }

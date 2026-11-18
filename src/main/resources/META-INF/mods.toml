@@ -9,10 +9,10 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.60.0: reconstrucción de la referencia original. Cuello granate continuo,
-hombreras de carbón, paño de jirones escalonados con diez cortes rosados.
-Ocho clips y chispas en el borde del cuello y el dobladillo, con respuesta
-rotacional independiente de los FPS. Conserva el icono preferido y el plegado.
+v1.61.0: costura en U, placas oscuras y puntas con desgarros de geometría.
+Atlas más preciso y ajuste rotacional de la capa respecto a la cabeza.
+Ocho clips, diez cortes emisivos y el mismo rig en pecho o Curios (opcional).
+Conserva el icono preferido y el item plegado.
 '''
 
 [[dependencies.${mod_id}]]

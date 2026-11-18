@@ -208,6 +208,8 @@ jobs:
           ver = next(l.split('=', 1)[1].strip() for l in
                      (root / 'gradle.properties').read_text().splitlines() if l.startswith('mod_version='))
           registered = tuple(map(int, ver.split('.'))) >= (1, 60, 0)
+          sculpt = json.loads((root / 'tools/cape_relief.json').read_text())
+          fragments = sum(map(len, sculpt['fragments'].values()))
 
           # v1.17.0: la geometría se TRAZA del PNG del usuario. Los 72
           # huesos originales siguen BYTE-IDÉNTICOS; encima, 150 huesos
@@ -245,12 +247,10 @@ jobs:
                   assert _nb_c == [], _ob['name']
               else:
                   assert _ob_c == _nb_c, _ob['name']
-          assert len(armor_geo['bones']) == 225
-          # v1.32.0: 270 cubos. Los 15 que faltan respecto a v1.27.0 son
-          # los 5 cubos de cada losa (cape_top/mid/bottom), anulados para
-          # el render en tercera persona de las tiras hijas; se suman los
-          # 3 cubos del CUELLITO v19_cuellito_*.
-          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 270
+          assert len(armor_geo['bones']) == 226
+          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 270 + fragments
+          hinge = next(b for b in armor_geo['bones'] if b['name'] == 'cape_wearer_fit')
+          assert hinge['parent'] == 'chestplate' and not hinge['cubes']
           new_bones = armor_geo['bones'][72:]
           new_names = {b['name'] for b in new_bones}
           assert {
@@ -281,7 +281,8 @@ jobs:
           zs = [c['origin'][2] + c['size'][2] / 2 for b in ribbons for c in b['cubes']]
           assert min(zs) > 2.25 and max(zs) - min(zs) > 1.5
           ends = {b['name']: b['cubes'] for b in ribbons if b['name'].endswith('seg4')}
-          assert len(ends) == 12 and all(len(cs) == 3 for cs in ends.values())
+          assert len(ends) == 12 and all(len(cs) == 3 + len(sculpt['fragments'].get(name, []))
+                                         for name,cs in ends.items())
           assert all(not b.get('cubes') for b in ribbons if b['name'].endswith(('seg5','seg6')))
           assert (base / 'textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png').is_file()
           if registered:
@@ -369,8 +370,8 @@ jobs:
           assert 'Exception | LinkageError' in item_glow
           assert 'new CapaArmorModel(' in armor_renderer
           for token in ('setHidden(true)', 'setChildrenHidden(false)', 'HIDDEN_DETAILS',
-                        'DataTickets.ENTITY', 'getInitialSnapshot', 'v15_cloth_',
-                        'Math.toRadians', 'ConcurrentHashMap', 'CapaTestMod.LOGGER',
+                        'DataTickets.ENTITY', 'resolveRig', 'v15_cloth_',
+                        'Math.toRadians', 'LinkedHashMap', 'CapaTestMod.LOGGER',
                         'Exception | LinkageError', 'private static final int COLUMNS = 9;'):
               assert token in armor_model, token
           if registered:
@@ -560,8 +561,8 @@ jobs:
           assert bb['meta']['format_version'] == '5.0'
           # v1.17.3: el .bbmodel de Blockbench muestra SOLO la capa: sin
           # maniqui Steve/Alex y sin los 126 cubos de la armadura vieja.
-          assert len(bb['elements']) == 159 and len(bb['groups']) == 225
-          assert sum(e['visibility'] for e in bb['elements']) == 132
+          assert len(bb['elements']) == 159+fragments and len(bb['groups']) == 226
+          assert sum(e['visibility'] for e in bb['elements']) == 132+fragments
           assert not any('Steve/Alex' in g['name'] for g in bb['groups'])
           assert bb['resolution'] == {'width': 128, 'height': 128}
           assert all(max(f['uv']) <= 128 for e in bb['elements'] for f in e['faces'].values())
@@ -603,23 +604,13 @@ jobs:
           assert 'def sample(' in _motion and 'def slope(' in _motion
           # Java sólo suma la respuesta preexistente; no recalcula la coreografía.
           _armor_model = (root / 'src/main/java/com/capatest/client/CapaArmorModel.java').read_text()
-          assert 'motionParts(' in _armor_model and '0.62D * seg' in _armor_model
+          assert 'applyClothResponse(' in _armor_model and '0.62D * seg' in _armor_model
           assert 'b.getRotX() +' in _armor_model, 'Java vuelve a pisar GeckoLib'
           assert not re.search(r'\bsetPos[XYZ]\(', _armor_model), 'Java mueve la capa en XYZ'
           assert 'v17_mote_' not in _armor_model and 'v17_ash_' not in _armor_model
-          # v1.26.0: DETERIORO_NAMES == huesos de tela del geo. Antes
-          # arrastraba 42 nombres que ya NO existen (4 mechones de mas,
-          # 10 tejas, 4 piezas de capucha) y le faltaban los 10 v18_*:
-          # las hombreras y la cadena NO recibian respuesta del portador.
-          _armor_names = set(re.findall(
-              r'"(v\d{2}_[a-z0-9_]+)"',
-              _armor_model.split('DETERIORO_NAMES = {')[1].split('};')[0]))
-          _expected = {n for n in new_names if n.startswith(
-              ('v15_cloth_', 'v17_ribbon_', 'v17_cowl_', 'v17_vein_', 'v18_'))}
-          assert _armor_names == _expected, (
-              'DETERIORO_NAMES desincronizado del geo',
-              sorted(_expected - _armor_names), sorted(_armor_names - _expected))
-          assert len(_armor_names) == 150, len(_armor_names)
+          assert 'RIBBONS = 12' in _armor_model and 'LAST_SEGMENT = 4' in _armor_model
+          assert 'rearPadBaseX' not in _armor_model
+          assert 'CapeFit.foldDegrees(model.body.xRot' in armor_renderer
           # v1.22.0: OCHO estados reales, no cuatro clonados.
           assert all(f'"{k}"' in _motion for k in
                      ('volar', 'caer', 'agachado', 'agua'))
@@ -669,9 +660,7 @@ jobs:
           assert 'cape_shape' in (root / 'tools/armor_model_pipeline.py').read_text()
           assert 'cape_shape' in texture_src
           assert 'SEG_FRACTIONS' in (root / 'tools/cape_shape.py').read_text()
-          assert 'column * 0.030D' in armor_model
-          assert 'v15_orbit_' in armor_model
-          assert 'v15_pauldron_' in armor_model and 'v15_front_chain_' in armor_model
+          assert 'v15_orbit_' not in armor_model, 'se ejecuta la onda de una familia que ya no se dibuja'
           assert 'INFLATE = (0.01, 0.03, 0.05)' in (root / 'tools/armor_model_pipeline.py').read_text()
           assert 'assert_opaque' in (root / 'tools/armor_model_pipeline.py').read_text()
           assert 'def build_blight_sprites(' in texture_src
@@ -685,6 +674,8 @@ jobs:
           assert 'glow.red(), glow.green(), glow.blue(), 1.0F' in glow_layer, 'alpha del glow variable'
           assert 'stateFor(wearer, armor.getCurrentStack())' in glow_layer
           assert 'if (wearer == null)' in curio
+          assert 'rotateIfSneaking(' not in curio and 'translateIfSneaking(' not in curio
+          assert 'prepForRender(wearer, stack, EquipmentSlot.CHEST, humanoid)' in curio
           # v1.17.1: la version se lee de gradle.properties. Un numero
           # hardcodeado aqui dejaria pasar un JAR con el nombre viejo.
           props = (root / 'gradle.properties').read_text().splitlines()
@@ -796,9 +787,11 @@ jobs:
           elif grep -qx 'mod_version=1.59.0' gradle.properties; then
             python3 tools/cape_motion.py
             python3 tools/verify_v1590.py
-          else
+          elif grep -qx 'mod_version=1.60.0' gradle.properties; then
             python3 tools/cape_motion.py
             python3 tools/verify_v1600.py
+          else
+            OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1610.py
           fi
           # v1240: el calibrador de energia es un lazo cerrado Jacobi; se
           # comprueba que siga siendo importable y que el perfil medido
@@ -812,8 +805,11 @@ jobs:
           mkdir -p "$CLASSES"
           javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/CapeState.java \
             src/main/java/com/capatest/client/CapeResponse.java \
-            src/test/java/com/capatest/item/CapeStateTest.java
+            src/main/java/com/capatest/client/CapeFit.java \
+            src/test/java/com/capatest/item/CapeStateTest.java \
+            src/test/java/com/capatest/client/CapeFitTest.java
           java -cp "$CLASSES" com.capatest.item.CapeStateTest
+          java -cp "$CLASSES" com.capatest.client.CapeFitTest
 
       - name: Build
         id: build
@@ -885,6 +881,7 @@ jobs:
             grep -qx 'com/capatest/client/CapaItemGlowLayer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaArmorModel.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeResponse.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapeFit.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaArmorRenderer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapaDeteriorerItem.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeState.class' /tmp/jar-contents.txt
@@ -925,8 +922,6 @@ jobs:
             python3 -c 'import struct; d=open("/tmp/folded-glow.png","rb").read(); assert struct.unpack(">II", d[16:24]) == (128, 128); print("OK: glowmask del item 128x128 dentro del jar")'
             unzip -p "$jar" assets/capatest/animations/item/cape_folded.animation.json > /tmp/folded-anim.json
             python3 -c 'import json; a=json.load(open("/tmp/folded-anim.json"))["animations"]; assert len(a)==5 and "animation.item" in a; print("OK: 5 animaciones con animation.item dentro del jar")'
-            unzip -p "$jar" assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json > /tmp/armor-geo.json
-            python3 -c 'import json; b=json.load(open("/tmp/armor-geo.json"))["minecraft:geometry"][0]["bones"]; assert len(b)==225 and sum(len(x.get("cubes",[])) for x in b)==270; print("OK: 225 huesos / 270 cubos (losas sin cubos + cuellito) dentro del jar")'
             echo "OK: clases, mods.toml, 3D item, animation.item, atlas limpio + glowmask, chispa exclusiva y datos Curios presentes"
           done
           test "$found" -eq 1
@@ -936,6 +931,7 @@ jobs:
           cd build/libs
           VER="$(sed -n 's/^mod_version=//p' ../../gradle.properties | tr -d '[:space:]')"
           sha256sum "capatest-$VER.jar" > SHA256SUMS.txt
+          printf '::notice title=SHA-256 del JAR Forge verificado::%s\n' "$(cat SHA256SUMS.txt)"
 
       - name: Upload verified jar as artifact
         uses: actions/upload-artifact@v4

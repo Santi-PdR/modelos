@@ -11,7 +11,7 @@ async function loadJson(name) {
 function assetUrl(name) { return `assets/${name}`; }
 /* END LOCAL LOADER */
 
-let GEO, CLIPS, ATLAS, GLOW, SPARK, ATLAS_W = 128, ATLAS_H = 128;
+let GEO, CLIPS, FIT, ATLAS, GLOW, SPARK, ATLAS_W = 128, ATLAS_H = 128;
 const canvas = document.getElementById('view');
 const ctx = canvas.getContext('2d', { alpha: false });
 let SIZE = 480;
@@ -118,6 +118,31 @@ function poseAt(geo, clip, t) {
   })};
 }
 
+function degreeFold(profile, stance, look, turn) {
+  const table=profile.fold;
+  const axis=(v,n)=>{
+    v=Math.min(n-1, Math.max(0,v));
+    const i=Math.min(Math.floor(v),n-2);
+    return [i,v-i];
+  };
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  const [st,ft]=axis(stance*(table.length-1),table.length);
+  const wrapped=((turn+180)%360+360)%360-180;
+  const [sy,fy]=axis(Math.abs(wrapped)/profile.yawStep,table[0].length);
+  const [sp,fp]=axis((look+90)/profile.pitchStep,table[0][0].length);
+  const row=k=>lerp(lerp(table[k][sy][sp],table[k][sy][sp+1],fp),
+    lerp(table[k][sy+1][sp],table[k][sy+1][sp+1],fp),fy);
+  return lerp(row(st),row(st+1),ft);
+}
+function wearerPose(geo, profile, stance, look, turn) {
+  const angle=degreeFold(profile,stance,look,turn);
+  return {...geo, bones:geo.bones.map(b => {
+    if (b.name===profile.bone) return {...b,rotation:[-angle,0,0]};
+    if (b.name==='chestplate') return {...b,rotation:[stance*profile.bodyAngle,0,0],offset:[0,-3.2*stance,0]};
+    return b;
+  })};
+}
+
 function matrices(geo) {
   const by = {}, out = {};
   for (const b of geo.bones) by[b.name] = b;
@@ -147,7 +172,7 @@ function faceUV(s) {
   return [[u+w,v],[u,v],[u,v+h],[u+w,v+h]];
 }
 
-function playerFaces() {
+function playerFaces(stance=0, look=0, turn=0) {
   // Maniquí Steve/Alex a escala (1 bloque = 16 unidades). NO está en el
   // .geo.json ni en el .bbmodel: sólo se usa para juzgar el ajuste.
   const parts = [
@@ -158,9 +183,14 @@ function playerFaces() {
     [-4,  0, -2, 4, 12, 4, [45, 40, 48]],
     [ 0,  0, -2, 4, 12, 4, [45, 40, 48]],
   ];
+  const about=(pivot,rotation,offset)=>mul(T(pivot.map((v,i)=>v+offset[i])),mul(rotation,T(pivot.map(v=>-v))));
+  const head=about([0,24,0],mul(R('y',turn),R('x',look)),[0,-4.2*stance,0]);
+  const body=about([0,24,0],R('x',-(FIT?.bodyAngle || 0)*stance),[0,-3.2*stance,0]);
+  const legs=T([0,-.2*stance,4*stance]);
   const out = [];
-  for (const [x, y, z, w, h, d, color] of parts) {
-    const V = CORNERS.map(k => [x + k[0]*w, y + k[1]*h, z + k[2]*d]);
+  for (const [i,[x,y,z,w,h,d,color]] of parts.entries()) {
+    const pose=i===0 ? head : i<4 ? body : legs;
+    const V = CORNERS.map(k => apply(pose,[x + k[0]*w, y + k[1]*h, z + k[2]*d]));
     for (const fn in FACE_ORDER) {
       const idx = FACE_ORDER[fn];
       out.push({ pts: idx.map(i => V[i]), uvs: [[0,0],[0,0],[0,0],[0,0]], color });
@@ -330,10 +360,15 @@ function drawRuntimeParticles(seconds, size) {
 let yaw=25, pitch=10, zoom=1.0, playing=true, t=0, elapsed=0;
 let lastFrame=null, dirty=true, hidden=null, frameBounds=null;
 let showPlayer=true, showFx=false, referenceView=false;
+const stanceControl=document.getElementById('fitStance'), lookControl=document.getElementById('fitLook');
+const turnControl=document.getElementById('fitTurn'), fitValue=document.getElementById('fitValue');
+const fitReset=document.getElementById('fitReset'), fxControl=document.getElementById('l_particles');
 const seek=document.getElementById('seek'), play=document.getElementById('play');
 function setReference(value) {
   referenceView=value;
   document.getElementById('v34').setAttribute('aria-pressed',String(value));
+  for (const control of [stanceControl, lookControl, turnControl, fitReset, fxControl])
+    control.disabled=value;
   dirty=true;
 }
 function setPlaying(value) {
@@ -364,10 +399,17 @@ function draw(now) {
   }
   lastFrame=now;
   if (!dirty) return;
-  const faces=collect(referenceView?GEO:poseAt(GEO,clip,t),hidden);
-  if (showPlayer) faces.push(...playerFaces());
-  render(faces,yaw,pitch,zoom,SIZE,frameBounds,showFx?simulatedTint(t,clip.length):null);
-  if (showFx) drawRuntimeParticles(elapsed,SIZE);
+  const stance=referenceView ? 0 : Number(stanceControl.checked);
+  const look=referenceView ? 0 : +lookControl.value;
+  const turn=referenceView ? 0 : +turnControl.value;
+  const posed=referenceView ? GEO : wearerPose(poseAt(GEO,clip,t),FIT,stance,look,turn);
+  const faces=collect(posed,hidden);
+  if (showPlayer) faces.push(...playerFaces(stance,look,turn));
+  fitValue.textContent=referenceView ? 'Pose base · ajuste desactivado' :
+    `Mirada ${look}° · giro ${turn}° · bisagra ${degreeFold(FIT,stance,look,turn).toFixed(1)}°`;
+  const fx=showFx&&!referenceView;
+  render(faces,yaw,pitch,zoom,SIZE,frameBounds,fx?simulatedTint(t,clip.length):null);
+  if (fx) drawRuntimeParticles(elapsed,SIZE);
   document.getElementById('faces').textContent=faces.length;
   document.getElementById('clock').textContent=referenceView?'Pose base':`${t.toFixed(2).replace('.',',')} s`;
   seek.value=Math.round(t/clip.length*1000);
@@ -385,10 +427,10 @@ function pixels(im) {
   return ctx.getImageData(0,0,im.width,im.height).data;
 }
 async function boot() {
-  const [geo,clips,atlas,glow,spark]=await Promise.all([
-    loadJson('armor.geo.json'), loadJson('armor.animation.json'), image('armor.png'),
+  const [geo,clips,fit,atlas,glow,spark]=await Promise.all([
+    loadJson('armor.geo.json'), loadJson('armor.animation.json'), loadJson('fit.json'), image('armor.png'),
     image('armor_glowmask.png'), image('capa_spark_1.png')]);
-  GEO=geo['minecraft:geometry'][0]; CLIPS=prepareClips(clips); hidden=runtimeHidden(GEO);
+  GEO=geo['minecraft:geometry'][0]; CLIPS=prepareClips(clips); FIT=fit; hidden=runtimeHidden(GEO);
   ATLAS=pixels(atlas); GLOW=pixels(glow); SPARK=spark; ATLAS_W=atlas.width; ATLAS_H=atlas.height;
   updateBounds();
   document.getElementById('bones').textContent=GEO.bones.length;
@@ -409,7 +451,9 @@ for (const [id,y,p] of [['vBack',0,9],['vFront',180,8],['vSide',-87,8],['vTop',8
   document.getElementById(id).onclick=()=>{yaw=y; pitch=p; dirty=true;};
 }
 document.getElementById('v34').onclick=()=>{
-  yaw=25; pitch=10; t=elapsed=0;
+  if (referenceView) { setReference(false); return; }
+  yaw=25; pitch=10; zoom=1; t=elapsed=0;
+  document.getElementById('zoom').value=zoom;
   setPlaying(false); setReference(true);
 };
 play.onclick=()=>setPlaying(!playing);
@@ -417,9 +461,19 @@ seek.oninput=e=>{
   if (!CLIPS) return;
   setPlaying(false); setReference(false); t=CLIPS[motionState].length*(+e.target.value)/1000; elapsed=t; dirty=true;
 };
-document.getElementById('state').onchange=e=>{ motionState=e.target.value; t=elapsed=0; setReference(false); };
+document.getElementById('state').onchange=e=>{
+  motionState=e.target.value; t=elapsed=0;
+  stanceControl.checked=motionState==='animation.sneak';
+  setReference(false);
+};
+for (const control of [stanceControl,lookControl,turnControl]) {
+  control.oninput=()=>{ if (!referenceView) dirty=true; };
+}
+fitReset.onclick=()=>{
+  stanceControl.checked=false; lookControl.value=turnControl.value=0; dirty=true;
+};
 document.getElementById('zoom').oninput=e=>{ zoom=+e.target.value; dirty=true; };
 document.getElementById('l_player').onchange=e=>{ showPlayer=e.target.checked; dirty=true; };
-document.getElementById('l_particles').onchange=e=>{ showFx=e.target.checked; dirty=true; };
+fxControl.onchange=e=>{ showFx=e.target.checked; dirty=true; };
 
 boot().catch(error=>{ document.getElementById('loading').textContent=error.message; });

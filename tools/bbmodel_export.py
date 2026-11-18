@@ -43,7 +43,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from armor_model_pipeline import legacy_element
+from armor_model_pipeline import legacy_element, relief
 import cape_motion as M
 import cape_animation_pipeline as animation
 
@@ -351,10 +351,9 @@ def main() -> None:
     _im = Image.open(io.BytesIO(_raw))
     assert _im.size == (128, 128), ("textura del .bbmodel", _im.size)
     assert model["resolution"] == {"width": 128, "height": 128}
-    # v1.27.0: 156 cubos de capa (150 + 6 de las hombreras nuevas:
-    # placa, lam, filo y labio por cada hombro).
-    assert len(model["elements"]) == 159, len(model["elements"])
-    assert sum(e["visibility"] for e in model["elements"]) == 132
+    n_visible = 132 + sum(map(len, relief()['fragments'].values()))
+    assert len(model['elements']) == n_visible + 27, len(model['elements'])
+    assert sum(e['visibility'] for e in model['elements']) == n_visible
     assert not any(e["name"].startswith(("v17_mote_", "v17_ash_",
                                        "v16_mote_", "v16_ash_"))
                    for e in model["elements"]), "vuelven las motas 3D"

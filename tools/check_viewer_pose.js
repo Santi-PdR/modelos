@@ -11,8 +11,9 @@ const src = fs.readFileSync(path.join(__dirname, '../preview/app.js'), 'utf8').s
 const matrices = vm.runInContext(`${src}
   (() => {
     const clips=prepareClips(indata.clips), geo=indata.geo;
-    return {hidden:[...runtimeHidden(geo)], poses:indata.tests.map(({clip,t}) => {
-      const posed=poseAt(geo,clips[clip],t);
+    return {hidden:[...runtimeHidden(geo)], poses:indata.tests.map(({clip,t,aim}) => {
+      const base=poseAt(geo,clips[clip],t);
+      const posed=aim ? wearerPose(base,indata.fit,...aim) : base;
       return { byName: matrices(posed), sampleFaces: collect(posed, runtimeHidden(geo)).filter((_,i)=>i%37===0) };
     })};
   })();`, context, { filename:'preview/app.js' });

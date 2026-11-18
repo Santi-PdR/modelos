@@ -44,12 +44,10 @@ animación y la documentación de GeckoLib._
 
 - **Render de huesos es RECURSIVO:** se aplica transform en cada nivel y
   se recorren los hijos.
-- **`setHidden(true)` oculta el hueso Y sus hijos no renderizan en tercera
-  persona (F5).** → NO ocultar los huesos padre de la capa (caería la
-  capa entera al mirar desde atrás). Esta es la causa del regreso v1.30.0.
-- **`setChildrenHidden`** oculta solo los hijos. La visibilidad del hueso
-  se hereda; `GeoArmorRenderer` hereda visibilidad de
-  `HumanoidArmorLayer#setPartVisibility`.
+- **`setHidden(true)`** oculta los cubos del hueso; **`setChildrenHidden`**
+  corta el recorrido de los hijos. En GeckoLib 4.8 son dos controles distintos.
+  No cortar `cape_top/mid/bottom` ni el portador `cape_wearer_fit` al
+  ocultar los cubos antiguos o al aplicar la visibilidad del slot.
 - **Glowmask:** GeckoLib usa una imagen `glowmask.png` separada (no mcmeta
   en 5.x). `AutoGlowingTexture` usa el glowmask; el alpha del glowmask es
   el brillo (blanco = 100% fullbright, negro = 0). El glowmask debe ser
@@ -72,7 +70,7 @@ animación y la documentación de GeckoLib._
 
 ## 5. Restricciones VIGENTES de este proyecto (no revivir)
 
-- La capa **visible**, **sin intersectar el cuerpo**, en **+Z (front)**.
+- La capa **visible**, **sin intersectar el torso**, en **+Z (espalda)**.
 - **Motion espacial PROHIBIDO** (fuerza/dirección del viento, oscilación
   en Z, cresta en Z): solo **rotación** o **cosmético**.
 - **Alpha del glow FIJO 1.0**; brillo en COLOR.
@@ -81,3 +79,20 @@ animación y la documentación de GeckoLib._
 - **8 RMS distintos** por clip (validación). Cualquier edit debe
   preservarlos.
 - **Icono 2D byte a byte** el PREFERIDO (SHA `c90670ba…`).
+
+## 6. Comparar y validar el ajuste equipado desde v1.61.0
+
+1. `python3 tools/build_deliverables.py` reconstruye GEO, atlas, clips,
+   `.bbmodel`, comparación y visor. Editar primero las fuentes en `tools/`.
+2. `python3 tools/verify_v1610.py` coteja la entrega, no sólo el modelo en
+   memoria. Para la referencia se fija la cámara y se ignoran pelo, ropa y
+   partículas libres; el registro mide contorno sólido y RGB común.
+3. `cape_wearer_fit` está entre `chestplate` y el conjunto equipado. No
+   tiene cubos ni keyframes. El renderer lo rota, en ambos pases, según
+   cabeza y torso de `HumanoidModel`. No aplicar un segundo ajuste en
+   Curios ni hornear la corrección al proyecto de Blockbench.
+4. En juego, comprobar en F5 primero el pecho sin Curios, luego `back`
+   con el pecho vacío, y finalmente ambos slots (una sola capa y glow).
+   Probar agacharse mirando arriba y girando, caminar, esprintar, caer,
+   planear y nadar. Probar de día y noche: el glow debe coincidir con los
+   cortes. El barrido de cajas no reemplaza estas comprobaciones.

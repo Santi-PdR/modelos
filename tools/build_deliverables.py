@@ -20,6 +20,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -27,6 +28,8 @@ import sys
 from pathlib import Path
 
 from PIL import Image, ImageDraw
+
+import cape_fit
 
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "src/main/resources/assets/capatest"
@@ -86,6 +89,7 @@ def step_recursos_visor() -> None:
     }
     for src, dst in copy.items():
         shutil.copy(RES / src, A / dst)
+    (A / 'fit.json').write_text(json.dumps(cape_fit.profile(), separators=(',', ':')) + '\n')
     atlas = Image.open(A / "armor.png").convert("RGBA")
     atlas.crop((0, 0, 96, 48)).resize((576, 288), Image.NEAREST).save(A / "canvas.png")
     atlas.resize((384, 384), Image.NEAREST).save(A / "atlas.png")
@@ -113,7 +117,7 @@ def step_gifs_y_estados(ver: str) -> None:
     print("5) comparación a escala, GIF y 8 poses")
     run(sys.executable, "tools/present_v1600.py", "--out", str(D), "--gif")
     shutil.copy(D / f"capa_v{ver.replace('.', '')}_antes_despues.png", A / "antes_despues.png")
-    shutil.copy(D / "capa_v1600_registro.png", A / "registro.png")
+    shutil.copy(D / f"capa_v{ver.replace('.', '')}_registro.png", A / "registro.png")
     shutil.copy(D / "capa_v1170_estados.png", A / "estados.png")
     shutil.copy(D / "capa_v1170_animaciones.gif", A / "animacion.gif")
 
