@@ -7,9 +7,13 @@ head and torso boxes; this is not a test of all skins, hats or armor mods.
 from __future__ import annotations
 
 import argparse
+import base64
 from contextlib import nullcontext
 import hashlib
+from io import BytesIO
 import json
+import re
+import subprocess
 
 import numpy as np
 from PIL import Image
@@ -60,27 +64,27 @@ def similarity(geo, atlas, emission):
     (base,new),p = registered_metrics(old,geo,atlas,baseline_atlas=TEX_BASE)
     for key,label in (('all','Silueta'),('upper','Zona alta'),('lower','Jirones'),('seam','Costura en U')):
         print(f'{label}: {base[key]:.2%} → {new[key]:.2%}')
-    assert new['all'] >= .948 and new['all'] > base['all']+.011, new['all']
-    assert new['seam'] > .910 and new['upper'] > .935 and new['lower'] > .948
+    assert new['all'] >= .952 and new['all'] > base['all']+.011, new['all']
+    assert new['seam'] > .924 and new['upper'] > .945 and new['lower'] > .952
     print(f"RGB común: {base['mae']:.2f} → {new['mae']:.2f}/255 (menor es mejor)")
-    assert new['mae'] < 4.60 and new['mae'] < .68*base['mae'], new['mae']
+    assert new['mae'] < 4.10 and new['mae'] < .60*base['mae'], new['mae']
     assert abs(new['pink']-p) < .011
     source, labels, rose = (crop(v) for v in R.reference())
     common = (labels>0) & base['match'] & new['match']
     aim = rose & common
     a,b = (iou(bright(view)&common,aim) for view in (views(old,TEX_BASE), views(geo,atlas)))
     print(f'Rosa visible: IoU {a:.2%} → {b:.2%}, no sólo área total')
-    assert b > a+.08 and b >= .57, (a,b)
+    assert b > a+.15 and b >= .73, (a,b)
     cores = bright(source, cores=True) & rose & common
     projected = emission_projection(geo,atlas,emission)
     old_live = emission_projection(old,TEX_BASE,GLOW_BASE)
     fit = iou(projected & common, cores)
     print(f'Núcleos emisivos en la referencia: IoU {iou(old_live&common,cores):.2%} → {fit:.2%}')
-    assert fit > .50 and np.count_nonzero(projected & cores) / projected.sum() > .68, fit
+    assert fit > .74 and np.count_nonzero(projected & cores) / projected.sum() > .68, fit
 
     faces,owner = S.visible_faces(geo)
     family = np.where(owner>=0,np.array([f['family'] for f in faces])[owner],0)
-    for label,threshold in ((R.COLLAR,.88),(R.SHOULDER,.765)):
+    for label,threshold in ((R.COLLAR,.92),(R.SHOULDER,.785)):
         assert iou(family==label,labels==label) > threshold, label
     # This known opening is through two plies. Deep shadows elsewhere can
     # remain cloth and must not become transparent to flatter the score.
@@ -133,8 +137,50 @@ def protection(geo, atlas, glow, runtime, candidate):
                 else:
                     assert not active[rect].any(), (b['name'],k)
     assert not np.any(active & ~linked)
-    assert active.sum() > 450
+    assert active.sum() > 650
     print(f'Atlas {C.SIZE}² opaco, {active.sum()} texels de luz sólo en el paño; icono, plegado y clips conservados')
+
+
+def visor_material(geo, atlas, glow):
+    html = (P.ROOT/'docs/capa_v1170_visor.html').read_text()
+    def embedded(key):
+        return json.loads(re.search(rf'^const {key} = (.+);$',html,re.M)[1])
+    ref = json.loads(json.dumps(R.viewer_camera()))
+    assert embedded('INLINE_REFERENCE') == ref
+    with Image.open(R.SOURCE) as actual:
+        original = np.asarray(actual.convert('RGB').crop(R.CROP))
+    for name,expected in (('reference-crop.png', original),
+                          ('armor.png',np.asarray(atlas)),('armor_glowmask.png',np.asarray(glow))):
+        data = embedded('INLINE_IMAGES')[name].split(',',1)[1]
+        with Image.open(BytesIO(base64.b64decode(data))) as packed:
+            assert np.array_equal(np.asarray(packed),expected), name
+    tests = [dict(yaw=R.YAW,pitch=R.PITCH,ambient=.24,tint=t) for t in (None,(.89,.60,.77))]
+    tests.append(dict(yaw=180.,pitch=8.,ambient=.24,tint=(.72,.50,.68)))
+    size = 224
+    packet = dict(geo=geo,reference=ref,size=size,atlasSize=C.SIZE,tests=tests,
+                  albedo=base64.b64encode(atlas.tobytes()).decode(),
+                  emission=base64.b64encode(glow.tobytes()).decode())
+    run = subprocess.run(['node','tools/check_viewer_raster.js'],cwd=P.ROOT,check=True,
+                         input=json.dumps(packet),capture_output=True,text=True)
+    frame = [*ref['center'],R.SCALE*size/max(ref['cropSize'])]
+    bitmaps=[]
+    for test,result in zip(tests,json.loads(run.stdout),strict=True):
+        assert np.allclose(frame,result['frame'],rtol=0,atol=1e-12)
+        tint=test['tint']
+        py = P.render(geo,atlas,P.effective_hidden(geo),size=size,frame=frame,
+                      bg=(18,14,26), emission=glow if tint else None, **test)
+        js = np.frombuffer(base64.b64decode(result['rgba']),np.uint8).reshape((size,size,4))
+        assert np.all(js[...,3]==255)
+        rgb=js[...,:3].astype(np.int16)
+        discrepancy=np.abs(rgb-np.asarray(py))
+        assert (discrepancy<=1).mean()>.997, (test,discrepancy.mean())
+        bitmaps.append(rgb)
+    base,light,_ = bitmaps
+    assert np.count_nonzero(np.max(light-base,axis=2)>64)>200
+    # Same occlusion and coverage: low ambient exposes only the hotspots.
+    scene=np.array([18,14,26])
+    assert np.array_equal((base==scene).all(2),(light==scene).all(2))
+    print('Visor: PNG original y encuadre exactos; RGB/alpha del pase de luz contrastados con el raster Python')
 
 
 def main():
@@ -150,8 +196,8 @@ def main():
     if a.fit_only:
         fit_check(geo,runtime['animations'],a.quick,pads=True)
         return
-    assert layout['density'][R.CLOTH]>=5.0 and layout['cards']>=210, layout
-    print(f"{layout['cards']} cartas · {layout['density'][R.CLOTH]:.2f} texels/u de paño")
+    assert layout['density'][R.CLOTH]>=8.0 and layout['cards']>=240, layout
+    print(f"{layout['cards']} cartas · {layout['density'][R.CLOTH]:.2f} texels/u nominales del paño antes de ajustar ejes por cara")
     similarity(geo,atlas,glow)
     if a.look_only:
         return
@@ -169,6 +215,7 @@ def main():
     fit_check(geo,runtime['animations'],a.quick,pads=True)
     if not a.candidate:
         visor_fit(geo,runtime)
+        visor_material(geo,atlas,glow)
 
 
 if __name__=='__main__':

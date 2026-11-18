@@ -15,28 +15,29 @@ Se equipa en el pecho o en `back` con Curios opcional.
   costura y las puntas. Los escalones nuevos son sólidos conectados a sus
   gajos. Se conserva el hueco que atraviesa las dos capas del paño.
 - El atlas equipado opaco **256 × 256** tiene cartas UV por cara y guarda de
-  color. El paño pasa de **3,45 a 5,34 texels/u**. El reverso sigue mate y
+  color. Las cartas dan más resolución a las crestas y grietas expuestas
+  que a los cantos en escorzo, sin subir de 256². El reverso sigue mate y
   no se pintan pelo, ropa ni motas flotantes en la tela.
 - Los núcleos magenta emiten donde están las grietas de la referencia.
-  Forge dibuja la luz en un **segundo pase** con profundidad y sin borrar
-  texels del opaco. Se quita el reflejo de encantamiento sólo al equiparla,
+  Forge dibuja la luz en un **segundo pase** con la misma profundidad que el opaco, sin el offset de
+  la armadura vanilla y sin borrar texels del albedo. Se quita el reflejo de encantamiento sólo al equiparla,
   no del item en inventario. Pecho y Curios comparten ambos pases y el ajuste.
 - El `.bbmodel` lleva el mismo atlas opaco y la misma geometría. Se
   conservan los ocho clips, icono, plegado, chispas y sus texturas. Queda
   respaldo de los recursos exactos de [v1.61.0](docs/respaldos/v1.61.0/).
 
-Con el trazado fijo: **93,66 → 95,10 %** de silueta y **88,85 → 92,17 %**
-en la costura. En los píxeles comunes el error RGB baja de **6,92 a 4,35**
-sobre 255. El solapamiento de núcleos emisivos sube de **11,11 a 73,88 %**
+Con el trazado fijo: **93,66 → 95,21 %** de silueta y **88,85 → 92,66 %**
+en la costura. En los píxeles comunes el error RGB baja de **6,92 a 3,97**
+sobre 255. El solapamiento de núcleos emisivos sube de **11,11 a 76,74 %**
 (medir dónde emiten, no solamente cuánta área emite).
 
 [Registro de silueta](docs/capa_v1620_registro.png) ·
 [Prueba de emisión](docs/capa_v1620_luz.png) ·
-[Visor con luz ambiente y ajuste](docs/capa_v1170_visor.html)
+[Visor con comparación deslizable, luz y ajuste](docs/capa_v1170_visor.html)
 
 `python3 tools/verify_v1620.py` compara el mismo trazado sin cambiar la
-cámara, revisa albedo/emisión por separado y comprueba holguras y unión de
-las piezas durante poses y mezclas. El barrido no equivale a probar cascos
+cámara, verifica los píxeles del original y los dos mapas del visor y
+comprueba holguras y unión de las piezas durante poses y mezclas. El barrido no equivale a probar cascos
 u otras animaciones de mods ni a una captura F5.
 
 ### v1.61.0 — contorno, materiales y ajuste equipado

@@ -48,26 +48,25 @@ animación y la documentación de GeckoLib._
   corta el recorrido de los hijos. En GeckoLib 4.8 son dos controles distintos.
   No cortar `cape_top/mid/bottom` ni el portador `cape_wearer_fit` al
   ocultar los cubos antiguos o al aplicar la visibilidad del slot.
-- **Glowmask:** GeckoLib usa una imagen `glowmask.png` separada (no mcmeta
-  en 5.x). `AutoGlowingTexture` usa el glowmask; el alpha del glowmask es
-  el brillo (blanco = 100% fullbright, negro = 0). El glowmask debe ser
-  la misma resolución que la textura; píxeles transparentes = sin glow.
-- **Para este proyecto:** brillo en COLOR, **alpha del re-render FIJO
-  1.0** (corrección v1.33.0). No modular el alpha del glow.
+- **Plegado:** `AutoGlowingTexture` de GeckoLib conserva el camino anterior
+  con su `glowmask.png` de la misma resolución. En la capa equipada no se
+  usa `AutoGlowingTexture`: trasladaría píxeles al glow y los quitaría del
+  albedo, abriendo agujeros.
+- **Equipado:** el alpha global del re-render queda en **1,0**. Se pulsa
+  el color; el alpha de cada texel del atlas emisivo marca sólo su cobertura.
 
 ## 4. Texturas, atlas y UV
 
 - **Densidad de texel consistente**: no estirar el mismo swatch del atlas
   sobre caras de distinto tamaño. Alinear UV y densidad de texel.
-- **Emitir/glow:** la máscara emisiva se define con ALFA (blanco = brillo
-  máximo). Mipmapping cuidadoso para evitar bleeding de glow a zonas no
-  emisivas en LOD bajo.
-- **Atlas:** empaquetar compacto; la máscara emisiva se define con ALFA
-  (blanco = brillo máximo).
+- **Cartas UV:** cada cara lleva guarda de color. Al asignar espacio,
+  dar prioridad a las caras expuestas sin bajar a cero la densidad de
+  los cantos. Mantener el muestreo nearest en albedo y emisión.
 - **Desde v1.62.0:** la capa equipada usa dos mapas alineados 256²:
   albedo siempre opaco y emisión RGBA, sólo en núcleos del paño. El pase
-  emisivo usa la geometría equipada sin que GeckoLib vuelva a subir ni
-  recorte el albedo. El ítem plegado conserva su atlas y máscara de 128².
+  emisivo usa la geometría equipada y la misma profundidad que el opaco;
+  el opaco no usa el offset de armadura vanilla. GeckoLib no recorta ni
+  vuelve a subir el albedo. El ítem plegado conserva su atlas y máscara de 128².
 
 ## 5. Restricciones VIGENTES de este proyecto (no revivir)
 
@@ -97,7 +96,7 @@ animación y la documentación de GeckoLib._
    Probar agacharse mirando arriba y girando, caminar, esprintar, caer,
    planear y nadar. Probar de día y noche: el glow debe coincidir con los
    cortes. El barrido de cajas no reemplaza estas comprobaciones.
-
 5. En el visor, bajar **Luz ambiente** y activar **Chispas y emisión**.
    Comprobar que se iluminan los núcleos, no las placas o el forro entero;
-   apagarlos no debe abrir un agujero. «Referencia» vuelve a luz fija.
+   apagarlos no debe abrir un agujero. «Referencia» vuelve a luz fija y
+   permite deslizar el PNG original sobre la misma pose, escala y cámara.

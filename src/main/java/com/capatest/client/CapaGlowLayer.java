@@ -39,7 +39,7 @@ public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
             return;
         try {
             renderGlow(poseStack, animatable, bakedModel, bufferSource,
-                    partialTick, packedLight, packedOverlay);
+                    partialTick);
         } catch (Exception | LinkageError error) {
             // El pass emisivo es decorativo: nunca debe tumbar el render.
             disabled = true;
@@ -52,11 +52,10 @@ public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
                             CapaDeteriorerItem animatable,
                             BakedGeoModel bakedModel,
                             MultiBufferSource bufferSource,
-                            float partialTick,
-                            int packedLight,
-                            int packedOverlay) {
+                            float partialTick) {
         // The texture holds colored emission and coverage. Do not derive it
         // with AutoGlowingTexture: that path re-uploads a modified base image.
+        // Match the unshifted opaque depth; the glow only writes color.
         RenderType emissive = RenderType.entityTranslucentEmissive(EMISSION, false);
 
         if (!(getRenderer() instanceof GeoArmorRenderer<?> armor))

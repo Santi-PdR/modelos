@@ -27,14 +27,21 @@ def requests(faces, uses, factor):
         yield name, 2*w, 2*h
     for i, f in enumerate(faces):
         n = uses[i]
-        if n <= 5 or (f['fn'] in ('north', 'down') and n < 18):
+        if n <= 4 or (f['fn'] in ('north', 'down') and n < 15):
             continue
+        # Budget for the exposed part of each axis, instead of spending
+        # most of the atlas on foreshortened or overlapped sides. Keep a
+        # world-unit floor so a turn does not reveal a single streak of
+        # stretched color on either axis.
+        p = f['px']
+        axes = np.stack((p[0] - p[1], p[2] - p[1]))
+        visible = min(1., n / max(1., abs(np.linalg.det(axes))))
+        q = f['pts']
+        lengths = np.linalg.norm([q[0] - q[1], q[2] - q[1]], axis=1)
+        projected = np.linalg.norm(axes, axis=1) / R.SCALE
+        budget = np.maximum(.38 * lengths, projected * max(.52, visible**.56))
         density = S.DENSITIES[f['family']] * factor
-        p = f['pts']
-        # Use the actual length of each face axis so that edges and broad
-        # folds have the same texel density on the model.
-        w = max(2, math.ceil(np.linalg.norm(p[0] - p[1]) * density))
-        h = max(2, math.ceil(np.linalg.norm(p[2] - p[1]) * density))
+        w, h = (max(2, math.ceil(axis * density)) for axis in budget)
         yield i, w, h
 
 
@@ -44,7 +51,7 @@ def tiles(faces, owners):
     lock = np.zeros((SIZE, SIZE), bool)
     # Retained UVs of the hidden legacy armor still have a real texture.
     lock[:128, :128] = True
-    for factor in (2.2, 2.1, 2.0, 1.92, 1.85, 1.78, 1.7, 1.62, 1.55):
+    for factor in (3.2, 3.0, 2.9, 2.85, 2.8, 2.7, 2.6, 2.5, 2.4, 2.2, 2.0):
         req = list(requests(faces, uses, factor))
         packed = S.pack(lock, [(i, w+2*GUARD, h+2*GUARD) for i,w,h in req])
         if packed is not None:

@@ -276,8 +276,9 @@ jobs:
                          for n in new_names), 'vuelven las tiras finas sueltas'
           assert sum(1 for n in new_names if n.startswith('v17_vein_')) == 10
           veins = [b for b in new_bones if b['name'].startswith('v17_vein_')]
+          # GeckoLib adds inflate to both sides; guard the actual solid.
           ribbons = [b for b in new_bones if b['name'].startswith('v17_ribbon_')]
-          assert all(0.30 <= c['size'][2] <= 1.10
+          assert all(0.33 <= c['size'][2] + 2*c.get('inflate', 0) <= 1.17
                      and 0.01 <= c.get('inflate', 0) <= 0.05
                      for b in ribbons for c in b['cubes']), 'espesor de paño'
           zs = [c['origin'][2] + c['size'][2] / 2 for b in ribbons for c in b['cubes']]
@@ -536,7 +537,7 @@ jobs:
           assert sum(1 for b in geo_bones if b['name'].startswith('v17_ribbon_')) == 84
           # v1.22.0: 0.55-0.80 (antes 0.28-0.40). De perfil la capa era
           # una lámina de 0.3 unidades y parecía despegada del jugador.
-          assert all(0.30 <= c['size'][2] <= 1.10 for b in geo_bones
+          assert all(0.33 <= c['size'][2] + 2*c.get('inflate', 0) <= 1.17 for b in geo_bones
                      if b['name'].startswith('v17_ribbon_') for c in b['cubes'])
           # Proyecto Blockbench REAL, sin maniquí y con UV por cara.
           _bbver = [l.split('=', 1)[1].strip() for l in
@@ -667,6 +668,7 @@ jobs:
           assert 'stateFor(wearer, armor.getCurrentStack())' in glow_layer
           assert 'entityTranslucentEmissive(EMISSION, false)' in glow_layer
           assert 'AutoGlowingTexture.getRenderType(' not in glow_layer
+          assert 'return RenderType.entityCutoutNoCull(texture, true);' in armor_renderer, 'opaco y emisión deben compartir profundidad sin offset'
           assert 'buffers, renderType, null, yaw, partialTick, light' in armor_renderer
           assert 'getArmorFoilBuffer(' not in curio
           assert 'if (wearer == null)' in curio
@@ -763,8 +765,8 @@ jobs:
           assert 'SHA256SUMS.txt' in _fetch, 'no comprueba el SHA256SUMS'
           assert 'capatest-{ver}.jar' in _fetch
           print(f'OK: v{ver}, geometria rehecha (12 mechones anchos en 2 capas), '
-                'cuello alto + hombreras + cadena, atlas limpio con glowmask '
-                'fullbright, chispa EXCLUSIVA sin particulas vanilla, icono PREFERIDO revertido con backup byte-identico y sin lag')
+                'cuello alto + hombreras + cadena, albedo más emisión fullbright '
+                'independiente, chispa EXCLUSIVA sin particulas vanilla, icono PREFERIDO revertido con backup byte-identico y sin lag')
           PY
 
       # v1220: la autoevaluacion MEDIDA se ejecuta AQUI, en GitHub Actions,

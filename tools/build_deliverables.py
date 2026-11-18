@@ -30,6 +30,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 import cape_fit
+import cape_reference
 
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "src/main/resources/assets/capatest"
@@ -90,6 +91,9 @@ def step_recursos_visor() -> None:
     for src, dst in copy.items():
         shutil.copy(RES / src, A / dst)
     (A / 'fit.json').write_text(json.dumps(cape_fit.profile(), separators=(',', ':')) + '\n')
+    (A / 'reference-frame.json').write_text(json.dumps(cape_reference.viewer_camera()) + '\n')
+    with Image.open(cape_reference.SOURCE) as source:
+        source.convert('RGB').crop(cape_reference.CROP).save(A / 'reference-crop.png', optimize=True)
     atlas = Image.open(A / "armor.png").convert("RGBA")
     atlas.crop((0, 0, 96, 48)).resize((576, 288), Image.NEAREST).save(A / "canvas.png")
     atlas.resize((384, 384), Image.NEAREST).save(A / "atlas.png")

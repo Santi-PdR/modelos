@@ -469,7 +469,7 @@ def main() -> None:
     print(f"wrote {OUT.relative_to(ROOT)}: {len(geo['bones'])} bones, {cubes} cubes")
     print(f"  {CS.RIBBONS} MECHONES ANCHOS x {CS.SEGS + 1} tramos en 2 capas"
           f" | cuello alto {COLLAR_FRONT}+{COLLAR_BACK} | hombreras {PADS}"
-          f" | costura {CHAIN_LINKS} | grietas neón {CRACKS}"
+          f" | costura {CHAIN_LINKS} | emisión sobre el paño"
           f" | SIN tiras finas ni motas 3D")
 
 

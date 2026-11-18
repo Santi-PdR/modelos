@@ -32,22 +32,17 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     }
 
     /**
-     * v1.33.0: render type OPACO y con test de profundidad explícito.
-     *
-     * El default de GeckoLib ya es {@code armorCutoutNoCull} (opaco, doble
-     * cara, alpha-test), pero lo re-afirmamos aquí para que la capa NUNCA
-     * quede translúcida. La textura base es 100% opaca (alpha 255), así que
-     * el alpha-test no descarta nada y la capa se dibuja opaca. El test de
-     * profundidad asegura que, en la vista F5 (espalda), la parte de la
-     * capa detrás del cuerpo se OCLUDA correctamente (no se dibuje como un
-     * fantasma translúcido sobre el cuerpo).
+     * Opaque cloth with the same projection as the emissive pass.
+     * armorCutoutNoCull applies a view-space depth offset. On the same
+     * surface that would make entityTranslucentEmissive fail its depth test.
+     * Both cape passes instead use an unshifted, depth-tested render type.
      */
     @Override
     public RenderType getRenderType(CapaDeteriorerItem animatable,
                                     ResourceLocation texture,
                                     @Nullable MultiBufferSource bufferSource,
                                     float partialTick) {
-        return RenderType.armorCutoutNoCull(texture);
+        return RenderType.entityCutoutNoCull(texture, true);
     }
 
     @Override

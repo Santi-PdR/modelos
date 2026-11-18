@@ -11,7 +11,7 @@ async function loadJson(name) {
 function assetUrl(name) { return `assets/${name}`; }
 /* END LOCAL LOADER */
 
-let GEO, CLIPS, FIT, ATLAS, GLOW, SPARK, ATLAS_W = 128, ATLAS_H = 128;
+let GEO, CLIPS, FIT, REF, ORIGINAL, ATLAS, GLOW, SPARK, ATLAS_W = 128, ATLAS_H = 128;
 const canvas = document.getElementById('view');
 const ctx = canvas.getContext('2d', { alpha: false });
 let SIZE = 480;
@@ -225,7 +225,7 @@ function collect(geo, hidden) {
 
 /* ---------- rasterizador con z-buffer ---------- */
 let lastScale = null, lastCx = 0, lastCy = 0, lastView = null;
-function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1) {
+function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=null) {
   const view = mul(R('x', pitch), R('y', yaw));
   lastView = view;
   const prepared = [];
@@ -248,9 +248,8 @@ function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1) {
     x0=Math.min(...points.map(p=>p[0])); x1=Math.max(...points.map(p=>p[0]));
     y0=Math.min(...points.map(p=>p[1])); y1=Math.max(...points.map(p=>p[1]));
   }
-  const cx=(x0+x1)/2, cy=(y0+y1)/2;
-  const base = Math.min((size-46)/(x1-x0||1), (size-46)/(y1-y0||1));
-  const scale = base * zoom;
+  const [cx,cy,scale] = frame || [(x0+x1)/2, (y0+y1)/2,
+    Math.min((size-46)/(x1-x0||1), (size-46)/(y1-y0||1)) * zoom];
   lastScale = scale; lastCx = cx; lastCy = cy;
 
   const img = ctx.createImageData(size, size);
@@ -366,10 +365,35 @@ const turnControl=document.getElementById('fitTurn'), fitValue=document.getEleme
 const fitReset=document.getElementById('fitReset'), fxControl=document.getElementById('l_particles');
 const seek=document.getElementById('seek'), play=document.getElementById('play');
 const ambientControl=document.getElementById('ambient');
+const zoomControl=document.getElementById('zoom');
+const compareControl=document.getElementById('referenceCompare');
+const wipe=document.getElementById('wipe');
+function referenceScale(size) {
+  return size / Math.max(...REF.cropSize);
+}
+function referenceFrame(size) {
+  return [...REF.center, REF.pixelsPerUnit*referenceScale(size)];
+}
+function drawOriginal(size) {
+  const amount=+wipe.value/100;
+  if (amount===0) return;
+  const [w,h]=REF.cropSize.map(d=>d*referenceScale(size));
+  const x=(size-w)/2, y=(size-h)/2;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x,y,amount*w,h); ctx.clip();
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(ORIGINAL,x,y,w,h);
+  ctx.restore();
+  if (amount<1) {
+    ctx.fillStyle='#f4d0e4';
+    ctx.fillRect(Math.floor(x+amount*w),y,1,h);
+  }
+}
 function setReference(value) {
   referenceView=value;
   document.getElementById('v34').setAttribute('aria-pressed',String(value));
-  for (const control of [stanceControl, lookControl, turnControl, fitReset, fxControl, ambientControl])
+  compareControl.hidden=!value;
+  for (const control of [stanceControl, lookControl, turnControl, fitReset, fxControl, ambientControl, zoomControl])
     control.disabled=value;
   dirty=true;
 }
@@ -411,7 +435,8 @@ function draw(now) {
     `Mirada ${look}° · giro ${turn}° · bisagra ${degreeFold(FIT,stance,look,turn).toFixed(1)}°`;
   const fx=showFx&&!referenceView;
   render(faces,yaw,pitch,zoom,SIZE,frameBounds,fx?simulatedTint(t,clip.length):null,
-         referenceView ? 1 : +ambientControl.value);
+         referenceView ? 1 : +ambientControl.value, referenceView ? referenceFrame(SIZE) : null);
+  if (referenceView) drawOriginal(SIZE);
   if (fx) drawRuntimeParticles(elapsed,SIZE);
   document.getElementById('faces').textContent=faces.length;
   document.getElementById('clock').textContent=referenceView?'Pose base':`${t.toFixed(2).replace('.',',')} s`;
@@ -430,9 +455,12 @@ function pixels(im) {
   return ctx.getImageData(0,0,im.width,im.height).data;
 }
 async function boot() {
-  const [geo,clips,fit,atlas,glow,spark]=await Promise.all([
+  const [geo,clips,fit,atlas,glow,spark,reference,original]=await Promise.all([
     loadJson('armor.geo.json'), loadJson('armor.animation.json'), loadJson('fit.json'), image('armor.png'),
-    image('armor_glowmask.png'), image('capa_spark_1.png')]);
+    image('armor_glowmask.png'), image('capa_spark_1.png'), loadJson('reference-frame.json'), image('reference-crop.png')]);
+  if (original.width!==reference.cropSize[0] || original.height!==reference.cropSize[1])
+    throw new Error('La imagen no coincide con el encuadre de referencia');
+  REF=reference; ORIGINAL=original;
   GEO=geo['minecraft:geometry'][0]; CLIPS=prepareClips(clips); FIT=fit; hidden=runtimeHidden(GEO);
   if (glow.width!==atlas.width || glow.height!==atlas.height) throw new Error('El atlas emisivo no coincide con el opaco');
   ATLAS=pixels(atlas); GLOW=pixels(glow); SPARK=spark; ATLAS_W=atlas.width; ATLAS_H=atlas.height;
@@ -447,17 +475,19 @@ let drag=null;
 canvas.addEventListener('pointerdown',e=>{ drag=[e.clientX,e.clientY]; canvas.setPointerCapture(e.pointerId); });
 canvas.addEventListener('pointermove',e=>{
   if (!drag) return;
+  if (referenceView) setReference(false);
   yaw+=.46*(e.clientX-drag[0]); pitch=Math.max(-76,Math.min(76,pitch+.46*(e.clientY-drag[1])));
   drag=[e.clientX,e.clientY]; dirty=true;
 });
 for (const type of ['pointerup','pointercancel','lostpointercapture']) canvas.addEventListener(type,()=>drag=null);
 for (const [id,y,p] of [['vBack',0,9],['vFront',180,8],['vSide',-87,8],['vTop',8,58]]) {
-  document.getElementById(id).onclick=()=>{yaw=y; pitch=p; dirty=true;};
+  document.getElementById(id).onclick=()=>{setReference(false); yaw=y; pitch=p;};
 }
 document.getElementById('v34').onclick=()=>{
   if (referenceView) { setReference(false); return; }
-  yaw=25; pitch=10; zoom=1; t=elapsed=0;
-  document.getElementById('zoom').value=zoom;
+  if (!REF) return;
+  yaw=REF.yaw; pitch=REF.pitch; zoom=1; t=elapsed=0;
+  zoomControl.value=zoom;
   setPlaying(false); setReference(true);
 };
 play.onclick=()=>setPlaying(!playing);
@@ -476,9 +506,9 @@ for (const control of [stanceControl,lookControl,turnControl]) {
 fitReset.onclick=()=>{
   stanceControl.checked=false; lookControl.value=turnControl.value=0; dirty=true;
 };
-document.getElementById('zoom').oninput=e=>{ zoom=+e.target.value; dirty=true; };
+zoomControl.oninput=e=>{ zoom=+e.target.value; dirty=true; };
 document.getElementById('l_player').onchange=e=>{ showPlayer=e.target.checked; dirty=true; };
 fxControl.onchange=e=>{ showFx=e.target.checked; dirty=true; };
-ambientControl.oninput=()=>{ dirty=true; };
+ambientControl.oninput=wipe.oninput=()=>{ dirty=true; };
 
 boot().catch(error=>{ document.getElementById('loading').textContent=error.message; });

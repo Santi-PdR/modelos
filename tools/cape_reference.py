@@ -112,3 +112,11 @@ def render_frame(crop=CROP):
     size = max(x1 - x0, y1 - y0)
     return size, ((size / 2 - (ORIGIN[0] - x0)) / SCALE,
                   ((ORIGIN[1] - y0) - size / 2) / SCALE, SCALE), (0, 0, x1-x0, y1-y0)
+
+
+def viewer_camera():
+    """Center the same reference crop in the viewer's square canvas."""
+    x0,y0,x1,y1 = CROP
+    return dict(yaw=YAW, pitch=PITCH, pixelsPerUnit=SCALE,
+                center=(((x0+x1)/2-ORIGIN[0])/SCALE, (ORIGIN[1]-(y0+y1)/2)/SCALE),
+                cropSize=(x1-x0, y1-y0))

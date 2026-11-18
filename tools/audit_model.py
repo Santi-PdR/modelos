@@ -98,7 +98,7 @@ def static_checks() -> None:
     atlas = np.asarray(Image.open(P.ARMOR_TEX).convert('RGBA'))
     glow = np.asarray(Image.open(P.ARMOR_TEX.with_stem(P.ARMOR_TEX.stem+'_glowmask')).convert('RGBA'))
     assert atlas.shape == glow.shape == (256,256,4)
-    assert (atlas[...,3] == 255).all() and np.count_nonzero(glow[...,3]) > 450
+    assert (atlas[...,3] == 255).all() and np.count_nonzero(glow[...,3]) > 650
     item_model = json.loads((ROOT / 'src/main/resources/assets/capatest/models/item'
                              '/capa_deteriorer_evilsaiyan.json').read_text())
     assert item_model['parent'] == 'minecraft:item/generated', 'el icono 2D no se ve'

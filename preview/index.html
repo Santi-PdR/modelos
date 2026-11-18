@@ -18,6 +18,7 @@ h2{margin:0 0 8px;font-size:1.13rem}p{margin:5px 0;color:var(--dim)}.grid{displa
 button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--rose);outline-offset:3px}.muted,label,output{color:var(--dim);font-size:.85rem}input{accent-color:var(--rose)}
 details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summary{cursor:pointer;color:var(--ink);font-size:.9rem}.fit input[type=range]{width:clamp(90px,24vw,142px)}
 #seek{flex:1;min-width:80px}.sample{image-rendering:pixelated;width:min(100%,330px);height:auto;border:1px solid var(--line);border-radius:7px;margin-top:9px}.split{display:grid;grid-template-columns:1fr 1fr;gap:10px}.split img,.plate{display:block;width:100%;height:auto;border-radius:8px;margin:9px 0}.split img{image-rendering:pixelated}.foot{padding:12px 0 40px;color:var(--dim);font-size:.88rem}
+#referenceCompare[hidden]{display:none}#wipe{flex:1;min-width:80px}
 @media(max-width:740px){.grid{grid-template-columns:1fr}header{padding-top:26px}}
 </style>
 </head>
@@ -32,6 +33,10 @@ details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summar
     <div class="stage"><canvas id="view" width="480" height="480" aria-label="Render interactivo de la capa"></canvas><div id="loading" role="status">Cargando el modelo…</div></div>
     <div class="controls" aria-label="Ángulo de cámara">
       <button id="vBack">Espalda</button><button id="v34" aria-pressed="false" title="Pose base y cámara de la imagen original">Referencia</button><button id="vSide">Perfil</button><button id="vFront">Forro</button><button id="vTop">Cenital</button>
+    </div>
+    <div id="referenceCompare" class="controls" hidden>
+      <label for="wipe">Imagen original</label><input id="wipe" type="range" min="0" max="100" value="50" aria-label="Porcentaje de la imagen original sobre el modelo">
+      <span class="muted">Pose, cámara y escala fijas</span>
     </div>
     <div class="controls">
       <label for="state">Estado</label>
@@ -69,7 +74,7 @@ details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summar
       <output id="fitValue" for="fitStance fitLook fitTurn">Mirada 0° · giro 0° · bisagra 0°</output>
       <p class="muted">Usa la misma corrección rotacional que el mod. El maniquí simula cabeza y torso, no el movimiento de brazos y piernas.</p>
     </details>
-    <p class="muted">«Referencia» vuelve al ángulo original y congela la pose base, con luz constante y sin ajuste ni FX. Púlsalo de nuevo o elige un estado para salir. Arrastra para girar. Las poses salen del JSON del mod; los FX son una simulación, no una captura de Minecraft.</p>
+    <p class="muted">«Referencia» fija la pose base, la luz y el zoom. Desliza la imagen original sobre el modelo sin mover la cámara. Elige otra vista, arrastra o reproduce un estado para salir. Las poses salen del JSON del mod; los FX son una simulación, no una captura de Minecraft.</p>
     <p class="muted"><span id="bones">—</span> huesos · <span id="faces">—</span> caras · UV del atlas real</p>
   </section>
   <aside class="stack">
