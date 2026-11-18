@@ -130,6 +130,10 @@ def apply_relief(geo):
         for part in parts:
             assert 0 <= part['source'] < len(originals), (name, part)
             fragment = deepcopy(originals[part['source']])
+            # A relief piece has its own local axes. Retuning the source
+            # cuboid must not rotate an unrotated piece around a new pivot.
+            fragment.pop('pivot', None)
+            fragment.pop('rotation', None)
             fragment.update({k: deepcopy(v) for k,v in part.items() if k != 'source'})
             cubes.append(fragment)
 
@@ -138,7 +142,7 @@ def source_cube(name: str, cube_index: int) -> int:
     """Original section supplying the material and joint of a split part."""
     parts = relief()['fragments'].get(name)
     if parts is not None:
-        base = 3 if name.endswith(f'_seg{TAIL_JOINT}') else 1
+        base = 4 if name.startswith('v18_pad_') else (3 if name.endswith(f'_seg{TAIL_JOINT}') else 1)
         if cube_index >= base:
             return parts[cube_index-base]['source']
     return cube_index
@@ -449,10 +453,10 @@ def build_base() -> dict:
 
 
 def build() -> dict:
-    from cape_surface import map_surface
+    from cape_material import map_material
 
     data = build_base()
-    map_surface(data['minecraft:geometry'][0])
+    map_material(data['minecraft:geometry'][0])
     return data
 
 

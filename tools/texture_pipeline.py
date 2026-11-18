@@ -3,7 +3,9 @@
 Procedural texture suite for the Mantle of the Blight Star (v1.12.0).
 
 Why procedural instead of AI-generated art:
-    The 128x128 armor texture is a strict UV atlas. Every cube face of
+    Historical notes below cover the original 128x128 atlas; v1.62 uses a
+    256x256 opaque base and an independent RGBA emissive pass.
+    The armor texture is a strict UV atlas. Every cube face of
     capa_deteriorer_evilsaiyan.geo.json samples a fixed rectangle of it, so a
     repainted texture would misalign every single piece of the cape. This
     pipeline reads the pristine originals from tools/originals/, derives a UV
@@ -66,8 +68,8 @@ Why procedural instead of AI-generated art:
     anti-aliased 16x16 sprites.
 
 Outputs (all committed, so CI needs no Python deps):
-    textures/item/armor/capa_deteriorer_evilsaiyan.png            128x128
-    textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png  128x128
+    textures/item/armor/capa_deteriorer_evilsaiyan.png            256x256
+    textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png  256x256
     textures/item/capa_deteriorer_evilsaiyan.png                  64x64
     textures/item/cape_folded.png                                  128x128 (3D item atlas)
     textures/item/cape_folded_glowmask.png                         128x128 (efecto del item)
@@ -84,7 +86,7 @@ import math
 from pathlib import Path
 
 import numpy as np
-from cape_surface import atlas as reference_surface
+from cape_material import SIZE as ARMOR_SIZE, atlas as reference_surface
 from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 import cape_shape as CS
@@ -105,7 +107,7 @@ SEED = 20261111
 # --------------------------------------------------------------------------
 # UV atlas mask: which texels are actually sampled by the 126 geo cubes
 # --------------------------------------------------------------------------
-def uv_usage_mask(size: int = SIZE) -> np.ndarray:
+def uv_usage_mask(size: int = ARMOR_SIZE) -> np.ndarray:
     geometry = json.loads(GEO.read_text())["minecraft:geometry"][0]
     mask = np.zeros((size, size), dtype=bool)
 
@@ -339,11 +341,7 @@ def assert_cloth_uvs() -> None:
                 u, v = face["uv"]
                 width, height = face["uv_size"]
                 assert width > 0 and height > 0, face
-                assert 0 <= u and 0 <= v and u + width <= 128 and v + height <= 128, face
-                assert any(
-                    u >= x0 and v >= y0 and u + width <= x1 and v + height <= y1
-                    for x0, y0, x1, y1 in OPAQUE_RECTS
-                ), f"UV nueva fuera de zona opaca: {face}"
+                assert 0 <= u and 0 <= v and u + width <= ARMOR_SIZE and v + height <= ARMOR_SIZE, face
                 checked += 1
     assert checked > 300, checked
     print(f"v1.17.0 cloth UV faces checked: {checked}")
@@ -506,10 +504,10 @@ def shape_energy_density(out: np.ndarray) -> np.ndarray:
 def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
     """Paño equipado reconstruido con cartas UV registradas a la referencia."""
     atlas, glowmask = reference_surface()
-    assert atlas.size == (SIZE, SIZE) and glowmask.size == (SIZE, SIZE)
+    assert atlas.size == (ARMOR_SIZE, ARMOR_SIZE) and glowmask.size == atlas.size
     # Cobertura de UV de la geometría nueva: se calcula para no perder la
     # regresión de "ningún UV fuera del atlas".
-    assert used.shape == (SIZE, SIZE)
+    assert used.shape == (ARMOR_SIZE, ARMOR_SIZE)
     return atlas, glowmask
 
 
@@ -1192,7 +1190,7 @@ def main() -> None:
     assert (armor_alpha == 255).all(), "atlas con texel transparente"
     glow_alpha = np.asarray(glowmask)[..., 3]
     emissive = int((glow_alpha > 0).sum())
-    assert 200 < emissive < SIZE * SIZE, emissive
+    assert 200 < emissive < ARMOR_SIZE * ARMOR_SIZE, emissive
     assert np.asarray(armor)[0:48, 0:96, 0].mean() > \
         np.asarray(armor)[48:96, 0:96, 0].mean(), "falta degradado carmesi->morado"
     print(f"atlas limpio v1.23.0: {emissive} texels EMISSIVE (fullbright)")

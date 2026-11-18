@@ -84,6 +84,25 @@ def panel(out, stamp, newer, atlas, *, prior='1.60.0'):
     guide.save(out/f'capa_v{suffix}_registro.png',optimize=True)
 
 
+def lighting_panel(out, stamp, geo, atlas):
+    """Same camera, dark cloth, only the independent emission changed."""
+    from verify_v1620 import GLOW, views
+    board=Image.new('RGB',(1304,863),BG)
+    d=ImageDraw.Draw(board)
+    label(d,(32,25),'MANTLE OF THE BLIGHT STAR   /   v'+stamp,19,ROSE,bold=True)
+    label(d,(31,62),'Las grietas emiten sobre el paño',49,bold=True)
+    label(d,(33,127),'El pase de luz no elimina texels del atlas opaco.',21,DIM)
+    src=Image.open(R.SOURCE).convert('RGB').crop(R.CROP)
+    options=(('01  REFERENCIA ORIGINAL',src),
+             ('02  POCA LUZ, SIN EMISIÓN',views(geo,atlas,bg=BG_PANEL,ambient=.22)),
+             ('03  MISMA LUZ, CON EMISIÓN',views(geo,atlas,bg=BG_PANEL,ambient=.22,emission=GLOW)))
+    for i,(title,im) in enumerate(options):
+        x=32+i*422
+        label(d,(x,178),title,18,ROSE if i==2 else DIM,bold=True)
+        board.paste(im.resize((396,638),Image.Resampling.NEAREST),(x,209))
+    board.save(out/f"capa_v{stamp.replace('.', '')}_luz.png",optimize=True)
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--out',type=Path,required=True)
@@ -92,8 +111,10 @@ def main():
     out.mkdir(exist_ok=True,parents=True)
     geo=P.load(P.ARMOR_GEO);ver=P.mod_version();atlas=P.ARMOR_TEX
     clips=json.loads(A.ANIM.read_text())['animations']
-    prior = '1.59.0' if ver == '1.60.0' else '1.60.0'
+    prior = {'1.60.0':'1.59.0','1.61.0':'1.60.0','1.62.0':'1.61.0'}[ver]
     panel(out,ver,geo,atlas,prior=prior)
+    if ver == "1.62.0":
+        lighting_panel(out,ver,geo,atlas)
     suffix = ver.replace('.', '')
     shutil.copyfile(out/f'capa_v{suffix}_antes_despues.png',out/'capa_v1170_comparativa.png')
     shutil.copyfile(out/f'capa_v{suffix}_registro.png',out/'capa_v1170_silhouette_compare.png')

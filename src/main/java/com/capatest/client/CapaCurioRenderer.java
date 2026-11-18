@@ -2,12 +2,10 @@ package com.capatest.client;
 
 import com.capatest.item.CapaDeteriorerItem;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.entity.ItemRenderer;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -63,12 +61,10 @@ public class CapaCurioRenderer implements ICurioRenderer {
         this.cape.prepForRender(wearer, stack, EquipmentSlot.CHEST, humanoid);
         RenderType renderType = this.cape.getRenderType(
                 animatable, this.cape.getTextureLocation(animatable), buffer, partialTicks);
-        VertexConsumer vertexConsumer = ItemRenderer.getArmorFoilBuffer(
-                buffer, renderType, false, stack.hasFoil());
         poseStack.pushPose();
         try {
             this.cape.defaultRender(poseStack, animatable, buffer, renderType,
-                    vertexConsumer, 0, partialTicks, light);
+                    null, 0, partialTicks, light);
         } finally {
             poseStack.popPose();
         }

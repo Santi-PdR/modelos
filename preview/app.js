@@ -225,7 +225,7 @@ function collect(geo, hidden) {
 
 /* ---------- rasterizador con z-buffer ---------- */
 let lastScale = null, lastCx = 0, lastCy = 0, lastView = null;
-function render(faces, yaw, pitch, zoom, size, bounds, tint) {
+function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1) {
   const view = mul(R('x', pitch), R('y', yaw));
   lastView = view;
   const prepared = [];
@@ -296,11 +296,12 @@ function render(faces, yaw, pitch, zoom, size, bounds, tint) {
           const cr=solid ? solid[0] : A[ti];
           const cg=solid ? solid[1] : A[ti+1];
           const cb=solid ? solid[2] : A[ti+2];
-          const lit = q.shade;
-          const em = !solid && tint ? GLOW[ti+3]/255 : 0;
-          pix[di]   = pix[di]*(1-al) + cr*(lit+em*Math.max(0,(tint?.[0] || 0)-lit))*al;
-          pix[di+1] = pix[di+1]*(1-al) + cg*(lit+em*Math.max(0,(tint?.[1] || 0)-lit))*al;
-          pix[di+2] = pix[di+2]*(1-al) + cb*(lit+em*Math.max(0,(tint?.[2] || 0)-lit))*al;
+          const lit = q.shade * ambient;
+          const emission = !solid && tint ? GLOW[ti+3]/255 : 0;
+          const diffuse = lit * (1-emission);
+          pix[di]   = pix[di]*(1-al) + (cr*diffuse + emission*GLOW[ti]  *(tint?.[0] || 0))*al;
+          pix[di+1] = pix[di+1]*(1-al) + (cg*diffuse + emission*GLOW[ti+1]*(tint?.[1] || 0))*al;
+          pix[di+2] = pix[di+2]*(1-al) + (cb*diffuse + emission*GLOW[ti+2]*(tint?.[2] || 0))*al;
           depth[idx]=zz;
         }
       }
@@ -364,10 +365,11 @@ const stanceControl=document.getElementById('fitStance'), lookControl=document.g
 const turnControl=document.getElementById('fitTurn'), fitValue=document.getElementById('fitValue');
 const fitReset=document.getElementById('fitReset'), fxControl=document.getElementById('l_particles');
 const seek=document.getElementById('seek'), play=document.getElementById('play');
+const ambientControl=document.getElementById('ambient');
 function setReference(value) {
   referenceView=value;
   document.getElementById('v34').setAttribute('aria-pressed',String(value));
-  for (const control of [stanceControl, lookControl, turnControl, fitReset, fxControl])
+  for (const control of [stanceControl, lookControl, turnControl, fitReset, fxControl, ambientControl])
     control.disabled=value;
   dirty=true;
 }
@@ -408,7 +410,8 @@ function draw(now) {
   fitValue.textContent=referenceView ? 'Pose base · ajuste desactivado' :
     `Mirada ${look}° · giro ${turn}° · bisagra ${degreeFold(FIT,stance,look,turn).toFixed(1)}°`;
   const fx=showFx&&!referenceView;
-  render(faces,yaw,pitch,zoom,SIZE,frameBounds,fx?simulatedTint(t,clip.length):null);
+  render(faces,yaw,pitch,zoom,SIZE,frameBounds,fx?simulatedTint(t,clip.length):null,
+         referenceView ? 1 : +ambientControl.value);
   if (fx) drawRuntimeParticles(elapsed,SIZE);
   document.getElementById('faces').textContent=faces.length;
   document.getElementById('clock').textContent=referenceView?'Pose base':`${t.toFixed(2).replace('.',',')} s`;
@@ -431,6 +434,7 @@ async function boot() {
     loadJson('armor.geo.json'), loadJson('armor.animation.json'), loadJson('fit.json'), image('armor.png'),
     image('armor_glowmask.png'), image('capa_spark_1.png')]);
   GEO=geo['minecraft:geometry'][0]; CLIPS=prepareClips(clips); FIT=fit; hidden=runtimeHidden(GEO);
+  if (glow.width!==atlas.width || glow.height!==atlas.height) throw new Error('El atlas emisivo no coincide con el opaco');
   ATLAS=pixels(atlas); GLOW=pixels(glow); SPARK=spark; ATLAS_W=atlas.width; ATLAS_H=atlas.height;
   updateBounds();
   document.getElementById('bones').textContent=GEO.bones.length;
@@ -475,5 +479,6 @@ fitReset.onclick=()=>{
 document.getElementById('zoom').oninput=e=>{ zoom=+e.target.value; dirty=true; };
 document.getElementById('l_player').onchange=e=>{ showPlayer=e.target.checked; dirty=true; };
 fxControl.onchange=e=>{ showFx=e.target.checked; dirty=true; };
+ambientControl.oninput=()=>{ dirty=true; };
 
 boot().catch(error=>{ document.getElementById('loading').textContent=error.message; });

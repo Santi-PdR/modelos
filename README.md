@@ -1,11 +1,43 @@
-# Mantle of the Blight Star — v1.61.0
+# Mantle of the Blight Star — v1.62.0
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
 [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench](docs/CAPA_v1.61.0.bbmodel)
+· [Proyecto Blockbench](docs/CAPA_v1.62.0.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
+
+### v1.62.0 — forma más fiel y luz que sigue las grietas
+
+![Referencia, v1.61.0 y v1.62.0 registradas con la misma cámara](docs/capa_v1620_antes_despues.png)
+
+- Se afinaron la cresta granate, el canto de las placas, el asiento de la
+  costura y las puntas. Los escalones nuevos son sólidos conectados a sus
+  gajos. Se conserva el hueco que atraviesa las dos capas del paño.
+- El atlas equipado opaco **256 × 256** tiene cartas UV por cara y guarda de
+  color. El paño pasa de **3,45 a 5,34 texels/u**. El reverso sigue mate y
+  no se pintan pelo, ropa ni motas flotantes en la tela.
+- Los núcleos magenta emiten donde están las grietas de la referencia.
+  Forge dibuja la luz en un **segundo pase** con profundidad y sin borrar
+  texels del opaco. Se quita el reflejo de encantamiento sólo al equiparla,
+  no del item en inventario. Pecho y Curios comparten ambos pases y el ajuste.
+- El `.bbmodel` lleva el mismo atlas opaco y la misma geometría. Se
+  conservan los ocho clips, icono, plegado, chispas y sus texturas. Queda
+  respaldo de los recursos exactos de [v1.61.0](docs/respaldos/v1.61.0/).
+
+Con el trazado fijo: **93,66 → 95,10 %** de silueta y **88,85 → 92,17 %**
+en la costura. En los píxeles comunes el error RGB baja de **6,92 a 4,35**
+sobre 255. El solapamiento de núcleos emisivos sube de **11,11 a 73,88 %**
+(medir dónde emiten, no solamente cuánta área emite).
+
+[Registro de silueta](docs/capa_v1620_registro.png) ·
+[Prueba de emisión](docs/capa_v1620_luz.png) ·
+[Visor con luz ambiente y ajuste](docs/capa_v1170_visor.html)
+
+`python3 tools/verify_v1620.py` compara el mismo trazado sin cambiar la
+cámara, revisa albedo/emisión por separado y comprueba holguras y unión de
+las piezas durante poses y mezclas. El barrido no equivale a probar cascos
+u otras animaciones de mods ni a una captura F5.
 
 ### v1.61.0 — contorno, materiales y ajuste equipado
 
@@ -792,10 +824,10 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Descargas v1.61.0
+### Descargas v1.62.0
 
 El [workflow de Forge](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-compila `capatest-1.61.0.jar` con JDK 17 y Gradle 8.8. Abre el run de la
+compila `capatest-1.62.0.jar` con JDK 17 y Gradle 8.8. Abre el run de la
 rama de este rediseño y baja **capatest-jar** en Artifacts. El ZIP incluye
 `SHA256SUMS.txt`: sólo se sube tras comparar dos builds y verificar los
 recursos exactos dentro del JAR. La [v1.59.0 publicada](https://github.com/Santi-PdR/modelos/releases/tag/v1.59.0)
@@ -827,7 +859,7 @@ El script prueba **dos fuentes** (asset de release y artifact histórico)
 y exige el MISMO digest en ambas: si el binario no coincide byte a
 byte, no escribe nada.
 
-**Modelo de Blockbench:** [CAPA_v1.61.0.bbmodel](docs/CAPA_v1.61.0.bbmodel),
+**Modelo de Blockbench:** [CAPA_v1.62.0.bbmodel](docs/CAPA_v1.62.0.bbmodel),
 byte a byte igual a la descarga que ofrece el visor offline.
 
 Regla de entrega: **el `.bbmodel` cambia de nombre con `mod_version`** y

@@ -51,6 +51,15 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     }
 
     @Override
+    public void defaultRender(PoseStack poseStack, CapaDeteriorerItem animatable,
+                              MultiBufferSource buffers, @Nullable RenderType renderType,
+                              @Nullable VertexConsumer buffer, float yaw, float partialTick, int light) {
+        // The item keeps its foil in the inventory, but worn cloth should not
+        // receive a second purple glint over the reference-matched material.
+        super.defaultRender(poseStack, animatable, buffers, renderType, null, yaw, partialTick, light);
+    }
+
+    @Override
     protected void applyBaseTransformations(HumanoidModel<?> model) {
         super.applyBaseTransformations(model);
         wearerFold = (float) CapeFit.foldDegrees(model.body.xRot, model.body.yRot,

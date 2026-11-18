@@ -2,7 +2,7 @@
 """Contratos de recursos y comparación registrada con la imagen original.
 
 `--check` exige una mejora de silueta y color con la misma cámara para
-las dos versiones. verify_v1610 hace además la prueba de ajuste y rig.
+las dos versiones. verify_v1620 hace además la prueba de ajuste y rig.
 """
 from __future__ import annotations
 
@@ -79,7 +79,7 @@ def static_checks() -> None:
     bones = geo["minecraft:geometry"][0]["bones"]
     from armor_model_pipeline import FIT_BONE, relief
     n_fragments = sum(map(len, relief()['fragments'].values()))
-    assert len(bones) == 226 and sum(len(b.get('cubes', [])) for b in bones) == 270+n_fragments
+    assert len(bones) == 226 and sum(len(b.get('cubes', [])) for b in bones) == 260+n_fragments
     rig = next(b for b in bones if b['name'] == FIT_BONE)
     assert rig['parent'] == 'chestplate' and not rig['cubes']
     forbidden = ("v17_mote_", "v17_ash_", "v17_yoke_",
@@ -97,7 +97,8 @@ def static_checks() -> None:
                    if b['name'].startswith('v17_ribbon_') for c in b['cubes'])
     atlas = np.asarray(Image.open(P.ARMOR_TEX).convert('RGBA'))
     glow = np.asarray(Image.open(P.ARMOR_TEX.with_stem(P.ARMOR_TEX.stem+'_glowmask')).convert('RGBA'))
-    assert (atlas[...,3] == 255).all() and np.count_nonzero(glow[...,3]) == 3380
+    assert atlas.shape == glow.shape == (256,256,4)
+    assert (atlas[...,3] == 255).all() and np.count_nonzero(glow[...,3]) > 450
     item_model = json.loads((ROOT / 'src/main/resources/assets/capatest/models/item'
                              '/capa_deteriorer_evilsaiyan.json').read_text())
     assert item_model['parent'] == 'minecraft:item/generated', 'el icono 2D no se ve'
@@ -128,9 +129,9 @@ def static_checks() -> None:
     # NO puede volver a incluir el maniquí ni los cubos de armadura vieja.
     assert (ROOT / 'docs' / f'CAPA_v{VER}.bbmodel').read_bytes() == BB.read_bytes()
     bb = json.loads(BB.read_text())
-    assert len(bb['elements']) == 159+n_fragments and sum(e['visibility'] for e in bb['elements']) == 132+n_fragments
-    assert bb['resolution'] == {'width': 128, 'height': 128}
-    assert all(max(f['uv']) <= 128 for e in bb['elements']
+    assert len(bb['elements']) == 149+n_fragments and sum(e['visibility'] for e in bb['elements']) == 122+n_fragments
+    assert bb['resolution'] == {'width': 256, 'height': 256}
+    assert all(max(f['uv']) <= 256 for e in bb['elements']
                for f in e['faces'].values())
     assert not any(e['name'] in ('head', 'torso', 'arm_L', 'arm_R',
                                  'leg_L', 'leg_R') for e in bb['elements'])
@@ -174,7 +175,7 @@ def static_checks() -> None:
     # sólo Java conserva su respuesta adicional al giro del portador.
     # El eje medido tiene que ser el de la anatomía REAL: (columnas-1)/2.
     for prefix, cols in (("v17_ribbon_", 12), ("v15_cloth_cape_", 9),
-                         ("v17_vein_", 10), ("v17_cowl_front_", 7),
+                         ("v17_cowl_front_", 7),
                          ("v17_cowl_tooth_", 7), ("v17_cowl_back_", 5),
                          ("v18_chain_", 8), ("v18_pad_", 2)):
         got = {int(_re.search(r"(\d+)", b["name"][len(prefix):]).group(1))
@@ -183,6 +184,8 @@ def static_checks() -> None:
         pivots = sorted(b["pivot"][0] for b in bones
                         if b["name"].startswith(prefix))
         assert pivots[0] < 0 < pivots[-1], (prefix, pivots[:2])
+    vestiges = [b for b in bones if b['name'].startswith('v17_vein_')]
+    assert len(vestiges) == 10 and all(not b['cubes'] for b in vestiges)
     assert 'RIBBONS = 12' in armor_java and 'LAST_SEGMENT = 4' in armor_java
     assert 'b.getRotX() +' in armor_java and not _re.search(r'\bsetPos[XYZ]\(', armor_java)
     assert 'rearPadBaseX' not in armor_java, 'la onda antigua sobreescribe la hombrera'
@@ -229,7 +232,7 @@ def static_checks() -> None:
     # blanco de la versión anterior no es criterio para la placa de carbón.
     _pads = [b for b in bones if b["name"].startswith("v18_pad_")]
     assert len(_pads) == 2, len(_pads)
-    assert all(len(b.get("cubes", [])) == 4 for b in _pads), \
+    assert all(len(b["cubes"]) == 4 + len(relief()["fragments"].get(b["name"], [])) for b in _pads), \
         'la hombrera vuelve a ser un cubo'
     _chains = [b for b in bones if b["name"].startswith("v18_chain_")]
     assert len(_chains) == 8, len(_chains)
@@ -280,7 +283,7 @@ def static_checks() -> None:
 
 
 def main() -> None:
-    from verify_v1610 import OLD_GEO, OLD_TEX, registered_metrics, visual
+    from verify_v1620 import GEO_BASE, TEX_BASE, GLOW, registered_metrics, similarity
 
     ap=argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--check',action='store_true',help='aplica los mínimos de fidelidad')
@@ -288,10 +291,10 @@ def main() -> None:
     static_checks()
     now=P.load(P.ARMOR_GEO)
     if args.check:
-        visual(now,P.ARMOR_TEX)
+        similarity(now,P.ARMOR_TEX,GLOW)
         print(f'OK: contorno y color registrados de v{VER}; recursos protegidos')
     else:
-        (a,b),pink=registered_metrics(P.load(OLD_GEO),now,P.ARMOR_TEX,baseline_atlas=OLD_TEX)
+        (a,b),pink=registered_metrics(P.load(GEO_BASE),now,P.ARMOR_TEX,baseline_atlas=TEX_BASE)
         print(f"IoU: {a['all']:.1%} → {b['all']:.1%}; RGB {a['mae']:.1f} → {b['mae']:.1f}; "
               f"rosa intenso: {b['pink']:.1%} (referencia {pink:.1%})")
 

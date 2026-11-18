@@ -64,9 +64,10 @@ animación y la documentación de GeckoLib._
   emisivas en LOD bajo.
 - **Atlas:** empaquetar compacto; la máscara emisiva se define con ALFA
   (blanco = brillo máximo).
-- **Para este proyecto:** el glowmask es separado; alpha del paño FIJO
-  (brillo en color). Las mejoras de textura son **RGB-only**, sin tocar
-  alfa ni glowmask.
+- **Desde v1.62.0:** la capa equipada usa dos mapas alineados 256²:
+  albedo siempre opaco y emisión RGBA, sólo en núcleos del paño. El pase
+  emisivo usa la geometría equipada sin que GeckoLib vuelva a subir ni
+  recorte el albedo. El ítem plegado conserva su atlas y máscara de 128².
 
 ## 5. Restricciones VIGENTES de este proyecto (no revivir)
 
@@ -84,7 +85,7 @@ animación y la documentación de GeckoLib._
 
 1. `python3 tools/build_deliverables.py` reconstruye GEO, atlas, clips,
    `.bbmodel`, comparación y visor. Editar primero las fuentes en `tools/`.
-2. `python3 tools/verify_v1610.py` coteja la entrega, no sólo el modelo en
+2. `python3 tools/verify_v1620.py` coteja la entrega, no sólo el modelo en
    memoria. Para la referencia se fija la cámara y se ignoran pelo, ropa y
    partículas libres; el registro mide contorno sólido y RGB común.
 3. `cape_wearer_fit` está entre `chestplate` y el conjunto equipado. No
@@ -96,3 +97,7 @@ animación y la documentación de GeckoLib._
    Probar agacharse mirando arriba y girando, caminar, esprintar, caer,
    planear y nadar. Probar de día y noche: el glow debe coincidir con los
    cortes. El barrido de cajas no reemplaza estas comprobaciones.
+
+5. En el visor, bajar **Luz ambiente** y activar **Chispas y emisión**.
+   Comprobar que se iluminan los núcleos, no las placas o el forro entero;
+   apagarlos no debe abrir un agujero. «Referencia» vuelve a luz fija.

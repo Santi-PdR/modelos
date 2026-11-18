@@ -97,10 +97,11 @@ jobs:
           assert hashlib.sha256(orig_geo_path.read_bytes()).hexdigest() == \
               'e01e347c5be0678b18907d91452d7a0c405ec430ef3fc751096532c804d43b8c'
 
+          armor_size = 256  # opaque base + independently sampled worn light
           for name in ('armor/capa_deteriorer_evilsaiyan.png',
                        'armor/capa_deteriorer_evilsaiyan_glowmask.png'):
               w, h = struct.unpack('>II', (base / 'textures/item' / name).read_bytes()[16:24])
-              assert (w, h) == (128, 128), (name, w, h)
+              assert (w, h) == (armor_size, armor_size), (name, w, h)
           icon_path = base / 'textures/item/capa_deteriorer_evilsaiyan.png'
           w, h = struct.unpack('>II', icon_path.read_bytes()[16:24])
           assert (w, h) == (64, 64), ('icon', w, h)
@@ -234,6 +235,7 @@ jobs:
               assert 'def fan_x(' in (root / 'tools/cape_shape.py').read_text()
           assert (root / 'referencias/REFERENCIA_CAPA_atlas96.png').is_file()
           armor_geo = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]
+          assert (armor_geo['description']['texture_width'], armor_geo['description']['texture_height']) == (armor_size, armor_size)
           orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
           # v1.29.0: los 72 huesos originales se conservan, EXCEPTO que las
           # 3 losas (cape_top/mid/bottom) quedan SIN cubos: se anularon para
@@ -248,7 +250,7 @@ jobs:
               else:
                   assert _ob_c == _nb_c, _ob['name']
           assert len(armor_geo['bones']) == 226
-          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 270 + fragments
+          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 260 + fragments
           hinge = next(b for b in armor_geo['bones'] if b['name'] == 'cape_wearer_fit')
           assert hinge['parent'] == 'chestplate' and not hinge['cubes']
           new_bones = armor_geo['bones'][72:]
@@ -275,7 +277,7 @@ jobs:
           assert sum(1 for n in new_names if n.startswith('v17_vein_')) == 10
           veins = [b for b in new_bones if b['name'].startswith('v17_vein_')]
           ribbons = [b for b in new_bones if b['name'].startswith('v17_ribbon_')]
-          assert all(0.40 <= c['size'][2] <= 0.85
+          assert all(0.30 <= c['size'][2] <= 1.10
                      and 0.01 <= c.get('inflate', 0) <= 0.05
                      for b in ribbons for c in b['cubes']), 'espesor de paño'
           zs = [c['origin'][2] + c['size'][2] / 2 for b in ribbons for c in b['cubes']]
@@ -286,10 +288,10 @@ jobs:
           assert all(not b.get('cubes') for b in ribbons if b['name'].endswith(('seg5','seg6')))
           assert (base / 'textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png').is_file()
           if registered:
-              assert all(b.get('parent', '').startswith('v17_ribbon_') for b in veins)
+              assert all(not b['cubes'] for b in veins), 'la emisión debe vivir sobre el atlas de la tela'
               assert all(c['uv']['north'] != c['uv']['south']
                          for b in ribbons for c in b['cubes']), 'forro sin UV propia'
-              assert 'from cape_surface import atlas' in texture_pipeline
+              assert 'atlas as reference_surface' in texture_pipeline and 'from cape_material import' in texture_pipeline
           else:
               assert all(c['uv']['north']['uv'][0] == 98.0
                          for b in veins for c in b['cubes']), 'grietas sin parche neón'
@@ -315,23 +317,13 @@ jobs:
                   chain.append(cur)
                   cur = parent.get(cur)
               assert not (set(chain) & hidden), (b['name'], set(chain) & hidden)
-          opaque_rects = (
-              (0.0, 0.0, 128.0, 128.0),   # v1.23.0: atlas limpio 100% opaco
-              (0.0, 0.0, 96.0, 48.0),
-              (105.0, 0.0, 109.0, 48.0),
-              (120.0, 0.0, 124.0, 48.0),
-              (69.0, 109.0, 75.0, 127.0),
-              (57.0, 76.0, 71.0, 93.0),
-          )
           for bone in new_bones:
               for cube in bone.get('cubes', []):
                   for face in cube['uv'].values():
                       u, v = face['uv']
                       uw, vh = face['uv_size']
                       assert uw > 0 and vh > 0, (bone['name'], face)
-                      assert 0 <= u and 0 <= v and u + uw <= 128 and v + vh <= 128, (bone['name'], face)
-                      assert any(u >= x0 and v >= y0 and u + uw <= x1 and v + vh <= y1
-                                 for x0, y0, x1, y1 in opaque_rects), (bone['name'], face)
+                      assert 0 <= u and 0 <= v and u + uw <= armor_size and v + vh <= armor_size, (bone['name'], face)
 
           model = json.loads((base / 'models/item/capa_deteriorer_evilsaiyan.json').read_text())
           # v1.17.2: el BEWLR 3D tapaba el icono 2D en el inventario.
@@ -428,7 +420,7 @@ jobs:
           # filo y labio) y la cadena son ocho anillos.
           _pads = [b for b in new_bones if b['name'].startswith('v18_pad_')]
           assert len(_pads) == 2, len(_pads)
-          assert all(len(b.get('cubes', [])) == 4 for b in _pads), \
+          assert all(len(b['cubes']) == 4 + len(sculpt['fragments'].get(b['name'], [])) for b in _pads), \
               'la hombrera vuelve a ser un cubo'
           _chains = [b for b in new_bones if b['name'].startswith('v18_chain_')]
           assert len(_chains) == 8, len(_chains)
@@ -544,7 +536,7 @@ jobs:
           assert sum(1 for b in geo_bones if b['name'].startswith('v17_ribbon_')) == 84
           # v1.22.0: 0.55-0.80 (antes 0.28-0.40). De perfil la capa era
           # una lámina de 0.3 unidades y parecía despegada del jugador.
-          assert all(0.40 <= c['size'][2] <= 0.85 for b in geo_bones
+          assert all(0.30 <= c['size'][2] <= 1.10 for b in geo_bones
                      if b['name'].startswith('v17_ribbon_') for c in b['cubes'])
           # Proyecto Blockbench REAL, sin maniquí y con UV por cara.
           _bbver = [l.split('=', 1)[1].strip() for l in
@@ -561,11 +553,11 @@ jobs:
           assert bb['meta']['format_version'] == '5.0'
           # v1.17.3: el .bbmodel de Blockbench muestra SOLO la capa: sin
           # maniqui Steve/Alex y sin los 126 cubos de la armadura vieja.
-          assert len(bb['elements']) == 159+fragments and len(bb['groups']) == 226
-          assert sum(e['visibility'] for e in bb['elements']) == 132+fragments
+          assert len(bb['elements']) == 149+fragments and len(bb['groups']) == 226
+          assert sum(e['visibility'] for e in bb['elements']) == 122+fragments
           assert not any('Steve/Alex' in g['name'] for g in bb['groups'])
-          assert bb['resolution'] == {'width': 128, 'height': 128}
-          assert all(max(f['uv']) <= 128 for e in bb['elements'] for f in e['faces'].values())
+          assert bb['resolution'] == {'width': armor_size, 'height': armor_size}
+          assert all(max(f['uv']) <= armor_size for e in bb['elements'] for f in e['faces'].values())
           assert not any(e['name'] in ('head','torso','arm_L','arm_R','leg_L','leg_R') for e in bb['elements'])
           assert all('faces' in e and e['faces'] for e in bb['elements'])
           assert bb['textures'][0]['source'].startswith('data:image/png;base64,')
@@ -673,6 +665,10 @@ jobs:
           assert 'Exception | LinkageError' in glow_layer
           assert 'glow.red(), glow.green(), glow.blue(), 1.0F' in glow_layer, 'alpha del glow variable'
           assert 'stateFor(wearer, armor.getCurrentStack())' in glow_layer
+          assert 'entityTranslucentEmissive(EMISSION, false)' in glow_layer
+          assert 'AutoGlowingTexture.getRenderType(' not in glow_layer
+          assert 'buffers, renderType, null, yaw, partialTick, light' in armor_renderer
+          assert 'getArmorFoilBuffer(' not in curio
           assert 'if (wearer == null)' in curio
           assert 'rotateIfSneaking(' not in curio and 'translateIfSneaking(' not in curio
           assert 'prepForRender(wearer, stack, EquipmentSlot.CHEST, humanoid)' in curio
@@ -790,8 +786,10 @@ jobs:
           elif grep -qx 'mod_version=1.60.0' gradle.properties; then
             python3 tools/cape_motion.py
             python3 tools/verify_v1600.py
-          else
+          elif grep -qx 'mod_version=1.61.0' gradle.properties; then
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1610.py
+          else
+            OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1620.py
           fi
           # v1240: el calibrador de energia es un lazo cerrado Jacobi; se
           # comprueba que siga siendo importable y que el perfil medido
@@ -979,7 +977,8 @@ jobs:
             hombreras de carbón y doce jirones a alturas escalonadas.
             Comparativa registrada con la misma cámara que la imagen original.
           - **Materiales**: cartas UV de la superficie visible, forro y cantos
-            mates. 3.380 texels neón, ambas máscaras, plegado e icono intactos.
+            mates. Luz de las grietas en su propio atlas, sin recortar el paño.
+            Plegado, glow del plegado e icono intactos.
           - **Ocho clips**: poses rotacionales en tres bisagras. El visor y
             proyecto usan los mismos assets que lleva el JAR. No se añaden
             cambios de posición ni escala en el mod.

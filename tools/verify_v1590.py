@@ -89,9 +89,12 @@ def geometry_change(old, new, atlas):
             print(f"Ancho {widths[0]:.2f}→{widths[1]:.2f} u; hueco central a Y=5.5: {gaps[0]:.2f}→{gaps[1]:.2f} u")
 
 
-def check_editor(old, bb, geo, atlas, runtime):
+def check_editor(old, bb, geo, atlas, runtime, *, retired_elements=frozenset()):
     for part in ("groups", "elements"):
         prev = {e['name']: e['uuid'] for e in old[part]}
+        if part == 'elements':
+            assert retired_elements <= prev.keys()
+            prev = {name: uid for name,uid in prev.items() if name not in retired_elements}
         curr = {e['name']: e['uuid'] for e in bb[part]}
         assert all(curr.get(name) == uid for name, uid in prev.items()), f"UUID cambiado ({part})"
         assert len(set(curr.values())) == len(curr) == len(bb[part])
@@ -142,7 +145,7 @@ def check_editor(old, bb, geo, atlas, runtime):
                     assert np.allclose(e['faces'][fn]['uv'], desired, atol=.00051, rtol=0)
     data = base64.b64decode(bb['textures'][0]['source'].split(',',1)[1])
     image = Image.open(io.BytesIO(data)).convert('RGBA')
-    assert image.size == (128,128) and np.array_equal(np.asarray(image), np.asarray(atlas))
+    assert image.size == atlas.size and np.array_equal(np.asarray(image), np.asarray(atlas))
     assert bb == B.build(geo, atlas, runtime), "el export no es reproducible"
     print(f"Blockbench: {n_visible} cubos visibles como en el GEO, 27 anclas ocultas, UV/signos/pivotes y UUIDs verificados")
 

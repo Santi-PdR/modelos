@@ -91,27 +91,25 @@ def editor_rotation(vec) -> list:
     return [round(-v[0], 4), round(-v[1], 4), round(v[2], 4)]
 
 
-def face_uv(spec) -> dict | None:
+def face_uv(spec, bounds) -> dict | None:
     if not isinstance(spec, dict) or "uv" not in spec:
         return None
     u, v = spec["uv"]
     w, h = spec.get("uv_size", [0, 0])
     if not all(isinstance(q, (int, float)) for q in (u, v, w, h)):
         return None
-    if w <= 0 or h <= 0 or u < 0 or v < 0 or u + w > 128 or v + h > 128:
+    if w <= 0 or h <= 0 or u < 0 or v < 0 or u + w > bounds[0] or v + h > bounds[1]:
         return None
     return {"uv": [round(u, 3), round(v, 3), round(u + w, 3), round(v + h, 3)],
             "texture": 0}
 
 
 def atlas_texture() -> Image.Image:
-    """Sólo el atlas real 128x128: nada de maniquí ni parches extra."""
-    atlas = Image.open(ATLAS).convert("RGBA")
-    assert atlas.size == (128, 128), atlas.size
-    return atlas
+    """Sólo el atlas real: nada de maniquí ni parches extra."""
+    return Image.open(ATLAS).convert("RGBA")
 
 
-def make_element(bone: dict, ci: int, cube: dict, key: str) -> dict:
+def make_element(bone: dict, ci: int, cube: dict, key: str, bounds) -> dict:
     o, sz = cube["origin"], cube["size"]
     x, y, z = -(o[0] + sz[0]), o[1], o[2]
     f = [round(v, 4) for v in (x, y, z)]
@@ -126,7 +124,7 @@ def make_element(bone: dict, ci: int, cube: dict, key: str) -> dict:
     faces = {}
     spec = cube.get("uv", {}) if isinstance(cube.get("uv"), dict) else {}
     for fn in FACES:
-        fv = face_uv(spec.get(fn))
+        fv = face_uv(spec.get(fn), bounds)
         if fv and fn in ("up", "down"):
             fv["uv"] = [fv["uv"][2], fv["uv"][3], fv["uv"][0], fv["uv"][1]]
         faces[fn] = fv or {"uv": [0, 0, 0, 0], "texture": None}
@@ -266,6 +264,8 @@ def build(geo: dict | None = None, atlas: Image.Image | None = None,
     # alrededor de la capa. El archivo de Blockbench exporta SOLO los
     # huesos de la capa nueva (v15_/v16_/v17_); el geo del mod no cambia.
     bones = geo["bones"]
+    bounds = atlas.size
+    assert bounds == tuple(geo['description'][f'texture_{axis}'] for axis in ('width','height')), bounds
     CAPE_BONES = ("v15_", "v16_", "v17_", "v18_", "v19_")
 
     elements, groups, node_by_name = [], [], {}
@@ -283,7 +283,7 @@ def build(geo: dict | None = None, atlas: Image.Image | None = None,
                 # ahora se articula junto con el resto del dobladillo.
                 old_key, old_idx = legacy_element(key, ci)
                 ek = f"{old_key}/cube/{old_idx}"
-                elements.append(make_element({"name": old_key}, old_idx, c, ek))
+                elements.append(make_element({"name": old_key}, old_idx, c, ek, bounds))
                 kids.append(uid(ek))
         gkey = key + "/group"
         node_by_name[key] = {"uuid": uid(gkey), "isOpen": False, "children": kids}
@@ -308,7 +308,7 @@ def build(geo: dict | None = None, atlas: Image.Image | None = None,
 
     texture = {
         "path": "", "name": "capa_deteriorer_evilsaiyan.png", "folder": "",
-        "namespace": "", "id": "0", "width": 128, "height": 128,
+        "namespace": "", "id": "0", "width": bounds[0], "height": bounds[1],
         "uv_scale": [1, 1], "particle": False, "render_mode": "default",
         "visible": True, "enabled": True, "saved": True,
         "internal": True, "source": data_url(atlas),
@@ -319,7 +319,7 @@ def build(geo: dict | None = None, atlas: Image.Image | None = None,
         "name": f"capa_deteriorer_evilsaiyan_v{VER_TAG}",
         "model_identifier": "geometry.capa_deteriorer_evilsaiyan",
         "visible_box": [1, 1, 1],
-        "resolution": {"width": 128, "height": 128},
+        "resolution": {"width": bounds[0], "height": bounds[1]},
         "elements": elements,
         "groups": groups,
         "outliner": roots,
@@ -349,9 +349,8 @@ def main() -> None:
     import re as _re
     _raw = base64.b64decode(model["textures"][0]["source"].split(",", 1)[1])
     _im = Image.open(io.BytesIO(_raw))
-    assert _im.size == (128, 128), ("textura del .bbmodel", _im.size)
-    assert model["resolution"] == {"width": 128, "height": 128}
-    n_visible = 132 + sum(map(len, relief()['fragments'].values()))
+    assert _im.size == tuple(model["resolution"][axis] for axis in ("width", "height")) == atlas_texture().size
+    n_visible = 122 + sum(map(len, relief()['fragments'].values()))
     assert len(model['elements']) == n_visible + 27, len(model['elements'])
     assert sum(e['visibility'] for e in model['elements']) == n_visible
     assert not any(e["name"].startswith(("v17_mote_", "v17_ash_",
@@ -366,7 +365,7 @@ def main() -> None:
                for g in model["groups"]), "un grupo viejo tiene cubos visibles"
     for e in model["elements"]:
         for f in e["faces"].values():
-            assert max(f["uv"]) <= 128, (e["name"], f["uv"])
+            assert all(0 <= u <= _im.size[j%2] for j,u in enumerate(f["uv"])), (e["name"], f["uv"])
     anims = model["animations"]
     assert len(anims) == 8, len(anims)
     total = 0

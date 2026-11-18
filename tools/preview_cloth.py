@@ -175,7 +175,7 @@ MANNEQUIN_BOXES = (
 
 
 def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27),
-           *, frame=None, mannequin=False):
+           *, frame=None, mannequin=False, ambient=1.0, emission=None, tint=(.89,.60,.77)):
     faces = [(p, uv, None) for p, uv, _ in collect(geo, hidden)]
     if mannequin:
         for origin, dim, color in (MANNEQUIN_BOXES if mannequin is True else mannequin):
@@ -184,6 +184,10 @@ def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27),
     atlas = np.asarray((atlas_path if isinstance(atlas_path, Image.Image)
                         else Image.open(atlas_path)).convert("RGBA"))
     AH, AW = atlas.shape[:2]
+    light = None if emission is None else np.asarray((emission if isinstance(emission, Image.Image)
+                                                    else Image.open(emission)).convert('RGBA'))
+    if light is not None:
+        assert light.shape == atlas.shape
     view = R("x", pitch) @ R("y", yaw)
     prepared, pts_all = [], []
     for pts, uvs, color in faces:
@@ -193,10 +197,10 @@ def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27),
         shade = 0.45
         if ln > 1e-6:
             n /= ln
-            light = np.array([-0.35, 0.65, 0.68])
-            light /= np.linalg.norm(light)
-            shade = 0.40 + 0.60 * abs(float(np.dot(n, light)))
-        prepared.append((pv, uvs, shade, color))
+            lamp = np.array([-0.35, 0.65, 0.68])
+            lamp /= np.linalg.norm(lamp)
+            shade = 0.40 + 0.60 * abs(float(np.dot(n, lamp)))
+        prepared.append((pv, uvs, shade * ambient, color))
         pts_all.append(pv)
     if frame is None:
         allv = np.concatenate(pts_all, axis=0)
@@ -244,6 +248,10 @@ def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27),
                 vi = np.clip(np.floor(vv).astype(int), 0, AH - 1)
                 tex = atlas[vi, ui].astype(float)
                 col = tex[:, :, :3] * shade
+                if light is not None:
+                    e = light[vi, ui].astype(float)
+                    a_glow = e[...,3:] / 255.
+                    col = col * (1-a_glow) + e[...,:3] * tint * a_glow
                 alpha = tex[:, :, 3:4] / 255.0
             else:
                 col = np.broadcast_to(np.asarray(solid) * shade, inside.shape + (3,))

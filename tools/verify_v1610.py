@@ -134,7 +134,7 @@ def pose_samples(geo, clips):
                 yield interpolate(p,pb[0],weight), f'{a}[{j}]→{b} {weight}', False
 
 
-def fit_check(geo, clips, quick=False):
+def fit_check(geo, clips, quick=False, *, pads=False):
     bones = {b['name']:b for b in geo['bones']}
     hidden = P.effective_hidden(geo)
     cubes = [(b['name'], j, P.cube_points(c, np.eye(4))) for b in geo['bones']
@@ -162,6 +162,11 @@ def fit_check(geo, clips, quick=False):
             links[n] = list(itertools.product(ix, groups[bones[n]['parent']]))
         if n.startswith('v18_chain_'):
             links[n] = list(itertools.product(ix, collar))
+        if pads and n.startswith('v18_pad_'):
+            roots = [i for (c,j),parts in sections.items() if j==0 for i in parts]
+            links[n] = list(itertools.product(ix, collar + roots))
+            for k in ix[1:4]:
+                links[f'{n} pieza {k}'] = [(ix[0], k)]
     # Each cut / step is joined to the same solid segment in local coordinates.
     # The four sides of a tear need not all touch each other directly.
     for n, parts in G.relief()['fragments'].items():
@@ -215,9 +220,13 @@ def fit_check(geo, clips, quick=False):
     assert torso_z > 2.25, torso
     for name, margin in zip(ls, common, strict=True):
         assert margin > (.030 if name.startswith('gajo') else .020), (name, margin)
-    ranges = [min(m for k,m in zip(ls,common) if k.startswith(prefix))
-              for prefix in ('gajo', 'raíz', 'v18_chain_', 'v17_vein_')]
-    print(f'841 poses + 504 mezclas · Z ≥ {torso_z:.3f} u · solapes gajos/raíces/costura/grietas '
+    prefixes = [('gajo','gajos'), ('raíz','raíces'), ('v18_chain_','costura')]
+    if pads:
+        prefixes.append(('v18_pad_', 'placas'))
+    if any(k.startswith('v17_vein_') for k in ls):
+        prefixes.append(('v17_vein_', 'grietas'))
+    ranges = [min(m for k,m in zip(ls,common) if k.startswith(prefix)) for prefix,_ in prefixes]
+    print(f'841 poses + 504 mezclas · Z ≥ {torso_z:.3f} u · solapes '+ '/'.join(t for _,t in prefixes)+' '
           + '/'.join(f'{q:.3f}' for q in ranges)+' u', flush=True)
 
     def envelope(parts, ids=None):

@@ -1,5 +1,6 @@
 package com.capatest.client;
 
+import com.capatest.CapaTestMod;
 import com.capatest.item.CapaDeteriorerItem;
 import com.capatest.item.CapeState;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -11,12 +12,13 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
-import software.bernie.geckolib.cache.texture.AutoGlowingTexture;
 import software.bernie.geckolib.renderer.GeoArmorRenderer;
-import software.bernie.geckolib.renderer.layer.AutoGlowingGeoLayer;
+import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 
-/** Modula sólo el RGB del pase emisivo; el glowmask y la opacidad no cambian. */
-public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
+/** Separate, depth-tested light on the same solids, without editing the opaque atlas. */
+public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
+    private static final ResourceLocation EMISSION = new ResourceLocation(CapaTestMod.MOD_ID,
+            "textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png");
     private boolean disabled;
 
     public CapaGlowLayer(GeoArmorRenderer<CapaDeteriorerItem> renderer) {
@@ -33,7 +35,7 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
                        float partialTick,
                        int packedLight,
                        int packedOverlay) {
-        if (disabled || bakedModel == null)
+        if (disabled || bakedModel == null || bufferSource == null)
             return;
         try {
             renderGlow(poseStack, animatable, bakedModel, bufferSource,
@@ -41,7 +43,7 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
         } catch (Exception | LinkageError error) {
             // El pass emisivo es decorativo: nunca debe tumbar el render.
             disabled = true;
-            com.capatest.CapaTestMod.LOGGER.error(
+            CapaTestMod.LOGGER.error(
                     "Blight Star Mantle: capa emisiva desactivada", error);
         }
     }
@@ -53,12 +55,9 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
                             float partialTick,
                             int packedLight,
                             int packedOverlay) {
-        ResourceLocation texture = getTextureResource(animatable);
-        if (texture == null)
-            return;
-        RenderType emissive = AutoGlowingTexture.getRenderType(texture);
-        if (emissive == null)
-            return;
+        // The texture holds colored emission and coverage. Do not derive it
+        // with AutoGlowingTexture: that path re-uploads a modified base image.
+        RenderType emissive = RenderType.entityTranslucentEmissive(EMISSION, false);
 
         if (!(getRenderer() instanceof GeoArmorRenderer<?> armor))
             return;
@@ -69,7 +68,7 @@ public class CapaGlowLayer extends AutoGlowingGeoLayer<CapaDeteriorerItem> {
 
         getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, emissive,
                 bufferSource.getBuffer(emissive), partialTick,
-                LightTexture.FULL_SKY, OverlayTexture.NO_OVERLAY,
+                LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY,
                 glow.red(), glow.green(), glow.blue(), 1.0F);
     }
 }
