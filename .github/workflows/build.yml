@@ -907,6 +907,8 @@ jobs:
             python3 tools/verify_v1560.py
           elif grep -qx 'mod_version=1.57.0' gradle.properties; then
             python3 tools/verify_v1570.py
+          elif grep -qx 'mod_version=1.58.0' gradle.properties; then
+            python3 tools/verify_v1580.py
           fi
           # v1240: el calibrador de energia es un lazo cerrado Jacobi; se
           # comprueba que siga siendo importable y que el perfil medido
@@ -1068,6 +1070,14 @@ jobs:
           interno en Blockbench incluye la versión.
 
           ### Qué incluye
+
+          - **v1.58.0 — Pliegues envolventes y jirones violetas**: después
+            de revisar la capa con y sin maniquí, se pinta el cuello con
+            dobleces granate redondeados, y el paño con caras violetas
+            más anchas y desgarros mates. Cambian **1.917** texels del
+            cuello y **6.758** del paño y forro; mismo RGB emisivo,
+            glowmasks, icono, geometría, UV y ocho clips. La comparativa
+            de los dos acabados usa la misma cámara.
 
           - **v1.57.0 — Textura de la capa equipada**: paño 128×128
             repintado según las dos capturas de Blockbench. Granate oscuro

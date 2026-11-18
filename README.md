@@ -1,19 +1,37 @@
-# Mantle of the Blight Star — v1.57.0
+# Mantle of the Blight Star — v1.58.0
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Capa equipada en `curios:back`, temática
 **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-> **Release: [v1.57.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.57.0)**
-> · [JAR Forge](https://github.com/Santi-PdR/modelos/releases/download/v1.57.0/capatest-1.57.0.jar)
-> · [Proyecto Blockbench](https://github.com/Santi-PdR/modelos/releases/download/v1.57.0/CAPA_v1.57.0.bbmodel).
-> [v1.56.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.56.0) y anteriores quedan como histórico, sin sobrescribir.
+> **Release: [v1.58.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.58.0)**
+> · [JAR Forge](https://github.com/Santi-PdR/modelos/releases/download/v1.58.0/capatest-1.58.0.jar)
+> · [Proyecto Blockbench](https://github.com/Santi-PdR/modelos/releases/download/v1.58.0/CAPA_v1.58.0.bbmodel).
+> [v1.57.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.57.0) y anteriores quedan como histórico, sin sobrescribir.
+
+### v1.58.0 — pliegues envolventes y jirones violetas
+
+[Comparativa con tus capturas de v1.57.0](docs/capa_v1580_antes_despues.png)
+· [Proyecto Blockbench en el repo](docs/CAPA_v1.58.0.bbmodel)
+· [Visor 3D offline](docs/capa_v1170_visor.html).
+
+El cuello deja de leerse como paneles rectos: el granate sigue un doblez
+redondeado con sombra por debajo. Los jirones enseñan caras violetas más
+anchas, a distinta altura, con desgarros oscuros pintados. Cambian **1.917
+texels del cuello** y **6.758 del paño y forro**, con un cambio de al menos
+20/255 en el **38% de los píxeles visibles** en la comparación frontal.
+Las imágenes son renders software, no capturas del mod en Minecraft.
+
+[Respaldo v1.57.0](docs/respaldos/v1.57.0/) y
+`python3 tools/verify_v1580.py` verifican que la geometría, las UV, las
+ocho animaciones, el icono, el item plegado y toda la energía sean
+idénticos a v1.57.0. Alfa del atlas: 255.
 
 ### v1.57.0 — textura de la capa equipada
 
 [Comparativa de las referencias y el paño equipado](docs/capa_v1570_antes_despues.png)
-· [Proyecto Blockbench en el repo](docs/CAPA_v1.57.0.bbmodel)
-· [Visor 3D offline](docs/capa_v1170_visor.html).
+· [Proyecto Blockbench v1.57.0](https://github.com/Santi-PdR/modelos/releases/download/v1.57.0/CAPA_v1.57.0.bbmodel)
+· [Visor 3D v1.57.0](https://github.com/Santi-PdR/modelos/releases/download/v1.57.0/capa_v1170_visor.html).
 
 Se repintó el atlas 3D 128×128 de acuerdo con las dos capturas: granate
 oscuro en capucha y capa externa, violeta en el forro y las puntas,
@@ -677,11 +695,11 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Descargas v1.57.0
+### Descargas v1.58.0
 
-La [release v1.57.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.57.0)
-incluye `capatest-1.57.0.jar` (Forge 1.20.1, compilado con JDK 17 y Gradle 8.8),
-`CAPA_v1.57.0.bbmodel` y los renders. CI reconstruye el JAR, comprueba que
+La [release v1.58.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.58.0)
+incluye `capatest-1.58.0.jar` (Forge 1.20.1, compilado con JDK 17 y Gradle 8.8),
+`CAPA_v1.58.0.bbmodel` y los renders. CI reconstruye el JAR, comprueba que
 ambas compilaciones son byte a byte iguales y coteja los digests del JAR y
 el `.bbmodel` subidos al borrador. El borrador se publica tras CI exitosa.
 
@@ -713,8 +731,8 @@ El script prueba **dos fuentes** (asset de release y artifact histórico)
 y exige el MISMO digest en ambas: si el binario no coincide byte a
 byte, no escribe nada.
 
-**Modelo de Blockbench:** [CAPA_v1.57.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.57.0/CAPA_v1.57.0.bbmodel),
-byte a byte igual a `docs/CAPA_v1.57.0.bbmodel`.
+**Modelo de Blockbench:** [CAPA_v1.58.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.58.0/CAPA_v1.58.0.bbmodel),
+byte a byte igual a `docs/CAPA_v1.58.0.bbmodel`.
 
 Regla de entrega: **el `.bbmodel` cambia de nombre con `mod_version`** y
 **siempre se incluye su enlace**. El workflow lee la versión de

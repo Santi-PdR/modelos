@@ -9,6 +9,11 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.58.0: PLIEGUES ENVOLVENTES Y JIRONES VIOLETAS. El cuello granate
+se pinta con dobleces redondeados y sombra bajo el pliegue. Las caras
+violetas asoman a distinta altura, con surcos mates y bordes desgastados.
+Sólo cambia RGB; el brillo, la geometría, UV y ocho clips se conservan.
+
 v1.57.0: NUEVA TEXTURA DEL PAÑO EQUIPADO. Granate oscuro, forro violeta,
 pliegues quebrados y puntas desgastadas, según las capturas de Blockbench.
 Se retiran el galón cobrizo y el bordado. Sólo cambia el RGB del paño;

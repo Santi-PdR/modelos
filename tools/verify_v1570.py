@@ -7,81 +7,27 @@
 from __future__ import annotations
 
 import argparse
-import base64
-import hashlib
-import io
-import json
 import unicodedata
 from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-import bbmodel_export as bb
-import cape_animation_pipeline as anim
-import preview_cloth as preview
-from cape_atlas_v1230 import build_clean_atlas
+from texture_regression import VerifiedEdit, render_pair, validate
 
-ROOT = preview.ROOT
+ROOT = Path(__file__).resolve().parents[1]
 BASELINE = ROOT / "docs/respaldos/v1.56.0"
-OLD_ATLAS = BASELINE / preview.ARMOR_TEX.relative_to(preview.ASSETS)
-GEO_SHA = "f70f8debf7fafaba75016b46800b9fc817ba5c189553ff35652d9e995e1a75fc"
-ANIM_SHA = "6a5543d1b0c9facd3afa72eaecd636e42b10849768dd43936db57f2d9103157a"
 BG = (29, 25, 35)
 
 
-def rgba(data: Path | bytes) -> np.ndarray:
-    with Image.open(io.BytesIO(data) if isinstance(data, bytes) else data) as image:
-        return np.asarray(image.convert("RGBA"))
-
-
-def png(image: Image.Image) -> bytes:
-    with io.BytesIO() as stream:
-        image.save(stream, format="PNG")
-        return stream.getvalue()
-
-
-def check_atlas(atlas: Image.Image, glowmask: Image.Image) -> None:
-    before, after = rgba(OLD_ATLAS), np.asarray(atlas)
-    assert before.shape == after.shape == (128, 128, 4)
-    assert after[..., 3].min() == 255, "perdió opacidad"
-    old_glow = OLD_ATLAS.with_stem(OLD_ATLAS.stem + "_glowmask")
-    assert old_glow.read_bytes() == png(glowmask), "cambió el glowmask generado"
-    glow = np.asarray(glowmask)[..., 3] > 0
-    assert np.array_equal(before[glow], after[glow]), "cambió el RGB bajo el neón/halo"
-    diff = np.abs(after[..., :3].astype(int) - before[..., :3]).max(axis=2)
-    cloth = diff[:96, :96]
+def check_atlas(edit: VerifiedEdit) -> None:
+    cloth = edit.delta[:96, :96]
     for rows in (slice(0, 48), slice(48, 96)):
-        available = cloth[rows][~glow[rows, :96]]
+        available = cloth[rows][~edit.protected[rows, :96]]
         assert (available >= 24).mean() > 0.40, "la capa de tela apenas cambia"
-    print(f"Atlas 3D: {(diff > 0).sum()} texels RGB distintos; paño y forro: "
+    print(f"Atlas 3D: {(edit.delta > 0).sum()} texels RGB distintos; paño y forro: "
           f"{(cloth > 0).sum()}/9216, {(cloth >= 32).sum()} con Δ ≥ 32/255. "
-          f"Alfa 255 y {glow.sum()} texels de energía intactos.")
-
-
-def same_model(before: dict, after: dict, atlas: Image.Image) -> None:
-    # El nombre de versión y la imagen embebida son las únicas diferencias.
-    assert {k: v for k, v in before.items() if k not in ("name", "textures")} == {
-        k: v for k, v in after.items() if k not in ("name", "textures")}, "cambió el modelo además del atlas"
-    assert len(after["textures"]) == len(before["textures"]) == 1
-    a, b = before["textures"][0], after["textures"][0]
-    assert {k: v for k, v in a.items() if k != "source"} == {k: v for k, v in b.items() if k != "source"}
-    data = base64.b64decode(b["source"].split(",", 1)[1])
-    assert np.array_equal(rgba(data), np.asarray(atlas)), "el .bbmodel no lleva el atlas repintado"
-
-
-def render_pair(geo: dict, atlas: Image.Image) -> tuple[Image.Image, Image.Image]:
-    hidden = preview.effective_hidden(geo)
-    # Mismos UV, geo y cámara: la diferencia del render viene sólo del color.
-    sources = (OLD_ATLAS, io.BytesIO(png(atlas)))
-    before, after = [preview.render(geo, src, hidden, yaw=-28, pitch=8, size=456, bg=BG)
-                     for src in sources]
-    old, new = np.asarray(before).astype(int), np.asarray(after).astype(int)
-    visible = (old != BG).any(axis=2) | (new != BG).any(axis=2)
-    changed = (np.abs(new - old).max(axis=2)[visible] >= 20).mean()
-    assert changed > 0.24, "no hay un cambio claro sobre el modelo 3D"
-    print(f"Render equipado 3/4: {changed:.1%} de los píxeles visibles con Δ ≥ 20/255.")
-    return before, after
+          f"Alfa 255 y {edit.protected.sum()} texels de energía intactos.")
 
 
 def comparison(path: Path, renders: tuple[Image.Image, Image.Image]) -> None:
@@ -122,28 +68,14 @@ def main() -> None:
     parser.add_argument("--candidate", action="store_true")
     parser.add_argument("--comparison", type=Path)
     args = parser.parse_args()
-    for line in (BASELINE / "SHA256SUMS.txt").read_text().splitlines():
-        sha, name = line.split("  ", 1)
-        assert hashlib.sha256((BASELINE / name).read_bytes()).hexdigest() == sha, name
-    for tex in (BASELINE / "textures").rglob("*.png"):
-        if tex != OLD_ATLAS:
-            assert tex.read_bytes() == (preview.ASSETS / tex.relative_to(BASELINE)).read_bytes(), tex.name
-    assert hashlib.sha256(preview.ARMOR_GEO.read_bytes()).hexdigest() == GEO_SHA, "cambió el geo"
-    assert hashlib.sha256(anim.ANIM.read_bytes()).hexdigest() == ANIM_SHA, "cambió el animation.json"
-    anim.ribbon_rms(json.loads(anim.ANIM.read_text()))
-
-    before = json.loads((BASELINE / "CAPA_v1.56.0.bbmodel").read_text())
-    geo = preview.load(preview.ARMOR_GEO)
-    atlas, glow = build_clean_atlas()
-    check_atlas(atlas, glow)
-    if args.candidate:
-        after = bb.build(geo, atlas)
-    else:
-        assert preview.ARMOR_TEX.read_bytes() == png(atlas), "atlas sin regenerar"
-        after = json.loads(bb.DOC.read_text())
-        assert after["name"] == f"capa_deteriorer_evilsaiyan_v{bb.VER_TAG}", "nombre interno viejo"
-    same_model(before, after, atlas)
-    renders = render_pair(geo, atlas)
+    edit = validate(BASELINE, candidate=args.candidate)
+    check_atlas(edit)
+    renders = render_pair(edit, yaw=-28, pitch=8, size=456, bg=BG)
+    before, after = (np.asarray(image).astype(int) for image in renders)
+    visible = (before != BG).any(axis=2) | (after != BG).any(axis=2)
+    changed = (np.abs(after - before).max(axis=2)[visible] >= 20).mean()
+    assert changed > 0.24, "no hay un cambio claro sobre el modelo 3D"
+    print(f"Render equipado 3/4: {changed:.1%} de los píxeles visibles con Δ ≥ 20/255.")
     if args.comparison:
         comparison(args.comparison, renders)
     print("OK: paño 3D nuevo, icono, glowmasks, geometría y 8 clips intactos.")
