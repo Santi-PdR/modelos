@@ -18,7 +18,7 @@ import top.theillusivec4.curios.api.client.ICurioRenderer;
 /**
  * Renderiza la capa cuando va en el slot "back" de Curios.
  *
- * Reutiliza el GeoArmorRenderer (con su capa de brillo pulsante y sus cuatro
+ * Reutiliza el GeoArmorRenderer (con su capa de brillo pulsante y sus ocho
  * animaciones) en vez de duplicar el modelo: Curios nos da el PoseStack del
  * cuerpo y el HumanoidModel del portador, que es exactamente lo que
  * GeoArmorRenderer necesita en prepForRender().
@@ -52,6 +52,10 @@ public class CapaCurioRenderer implements ICurioRenderer {
         // GeckoLib 4.8.x puede recibir un portador nulo en renders de GUI/HUD
         // con otros mods de render instalados; no intentar prepForRender().
         if (wearer == null)
+            return;
+        // Si también está en el pecho, sólo se dibuja esa copia: evita
+        // z-fighting y el doble glow, con la misma prioridad que el aura.
+        if (wearer.getItemBySlot(EquipmentSlot.CHEST).is(stack.getItem()))
             return;
         poseStack.pushPose();
         ICurioRenderer.translateIfSneaking(poseStack, wearer);

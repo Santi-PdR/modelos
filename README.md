@@ -1,19 +1,49 @@
-# Mantle of the Blight Star — v1.58.0
+# Mantle of the Blight Star — v1.59.0
 
-Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
-Capa equipada en `curios:back`, temática
-**Deterioro (Shigaraki) + Evil Saiyan Rosé**.
+Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
+Se equipa en el pecho o en `back` con Curios opcional.
 
-> **Release: [v1.58.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.58.0)**
-> · [JAR Forge](https://github.com/Santi-PdR/modelos/releases/download/v1.58.0/capatest-1.58.0.jar)
-> · [Proyecto Blockbench](https://github.com/Santi-PdR/modelos/releases/download/v1.58.0/CAPA_v1.58.0.bbmodel).
-> [v1.57.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.57.0) y anteriores quedan como histórico, sin sobrescribir.
+[Descargas v1.59.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.59.0)
+· [JAR](https://github.com/Santi-PdR/modelos/releases/download/v1.59.0/capatest-1.59.0.jar)
+· [Proyecto Blockbench](docs/CAPA_v1.59.0.bbmodel)
+· [Visor offline](docs/capa_v1170_visor.html)
+
+### v1.59.0 — dobladillo partido y ocho poses
+
+![Comparativa a la misma cámara/escala, con detalle del cuello](docs/capa_v1590_antes_despues.png)
+
+- **Forma equipada:** el centro del dobladillo se abre entre dos colas
+  desiguales. El paño gana relieve, con solapas oblicuas y hombreras
+  escalonadas; las partes finales de cada gajo ahora comparten un pivote.
+- **Materiales:** sarga granate de crestas anchas, forro violeta mate,
+  bordes gastados, acero azulado con biseles y remaches. Se conservan
+  byte a byte el icono preferido (pixel art), ambos glowmasks y el item
+  plegado. El atlas equipado sigue opaco y conserva el RGB de neón/halo.
+- **Animación:** las tres bisagras rotan con cada estado. Esprintar barre,
+  planear abre el paño, caer levanta el remate, agacharse recoge y nadar
+  produce una curva en S. El JSON, el visor y Blockbench comparten ocho
+  duraciones y muestras; Blockbench añade tangentes Bézier a las
+  rotaciones. No se reescribieron los canales de posición y escala.
+- **Mod:** perfil único para clip, brillo y chispas. El planeo y el esprint
+  crean una estela corta; con media vida o menos, o al 65 % de desgaste,
+  se activa el pulso doble magenta. El brillo sólo modula RGB; las
+  chispas se emiten detrás del cuerpo, no de la cabeza. Si llevas una
+  copia en cada slot, la del pecho prevalece sobre `back`.
+
+[Ocho estados a la misma escala](docs/capa_v1170_estados.png)
+· [GIF con ciclos sincronizados por fase](docs/capa_v1170_animaciones.gif)
+· [Respaldo íntegro de la base v1.58.0](docs/respaldos/v1.58.0/).
+
+**Validación:** `python3 tools/verify_v1590.py` mide 9.141 texels RGB
+repintados (6.452 de paño/forro). A la misma altura y cámara trasera,
+la abertura central pasa de 0,42 a 3,85 unidades. Comprueba también el
+GEO, el `.bbmodel`, las poses del visor y la holgura en 1.097 muestras.
+Estos renders usan un maniquí neutro y no sustituyen una prueba en Minecraft/F5.
 
 ### v1.58.0 — pliegues envolventes y jirones violetas
 
 [Comparativa con tus capturas de v1.57.0](docs/capa_v1580_antes_despues.png)
-· [Proyecto Blockbench en el repo](docs/CAPA_v1.58.0.bbmodel)
-· [Visor 3D offline](docs/capa_v1170_visor.html).
+· [Proyecto Blockbench v1.58.0](docs/respaldos/v1.58.0/CAPA_v1.58.0.bbmodel).
 
 El cuello deja de leerse como paneles rectos: el granate sigue un doblez
 redondeado con sombra por debajo. Los jirones enseñan caras violetas más
@@ -369,8 +399,8 @@ verdad, con la geometría, el atlas, el runtime y la auditoría cambiados.
   reconstruye geo, atlas, icono, clips, `.bbmodel`, previews, GIF, hoja de
   estados, comparativas y el visor autocontenido. Los scripts que hacían
   el GIF y la hoja de estados vivían en `/tmp` (fuera del repo) y se
-  perdían: ahora están versionados (`tools/make_anim_gifs.js`,
-  `tools/make_state_sheet.js`, `tools/make_reference_icons.py`).
+  perdían. En v1.59.0 la misma reconstrucción usa `tools/present_v1590.py`
+  y las pistas serializadas del mod.
 - **El código fuente del visor está versionado**: `preview/app.js` y
   `preview/index.html` (~41 KB). Antes todo `preview/` estaba en
   `.gitignore`, así que el visor publicado (14 MB) **no se podía
@@ -695,11 +725,11 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Descargas v1.58.0
+### Descargas v1.59.0
 
-La [release v1.58.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.58.0)
-incluye `capatest-1.58.0.jar` (Forge 1.20.1, compilado con JDK 17 y Gradle 8.8),
-`CAPA_v1.58.0.bbmodel` y los renders. CI reconstruye el JAR, comprueba que
+La [release v1.59.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.59.0)
+incluye `capatest-1.59.0.jar` (Forge 1.20.1, compilado con JDK 17 y Gradle 8.8),
+`CAPA_v1.59.0.bbmodel` y los renders. CI reconstruye el JAR, comprueba que
 ambas compilaciones son byte a byte iguales y coteja los digests del JAR y
 el `.bbmodel` subidos al borrador. El borrador se publica tras CI exitosa.
 
@@ -731,8 +761,8 @@ El script prueba **dos fuentes** (asset de release y artifact histórico)
 y exige el MISMO digest en ambas: si el binario no coincide byte a
 byte, no escribe nada.
 
-**Modelo de Blockbench:** [CAPA_v1.58.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.58.0/CAPA_v1.58.0.bbmodel),
-byte a byte igual a `docs/CAPA_v1.58.0.bbmodel`.
+**Modelo de Blockbench:** [CAPA_v1.59.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.59.0/CAPA_v1.59.0.bbmodel),
+byte a byte igual a `docs/CAPA_v1.59.0.bbmodel`.
 
 Regla de entrega: **el `.bbmodel` cambia de nombre con `mod_version`** y
 **siempre se incluye su enlace**. El workflow lee la versión de

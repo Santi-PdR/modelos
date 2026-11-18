@@ -7,6 +7,7 @@ import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -31,33 +32,22 @@ import software.bernie.geckolib.renderer.GeoArmorRenderer;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
-    // v1.22.0: UN CLIP POR ESTADO. Antes `animation.air` era un clon de
-    // correr, así que saltar, caer y volar con elytra se movían igual que
-    // esprintar en llano. Ahora hay 8 curvas distintas en cape_motion.py.
-    private static final RawAnimation IDLE_ANIM = RawAnimation.begin().thenLoop("animation.idle");
-    private static final RawAnimation MOVING_ANIM = RawAnimation.begin().thenLoop("animation.moving");
-    private static final RawAnimation SPRINT_ANIM = RawAnimation.begin().thenLoop("animation.sprint");
-    private static final RawAnimation FLY_ANIM = RawAnimation.begin().thenLoop("animation.air");
-    private static final RawAnimation FALL_ANIM = RawAnimation.begin().thenLoop("animation.fall");
-    private static final RawAnimation SNEAK_ANIM = RawAnimation.begin().thenLoop("animation.sneak");
-    private static final RawAnimation SWIM_ANIM = RawAnimation.begin().thenLoop("animation.swim");
-    private static final RawAnimation DETERIORO_ANIM = RawAnimation.begin().thenLoop("animation.deterioro");
-    // v1.9.0: animación dedicada del bulto plegado en GUI/hotbar/mano.
     private static final RawAnimation ITEM_ANIM = RawAnimation.begin().thenLoop("animation.item");
-    /** v1.23.0: chispas SUTILES. Un tick de emisión cada 8 (~1.25/s) y
-     *  como mucho 3 chispas en ese tick: 1.25-3.75 partículas por
-     *  segundo, SIN geometría, SIN sonidos y SIN búsqueda de entidades.
-     *  <p>v1.26.0: el comentario decía 6 ticks y 4 chispas desde
-     *  v1.25.0, cuando el código ya usaba 8 y 3. La CI validaba el
-     *  LITERAL del comentario, así que el desajuste pasaba inadvertido:
-     *  ahora la CI parsea estos DOS valores y comprueba que el código
-     *  no pida más chispas de las permitidas. */
+    private static final Map<CapeState, RawAnimation> WORN_ANIMATIONS = new EnumMap<>(CapeState.class);
     private static final int SPARK_INTERVAL_TICKS = 8;
     private static final int MAX_SPARKS_PER_TICK = 3;
+    private static final String AURA_TICK = "capatest:aura_tick";
+
+    static {
+        for (CapeState mode : CapeState.values()) {
+            WORN_ANIMATIONS.put(mode, RawAnimation.begin().thenLoop(mode.clip()));
+        }
+    }
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
@@ -100,50 +90,36 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
             Entity entity = state.getData(DataTickets.ENTITY);
 
             // Sin entidad = el ITEM 3D plegado en GUI/hotbar/mano.
-            if (entity == null) {
-                state.setAnimation(ITEM_ANIM);
-                return PlayState.CONTINUE;
-            }
-            if (entity instanceof ArmorStand) {
-                state.setAnimation(IDLE_ANIM);
-                return PlayState.CONTINUE;
-            }
-
-            Vec3 motion = entity.getDeltaMovement();
-            double horizontal = motion.x * motion.x + motion.z * motion.z;
-            boolean moving = horizontal > 0.0009D;
-            boolean living = entity instanceof LivingEntity;
-            boolean flying = living && ((LivingEntity) entity).isFallFlying();
-            boolean airborne = !entity.onGround();
-            boolean falling = airborne && motion.y < -0.08D && !flying;
-            boolean inWater = entity.isInWater();
-            boolean crouching = entity.isCrouching();
-            boolean sprinting = entity.isSprinting() && moving;
-            boolean hurt = living && ((LivingEntity) entity).getHealth()
-                    < ((LivingEntity) entity).getMaxHealth() * 0.5F;
-
-            // Prioridad de estado: el que más cambia la silueta gana.
-            if (hurt) {
-                state.setAnimation(DETERIORO_ANIM);   // estremecimiento
-            } else if (flying) {
-                state.setAnimation(FLY_ANIM);         // elytra / planeo
-            } else if (falling) {
-                state.setAnimation(FALL_ANIM);        // caída libre
-            } else if (inWater) {
-                state.setAnimation(SWIM_ANIM);        // flote amortiguado
-            } else if (crouching) {
-                state.setAnimation(SNEAK_ANIM);       // capa recogida
-            } else if (sprinting) {
-                state.setAnimation(SPRINT_ANIM);      // barrida + estela
-            } else if (airborne) {
-                state.setAnimation(FLY_ANIM);         // salto
-            } else if (moving) {
-                state.setAnimation(MOVING_ANIM);      // vaivén de paso
-            } else {
-                state.setAnimation(IDLE_ANIM);        // respiración
-            }
+            state.setAnimation(entity == null ? ITEM_ANIM :
+                    WORN_ANIMATIONS.get(stateFor(entity, state.getData(DataTickets.ITEMSTACK))));
             return PlayState.CONTINUE;
         }));
+    }
+
+    public static CapeState stateFor(Entity entity, ItemStack equipped) {
+        if (entity == null || entity instanceof ArmorStand) {
+            return CapeState.IDLE;
+        }
+        Vec3 velocity = entity.getDeltaMovement();
+        // Otros jugadores pueden estar interpolando la posición sin tener
+        // su velocidad de locomoción local. Usar también el delta visible.
+        double dx = entity.getX() - entity.xo;
+        double dz = entity.getZ() - entity.zo;
+        double horizontal = Math.max(velocity.horizontalDistanceSqr(), dx * dx + dz * dz);
+        double dy = Math.min(velocity.y, entity.getY() - entity.yo);
+        boolean elytra = false;
+        float health = 1.0F;
+        float maxHealth = 1.0F;
+        if (entity instanceof LivingEntity living) {
+            health = living.getHealth();
+            maxHealth = living.getMaxHealth();
+            elytra = living.isFallFlying();
+        }
+        int damage = equipped == null ? 0 : equipped.getDamageValue();
+        int maxDamage = equipped == null ? 0 : equipped.getMaxDamage();
+        boolean blight = CapeState.deteriorated(health, maxHealth, damage, maxDamage);
+        return CapeState.select(blight, elytra, entity.isInWater(), !entity.onGround(),
+                entity.isCrouching(), entity.isSprinting(), horizontal, dy);
     }
 
     @Override
@@ -180,89 +156,61 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
 
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slotId, boolean isSelected) {
-        if (level.isClientSide || !(entity instanceof Player player)) {
-            return;
+        if (!level.isClientSide && entity instanceof Player player
+                && player.getItemBySlot(EquipmentSlot.CHEST) == stack) {
+            spawnAura(level, player, stack);
         }
-        if (player.getItemBySlot(EquipmentSlot.CHEST).isEmpty()
-                || player.getItemBySlot(EquipmentSlot.CHEST).getItem() != this) {
-            return;
-        }
-        // rev. B: NO hay Effects track ni motas 3D. Las partículas se
-        // generan AQUI, desde el servidor, sólo mientras la capa está
-        // equipada; así las ven también los demás jugadores y el
-        // .bbmodel no busca JSONs de partículas que no existen.
-        boolean deterioro = stack.isDamaged()
-                || player.getHealth() < player.getMaxHealth() * 0.5F;
-        spawnAura(level, player, deterioro);
     }
 
-    /** Compatibilidad con la llamada antigua (sin estado de deterioro). */
-    public static void spawnAura(Level level, Player player) {
-        spawnAura(level, player, false);
-    }
-
-    /**
-     * Chispas emitidas desde el servidor para que también las vean otros
-     * jugadores. La llaman inventoryTick (slot de pecho) y CuriosCompat
-     * (slot back). El sello por tick evita duplicar el efecto.
-     *
-     * <p>v1.23.0: UNA partícula exclusiva ({@code capa_spark}) con textura
-     * propia, en vez de partículas vanilla. Chispas rectangulares,
-     * verticales, semitransparentes y con centro brillante; SIN gravedad,
-     * suben suavemente y se desvanecen. Nacen dispersas en los BORDES y
-     * las PUNTAS INFERIORES de la capa, no detrás de la cabeza.
-     * Presupuesto fijo de 3 chispas por tick de emisión, 1 emisión cada
-     * 8 ticks.
-     * Las partículas NO son geometría: se generan al llevar la capa puesta.
-     */
-    public static void spawnAura(Level level, Player player, boolean deterioro) {
-        if (level.isClientSide || !(level instanceof ServerLevel server)) {
+    /** FX del servidor, una sola emisión como máximo cada 8 ticks (hasta
+     *  3 chispas). Los demás clientes ven el mismo impulso, sin geometría
+     *  de partículas ni emisores en Blockbench. */
+    public static void spawnAura(Level level, Player player, ItemStack equipped) {
+        if (!(level instanceof ServerLevel server) || player.isSpectator()) {
             return;
         }
-        if (player.tickCount % SPARK_INTERVAL_TICKS != 0) {
-            return;
-        }
-
-        CompoundTag data = player.getPersistentData();
         int tick = player.tickCount;
-        if (data.getInt("capatest:aura_tick") == tick) {
+        if (tick % SPARK_INTERVAL_TICKS != 0) {
             return;
         }
-        data.putInt("capatest:aura_tick", tick);
-
-        double yaw = Math.toRadians(player.getYRot());
-        double backX = -Math.sin(yaw), backZ = Math.cos(yaw);
-        double sideX = Math.cos(yaw), sideZ = Math.sin(yaw);
-
-        boolean sprint = player.isSprinting();
-        boolean flying = player.isFallFlying();
-        boolean falling = !player.onGround() && player.getDeltaMovement().y < -0.08D;
-        int count = deterioro ? 3 : ((sprint || flying || falling) ? 2 : 1);
-        count = Math.min(count, MAX_SPARKS_PER_TICK);
-
-        // v1.23.0: las chispas nacen en los BORDES y en las PUNTAS
-        // INFERIORES del paño (y=0.12..0.95), NUNCA detrás de la cabeza.
-        // Antes el aura de polvo vanilla se acumulaba en y=1.4 y tapaba
-        // la cabeza del jugador en las capturas.
-        for (int i = 0; i < count; i++) {
-            boolean tip = i % 2 == 0;
-            double rnd = ThreadLocalRandom.current().nextDouble();
-            // v1.25.0: SOBRE el paño. La tela vive a z=0.09..0.21 bloques
-            // de la espalda; con 0.42-0.74 antes salían MÁS atrás que la
-            // capa y se leían como barras sueltas que no la seguían.
-            double height = tip
-                    ? 0.10D + 0.26D * rnd            // sobre las puntas
-                    : 0.30D + 0.34D * rnd;           // bordes del paño
-            double side = (i % 2 == 0 ? -1.0D : 1.0D) * (0.30D + 0.16D * rnd);
-            double depth = 0.10D + (tip ? 0.12D : 0.04D) + 0.06D * rnd;
-            double x = player.getX() + backX * depth + sideX * side;
-            double z = player.getZ() + backZ * depth + sideZ * side;
-            server.sendParticles(CapaParticles.CAPA_SPARK.get(),
-                    x, player.getY() + height, z,
-                    1, 0.018D, 0.010D, 0.018D, 0.0D);
+        CompoundTag data = player.getPersistentData();
+        if (data.contains(AURA_TICK) && data.getInt(AURA_TICK) == tick) {
+            return;
         }
-        // Las partículas NO son geometría: el .bbmodel no lleva ni un cubo
-        // suelto ni pista `effects`. Todo se genera aquí, en runtime.
-    }
+        data.putInt(AURA_TICK, tick);
 
+        CapeState mode = stateFor(player, equipped);
+        int pulse = tick / SPARK_INTERVAL_TICKS + player.getId();
+        boolean quiet = mode == CapeState.IDLE || mode == CapeState.SNEAK;
+        if (quiet && (pulse & 1) != 0) {
+            return;
+        }
+        CapeState.Aura aura = mode.aura();
+        int count = Math.min(aura.count(), MAX_SPARKS_PER_TICK);
+        // Yaw del cuerpo, no de la cámara/cabeza. El +Z del .geo es la
+        // espalda; con yaw=0 (mira a +Z del mundo) nace hacia -Z.
+        double yaw = Math.toRadians(player.yBodyRot);
+        double backX = Math.sin(yaw), backZ = -Math.cos(yaw);
+        double sideX = Math.cos(yaw), sideZ = Math.sin(yaw);
+        RandomSource random = player.getRandom();
+        double firstSide = ((pulse >>> (quiet ? 1 : 0)) & 1) == 0 ? -1.0D : 1.0D;
+        for (int i = 0; i < count; i++) {
+            boolean tip = i != 1;
+            // En deterioro, dos puntas y un borde; nunca detrás de la nuca.
+            double sign = i == 0 ? firstSide : -firstSide;
+            double side = sign * ((tip ? 0.23D : 0.39D) + random.nextDouble() * 0.12D);
+            double height = (tip ? 0.16D : 0.41D) + random.nextDouble() * 0.18D;
+            double depth = aura.depth() + (random.nextDouble() - 0.5D) * 0.10D;
+            double trail = aura.trail() * (0.75D + 0.35D * random.nextDouble());
+            double outward = sign * aura.sideways() * (0.75D + 0.35D * random.nextDouble());
+            // count=0 del protocolo de Minecraft: una partícula, impulso
+            // exacto = (dx,dy,dz)*speed; count=1 lo volvía ruido gaussiano.
+            server.sendParticles(CapaParticles.CAPA_SPARK.get(),
+                    player.getX() + backX * depth + sideX * side,
+                    player.getY() + height,
+                    player.getZ() + backZ * depth + sideZ * side,
+                    0, backX * trail + sideX * outward, aura.lift(),
+                    backZ * trail + sideZ * outward, 1.0D);
+        }
+    }
 }

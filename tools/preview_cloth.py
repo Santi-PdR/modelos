@@ -3,7 +3,7 @@
 
 Uso:
     python -m pip install Pillow numpy
-    python tools/preview_cloth.py --out /tmp/capa_preview
+    python tools/preview_cloth.py --out preview/assets/renders
 
 Genera vistas del bulto plegado, la capa equipada (frente/3-4/espalda),
 un perfil para el relieve 3D y el arnés delantero aislado, la superficie de
@@ -16,9 +16,9 @@ sombreado y la orientación de caras son aproximaciones.
 from __future__ import annotations
 
 import argparse
-import copy
 
-import cape_motion as M
+import cape_animation_pipeline as animations
+import cape_tracks as tracks
 import json
 import math
 import pathlib
@@ -112,7 +112,10 @@ def matrices(geo):
         b = by[n]
         p = b.get("pivot", [0, 0, 0]) or [0, 0, 0]
         B = np.array([-p[0], p[1], p[2]], float)
-        local = T(B) @ rotmat(b.get("rotation", [0, 0, 0]) or [0, 0, 0]) @ T(-B)
+        offset = np.array(b.get("offset", [0, 0, 0])) * [-1, 1, 1]
+        scale = b.get("scale", [1, 1, 1])
+        local = (T(B + offset) @ rotmat(b.get("rotation", [0, 0, 0]))
+                 @ np.diag([*scale, 1]) @ T(-B))
         out[n] = (calc(b["parent"]) if b.get("parent") else np.eye(4)) @ local
         return out[n]
 
@@ -134,21 +137,25 @@ def face_uv(s):
     return np.array([[u + w, v], [u, v], [u, v + h], [u + w, v + h]], float)
 
 
+def cube_points(c, matrix, *, inflate=True):
+    origin, size = np.array(c["origin"], float), np.array(c["size"], float)
+    x, y, z = origin
+    d = c.get("inflate", 0.0) if inflate else 0.0
+    lo = np.array([-x - size[0], y, z]) - d
+    vertices = lo + CORNERS * (size + 2 * d)
+    p = np.array(c.get("pivot", (0, 0, 0))) * [-1, 1, 1]
+    transform = matrix @ T(p) @ rotmat(c.get("rotation", (0, 0, 0))) @ T(-p)
+    return (transform @ np.c_[vertices, np.ones(8)].T).T[:, :3]
+
+
 def collect(geo, hidden):
     mats = matrices(geo)
     faces = []
     for b in geo["bones"]:
         if b["name"] in hidden:
             continue
-        M = mats[b["name"]]
         for c in b.get("cubes", []):
-            o, sz = np.array(c["origin"], float), np.array(c["size"], float)
-            O = np.array([-(o[0] + sz[0]), o[1], o[2]], float)
-            cp = np.array(c.get("pivot", [0, 0, 0]) or [0, 0, 0], float)
-            P = np.array([-cp[0], cp[1], cp[2]], float)
-            M2 = M @ T(P) @ rotmat(c.get("rotation", [0, 0, 0]) or [0, 0, 0]) @ T(-P)
-            V = O[None, :] + CORNERS * sz[None, :]
-            VT = (M2 @ np.c_[V, np.ones(8)].T).T[:, :3]
+            VT = cube_points(c, mats[b["name"]])
             for name, idx in FACE_ORDER.items():
                 spec = c["uv"].get(name)
                 if spec:
@@ -156,13 +163,30 @@ def collect(geo, hidden):
     return faces
 
 
-def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27), *, frame=None):
-    faces = collect(geo, hidden)
-    atlas = np.asarray(Image.open(atlas_path).convert("RGBA"))
+# Maniquí neutro para presentar la holgura, nunca exportado a Blockbench.
+MANNEQUIN_BOXES = (
+    ((-4, 24, -4), (8, 8, 8), (113, 120, 139)),
+    ((-4, 12, -2), (8, 12, 4), (70, 76, 99)),
+    ((-8, 12, -2), (4, 12, 4), (82, 88, 112)),
+    ((4, 12, -2), (4, 12, 4), (82, 88, 112)),
+    ((-4, 0, -2), (4, 12, 4), (53, 59, 78)),
+    ((0, 0, -2), (4, 12, 4), (53, 59, 78)),
+)
+
+
+def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27),
+           *, frame=None, mannequin=False):
+    faces = [(p, uv, None) for p, uv, _ in collect(geo, hidden)]
+    if mannequin:
+        for origin, dim, color in MANNEQUIN_BOXES:
+            points = np.asarray(origin) + CORNERS * np.asarray(dim)
+            faces.extend((points[idx], np.zeros((4, 2)), color) for idx in FACE_ORDER.values())
+    atlas = np.asarray((atlas_path if isinstance(atlas_path, Image.Image)
+                        else Image.open(atlas_path)).convert("RGBA"))
     AH, AW = atlas.shape[:2]
     view = R("x", pitch) @ R("y", yaw)
     prepared, pts_all = [], []
-    for pts, uvs, _ in faces:
+    for pts, uvs, color in faces:
         pv = (view @ np.c_[pts, np.ones(4)].T).T[:, :3]
         n = np.cross(pv[1] - pv[0], pv[2] - pv[0])
         ln = np.linalg.norm(n)
@@ -172,7 +196,7 @@ def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27), *
             light = np.array([-0.35, 0.65, 0.68])
             light /= np.linalg.norm(light)
             shade = 0.40 + 0.60 * abs(float(np.dot(n, light)))
-        prepared.append((pv, uvs, shade))
+        prepared.append((pv, uvs, shade, color))
         pts_all.append(pv)
     if frame is None:
         allv = np.concatenate(pts_all, axis=0)
@@ -188,7 +212,7 @@ def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27), *
     img = np.zeros((size, size, 3), float)
     img[:] = np.array(bg, float)
     depth = np.full((size, size), -1e9, float)
-    for pv, uvs, shade in prepared:
+    for pv, uvs, shade, solid in prepared:
         scr = np.array([proj(p) for p in pv])
         z = pv[:, 2]
         for i, j, k in ((0, 1, 2), (0, 2, 3)):
@@ -213,13 +237,17 @@ def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27), *
             if not inside.any():
                 continue
             zz = z[i] + a * (z[j] - z[i]) + b * (z[k] - z[i])
-            uu = uvs[i, 0] + a * (uvs[j, 0] - uvs[i, 0]) + b * (uvs[k, 0] - uvs[i, 0])
-            vv = uvs[i, 1] + a * (uvs[j, 1] - uvs[i, 1]) + b * (uvs[k, 1] - uvs[i, 1])
-            ui = np.clip(np.round(uu).astype(int), 0, AW - 1)
-            vi = np.clip(np.round(vv).astype(int), 0, AH - 1)
-            tex = atlas[vi, ui].astype(float)
-            col = tex[:, :, :3] * shade
-            alpha = tex[:, :, 3:4] / 255.0
+            if solid is None:
+                uu = uvs[i, 0] + a * (uvs[j, 0] - uvs[i, 0]) + b * (uvs[k, 0] - uvs[i, 0])
+                vv = uvs[i, 1] + a * (uvs[j, 1] - uvs[i, 1]) + b * (uvs[k, 1] - uvs[i, 1])
+                ui = np.clip(np.round(uu).astype(int), 0, AW - 1)
+                vi = np.clip(np.round(vv).astype(int), 0, AH - 1)
+                tex = atlas[vi, ui].astype(float)
+                col = tex[:, :, :3] * shade
+                alpha = tex[:, :, 3:4] / 255.0
+            else:
+                col = np.broadcast_to(np.asarray(solid) * shade, inside.shape + (3,))
+                alpha = np.ones(inside.shape + (1,))
             region = img[by0:by1, bx0:bx1]
             dr = depth[by0:by1, bx0:bx1]
             mask = inside & (zz > dr) & (alpha[:, :, 0] > 0.03)
@@ -230,22 +258,29 @@ def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27), *
     return Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), "RGB")
 
 
-def posed(geo):
-    """Pose estática de la MISMA curva canónica (`cape_motion`).
+def pose_at(geo, channels, t, overlay=None):
+    """Composición de tracks con el rig, incluyendo position/scale bloqueados.
 
-    Antes este render, el visor JS, Java y Blockbench tenían cuatro ondas
-    distintas. Ahora todos muestrean `cape_motion.sample()` y las motas
-    flotantes ya no existen como geometría.
+    `overlay` son deltas Euler extra en el espacio del .geo, para sondear
+    holgura con un margen de la respuesta rotacional de Java.
     """
-    out = copy.deepcopy(geo)
-    for b in out["bones"]:
+    bones = []
+    for b in geo["bones"]:
         n = b["name"]
-        if not n.startswith(("v15_cloth_", "v15_hem_", "v16_", "v17_", "v18_")):
-            continue
-        pose = M.sample(n, "caminar", 0.31)
-        for axis in range(3):
-            b["rotation"][axis] += pose["rot"][axis]
-    return out
+        ch = channels.get(n, {})
+        rot, pos, scale = (tracks.sample(ch[key], t) if key in ch else d
+                           for key, d in tracks.DEFAULTS.items())
+        extra = overlay(n) if overlay else (0, 0, 0)
+        bones.append(dict(b, rotation=[a + c + d for a, c, d in
+                          zip(b.get("rotation", (0, 0, 0)), rot, extra)],
+                          offset=pos, scale=scale))
+    return dict(geo, bones=bones)
+
+
+def posed(geo):
+    """Pose tomada del animation.json que se empaqueta en el JAR."""
+    clip = json.loads(animations.ANIM.read_text())["animations"]["animation.moving"]
+    return pose_at(geo, tracks.prepare_clip(clip), clip["animation_length"] * .31)
 
 
 def load(p):
@@ -353,7 +388,7 @@ def particle_sheet(path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="/tmp/capa_preview", type=pathlib.Path)
+    ap.add_argument("--out", default=ROOT / "preview/assets/renders", type=pathlib.Path)
     ap.add_argument("--uv-test", action="store_true",
                     help="pinta franjas de colores en el canvas para validar el orden UV")
     ap.add_argument("--isolate", default="none",

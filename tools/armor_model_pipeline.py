@@ -1,33 +1,12 @@
 #!/usr/bin/env python3
-"""v1.23.0 — GEOMETRÍA REHECHA DESDE CERO (Blockbench).
+"""Silueta equipada v1.59.0, en dos capas con dobladillo partido.
 
-El usuario: «Rehace la geometría, textura y partículas de esta capa en
-Blockbench para que deje de parecer hecha de tiras finas y sueltas. Agrega
-un cuello alto y grueso de tela roja oscura (estilo bufanda) conectado a
-dos hombreras pequeñas color carbón y una cadena oscura en la parte
-superior de la espalda. Reemplaza las tiras delgadas por 10 a 14 mechones
-anchos, planos y superpuestos en dos capas (una interna morada oscura y
-una externa rojo carmesí) que se curven orgánicamente y terminen en punta
-afilada para dar volumen».
+El árbol conserva los 225 huesos y la armadura original oculta. Las tres
+bisagras viven en la costura y los tercios del paño. Cada cola articula
+sus tres últimos cubos desde el mismo pivote. El cuello asimétrico cubre
+la raíz, con acero estratificado y cadena arqueada sobre el tejido.
 
-Qué hay ahora (``tools/cape_shape.py`` es la fuente de verdad):
-
-  * 72 huesos heredados, sin cubos en el .bbmodel. Se conservan sus
-    nombres y padres; cape_top articula desde la costura del cuello.
-  * 27 anclas `v15_cloth_*`, diminutas y ENTERRADAS dentro del cuello:
-    mantienen viva la onda de `CapaArmorModel.panels[]` sin dibujar nada.
-  * Cuello en V escalonada: 7 piezas de base, 5 pliegues dorsales
-    abiertos en abanico y 7 faldones solapados que conectan con el paño.
-  * 2 HOMBRERAS CARBÓN (`v18_pad_*`) y una CADENA OSCURA de 8 eslabones
-    (`v18_chain_*`) sobre la parte alta de la espalda.
-  * 12 MECHONES (`v17_ribbon_k_seg0..6`): 6 externos carmesí y 6 internos
-    morado oscuro, intercalados, ~1.8-2.6 de ancho con SOLAPE real,
-    curvados en X y en Z, con punta afilada de 0.10. Dos capas con
-    profundidad distinta ⇒ volumen, no élitra.
-  * 10 GRIETAS 3D neón (`v17_vein_*`) sobre los mechones externos, con
-    textura del parche NEÓN y glowmask fullbright.
-
-Uso:  PYTHONPATH=tools:tools/_deps python3 tools/armor_model_pipeline.py
+Uso: python3 tools/armor_model_pipeline.py
 """
 from __future__ import annotations
 
@@ -51,20 +30,28 @@ CUEILLO = 3  # v1.32.0: 3 bloques chiquitos junto a la nuca (cuellito)
 PADS = 2
 CHAIN_LINKS = 8
 CRACKS = 10
+TAIL_JOINT = 4  # los últimos tres cubos comparten el último pivote visible
 
 # Holgura estática en el +Z del .geo (texels de modelo, 16 por bloque).
 # No se añade un canal de posición: se desplazan juntos los mechones y
 # las grietas que llevan cosidas. El torso acaba en Z=2.
-CLOTH_SETBACK = 1.26
+CLOTH_SETBACK = 1.98
 
 # Parches del atlas limpio (ver tools/cape_atlas_v1230.py).
 OUTER_V, INNER_V = 0.0, 48.0
 STRIPE_W = 96.0 / (CS.RIBBONS // 2)          # 16 texels por mechón
 
 
+def legacy_element(bone_name: str, cube_index: int) -> tuple[str, int]:
+    """Nombre original del elemento en Blockbench tras coser la punta."""
+    if bone_name.startswith("v17_ribbon_") and bone_name.endswith(f"_seg{TAIL_JOINT}"):
+        return bone_name.rsplit("_seg", 1)[0] + f"_seg{TAIL_JOINT + cube_index}", 0
+    return bone_name, cube_index
+
+
 def ribbon_thick(k: int) -> float:
-    """Mechón PLANO pero con cuerpo: 0.52-0.72 unidades de fondo."""
-    return 0.62 + 0.10 * math.sin(k * 1.7 + 0.3)
+    """Mechón PLANO pero con cuerpo: 0.68-0.84 unidades de fondo."""
+    return 0.76 + 0.08 * math.sin(k * 1.7 + 0.3)
 
 
 def band(u0: float, w: float, v0: float, h: float) -> dict:
@@ -130,7 +117,7 @@ def tip_uv(k: int, t: float) -> dict:
     """La punta muestrea la franja de DESGASTE (agujeros) de su capa."""
     j = k // 2
     base = OUTER_V if CS.layer(k) == "outer" else INNER_V
-    return band(j * STRIPE_W + 1.0, STRIPE_W - 2.0, base + 40.0, 7.5)
+    return band(j * STRIPE_W + 4.0, 8.0, base + min(44.0, 48.0 * t - 2.6), 3.4)
 
 
 def cube16(origin, size, front: dict, side: dict | None = None,
@@ -216,9 +203,12 @@ def build() -> dict:
                 _b["cubes"] = []
                 if _slab == "cape_top":
                     # Bisagra en la costura externa, no dentro del torso.
-                    # Al girar en sprint/vuelo, el borde alto ya no sube
-                    # hacia la cabeza. No cambia ninguna pista animada.
-                    _b["pivot"] = [0.0, 23.48, 4.24]
+                    # El borde alto gira fuera del volumen de la cabeza.
+                    _b["pivot"] = [0.0, 23.40, 4.66]
+                elif _slab == "cape_mid":
+                    _b["pivot"] = [0.0, CS.Y_TOP - CS.HEIGHT * 0.34, 4.60]
+                else:
+                    _b["pivot"] = [0.0, CS.Y_TOP - CS.HEIGHT * 0.67, 5.14]
 
     # ------------------------------------------------------------------
     # 1. 27 anclas INVISIBLES: dentro del cuello grueso. Java las necesita
@@ -240,57 +230,47 @@ def build() -> dict:
                 [ax, 23.60, 2.40], [0.0, 0.0, 0.0], [_anchor]))
 
     # ------------------------------------------------------------------
-    # 2. Silueta v1.56: cuello con escote en V y tres niveles de paño.
-    # Los nombres y padres son los mismos. La bisagra de cada faldón
-    # queda en su costura alta, no en el centro de una caja desplazada.
-    # GeckoLib conserva el signo de Z: no reflejar sólo `origin` como
-    # ocurría antes, pues dejaba el dorso a Z=-1.20..-0.30 (en el torso).
+    # 2. Cuello alto con solapas oblicuas, y faldones en cascada. Se
+    # reutilizan los grupos: cada solapa gira desde la costura superior.
     # ------------------------------------------------------------------
+    flap_heights = (2.28, 3.15, 4.36, 3.45, 4.08, 3.22, 2.18)
     for i in range(COLLAR_FRONT):
-        fx = (i - (COLLAR_FRONT - 1) / 2.0) / ((COLLAR_FRONT - 1) / 2.0)
+        fx = (i - 3.0) / 3.0
         center = 1.0 - abs(fx)
-        x = fx * 5.05
-        w = 1.92 + 0.20 * center
-        height = 1.95 + 0.65 * center
-        y_top = 23.48 - 0.72 * center
+        x = fx * 5.78
+        w = 2.18 + 0.25 * center
+        height = 1.56 + 0.58 * center
+        y_top = 23.18 - 0.59 * center + 0.10 * fx
+        z, depth = 3.46 + 0.42 * center, 1.32
         bottom = y_top - height
-        z = 2.66 + 0.22 * center
-        depth = 1.18
         bones.append(bone(
             f"v17_cowl_front_{i}", "chestplate",
-            [x, y_top, z + depth / 2.0],
-            [0.0, -fx * 12.0, -fx * 8.0],
-            [cowl_cube((x - w / 2.0, bottom, z), (w, height, depth),
-                       "base", INFLATE[i % 3])]))
-        # Siete tablas de faldón: cortas en los hombros y de doble caída
-        # en el centro. Solapan por arriba y de lado, como un mismo paño.
-        fw = 2.04 + 0.55 * center
-        fh = 2.85 + 2.65 * center
-        fy = bottom + 0.68
-        fz = z + depth - 0.30
-        fd = 0.94 + 0.66 * center  # relieve del panel central sobre los mechones
+            [x, y_top, z + depth / 2],
+            [1.8, -fx * 15.0, -fx * 11.5],
+            [cowl_cube((x - w / 2, bottom, z), (w, height, depth), "base", INFLATE[i % 3])]))
+        fw, fh = 2.43 + 0.29 * center, flap_heights[i]
+        fy, fz = bottom + 0.56, z + depth - 0.36
+        fd = 0.94 + 0.43 * center
         bones.append(bone(
             f"v17_cowl_tooth_{i}", f"v17_cowl_front_{i}",
             [x, fy, fz + fd / 2],
-            [3.0, 0.0, fx * 18.0],
+            [6.0, -fx * 6.0, fx * 35.0 + (3.4 if i % 2 else -2.5)],
             [cowl_cube((x - fw / 2.0, fy - fh, fz), (fw, fh, fd),
-                       "estrella" if i == COLLAR_FRONT // 2 else "faldon",
-                       INFLATE[1])]))
+                       "estrella" if i == COLLAR_FRONT // 2 else "faldon", INFLATE[1])]))
 
     for i in range(COLLAR_BACK):
-        fx = (i - (COLLAR_BACK - 1) / 2.0) / ((COLLAR_BACK - 1) / 2.0)
+        fx = (i - 2.0) / 2.0
         center = 1.0 - abs(fx)
-        x = fx * 5.05
-        w = 2.86 + 0.14 * center
-        height = 2.95 + 2.25 * center
-        y_top = 23.38 - 0.72 * center
-        z = 3.05 + 0.37 * center
+        x = fx * 5.60
+        w = 3.10 - 0.10 * center
+        height = 2.10 + 1.22 * center
+        y_top = 23.02 + 1.06 * center
+        z, depth = 3.56 + 0.99 * center, 0.93
         bones.append(bone(
             f"v17_cowl_back_{i}", "chestplate",
-            [x, y_top, z + 0.59],
-            [3.0, -fx * 9.0, -fx * 19.0],
-            [cowl_cube((x - w / 2.0, y_top - height, z), (w, height, 1.18),
-                       "dorsal", INFLATE[2])]))
+            [x, y_top - 0.38, z + depth / 2.0],
+            [-1.0, -fx * 15.0, fx * 15.0],
+            [cowl_cube((x - w / 2.0, y_top - height, z), (w, height, depth), "dorsal", INFLATE[2])]))
 
     # ------------------------------------------------------------------
     # 2b. CUELLITO (v1.32.0): 3 bloques chiquitos junto a la NUCA.
@@ -301,8 +281,8 @@ def build() -> dict:
     for i in range(CUEILLO):
         fx = (i - (CUEILLO - 1) / 2.0) / max(1.0, (CUEILLO - 1) / 2.0)
         x = fx * 1.60
-        y = 23.06
-        z = 2.73
+        y = 23.14 + 0.25 * (1.0 - abs(fx))
+        z = 3.55
         bones.append(bone(
             f"v19_cuellito_{i}", "chestplate",
             [x, y, z], [0.0, 0.0, fx * -5.0],
@@ -311,63 +291,41 @@ def build() -> dict:
                     COLLAR_UV, INFLATE[1])]))
 
     # ------------------------------------------------------------------
-    # 3. HOMBRERAS (pauldron de 3 piezas) + CADENA de 8 eslabones.
-    #
-    # v1.27.0: la hombrera era UN cubo 2.40x0.90x1.80 de gris carbón
-    # plano: en el juego se leía como una MASA NEGRA en el hombro. Ahora
-    # son tres piezas encajadas (placa + cresta exterior + labio
-    # delantero) con filete de luz en el borde: se lee como una
-    # hombrera de verdad. La cadena son ocho ANILLOS (no ocho motas)
-    # que se solapan y se cruzan, y van POR DETRÁS del cuello para que
-    # se lean como una cadena y no como puntos.
+    # 3. Hombreras de tres estratos y labio. El acero abre la silueta
+    # hacia los lados y la cadena sigue un arco bajo la nuca.
     # ------------------------------------------------------------------
     for i in range(PADS):
         side = -1.0 if i == 0 else 1.0
-        x = side * 5.20
-        dz = 0.93
-        bones.append(bone(
-            f"v18_pad_{i}", "chestplate",
-            [x, 23.10, 2.70 + dz], [0.0, 0.0, side * -16.0],
-            [
-                # PLACA base: la superficie del hombro.
-                cube_faces((x - 1.25, 22.70, 1.60 + dz), (2.50, 0.42, 2.10),
-                           {"up": PAD_UV, "north": PAD_SIDE_UV,
-                            "south": PAD_SIDE_UV, "east": PAD_SIDE_UV,
-                            "west": PAD_SIDE_UV, "down": PAD_SIDE_UV},
-                           INFLATE[0]),
-                # LAM superior: un escalón más arriba y más corto.
-                cube_faces((x - 1.09, 23.00, 1.76 + dz), (2.18, 0.34, 1.78),
-                           {"up": PAD_UV, "north": PAD_SIDE_UV,
-                            "south": PAD_SIDE_UV, "east": PAD_SIDE_UV,
-                            "west": PAD_SIDE_UV, "down": PAD_SIDE_UV},
-                           INFLATE[1]),
-                # FILO exterior: el canto que atrapa la luz del sol.
-                cube_faces((x + side * 0.95 - 0.21, 22.80, 1.68 + dz),
-                           (0.42, 0.52, 2.05),
-                           {"up": CREST_UV, "north": PAD_SIDE_UV,
-                            "south": PAD_SIDE_UV, "east": PAD_SIDE_UV,
-                            "west": PAD_SIDE_UV, "down": PAD_SIDE_UV},
-                           INFLATE[2]),
-                # LABIO delantero: el borde que baja hacia el pecho.
-                cube_faces((x - 1.08, 22.06, 1.42 + dz), (2.16, 0.74, 0.52),
-                           {"up": PAD_SIDE_UV, "north": PAD_SIDE_UV,
-                            "south": PAD_SIDE_UV, "east": PAD_SIDE_UV,
-                            "west": PAD_SIDE_UV, "down": PAD_SIDE_UV},
-                           INFLATE[0]),
-            ]))
+        x, y, z = side * 5.85, 23.07, 3.63
+        span = 3.66 if i == 0 else 3.40
+        bones.append(bone(f"v18_pad_{i}", "chestplate", [x, y, z],
+                          [1.0, -side * 12.0, -side * 15.0], [
+            cube16((x - span / 2, y - 0.56, z - 0.62), (span, 0.58, 2.08),
+                   PAD_SIDE_UV, PAD_UV, INFLATE[0]),
+            cube_faces((x - span * 0.44, y + 0.02, z - 0.56), (span * 0.88, 0.29, 1.88),
+                       {"up": PAD_UV, "north": PAD_SIDE_UV, "south": CREST_UV,
+                        "east": PAD_SIDE_UV, "west": PAD_SIDE_UV, "down": DARK}, INFLATE[1]),
+            cube16((x + side * (span / 2 - 0.62) - 0.22, y - 0.25, z - 0.48),
+                   (0.44, 0.66, 1.86), CREST_UV, PAD_SIDE_UV, INFLATE[2]),
+            cube16((x - span * 0.41, y - 0.94, z + 0.96), (span * 0.82, 0.78, 0.47),
+                   PAD_SIDE_UV, DARK, INFLATE[0]),
+        ]))
 
+    chain_depths = (5.56, 5.55, 5.56, 5.99, 6.01, 5.99, 5.71, 5.60)
     for i in range(CHAIN_LINKS):
-        x = -3.30 + i * 0.94
-        y = 22.16 - 0.21 * (1.0 - abs(x) / 3.30)
-        z = 4.79 - 0.17 * abs(x) / 3.30 + (0.03 if i % 2 else -0.03)
-        bones.append(bone(
-            f"v18_chain_{i}", "chestplate",
-            [x, y, z], [0.0, 0.0, 14.0 if i % 2 else -14.0],
-            [cube_faces((x - 0.48, y - 0.19, z - 0.10), (0.96, 0.38, 0.20),
-                        {"north": CHAIN_UV, "south": CHAIN_UV,
-                         "up": CHAIN_TOP_UV, "down": CHAIN_TOP_UV,
-                         "east": CHAIN_TOP_UV, "west": CHAIN_TOP_UV},
-                        INFLATE[1])]))
+        t = i / (CHAIN_LINKS - 1)
+        x = -3.66 + t * 7.32
+        sag = math.sin(math.pi * t)
+        y = 22.68 - 0.35 * t - 1.32 * sag
+        z = chain_depths[i]
+        angle = 29.0 * math.cos(math.pi * t) + (6.0 if i % 2 else -6.0)
+        twist = -22.0 * (chain_depths[min(7, i + 1)] - chain_depths[max(0, i - 1)])
+        bones.append(bone(f"v18_chain_{i}", "chestplate", [x, y, z], [0.0, twist, angle], [
+            cube_faces((x - 0.63, y - 0.21, z - 0.18), (1.26, 0.42, 0.36),
+                       {"north": CHAIN_UV, "south": CHAIN_UV, "up": CHAIN_TOP_UV,
+                        "down": CHAIN_TOP_UV, "east": CHAIN_TOP_UV, "west": CHAIN_TOP_UV},
+                       INFLATE[1]),
+        ]))
 
     # ------------------------------------------------------------------
     # 4. 12 MECHONES ANCHOS, PLANOS, CURVADOS Y SUPERPUESTOS, EN 2 CAPAS.
@@ -375,34 +333,41 @@ def build() -> dict:
     # ------------------------------------------------------------------
     for k in range(CS.RIBBONS):
         dep = ribbon_thick(k)
-        for n in range(CS.SEGS):
-            g = CS.segment_geometry(k, n)
-            t0, t1 = CS.segment_bounds(k, n)
-            tm = (t0 + t1) / 2.0
-            z = g["z"] + 0.012 * n + CLOTH_SETBACK
-            front = lock_uv(k, t0, t1, g["w"], g["h"])
-            bones.append(bone(
-                f"v17_ribbon_{k}_seg{n}", section_for_t(tm),
-                [g["cx"], g["cy"], z + dep / 2.0],
-                [0.0, 0.0, g["theta"]],
-                [cube16((g["cx"] - g["w"] / 2.0,
-                         g["cy"] - g["h"] / 2.0, z),
-                        (g["w"], g["h"], dep),
-                        front, DARK, INFLATE[(k + n) % 3])]))
-        # PUNTA AFILADA: 0.10 de ancho, 0.80 de largo, con desgaste en UV.
-        t = CS.tip_t(k)
-        x = CS.ribbon_x(k, t)
-        y = CS.Y_TOP - t * CS.HEIGHT
-        z = CS.ribbon_z(k, t) + 0.06 + CLOTH_SETBACK
-        last = CS.segment_geometry(k, CS.SEGS - 1)
-        theta = last["theta"] + 3.0 * math.sin(k * 2.3)
-        tw, th = 0.10, 0.80
-        bones.append(bone(
-            f"v17_ribbon_{k}_seg{CS.SEGS}", section_for_t(t),
-            [x, y - th / 2.0, z + dep / 2.0],
-            [0.0, 0.0, theta],
-            [cube16((x - tw / 2.0, y - th, z), (tw, th, dep * 0.8),
-                    tip_uv(k, t), DARK, INFLATE[(k + 2) % 3])]))
+        ribbon = []
+        for n in range(CS.SEGS + 1):
+            if n == CS.SEGS:
+                # Punta corta e irregular, alineada al último tramo.
+                t = CS.tip_t(k)
+                last = CS.segment_geometry(k, n - 1)
+                x, y = CS.ribbon_x(k, t), CS.Y_TOP - t * CS.HEIGHT
+                z = CS.ribbon_z(k, t) + 0.06 + CLOTH_SETBACK
+                w, h = 0.14 + 0.015 * (k % 4), 0.62 + 0.18 * (k % 3)
+                pivot = [x, y - h / 2, z + dep / 2]
+                angle = [last["bend"], last["twist"], last["theta"] + 3.0 * math.sin(k * 2.3)]
+                c = cube16((x - w / 2, y - h, z), (w, h, dep * .8), tip_uv(k, t),
+                           DARK, INFLATE[(k + 2) % 3])
+            else:
+                g = CS.segment_geometry(k, n)
+                t0, t1 = CS.segment_bounds(k, n)
+                t = (t0 + t1) / 2
+                x, y, z = g["cx"], g["cy"], g["z"] + 0.012 * n + CLOTH_SETBACK
+                w, h = g["w"] + (0.12 if 2 <= n <= 4 else 0.0), g["h"]
+                pivot = [x, y, z + dep / 2]
+                angle = [g["bend"], g["twist"], g["theta"]]
+                c = cube16((x - w / 2, y - h / 2, z), (w, h, dep),
+                           lock_uv(k, t0, t1, w, h), DARK, INFLATE[(k + n) % 3])
+            # Una cola continua, no tres dados que se sueltan en el aire:
+            # la inclinación de cada sección vive en el cubo. Se preservan
+            # nombres y tracks de los dos huesos terminales como anclas.
+            if n >= TAIL_JOINT:
+                c.update(pivot=[round(v, 4) for v in pivot], rotation=[round(v, 4) for v in angle])
+                angle = [0.0, 0.0, 0.0]
+            new_bone = bone(f"v17_ribbon_{k}_seg{n}", section_for_t(t), pivot, angle,
+                            [c] if n <= TAIL_JOINT else [])
+            if n > TAIL_JOINT:
+                ribbon[TAIL_JOINT]["cubes"].append(c)
+            ribbon.append(new_bone)
+        bones.extend(ribbon)
 
     # ------------------------------------------------------------------
     # 5. GRIETAS 3D NEÓN: trazos CORTOS sobre la capa externa. Son
@@ -410,21 +375,15 @@ def build() -> dict:
     # ------------------------------------------------------------------
     for i, m in enumerate(CS.vein_marks(CRACKS)):
         k, t = m["k"], m["t"]
-        x = CS.ribbon_x(k, t) + 0.12 * math.sin(i * 2.1)
-        y = CS.Y_TOP - t * CS.HEIGHT
-        # v1.25.0: EMBEBIDA en el mechón (no flotando delante)...
-        z = CS.ribbon_z(k, t) + ribbon_thick(k) - 0.14 + CLOTH_SETBACK
+        # El trazo se planta en el espacio local de su cubo, no en la
+        # curva global: así sigue adherido incluso en un gajo retorcido.
+        seg = next(n for n in range(CS.SEGS) if t <= CS.segment_bounds(k, n)[1])
+        g = CS.segment_geometry(k, seg)
+        x = g["cx"] + g["w"] * 0.26 * math.sin(i * 2.1 + 0.4)
+        y = CS.Y_TOP - CS.HEIGHT * t
+        z = g["z"] + 0.012 * seg + CLOTH_SETBACK + ribbon_thick(k) - 0.15
         vw = 0.12
-        vh = 0.65 + 0.45 * abs(math.sin(i * 1.7 + 0.3))
-        # ...y HIJA del tramo del mechón que la sostiene: hereda su
-        # rotación y su position, así que viaja con la tela en vez de
-        # quedarse clavada en el aire cuando la capa se mueve.
-        seg = CS.SEGS - 1
-        for nseg in range(CS.SEGS):
-            t0, t1 = CS.segment_bounds(k, nseg)
-            if t0 <= t <= t1:
-                seg = nseg
-                break
+        vh = 0.63 + 0.41 * abs(math.sin(i * 1.7 + 0.3))
         parent = f"v17_ribbon_{k}_seg{seg}"
         bones.append(bone(
             f"v17_vein_{i}", parent,

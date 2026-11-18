@@ -9,6 +9,11 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
+v1.59.0: DOBLADILLO PARTIDO. Gajos con forro violeta, sarga granate,
+solapas superpuestas, remaches y cadena en arco. Ocho poses sobre tres
+bisagras. El brillo RGB y las chispas responden al estado de la capa,
+sin cambiar sus máscaras ni el icono. Soporta pecho y Curios:back.
+
 v1.58.0: PLIEGUES ENVOLVENTES Y JIRONES VIOLETAS. El cuello granate
 se pinta con dobleces redondeados y sombra bajo el pliegue. Las caras
 violetas asoman a distinta altura, con surcos mates y bordes desgastados.

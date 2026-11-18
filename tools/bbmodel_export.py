@@ -43,7 +43,9 @@ from pathlib import Path
 
 from PIL import Image
 
+from armor_model_pipeline import legacy_element
 import cape_motion as M
+import cape_animation_pipeline as animation
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -84,9 +86,9 @@ def data_url(im: Image.Image) -> str:
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
-def neg_xy(vec) -> list:
+def editor_rotation(vec) -> list:
     v = list(vec or [0, 0, 0])
-    return [round(-v[0], 4), round(v[1], 4), round(v[2], 4)]
+    return [round(-v[0], 4), round(-v[1], 4), round(v[2], 4)]
 
 
 def face_uv(spec) -> dict | None:
@@ -114,7 +116,7 @@ def make_element(bone: dict, ci: int, cube: dict, key: str) -> dict:
     x, y, z = -(o[0] + sz[0]), o[1], o[2]
     f = [round(v, 4) for v in (x, y, z)]
     t = [round(v, 4) for v in (x + sz[0], y + sz[1], z + sz[2])]
-    rot = neg_xy(cube.get("rotation", [0, 0, 0]))
+    rot = editor_rotation(cube.get("rotation", [0, 0, 0]))
     if "pivot" in cube:
         origin = list(cube["pivot"])
         origin[0] = -origin[0]
@@ -144,44 +146,49 @@ def make_group(name: str, pivot, rotation, children, key: str,
     return {
         "name": name, "uuid": uid(key),
         "origin": [round(-p[0], 4), round(p[1], 4), round(p[2], 4)],
-        "rotation": neg_xy(rotation),
+        "rotation": editor_rotation(rotation),
         "visibility": True, "isOpen": is_open, "shade": True,
         "export": True, "locked": False, "autouv": 0,
         "children": children,
     }
 
 
-def kf(channel: str, t: float, values, key: str,
-       derivative, length: float) -> dict:
-    """Keyframe Bézier con tangentes de la DERIVADA ANALÍTICA.
-
-    El mango dura un tercio del intervalo entre muestras: antes era 0.30 s
-    fijo, que en el clip de 0.8 s se metía dentro de cuatro keyframes
-    vecinos y producía rebotes. Con `dt = intervalo/3` la curva es C1 y
-    no invade el tramo siguiente.
-    """
-    vals = [round(float(v), 4) for v in values]
-    dt = length / M.WAVE_SAMPLES / 3.0
-    slope = [round(float(d) / length * dt, 5) for d in derivative]
-    return {
-        "channel": channel,
-        "data_points": [{"x": str(vals[0]), "y": str(vals[1]),
-                         "z": str(vals[2])}],
-        "uuid": uid(key),
-        "time": round(t, 4),
-        "color": -1,
-        "interpolation": "bezier",
-        "bezier_linked": False,
-        "bezier_left_time": [round(-dt, 5)] * 3,
-        "bezier_left_value": [-v for v in slope],
-        "bezier_right_time": [round(dt, 5)] * 3,
-        "bezier_right_value": slope,
-    }
+def editor_vector(channel: str, v) -> list:
+    if channel == "rotation":
+        return editor_rotation(v)
+    if channel == "position":
+        return [-v[0], v[1], v[2]]
+    return list(v)
 
 
-# Cada clip arranca con fase distinta y tiene su propio carácter en
-# `cape_motion.STYLES`. Ya NO hay pista `effects`: las partículas son
-# runtime (`CapaDeteriorerItem.spawnAura`), no geometría ni keyframes.
+def channel_keys(track, aname, bname, channel, style, length):
+    points = sorted((float(t), p) for t, p in track.items())
+    axis = {"rotation": "r", "position": "p", "scale": "s"}[channel]
+    for j, (t, point) in enumerate(points):
+        values = editor_vector(channel, point["vector"])
+        assert point["easing"] == "linear", (aname, bname, channel, point)
+        key = {
+            "channel": channel,
+            "data_points": [{k: f"{v:g}" for k, v in zip("xyz", values)}],
+            "uuid": uid(f"{aname}/{bname}/{axis}{j}"),
+            "time": t,
+            "color": -1,
+            "interpolation": "linear",
+        }
+        if channel == "rotation":
+            # Tangentes en unidades/segundo; mismo derivado a ambos lados
+            # aunque los timestamps estén redondeados en GeckoLib.
+            d = editor_vector(channel, M.slope(bname, style, t / length))
+            left = -(t - points[j - 1][0] if j else points[1][0] - t) / 3.0
+            right = (points[j + 1][0] - t if j + 1 < len(points) else t - points[j - 1][0]) / 3.0
+            key.update(interpolation="bezier", bezier_linked=False,
+                       bezier_left_time=[round(left, 7)] * 3,
+                       bezier_right_time=[round(right, 7)] * 3,
+                       bezier_left_value=[round(v * left / length, 5) for v in d],
+                       bezier_right_value=[round(v * right / length, 5) for v in d])
+        yield key
+
+
 ANIMATION_SPECS = (
     ("idle_respiracion", "idle"),
     ("caminar", "caminar"),
@@ -210,31 +217,18 @@ MARKER_TIMES = {"idle": (0.0, 0.5), "caminar": (0.0, 0.5),
                 "deterioro": (0.0, 0.25, 0.5, 0.75)}
 
 
-def build_animations(anim_bones: list[tuple[str, str]]) -> list[dict]:
-    """8 clips (uno por estado) con rotación, posición y escala C1."""
+def build_animations(anim_bones: list[tuple[str, str]], runtime: dict) -> list[dict]:
+    """Misma duración, muestras y tres bisagras que el JAR."""
     out = []
+    by_style = {style: clip for clip, style in animation.STYLE_BY_CLIP.items()}
     for aname, style in ANIMATION_SPECS:
-        length = M.STYLES[style]["length"]
+        data = runtime["animations"][by_style[style]]
+        length = float(data["animation_length"])
         animators = {}
         for bname, guuid in anim_bones:
-            keyframes = []
-            for j in range(M.WAVE_SAMPLES + 1):
-                f = j / M.WAVE_SAMPLES
-                t = round(length * f, 4)
-                pose = M.sample(bname, style, f)
-                keyframes.append(kf("rotation", t, pose["rot"],
-                                    f"{aname}/{bname}/r{j}",
-                                    pose["drot"], length))
-                if pose["has_pos"]:
-                    keyframes.append(kf("position", t, pose["pos"],
-                                        f"{aname}/{bname}/p{j}",
-                                        pose["dpos"], length))
-                if pose["has_scale"]:
-                    keyframes.append(kf("scale", t, pose["scale"],
-                                        f"{aname}/{bname}/s{j}",
-                                        pose["dscale"], length))
-            animators[guuid] = {"name": bname, "type": "bone",
-                                "keyframes": keyframes}
+            keyframes = [k for channel, track in data["bones"][bname].items()
+                         for k in channel_keys(track, aname, bname, channel, style, length)]
+            animators[guuid] = {"name": bname, "type": "bone", "keyframes": keyframes}
         times = MARKER_TIMES[style]
         markers = [{"color": -1, "time": round(length * t, 4), "name": nm}
                    for t, nm in zip(times, MARKERS[style])]
@@ -256,12 +250,15 @@ def build_animations(anim_bones: list[tuple[str, str]]) -> list[dict]:
     return out
 
 
-def build(geo: dict | None = None, atlas: Image.Image | None = None) -> dict:
+def build(geo: dict | None = None, atlas: Image.Image | None = None,
+          runtime: dict | None = None) -> dict:
     """Admite geometría y atlas en memoria para comparar antes de exportar."""
     if geo is None:
         geo = json.loads(GEO.read_text())["minecraft:geometry"][0]
     if atlas is None:
         atlas = atlas_texture()
+    if runtime is None:
+        runtime = json.loads(animation.ANIM.read_text())
     # v1.17.2: el geo del mod conserva los 72 huesos PRISTINOS de la
     # armadura antigua (helmet, dedos, manos, arnes, broches) porque el
     # renderer Java los oculta con setHidden(true). Blockbench NO oculta
@@ -269,7 +266,7 @@ def build(geo: dict | None = None, atlas: Image.Image | None = None) -> dict:
     # alrededor de la capa. El archivo de Blockbench exporta SOLO los
     # huesos de la capa nueva (v15_/v16_/v17_); el geo del mod no cambia.
     bones = geo["bones"]
-    CAPE_BONES = ("v15_", "v16_", "v17_", "v18_")
+    CAPE_BONES = ("v15_", "v16_", "v17_", "v18_", "v19_")
 
     elements, groups, node_by_name = [], [], {}
     anim_bones: list[tuple[str, str]] = []
@@ -282,15 +279,18 @@ def build(geo: dict | None = None, atlas: Image.Image | None = None) -> dict:
         if key.startswith(CAPE_BONES) and not key.startswith(
                 ("v17_mote_", "v17_ash_", "v16_mote_", "v16_ash_")):
             for ci, c in enumerate(b.get("cubes", [])):
-                ek = f"{key}/cube/{ci}"
-                elements.append(make_element(b, ci, c, ek))
+                # Conserva UUID y nombre del cubo de la punta aun cuando
+                # ahora se articula junto con el resto del dobladillo.
+                old_key, old_idx = legacy_element(key, ci)
+                ek = f"{old_key}/cube/{old_idx}"
+                elements.append(make_element({"name": old_key}, old_idx, c, ek))
                 kids.append(uid(ek))
         gkey = key + "/group"
         node_by_name[key] = {"uuid": uid(gkey), "isOpen": False, "children": kids}
         groups.append(make_group(key, b.get("pivot") or [0, 0, 0],
                                  b.get("rotation") or [0, 0, 0],
                                  kids, gkey))
-        if key.startswith(("v17_", "v16_", "v18_")) or key.startswith(("v15_cloth_", "v15_hem_")):
+        if animation.animated(key):
             anim_bones.append((key, uid(gkey)))
 
     roots = []
@@ -324,7 +324,7 @@ def build(geo: dict | None = None, atlas: Image.Image | None = None) -> dict:
         "groups": groups,
         "outliner": roots,
         "textures": [texture],
-        "animations": build_animations(anim_bones),
+        "animations": build_animations(anim_bones, runtime),
     }
 
 
@@ -353,7 +353,8 @@ def main() -> None:
     assert model["resolution"] == {"width": 128, "height": 128}
     # v1.27.0: 156 cubos de capa (150 + 6 de las hombreras nuevas:
     # placa, lam, filo y labio por cada hombro).
-    assert len(model["elements"]) == 156, len(model["elements"])
+    assert len(model["elements"]) == 159, len(model["elements"])
+    assert sum(e["visibility"] for e in model["elements"]) == 132
     assert not any(e["name"].startswith(("v17_mote_", "v17_ash_",
                                        "v16_mote_", "v16_ash_"))
                    for e in model["elements"]), "vuelven las motas 3D"
@@ -362,7 +363,7 @@ def main() -> None:
     assert not any("Steve/Alex" in g["name"] for g in model["groups"])
     _visible = {e["uuid"] for e in model["elements"]}
     assert all(not ({c for c in g["children"] if isinstance(c, str)} & _visible)
-               or g["name"].startswith(("v15_", "v16_", "v17_", "v18_"))
+               or g["name"].startswith(("v15_", "v16_", "v17_", "v18_", "v19_"))
                for g in model["groups"]), "un grupo viejo tiene cubos visibles"
     for e in model["elements"]:
         for f in e["faces"].values():
@@ -381,10 +382,8 @@ def main() -> None:
             for k in an["keyframes"]:
                 assert uuid_re.match(k["uuid"])
                 assert k["channel"] in ("rotation", "position", "scale")
-                assert k["interpolation"] == "bezier"
+                assert k["interpolation"] == ("bezier" if k["channel"] == "rotation" else "linear")
                 assert k["data_points"]
-                assert all(abs(x + y) < 0.002 for x, y in zip(
-                    k["bezier_left_value"], k["bezier_right_value"]))
             total += len(an["keyframes"])
     # Ojo: el flag `"particle": false` de la textura SÍ es legítimo (es un
     # campo de Blockbench). Lo que no puede aparecer es un canal de efectos

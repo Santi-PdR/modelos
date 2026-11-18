@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """Atlas 128×128 de la capa equipada. No se usa para el item plegado.
 
-Paño equipado: doblez envolvente en el cuello granate y caras violetas
-anchas en los jirones, con roturas mates. Cada franja cae a su propio
-ritmo según la altura de su punta. Sólo se pintan las UV existentes,
-sin galones, emblemas ni cambios de silueta.
+Paño de sarga granate y forro mineral malva, pintados por gajo. Las
+vetas de hilo siguen el pliegue, y las roturas muestran un borde pálido
+antes de caer a sombra. Acero azulado quemado en hombreras y cadena.
 
-Los parches metálicos y el diseño de energía anterior se conservan. La
+El diseño de energía anterior se conserva. La
 máscara de brillo se genera con los trazos originales; el RGB de todo
 texel con glow se conserva, incluso en el halo que antes dependía del
 color del paño. Alfa del atlas fijo a 255.
@@ -40,18 +39,18 @@ LINK_TOP = (96, 80, 112, 96)      # canto superior del eslabón
 # caída las caras frías tienen más azul que rojo, sin competir en
 # saturación con el rosa protegido.
 CRIMSON_PLEATS = (
-    (0,  ((33, 6, 18), (128, 26, 48), (178, 49, 71))),
-    (14, ((30, 6, 17), (117, 24, 41), (168, 46, 66))),
-    (26, ((25, 5, 17), (100, 18, 39), (145, 40, 61))),
-    (37, ((22, 6, 23), (77, 17, 46), (125, 38, 68))),
-    (47, ((17, 6, 22), (55, 16, 41), (102, 34, 64))),
+    (0,  ((37, 5, 20), (119, 22, 42), (201, 68, 89))),
+    (15, ((44, 8, 25), (141, 31, 54), (219, 80, 98))),
+    (25, ((32, 6, 26), (112, 23, 52), (192, 61, 95))),
+    (36, ((24, 8, 30), (82, 18, 56), (144, 46, 97))),
+    (47, ((14, 6, 22), (57, 13, 44), (118, 38, 76))),
 )
 VIOLET_PLEATS = (
-    (0,  ((21, 8, 34), (56, 26, 82), (108, 60, 143))),
-    (14, ((25, 11, 40), (64, 28, 97), (120, 68, 155))),
-    (27, ((27, 11, 44), (83, 40, 122), (138, 81, 179))),
-    (36, ((24, 10, 40), (93, 48, 137), (147, 91, 192))),
-    (47, ((19, 8, 34), (72, 34, 106), (127, 69, 162))),
+    (0,  ((23, 12, 39), (53, 34, 84), (113, 77, 148))),
+    (15, ((26, 11, 46), (72, 42, 107), (130, 86, 173))),
+    (25, ((30, 13, 50), (87, 48, 127), (151, 104, 193))),
+    (38, ((26, 12, 43), (94, 54, 139), (165, 115, 202))),
+    (47, ((17, 8, 29), (75, 35, 110), (137, 88, 172))),
 )
 # Trayectorias a mano en la anchura de cada UV (0..15). El forro
 # desplaza la trayectoria para que sus crestas no calquen las de arriba.
@@ -66,7 +65,7 @@ FOLD_SPINES = (
 )
 # Fracción de la altura REAL de cada jirón, no una banda horizontal.
 # Algunos faldones cortos todavía muestran más granate que violeta.
-VIOLET_BREAK = (0.60, 0.56, 0.47, 0.52, 0.48, 0.65)
+VIOLET_BREAK = (0.72, 0.53, 0.42, 0.45, 0.40, 0.66)
 # RGB congelado de la textura v1.55.0 (sólo texels cubiertos por el glow).
 ENERGY_RGB = Path(__file__).resolve().parent / "originals" / "capa_glow_rgb.png"
 
@@ -88,7 +87,7 @@ def _fold_tones(stops, y):
 
 
 def _paint_shreds(atlas: np.ndarray, *, lining: bool) -> None:
-    """Pliegues sesgados con una segunda cara de tela fría, no de neón."""
+    """Sarga interrumpida, crestas anchas y contracanto en cada gajo."""
     y_base = 48 if lining else 0
     for panel in range(6):
         u = 16 * panel
@@ -97,38 +96,36 @@ def _paint_shreds(atlas: np.ndarray, *, lining: bool) -> None:
         tip = 48 * tip_t(2 * panel + int(lining))
         for y, ridge in enumerate(spine):
             depth = min(1.0, y / tip)
-            # Variación por bloques grande, sin un patrón de ruido por texel.
-            step = (y // 5 + panel * 3 + y // 11) % 5 - 2
-            spread = 5.05 - 0.85 * depth + 0.34 * step
-            taper = max(0.0, (depth - 0.78) / 0.22)
+            step = (y // 6 + panel * 3) % 5 - 2
+            spread = 5.7 - 1.38 * depth + 0.31 * step
             warm = _fold_tones(CRIMSON_PLEATS, y)
             cold = _fold_tones(VIOLET_PLEATS, y)
             for x in range(16):
                 d = hand * (x - ridge)
                 tone = 0
-                if -spread - 1.6 <= d <= spread + 2.3 - taper:
+                if -spread - 1.0 <= d <= spread + 1.9:
                     tone = 1
-                if -spread + 0.25 <= d <= spread + 0.6 - taper * 1.3:
+                if -spread <= d <= spread - 0.6:
                     tone = 2
-                if -3.35 + 0.23 * step <= d < 0.85 - taper * 0.6:
+                if -3.9 + 0.3 * step <= d <= -0.5:
                     tone = 3
-                if -2.3 < d <= -0.55 and (y + panel * 4) % 18 < 12:
+                if -2.9 + 0.24 * step < d <= -1.6 and (y + panel * 6) % 22 < 16:
                     tone = 4
-                # Surco quebrado que separa dos caras anchas del pliegue.
-                if 2.25 + 0.47 * step < d < 3.65 + 0.47 * step and (y + panel * 7) % 23 < 13:
+                # Giro del canto: recorte roto, con una cara visible por
+                # detrás. No repite una raya continua de arriba a abajo.
+                if 0.4 < d < 1.55 + 0.35 * step and y > 7 + (panel * 3) % 12:
                     tone = 1
-                if not lining:
-                    # La cara fría asoma en diagonal y en distinto punto
-                    # de cada faldón. La cresta granate cede más tarde.
-                    onset = tip * VIOLET_BREAK[panel] - 0.72 * d + 0.42 * step
-                    if tone >= 3 and panel in (0, 1, 5):
-                        onset += 2.8
-                    fade = min(1.0, max(0.0, (y - onset) / 7.0))
-                    color = _mix(warm[tone], cold[tone], fade)
-                else:
+                if lining:
                     color = cold[tone]
+                else:
+                    onset = tip * VIOLET_BREAK[panel] + 0.85 * d + 0.48 * step
+                    fade = min(1.0, max(0.0, (y - onset) / 6.0))
+                    color = _mix(warm[tone], cold[tone], fade)
+                if tone > 1 and (x + hand * (y // 2) + panel) % 6 == 0 and y % 9 < 7:
+                    # Dos texels de sarga, sólo en las caras anchas.
+                    color = _mix(color, cold[4] if lining else warm[4], .12)
                 if x in (0, 15):
-                    color = _mix((19, 6, 23), color, 0.40)
+                    color = _mix((22, 7, 29), color, .25 + .12 * (y % 6 < 3))
                 atlas[y_base + y, u + x, :3] = color
 
 
@@ -136,12 +133,11 @@ def _paint_shreds(atlas: np.ndarray, *, lining: bool) -> None:
 # comparten UV dentro de cada parche: el quiebre se coloca en la parte
 # central que realmente muestrean, incluidas las piezas más cortas.
 COWL_FOLDS = {
-    "dorsal": ((23, 5, 15), (71, 14, 29), (153, 41, 61), 8.0),
-    "base": ((21, 4, 13), (66, 11, 24), (141, 32, 50), 5.2),
-    "faldon": ((26, 5, 17), (79, 14, 31), (162, 45, 66), 7.2),
-    "canto": ((17, 5, 15), (48, 9, 22), (89, 21, 40), 6.0),
-    # Nombre del UV histórico: ahora es tela lisa doblada, no un emblema.
-    "estrella": ((27, 5, 18), (82, 15, 32), (167, 48, 70), 9.5),
+    "dorsal": ((26, 6, 21), (98, 17, 42), (195, 64, 91), 6.7),
+    "base": ((21, 5, 18), (81, 13, 37), (157, 49, 72), 5.3),
+    "faldon": ((29, 7, 25), (109, 22, 47), (208, 78, 102), 7.6),
+    "canto": ((15, 6, 20), (52, 11, 30), (111, 32, 56), 6.0),
+    "estrella": ((26, 6, 21), (100, 19, 45), (191, 64, 95), 7.3),
 }
 
 
@@ -167,7 +163,7 @@ def _paint_cowl_panels(atlas: np.ndarray) -> None:
         for x in range(w):
             side = 2.0 * (x + 0.5) / w - 1
             # Curva con fondo redondeado, no un segundo galón en V.
-            lip = low - 7.3 * abs(side + 0.13) ** 2.15 + 1.30 * side
+            lip = low - 5.3 * abs(side + 0.23) ** 2.05 + 3.10 * side
             # La caída secundaria no es paralela; se apaga hacia un borde.
             second = low + 7.7 - 4.1 * abs(side - 0.18) ** 1.65 + 1.3 * side
             fold_weight = 0.98 - 0.48 * abs(side + 0.08)
@@ -178,8 +174,16 @@ def _paint_cowl_panels(atlas: np.ndarray) -> None:
                 color = _fold_edge(color, shadow, crest, y - lip, fold_weight)
                 if name not in ("base", "canto"):
                     color = _fold_edge(color, shadow, crest, y - second, inner_weight)
-                if y > 19.5 - 4.1 * abs(side - 0.1):
-                    color = _mix(color, shadow, 0.31)
+                if y > 13.6 + 5.4 * side - 1.8 * side * side:
+                    lining = _mix((36, 14, 58), color, 0.44)
+                    color = _mix(color, lining, 0.33 + 0.40 * depth)
+                if name != "canto" and (x + y // 2) % 7 == 0 and 3 < y < 17:
+                    color = _mix(color, crest, 0.19)
+                # Fragmentos de hilo expuesto, cortos y diagonales.
+                if name in ("faldon", "estrella") and 8 <= y <= 12 and x in (y - 1, y, 28 - y // 2):
+                    color = _mix(color, (231, 111, 131), 0.24)
+                if abs(side + 0.15 * math.sin(y * 0.24)) > 0.59:
+                    color = _mix(color, shadow, 0.49)
                 atlas[v0 + y, u0 + x, :3] = color
 
 
@@ -198,53 +202,41 @@ def _steel(arr, box, top, bottom, diag=True) -> None:
 
 
 def _pad_plate(arr) -> None:
-    """v1.27.0: la HOMBRERA deja de ser una caja gris.
-
-    Antes era un rectángulo carbón plano (luminancia ~34, sin volumen)
-    que en el juego se leía como una MASA NEGRA pegada al hombro. Ahora
-    es una placa de acero con filo de luz arriba-izquierda, sombra
-    abajo-derecha, remaches con su sombra y un filete carmesí que la
-    ata al paño de la capa.
-    """
-    u0, v0, u1, v1 = PAD
-    _steel(arr, PAD, (104, 106, 126), (34, 34, 46))
-    img = Image.fromarray(arr, "RGBA")
-    d = ImageDraw.Draw(img)
-    d.line([(u0, v0), (u1 - 1, v0)], fill=(176, 178, 198, 255))
-    d.line([(u0, v0), (u0, v1 - 1)], fill=(168, 170, 190, 255))
-    d.line([(u0, v1 - 1), (u1 - 1, v1 - 1)], fill=(16, 16, 24, 255))
-    d.line([(u1 - 1, v0), (u1 - 1, v1 - 1)], fill=(22, 22, 32, 255))
-    for x, y in ((u0 + 3, v0 + 3), (u1 - 6, v0 + 3),
-                 (u0 + 3, v1 - 6), (u1 - 6, v1 - 6)):
-        d.rectangle((x, y, x + 1, y + 1), fill=(196, 198, 216, 255))
-        d.point((x + 1, y + 2), fill=(12, 12, 18, 255))
-    # FILETE carmesí: la hombrera está cosida al paño de la capa.
-    d.line([(u0, v1 - 2), (u1 - 1, v1 - 2)], fill=(126, 30, 48, 255))
-    arr[...] = np.asarray(img, dtype=np.uint8)
+    """Acero de tormenta: biseles interiores, remaches y arañazos mates."""
+    u, v, _, _ = PAD
+    _steel(arr, PAD, (102, 101, 134), (31, 28, 46))
+    image = Image.fromarray(arr)
+    draw = ImageDraw.Draw(image)
+    def trace(pts, color):
+        draw.line([(u+x, v+y) for x, y in pts], fill=(*color, 255))
+    trace([(1, 12), (1, 5), (4, 2), (12, 2)], (160, 160, 188))
+    trace([(3, 12), (11, 12), (13, 10), (13, 4)], (28, 22, 35))
+    trace([(4, 10), (8, 6), (11, 6)], (67, 39, 70))
+    trace([(7, 8), (9, 5)], (157, 133, 155))
+    trace([(8, 8), (10, 6)], (35, 25, 45))
+    for x, y in ((4, 4), (11, 4), (4, 11), (11, 10)):
+        draw.point((u + x + 1, v + y + 1), fill=(24, 22, 36, 255))
+        draw.point((u + x, v + y), fill=(201, 185, 200, 255))
+    arr[...] = np.asarray(image)
 
 
 def _pad_side(arr) -> None:
-    """Lateral de la placa: acero más oscuro con el mismo filete."""
-    u0, v0, u1, v1 = PAD_SIDE
-    _steel(arr, PAD_SIDE, (62, 64, 82), (22, 22, 30), diag=False)
-    img = Image.fromarray(arr, "RGBA")
-    d = ImageDraw.Draw(img)
-    d.line([(u0, v0), (u1 - 1, v0)], fill=(120, 122, 142, 255))
-    d.line([(u0, v0 + 8), (u1 - 1, v0 + 8)], fill=(126, 30, 48, 255))
-    d.line([(u0, v1 - 1), (u1 - 1, v1 - 1)], fill=(14, 14, 20, 255))
-    arr[...] = np.asarray(img, dtype=np.uint8)
+    u, v, _, _ = PAD_SIDE
+    _steel(arr, PAD_SIDE, (96, 88, 118), (19, 15, 33), diag=False)
+    for y, color in ((2, (155, 149, 181)), (4, (51, 39, 63)), (9, (93, 36, 67)),
+                     (10, (60, 18, 38)), (13, (18, 14, 29))):
+        arr[v + y, u + 1:u + 15, :3] = color
+    for k in (4, 10):
+        arr[v + 6:v + 8, u + k, :3] = (142, 117, 152)
+        arr[v + 8, u + k + 1, :3] = (28, 19, 40)
 
 
 def _crest(arr) -> None:
-    """Cresta exterior: el filo de la hombrera que ATRAPA la luz."""
-    u0, v0, u1, v1 = CREST
-    _steel(arr, CREST, (188, 190, 210), (58, 58, 76), diag=False)
-    img = Image.fromarray(arr, "RGBA")
-    d = ImageDraw.Draw(img)
-    d.line([(u0, v0), (u1 - 1, v0)], fill=(236, 238, 252, 255))
-    d.line([(u0, v0 + 1), (u1 - 1, v0 + 1)], fill=(214, 216, 234, 255))
-    d.line([(u0, v1 - 1), (u1 - 1, v1 - 1)], fill=(26, 26, 36, 255))
-    arr[...] = np.asarray(img, dtype=np.uint8)
+    u, v, _, _ = CREST
+    _steel(arr, CREST, (169, 162, 193), (52, 44, 77), diag=False)
+    arr[v + 3, u + 1:u + 15, :3] = (188, 181, 204)
+    arr[v + 5, u + 2:u + 14, :3] = (61, 42, 70)
+    arr[v + 11, u + 3:u + 13, :3] = (101, 52, 90)
 
 
 def _link(arr) -> None:
@@ -267,9 +259,9 @@ def _link(arr) -> None:
             if r < 0.52:
                 c = (12, 11, 18)              # HUECO del eslabón
             elif r <= 1.0:
-                c = _mix((124, 126, 146), (48, 48, 62), (i + j) / span)
+                c = _mix((133, 125, 153), (47, 39, 63), (i + j) / span)
                 if r > 0.86 and dx < 0.0 and dy < 0.0:
-                    c = (226, 228, 244)      # brillo especular
+                    c = (222, 211, 235)      # brillo especular
                 elif r < 0.68:
                     c = (30, 29, 40)          # sombra interior
             else:

@@ -1,71 +1,23 @@
 <!doctype html>
 <html lang="es">
-<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Capa v1.58.0 — ver el modelo</title>
+<meta name="color-scheme" content="dark">
+<title>Mantle of the Blight Star · v1.59.0</title>
 <style>
-  body{margin:0;background:#0e0c14;color:#ece4f5;font:16px system-ui,sans-serif;
-       display:flex;min-height:100vh;align-items:center;justify-content:center}
-  main{max-width:760px;padding:32px}
-  h1{font-size:26px;margin:0 0 8px}
-  p{color:#a99fbb;line-height:1.5}
-  .grid{display:grid;gap:14px;margin-top:26px}
-  a{display:block;padding:18px 20px;border:1px solid #3a2c4c;border-radius:10px;
-    background:#1a1324;color:#f4e9ff;text-decoration:none;transition:.15s}
-  a:hover{border-color:#e64fa8;background:#241633}
-  a b{display:block;font-size:17px;margin-bottom:4px}
-  a span{color:#a99fbb;font-size:13px}
-  code{color:#f07ac2}
+body{background:#141019;color:#f4e7ee;max-width:960px;margin:48px auto;padding:0 18px;font:17px/1.55 system-ui,sans-serif}h1{font:clamp(2.4em,7vw,4em)/1.02 Georgia,serif;margin:12px 0}a{color:#ffb4d4}.k{color:#ffb4d4;text-transform:uppercase;letter-spacing:.14em;font-size:.79em}nav{display:flex;flex-wrap:wrap;gap:10px;margin:26px 0}nav a{border:1px solid #634459;padding:8px 13px;border-radius:7px;text-decoration:none}nav a:hover{background:#352436}img{width:100%;border-radius:12px}small{color:#c7b3c7}
 </style>
-</head>
-<body>
 <main>
-  <h1>Capa Deteriorer · v1.58.0</h1>
-  <p>Cuello granate con dobleces redondeados, jirones violetas más visibles
-    y desgarros mates. La geometría, el brillo y las ocho animaciones no cambian.</p>
-  <div class="grid">
-    <a href="capa_v1580_antes_despues.png"><b>Ver los nuevos pliegues y jirones</b>
-       <span>Capturas de v1.57.0 y comparación con la misma cámara y geometría.</span></a>
-    <a href="capa_v1170_visor.html"><b>Ver el modelo en 3D (recomendado)</b>
-       <span>Visor autocontenido: rota con el ratón, cambia de vista y reproduce los 8 estados y las chispas exclusivas.</span></a>
-    <a href="https://github.com/Santi-PdR/modelos/releases/tag/v1.58.0"><b>JAR v1.58.0 (Release)</b>
-       <span>Forge 1.20.1 · JDK 17 + Gradle 8.8 · descarga directa.</span></a>
-    <a href="capa_v1570_antes_despues.png"><b>Comparar v1.56.0 y v1.57.0</b>
-       <span>Las referencias de color y el repintado inicial de granate y violeta.</span></a>
-    <a href="capa_v1560_antes_despues.png"><b>Comparar v1.55.0 y v1.56.0</b>
-       <span>Modelo equipado y atlas 3D, a la misma escala. 6.470 texels del paño y forro cambian.</span></a>
-    <a href="https://github.com/Santi-PdR/modelos/releases/download/v1.58.0/CAPA_v1.58.0.bbmodel"><b>🔗 Link directo del .bbmodel (v1.58.0)</b>
-       <span>Modelo con la textura nueva embebida, igual al archivo local de abajo.</span></a>
-    <a href="capa_v1170_icon_compare.png"><b>Icono del item (ahora visible)</b>
-       <span>El inventario usa el PNG 2D de 16×16 ampliado con NEAREST; el renderer 3D ya no lo tapa.</span></a>
-    <a href="CAPA_v1.58.0.bbmodel" download><b>Descargar el .bbmodel para Blockbench</b>
-       <span>156 cubos de capa · 225 grupos · 8 animaciones · 26208 keyframes C1 · textura 128×128 embebida · sin maniquí, sin cubos sueltos y sin partículas externas.</span></a>
-    <a href="capa_v1170_comparativa.png"><b>Comparativa con tu referencia</b>
-       <span>Tu PNG de Blockbench a la izquierda, el modelo actual a la derecha.</span></a>
-    <a href="capa_v1170_animaciones.png"><b>Hoja de animaciones</b>
-       <span>18 poses del ondeo por tramo y del pulso de las venas.</span></a>
-    <a href="capa_v1170_estados.png"><b>Los 8 estados de movimiento</b>
-       <span>Reposo, caminar, correr, volar, caer, agacharse, agua y deterioro, en dos tiempos cada uno.</span></a>
-    <a href="capa_v1170_animaciones.gif"><b>GIF animado</b>
-       <span>18 fotogramas en bucle de la nueva curva C1.</span></a>
-    <a href="capa_v1170_particles.png"><b>Sprites de partículas (runtime)</b>
-       <span><code>capa_spark</code>: 3 sprites propios, chispa rectangular vertical con centro brillante. Aparece SÓLO al equipar la capa, en bordes y puntas. Sin partículas vanilla ni JSON Snowstorm.</span></a>
-    <a href="ICONO_APROBADO_BACKUP.png"><b>Backup del icono aprobado (v1.13)</b>
-       <span>Byte-idéntico al icono histórico · <code>tools/restore_icon.py</code> lo restaura. El icono PREFERIDO de la v1.25.0 (el activo) está en <code>referencias/ICONO_PREFERIDO_BACKUP.png</code> y en <code>referencias/ICONO_V125_PREFERIDO_BACKUP.png</code>.</span></a>
-    <a href="capa_v1170_side_relief.png"><b>Vista de perfil (sin piezas sueltas)</b>
-       <span>Comprobación de que no queda ninguna barra ni punto flotando alrededor de la capa.</span></a>
-    <a href="capa_v1170_silhouette_compare.png"><b>Autoevaluación visual</b>
-       <span>Color calibrado por medición: cobertura, energía y silueta comparadas décima a décima con tu PNG.</span></a>
-    <a href="capa_v1180_atlas_desde_imagen.png"><b>Atlas = tu imagen limpiada</b>
-       <span>96×48 sin checkerboard ni maniquí; cada tramo 3D muestrea su propio píxel (<code>foto_uv()</code>).</span></a>
-  </div>
-  <p style="margin-top:26px;font-size:13px">Otros archivos de v1.58.0:
-     <code>capa_v1170_preview.png</code> (6 vistas),
-     <code>capa_v1170_front_rig.png</code>,
-     <code>capa_v1170_side_relief.png</code>,
-     <code>capa_v1170_uv_test.png</code>,
-     <code>CAPA_v1.58.0.bbmodel</code>.</p>
+  <div class="k">v1.59.0 · Modelo equipado</div>
+  <h1>Mantle of the Blight Star</h1>
+  <p>Dos colas irregulares, solapas granate sobre forro violeta, acero biselado y ocho poses. Forge 1.20.1 con GeckoLib 4.8.1.</p>
+  <nav>
+    <a href="https://github.com/Santi-PdR/modelos/releases/tag/v1.59.0">JAR y hashes (release)</a>
+    <a href="CAPA_v1.59.0.bbmodel" download>Proyecto Blockbench</a>
+    <a href="capa_v1170_visor.html">Visor 3D offline</a>
+    <a href="capa_v1170_estados.png">Ocho estados</a>
+    <a href="capa_v1170_animaciones.gif">GIF</a>
+  </nav>
+  <a href="capa_v1590_antes_despues.png"><img src="capa_v1590_antes_despues.png" alt="La capa v1.58.0 frente a la v1.59.0, misma cámara y escala, con detalle de la cadena y el cuello"></a>
+  <p><small>Los renders usan un maniquí neutro. No son capturas in-game.</small></p>
 </main>
-</body>
-</html>

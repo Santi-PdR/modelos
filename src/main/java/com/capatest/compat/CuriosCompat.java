@@ -2,6 +2,7 @@ package com.capatest.compat;
 
 import com.capatest.CapaTestMod;
 import com.capatest.item.CapaDeteriorerItem;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
@@ -52,10 +53,9 @@ public final class CuriosCompat {
 
             @Override
             public void curioTick(SlotContext slotContext, ItemStack stack) {
-                if (slotContext.entity() instanceof Player player) {
-                    boolean deterioro = stack.isDamaged()
-                            || player.getHealth() < player.getMaxHealth() * 0.5F;
-                    CapaDeteriorerItem.spawnAura(player.level(), player, deterioro);
+                if (slotContext.entity() instanceof Player player
+                        && !player.getItemBySlot(EquipmentSlot.CHEST).is(stack.getItem())) {
+                    CapaDeteriorerItem.spawnAura(player.level(), player, stack);
                 }
             }
         });

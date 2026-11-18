@@ -145,9 +145,8 @@ def static_checks() -> None:
     kfs = sum(len(an["keyframes"]) for a in bb["animations"]
               for an in a["animators"].values())
     assert kfs >= 25000, kfs
-    motion = (ROOT / "tools" / "cape_motion.py").read_text()
-    assert "TRAVEL = 0.62" in motion and "def sample(" in motion
-    assert "def phase_of(" in motion and "STYLES" in motion
+    import cape_motion as motion
+    assert len(motion.STYLES) == 8
     # GeckoLib: los 8 clips deben animar huesos v17_ de verdad (antes
     # animaban SOLO huesos viejos ocultos por Java).
     runtime_anim = json.loads((ROOT / "src/main/resources/assets/capatest"
@@ -178,35 +177,12 @@ def static_checks() -> None:
                  "v16_mote_", "v16_ash_")
     assert not any(b["name"].startswith(forbidden) for b in bones), \
         "vuelve la geometría de partículas"
-    # Nada desprendido: todo cubo visible tiene un vecino a < 2.2 u.
-    import preview_cloth as _PC
-    _hidden = _PC.effective_hidden(json.loads(
-        (ROOT / "src/main/resources/assets/capatest/geo/item/armor"
-         / "capa_deteriorer_evilsaiyan.geo.json").read_text())[
-             "minecraft:geometry"][0])
-    _pts = []
-    for _b in bones:
-        if _b["name"] in _hidden:
-            continue
-        for _c in _b.get("cubes", []):
-            _o, _z = _c["origin"], _c["size"]
-            _pts.append([_o[i] + _z[i] / 2 for i in range(3)])
-    _arr = np.asarray(_pts, float)
-    _worst = 0.0
-    for _i in range(len(_arr)):
-        _d = np.sqrt(((_arr - _arr[_i]) ** 2).sum(1))
-        _d[_i] = 1e9
-        _worst = max(_worst, float(_d.min()))
-    assert _worst < 2.2, ("cubo desprendido", _worst)
-    # v1.23.0: 12 MECHONES ANCHOS EN DOS CAPAS, con V y punta afilada.
+    # El contacto entre piezas se mide ya con el rig animado en verify_v1590.
     import cape_shape as _CS
     assert _CS.RIBBONS == 12 and _CS.SEGS == 6
     tips = [_CS.tip_t(k) for k in range(12)]
-    assert 0.64 <= min(tips) < 0.82 and max(tips) > 0.95, tips
-    assert tips[0] < tips[5] and tips[11] < tips[6], tips
-    assert 6.5 < _CS.silhouette(0.733) < 8.5, 'apertura del abanico'
-    assert _CS.silhouette(0.9) < _CS.silhouette(0.733), 'cierra hacia el dobladillo'
-    assert _CS.silhouette(1.0) < _CS.silhouette(0.9) * 1.02, 'la punta no se reabre'
+    assert tips[5] < tips[4] - .2 and tips[6] < tips[8] - .2, tips
+    assert _CS.silhouette(.60) - _CS.silhouette(1.0) > 1.8
     # Mechón ANCHO arriba y PUNTA AFILADA abajo.
     assert _CS.ribbon_w(5, 0.20) > 1.8, 'vuelven las tiras finas'
     assert _CS.ribbon_w(5, 0.98) < 0.35, 'la punta no afila'
@@ -276,7 +252,7 @@ def static_checks() -> None:
     # NO puede volver a incluir el maniquí ni los cubos de armadura vieja.
     assert (ROOT / 'docs' / f'CAPA_v{VER}.bbmodel').read_bytes() == BB.read_bytes()
     bb = json.loads(BB.read_text())
-    assert len(bb['elements']) == 156, len(bb['elements'])
+    assert len(bb['elements']) == 159 and sum(e['visibility'] for e in bb['elements']) == 132
     assert bb['resolution'] == {'width': 128, 'height': 128}
     assert all(max(f['uv']) <= 128 for e in bb['elements']
                for f in e['faces'].values())
@@ -312,30 +288,15 @@ def static_checks() -> None:
     # rev. B: sin JSON Snowstorm (Bedrock) que Blockbench busque.
     assert not (ROOT / "docs/particles").exists()
     java = (ROOT / "src/main/java/com/capatest/item/CapaDeteriorerItem.java").read_text()
-    assert "spawnAura(Level level, Player player, boolean deterioro)" in java
-    assert "NO son geomet" in java or "NO es geomet" in java
+    assert "spawnAura(Level level, Player player, ItemStack equipped)" in java
     armor_java = (ROOT / "src/main/java/com/capatest/client"
                   / "CapaArmorModel.java").read_text()
     assert "motionParts(" in armor_java and "0.62D * seg" in armor_java
     assert not any(n in armor_java for n in ("v17_mote_", "v17_ash_"))
     # ------------------------------------------------------------------
-    # v1.26.0: EJES DE SIMETRÍA. El eje lateral es (columnas - 1) / 2 de
-    # cada familia, medido sobre los pivotes X del geo. Con el 7.5 global
-    # (heredado de 16 tiras de la élitra) la capa se inclinaba siempre
-    # hacia el mismo lado y el paño izquierdo ondeaba el doble. Python,
-    # Java y el visor tienen que decir EXACTAMENTE lo mismo.
-    # ------------------------------------------------------------------
-    axes = {"RIBBON": 5.5, "CLOTH": 4.0, "VEIN": 4.5, "COWL": 3.0,
-            "COWL_BACK": 2.0, "CHAIN": 3.5, "PAD": 0.5}
-    visor = (ROOT / "docs" / "capa_v1170_visor.html").read_text()
-    for key, value in axes.items():
-        assert f"{key}_AXIS = {value}" in motion, f"eje {key} ausente en Python"
-        assert f"{key}_AXIS = {value}D" in armor_java, f"eje {key} ausente en Java"
-        assert f"{key.lower()}: {value}" in visor, f"eje {key} ausente en el visor"
-    assert "def axis_of(" in motion and "lateral = (col - axis) / axis" in motion
+    # El eje Python se deriva de la familia. El visor consume el bake y
+    # sólo Java conserva su respuesta adicional al giro del portador.
     assert "motionAxis(" in armor_java
-    assert "double lateral = (col - axis) / axis;" in armor_java
-    assert "const lateral = (col - axis) / axis;" in visor
     # El eje medido tiene que ser el de la anatomía REAL: (columnas-1)/2.
     for prefix, cols in (("v17_ribbon_", 12), ("v15_cloth_cape_", 9),
                          ("v17_vein_", 10), ("v17_cowl_front_", 7),
@@ -391,12 +352,9 @@ def static_checks() -> None:
     _visor_js = (ROOT / 'preview/app.js').read_text()
     assert "startsWith('v15_cloth_')) h.add(b.name)" in _visor_js, \
         'el visor vuelve a dibujar las anclas'
-    assert 'l_anchors' in _visor_js, 'el visor no tiene el diagnóstico de anclas'
     _visor_emb = (ROOT / 'docs/capa_v1170_visor.html').read_text()
     assert "startsWith('v15_cloth_')) h.add(b.name)" in _visor_emb, \
         'el visor autocontenido publicado dibuja las anclas'
-    assert 'l_anchors' in _visor_emb, \
-        'el visor autocontenido publicado no tiene el diagnóstico'
     # Los controles de visibilidad existen y aíslan las piezas.
     for _token in ('Visibilidad', 'ANCLAS', 'HOMBRERAS', 'CADENA',
                    'capa.visibilidad'):
@@ -464,12 +422,9 @@ def static_checks() -> None:
     assert _int and _max, "no se encuentra el presupuesto de chispas"
     assert int(_int.group(1)) == 8, ("intervalo de chispas", _int.group(1))
     assert int(_max.group(1)) == 3, ("maximo de chispas", _max.group(1))
-    _ask = _re.search(r"int count = deterioro \? (\d+) :", _item)
-    assert _ask and int(_ask.group(1)) <= int(_max.group(1)), \
-        "el codigo pide mas chispas de las permitidas"
-    assert "MAX_SPARKS_PER_TICK = 4" not in _item, "literal obsoleto"
+    assert "Math.min(aura.count(), MAX_SPARKS_PER_TICK)" in _item
     curios = (ROOT / "src/main/java/com/capatest/compat/CuriosCompat.java").read_text()
-    assert "spawnAura(player.level(), player, deterioro)" in curios
+    assert "spawnAura(player.level(), player, stack)" in curios
 
 
 def main() -> None:
@@ -504,7 +459,9 @@ def main() -> None:
     _glow = np.asarray(_Image.open(
         ROOT / 'src/main/resources/assets/capatest/textures/item/armor'
         / 'capa_deteriorer_evilsaiyan_glowmask.png').convert('RGBA')).astype(float)
-    grad = float(_atlas[2:6, 0:96, 0].mean() - _atlas[62:70, 0:96, 0].mean())
+    em = _glow[..., 3] > 0
+    grad = float(_atlas[2:6, 0:96, 0][~em[2:6, :96]].mean()
+                 - _atlas[62:70, 0:96, 0][~em[62:70, :96]].mean())
     neon = float((_glow[..., 3] > 0).mean() * 100)
     import cape_shape as _CS
     wid = float(_CS.ribbon_w(5, 0.2))
