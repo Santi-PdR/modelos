@@ -7,7 +7,7 @@ Este script es el ÚNICO punto de entrada para regenerar los entregables:
   2. clips + .bbmodel          (tools/cape_animation_pipeline.py, bbmodel_export.py)
   3. recursos del visor        (preview/assets/)
   4. previews software          (tools/preview_cloth.py)
-  5. GIF + hoja de estados      (tools/present_v1590.py)
+  5. GIF + hoja de estados      (tools/present_v1600.py)
   6. comparativas              (render software + medidas)
   7. visor autocontenido       (tools/build_standalone_preview.py)
 
@@ -111,46 +111,17 @@ def step_previews(out: Path) -> None:
 
 def step_gifs_y_estados(ver: str) -> None:
     print("5) comparación a escala, GIF y 8 poses")
-    run(sys.executable, "tools/present_v1590.py", "--out", str(D), "--gif")
+    run(sys.executable, "tools/present_v1600.py", "--out", str(D), "--gif")
     shutil.copy(D / f"capa_v{ver.replace('.', '')}_antes_despues.png", A / "antes_despues.png")
+    shutil.copy(D / "capa_v1600_registro.png", A / "registro.png")
     shutil.copy(D / "capa_v1170_estados.png", A / "estados.png")
     shutil.copy(D / "capa_v1170_animaciones.gif", A / "animacion.gif")
 
 
 def step_comparativas(ver: str) -> None:
     print("6) comparativas")
-    sys.path.insert(0, str(ROOT / "tools"))
-    import numpy as np  # noqa: E402
-    import preview_cloth as P  # noqa: E402
-
-    armor = P.load(P.ARMOR_GEO)
-    hidden = P.effective_hidden(armor)
-    front = P.render(armor, P.ARMOR_TEX, hidden, yaw=0, pitch=8, size=705)
-
-    ref = Image.open(ROOT / "referencias/REFERENCIA_CAPA.png").convert("RGB").crop(
-        (385, 55, 695, 525)).resize((465, 705), Image.LANCZOS)
-    cmp_img = Image.new("RGB", (1230, 800), (14, 12, 20))
-    cd = ImageDraw.Draw(cmp_img)
-    cmp_img.paste(ref, (8, 40))
-    cmp_img.paste(front, (490, 40))
-    cd.text((10, 16), "TU REFERENCIA (Blockbench)", fill=(240, 232, 245))
-    cd.text((494, 16), f"v{ver} - dobladillo partido, solapas oblicuas y acero estratificado",
-            fill=(240, 232, 245))
-    cd.text((10, 754), "Izquierda: TU captura (el maniqui blanco es solo escala). "
-                       "Derecha: la capa SOLA, como se abre en Blockbench",
-            fill=(150, 140, 165))
-    cd.text((10, 774), f"v{ver}: 12 gajos con forro | cadena en arco | 8 poses rotacionales",
-            fill=(150, 140, 165))
-    cmp_img.save(D / "capa_v1170_comparativa.png")
-    cmp_img.save(A / "comparativa_final.png")
-
-    sil = Image.new("RGB", (940, 330), (14, 12, 20))
-    sil.paste(ref.resize((465, 330), Image.LANCZOS), (6, 0))
-    sil.paste(front.crop((0, 120, 705, 705)).resize((465, 330), Image.LANCZOS), (475, 0))
-    ImageDraw.Draw(sil).text((10, 308), "silueta medida del PNG", fill=(235, 228, 245))
-    ImageDraw.Draw(sil).text((479, 308), f"silueta del modelo v{ver}", fill=(235, 228, 245))
-    sil.save(D / "capa_v1170_silhouette_compare.png")
-
+    # La comparación registrada y su máscara ya salen de present_v1600.
+    shutil.copy(D / "capa_v1170_comparativa.png", A / "comparativa_final.png")
     aprobado = Image.open(ROOT / "referencias/ICONO_APROBADO_BACKUP.png").convert(
         "RGBA").resize((256, 256), Image.NEAREST)
     activo = Image.open(RES / "textures/item/capa_deteriorer_evilsaiyan.png").convert(
@@ -170,7 +141,6 @@ def step_comparativas(ver: str) -> None:
            fill=(235, 228, 245))
     ic.save(D / "capa_v1170_icon_compare.png")
     ic.save(D / "capa_v1170_icon_remaster.png")
-    _ = np  # numpy ya importado: el render usa numpy por debajo
 
 
 def step_visor() -> None:

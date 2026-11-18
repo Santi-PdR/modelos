@@ -84,7 +84,7 @@ import math
 from pathlib import Path
 
 import numpy as np
-from cape_atlas_v1230 import build_clean_atlas
+from cape_surface import atlas as reference_surface
 from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 import cape_shape as CS
@@ -504,16 +504,8 @@ def shape_energy_density(out: np.ndarray) -> np.ndarray:
 
 
 def build_armor(used: np.ndarray) -> tuple[Image.Image, Image.Image]:
-    """v1.23.0: atlas LIMPIO, creado a mano, con glowmask FULLBRIGHT.
-
-    Hasta v1.22.0 `build_armor` recortaba la foto del usuario y le añadía
-    grano/twill/bloom: el ruido se leía como motas y cuadros en Blockbench.
-    Ahora `cape_atlas_v1230.build_clean_atlas()` pinta un degradado
-    carmesí -> morado oscuro definido, agujeros de desgaste en las puntas,
-    grietas y bordes neón, y un glowmask que GeckoLib renderiza emisivo.
-    El icono 2D y el item plegado siguen usando su arte propio.
-    """
-    atlas, glowmask = build_clean_atlas()
+    """Paño equipado reconstruido con cartas UV registradas a la referencia."""
+    atlas, glowmask = reference_surface()
     assert atlas.size == (SIZE, SIZE) and glowmask.size == (SIZE, SIZE)
     # Cobertura de UV de la geometría nueva: se calcula para no perder la
     # regresión de "ningún UV fuera del atlas".

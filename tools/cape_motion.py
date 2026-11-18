@@ -25,7 +25,7 @@ class Style:
 
 
 STYLES = {
-    "idle":       Style(3.60, (3, 2, -1), (1.7, 2.1, 2.7), (.4, 1.3, 1.7), 0.4, 2.7),
+    "idle":       Style(3.60, (1.2, 0.9, -0.4), (1.1, 1.7, 2.0), (.3, 1.0, 1.35), 0.4, 2.3),
     "caminar":    Style(1.00, (12, 6, -2), (2.6, 4.4, 4.5), (1.4, 2.6, 4.8), 2.0, 5.2, .4),
     "correr":     Style(0.72, (32, 14, -5), (3.8, 4.6, 6.2), (1.0, 2.3, 4.4), -6.0, 8.4, .8),
     "volar":      Style(1.35, (51, 12, -2), (4.0, 5.5, 5.8), (1.1, 1.9, 3.2), 14.0, 12.0, 1.5),
@@ -107,6 +107,8 @@ def sample(name: str, style: str, f: float) -> tuple[float, float, float]:
             pitch += 4.1 * q * math.sin(2 * a - .6)
         elif style == "deterioro":
             roll += 10.0 * q * hand * beat(a) * math.sin(3 * t + .48 * col - .33 * seg)
+        if col in (0, 10):       # gajos cortos cosidos junto a la hombrera
+            pitch, yaw, roll = pitch*.58, yaw*.55, roll*.57
         return pitch, yaw, roll
 
     col = int(name.rsplit("_", 1)[1]) if name.rsplit("_", 1)[-1].isdigit() else 0
@@ -115,14 +117,14 @@ def sample(name: str, style: str, f: float) -> tuple[float, float, float]:
     if name.startswith("v17_cowl_tooth_"):
         # Solapa de tela pesada: rebote corto. El resto del cuello ancla.
         return .18 * spec.ripple * math.sin(a - .5), 0.0, .12 * spec.ripple * math.sin(a)
-    if name.startswith("v18_chain_"):
-        # Oscilación muy corta para que los eslabones no se separen.
-        return .45 * math.sin(a), 0.0, .84 * math.sin(a + .5)
+    if name.startswith(('v17_cowl_front_', 'v17_cowl_back_', 'v18_chain_')):
+        # El pliegue del cuello y su costura quedan reunidos.
+        return 0.0, 0.0, 0.0
     if name.startswith("v18_pad_"):
         return .55 * math.sin(a), 0.0, .37 * side * math.cos(a)
     if name.startswith("v17_vein_"):
         # Grabadas en su jirón. Rotan con él, escala heredada sin cambios.
-        return 0.0, 0.0, .5 * math.sin(a) * (1.6 if style == "deterioro" else 1.0)
+        return 0.0, 0.0, 0.0
     return .45 * math.sin(a), 0.0, .47 * math.sin(a + .6)
 
 

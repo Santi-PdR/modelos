@@ -278,7 +278,8 @@ def check_visor(geo, runtime):
                        ('armor_glowmask.png',P.ARMOR_TEX.with_stem(P.ARMOR_TEX.stem+'_glowmask')),
                        ('capa_spark_1.png',P.PARTICLE_DIR/'capa_spark_1.png')):
         assert base64.b64decode(files[name].split(',',1)[1]) == file.read_bytes()
-    rawbb = re.search(r'href="data:[^;]+;base64,([^"]+)" download="CAPA_v1\.59\.0\.bbmodel"',html)[1]
+    filename = re.escape(B.DOC.name)
+    rawbb = re.search(r'href="data:[^;]+;base64,([^"]+)" download="' + filename + r'"',html)[1]
     assert base64.b64decode(rawbb) == B.DOC.read_bytes()
     clips = runtime['animations']
     tests = [{'clip':name, 't':clip['animation_length']*f} for name,clip in clips.items() for f in (.0,.177,.409,.711)]

@@ -17,68 +17,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Modelo de la capa equipada v1.14.0 (Deterioro / Evil Saiyan Rosé).
- *
- * <p>La capa es un mosaico 9×3 sobre UN rectángulo global: las 27 caras
- * comparten escala y el canvas 96×48 se lee como una sola ilustración. En
- * runtime se ocultan los 61 huesos originales con cubos que no pertenecen a
- * la cadena {@code chestplate → cape_top/mid/bottom}, pero se dejan vivos sus
- * hijos {@code v15_*}, que heredan las animaciones originales.</p>
- *
- * <p>v1.7.0 usa 3 pliegues anchos en lugar de 9 rayas finas: el relieve en Z
- * de la geometría y el sombreado del canvas muestrean la misma onda, así que
- * el retardo por columna se suaviza para que cada pliegue se mueva como un
- * bloque y no como un código de barras.</p>
- *
- * <p>v1.8.0 añade 5 estrellas 3D ({@code v15_star_*}) sobre la constelación
- * del canvas. Usan la zona emisiva ya existente, así que {@link CapaGlowLayer}
- * las hace latir sin cambiar la cobertura del glowmask.</p>
- *
- * <p>v1.9.0 añade 4 fragmentos orbitales ({@code v15_orbit_*}) alrededor del
- * medallón de Blight Star. Giran muy despacio en Z, con un poco más de energía
- * al correr; es animación cosmética y comparte el mismo fail-safe.</p>
- *
- * <p>También anima las 2 hombreras ({@code v15_pauldron_*}) y las 2 cadenas
- * delanteras ({@code v15_front_chain_*}): siguen el giro del cuerpo y el
- * sprint con amplitudes de 1–2°. Los nervios, drapeados y pesas cuelgan de
- * los paneles/hembras, así que heredan la onda sin coste extra de búsqueda.</p>
- *
- * <p>Corrección del crash de v1.5.0 (vigente): GeckoLib guarda las rotaciones
- * de los huesos en <b>radianes</b> (ver {@code BakedModelFactory.constructBone}:
- * {@code Math.toRadians(-rotation.x)}). v1.5.0 sumaba grados directamente,
- * así que un {@code bend} de 12 se convertía en 12 rad ≈ 687°: matrices
- * degeneradas por frame y culling/render inestable. Ahora todos los ángulos
- * se convierten con {@link Math#toRadians(double)}.</p>
- *
- * <p>También se elimina la consulta al modelo bakeado del hot path: puede
- * llamar a {@code AnimationProcessor.setActiveModel()} cuando cambia el modelo,
- * lo que vacía y vuelve a registrar los huesos (y por tanto reinicia los
- * {@link BoneSnapshot}) a mitad de frame. Los huesos se resuelven una sola vez
- * desde el {@code AnimationProcessor} que ya está activo, con un guardia de
- * identidad para sobrevivir a un resource reload.</p>
- *
- * <p>La onda de la tela es 100% cosmética. Si algo inesperado falla, se
- * desactiva una sola vez (con log) y la capa sigue renderizándose con la pose
- * estática del geo, en vez de tirar el juego.</p>
- *
- * <p>REV. B: NO hay motas ni ceniza en el modelo. Los 26 cubos sueltos
- * que aparecían flotando en Blockbench se eliminaron del geo; las
- * partículas las emite {@code CapaDeteriorerItem.spawnAura()} desde el
- * servidor cuando la capa está equipada. Además, la fase de la onda
- * dejó de ser {@code i * 0.37} (un índice global sin relación con la
- * tela) y ahora es {@code -0.62*tramo + columna*0.19}: el movimiento
- * BAJA por cada jirón. Curva y constantes compartidas con
- * {@code tools/cape_motion.py}, el {@code .bbmodel}, el
- * {@code animation.json} de GeckoLib y el visor.</p>
- *
- * <p>v1.21.0: Java NO vuelve a calcular esa onda. GeckoLib ya aplicó
- * {@code sample()} cuando se ejecuta {@code setCustomAnimations}; este
- * modelo sólo SUMA la respuesta al giro/salto/sprint del portador.
- * Antes las dos curvas se pisaban y la capa temblaba distinto en el
- * juego que en Blockbench.</p>
- *
- * Referencias (ideas, no código portado): tr7zw/WaveyCapes, ismaildzf/finery,
- * GlowberryClient #102/#106, FabricExtras/ArmorModelAPI y GeckoLib 1.20.1.
+ * Modelo equipado: GeckoLib anima los ocho clips; la respuesta adicional
+ * del portador actúa sólo en rotación sobre los gajos. El cuello, sus
+ * costuras y las grietas adheridas no reciben una segunda onda.
  */
 public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     private static final String[] SECTIONS = {"cape_top", "cape_mid", "cape_bottom"};
@@ -121,7 +62,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     };
 
     /** Estado por portador; es una instancia del modelo, no un static global. */
-    private final Map<Long, double[]> motion = new ConcurrentHashMap<>();
+    private final Map<Long, CapeResponse> motion = new ConcurrentHashMap<>();
 
     // ------------------------------------------------------------------
     // v1.27.0 — CONTROLES DE VISIBILIDAD (diagnóstico y aislamiento).
@@ -462,18 +403,11 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         if (motion.size() > 128)
             motion.clear();
 
-        double[] m = motion.computeIfAbsent(instanceId, key -> new double[7]);
-        m[0] = Mth.lerp(m[0], targetSpeed, 0.14D);
-        m[1] = Mth.lerp(m[1], targetLift, 0.10D);
-        m[2] = Mth.lerp(m[2], turnTarget, 0.12D);
-        m[3] = Mth.lerp(m[3], targetSneak, 0.12D);
-        m[4] = Mth.lerp(m[4], targetWater, 0.06D);
-        m[5] = Mth.lerp(m[5], targetAir, 0.12D);
-        m[6] = Mth.lerp(m[6], targetSprint, 0.14D);
-
         double time = entity == null
                 ? state.getAnimationTick() / 20.0D
-                : (entity.tickCount + state.getPartialTick()) / 20.0D;
+                : (entity.tickCount + (double) state.getPartialTick()) / 20.0D;
+        double[] m = motion.computeIfAbsent(instanceId, key -> new CapeResponse()).sample(
+                time, targetSpeed, targetLift, turnTarget, targetSneak, targetWater, targetAir, targetSprint);
         double seed = entity == null ? instanceId : entity.getId();
         double wind = Math.sin(time * 1.31D + seed * 0.37D) * 0.65D
                 + Math.sin(time * 2.73D + seed * 0.11D) * 0.35D;
@@ -886,36 +820,27 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             GeoBone b = deterioroBones[i];
             if (b == null)
                 continue;
-            int family = deterioroParts[i][0];
+            // El pliegue alto queda armado y las grietas heredan sólo su
+            // gajo. Reaplicarles movimiento las despegaba del paño.
+            if (deterioroParts[i][0] != 0 || !DETERIORO_NAMES[i].startsWith("v17_ribbon_"))
+                continue;
             int col = deterioroParts[i][1];
             int seg = deterioroParts[i][2];
-            double segF = Math.min(1.0D, seg / 6.0D);
-            // v1.26.0: el eje sale de la anatomía de la familia, no de
-            // un 7.5 global (ver motionAxis).
+            if (seg > 4) // pivotes terminales conservados; sus cubos viven en seg4
+                continue;
             double axis = motionAxis(DETERIORO_NAMES[i]);
             double lateral = (col - axis) / axis;
-            // TRAVEL = 0.62 rad/tramo: la onda llega retardada desde
-            // GeckoLib; el offset se propaga con el MISMO retardo.
             double lag = 0.62D * seg;
-            double response = 0.35D + 0.65D * segF;
-            double ripple = Math.sin(time * 1.7D - lag + seed * 0.05D)
-                    * 0.50D * response;
-            double offX = Mth.clamp(-(sprint * 2.2D + airborne * 1.6D
-                    + lift * 0.9D + speed * 0.6D) * response
-                    + (sneak + water) * 1.0D * response, -6.0D, 6.0D);
-            double offY = Mth.clamp(turn * 2.6D * response * lateral
-                    + wind * 0.55D * response + sweep * 0.45D * response,
-                    -5.0D, 5.0D);
-            double offZ = Mth.clamp((gust * 0.9D + wind * 0.35D) * response
-                    * (0.6D + 0.4D * Math.abs(lateral))
-                    + ripple + turn * 1.2D * lateral, -5.0D, 5.0D);
-            if (family == 1) {          // capuchón: casi rígido
-                offX *= 0.35D;
-                offY = 0.0D;
-                offZ *= 0.45D;
-            } else if (family == 2) {  // venas: siguen el estremecimiento
-                offZ *= 1.35D;
-            }
+            double response = 0.35D + 0.65D * seg / 6.0D;
+            double ripple = Math.sin(time * 1.7D - lag + seed * 0.05D) * 0.44D;
+            double offX = Mth.clamp(-(sprint * 1.3D + airborne * 0.9D
+                    + lift * 0.65D + speed * 0.62D) + (sneak + water) * 0.72D,
+                    -CapeResponse.MAX_BACK, CapeResponse.MAX_IN) * response;
+            double offY = Mth.clamp(turn * 1.84D * lateral + wind * 0.38D + sweep * 0.35D,
+                    -CapeResponse.MAX_YAW, CapeResponse.MAX_YAW) * response;
+            double offZ = Mth.clamp((gust * 0.68D + wind * 0.24D) * (0.6D + 0.4D * Math.abs(lateral))
+                    + ripple + turn * 0.86D * lateral,
+                    -CapeResponse.MAX_ROLL, CapeResponse.MAX_ROLL) * response;
             b.setRotX(b.getRotX() + (float) Math.toRadians(offX));
             b.setRotY(b.getRotY() + (float) Math.toRadians(offY));
             b.setRotZ(b.getRotZ() + (float) Math.toRadians(offZ));

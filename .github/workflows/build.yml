@@ -205,6 +205,10 @@ jobs:
           for anim_name, spec in folded_anim['animations'].items():
               assert set(spec['bones']) <= folded_names, (anim_name, set(spec['bones']) - folded_names)
 
+          ver = next(l.split('=', 1)[1].strip() for l in
+                     (root / 'gradle.properties').read_text().splitlines() if l.startswith('mod_version='))
+          registered = tuple(map(int, ver.split('.'))) >= (1, 60, 0)
+
           # v1.17.0: la geometría se TRAZA del PNG del usuario. Los 72
           # huesos originales siguen BYTE-IDÉNTICOS; encima, 150 huesos
           # nuevos reconstruyen el ABANICO medido en la referencia.
@@ -215,15 +219,17 @@ jobs:
           assert len(profile['energy_marks']) >= 40, 'faltan grietas trazadas'
           assert (root / 'referencias/REFERENCIA_CAPA_recorte.png').is_file()
           assert (root / 'docs/referencia_analizada.png').is_file()
-          assert 'def nearest_ribbon' in (root / 'tools/cape_shape.py').read_text()
           texture_pipeline = (root / 'tools/texture_pipeline.py').read_text()
-          # v1.17.2: el atlas YA NO samplea pixeles crudos del recorte (asi
-          # entraban el brazo beige, el arnes gris y el fondo a cuadros).
-          # v1.18.0: el atlas ES la foto limpia de la referencia y cada
-          # tramo 3D muestrea su propio pixel por UV local.
-          assert 'from reference_canvas import canvas as foto' in texture_pipeline
-          assert 'def foto_uv(' in (root / 'tools/armor_model_pipeline.py').read_text()
-          assert 'def fan_x(' in (root / 'tools/cape_shape.py').read_text()
+          if registered:
+              saved = (root / 'referencias/REFERENCIA_CAPA.png').read_bytes()
+              assert hashlib.sha256(saved).hexdigest() == '3a42a0feb6d468211eb6ae4c9c96f0c33c6f769063bc2805795b24dadfa07196'
+              assert (root / 'tools/cape_reference.py').is_file()
+              assert (root / 'tools/cape_surface.py').is_file()
+          else:
+              assert 'def nearest_ribbon' in (root / 'tools/cape_shape.py').read_text()
+              assert 'from reference_canvas import canvas as foto' in texture_pipeline
+              assert 'def foto_uv(' in (root / 'tools/armor_model_pipeline.py').read_text()
+              assert 'def fan_x(' in (root / 'tools/cape_shape.py').read_text()
           assert (root / 'referencias/REFERENCIA_CAPA_atlas96.png').is_file()
           armor_geo = json.loads((base / 'geo/item/armor/capa_deteriorer_evilsaiyan.geo.json').read_text())['minecraft:geometry'][0]
           orig_bones = json.loads(orig_geo_path.read_text())['minecraft:geometry'][0]['bones']
@@ -268,28 +274,31 @@ jobs:
                          for n in new_names), 'vuelven las tiras finas sueltas'
           assert sum(1 for n in new_names if n.startswith('v17_vein_')) == 10
           veins = [b for b in new_bones if b['name'].startswith('v17_vein_')]
-          assert all(c['uv']['north']['uv'][0] == 98.0
-                     for b in veins for c in b['cubes']), 'grietas sin parche NEON'
           ribbons = [b for b in new_bones if b['name'].startswith('v17_ribbon_')]
           assert all(0.40 <= c['size'][2] <= 0.85
                      and 0.01 <= c.get('inflate', 0) <= 0.05
-                     and c['uv']['north']['uv'][0] == c['uv']['south']['uv'][0]
-                     for b in ribbons for c in b['cubes']), 'banda UV / espesor'
-          # Anclaje +Z, dos capas y dobladillo con las tres últimas piezas
-          # solidarias. Los 24 pivotes terminales sin cubo retienen sus tracks.
+                     for b in ribbons for c in b['cubes']), 'espesor de paño'
           zs = [c['origin'][2] + c['size'][2] / 2 for b in ribbons for c in b['cubes']]
           assert min(zs) > 2.25 and max(zs) - min(zs) > 1.5
-          assert all(b['cubes'][0]['size'][0] >= 1.55 for b in ribbons if b['name'].endswith('seg0'))
           ends = {b['name']: b['cubes'] for b in ribbons if b['name'].endswith('seg4')}
-          assert len(ends) == 12 and all(len(cs) == 3 and cs[-1]['size'][0] <= .2 for cs in ends.values())
+          assert len(ends) == 12 and all(len(cs) == 3 for cs in ends.values())
           assert all(not b.get('cubes') for b in ribbons if b['name'].endswith(('seg5','seg6')))
-          for center, long in ((5, 4), (6, 8)):
-              assert ends[f'v17_ribbon_{center}_seg4'][-1]['origin'][1] > ends[f'v17_ribbon_{long}_seg4'][-1]['origin'][1] + 4
-          # Atlas limpio: sólo comprobaciones de FICHERO aquí (stdib).
-          # El degradado, el glowmask y la chispa se miden a pixel en
-          # tools/audit_model.py --check (paso con numpy/Pillow instalado).
           assert (base / 'textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png').is_file()
-          assert 'build_clean_atlas' in (root / 'tools/texture_pipeline.py').read_text()
+          if registered:
+              assert all(b.get('parent', '').startswith('v17_ribbon_') for b in veins)
+              assert all(c['uv']['north'] != c['uv']['south']
+                         for b in ribbons for c in b['cubes']), 'forro sin UV propia'
+              assert 'from cape_surface import atlas' in texture_pipeline
+          else:
+              assert all(c['uv']['north']['uv'][0] == 98.0
+                         for b in veins for c in b['cubes']), 'grietas sin parche neón'
+              assert all(c['uv']['north']['uv'][0] == c['uv']['south']['uv'][0]
+                         for b in ribbons for c in b['cubes']), 'banda UV'
+              assert all(b['cubes'][0]['size'][0] >= 1.55 for b in ribbons if b['name'].endswith('seg0'))
+              assert all(cs[-1]['size'][0] <= .2 for cs in ends.values())
+              for center, long in ((5, 4), (6, 8)):
+                  assert ends[f'v17_ribbon_{center}_seg4'][-1]['origin'][1] > ends[f'v17_ribbon_{long}_seg4'][-1]['origin'][1] + 4
+              assert 'build_clean_atlas' in texture_pipeline
 
           # El contacto se prueba con cubos transformados y en movimiento
           # (SAT) en Verify equipped model, no con distancia entre centros.
@@ -360,10 +369,15 @@ jobs:
           assert 'Exception | LinkageError' in item_glow
           assert 'new CapaArmorModel(' in armor_renderer
           for token in ('setHidden(true)', 'setChildrenHidden(false)', 'HIDDEN_DETAILS',
-                        'DataTickets.ENTITY', 'getInitialSnapshot', 'v15_cloth_', 'Mth.lerp',
+                        'DataTickets.ENTITY', 'getInitialSnapshot', 'v15_cloth_',
                         'Math.toRadians', 'ConcurrentHashMap', 'CapaTestMod.LOGGER',
                         'Exception | LinkageError', 'private static final int COLUMNS = 9;'):
               assert token in armor_model, token
+          if registered:
+              assert 'CapeResponse' in armor_model and 'Math.expm1' in (
+                  root / 'src/main/java/com/capatest/client/CapeResponse.java').read_text()
+          else:
+              assert 'Mth.lerp' in armor_model
           # v1.27.0: LAS 27 ANCLAS DE LA ONDA NO SE DIBUJAN. Son cubos
           # de 0.16 que existen SÓLO para dar pose a la tela (los usan
           # panels[] y el animation.json). El hueso se conserva; lo que se
@@ -391,7 +405,8 @@ jobs:
           # v1.27.0: los entregables de docs/ son REPRODUCIBLES: los
           # scripts que generan el GIF y la hoja de estados están en el
           # repo (antes vivían en /tmp y se perdían).
-          for _f in ('tools/present_v1590.py', 'tools/build_deliverables.py', 'tools/check_viewer_pose.js'):
+          presenter = 'tools/present_v1600.py' if registered else 'tools/present_v1590.py'
+          for _f in (presenter, 'tools/build_deliverables.py', 'tools/check_viewer_pose.js'):
               assert (root / _f).is_file(), f'falta {_f}'
           # El CÓDIGO FUENTE del visor está versionado: antes todo
           # `preview/` estaba ignorado y el visor publicado (14 MB) no se
@@ -508,16 +523,18 @@ jobs:
           assert 'SEG_FRACTIONS' in (root / 'tools/cape_shape.py').read_text()
           shape_src = (root / 'tools/cape_shape.py').read_text()
           assert 'PROFILE_DATA' in shape_src and 'palette_at' in shape_src
-          # El cierre deja de estar en el centro; ahora se lee una cola por lado.
-          import sys as _sys; _sys.path.insert(0, 'tools')
-          import cape_shape as _CS
-          tips = [_CS.tip_t(k) for k in range(12)]
-          assert len(tips) == 12 and min(tips) >= .64 and max(tips) > .95
-          assert tips[5] < tips[4] - .2 and tips[6] < tips[8] - .2
-          assert _CS.silhouette(1.0) < _CS.silhouette(.60) - 1.8
-          assert 'def charred_hem' in (root / 'tools/texture_pipeline.py').read_text(), 'falta el deshilachado del dobladillo'
-          assert 'v1306: el CAPUCHON' in (root / 'tools/texture_pipeline.py').read_text(), 'falta la calibracion del yugo'
-          assert 'GUION ALARGADO' in (root / 'tools/texture_pipeline.py').read_text(), 'falta el trazo de energia alargado'
+          # Comparar el contorno de v1.60 con la forma de dos colas volvería
+          # a premiar el diseño anterior. Los umbrales nuevos usan el PNG.
+          if not registered:
+              import sys as _sys; _sys.path.insert(0, 'tools')
+              import cape_shape as _CS
+              tips = [_CS.tip_t(k) for k in range(12)]
+              assert len(tips) == 12 and min(tips) >= .64 and max(tips) > .95
+              assert tips[5] < tips[4] - .2 and tips[6] < tips[8] - .2
+              assert _CS.silhouette(1.0) < _CS.silhouette(.60) - 1.8
+              assert 'def charred_hem' in texture_src, 'falta el deshilachado del dobladillo'
+              assert 'v1306: el CAPUCHON' in texture_src, 'falta la calibración del yugo'
+              assert 'GUION ALARGADO' in texture_src, 'falta el trazo de energía alargado'
           assert (root / 'tools/energy_calibration.py').is_file()
           _tp = (root / 'tools/texture_pipeline.py').read_text()
           assert 'def shape_energy_density' in _tp and 'ENERGY_GAIN' in _tp
@@ -626,7 +643,7 @@ jobs:
           assert any(_n.startswith('v17_cowl_')
                      and any(_k['channel'] == 'scale' for _k in _an['keyframes'])
                      for _n, _an in _names.items())
-          # Igualdad de tiempos, RMS y muestreo entre frames en verify_v1590.
+          # Igualdad de tiempos, RMS y muestreo entre frames en Verify equipped model.
           assert set(('cape_top','cape_mid','cape_bottom')) <= set(_names)
           _visor_html = (root / 'docs/capa_v1170_visor.html').read_text()
           assert 'INLINE_ANIMATIONS' in _visor_html and 'poseAt(' in _visor_html
@@ -678,7 +695,10 @@ jobs:
           # .bbmodel que ya no existia.
           _index = (root / 'docs/index.html').read_text()
           assert f'href="CAPA_v{ver}.bbmodel"' in _index, 'docs/index.html con bbmodel local viejo'
-          assert f'releases/tag/v{ver}' in _index, 'docs/index.html con release vieja'
+          if registered:
+              assert 'actions/workflows/build.yml' in _index
+          else:
+              assert f'releases/tag/v{ver}' in _index, 'docs/index.html con release vieja'
           assert f'{ver}' in _index, 'docs/index.html sin la version vigente'
           assert len(ver.split('.')) == 3 and all(x.isdigit() for x in ver.split('.')), ver
           assert f'mod_version={ver}' in (root / 'gradle.properties').read_text()
@@ -776,6 +796,9 @@ jobs:
           elif grep -qx 'mod_version=1.59.0' gradle.properties; then
             python3 tools/cape_motion.py
             python3 tools/verify_v1590.py
+          else
+            python3 tools/cape_motion.py
+            python3 tools/verify_v1600.py
           fi
           # v1240: el calibrador de energia es un lazo cerrado Jacobi; se
           # comprueba que siga siendo importable y que el perfil medido
@@ -788,6 +811,7 @@ jobs:
           CLASSES="$RUNNER_TEMP/cape-state-test"
           mkdir -p "$CLASSES"
           javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/CapeState.java \
+            src/main/java/com/capatest/client/CapeResponse.java \
             src/test/java/com/capatest/item/CapeStateTest.java
           java -cp "$CLASSES" com.capatest.item.CapeStateTest
 
@@ -844,18 +868,6 @@ jobs:
       - name: List built jars
         run: ls -lh build/libs
 
-      # v1.27.0: El JAR tambien se sube como ARTIFACT de Actions. La
-      # descarga del asset de Release rebota a release-assets.github.com,
-      # que esta bloqueado en el sandbox; el artifact se sirve por la API,
-      # que si es accesible. Ademas permite bajar el .jar exacto del run.
-      - name: Upload jar as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: capatest-jar
-          path: build/libs/*.jar
-          if-no-files-found: error
-          retention-days: 30
-
       - name: Verify jar contents (model resources)
         run: |
           set -euo pipefail
@@ -872,6 +884,7 @@ jobs:
             grep -qx 'com/capatest/client/CapaItemRenderer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaItemGlowLayer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaArmorModel.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapeResponse.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaArmorRenderer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapaDeteriorerItem.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeState.class' /tmp/jar-contents.txt
@@ -893,6 +906,8 @@ jobs:
             for asset in \
               textures/item/armor/capa_deteriorer_evilsaiyan{,_glowmask}.png \
               textures/item/capa_deteriorer_evilsaiyan.png \
+              textures/item/cape_folded{,_glowmask}.png \
+              geo/item/cape_folded.geo.json animations/item/cape_folded.animation.json \
               geo/item/armor/capa_deteriorer_evilsaiyan.geo.json \
               animations/item/armor/capa_deteriorer_evilsaiyan.animation.json; do
               asset="assets/capatest/$asset"
@@ -916,6 +931,22 @@ jobs:
           done
           test "$found" -eq 1
 
+      - name: Prepare artifact hash
+        run: |
+          cd build/libs
+          VER="$(sed -n 's/^mod_version=//p' ../../gradle.properties | tr -d '[:space:]')"
+          sha256sum "capatest-$VER.jar" > SHA256SUMS.txt
+
+      - name: Upload verified jar as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: capatest-jar
+          path: |
+            build/libs/capatest-*.jar
+            build/libs/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.
       - name: Stage verified release (draft)
@@ -935,6 +966,7 @@ jobs:
           BBF="docs/CAPA_v$VER.bbmodel"
           BB_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/CAPA_v$VER.bbmodel"
           COMPARISON="docs/capa_v${VER//./}_antes_despues.png"
+          REGISTER="docs/capa_v${VER//./}_registro.png"
           cat > "$NOTES" <<'MD'
           ## Mantle of the Blight Star __TAG__ — build más reciente
 
@@ -947,18 +979,17 @@ jobs:
 
           ### Qué incluye
 
-          - **Silueta equipada**: dobladillo dividido en dos colas, solapas
-            oblicuas, acero estratificado y cadena en arco. 132 cubos
-            visibles; 225 huesos con UUIDs estables en el proyecto.
-          - **Materiales**: sarga granate, forro violeta y cantos de acero.
-            9.141 texels RGB cambiados; alpha 255. Icono, item plegado,
-            glowmasks y 3.380 texels neón/halo intactos.
-          - **Ocho clips**: poses rotacionales en tres bisagras. Visor y
-            proyecto salen del mismo JSON que lleva el JAR. No se cambian
-            los canales de posición ni de escala.
-          - **Mod**: estela de esprint/planeo, pulso doble rosa con poca
-            salud o desgaste alto y prioridad de pecho sobre Curios:back.
-            El pase emisivo varía RGB con alfa fijo; no hay FX en el rig.
+          - **Silueta equipada**: cuello granate alto, costura en U,
+            hombreras de carbón y doce jirones a alturas escalonadas.
+            Comparativa registrada con la misma cámara que la imagen original.
+          - **Materiales**: cartas UV de la superficie visible, forro y cantos
+            mates. 3.380 texels neón, ambas máscaras, plegado e icono intactos.
+          - **Ocho clips**: poses rotacionales en tres bisagras. El visor y
+            proyecto usan los mismos assets que lleva el JAR. No se añaden
+            cambios de posición ni escala en el mod.
+          - **Mod**: suavizado independiente de la tasa de frames y chispas
+            en el borde del cuello y el dobladillo. Se mantiene la prioridad
+            del pecho sobre Curios:back y el pase emisivo con alfa fijo.
 
           ### Descargas de esta Release
 
@@ -975,6 +1006,9 @@ jobs:
           if [ -f "$COMPARISON" ]; then
             printf '| `%s` | Antes/después del modelo equipado con la misma cámara |\n' \
               "$(basename "$COMPARISON")" >> "$NOTES"
+          fi
+          if [ -f "$REGISTER" ]; then
+            printf '| `%s` | Diferencias de la silueta respecto de la referencia |\n' "$(basename "$REGISTER")" >> "$NOTES"
           fi
           printf '\nLos previews son render software: la prueba in-game sigue pendiente.\n' >> "$NOTES"
           sed -i "s/__TAG__/$TAG/g; s/__VER__/$VER/g; s|__BBURL__|$BB_URL|g" "$NOTES"
@@ -997,6 +1031,7 @@ jobs:
                   docs/capa_v1170_preview.png docs/capa_v1170_comparativa.png
                   docs/capa_v1170_estados.png docs/capa_v1170_animaciones.gif)
           if [ -f "$COMPARISON" ]; then ASSETS+=("$COMPARISON"); fi
+          if [ -f "$REGISTER" ]; then ASSETS+=("$REGISTER"); fi
           gh release upload "$TAG" "${ASSETS[@]}" --clobber
 
           # Un borrador aún no tiene tag disponible para consultas anónimas.

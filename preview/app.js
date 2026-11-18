@@ -151,12 +151,12 @@ function playerFaces() {
   // Maniquí Steve/Alex a escala (1 bloque = 16 unidades). NO está en el
   // .geo.json ni en el .bbmodel: sólo se usa para juzgar el ajuste.
   const parts = [
-    [-4, 24, -4, 8, 8, 8, [113, 120, 139]],
-    [-4, 12, -2, 8, 12, 4, [70, 76, 99]],
-    [-8, 12, -2, 4, 12, 4, [82, 88, 112]],
-    [ 4, 12, -2, 4, 12, 4, [82, 88, 112]],
-    [-4,  0, -2, 4, 12, 4, [53, 59, 78]],
-    [ 0,  0, -2, 4, 12, 4, [53, 59, 78]],
+    [-4, 24, -4, 8, 8, 8, [227, 226, 232]],
+    [-4, 12, -2, 8, 12, 4, [40, 38, 47]],
+    [-8, 12, -2, 4, 12, 4, [59, 54, 64]],
+    [ 4, 12, -2, 4, 12, 4, [59, 54, 64]],
+    [-4,  0, -2, 4, 12, 4, [45, 40, 48]],
+    [ 0,  0, -2, 4, 12, 4, [45, 40, 48]],
   ];
   const out = [];
   for (const [x, y, z, w, h, d, color] of parts) {
@@ -209,20 +209,8 @@ function render(faces, yaw, pitch, zoom, size, bounds, tint) {
     const e2=[pv[2][0]-pv[0][0],pv[2][1]-pv[0][1],pv[2][2]-pv[0][2]];
     const n=[e1[1]*e2[2]-e1[2]*e2[1], e1[2]*e2[0]-e1[0]*e2[2], e1[0]*e2[1]-e1[1]*e2[0]];
     const l=Math.hypot(...n);
-    // Iluminacion de presentacion: luz principal + relleno + rim en las
-    // caras de perfil + gamma suave. Antes el minimo 0.40 aplastaba el
-    // violeta y la capa parecia una silueta plana.
-    let shade=0.52;
-    if (l>1e-6) {
-      const nd=Math.abs((n[0]*LIGHT[0]+n[1]*LIGHT[1]+n[2]*LIGHT[2])/l);
-      const rim=1.0-Math.abs(n[2]/l);
-      // v1225: especular suave en las caras de frente y mas rim en los
-      // perfiles. Los pliegues se leen como tela con volumen, no como
-      // laminas planas. Solo afecta al visor, nunca a la autoevaluacion.
-      const spec=Math.pow(nd,6)*0.12;
-      shade=Math.pow(Math.min(1,0.48+0.40*nd+0.12*rim+spec),0.90);
-    }
-    for (const p of pv) { x0=Math.min(x0,p[0]); x1=Math.max(x1,p[0]); y0=Math.min(y0,p[1]); y1=Math.max(y1,p[1]); }
+    // Misma luz aproximada que el render de comparación registrado.
+    const shade=l>1e-6 ? .40+.60*Math.abs((n[0]*LIGHT[0]+n[1]*LIGHT[1]+n[2]*LIGHT[2])/l) : .45;
     prepared.push({pv, uvs:f.uvs, shade, color:f.color || null});
   }
   if (bounds) {
@@ -268,7 +256,7 @@ function render(faces, yaw, pitch, zoom, size, bounds, tint) {
           if (zz<=depth[idx]) continue;
           const uu=U[i][0]+a*(U[j][0]-U[i][0])+b*(U[k][0]-U[i][0]);
           const vv=U[i][1]+a*(U[j][1]-U[i][1])+b*(U[k][1]-U[i][1]);
-          let ui=Math.round(uu), vi=Math.round(vv);
+          let ui=Math.floor(uu), vi=Math.floor(vv);
           if (ui<0) ui=0; else if (ui>=AW) ui=AW-1;
           if (vi<0) vi=0; else if (vi>=AH) vi=AH-1;
           const ti=(vi*AW+ui)*4, di=idx*4;
@@ -294,7 +282,7 @@ function render(faces, yaw, pitch, zoom, size, bounds, tint) {
 /* FX ilustrativos: los impulsos del servidor y la iluminación de
    Minecraft no corren en el navegador. Se usan los assets del mod. */
 const FX = {
-  'animation.idle': [1, .004, .003, .34, .010, .72, .17, 0],
+  'animation.idle': [2, .004, .003, .34, .010, .72, .17, 0],
   'animation.moving': [1, .009, .011, .40, .010, .79, .21, 0],
   'animation.sprint': [2, .012, .029, .50, .010, .87, .13, .1],
   'animation.air': [2, .021, .027, .55, .011, .87, .12, .18],
@@ -312,38 +300,55 @@ function simulatedTint(t, length) {
 }
 function drawRuntimeParticles(seconds, size) {
   const [count, outward, trail, depth, rise]=FX[motionState];
-  const stride=motionState==='animation.idle'||motionState==='animation.sneak' ? .8 : .4;
-  for (let shot=Math.floor(seconds/stride)-4; shot<=Math.floor(seconds/stride); shot++) {
-    const age=seconds-shot*stride, life=trail>.02?1.13:1.58;
+  const sneaking=motionState==='animation.sneak';
+  const stride=sneaking ? .8 : .4;
+  const shotNow=Math.floor(seconds/stride);
+  for (let shot=shotNow-6; shot<=shotNow; shot++) {
+    if (shot<0) continue;
+    const age=seconds-shot*stride;
+    const life=1.98-Math.min(trail/.035,1)*.54;
     if (age<0 || age>=life) continue;
-    const first=shot%2===0?-1:1;
     for (let i=0;i<count;i++) {
-      const side=i===0?first:-first, tip=i!==1;
+      const upper=((motionState==='animation.idle'||motionState==='animation.deterioro')&& i===1)
+              || (motionState==='animation.moving' && shot%3===0) || (sneaking && shot%2===0);
+      const side=(shot+(i===0?0:1))%2===0?-1:1, low=i!==1;
       const jitter=.5+.5*Math.sin(shot*61.7+i*2.92);
-      const p=apply(lastView,[side*(tip?4.3:7.0)+jitter*side+age*18*outward*side,
-        (tip?3.4:7.8)+2*jitter+age*190*rise, depth*16+age*210*trail]);
+      const x0=side*(upper ? .50+.095*jitter : (low?.24:.41)+.145*jitter);
+      const y0=upper ? 1.36+.16*jitter : (low?.13:.54)+.21*jitter;
+      const z0=upper ? .34+.08*jitter : depth+.10*(jitter-.5);
+      const t=upper ? .005 : trail;
+      const p=apply(lastView,[16*(x0+age*14*outward*side),16*(y0+age*13*rise),16*(z0+age*14*t)]);
       const x=size/2+(p[0]-lastCx)*lastScale, y=size/2-(p[1]-lastCy)*lastScale;
-      const w=(trail>.02?.78:.56)*lastScale;
-      ctx.globalAlpha=Math.min(1, age*6)*Math.min(1,(life-age)*2.4)*.79;
+      const w=(.60+.19*jitter+.08*(trail>.02))*lastScale;
+      ctx.globalAlpha=Math.min(1,age*6)*Math.min(1,(life-age)*2.4)*.79;
       ctx.drawImage(SPARK,x-w/2,y-w/2,w,w);
     }
   }
   ctx.globalAlpha=1;
 }
 
-let yaw=12, pitch=9, zoom=1.0, playing=true, t=0, elapsed=0;
+let yaw=25, pitch=10, zoom=1.0, playing=true, t=0, elapsed=0;
 let lastFrame=null, dirty=true, hidden=null, frameBounds=null;
-let showPlayer=false, showFx=false;
+let showPlayer=true, showFx=false, referenceView=false;
 const seek=document.getElementById('seek'), play=document.getElementById('play');
-function setPlaying(value) { playing=value; play.textContent=playing?'Pausar':'Reproducir'; }
+function setReference(value) {
+  referenceView=value;
+  document.getElementById('v34').setAttribute('aria-pressed',String(value));
+  dirty=true;
+}
+function setPlaying(value) {
+  playing=value;
+  if (value) setReference(false);
+  play.textContent=playing?'Pausar':'Reproducir';
+}
 
 function updateBounds() {
   if (!GEO) return;
-  const clip=CLIPS[motionState];
   const lo=[Infinity,Infinity,Infinity], hi=[-Infinity,-Infinity,-Infinity];
-  for (let i=0;i<12;i++) {
-    const f=collect(poseAt(GEO,clip,clip.length*i/12),hidden);
-    if (showPlayer) f.push(...playerFaces());
+  const player=playerFaces();
+  for (const clip of Object.values(CLIPS)) for (let i=0;i<7;i++) {
+    const f=collect(poseAt(GEO,clip,clip.length*i/7),hidden);
+    f.push(...player);
     for (const {pts} of f) for (const p of pts) for (let a=0;a<3;a++) {
       lo[a]=Math.min(lo[a],p[a]); hi[a]=Math.max(hi[a],p[a]);
     }
@@ -359,12 +364,12 @@ function draw(now) {
   }
   lastFrame=now;
   if (!dirty) return;
-  const faces=collect(poseAt(GEO,clip,t),hidden);
+  const faces=collect(referenceView?GEO:poseAt(GEO,clip,t),hidden);
   if (showPlayer) faces.push(...playerFaces());
   render(faces,yaw,pitch,zoom,SIZE,frameBounds,showFx?simulatedTint(t,clip.length):null);
   if (showFx) drawRuntimeParticles(elapsed,SIZE);
   document.getElementById('faces').textContent=faces.length;
-  document.getElementById('clock').textContent=`${t.toFixed(2).replace('.',',')} s`;
+  document.getElementById('clock').textContent=referenceView?'Pose base':`${t.toFixed(2).replace('.',',')} s`;
   seek.value=Math.round(t/clip.length*1000);
   dirty=false;
 }
@@ -400,17 +405,21 @@ canvas.addEventListener('pointermove',e=>{
   drag=[e.clientX,e.clientY]; dirty=true;
 });
 for (const type of ['pointerup','pointercancel','lostpointercapture']) canvas.addEventListener(type,()=>drag=null);
-for (const [id,y,p] of [['vBack',0,9],['v34',-32,10],['vFront',180,8],['vSide',-87,8],['vTop',8,58]]) {
+for (const [id,y,p] of [['vBack',0,9],['vFront',180,8],['vSide',-87,8],['vTop',8,58]]) {
   document.getElementById(id).onclick=()=>{yaw=y; pitch=p; dirty=true;};
 }
+document.getElementById('v34').onclick=()=>{
+  yaw=25; pitch=10; t=elapsed=0;
+  setPlaying(false); setReference(true);
+};
 play.onclick=()=>setPlaying(!playing);
 seek.oninput=e=>{
   if (!CLIPS) return;
-  setPlaying(false); t=CLIPS[motionState].length*(+e.target.value)/1000; elapsed=t; dirty=true;
+  setPlaying(false); setReference(false); t=CLIPS[motionState].length*(+e.target.value)/1000; elapsed=t; dirty=true;
 };
-document.getElementById('state').onchange=e=>{ motionState=e.target.value; t=elapsed=0; updateBounds(); dirty=true; };
+document.getElementById('state').onchange=e=>{ motionState=e.target.value; t=elapsed=0; setReference(false); };
 document.getElementById('zoom').oninput=e=>{ zoom=+e.target.value; dirty=true; };
-document.getElementById('l_player').onchange=e=>{ showPlayer=e.target.checked; updateBounds(); dirty=true; };
+document.getElementById('l_player').onchange=e=>{ showPlayer=e.target.checked; dirty=true; };
 document.getElementById('l_particles').onchange=e=>{ showFx=e.target.checked; dirty=true; };
 
 boot().catch(error=>{ document.getElementById('loading').textContent=error.message; });

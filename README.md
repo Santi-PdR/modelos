@@ -1,14 +1,47 @@
-# Mantle of the Blight Star — v1.59.0
+# Mantle of the Blight Star — v1.60.0
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
-[Descargas v1.59.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.59.0)
-· [JAR](https://github.com/Santi-PdR/modelos/releases/download/v1.59.0/capatest-1.59.0.jar)
-· [Proyecto Blockbench](docs/CAPA_v1.59.0.bbmodel)
+[Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
+· [Proyecto Blockbench](docs/CAPA_v1.60.0.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 
+### v1.60.0 — volver a la referencia original
+
+![Referencia original, v1.59.0 y v1.60.0, registradas con la misma cámara](docs/capa_v1600_antes_despues.png)
+
+- **Forma**: cuello granate alto y continuo, costura mate en U, hombreras
+  de carbón y doce jirones escalonados. Las puntas violetas son más largas
+  que el paño rojo de encima. Ya no hay un dobladillo de dos colas ni acero claro.
+- **Textura**: cartas UV locales muestrean la superficie visible de la
+  imagen registrada. El atlas no incorpora piel, pelo, cuadrícula ni motas
+  sueltas. El reverso y los cantos tienen materiales propios. Diez cortes
+  al ras usan el glowmask anterior, sin bañar todo el paño en rosa.
+- **Mod**: las chispas nacen en los bordes del cuello o cerca del dobladillo,
+  como en la imagen, con hasta tres por ocho ticks. La respuesta del paño
+  usa tiempo transcurrido, no FPS; no se añade movimiento en XYZ. Se
+  mantienen los ocho estados y el alfa 1,0 fijo del pase emisivo.
+- **Conservado**: 225 huesos, UUID, icono preferido, item plegado, ambas
+  máscaras y 3.380 texels emisivos. Forge 1.20.1, GeckoLib 4.8.1 y Curios
+  opcional, con prioridad para el pecho.
+
+**Registro**: 61,0 % → 91,0 % de solapamiento (intersección/unión) con la
+silueta trazada. En los píxeles de capa comunes con la referencia, el error
+medio RGB bajó de 30,7 a 9,0 sobre 255. Se usa la misma cámara, sin reencuadrar
+por versión. El pelo, el portador y el reverso no observado no se cuentan
+como una reconstrucción exacta. Los renders son software, no capturas F5.
+
+[Mapa de coincidencia](docs/capa_v1600_registro.png) · [Ocho estados](docs/capa_v1170_estados.png) ·
+[Movimiento](docs/capa_v1170_animaciones.gif) · [Respaldo v1.59.0](docs/respaldos/v1.59.0/).
+
+`python3 tools/verify_v1600.py` comprueba máscaras y atlas, 841 poses, 504
+mezclas de clips, 147 orientaciones muestreadas de cabeza (hasta ±75° de giro y ±20° de inclinación) y los archivos
+exactos del visor. No sustituye una prueba en Minecraft.
+
 ### v1.59.0 — dobladillo partido y ocho poses
+
+[Proyecto v1.59.0](docs/respaldos/v1.59.0/CAPA_v1.59.0.bbmodel).
 
 ![Comparativa a la misma cámara/escala, con detalle del cuello](docs/capa_v1590_antes_despues.png)
 
@@ -725,15 +758,14 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Descargas v1.59.0
+### Descargas v1.60.0
 
-La [release v1.59.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.59.0)
-incluye `capatest-1.59.0.jar` (Forge 1.20.1, compilado con JDK 17 y Gradle 8.8),
-`CAPA_v1.59.0.bbmodel` y los renders. CI reconstruye el JAR, comprueba que
-ambas compilaciones son byte a byte iguales y coteja los digests del JAR y
-el `.bbmodel` subidos al borrador. El borrador se publica tras CI exitosa.
-
-Verificar ambos archivos descargados junto con `SHA256SUMS.txt` de la release:
+El [workflow de Forge](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
+compila `capatest-1.60.0.jar` con JDK 17 y Gradle 8.8. Abre el run de la
+rama de este rediseño y baja **capatest-jar** en Artifacts. El ZIP incluye
+`SHA256SUMS.txt`: sólo se sube tras comparar dos builds y verificar los
+recursos exactos dentro del JAR. La [v1.59.0 publicada](https://github.com/Santi-PdR/modelos/releases/tag/v1.59.0)
+sigue disponible por separado.
 
 ```sh
 sha256sum -c SHA256SUMS.txt
@@ -761,8 +793,8 @@ El script prueba **dos fuentes** (asset de release y artifact histórico)
 y exige el MISMO digest en ambas: si el binario no coincide byte a
 byte, no escribe nada.
 
-**Modelo de Blockbench:** [CAPA_v1.59.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.59.0/CAPA_v1.59.0.bbmodel),
-byte a byte igual a `docs/CAPA_v1.59.0.bbmodel`.
+**Modelo de Blockbench:** [CAPA_v1.60.0.bbmodel](docs/CAPA_v1.60.0.bbmodel),
+byte a byte igual a la descarga que ofrece el visor offline.
 
 Regla de entrega: **el `.bbmodel` cambia de nombre con `mod_version`** y
 **siempre se incluye su enlace**. El workflow lee la versión de
@@ -770,7 +802,7 @@ Regla de entrega: **el `.bbmodel` cambia de nombre con `mod_version`** y
 con `workflow_dispatch(publicar=true)` o un commit marcado `[publicar]`.
 El borrador se hace público sólo tras la verificación de CI.
 
-### Tests en GitHub y efectos en runtime (v1220)
+### Histórico — tests y efectos en runtime (v1220)
 
 `tools/audit_model.py` es un **test de regresión numérico**: renderiza el
 geo+atlas reales y compara décima a décima con `REFERENCIA_CAPA.png`

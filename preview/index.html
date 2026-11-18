@@ -22,15 +22,15 @@ button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{ou
 </head>
 <body><main>
 <header>
-  <div class="kicker">__VERSION__ · Capa equipada · Visor interactivo</div>
+  <div class="kicker">Desarrollo local · Capa equipada · Visor interactivo</div>
   <h1>Mantle of the Blight Star</h1>
-  <p>Rediseño de la silueta, sarga granate y forro violeta, con ocho poses en movimiento.</p>
+  <p>La capa de la referencia: cuello plegado, carbón, granate y jirones violetas.</p>
 </header>
 <div class="grid">
   <section class="card" aria-label="Modelo equipado interactivo">
     <div class="stage"><canvas id="view" width="480" height="480" aria-label="Render interactivo de la capa"></canvas><div id="loading" role="status">Cargando el modelo…</div></div>
     <div class="controls" aria-label="Ángulo de cámara">
-      <button id="vBack">Espalda</button><button id="v34">Tres cuartos</button><button id="vSide">Perfil</button><button id="vFront">Forro</button><button id="vTop">Cenital</button>
+      <button id="vBack">Espalda</button><button id="v34" aria-pressed="false" title="Pose base y cámara de la imagen original">Referencia</button><button id="vSide">Perfil</button><button id="vFront">Forro</button><button id="vTop">Cenital</button>
     </div>
     <div class="controls">
       <label for="state">Estado</label>
@@ -49,17 +49,17 @@ button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{ou
       <output id="clock" for="seek">0,00 s</output>
     </div>
     <div class="controls">
-      <label><input type="checkbox" id="l_player"> Maniquí neutro</label>
+      <label><input type="checkbox" id="l_player" checked> Maniquí neutro</label>
       <label><input type="checkbox" id="l_particles"> Simular chispas y brillo</label>
       <label for="zoom">Zoom</label><input id="zoom" type="range" min="0.72" max="2.5" step="0.02" value="1" aria-label="Zoom">
     </div>
-    <p class="muted">Arrastra para girar. Las poses salen del JSON del mod; los FX son una simulación, no una captura de Minecraft.</p>
+    <p class="muted">«Referencia» congela la pose base en el ángulo original. Arrastra para girar. Las poses salen del JSON del mod; los FX son una simulación, no una captura de Minecraft.</p>
     <p class="muted"><span id="bones">—</span> huesos · <span id="faces">—</span> caras · UV del atlas real</p>
   </section>
   <aside class="stack">
     <section class="card">
-      <div class="kicker">01 · Materiales</div><h2>Sarga, forro y acero</h2>
-      <p>Gajos anchos, roturas mates, solapas asimétricas y hombreras con remaches. La máscara emisiva rosa está intacta.</p>
+      <div class="kicker">01 · Materiales</div><h2>Granate, violeta y carbón</h2>
+      <p>Las caras expuestas muestrean su región de referencia, con cartas UV locales. El forro y los cantos son mates; los diez cortes usan la máscara emisiva intacta.</p>
       <div class="split"><div><img src="assets/atlas.png" alt="Atlas real RGBA de la capa"><span class="muted">Atlas 128 × 128</span></div><div><img src="assets/glowmask.png" alt="Máscara emisiva conservada"><span class="muted">Máscara emisiva</span></div></div>
     </section>
     <section class="card">
@@ -69,8 +69,9 @@ button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{ou
     </section>
   </aside>
 </div>
-<section class="card"><div class="kicker">03 · Comparación</div><h2>Antes y después a la misma escala</h2>
-<a href="assets/antes_despues.png"><img class="plate" src="assets/antes_despues.png" loading="lazy" alt="Comparativa a escala del modelo v1.58.0 y el nuevo, con dos detalles ampliados"></a>
+<section class="card"><div class="kicker">03 · Comparación</div><h2>Modelo y referencia a la misma escala</h2>
+<a href="assets/antes_despues.png"><img class="plate" src="assets/antes_despues.png" loading="lazy" alt="Imagen original, v1.59.0 y nuevo modelo con la misma cámara"></a>
+<a href="assets/registro.png">Ver el mapa de coincidencia de silueta</a>
 </section>
 <div class="foot">Visor software offline. El test de ajuste se hace con un maniquí neutro; la prueba en Minecraft sigue siendo necesaria.</div>
 <script src="app.js"></script>

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Mantle of the Blight Star · Visor de la capa</title>
+<style>
+:root{--bg:#100e17;--panel:#191521;--line:#382b43;--ink:#f5e9ef;--dim:#c7b4ca;--rose:#ffaed6;--steel:#bbb3e5}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif}a{color:var(--rose)}
+main{width:min(1160px,calc(100% - 36px));margin:auto}header{padding:38px 0 22px;border-bottom:1px solid var(--line)}
+.kicker{color:var(--rose);font-size:.77rem;letter-spacing:.15em;font-weight:700;text-transform:uppercase}h1{font:clamp(2.2rem,6vw,4.4rem)/1.02 Georgia,serif;margin:8px 0 12px;letter-spacing:-.045em}
+h2{margin:0 0 8px;font-size:1.13rem}p{margin:5px 0;color:var(--dim)}.grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:18px;margin:22px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}.stack{display:grid;align-content:start;gap:18px}
+.stage{position:relative;border-radius:9px;overflow:hidden;background:#100e18}#view{display:block;width:100%;max-height:590px;object-fit:contain;touch-action:none;cursor:grab}#view:active{cursor:grabbing}
+#loading{position:absolute;inset:0;display:grid;place-content:center;color:var(--dim);pointer-events:none}#loading[hidden]{display:none}
+.controls{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:11px}button,select{font:inherit;font-size:.87rem;color:var(--ink);background:#282031;border:1px solid var(--line);border-radius:7px;padding:7px 11px}button:hover{border-color:var(--rose);cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--rose);outline-offset:3px}.muted,label,output{color:var(--dim);font-size:.85rem}input{accent-color:var(--rose)}
+#seek{flex:1;min-width:80px}.sample{image-rendering:pixelated;width:min(100%,330px);height:auto;border:1px solid var(--line);border-radius:7px;margin-top:9px}.split{display:grid;grid-template-columns:1fr 1fr;gap:10px}.split img,.plate{display:block;width:100%;height:auto;border-radius:8px;margin:9px 0}.split img{image-rendering:pixelated}.foot{padding:12px 0 40px;color:var(--dim);font-size:.88rem}
+@media(max-width:740px){.grid{grid-template-columns:1fr}header{padding-top:26px}}
+</style>
+</head>
+<body><main>
+<header>
+  <div class="kicker">__VERSION__ · Capa equipada · Visor interactivo</div>
+  <h1>Mantle of the Blight Star</h1>
+  <p>Rediseño de la silueta, sarga granate y forro violeta, con ocho poses en movimiento.</p>
+</header>
+<div class="grid">
+  <section class="card" aria-label="Modelo equipado interactivo">
+    <div class="stage"><canvas id="view" width="480" height="480" aria-label="Render interactivo de la capa"></canvas><div id="loading" role="status">Cargando el modelo…</div></div>
+    <div class="controls" aria-label="Ángulo de cámara">
+      <button id="vBack">Espalda</button><button id="v34">Tres cuartos</button><button id="vSide">Perfil</button><button id="vFront">Forro</button><button id="vTop">Cenital</button>
+    </div>
+    <div class="controls">
+      <label for="state">Estado</label>
+      <select id="state">
+        <option value="animation.idle">Reposo</option>
+        <option value="animation.moving">Caminar</option>
+        <option value="animation.sprint">Esprintar</option>
+        <option value="animation.air">Salto / planeo</option>
+        <option value="animation.fall">Caída</option>
+        <option value="animation.sneak">Agacharse</option>
+        <option value="animation.swim">Agua</option>
+        <option value="animation.deterioro">Deterioro</option>
+      </select>
+      <button id="play">Pausar</button>
+      <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Posición en el ciclo">
+      <output id="clock" for="seek">0,00 s</output>
+    </div>
+    <div class="controls">
+      <label><input type="checkbox" id="l_player"> Maniquí neutro</label>
+      <label><input type="checkbox" id="l_particles"> Simular chispas y brillo</label>
+      <label for="zoom">Zoom</label><input id="zoom" type="range" min="0.72" max="2.5" step="0.02" value="1" aria-label="Zoom">
+    </div>
+    <p class="muted">Arrastra para girar. Las poses salen del JSON del mod; los FX son una simulación, no una captura de Minecraft.</p>
+    <p class="muted"><span id="bones">—</span> huesos · <span id="faces">—</span> caras · UV del atlas real</p>
+  </section>
+  <aside class="stack">
+    <section class="card">
+      <div class="kicker">01 · Materiales</div><h2>Sarga, forro y acero</h2>
+      <p>Gajos anchos, roturas mates, solapas asimétricas y hombreras con remaches. La máscara emisiva rosa está intacta.</p>
+      <div class="split"><div><img src="assets/atlas.png" alt="Atlas real RGBA de la capa"><span class="muted">Atlas 128 × 128</span></div><div><img src="assets/glowmask.png" alt="Máscara emisiva conservada"><span class="muted">Máscara emisiva</span></div></div>
+    </section>
+    <section class="card">
+      <div class="kicker">02 · Proyecto</div><h2>Editable en Blockbench</h2>
+      <p>Textura embebida, grupos con UUIDs estables y ocho clips con las tres bisagras. No hay maniquí ni emisores en el archivo.</p>
+      <div class="controls"><a href="assets/capa_deteriorer_evilsaiyan.bbmodel">Descargar .bbmodel</a><img width="42" height="42" src="assets/icon.png" alt="Icono preferido, sin cambios"></div>
+    </section>
+  </aside>
+</div>
+<section class="card"><div class="kicker">03 · Comparación</div><h2>Antes y después a la misma escala</h2>
+<a href="assets/antes_despues.png"><img class="plate" src="assets/antes_despues.png" loading="lazy" alt="Comparativa a escala del modelo v1.58.0 y el nuevo, con dos detalles ampliados"></a>
+</section>
+<div class="foot">Visor software offline. El test de ajuste se hace con un maniquí neutro; la prueba en Minecraft sigue siendo necesaria.</div>
+<script src="app.js"></script>
+</main></body></html>

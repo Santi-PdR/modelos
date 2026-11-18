@@ -1,5 +1,7 @@
 package com.capatest.item;
 
+import com.capatest.client.CapeResponse;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -37,6 +39,24 @@ public final class CapeStateTest {
             check(aura.count() >= 1 && aura.count() <= 3, "presupuesto");
             check(aura.depth() > 0.25 && aura.depth() <= .65, "distancia de la espalda");
             check(aura.lift() > 0 && aura.lift() <= .021, "elevación de chispa");
+            boolean sawCollar = false;
+            for (int pulse = 0; pulse < 16; pulse++) {
+                for (int index = 0; index < aura.count(); index++) {
+                    CapeState.Spark spark = state.spark(pulse, index, true, .5, .5, .5);
+                    CapeState.Spark edge = state.spark(pulse, index, true, 1, 1, 1);
+                    CapeState.Spark low = state.spark(pulse, index, false, 1, 1, 1);
+                    check(!low.collar() && low.height() < .8, "chispa alta al volar o nadar");
+                    check(Math.abs(spark.side()) >= .24 && Math.abs(edge.side()) < .62, "anclaje lateral");
+                    check(spark.depth() > .26 && edge.depth() <= .601, "chispas fuera de la espalda");
+                    check(edge.height() <= 1.52, "chispa por encima del cuello");
+                    if (spark.collar()) {
+                        sawCollar = true;
+                        check(spark.height() >= 1.36 && Math.abs(spark.side()) >= .50, "nace cerca de la cara");
+                    }
+                }
+            }
+            check(sawCollar == (state==CapeState.IDLE || state==CapeState.WALK ||
+                    state==CapeState.SNEAK || state==CapeState.BLIGHT), "nivel de aura del estado");
             for (int i = 0; i <= 400; i++) {
                 CapeState.Glow c = state.glow(i / 20.0);
                 check(c.red() > .25 && c.red() <= 1 && c.green() > .25 && c.green() <= 1
@@ -48,6 +68,24 @@ public final class CapeStateTest {
         check(CapeState.BLIGHT.aura().count() == 3, "falta la tercera chispa de deterioro");
         check(CapeState.BLIGHT.glow(0).red() > CapeState.BLIGHT.glow(1.5).red()
                 && CapeState.BLIGHT.glow(1.5).red() > CapeState.BLIGHT.glow(.75).red(), "falta el eco");
-        System.out.println("CapeState: ocho clips, prioridades, umbrales y perfiles RGB/chispas verificados");
+        check(CapeState.BLIGHT.spark(2, 0, true, .5, .5, .5).side()
+                == -CapeState.BLIGHT.spark(2, 2, true, .5, .5, .5).side(), "dos bordes del dobladillo");
+        double at30 = simulateResponse(30), at144 = simulateResponse(144);
+        check(at30 > .8 && at30 < 1 && Math.abs(at30-at144) < 1e-12,
+                "respuesta distinta con 30 y 144 fps");
+        CapeResponse filter = new CapeResponse();
+        filter.sample(9,0,0,0,0,0,0,0);
+        double first = filter.sample(9.03,1,0,0,0,0,0,0)[0];
+        check(filter.sample(9.03,1,0,0,0,0,0,0)[0] == first, "dos pasadas avanzan el filtro");
+        check(filter.sample(0,.5,0,0,0,0,0,0)[0] == .5, "arrastre de otro reloj");
+        System.out.println("CapeState: ocho clips, aura con dos niveles y filtro independiente de FPS verificados");
+    }
+
+    private static double simulateResponse(int fps) {
+        CapeResponse filter = new CapeResponse();
+        filter.sample(0,0,0,0,0,0,0,0);
+        for (int i = 1; i < fps; i++)
+            filter.sample(i / (double) fps,1,0,0,0,0,0,0);
+        return filter.sample(1,1,0,0,0,0,0,0)[0];
     }
 }

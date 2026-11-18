@@ -2,7 +2,7 @@ package com.capatest.item;
 
 /** Una lectura del portador para el clip, el color emisivo y las chispas. */
 public enum CapeState {
-    IDLE("idle",               new Aura(1, 0.004, 0.003, 0.34, 0.010)),
+    IDLE("idle",               new Aura(2, 0.004, 0.003, 0.34, 0.010)),
     WALK("moving",             new Aura(1, 0.009, 0.011, 0.40, 0.010)),
     SPRINT("sprint",            new Aura(2, 0.012, 0.029, 0.50, 0.010)),
     AIR("air",                 new Aura(2, 0.021, 0.027, 0.55, 0.011)),
@@ -24,6 +24,26 @@ public enum CapeState {
 
     public String clip() { return this.clip; }
     public Aura aura() { return this.aura; }
+
+    public record Spark(double side, double height, double depth, boolean collar) {}
+
+    /** Emisores pequeños en los cantos del cuello o fuera del dobladillo.
+     *  En vuelo y agua no se dejan motas a la altura de la cara. */
+    public Spark spark(int pulse, int index, boolean collarAllowed, double a, double b, double c) {
+        boolean collar = collarAllowed && switch (this) {
+            case IDLE, BLIGHT -> index == 1;
+            case WALK -> pulse % 3 == 0;
+            case SNEAK -> (pulse & 3) == 0;
+            default -> false;
+        };
+        int beat = this == SNEAK ? pulse >>> 1 : pulse;
+        double sign = ((beat + (index == 0 ? 0 : 1)) & 1) == 0 ? -1.0 : 1.0;
+        boolean low = index != 1;
+        double side = collar ? .50 + .095 * a : (low ? .24 : .41) + .145 * a;
+        double height = collar ? 1.36 + .16 * b : (low ? .13 : .54) + .21 * b;
+        double depth = collar ? .34 + .08 * c : aura.depth() + .10 * (c - .5);
+        return new Spark(sign * side, height, depth, collar);
+    }
 
     public static boolean deteriorated(float health, float maxHealth, int damage, int maxDamage) {
         return (maxHealth > 0.0F && health <= maxHealth * 0.5F)

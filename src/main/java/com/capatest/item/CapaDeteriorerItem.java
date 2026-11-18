@@ -181,7 +181,7 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
 
         CapeState mode = stateFor(player, equipped);
         int pulse = tick / SPARK_INTERVAL_TICKS + player.getId();
-        boolean quiet = mode == CapeState.IDLE || mode == CapeState.SNEAK;
+        boolean quiet = mode == CapeState.SNEAK;
         if (quiet && (pulse & 1) != 0) {
             return;
         }
@@ -193,16 +193,18 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
         double backX = Math.sin(yaw), backZ = -Math.cos(yaw);
         double sideX = Math.cos(yaw), sideZ = Math.sin(yaw);
         RandomSource random = player.getRandom();
-        double firstSide = ((pulse >>> (quiet ? 1 : 0)) & 1) == 0 ? -1.0D : 1.0D;
+        // Deterioro manda sobre los clips, pero una chispa de cuello no
+        // debe aparecer pegada a la cara si el portador va en vuelo/agua.
+        boolean collarAllowed = player.onGround() && !player.isFallFlying() && !player.isInWater();
+        double stature = Math.max(.36D, Math.min(1.0D, player.getBbHeight() / 1.80D));
         for (int i = 0; i < count; i++) {
-            boolean tip = i != 1;
-            // En deterioro, dos puntas y un borde; nunca detrás de la nuca.
-            double sign = i == 0 ? firstSide : -firstSide;
-            double side = sign * ((tip ? 0.23D : 0.39D) + random.nextDouble() * 0.12D);
-            double height = (tip ? 0.16D : 0.41D) + random.nextDouble() * 0.18D;
-            double depth = aura.depth() + (random.nextDouble() - 0.5D) * 0.10D;
-            double trail = aura.trail() * (0.75D + 0.35D * random.nextDouble());
-            double outward = sign * aura.sideways() * (0.75D + 0.35D * random.nextDouble());
+            CapeState.Spark spark = mode.spark(pulse, i, collarAllowed, random.nextDouble(),
+                    random.nextDouble(), random.nextDouble());
+            double side = spark.side();
+            double height = spark.height() * stature;
+            double depth = spark.depth();
+            double trail = spark.collar() ? 0.005D : aura.trail() * (0.75D + 0.35D * random.nextDouble());
+            double outward = Math.copySign(aura.sideways() * (0.75D + 0.35D * random.nextDouble()), side);
             // count=0 del protocolo de Minecraft: una partícula, impulso
             // exacto = (dx,dy,dz)*speed; count=1 lo volvía ruido gaussiano.
             server.sendParticles(CapaParticles.CAPA_SPARK.get(),

@@ -23,7 +23,7 @@ INK, DIM, ROSE = (249, 237, 242), (197, 175, 198), (255, 172, 213)
 TITLES = (
     ("Reposo", "Peso en el dobladillo"), ("Caminar", "Vaivén a contratiempo"),
     ("Esprintar", "Barrido hacia atrás"), ("Salto / planeo", "Apertura de los gajos"),
-    ("Caída", "Remate levantado"), ("Agacharse", "Colas recogidas"),
+    ("Caída", "Remate levantado"), ("Agacharse", "Dobladillo recogido"),
     ("Agua", "Curva en S y deriva"), ("Deterioro", "Doble impulso"),
 )
 

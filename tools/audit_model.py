@@ -1,22 +1,14 @@
 #!/usr/bin/env python3
-"""Test de autoevaluación visual de la capa contra la referencia del usuario.
+"""Contratos de recursos y comparación registrada con la imagen original.
 
-Se ejecuta LOCALMENTE y en GITHUB ACTIONS. Mide, décima a décima de altura,
-la mediana RGB del paño, la cobertura de tela, la densidad de energía rosa y
-el semiancho de silueta, usando la MISMA máscara en el PNG de referencia y en
-el render del geo+atlas reales. No es una opinión: es una regresión numérica.
-
-  PYTHONPATH=tools python3 tools/audit_model.py            # solo informe
-  PYTHONPATH=tools python3 tools/audit_model.py --check    # falla si empeora
-
-Requiere numpy y Pillow (en CI los instala el workflow antes de este paso).
+`--check` exige una mejora de silueta y color con la misma cámara para
+las dos versiones. verify_v1600 hace además la prueba de ajuste y rig.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -30,26 +22,6 @@ VER = next(l.split("=", 1)[1].strip() for l in
            if l.startswith("mod_version="))
 BB = ROOT / "docs" / f"CAPA_v{VER}.bbmodel"
 
-# v1.18.0: cloth/energy/color/total quedan como INFORMACION, no como
-# umbral: media un atlas sintetico que ya no existe. El test ahora exige
-# que el atlas sea la foto del usuario y que la silueta siga cerrando.
-#
-# rev. B: se comprueba ademas que NO haya geometria de particulas
-# (motas/ceniza/yugo), que ningun cubo quede desprendido y que las 4
-# animaciones lleven la curva unica de tools/cape_motion.py.
-#
-# v1240: umbrales REAJUSTADOS tras la ronda de forma/energía/color. El
-# estado medido es total 139.0 (paño 73.5, energía 32.8, color 98,
-# silueta 1.41x); se deja ~15% de holgura para diferencias de versión de
-# Pillow/numpy entre el sandbox y Ubuntu. Antes el límite era 205 sobre
-# 190.8: ahora el test PROTEGE la mejora conseguida.
-LIMITS = {
-    "total": 165.0,
-    "color": 120.0,
-    "cloth": 95.0,
-    "energy": 55.0,
-    "silhouette": 1.60,
-}
 # v1.28.0: el icono PREFERIDO vuelve a ser el ACTIVO. El usuario comparo
 # el rediseño de la v1.27.0 con el de la v1.25.0 y se quedo con el de la
 # v1.25.0 ("era mejor el anterior, ese quiero"). El PNG activo es por
@@ -63,74 +35,11 @@ ICON_V127_SHA = "1500c07312d04e86b289913abb7c168c380d15d300bea6e27b70d81e9b92952
 ICON_BACKUP_SHA = "e88ccec0a0c67b1ad0982ed781f0d684ae4662660c545fa134574781967e4840"
 
 
-def cloth(a: np.ndarray) -> np.ndarray:
-    """Paño: excluye checkerboard, cabeza blanca, brazo, arnés y fondo."""
-    r, g, b = a[..., 0], a[..., 1], a[..., 2]
-    return ((r > g + 8) & (b > g + 3) & (r > 42) & (r < 205)
-            & ~((r > 175) & (g > 165) & (b > 165)))
-
-
-def energy(a: np.ndarray) -> np.ndarray:
-    r, g, b = a[..., 0], a[..., 1], a[..., 2]
-    return (r > 105) & (b > 75) & (r > g + 48) & (b > g + 22)
-
-
-def medians(a: np.ndarray) -> list[float]:
-    m = cloth(a)
-    if m.sum() < 30:
-        return [0.0, 0.0, 0.0]
-    return [float(np.median(a[m, i])) for i in range(3)]
-
-
-def render_front() -> np.ndarray:
-    armor = P.load(P.ARMOR_GEO)
-    front = P.render(armor, P.ARMOR_TEX, P.effective_hidden(armor),
-                     yaw=0, pitch=8, size=700)
-    return np.asarray(front, float)
-
-
-def measure() -> dict:
-    rc = np.asarray(Image.open(ROOT / "referencias" / "REFERENCIA_CAPA.png")
-                    .convert("RGB").crop((385, 150, 695, 525)), float)
-    rn = render_front()
-    err = dict(cloth=0.0, energy=0.0, color=0.0)
-    rows = []
-    for j in range(10):
-        t0, t1 = j / 10, (j + 1) / 10
-        ref = medians(rc[int(t0 * 375):int(t1 * 375)])
-        got = medians(rn[int(120 + t0 * 540):int(120 + t1 * 540)])
-        cr = cloth(rc[int(t0 * 375):int(t1 * 375)])
-        cg = cloth(rn[int(120 + t0 * 540):int(120 + t1 * 540)])
-        er = energy(rc[int(t0 * 375):int(t1 * 375)]) & cr
-        eg = energy(rn[int(120 + t0 * 540):int(120 + t1 * 540)]) & cg
-        cover_r, cover_g = 100 * cr.mean(), 100 * cg.mean()
-        eng_r = 100 * er.sum() / max(1, cr.sum())
-        eng_g = 100 * eg.sum() / max(1, cg.sum())
-        err["cloth"] += abs(cover_r - cover_g)
-        err["energy"] += abs(eng_r - eng_g)
-        err["color"] += sum(abs(ref[i] - got[i]) for i in range(3))
-        rows.append((t0, ref, got, cover_r, cover_g, eng_r, eng_g))
-    ratios = []
-    for t in (0.2, 0.3, 0.4, 0.5, 0.6, 0.7):
-        vals = []
-        for a, h, y0 in ((rc, 375, 0), (rn, 540, 120)):
-            y = int(y0 + t * h)
-            cols = cloth(a[max(0, y - 4):min(a.shape[0], y + 5)]).sum(0)
-            xs = np.where(cols >= 2)[0]
-            vals.append((np.percentile(xs, 98) - np.percentile(xs, 2)) / 2 / h
-                        if len(xs) >= 8 else 0.0)
-        ratios.append(vals[1] / max(1e-6, vals[0]))
-    err["silhouette"] = float(np.mean(ratios))
-    err["total"] = (err["cloth"] + err["energy"] + err["color"] / 3.0)
-    return dict(err=err, rows=rows)
-
-
 def static_checks() -> None:
     cal = json.loads((ROOT / "tools" / "color_calibration.json").read_text())
     assert len(cal["rows"]) == 10, "falta el perfil de calibración medido"
-    assert "build_clean_atlas" in (
-        ROOT / "tools" / "texture_pipeline.py").read_text()
-    assert (ROOT / "tools" / "cape_atlas_v1230.py").is_file()
+    assert (ROOT / 'tools/cape_surface.py').is_file()
+    assert (ROOT / 'docs/capa_v1600_registro.png').is_file()
     assert BB.is_file(), f"falta el .bbmodel de la version {VER}"
     bb = json.loads(BB.read_text())
     assert bb["name"] == f'capa_deteriorer_evilsaiyan_v{VER.replace(".", "_")}'
@@ -177,51 +86,18 @@ def static_checks() -> None:
                  "v16_mote_", "v16_ash_")
     assert not any(b["name"].startswith(forbidden) for b in bones), \
         "vuelve la geometría de partículas"
-    # El contacto entre piezas se mide ya con el rig animado en verify_v1590.
+    # El contacto y la continuidad se miden sobre el rig, no sobre el
+    # ancho de la V antigua ni sobre un gradiente global del atlas.
     import cape_shape as _CS
     assert _CS.RIBBONS == 12 and _CS.SEGS == 6
     tips = [_CS.tip_t(k) for k in range(12)]
-    assert tips[5] < tips[4] - .2 and tips[6] < tips[8] - .2, tips
-    assert _CS.silhouette(.60) - _CS.silhouette(1.0) > 1.8
-    # Mechón ANCHO arriba y PUNTA AFILADA abajo.
-    assert _CS.ribbon_w(5, 0.20) > 1.8, 'vuelven las tiras finas'
-    assert _CS.ribbon_w(5, 0.98) < 0.35, 'la punta no afila'
-    assert _CS.layer(0) == 'outer' and _CS.layer(1) == 'inner'
-    assert _CS.ribbon_z(0, 0.5) > _CS.ribbon_z(1, 0.5) + 0.4, 'capas sin volumen'
-    assert 'def charred_hem' in tp, 'falta el deshilachado del dobladillo'
-    assert 'BEST-SO-FAR' in cal_e.read_text(), 'falta el mejor-perfil conservado'
-    # v1331: el capuchon muestrea la region `yoke`, fuera del canvas;
-    # sin su calibracion propia el error cromatico de t=0.0/0.1 se
-    # disparaba. Y los guiones de energia deben ser trazos, no cuadrados.
-    assert 'v1306: el CAPUCHON' in tp, 'falta la calibracion del yugo'
-    assert 'GUION ALARGADO' in tp, 'falta el trazo de energia alargado'
-    # v1.17.2: regresión de las capturas in-game. El atlas NO puede volver
-    # a samplear el recorte crudo (metia brazo/arnes/checkerboard en la tela)
-    # y el item NO puede volver a registrar un BEWLR que oculte el icono.
-    # v1.18.0: el atlas ES la imagen, no una paleta sintetica.
-    # v1.23.0: atlas LIMPIO (no el recorte de la foto) + EMISSIVE real.
-    assert 'build_clean_atlas' in tp, 'falta el atlas limpio v1.23.0'
-    assert 'def foto_uv(' in (ROOT / 'tools/armor_model_pipeline.py').read_text()
-    assert 'def fan_x(' in (ROOT / 'tools/cape_shape.py').read_text()
-    atlas = np.asarray(Image.open(
-        ROOT / 'src/main/resources/assets/capatest/textures/item/armor'
-        / 'capa_deteriorer_evilsaiyan.png').convert('RGBA'))
-    assert (atlas[..., 3] == 255).all(), 'atlas con texel transparente'
-    glow = np.asarray(Image.open(
-        ROOT / 'src/main/resources/assets/capatest/textures/item/armor'
-        / 'capa_deteriorer_evilsaiyan_glowmask.png').convert('RGBA'))
-    emissive = glow[..., 3] > 0
-    em = int(emissive.sum())
-    assert 500 < em < 128 * 128, ('glowmask fullbright', em)
-    # Una sola coordenada puede caer sobre el nuevo galón/parche claro.
-    # Promediar el hilo no emisivo de cada banda mide el degradado real.
-    red = atlas[..., 0]
-    upper = red[2:6, :96][~emissive[2:6, :96]].mean()
-    lower = red[62:70, :96][~emissive[62:70, :96]].mean()
-    assert upper - lower > 40, ('falta degradado carmesí -> morado', upper, lower)
-    # Wear holes en las puntas: texel oscuro en la franja baja.
-    assert (atlas[44:48, 0:96, :3].mean() < atlas[4:8, 0:96, :3].mean()), \
-        'faltan agujeros de desgaste'
+    assert max(tips[1::2]) > .92 and min(tips[::2]) < .34
+    assert sorted(tips)[-1]-sorted(tips)[-3] > .03, 'puntas alineadas'
+    assert not any(c['uv']['north']==c['uv']['south'] for b in bones
+                   if b['name'].startswith('v17_ribbon_') for c in b['cubes'])
+    atlas = np.asarray(Image.open(P.ARMOR_TEX).convert('RGBA'))
+    glow = np.asarray(Image.open(P.ARMOR_TEX.with_stem(P.ARMOR_TEX.stem+'_glowmask')).convert('RGBA'))
+    assert (atlas[...,3] == 255).all() and np.count_nonzero(glow[...,3]) == 3380
     item_model = json.loads((ROOT / 'src/main/resources/assets/capatest/models/item'
                              '/capa_deteriorer_evilsaiyan.json').read_text())
     assert item_model['parent'] == 'minecraft:item/generated', 'el icono 2D no se ve'
@@ -361,20 +237,8 @@ def static_checks() -> None:
         assert _token in _armor_java_all, f'falta el control {_token}'
     assert 'def isolate(' in (ROOT / 'tools/preview_cloth.py').read_text(), \
         'el preview no puede aislar pads/cadena/anclas'
-    # ------------------------------------------------------------------
-    # v1.27.0: LA HOMBRERA Y LA CADENA NO SON MASAS NEGRAS. Antes la
-    # hombrera era un rectángulo carbón plano y la cadena ocho motas:
-    # en el juego se leían como una mancha y como puntos. Ahora la
-    # hombrera tiene filo de luz y la cadena son anillos con hueco.
-    # ------------------------------------------------------------------
-    _atlas_rgb = atlas[..., :3]
-    _pad = _atlas_rgb[0:16, 96:112]
-    _chain = _atlas_rgb[0:16, 112:128]
-    assert float(_pad.mean()) > 40.0, 'la hombrera sigue siendo negra'
-    assert int(_pad.max()) > 150, 'la hombrera no tiene luz'
-    assert int(_chain.min()) < 60, 'el eslabón no tiene hueco'
-    assert int(_chain.max()) > 150, 'el eslabón no tiene brillo'
-    # La hombrera son 4 piezas por hombro, no un cubo.
+    # Los datos de cada cara se verifican en verify_v1600. El acero
+    # blanco de la versión anterior no es criterio para la placa de carbón.
     _pads = [b for b in bones if b["name"].startswith("v18_pad_")]
     assert len(_pads) == 2, len(_pads)
     assert all(len(b.get("cubes", [])) == 4 for b in _pads), \
@@ -428,62 +292,21 @@ def static_checks() -> None:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--check", action="store_true",
-                    help="falla con exit 1 si alguna métrica supera su umbral")
-    args = ap.parse_args()
+    from verify_v1600 import BASE_GEO, check_similarity, registered_metrics
+
+    ap=argparse.ArgumentParser(description=__doc__)
+    ap.add_argument('--check',action='store_true',help='aplica los mínimos de fidelidad')
+    args=ap.parse_args()
     static_checks()
-    res = measure()
-    err = res["err"]
-    print("  BANDA | REFERENCIA (mediana / tela% / energia%) | MODELO")
-    for t, ref, got, cr, cg, er, eg in res["rows"]:
-        print(f"  t={t:.1f} | {[int(x) for x in ref]} {cr:5.1f}% {er:5.1f}%"
-              f" | {[int(x) for x in got]} {cg:5.1f}% {eg:5.1f}%")
-    print("\n  ERROR ACUMULADO (menor es mejor):")
-    for key in ("cloth", "energy", "color", "silhouette", "total"):
-        lim = LIMITS[key]
-        print(f"    {key:<11} {err[key]:7.2f}   limite {lim:6.2f}")
-    print(f"  ratio de silueta t=0.2..0.7: {err['silhouette']:.2f}x")
-    # v1.18.0: las metricas de cobertura/energia/color medían un ATLAS
-    # SINTETICO. Ahora el atlas ES la foto del usuario, asi que el criterio
-    # honesto es la fidelidad pixel a pixel con esa foto; la silueta sigue
-    # siendo el unico limite geometrico.
-    # v1.23.0: la geometría y el atlas se REHICIERON contra un diseño
-    # nuevo, así que comparar píxel a píxel con el PNG recortado ya no es
-    # un criterio honesto. Se mide la FIDELIDAD AL DISEÑO: degradado,
-    # cobertura emisiva, dos capas, mechones anchos y V.
-    from PIL import Image as _Image
-    _atlas = np.asarray(_Image.open(
-        ROOT / 'src/main/resources/assets/capatest/textures/item/armor'
-        / 'capa_deteriorer_evilsaiyan.png').convert('RGB')).astype(float)
-    _glow = np.asarray(_Image.open(
-        ROOT / 'src/main/resources/assets/capatest/textures/item/armor'
-        / 'capa_deteriorer_evilsaiyan_glowmask.png').convert('RGBA')).astype(float)
-    em = _glow[..., 3] > 0
-    grad = float(_atlas[2:6, 0:96, 0][~em[2:6, :96]].mean()
-                 - _atlas[62:70, 0:96, 0][~em[62:70, :96]].mean())
-    neon = float((_glow[..., 3] > 0).mean() * 100)
-    import cape_shape as _CS
-    wid = float(_CS.ribbon_w(5, 0.2))
-    fid = (max(0.0, 60.0 - grad) / 60.0
-           + max(0.0, 4.0 - neon) / 4.0
-           + max(0.0, 1.8 - wid) / 1.8)
-    print(f"  degradado carmesi->morado: {grad:.1f} | neón emissive: {neon:.2f}%"
-          f" | mechón ancho: {wid:.2f}u")
-    print(f"  FIDELIDAD AL DISEÑO v{VER}: {fid:.3f}   limite 1.00")
-
+    old,now=P.load(BASE_GEO),P.load(P.ARMOR_GEO)
     if args.check:
-        bad = [k for k in ('silhouette',) if err[k] > LIMITS[k]]
-        if fid > 1.00:
-            bad.append('diseno')
-        if bad:
-            print("FALLO: métricas fuera de umbral: " + ", ".join(bad),
-                  file=sys.stderr)
-            sys.exit(1)
-        print(f"OK: diseño v{VER} dentro de umbrales, sin piezas volando, "
-          "chispa exclusiva en runtime e icono intacto")
+        check_similarity(old,now,P.ARMOR_TEX)
+        print(f'OK: contorno y color registrados de v{VER}; recursos protegidos')
     else:
-        print("(informe; usa --check para que falle como test de CI)")
+        (a,b),pink=registered_metrics(old,now,P.ARMOR_TEX)
+        print(f"IoU: {a['all']:.1%} → {b['all']:.1%}; RGB {a['mae']:.1f} → {b['mae']:.1f}; "
+              f"rosa intenso: {b['pink']:.1%} (referencia {pink:.1%})")
 
 
-main()
+if __name__ == '__main__':
+    main()

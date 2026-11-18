@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Hornea la coreografía rotacional para GeckoLib.
 
-La base v1.58.0 es la fuente de los canales espaciales BLOQUEADOS y de las
+La base v1.59.0 es la fuente de los canales espaciales BLOQUEADOS y de las
 pistas de la armadura oculta. Se reemplazan sólo las rotaciones del rig
 visible y de sus anclas. Nunca se lee la propia salida como entrada.
 """
@@ -19,7 +19,7 @@ ANIM = (ROOT / "src/main/resources/assets/capatest/animations/item/armor"
 GEO = (ROOT / "src/main/resources/assets/capatest/geo/item/armor"
        / "capa_deteriorer_evilsaiyan.geo.json")
 
-BASE_ANIM = (ROOT / "docs/respaldos/v1.58.0/animations/item/armor"
+BASE_ANIM = (ROOT / "docs/respaldos/v1.59.0/animations/item/armor"
              / "capa_deteriorer_evilsaiyan.animation.json")
 STYLE_BY_CLIP = {
     "animation.idle": "idle",

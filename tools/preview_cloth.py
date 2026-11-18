@@ -178,7 +178,7 @@ def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27),
            *, frame=None, mannequin=False):
     faces = [(p, uv, None) for p, uv, _ in collect(geo, hidden)]
     if mannequin:
-        for origin, dim, color in MANNEQUIN_BOXES:
+        for origin, dim, color in (MANNEQUIN_BOXES if mannequin is True else mannequin):
             points = np.asarray(origin) + CORNERS * np.asarray(dim)
             faces.extend((points[idx], np.zeros((4, 2)), color) for idx in FACE_ORDER.values())
     atlas = np.asarray((atlas_path if isinstance(atlas_path, Image.Image)
@@ -240,8 +240,8 @@ def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27),
             if solid is None:
                 uu = uvs[i, 0] + a * (uvs[j, 0] - uvs[i, 0]) + b * (uvs[k, 0] - uvs[i, 0])
                 vv = uvs[i, 1] + a * (uvs[j, 1] - uvs[i, 1]) + b * (uvs[k, 1] - uvs[i, 1])
-                ui = np.clip(np.round(uu).astype(int), 0, AW - 1)
-                vi = np.clip(np.round(vv).astype(int), 0, AH - 1)
+                ui = np.clip(np.floor(uu).astype(int), 0, AW - 1)
+                vi = np.clip(np.floor(vv).astype(int), 0, AH - 1)
                 tex = atlas[vi, ui].astype(float)
                 col = tex[:, :, :3] * shade
                 alpha = tex[:, :, 3:4] / 255.0
@@ -439,14 +439,14 @@ def main():
         # de la capa mira a +Z (el arnés del pecho está a -Z), así que la
         # vista yaw=0 es la ESPALDA (F5) y yaw=180 el INTERIOR de la capa.
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=0, pitch=8, size=520),
-         "DETERIORO - espalda (F5)"),
+         "CAPA - espalda (render software)"),
         (render(posed(armor), ARMOR_TEX, runtime_hidden, yaw=-28, pitch=10, size=520),
          "DETERIORO - flujo de jirones 3/4"),
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=180, pitch=8, size=520),
          "DETERIORO - interior (cara del pecho)"),
         (side_relief, "JIRONES 3D - perfil"),
         (render(armor, ARMOR_TEX, runtime_hidden, yaw=205, pitch=14, size=520),
-         "COLLAR + MICROVOXELES - 3/4"),
+         "CUELLO Y FORRO - 3/4"),
     ]
     compose([v for v, _ in views], [l for _, l in views], 3, 520).save(args.out / "full.png")
     compose([

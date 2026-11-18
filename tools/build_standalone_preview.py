@@ -22,7 +22,7 @@ def data(path: Path) -> str:
 
 
 def main() -> None:
-    html = (PREVIEW / "index.html").read_text().replace("__VERSION__", f"v{VER} · Offline")
+    html = (PREVIEW / "index.html").read_text().replace("Desarrollo local", f"v{VER} · Offline")
     app = (PREVIEW / "app.js").read_text()
     loader = """async function loadJson(name) {
   return name === 'armor.geo.json' ? INLINE_GEO : INLINE_ANIMATIONS;

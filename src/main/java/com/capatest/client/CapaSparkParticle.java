@@ -26,13 +26,13 @@ public class CapaSparkParticle extends TextureSheetParticle {
         this.streak = (float) Math.min(1.0D, horizontal / 0.035D);
         double clamp = horizontal > 0.04D ? 0.04D / horizontal : 1.0D;
         this.setParticleSpeed(dx * clamp, Math.max(0.007D, Math.min(0.021D, dy)), dz * clamp);
-        this.lifetime = 30 - Math.round(11 * this.streak) + this.random.nextInt(8);
+        this.lifetime = 37 - Math.round(13 * this.streak) + this.random.nextInt(9);
         this.alpha = 0.0F;
         this.hasPhysics = false;
         this.gravity = 0.0F;
         this.friction = 0.94F;
         this.phase = this.random.nextFloat() * 3.14F;
-        this.scale(0.33F + 0.10F * this.streak);
+        this.scale(0.29F + 0.12F * this.streak + 0.12F * this.random.nextFloat());
         this.baseSize = this.quadSize;
         this.setSpriteFromAge(sprites);
     }
