@@ -1,14 +1,28 @@
-# Mantle of the Blight Star — v1.56.0
+# Mantle of the Blight Star — v1.57.0
 
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Capa equipada en `curios:back`, temática
 **Deterioro (Shigaraki) + Evil Saiyan Rosé**.
 
-> **Release vigente: [v1.56.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.56.0)**
-> · [JAR Forge](https://github.com/Santi-PdR/modelos/releases/download/v1.56.0/capatest-1.56.0.jar)
-> · [Proyecto Blockbench](docs/CAPA_v1.56.0.bbmodel)
-> · [Visor 3D offline](docs/capa_v1170_visor.html).
-> Las versiones v1.55.0 y anteriores quedan como histórico, sin sobrescribir.
+> **Release: [v1.57.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.57.0)**
+> · [JAR Forge](https://github.com/Santi-PdR/modelos/releases/download/v1.57.0/capatest-1.57.0.jar)
+> · [Proyecto Blockbench](https://github.com/Santi-PdR/modelos/releases/download/v1.57.0/CAPA_v1.57.0.bbmodel).
+> [v1.56.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.56.0) y anteriores quedan como histórico, sin sobrescribir.
+
+### v1.57.0 — textura de la capa equipada
+
+[Comparativa de las referencias y el paño equipado](docs/capa_v1570_antes_despues.png)
+· [Proyecto Blockbench en el repo](docs/CAPA_v1.57.0.bbmodel)
+· [Visor 3D offline](docs/capa_v1170_visor.html).
+
+Se repintó el atlas 3D 128×128 de acuerdo con las dos capturas: granate
+oscuro en capucha y capa externa, violeta en el forro y las puntas,
+pliegues quebrados y cantos desgastados. No quedan el galón cobrizo ni
+la estrella bordada. Se verificaron 6.760 texels distintos del paño y
+forro frente a v1.56.0. Sólo se modifica RGB: geometría, UV, animaciones,
+icono, item plegado y glowmasks permanecen iguales. El respaldo previo
+está en [`docs/respaldos/v1.56.0/`](docs/respaldos/v1.56.0/).
+`python3 tools/verify_v1570.py` comprueba estos cambios frente al respaldo.
 
 ### v1.56.0 — paño 3D y cuello rediseñados
 
@@ -663,11 +677,11 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Release vigente: v1.56.0
+### Descargas v1.57.0
 
-La [release v1.56.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.56.0)
-incluye `capatest-1.56.0.jar` (Forge 1.20.1, compilado con JDK 17 y Gradle 8.8),
-`CAPA_v1.56.0.bbmodel` y los renders. CI reconstruye el JAR, comprueba que
+La [release v1.57.0](https://github.com/Santi-PdR/modelos/releases/tag/v1.57.0)
+incluye `capatest-1.57.0.jar` (Forge 1.20.1, compilado con JDK 17 y Gradle 8.8),
+`CAPA_v1.57.0.bbmodel` y los renders. CI reconstruye el JAR, comprueba que
 ambas compilaciones son byte a byte iguales y coteja los digests del JAR y
 el `.bbmodel` subidos al borrador. El borrador se publica tras CI exitosa.
 
@@ -678,7 +692,7 @@ sha256sum -c SHA256SUMS.txt
 ```
 
 Para versiones históricas con copia en `artifacts/vX.Y.Z`, sigue disponible
-`python3 tools/fetch_published_jar.py --version 1.55.0 --keep-sums`.
+`python3 tools/fetch_published_jar.py 1.55.0 --keep-sums`.
 
 El mismo rescate vale para una versión **anterior**: el JAR exacto de la
 `v1.27.0` se recupera de su artifact histórico (`14057282072`) o de su
@@ -699,16 +713,14 @@ El script prueba **dos fuentes** (asset de release y artifact histórico)
 y exige el MISMO digest en ambas: si el binario no coincide byte a
 byte, no escribe nada.
 
-**Link del modelo de Blockbench**: [https://github.com/Santi-PdR/modelos/releases/download/v1.53.0/CAPA_v1.53.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.53.0/CAPA_v1.53.0.bbmodel)
-(el mismo archivo que `docs/CAPA_v1.53.0.bbmodel` y el asset de la Release,
-byte-idénticos; ya no existe el viejo `capa_v1170.bbmodel`).
+**Modelo de Blockbench:** [CAPA_v1.57.0.bbmodel](https://github.com/Santi-PdR/modelos/releases/download/v1.57.0/CAPA_v1.57.0.bbmodel),
+byte a byte igual a `docs/CAPA_v1.57.0.bbmodel`.
 
- Regla de entrega: **cada cambio sube `mod_version`** (aquí 1.47.0 →
-1.48.0), **el `.bbmodel` cambia de nombre con esa versión** y
-**siempre se incluye el link del `.bbmodel`**. El workflow lee
-la versión de `gradle.properties` para que JAR, tag y assets nunca se
-desincronizen; publica con `workflow_dispatch(publicar=true)` o con un
-commit marcado `[publicar]`.
+Regla de entrega: **el `.bbmodel` cambia de nombre con `mod_version`** y
+**siempre se incluye su enlace**. El workflow lee la versión de
+`gradle.properties` para alinear JAR, tag y assets, y prepara un borrador
+con `workflow_dispatch(publicar=true)` o un commit marcado `[publicar]`.
+El borrador se hace público sólo tras la verificación de CI.
 
 ### Tests en GitHub y efectos en runtime (v1220)
 

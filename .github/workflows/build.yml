@@ -814,7 +814,7 @@ jobs:
           # desfasada: antes seguia anunciando la v1.25.0 y enlazaba a un
           # .bbmodel que ya no existia.
           _index = (root / 'docs/index.html').read_text()
-          assert f'CAPA_v{ver}.bbmodel' in _index, 'docs/index.html con bbmodel viejo'
+          assert f'href="CAPA_v{ver}.bbmodel"' in _index, 'docs/index.html con bbmodel local viejo'
           assert f'releases/tag/v{ver}' in _index, 'docs/index.html con release vieja'
           assert f'{ver}' in _index, 'docs/index.html sin la version vigente'
           assert len(ver.split('.')) == 3 and all(x.isdigit() for x in ver.split('.')), ver
@@ -905,6 +905,8 @@ jobs:
           PYTHONPATH=tools python3 tools/audit_model.py --check
           if grep -qx 'mod_version=1.56.0' gradle.properties; then
             python3 tools/verify_v1560.py
+          elif grep -qx 'mod_version=1.57.0' gradle.properties; then
+            python3 tools/verify_v1570.py
           fi
           # v1240: el calibrador de energia es un lazo cerrado Jacobi; se
           # comprueba que siga siendo importable y que el perfil medido
@@ -1008,6 +1010,17 @@ jobs:
             for i in 0 1 2; do
               grep -qx "assets/capatest/textures/particle/capa_spark_${i}.png" /tmp/jar-contents.txt
             done
+            # Comprueba el contenido, no sólo el nombre: el JAR debe usar
+            # el mismo atlas equipado que validaron los renders y el .bbmodel.
+            for asset in \
+              textures/item/armor/capa_deteriorer_evilsaiyan{,_glowmask}.png \
+              textures/item/capa_deteriorer_evilsaiyan.png \
+              geo/item/armor/capa_deteriorer_evilsaiyan.geo.json \
+              animations/item/armor/capa_deteriorer_evilsaiyan.animation.json; do
+              asset="assets/capatest/$asset"
+              unzip -p "$jar" "$asset" | cmp - "src/main/resources/$asset"
+            done
+            echo "OK: atlas equipado, glowmask, icono, geometría y clips byte a byte dentro del jar"
             grep -qx 'data/curios/tags/items/back.json' /tmp/jar-contents.txt
             grep -qx 'data/capatest/curios/entities/player.json' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaCurioRenderer.class' /tmp/jar-contents.txt
@@ -1043,17 +1056,25 @@ jobs:
           NOTES="$RUNNER_TEMP/release-notes.md"
           BBF="docs/CAPA_v$VER.bbmodel"
           BB_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/CAPA_v$VER.bbmodel"
+          COMPARISON="docs/capa_v${VER//./}_antes_despues.png"
           cat > "$NOTES" <<'MD'
           ## Mantle of the Blight Star __TAG__ — build más reciente
 
           JAR compilado en CI (JDK 17 + Gradle 8.8, Forge 1.20.1-47.3.0).
-          v1.55.0 y las anteriores quedan como histórico y no se sobrescriben.
+          Las versiones anteriores quedan como histórico y no se sobrescriben.
 
           **Link directo del .bbmodel (VERSIONADO)**: __BBURL__
           El archivo se llama `CAPA_v__VER__.bbmodel` y su `name`
           interno en Blockbench incluye la versión.
 
           ### Qué incluye
+
+          - **v1.57.0 — Textura de la capa equipada**: paño 128×128
+            repintado según las dos capturas de Blockbench. Granate oscuro
+            en el cuello, violeta en los jirones y puntas desgastadas, sin
+            galón cobrizo ni estrella bordada. Cambian **6.760** texels del
+            paño y el forro frente a v1.56.0. Geometría, UV y ocho clips
+            intactos; mismo icono, item plegado y glowmasks.
 
           - **v1.56.0 — Paño 3D y cuello rediseñados**: carmesí de brasa y
             ciruela, doble galón en V y estrella bordada. Cambian **6.470**
@@ -1617,10 +1638,12 @@ jobs:
           | `capa_v1170_visor.html` | Visor 3D offline |
           | `capa_v1170_preview.png` | 6 vistas del render software |
           | `capa_v1170_comparativa.png` | Tu referencia frente al modelo |
-          | `capa_v1560_antes_despues.png` | Modelo equipado v1.55.0 y v1.56.0 a la misma escala |
-
-          Los previews son render software: la prueba in-game sigue pendiente.
           MD
+          if [ -f "$COMPARISON" ]; then
+            printf '| `%s` | Antes/después del modelo equipado con la misma cámara |\n' \
+              "$(basename "$COMPARISON")" >> "$NOTES"
+          fi
+          printf '\nLos previews son render software: la prueba in-game sigue pendiente.\n' >> "$NOTES"
           sed -i "s/__TAG__/$TAG/g; s/__VER__/$VER/g; s|__BBURL__|$BB_URL|g" "$NOTES"
           if gh release view "$TAG" --json isDraft,targetCommitish > "$RUNNER_TEMP/release.json"; then
             # Reintentos del mismo SHA sí; nunca escribir sobre lo publicado.
@@ -1639,7 +1662,6 @@ jobs:
           done > "$SUMS"
           ASSETS=("$JAR" "$BBF" "$SUMS" docs/capa_v1170_visor.html
                   docs/capa_v1170_preview.png docs/capa_v1170_comparativa.png)
-          COMPARISON="docs/capa_v${VER//./}_antes_despues.png"
           if [ -f "$COMPARISON" ]; then ASSETS+=("$COMPARISON"); fi
           gh release upload "$TAG" "${ASSETS[@]}" --clobber
 

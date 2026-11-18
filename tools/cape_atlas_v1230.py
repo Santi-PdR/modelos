@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Atlas 128×128 de la capa equipada. No se usa para el item plegado.
 
-v1.56: paño pintado desde cero, en carmesí de brasa y ciruela. Cada franja
-vertical de 16 texels corresponde a un mechón; su cresta, sombra y galón
-siguen la misma altura de UV desde el hombro hasta la punta. El cuello
-usa paneles propios a densidad constante. Desgaste y costuras son RGB.
+Paño repintado a partir de las capturas de Blockbench: granate profundo
+arriba, forro violeta y cantos desgastados. Las 12 franjas mantienen sus
+UV originales; cada una tiene pliegues y roturas de distinta trayectoria.
+Los parches del cuello son tela, sin galones ni emblemas.
 
 Los parches metálicos y el diseño de energía anterior se conservan. La
 máscara de brillo se genera con los trazos originales; el RGB de todo
@@ -19,6 +19,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
+from cape_shape import tip_t
 from cloth_spec import COWL_TILES
 
 SIZE = 128
@@ -35,19 +36,36 @@ PAD_SIDE = (96, 64, 112, 80)     # lateral de la placa de hombro
 CREST = (112, 64, 128, 80)       # cresta exterior: el filo que brilla
 LINK_TOP = (96, 80, 112, 96)      # canto superior del eslabón
 
-# De arriba abajo: triples (sombra profunda, cuerpo del pliegue, cresta).
-# La base de la capa externa pasa de brasa a ciruela; el forro es frío.
-OUTER_YARN = (
-    (0,  ((52, 13, 32), (147, 36, 61), (224, 112, 116))),
-    (20, ((49, 14, 34), (134, 38, 66), (206, 97, 117))),
-    (33, ((32, 12, 38), (103, 43, 79), (170, 91, 132))),
-    (47, ((22, 11, 34), (58, 30, 76), (117, 78, 131))),
+# Sombra, cuerpo y cresta. La referencia iluminada da granate (~70,18,32)
+# y violeta (~64,29,69); los RGB del atlas compensan la sombra del cubo.
+# Los picos de rojo quedan aparte de los rosas del neón.
+CRIMSON_PLEATS = (
+    (0,  ((36, 6, 17), (128, 26, 40), (185, 48, 57))),
+    (13, ((31, 6, 16), (110, 20, 35), (171, 44, 55))),
+    (24, ((28, 6, 21), (100, 18, 35), (165, 41, 54))),
+    (33, ((23, 6, 24), (77, 23, 51), (140, 48, 77))),
+    (47, ((16, 7, 22), (48, 20, 47), (100, 49, 86))),
 )
-INNER_YARN = (
-    (0,  ((27, 13, 39), (88, 48, 104), (167, 110, 168))),
-    (22, ((24, 12, 37), (71, 36, 92), (149, 95, 154))),
-    (47, ((16, 9, 30), (45, 24, 67), (103, 65, 119))),
+VIOLET_PLEATS = (
+    (0,  ((16, 7, 23), (49, 23, 61), (98, 60, 110))),
+    (17, ((19, 7, 28), (52, 23, 66), (103, 62, 119))),
+    (31, ((24, 9, 35), (79, 37, 95), (135, 79, 145))),
+    (47, ((17, 7, 27), (67, 32, 81), (116, 66, 130))),
 )
+# Trayectorias a mano en UV (0..15). Se escalonan en y de forma distinta
+# para el forro: no aparece la misma raya atravesando todos los jirones.
+FOLD_ROWS = (0, 8, 16, 24, 32, 40, 47)
+FOLD_SPINES = (
+    (10, 9, 5, 8, 5, 7, 9),
+    (4, 5, 9, 10, 7, 4, 5),
+    (8, 10, 7, 4, 6, 9, 7),
+    (6, 4, 5, 9, 10, 6, 8),
+    (11, 9, 8, 5, 6, 9, 6),
+    (5, 8, 6, 10, 8, 5, 8),
+)
+# El violeta asoma a distinta altura bajo las crestas granate. Los
+# jirones exteriores más cortos conservan una caída más roja.
+VIOLET_BREAK = (33, 29, 22, 28, 24, 32)
 # RGB congelado de la textura v1.55.0 (sólo texels cubiertos por el glow).
 ENERGY_RGB = Path(__file__).resolve().parent / "originals" / "capa_glow_rgb.png"
 
@@ -56,77 +74,89 @@ def _mix(a, b, q):
     return tuple(round(a[i] + (b[i] - a[i]) * q) for i in range(3))
 
 
-def _yarn_at(rows, v):
-    for (v0, p0), (v1, p1) in zip(rows, rows[1:]):
-        if v <= v1:
-            return tuple(_mix(a, b, (v - v0) / (v1 - v0)) for a, b in zip(p0, p1))
-    return rows[-1][1]
+def _tones_at(stops, y):
+    for (lo, a), (hi, b) in zip(stops, stops[1:]):
+        if y <= hi:
+            return tuple(_mix(c0, c1, (y - lo) / (hi - lo)) for c0, c1 in zip(a, b))
+    return stops[-1][1]
 
 
-def _drape(arr, v0, rows, *, lining=False) -> None:
-    """Paño nuevo: pliegues sesgados de 4–7 texels y doble galón tejido en V."""
-    for v in range(48):
-        shadow, body, crest = _yarn_at(rows, v)
-        tones = (shadow, _mix(shadow, body, 0.55), body, _mix(body, crest, 0.62), crest)
-        for u in range(96):
-            panel, x = divmod(u, 16)
-            pleat = 6.0 + 1.4 * math.sin(v * 0.13 + panel * 1.21 + lining * 1.4)
-            # La cara iluminada es ancha, la sombra termina en un canto
-            # abrupto. No es una onda suave sobre el atlas anterior.
-            d = x - pleat
-            tone = (4 if -0.8 <= d <= 1.7 else 3 if -2.4 <= d <= 3.0
-                    else 2 if -4.6 <= d <= 4.0 else 1 if -5.8 <= d <= 6.3 else 0)
-            color = tones[tone]
-            # Trabajo de telar a escala de juego: una arista pespunteada
-            # y el galón atraviesan varias filas, no añaden ruido por píxel.
-            if x in (1, 14) and (v + panel) % 5 < 3 and v < 42:
-                color = _mix(shadow, crest, 0.47 if x == 1 else 0.32)
-            braid_y = 14 + round(9 * (1 - abs((u + 0.5) / 48 - 1)))
-            offset = v - braid_y - (3 if lining else 0)
-            braid = (166, 121, 164) if lining else (218, 141, 114)
-            if offset in (-1, 2, 6):
-                color = _mix(color, shadow, 0.68)
-            elif offset in (0, 1, 5):
-                # Una pasada larga de hilo y otra fina, con el relieve
-                # del pliegue todavía visible por debajo del bordado.
-                color = _mix(color, braid, (0.52 if offset == 5 else 0.69) + 0.04 * tone)
-            arr[v0 + v, u, :3] = color
+def _paint_shreds(atlas: np.ndarray, *, lining: bool) -> None:
+    """Bloques de color en zigzag, cresta quebrada y desgaste en RGB."""
+    stops = VIOLET_PLEATS if lining else CRIMSON_PLEATS
+    y_base = 48 if lining else 0
+    for panel in range(6):
+        u = 16 * panel
+        hand = -1 if (panel + lining) % 2 else 1
+        spine = np.interp(np.arange(48), FOLD_ROWS, FOLD_SPINES[(panel + 2 * lining) % 6])
+        tip = 48 * tip_t(2 * panel + int(lining))
+        for y, ridge in enumerate(spine):
+            depth = min(1.0, y / tip)
+            stain = (panel * 7 + y // 4 + y // 9) % 5 - 2
+            # La cresta termina en una arista estrecha; cada lado pierde
+            # anchura de forma distinta al acercarse al extremo real del UV.
+            spread = 4.9 - 1.3 * depth + 0.43 * stain
+            tear = max(0.0, (depth - 0.73) / 0.27)
+            near, face, light = _tones_at(stops, y)
+            tones = (near, _mix(near, face, 0.38), face, _mix(face, light, 0.56), light)
+            if not lining and y >= VIOLET_BREAK[panel] - 4:
+                a, b, c = _tones_at(VIOLET_PLEATS, y)
+                violet = (a, _mix(a, b, 0.38), b, _mix(b, c, 0.56), c)
+            else:
+                violet = None
+            for x in range(16):
+                d = hand * (x - ridge)
+                # La sombra continúa al otro lado del pliegue. Las cuñas
+                # descentradas evitan tanto el ruido fino como los galones.
+                tone = 0
+                if -spread - 1.7 <= d <= spread + 2.0 - tear * 2:
+                    tone = 1
+                if -spread + 0.7 <= d <= spread - tear * 1.8:
+                    tone = 2
+                if -2.8 + 0.16 * stain <= d <= 1.0 - tear * 0.6:
+                    tone = 3
+                if -1.4 < d <= 0.25 and (y + panel * 3) % 13 < 10:
+                    tone = 4
+                # Una segunda cara del pliegue sólo asoma por tramos.
+                if 4.2 + 0.22 * stain <= d <= 5.6 + 0.25 * stain and (y + panel * 5) % 19 < 12:
+                    tone = 2
+                color = tones[tone]
+                if violet is not None:
+                    onset = VIOLET_BREAK[panel] + 0.62 * d + 0.56 * stain
+                    fade = min(1.0, max(0.0, (y - onset) / 7))
+                    color = _mix(color, violet[tone], fade)
+                if x == 0 or x == 15:
+                    color = _mix(near, color, 0.18)
+                atlas[y_base + y, u + x, :3] = color
 
 
-def _paint_cowl_panels(arr) -> None:
-    palettes = {
-        "dorsal": ((52, 13, 32), (126, 34, 55), (184, 70, 87), (225, 134, 113)),
-        "base": ((37, 13, 31), (93, 27, 47), (144, 60, 73), (173, 94, 88)),
-        "faldon": ((43, 13, 37), (112, 31, 60), (169, 64, 96), (203, 114, 111)),
-        "canto": ((33, 12, 29), (73, 24, 45), (107, 46, 68), (143, 71, 80)),
+def _paint_cowl_panels(atlas: np.ndarray) -> None:
+    """Granate de la bufanda: crestas asimétricas, sin bordado ni filete."""
+    palette = {
+        "dorsal": ((28, 5, 14), (83, 13, 27), (141, 35, 45)),
+        "base": ((25, 5, 14), (71, 11, 24), (120, 27, 39)),
+        "faldon": ((29, 6, 19), (91, 16, 32), (149, 37, 49)),
+        "canto": ((17, 6, 15), (56, 11, 23), (86, 21, 34)),
+        # Identificador UV histórico; el panel central ya no lleva estrella.
+        "estrella": ((30, 5, 18), (96, 17, 31), (152, 37, 46)),
     }
-    for name, (u0, v0, u1, v1) in COWL_TILES.items():
-        shadow, body, crest, piping = palettes["faldon" if name == "estrella" else name]
+    for i, (name, (u0, v0, u1, v1)) in enumerate(COWL_TILES.items()):
+        shadow, body, light = palette[name]
         w, h = u1 - u0, v1 - v0
         for y in range(h):
+            t = y / (h - 1)
+            fold = w * (0.42 + 0.10 * math.sin(t * 4.4 + i * 0.9))
             for x in range(w):
-                xrel = (x + 0.5) / w
-                crease = 1 - min(1.0, abs(xrel - 0.39) / 0.55)
-                color = _mix(body, crest, crease * 0.92)
-                color = _mix(color, shadow, 0.49 * (y / (h - 1)) + 0.19 * (1 - crease))
-                if y in (1, 2):
-                    color = _mix(piping, color, 0.11 + 0.18 * (1 - crease))
-                elif y == 4:
-                    color = shadow
-                elif name != "canto" and 6 <= y <= 19 and x == w // 2 - 3 - y // 10:
-                    if y % 4 < 2:
-                        color = _mix(color, piping, 0.36)
-                if name == "estrella":
-                    # Estrella de ceniza bordada en el pliegue principal.
-                    # Los cuatro rayos y su borde se leen a escala de juego.
-                    dx, dy = abs(x - w // 2), abs(y - 13)
-                    if (dx <= 1 and dy <= 6) or (dy <= 1 and dx <= 4) or dx + dy <= 4:
-                        color = shadow
-                    if (dx == 0 and dy <= 5) or (dy == 0 and dx <= 3) or dx + dy <= 2:
-                        color = piping if x <= w // 2 else _mix(piping, crest, 0.52)
-                    if dx + dy <= 1:
-                        color = (223, 161, 133)
-                arr[v0 + y, u0 + x, :3] = color
+                d = (x + 0.5 - fold) / w
+                # El canto oscuro y la luz en diagonal dan forma a cada
+                # paño sin imprimir líneas claras por todo el cuello.
+                crease = max(0.0, 1.0 - abs(d + t * 0.07) * 3.7)
+                color = _mix(body, light, crease * (0.69 - 0.36 * t))
+                if abs(d) > 0.29 or y > 20 + (x + i) % 4:
+                    color = _mix(color, shadow, 0.52)
+                if 0.14 < d < 0.25 and 0.19 < t < 0.81:
+                    color = _mix(color, shadow, 0.32)
+                atlas[v0 + y, u0 + x, :3] = color
 
 
 def _steel(arr, box, top, bottom, diag=True) -> None:
@@ -258,25 +288,28 @@ def _patches(arr) -> None:
     arr[...] = np.asarray(img2, dtype=np.uint8)
 
 
-def _wear_holes(arr) -> None:
-    """Agujeros de desgaste en las PUNTAS: muescas + boquetes irregulares."""
-    img = Image.fromarray(arr, "RGBA")
-    d = ImageDraw.Draw(img)
-    dark = (9, 5, 16, 255)
-    for layer_v in (0, 48):
-        y_base = layer_v + 48
-        for k in range(6):
-            u = k * 16 + 3 + (k * 5) % 7
-            depth = 3 + (k * 7) % 5
-            d.polygon([(u, y_base - 1), (u + 3, y_base - 1),
-                       (u + 2, y_base - depth), (u + 1, y_base - depth + 2)],
-                      fill=dark)
-    holes = [(11, 40, 2, 2), (27, 43, 2, 2), (45, 38, 3, 2),
-             (61, 45, 2, 3), (77, 41, 2, 2), (91, 44, 2, 2),
-             (16, 88, 2, 2), (50, 91, 2, 2), (84, 87, 2, 2)]
-    for u, v, w, h in holes:
-        d.ellipse((u - w, v - h, u + w, v + h), fill=dark)
-    arr[...] = np.asarray(img, dtype=np.uint8)
+def _frayed_edges(atlas: np.ndarray) -> None:
+    """Mordidas estrechas, en lugar de lunares. No perforan el canal alfa."""
+    image = Image.fromarray(atlas)
+    draw = ImageDraw.Draw(image)
+    for lining in (False, True):
+        base = 48 if lining else 0
+        dark = (14, 7, 24, 255) if lining else (18, 5, 16, 255)
+        for panel in range(6):
+            start = 16 * panel
+            tip = min(47, int(48 * tip_t(2 * panel + int(lining))))
+            # Alterna lado y altura para que la rotura siga la caída del
+            # jirón y no parezca una costura horizontal entre piezas.
+            for y, side, length in ((tip - 9, panel % 2, 6), (tip - 3, 1 - panel % 2, 5)):
+                rim = start if side == 0 else start + 15
+                inward = 1 if side == 0 else -1
+                y += base
+                draw.polygon(((rim, y - 2), (rim + inward * 2, y + 1),
+                              (rim + inward * 4, y + 3), (rim + inward, y + 4),
+                              (rim, min(y + length, base + 47))), fill=dark)
+            x, y = start + (3 + 3 * panel) % 10, base + tip - 2
+            draw.line(((x, y), (x + 1, y - 3), (x + 3, y - 5)), fill=dark, width=1)
+    atlas[...] = np.asarray(image)
 
 
 def _neon_paths():
@@ -334,11 +367,11 @@ def build_clean_atlas():
     """Devuelve (atlas RGBA, glowmask RGBA) 128x128, deterministas."""
     atlas = np.empty((SIZE, SIZE, 4), dtype=np.uint8)
     atlas[...] = (26, 10, 36, 255)
-    _drape(atlas, 0, OUTER_YARN)
-    _drape(atlas, 48, INNER_YARN, lining=True)
+    _paint_shreds(atlas, lining=False)
+    _paint_shreds(atlas, lining=True)
     _patches(atlas)
     _paint_cowl_panels(atlas)
-    _wear_holes(atlas)
+    _frayed_edges(atlas)
 
     core, hot, halo = _neon_masks()
     halo2 = np.asarray(Image.fromarray(core).filter(ImageFilter.MaxFilter(5)))
