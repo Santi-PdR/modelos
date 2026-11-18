@@ -97,7 +97,7 @@ jobs:
           assert hashlib.sha256(orig_geo_path.read_bytes()).hexdigest() == \
               'e01e347c5be0678b18907d91452d7a0c405ec430ef3fc751096532c804d43b8c'
 
-          armor_size = 256  # opaque base + independently sampled worn light
+          armor_size = 512  # opaque base + independently sampled worn light
           for name in ('armor/capa_deteriorer_evilsaiyan.png',
                        'armor/capa_deteriorer_evilsaiyan_glowmask.png'):
               w, h = struct.unpack('>II', (base / 'textures/item' / name).read_bytes()[16:24])
@@ -790,8 +790,10 @@ jobs:
             python3 tools/verify_v1600.py
           elif grep -qx 'mod_version=1.61.0' gradle.properties; then
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1610.py
-          else
+          elif grep -qx 'mod_version=1.62.0' gradle.properties; then
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1620.py
+          else
+            OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1630.py
           fi
           # v1240: el calibrador de energia es un lazo cerrado Jacobi; se
           # comprueba que siga siendo importable y que el perfil medido
@@ -810,6 +812,9 @@ jobs:
             src/test/java/com/capatest/client/CapeFitTest.java
           java -cp "$CLASSES" com.capatest.item.CapeStateTest
           java -cp "$CLASSES" com.capatest.client.CapeFitTest
+          java -cp "$CLASSES" com.capatest.item.CapeStateTest --spark-samples > "$CLASSES/sparks.tsv"
+          PYTHONPATH=tools python3 -c 'import cape_aura as a,json; print(json.dumps(a.profile()))' | \
+            node tools/check_viewer_embers.js "$CLASSES/sparks.tsv"
 
       - name: Build
         id: build
@@ -904,6 +909,7 @@ jobs:
               textures/item/armor/capa_deteriorer_evilsaiyan{,_glowmask}.png \
               textures/item/capa_deteriorer_evilsaiyan.png \
               textures/item/cape_folded{,_glowmask}.png \
+              textures/particle/capa_spark_{0,1,2}.png particles/capa_spark.json \
               geo/item/cape_folded.geo.json animations/item/cape_folded.animation.json \
               geo/item/armor/capa_deteriorer_evilsaiyan.geo.json \
               animations/item/armor/capa_deteriorer_evilsaiyan.animation.json; do
@@ -984,9 +990,9 @@ jobs:
           - **Ocho clips**: poses rotacionales en tres bisagras. El visor y
             proyecto usan los mismos assets que lleva el JAR. No se añaden
             cambios de posición ni escala en el mod.
-          - **Mod**: suavizado independiente de la tasa de frames y chispas
-            en el borde del cuello y el dobladillo. Se mantiene la prioridad
-            del pecho sobre Curios:back y el pase emisivo con alfa fijo.
+          - **Mod**: las chispas rosadas nacen en cuello, flancos, aberturas
+            y borde inferior; no atraviesan el portador en el visor. La
+            prioridad del pecho sobre Curios:back y los ocho clips se conservan.
 
           ### Descargas de esta Release
 
@@ -1029,6 +1035,10 @@ jobs:
                   docs/capa_v1170_estados.png docs/capa_v1170_animaciones.gif)
           if [ -f "$COMPARISON" ]; then ASSETS+=("$COMPARISON"); fi
           if [ -f "$REGISTER" ]; then ASSETS+=("$REGISTER"); fi
+          for view in detalles luz; do
+            IMAGE="docs/capa_v${VER//./}_$view.png"
+            if [ -f "$IMAGE" ]; then ASSETS+=("$IMAGE"); fi
+          done
           gh release upload "$TAG" "${ASSETS[@]}" --clobber
 
           # Un borrador aún no tiene tag disponible para consultas anónimas.

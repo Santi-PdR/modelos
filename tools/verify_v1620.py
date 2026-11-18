@@ -98,17 +98,18 @@ def similarity(geo, atlas, emission):
     assert .12 < sizes[1]/sizes[0] < .55 and .77 < sizes[2]/sizes[0] < 1.30, sizes
 
 
-def protection(geo, atlas, glow, runtime, candidate):
+def protection(geo, atlas, glow, runtime, candidate, *, backup=BACKUP, changed=()):
     assert hashlib.sha256(R.SOURCE.read_bytes()).hexdigest() == R.SOURCE_SHA256
-    allowed = {GEO_BASE,TEX_BASE,GLOW_BASE,OLD_BB}
-    for line in (BACKUP/'SHA256SUMS.txt').read_text().splitlines():
+    allowed = {GEO_BASE.relative_to(BACKUP).as_posix(), TEX_BASE.relative_to(BACKUP).as_posix(),
+               GLOW_BASE.relative_to(BACKUP).as_posix(), *changed}
+    for line in (backup/'SHA256SUMS.txt').read_text().splitlines():
         digest,name = line.split('  ',1)
-        f = BACKUP/name
+        f = backup/name
         assert hashlib.sha256(f.read_bytes()).hexdigest() == digest, f
-        if f not in allowed and not candidate:
+        if name not in allowed and f.suffix != '.bbmodel' and not candidate:
             assert f.read_bytes() == (P.ASSETS/name).read_bytes(), name
-    assert runtime == json.loads(CLIPS.read_text())
-    prev,cur = P.load(GEO_BASE),geo
+    assert runtime == json.loads((backup/CLIPS.relative_to(BACKUP)).read_text())
+    prev,cur = P.load(backup/GEO_BASE.relative_to(BACKUP)),geo
     assert P.effective_hidden(prev) == P.effective_hidden(cur)
     assert [b['name'] for b in prev['bones']] == [b['name'] for b in cur['bones']]
     assert next(b for b in prev['bones'] if b['name']==G.FIT_BONE) == next(b for b in cur['bones'] if b['name']==G.FIT_BONE)

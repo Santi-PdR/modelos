@@ -2,16 +2,16 @@ package com.capatest.item;
 
 /** Una lectura del portador para el clip, el color emisivo y las chispas. */
 public enum CapeState {
-    IDLE("idle",               new Aura(2, 0.004, 0.003, 0.34, 0.010)),
-    WALK("moving",             new Aura(1, 0.009, 0.011, 0.40, 0.010)),
-    SPRINT("sprint",            new Aura(2, 0.012, 0.029, 0.50, 0.010)),
-    AIR("air",                 new Aura(2, 0.021, 0.027, 0.55, 0.011)),
-    FALL("fall",               new Aura(2, 0.010, 0.023, 0.46, 0.017)),
-    SNEAK("sneak",             new Aura(1, 0.003, 0.002, 0.35, 0.009)),
-    SWIM("swim",               new Aura(1, 0.009, 0.007, 0.37, 0.010)),
-    BLIGHT("deterioro",         new Aura(3, 0.023, 0.017, 0.39, 0.015));
+    IDLE("idle",               new Aura(2, 0.004, 0.003, 0.010)),
+    WALK("moving",             new Aura(1, 0.009, 0.011, 0.010)),
+    SPRINT("sprint",            new Aura(2, 0.012, 0.029, 0.010)),
+    AIR("air",                 new Aura(2, 0.021, 0.027, 0.011)),
+    FALL("fall",               new Aura(2, 0.010, 0.023, 0.017)),
+    SNEAK("sneak",             new Aura(1, 0.003, 0.002, 0.009)),
+    SWIM("swim",               new Aura(1, 0.009, 0.007, 0.010)),
+    BLIGHT("deterioro",         new Aura(3, 0.023, 0.017, 0.015));
 
-    public record Aura(int count, double sideways, double trail, double depth, double lift) {}
+    public record Aura(int count, double sideways, double trail, double lift) {}
     public record Glow(float red, float green, float blue) {}
 
     private final String clip;
@@ -27,22 +27,37 @@ public enum CapeState {
 
     public record Spark(double side, double height, double depth, boolean collar) {}
 
-    /** Emisores pequeños en los cantos del cuello o fuera del dobladillo.
-     *  En vuelo y agua no se dejan motas a la altura de la cara. */
-    public Spark spark(int pulse, int index, boolean collarAllowed, double a, double b, double c) {
-        boolean collar = collarAllowed && switch (this) {
+    // Centers in wearer-local blocks (x, height, back), near/far side of
+    // the registered design. Separate the yoke, flank, split and low hem;
+    // do not spawn an even cloud in the volume of the cloth.
+    private static final double[][][] SPARK_ORIGINS = {
+            {{-.655, 1.545, .395}, { .436, 1.448, .336}},
+            {{-.503, 1.075, .421}, { .551,  .492, .455}},
+            {{-.229,  .067, .624}, { .413,  .173, .640}},
+            {{-.493,  .176, .369}, { .600,  .113, .553}}
+    };
+    private static final double[][] SPARK_JITTER = {
+            {.025, .081, .021}, {.028, .105, .029},
+            {.047, .065, .039}, {.038, .076, .033}
+    };
+
+    /** Ash follows four parts of the silhouette; only grounded wearers get high sparks. */
+    public Spark spark(int pulse, int index, boolean grounded, double a, double b, double c) {
+        boolean collar = grounded && switch (this) {
             case IDLE, BLIGHT -> index == 1;
             case WALK -> pulse % 3 == 0;
             case SNEAK -> (pulse & 3) == 0;
             default -> false;
         };
         int beat = this == SNEAK ? pulse >>> 1 : pulse;
-        double sign = ((beat + (index == 0 ? 0 : 1)) & 1) == 0 ? -1.0 : 1.0;
-        boolean low = index != 1;
-        double side = collar ? .50 + .095 * a : (low ? .24 : .41) + .145 * a;
-        double height = collar ? 1.36 + .16 * b : (low ? .13 : .54) + .21 * b;
-        double depth = collar ? .34 + .08 * c : aura.depth() + .10 * (c - .5);
-        return new Spark(sign * side, height, depth, collar);
+        int side = (beat + (index == 0 ? 0 : 1)) & 1;
+        int band = collar ? 0 : grounded && (index == 1 || (beat & 3) == 3) ? 1
+                : ((beat + index) & 2) == 0 ? 2 : 3;
+        double[] origin = SPARK_ORIGINS[band][side];
+        double[] jitter = SPARK_JITTER[band];
+        return new Spark(origin[0] + jitter[0] * (2.0 * a - 1.0),
+                origin[1] + jitter[1] * (2.0 * b - 1.0),
+                origin[2] + jitter[2] * (2.0 * c - 1.0), collar);
     }
 
     public static boolean deteriorated(float health, float maxHealth, int damage, int maxDamage) {

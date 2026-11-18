@@ -62,7 +62,7 @@ animación y la documentación de GeckoLib._
 - **Cartas UV:** cada cara lleva guarda de color. Al asignar espacio,
   dar prioridad a las caras expuestas sin bajar a cero la densidad de
   los cantos. Mantener el muestreo nearest en albedo y emisión.
-- **Desde v1.62.0:** la capa equipada usa dos mapas alineados 256²:
+- **Capa equipada:** usa dos mapas alineados (512² en v1.63.0):
   albedo siempre opaco y emisión RGBA, sólo en núcleos del paño. El pase
   emisivo usa la geometría equipada y la misma profundidad que el opaco;
   el opaco no usa el offset de armadura vanilla. GeckoLib no recorta ni
@@ -84,7 +84,7 @@ animación y la documentación de GeckoLib._
 
 1. `python3 tools/build_deliverables.py` reconstruye GEO, atlas, clips,
    `.bbmodel`, comparación y visor. Editar primero las fuentes en `tools/`.
-2. `python3 tools/verify_v1620.py` coteja la entrega, no sólo el modelo en
+2. `python3 tools/verify_v1630.py` coteja la entrega, no sólo el modelo en
    memoria. Para la referencia se fija la cámara y se ignoran pelo, ropa y
    partículas libres; el registro mide contorno sólido y RGB común.
 3. `cape_wearer_fit` está entre `chestplate` y el conjunto equipado. No
@@ -96,7 +96,8 @@ animación y la documentación de GeckoLib._
    Probar agacharse mirando arriba y girando, caminar, esprintar, caer,
    planear y nadar. Probar de día y noche: el glow debe coincidir con los
    cortes. El barrido de cajas no reemplaza estas comprobaciones.
-5. En el visor, bajar **Luz ambiente** y activar **Chispas y emisión**.
+5. En el visor, bajar **Luz ambiente** y activar **Luz de grietas**.
+   **Chispas** se puede activar aparte para revisar el comportamiento.
    Comprobar que se iluminan los núcleos, no las placas o el forro entero;
    apagarlos no debe abrir un agujero. «Referencia» vuelve a luz fija y
    permite deslizar el PNG original sobre la misma pose, escala y cámara.

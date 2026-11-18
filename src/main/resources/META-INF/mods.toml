@@ -9,7 +9,7 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.62.0: costura en U, placas oscuras y puntas con desgarros de geometría.
+v1.63.0: hombrera escalonada, desgarros sólidos y chispas rosadas con tres fases.
 Atlas opaco 256x256 y luz independiente en las grietas del paño.
 Ocho clips y el mismo ajuste al portador en pecho o Curios (opcional).
 Conserva el icono preferido y el item plegado.

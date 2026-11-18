@@ -18,6 +18,10 @@ public final class CapeStateTest {
     }
 
     public static void main(String[] args) {
+        if (args.length == 1 && "--spark-samples".equals(args[0])) {
+            exportSparkSamples();
+            return;
+        }
         mode(CapeState.IDLE, false,false,false,false,false,true, 0,0);
         mode(CapeState.WALK, false,false,false,false,false,false, .024,0);
         mode(CapeState.SPRINT, false,false,false,false,false,true, .024,0);
@@ -37,21 +41,21 @@ public final class CapeStateTest {
             check(clips.add(state.clip()), "clip duplicado");
             CapeState.Aura aura = state.aura();
             check(aura.count() >= 1 && aura.count() <= 3, "presupuesto");
-            check(aura.depth() > 0.25 && aura.depth() <= .65, "distancia de la espalda");
             check(aura.lift() > 0 && aura.lift() <= .021, "elevación de chispa");
             boolean sawCollar = false;
             for (int pulse = 0; pulse < 16; pulse++) {
                 for (int index = 0; index < aura.count(); index++) {
                     CapeState.Spark spark = state.spark(pulse, index, true, .5, .5, .5);
                     CapeState.Spark edge = state.spark(pulse, index, true, 1, 1, 1);
-                    CapeState.Spark low = state.spark(pulse, index, false, 1, 1, 1);
+                    CapeState.Spark low = state.spark(pulse, index, false, 0, 0, 0);
                     check(!low.collar() && low.height() < .8, "chispa alta al volar o nadar");
-                    check(Math.abs(spark.side()) >= .24 && Math.abs(edge.side()) < .62, "anclaje lateral");
-                    check(spark.depth() > .26 && edge.depth() <= .601, "chispas fuera de la espalda");
-                    check(edge.height() <= 1.52, "chispa por encima del cuello");
+                    check(Math.abs(spark.side()) >= .18 && Math.abs(edge.side()) <= .681, "anclaje lateral");
+                    check(low.depth() >= .30 && spark.depth() >= .31 && edge.depth() <= .681, "chispas fuera de la espalda");
+                    check(edge.height() <= 1.63, "chispa por encima del cuello");
+                    check(low.height() >= 0, "chispa bajo el suelo");
                     if (spark.collar()) {
                         sawCollar = true;
-                        check(spark.height() >= 1.36 && Math.abs(spark.side()) >= .50, "nace cerca de la cara");
+                        check(spark.height() >= 1.44 && Math.abs(edge.side()) >= .436, "nace cerca de la cara");
                     }
                 }
             }
@@ -69,7 +73,9 @@ public final class CapeStateTest {
         check(CapeState.BLIGHT.glow(0).red() > CapeState.BLIGHT.glow(1.5).red()
                 && CapeState.BLIGHT.glow(1.5).red() > CapeState.BLIGHT.glow(.75).red(), "falta el eco");
         check(CapeState.BLIGHT.spark(2, 0, true, .5, .5, .5).side()
-                == -CapeState.BLIGHT.spark(2, 2, true, .5, .5, .5).side(), "dos bordes del dobladillo");
+                * CapeState.BLIGHT.spark(2, 2, true, .5, .5, .5).side() < 0, "dos bordes del dobladillo");
+        check(CapeState.WALK.spark(1, 0, true, .5, .5, .5).depth() > .6, "separación baja al fondo");
+        check(CapeState.WALK.spark(7, 0, true, .5, .5, .5).height() > .40, "no hay chispa lateral");
         double at30 = simulateResponse(30), at144 = simulateResponse(144);
         check(at30 > .8 && at30 < 1 && Math.abs(at30-at144) < 1e-12,
                 "respuesta distinta con 30 y 144 fps");
@@ -78,7 +84,25 @@ public final class CapeStateTest {
         double first = filter.sample(9.03,1,0,0,0,0,0,0)[0];
         check(filter.sample(9.03,1,0,0,0,0,0,0)[0] == first, "dos pasadas avanzan el filtro");
         check(filter.sample(0,.5,0,0,0,0,0,0)[0] == .5, "arrastre de otro reloj");
-        System.out.println("CapeState: ocho clips, aura con dos niveles y filtro independiente de FPS verificados");
+        System.out.println("CapeState: ocho clips, aura con cuatro zonas y filtro independiente de FPS verificados");
+    }
+
+    private static void exportSparkSamples() {
+        for (CapeState state : CapeState.values()) {
+            for (int pulse = 0; pulse < 24; pulse++) {
+                for (boolean grounded : new boolean[]{false, true}) {
+                    for (int i = 0; i < state.aura().count(); i++) {
+                        double a = (pulse % 5) / 4.0;
+                        double b = ((pulse + 3 * i + 1) % 7) / 6.0;
+                        double c = (i + 1) / 4.0;
+                        CapeState.Spark s = state.spark(pulse, i, grounded, a, b, c);
+                        System.out.println(state.clip() + "\t" + pulse + "\t" + i + "\t" + grounded
+                                + "\t" + a + "\t" + b + "\t" + c
+                                + "\t" + s.side() + "\t" + s.height() + "\t" + s.depth() + "\t" + s.collar());
+                    }
+                }
+            }
+        }
     }
 
     private static double simulateResponse(int fps) {

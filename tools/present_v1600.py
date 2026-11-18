@@ -84,6 +84,36 @@ def panel(out, stamp, newer, atlas, *, prior='1.60.0'):
     guide.save(out/f'capa_v{suffix}_registro.png',optimize=True)
 
 
+def detail_panel(out, geo, atlas):
+    """Exact source pixels and fixed crops, enlarged without smoothing."""
+    from verify_v1630 import GEO_BASE, TEX_BASE
+    a, b, _, _ = R.CROP
+    renders = (Image.open(R.SOURCE).convert('RGB').crop(R.CROP),
+               pose_view(P.load(GEO_BASE), TEX_BASE), pose_view(geo, atlas))
+    board = Image.new('RGB', (1130, 788), BG)
+    d = ImageDraw.Draw(board)
+    label(d, (29, 24), 'MANTLE OF THE BLIGHT STAR  /  v1.63.0', 18, ROSE, bold=True)
+    label(d, (28, 57), 'Bordes y desgarros de cerca', 44, bold=True)
+    label(d, (31, 117), 'Mismos píxeles de encuadre, sin filtros. Las motas no forman parte de la malla.', 17, DIM)
+
+    def paste(im, rect, scale, x, y):
+        l, t, r, btm = rect
+        board.paste(im.crop((l-a, t-b, r-a, btm-b)).resize(((r-l)*scale, (btm-t)*scale),
+                   Image.Resampling.NEAREST), (x, y))
+
+    for i, (name, im) in enumerate(zip(('01  ORIGINAL', '02  v1.62.0', '03  v1.63.0'), renders, strict=True)):
+        x = 32 + i*367
+        label(d, (x, 156), name, 18, ROSE if i == 2 else DIM, bold=True)
+        paste(im, (398, 176, 493, 254), 3, x, 190)
+        paste(im, (495, 360, 522, 392), 5, x, 484)
+        paste(im, (537, 414, 577, 450), 5, x+148, 484)
+        label(d, (x, 441), 'Placa sólida · escalón en el borde interior', 14, DIM)
+        label(d, (x, 677), 'Tajo izquierdo', 14, DIM)
+        label(d, (x+148, 677), 'Desgarro central', 14, DIM)
+    label(d, (32, 739), 'En los dos tajos se recortan sólidos conectados; no hay negro ni alfa para fingir la abertura.', 17, DIM)
+    board.save(out/'capa_v1630_detalles.png', optimize=True)
+
+
 def lighting_panel(out, stamp, geo, atlas):
     """Same camera, dark cloth, only the independent emission changed."""
     from verify_v1620 import GLOW, views
@@ -111,10 +141,12 @@ def main():
     out.mkdir(exist_ok=True,parents=True)
     geo=P.load(P.ARMOR_GEO);ver=P.mod_version();atlas=P.ARMOR_TEX
     clips=json.loads(A.ANIM.read_text())['animations']
-    prior = {'1.60.0':'1.59.0','1.61.0':'1.60.0','1.62.0':'1.61.0'}[ver]
+    prior = {'1.60.0':'1.59.0','1.61.0':'1.60.0','1.62.0':'1.61.0','1.63.0':'1.62.0'}[ver]
     panel(out,ver,geo,atlas,prior=prior)
-    if ver == "1.62.0":
+    if ver in ("1.62.0", "1.63.0"):
         lighting_panel(out,ver,geo,atlas)
+    if ver == "1.63.0":
+        detail_panel(out,geo,atlas)
     suffix = ver.replace('.', '')
     shutil.copyfile(out/f'capa_v{suffix}_antes_despues.png',out/'capa_v1170_comparativa.png')
     shutil.copyfile(out/f'capa_v{suffix}_registro.png',out/'capa_v1170_silhouette_compare.png')

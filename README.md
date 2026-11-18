@@ -1,11 +1,49 @@
-# Mantle of the Blight Star — v1.62.0
+# Mantle of the Blight Star — v1.63.0
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
 [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench](docs/CAPA_v1.62.0.bbmodel)
+· [Proyecto Blockbench](docs/CAPA_v1.63.0.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
+
+### v1.63.0 — hombrera sin perforar, desgarros sólidos y chispas rosadas
+
+![Referencia, v1.62.0 y v1.63.0 con la misma cámara y escala](docs/capa_v1630_antes_despues.png)
+
+- **Modelo equipado:** borde interior escalonado en la hombrera cercana.
+  La placa se conserva detrás de las motas de la imagen: no se interpreta
+  el rosa como un agujero. Los cortes del paño tienen profundidad y
+  conservan los empalmes de los jirones durante los ocho clips.
+- **Material:** dos mapas de **512 × 512**, 288 cartas con UV por cara.
+  El paño es opaco; la luz está sólo en núcleos magenta del paño, no en
+  la ropa del portador, el forro ni los cantos de acero.
+- **Mod:** cuatro zonas de emisión de chispas (cuello, flanco, abertura
+  y borde inferior), en coordenadas del cuerpo. En vuelo o agua no
+  nacen junto al cuello. Tres sprites biselados, con tamaño, fase y
+  desvanecimiento propios. Se conserva el máximo de tres chispas
+  cada ocho ticks por portador y la prioridad del pecho sobre `Curios:back`.
+- **Visor:** luces de grieta y chispas se seleccionan por separado; cada
+  chispa respeta la profundidad del paño y del maniquí. «Referencia» fija
+  cámara, escala y pose, y excluye las chispas de la comparación.
+
+Con la traza sin modificar: silueta **95,21 → 95,54 %**, hombreras
+**78,64 → 81,04 %**, jirones **95,36 → 95,78 %** (IoU). En los píxeles
+comunes, el error RGB baja de **3,97 a 1,46 / 255**; IoU de los núcleos
+emisivos **76,74 → 95,54 %**. En el desgarro central se abren **360 de
+385** píxeles trazados (antes 281). No se cambian el icono, el plegado,
+los ocho clips ni los UUID de elementos previos.
+
+[Detalles ampliados](docs/capa_v1630_detalles.png) ·
+[Registro de silueta](docs/capa_v1630_registro.png) ·
+[Prueba de luz](docs/capa_v1630_luz.png) ·
+[Respaldo v1.62.0](docs/respaldos/v1.62.0/)
+
+`python3 tools/verify_v1630.py` verifica las aberturas, el atlas y el rig
+contra el PNG y el respaldo. Las vistas no observadas se comprobaron
+contra el volumen del modelo anterior; una sola imagen no define el
+forro ni el perfil. Las simulaciones de pose y render no son capturas
+F5 ni verifican cascos de otros mods.
 
 ### v1.62.0 — forma más fiel y luz que sigue las grietas
 
@@ -825,10 +863,10 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Descargas v1.62.0
+### Descargas v1.63.0
 
 El [workflow de Forge](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-compila `capatest-1.62.0.jar` con JDK 17 y Gradle 8.8. Abre el run de la
+compila `capatest-1.63.0.jar` con JDK 17 y Gradle 8.8. Abre el run de la
 rama de este rediseño y baja **capatest-jar** en Artifacts. El ZIP incluye
 `SHA256SUMS.txt`: sólo se sube tras comparar dos builds y verificar los
 recursos exactos dentro del JAR. La [v1.59.0 publicada](https://github.com/Santi-PdR/modelos/releases/tag/v1.59.0)
@@ -860,7 +898,7 @@ El script prueba **dos fuentes** (asset de release y artifact histórico)
 y exige el MISMO digest en ambas: si el binario no coincide byte a
 byte, no escribe nada.
 
-**Modelo de Blockbench:** [CAPA_v1.62.0.bbmodel](docs/CAPA_v1.62.0.bbmodel),
+**Modelo de Blockbench:** [CAPA_v1.63.0.bbmodel](docs/CAPA_v1.63.0.bbmodel),
 byte a byte igual a la descarga que ofrece el visor offline.
 
 Regla de entrega: **el `.bbmodel` cambia de nombre con `mod_version`** y

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Two aligned atlases for the worn cape: opaque cloth and independent light.
 
-Only visible pixels of the matching material train a face's tile. The atlas
+Only visible pixels of the matching material train a face's tile. The
+512² worn atlas resolves individual crack pixels (folded stays 128²). The atlas
 is not a decal across the model: each tile stays on its own solid when the
 rig bends. Hidden backs, undersides and hard edges use authored swatches.
 """
@@ -18,7 +19,7 @@ import cape_surface as S
 import preview_cloth as P
 from armor_model_pipeline import source_cube
 
-SIZE = 256
+SIZE = 512
 GUARD = 1
 
 
@@ -51,7 +52,7 @@ def tiles(faces, owners):
     lock = np.zeros((SIZE, SIZE), bool)
     # Retained UVs of the hidden legacy armor still have a real texture.
     lock[:128, :128] = True
-    for factor in (3.2, 3.0, 2.9, 2.85, 2.8, 2.7, 2.6, 2.5, 2.4, 2.2, 2.0):
+    for factor in (5.75, 5.4, 5.1, 4.9, 4.65, 4.5, 4.3, 4.1):
         req = list(requests(faces, uses, factor))
         packed = S.pack(lock, [(i, w+2*GUARD, h+2*GUARD) for i,w,h in req])
         if packed is not None:

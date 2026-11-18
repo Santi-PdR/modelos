@@ -11,7 +11,7 @@ async function loadJson(name) {
 function assetUrl(name) { return `assets/${name}`; }
 /* END LOCAL LOADER */
 
-let GEO, CLIPS, FIT, REF, ORIGINAL, ATLAS, GLOW, SPARK, ATLAS_W = 128, ATLAS_H = 128;
+let GEO, CLIPS, FIT, REF, ORIGINAL, ATLAS, GLOW, SPARKS, AURA, ATLAS_W = 128, ATLAS_H = 128;
 const canvas = document.getElementById('view');
 const ctx = canvas.getContext('2d', { alpha: false });
 let SIZE = 480;
@@ -225,7 +225,7 @@ function collect(geo, hidden) {
 
 /* ---------- rasterizador con z-buffer ---------- */
 let lastScale = null, lastCx = 0, lastCy = 0, lastView = null;
-function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=null) {
+function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=null, overlay=null) {
   const view = mul(R('x', pitch), R('y', yaw));
   lastView = view;
   const prepared = [];
@@ -306,63 +306,96 @@ function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=nu
       }
     }
   }
+  if (overlay) overlay(pix,depth);
   ctx.putImageData(img,0,0);
 }
 
 /* FX ilustrativos: los impulsos del servidor y la iluminación de
    Minecraft no corren en el navegador. Se usan los assets del mod. */
-const FX = {
-  'animation.idle': [2, .004, .003, .34, .010, .72, .17, 0],
-  'animation.moving': [1, .009, .011, .40, .010, .79, .21, 0],
-  'animation.sprint': [2, .012, .029, .50, .010, .87, .13, .1],
-  'animation.air': [2, .021, .027, .55, .011, .87, .12, .18],
-  'animation.fall': [2, .010, .023, .46, .017, .74, .25, .04],
-  'animation.sneak': [1, .003, .002, .35, .009, .55, .12, 0],
-  'animation.swim': [1, .009, .007, .37, .010, .66, .27, .35],
-  'animation.deterioro': [3, .023, .017, .39, .015, .63, .37, .28]
+const TINT = {
+  'animation.idle': [.72, .17, 0],
+  'animation.moving': [.79, .21, 0],
+  'animation.sprint': [.87, .13, .1],
+  'animation.air': [.87, .12, .18],
+  'animation.fall': [.74, .25, .04],
+  'animation.sneak': [.55, .12, 0],
+  'animation.swim': [.66, .27, .35],
+  'animation.deterioro': [.63, .37, .28]
 };
 function simulatedTint(t, length) {
-  const [, , , , , base, amp, cool]=FX[motionState];
+  const [base, amp, cool]=TINT[motionState];
   const wave=.5+.5*Math.cos(2*Math.PI*t/length);
   const w=motionState==='animation.deterioro' ? (0.62*wave**3+0.38*(1-wave)**3)/.62 : wave;
   const gain=base+amp*w;
   return [gain*(1-.27*cool), gain*(.67+.25*cool), gain*(.86+.33*cool)];
 }
-function drawRuntimeParticles(seconds, size) {
-  const [count, outward, trail, depth, rise]=FX[motionState];
-  const sneaking=motionState==='animation.sneak';
-  const stride=sneaking ? .8 : .4;
-  const shotNow=Math.floor(seconds/stride);
-  for (let shot=shotNow-6; shot<=shotNow; shot++) {
-    if (shot<0) continue;
-    const age=seconds-shot*stride;
-    const life=1.98-Math.min(trail/.035,1)*.54;
-    if (age<0 || age>=life) continue;
-    for (let i=0;i<count;i++) {
-      const upper=((motionState==='animation.idle'||motionState==='animation.deterioro')&& i===1)
-              || (motionState==='animation.moving' && shot%3===0) || (sneaking && shot%2===0);
-      const side=(shot+(i===0?0:1))%2===0?-1:1, low=i!==1;
-      const jitter=.5+.5*Math.sin(shot*61.7+i*2.92);
-      const x0=side*(upper ? .50+.095*jitter : (low?.24:.41)+.145*jitter);
-      const y0=upper ? 1.36+.16*jitter : (low?.13:.54)+.21*jitter;
-      const z0=upper ? .34+.08*jitter : depth+.10*(jitter-.5);
-      const t=upper ? .005 : trail;
-      const p=apply(lastView,[16*(x0+age*14*outward*side),16*(y0+age*13*rise),16*(z0+age*14*t)]);
-      const x=size/2+(p[0]-lastCx)*lastScale, y=size/2-(p[1]-lastCy)*lastScale;
-      const w=(.60+.19*jitter+.08*(trail>.02))*lastScale;
-      ctx.globalAlpha=Math.min(1,age*6)*Math.min(1,(life-age)*2.4)*.79;
-      ctx.drawImage(SPARK,x-w/2,y-w/2,w,w);
+function sparkOrigin(state,pulse,index,grounded,noise) {
+  const sneak=state==='animation.sneak';
+  const collar=grounded && ((state==='animation.idle'||state==='animation.deterioro') ? index===1 :
+    state==='animation.moving' ? pulse%3===0 : sneak && (pulse&3)===0);
+  const beat=sneak ? pulse>>>1 : pulse;
+  const side=(beat+(index===0?0:1))&1;
+  const band=collar ? 0 : grounded && (index===1 || (beat&3)===3) ? 1 : ((beat+index)&2)===0 ? 2 : 3;
+  const point=AURA.origins[band][side].map((value,i)=>value+AURA.spread[band][i]*(2*noise[i]-1));
+  return {point,collar};
+}
+
+function overEmber(pix,depth,size,sprite,x,y,z,width,opacity,tint) {
+  const x0=x-width/2,y0=y-width/2,s=16/width;
+  for (let yy=Math.max(0,Math.ceil(y0)); yy<Math.min(size,y0+width); yy++) {
+    const row=Math.min(15,Math.floor((yy-y0)*s));
+    for (let xx=Math.max(0,Math.ceil(x0)); xx<Math.min(size,x0+width); xx++) {
+      const dst=yy*size+xx;
+      if (z<=depth[dst]) continue; // native particles also test depth against the body/cloth
+      const ti=(row*16+Math.min(15,Math.floor((xx-x0)*s)))*4;
+      const a=opacity*sprite[ti+3]/255;
+      for (let j=0;j<3;j++) pix[dst*4+j]=pix[dst*4+j]*(1-a)+sprite[ti+j]*tint[j]*a;
     }
   }
-  ctx.globalAlpha=1;
+}
+
+function drawRuntimeParticles(seconds, size, stance, pix, depth) {
+  const [count, outward, trail, rise]=AURA.modes[motionState];
+  const sneak=motionState==='animation.sneak';
+  const grounded=!['animation.air','animation.fall','animation.swim'].includes(motionState);
+  const stride=(sneak ? 2 : 1)*AURA.pulseTicks/20, embers=[];
+  const shotNow=Math.floor(seconds/stride);
+  const random=(n,i,k)=>.5+.5*Math.sin(n*61.7+i*2.92+k*61.36);
+  const first=Math.max(0,Math.ceil((seconds-47/20)/stride));
+  for (let shot=first; shot<=shotNow; shot++) {
+    const age=seconds-shot*stride;
+    for (let i=0;i<count;i++) {
+      const noise=[0,1,2].map(k=>random(shot,i,k));
+      const {point,collar}=sparkOrigin(motionState,sneak ? shot*2 : shot,i,grounded,noise);
+      const [x0,y0,z0]=point;
+      const dx=Math.sign(x0)*outward*(.75+.35*noise[0]);
+      const dz=collar ? .005 : trail*(.75+.35*noise[2]);
+      const streak=Math.min(1,Math.hypot(dx,dz)/.035);
+      const life=39-Math.round(13*streak)+Math.floor(random(shot,i,3)*9);
+      const tick=age*20,p=tick/life;
+      if (p<=0 || p>=1) continue;
+      const glint=.5+.5*Math.sin(noise[1]*3.14+p*9);
+      const fly=(1-Math.pow(.94,tick))/(1-.94);
+      const clamp=Math.min(1,.04/Math.max(1e-9,Math.hypot(dx,dz)));
+      const pos=apply(lastView,[16*(x0+fly*dx*clamp),16*(y0*(stance ? 1.5/1.8 : 1)+fly*rise),16*(z0+fly*dz*clamp)]);
+      const x=size/2+(pos[0]-lastCx)*lastScale,y=size/2-(pos[1]-lastCy)*lastScale;
+      const quad=(.1+.1*noise[0])*(.28+.10*streak+.15*noise[2]);
+      const width=32*quad*(1-.37*p+.06*glint)*lastScale;
+      const alpha=(.66+.08*glint+.09*streak)*Math.min(1,p*6)*Math.min(1,(1-p)*2.4);
+      embers.push({x,y,z:pos[2],width,alpha,frame:Math.min(2,Math.floor(3*p)),tint:[1-.19*p,.98-.22*p,1]});
+    }
+  }
+  for (const e of embers.sort((a,b)=>a.z-b.z))
+    overEmber(pix,depth,size,SPARKS[e.frame],e.x,e.y,e.z,e.width,e.alpha,e.tint);
 }
 
 let yaw=25, pitch=10, zoom=1.0, playing=true, t=0, elapsed=0;
 let lastFrame=null, dirty=true, hidden=null, frameBounds=null;
-let showPlayer=true, showFx=false, referenceView=false;
+let showPlayer=true, showFx=false, showGlow=false, referenceView=false;
 const stanceControl=document.getElementById('fitStance'), lookControl=document.getElementById('fitLook');
 const turnControl=document.getElementById('fitTurn'), fitValue=document.getElementById('fitValue');
 const fitReset=document.getElementById('fitReset'), fxControl=document.getElementById('l_particles');
+const glowControl=document.getElementById('l_glow');
 const seek=document.getElementById('seek'), play=document.getElementById('play');
 const ambientControl=document.getElementById('ambient');
 const zoomControl=document.getElementById('zoom');
@@ -393,7 +426,7 @@ function setReference(value) {
   referenceView=value;
   document.getElementById('v34').setAttribute('aria-pressed',String(value));
   compareControl.hidden=!value;
-  for (const control of [stanceControl, lookControl, turnControl, fitReset, fxControl, ambientControl, zoomControl])
+  for (const control of [stanceControl, lookControl, turnControl, fitReset, fxControl, glowControl, ambientControl, zoomControl])
     control.disabled=value;
   dirty=true;
 }
@@ -434,10 +467,10 @@ function draw(now) {
   fitValue.textContent=referenceView ? 'Pose base · ajuste desactivado' :
     `Mirada ${look}° · giro ${turn}° · bisagra ${degreeFold(FIT,stance,look,turn).toFixed(1)}°`;
   const fx=showFx&&!referenceView;
-  render(faces,yaw,pitch,zoom,SIZE,frameBounds,fx?simulatedTint(t,clip.length):null,
-         referenceView ? 1 : +ambientControl.value, referenceView ? referenceFrame(SIZE) : null);
+  render(faces,yaw,pitch,zoom,SIZE,frameBounds,showGlow&&!referenceView ? simulatedTint(t,clip.length) : null,
+         referenceView ? 1 : +ambientControl.value, referenceView ? referenceFrame(SIZE) : null,
+         fx ? (pixels,z)=>drawRuntimeParticles(elapsed,SIZE,stance,pixels,z) : null);
   if (referenceView) drawOriginal(SIZE);
-  if (fx) drawRuntimeParticles(elapsed,SIZE);
   document.getElementById('faces').textContent=faces.length;
   document.getElementById('clock').textContent=referenceView?'Pose base':`${t.toFixed(2).replace('.',',')} s`;
   seek.value=Math.round(t/clip.length*1000);
@@ -455,15 +488,17 @@ function pixels(im) {
   return ctx.getImageData(0,0,im.width,im.height).data;
 }
 async function boot() {
-  const [geo,clips,fit,atlas,glow,spark,reference,original]=await Promise.all([
+  const [geo,clips,fit,atlas,glow,aura,reference,original,sparks]=await Promise.all([
     loadJson('armor.geo.json'), loadJson('armor.animation.json'), loadJson('fit.json'), image('armor.png'),
-    image('armor_glowmask.png'), image('capa_spark_1.png'), loadJson('reference-frame.json'), image('reference-crop.png')]);
+    image('armor_glowmask.png'), loadJson('aura.json'), loadJson('reference-frame.json'), image('reference-crop.png'),
+    Promise.all([0,1,2].map(i=>image(`capa_spark_${i}.png`)))]);
   if (original.width!==reference.cropSize[0] || original.height!==reference.cropSize[1])
     throw new Error('La imagen no coincide con el encuadre de referencia');
   REF=reference; ORIGINAL=original;
   GEO=geo['minecraft:geometry'][0]; CLIPS=prepareClips(clips); FIT=fit; hidden=runtimeHidden(GEO);
   if (glow.width!==atlas.width || glow.height!==atlas.height) throw new Error('El atlas emisivo no coincide con el opaco');
-  ATLAS=pixels(atlas); GLOW=pixels(glow); SPARK=spark; ATLAS_W=atlas.width; ATLAS_H=atlas.height;
+  ATLAS=pixels(atlas); GLOW=pixels(glow); AURA=aura;
+  SPARKS=sparks.map(pixels); ATLAS_W=atlas.width; ATLAS_H=atlas.height;
   updateBounds();
   document.getElementById('bones').textContent=GEO.bones.length;
   document.getElementById('loading').hidden=true;
@@ -509,6 +544,7 @@ fitReset.onclick=()=>{
 zoomControl.oninput=e=>{ zoom=+e.target.value; dirty=true; };
 document.getElementById('l_player').onchange=e=>{ showPlayer=e.target.checked; dirty=true; };
 fxControl.onchange=e=>{ showFx=e.target.checked; dirty=true; };
+glowControl.onchange=e=>{ showGlow=e.target.checked; dirty=true; };
 ambientControl.oninput=wipe.oninput=()=>{ dirty=true; };
 
 boot().catch(error=>{ document.getElementById('loading').textContent=error.message; });

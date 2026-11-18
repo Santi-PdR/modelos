@@ -26,7 +26,7 @@ def main() -> None:
     app = (PREVIEW / "app.js").read_text()
     loader = """async function loadJson(name) {
   return {'armor.geo.json': INLINE_GEO, 'armor.animation.json': INLINE_ANIMATIONS, 'fit.json': INLINE_FIT,
-          'reference-frame.json': INLINE_REFERENCE}[name];
+          'reference-frame.json': INLINE_REFERENCE, 'aura.json': INLINE_AURA}[name];
 }
 function assetUrl(name) { return INLINE_IMAGES[name]; }"""
     app, n = re.subn(r"/\* BEGIN LOCAL LOADER \*/.*?/\* END LOCAL LOADER \*/", loader, app, flags=re.S)
@@ -36,8 +36,10 @@ function assetUrl(name) { return INLINE_IMAGES[name]; }"""
         "INLINE_ANIMATIONS": json.loads((ASSETS / "armor.animation.json").read_text()),
         "INLINE_FIT": json.loads((ASSETS / "fit.json").read_text()),
         "INLINE_REFERENCE": json.loads((ASSETS / "reference-frame.json").read_text()),
+        "INLINE_AURA": json.loads((ASSETS / "aura.json").read_text()),
         "INLINE_IMAGES": {name: data(ASSETS / name)
-                          for name in ("armor.png", "armor_glowmask.png", "capa_spark_1.png", "reference-crop.png")},
+                          for name in ("armor.png", "armor_glowmask.png", "reference-crop.png",
+                                       *(f"capa_spark_{i}.png" for i in range(3)))},
     }
     script = "<script>\n" + "".join(f"const {k} = {json.dumps(v, separators=(',', ':'))};\n"
                                      for k, v in inline.items()) + app + "\n</script>"

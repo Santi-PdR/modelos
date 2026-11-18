@@ -987,32 +987,26 @@ def build_folded_texture() -> tuple[Image.Image, Image.Image]:
 
 
 def build_spark_sprites() -> list[Image.Image]:
-    """v1.23.0: 3 sprites de CHISPA rectangular vertical semi-transparente.
-
-    Barra estrecha (4x13) magenta/rosa con centro casi blanco y bordes
-    translúcidos. Tres frames con altura/alpha distintos para un parpadeo
-    suave. NO son partículas vanilla: `CapaSparkParticle` las usa con su
-    propio `SpriteSet` registrado en `CapaParticleRegistration`.
-    """
-    out = []
-    for frame in range(3):
-        img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-        px = img.load()
-        h = 12 - frame
-        y0 = (16 - h) // 2
-        for y in range(y0, y0 + h):
-            fade = 1.0 - abs(y - (y0 + h / 2.0)) / (h / 2.0 + 0.5)
-            for x in range(5, 11):
-                q = 1.0 - abs(x - 7.5) / 3.0
-                if x in (5, 10):
-                    a = int(70 * fade)
-                    px[x, y] = (236, 46, 178, a)
-                elif x in (6, 9):
-                    a = int(185 * fade)
-                    px[x, y] = (255, 96, 210, a)
+    """Three vertical, beveled embers, without an outline or a white plus."""
+    out=[]
+    for frame,(top,bottom) in enumerate(((2,13),(2,14),(4,13))):
+        img=Image.new('RGBA',(16,16),(0,0,0,0))
+        px=img.load()
+        gain=(.89,1.,.82)[frame]
+        for y in range(top-1,bottom+2):
+            lift=(bottom-y)/max(1,bottom-top)
+            for x in range(4,12):
+                if x in (4,11) or y in (top-1,bottom+1):
+                    px[x,y]=(227,32,132,int((34 if x in (5,6,7,8,9,10) else 19)*gain))
+                elif y==top:
+                    px[x,y]=(255,173,218,int(224*gain)) if 6<=x<=9 else (242,66,164,int(147*gain))
+                elif x<=6:
+                    px[x,y]=(180,23,106,int((218 if x==6 else 144)*gain))
+                elif x>=10:
+                    px[x,y]=(251,56,155,int(162*gain))
                 else:
-                    a = int(235 * fade)
-                    px[x, y] = (255, 214, 244, a)
+                    # Raspberries, hot pink then a pale bevel as ash rises.
+                    px[x,y]=(255,round(65+81*lift),round(161+49*lift),int(249*gain))
         out.append(img)
     return out
 

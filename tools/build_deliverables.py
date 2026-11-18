@@ -30,6 +30,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 import cape_fit
+import cape_aura
 import cape_reference
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -81,15 +82,16 @@ def step_recursos_visor() -> None:
     copy = {
         "geo/item/armor/capa_deteriorer_evilsaiyan.geo.json": "armor.geo.json",
         "animations/item/armor/capa_deteriorer_evilsaiyan.animation.json": "armor.animation.json",
-        "textures/particle/capa_spark_1.png": "capa_spark_1.png",
         "textures/item/armor/capa_deteriorer_evilsaiyan.png": "armor.png",
         "textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png": "armor_glowmask.png",
         "textures/item/capa_deteriorer_evilsaiyan.png": "icon.png",
         "textures/item/cape_folded.png": "folded.png",
         "textures/item/cape_folded_glowmask.png": "folded_glowmask.png",
     }
+    copy.update({f"textures/particle/capa_spark_{i}.png": f"capa_spark_{i}.png" for i in range(3)})
     for src, dst in copy.items():
         shutil.copy(RES / src, A / dst)
+    (A / 'aura.json').write_text(json.dumps(cape_aura.profile(), separators=(',', ':')) + '\n')
     (A / 'fit.json').write_text(json.dumps(cape_fit.profile(), separators=(',', ':')) + '\n')
     (A / 'reference-frame.json').write_text(json.dumps(cape_reference.viewer_camera()) + '\n')
     with Image.open(cape_reference.SOURCE) as source:

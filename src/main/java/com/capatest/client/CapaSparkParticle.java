@@ -26,15 +26,15 @@ public class CapaSparkParticle extends TextureSheetParticle {
         this.streak = (float) Math.min(1.0D, horizontal / 0.035D);
         double clamp = horizontal > 0.04D ? 0.04D / horizontal : 1.0D;
         this.setParticleSpeed(dx * clamp, Math.max(0.007D, Math.min(0.021D, dy)), dz * clamp);
-        this.lifetime = 37 - Math.round(13 * this.streak) + this.random.nextInt(9);
+        this.lifetime = 39 - Math.round(13 * this.streak) + this.random.nextInt(9);
         this.alpha = 0.0F;
         this.hasPhysics = false;
         this.gravity = 0.0F;
         this.friction = 0.94F;
         this.phase = this.random.nextFloat() * 3.14F;
-        this.scale(0.29F + 0.12F * this.streak + 0.12F * this.random.nextFloat());
+        this.scale(0.28F + 0.10F * this.streak + 0.15F * this.random.nextFloat());
         this.baseSize = this.quadSize;
-        this.setSpriteFromAge(sprites);
+        this.setSprite(sprites.get(0, 2));
     }
 
     @Override
@@ -45,11 +45,12 @@ public class CapaSparkParticle extends TextureSheetParticle {
         float glint = 0.5F + 0.5F * (float) Math.sin(this.phase + p * 9.0F);
         this.alpha = (0.66F + 0.08F * glint + 0.09F * this.streak) * fade;
         this.quadSize = this.baseSize * (1.0F - 0.37F * p + 0.06F * glint);
-        // El núcleo sigue casi blanco; al apagarse enfriamos el magenta.
+        // La cara rosa pierde intensidad al envejecer, sin halo blanco.
         this.rCol = 1.0F - 0.19F * p;
-        this.gCol = 0.92F - 0.21F * p;
+        this.gCol = 0.98F - 0.22F * p;
         this.bCol = 1.0F;
-        this.setSpriteFromAge(this.sprites);
+        // Three equal phases; vanilla age interpolation hardly uses the last sprite.
+        this.setSprite(this.sprites.get(Math.min(2, 3 * this.age / this.lifetime), 2));
     }
 
     @Override

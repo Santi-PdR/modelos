@@ -97,8 +97,8 @@ def static_checks() -> None:
                    if b['name'].startswith('v17_ribbon_') for c in b['cubes'])
     atlas = np.asarray(Image.open(P.ARMOR_TEX).convert('RGBA'))
     glow = np.asarray(Image.open(P.ARMOR_TEX.with_stem(P.ARMOR_TEX.stem+'_glowmask')).convert('RGBA'))
-    assert atlas.shape == glow.shape == (256,256,4)
-    assert (atlas[...,3] == 255).all() and np.count_nonzero(glow[...,3]) > 650
+    assert atlas.shape == glow.shape == (512,512,4)
+    assert (atlas[...,3] == 255).all() and np.count_nonzero(glow[...,3]) > 1500
     item_model = json.loads((ROOT / 'src/main/resources/assets/capatest/models/item'
                              '/capa_deteriorer_evilsaiyan.json').read_text())
     assert item_model['parent'] == 'minecraft:item/generated', 'el icono 2D no se ve'
@@ -130,8 +130,8 @@ def static_checks() -> None:
     assert (ROOT / 'docs' / f'CAPA_v{VER}.bbmodel').read_bytes() == BB.read_bytes()
     bb = json.loads(BB.read_text())
     assert len(bb['elements']) == 149+n_fragments and sum(e['visibility'] for e in bb['elements']) == 122+n_fragments
-    assert bb['resolution'] == {'width': 256, 'height': 256}
-    assert all(max(f['uv']) <= 256 for e in bb['elements']
+    assert bb['resolution'] == {'width': 512, 'height': 512}
+    assert all(max(f['uv']) <= 512 for e in bb['elements']
                for f in e['faces'].values())
     assert not any(e['name'] in ('head', 'torso', 'arm_L', 'arm_R',
                                  'leg_L', 'leg_R') for e in bb['elements'])
@@ -152,12 +152,12 @@ def static_checks() -> None:
                                  "capatest:capa_spark_2"]
     for i in range(3):
         assert (particles / f"textures/particle/capa_spark_{i}.png").is_file()
-    # Chispa a PIXEL: barra vertical ESTRECHA con centro casi blanco.
+    # Chispa a PIXEL: barra vertical ESTRECHA con centro rosa y halo débil.
     _sp = np.asarray(Image.open(
         particles / "textures/particle/capa_spark_1.png").convert("RGBA"))
     assert _sp.shape[:2] == (16, 16)
-    assert int((_sp[..., 3] > 0).sum()) < 100, "la chispa no es estrecha"
-    assert _sp[8, 7, 0] > 230 and _sp[8, 7, 2] > 200, "falta centro brillante"
+    assert int((_sp[..., 3] >= 64).sum()) < 100, "la chispa no es estrecha"
+    assert _sp[8, 7, 0] > 230 and _sp[8, 7, 2] > 175 and _sp[8, 7, 1] < 150, "falta centro brillante"
     assert int(_sp[..., 3].max()) >= 200, "chispa sin nucleo opaco"
     assert not (particles / "particles/capa_ember.json").exists()
     assert not (particles / "particles/capa_blight_mote.json").exists()
@@ -283,7 +283,7 @@ def static_checks() -> None:
 
 
 def main() -> None:
-    from verify_v1620 import GEO_BASE, TEX_BASE, GLOW, registered_metrics, similarity
+    from verify_v1630 import GEO_BASE, TEX_BASE, GLOW, registered_metrics, similarity
 
     ap=argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--check',action='store_true',help='aplica los mínimos de fidelidad')
