@@ -59,7 +59,16 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     private final List<Cloth> cloth = new ArrayList<>(RIBBONS * (LAST_SEGMENT + 1));
     // This is render-thread state. Evict only the least recently used wearer.
     private final Map<Long, CapeResponse> motion = new LinkedHashMap<>(32, .75F, true);
+    private GeoBone strideTop;
+    private GeoBone strideMid;
+    private double armGoal;
+    private double legGoal;
     private boolean disabled;
+
+    void setStrideGoals(double armGoal, double legGoal) {
+        this.armGoal = armGoal;
+        this.legGoal = legGoal;
+    }
 
     private record Cloth(GeoBone bone, int column, int segment) {}
 
@@ -94,6 +103,8 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             return;
         try {
             applyClothResponse(instanceId, state);
+            if (state.getData(DataTickets.ENTITY) instanceof LivingEntity)
+                applyStrideClearance();
         } catch (Exception | LinkageError error) {
             disabled = true;
             motion.clear();
@@ -109,6 +120,8 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         if (root == cachedRoot)
             return true;
         cachedRoot = root;
+        strideTop = root;
+        strideMid = getBone(SECTIONS[1]).orElse(null);
         motion.clear();
         cloth.clear();
         details.clear();
@@ -170,6 +183,21 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             b.setChildrenHidden(!visible);
         }
         visibilidadAplicada = visibilidad;
+    }
+
+    private void applyStrideClearance() {
+        if (strideTop == null || strideMid == null || (armGoal <= 0 && legGoal <= 0))
+            return;
+        // GeckoLib's baked X is the negative of the authored GEO pitch.
+        // The two shared hinges carry their seams; no cubes are offset or scaled.
+        double top = -Math.toDegrees(strideTop.getRotX());
+        double mid = -Math.toDegrees(strideMid.getRotX());
+        double topLift = CapeStride.topLift(top, armGoal, legGoal);
+        double midLift = CapeStride.midLift(top + topLift, mid, legGoal);
+        if (topLift > 0)
+            strideTop.setRotX(strideTop.getRotX() - (float) Math.toRadians(topLift));
+        if (midLift > 0)
+            strideMid.setRotX(strideMid.getRotX() - (float) Math.toRadians(midLift));
     }
 
     private void applyClothResponse(long instanceId, AnimationState<CapaDeteriorerItem> state) {

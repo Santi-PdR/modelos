@@ -65,6 +65,16 @@ public enum CapeState {
                 || (maxDamage > 0 && damage >= maxDamage * 0.65D);
     }
 
+    /** Shared inputs, with separate playback and cosmetic selection policies. */
+    public record Wearer(boolean blight, boolean elytra, boolean water, boolean airborne,
+                         boolean crouching, boolean sprinting, double horizontalSquared, double vertical) {
+        public static final Wearer STILL = new Wearer(false, false, false, false, false, false, 0, 0);
+
+        public CapeState cosmeticState() {
+            return select(blight, elytra, water, airborne, crouching, sprinting, horizontalSquared, vertical);
+        }
+    }
+
     public static CapeState select(boolean blight, boolean elytra, boolean water,
                                    boolean airborne, boolean crouching, boolean sprinting,
                                    double horizontalSquared, double vertical) {

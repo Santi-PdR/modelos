@@ -15,19 +15,16 @@ import software.bernie.geckolib.renderer.GeoArmorRenderer;
 import software.bernie.geckolib.util.RenderUtils;
 
 public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
+    private final CapaArmorModel capeModel;
     private float wearerDepth;
 
     public CapaArmorRenderer() {
-        // Apunta a:
-        // assets/capatest/geo/item/armor/capa_deteriorer_evilsaiyan.geo.json
-        // assets/capatest/animations/item/armor/capa_deteriorer_evilsaiyan.animation.json
-        // assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan.png
-        // y *_glowmask.png (GeckoLib 4.8 usa el sufijo "_glowmask").
-        super(new CapaArmorModel(
-                new ResourceLocation(CapaTestMod.MOD_ID, "armor/capa_deteriorer_evilsaiyan")
-        ));
+        this(new CapaArmorModel(new ResourceLocation(CapaTestMod.MOD_ID, "armor/capa_deteriorer_evilsaiyan")));
+    }
 
-        // Emisivo pulsante en vez del AutoGlowingGeoLayer plano.
+    private CapaArmorRenderer(CapaArmorModel model) {
+        super(model);
+        this.capeModel = model;
         addRenderLayer(new CapaGlowLayer(this));
     }
 
@@ -59,6 +56,12 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         super.applyBaseTransformations(model);
         wearerDepth = (float) CapeFit.backset(model.body.xRot, model.body.yRot,
                 model.head.xRot, model.head.yRot);
+        double arm = Math.max(CapeStride.backDegrees(model.leftArm.xRot, model.leftArm.yRot),
+                CapeStride.backDegrees(model.rightArm.xRot, model.rightArm.yRot));
+        double leg = Math.max(CapeStride.backDegrees(model.leftLeg.xRot, model.leftLeg.yRot),
+                CapeStride.backDegrees(model.rightLeg.xRot, model.rightLeg.yRot));
+        capeModel.setStrideGoals(CapeStride.armGoal(arm, model.body.xRot, wearerDepth),
+                CapeStride.legGoal(leg, model.body.xRot, wearerDepth));
     }
 
     @Override

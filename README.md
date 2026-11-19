@@ -1,11 +1,38 @@
-# Mantle of the Blight Star — v1.65.0
+# Mantle of the Blight Star — v1.66.0
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
 [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench](docs/CAPA_v1.65.0.bbmodel)
+· [Proyecto Blockbench](docs/CAPA_v1.66.0.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
+
+### v1.66.0 — el paño cede a la zancada
+
+![La misma zancada con y sin holgura del paño](docs/capa_v1660_zancada.png)
+
+- **Movimiento equipado:** dos bisagras rotan el paño en función de cuánto
+  retroceden brazos y piernas del portador, sin desplazar la montura ni
+  separar las costuras. El GEO, el ajuste de cabeza, los ocho clips,
+  las texturas y el icono son idénticos a v1.65.0. El ajuste nuevo no se
+  hornea en Blockbench; sirve tanto para pecho como para `Curios:back`.
+- **Cambios de estado:** 3 ticks para salto, caída y aterrizaje; 4 al pasar
+  por agua (si no es una transición aérea), 5 entre marcha y sprint, 6
+  para los demás cambios de suelo. La marcha usa umbrales de entrada y
+  salida distintos para no volver a reposo por una oscilación de velocidad.
+- **Deterioro:** conserva el ciclo propio en reposo, el latido y las
+  chispas; al moverse usa el paño de la locomoción. El brillo mezcla sólo
+  el RGB al cambiar de estado, sin alterar la cobertura ni la transparencia.
+
+El [visor offline](docs/capa_v1170_visor.html) permite pausar el ciclo y
+alternar **Ajuste al portador → Zancada simulada → Holgura del paño**.
+`OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1660.py` cruza fases de
+zancada y tela, incluso mezclas de clips y extremos de la respuesta.
+En las zancadas objetivo no detecta cruces del paño; sí quedan contactos
+con la montura rígida y cruces de brazo en el escenario de máxima amplitud.
+La prueba F5 con armadura, cascos y élitros sigue pendiente, al igual que
+confirmar la prioridad de pecho cuando se equipa en los dos slots.
+[Respaldo de v1.65.0](docs/respaldos/v1.65.0/).
 
 ### v1.65.0 — un poco de cuello desde el frente
 

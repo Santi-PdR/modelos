@@ -601,8 +601,13 @@ jobs:
           _item_src = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
           modes = (root / 'src/main/java/com/capatest/item/CapeState.java').read_text()
           assert {'animation.' + k for k in re.findall(r'^    [A-Z]+\("([a-z]+)"', modes, re.M)} == cape_states
-          assert 'cape_controller", 8' in _item_src, 'sin transicion suave'
-          assert 'WORN_ANIMATIONS.get(stateFor(' in _item_src
+          if tuple(map(int, ver.split('.'))) >= (1, 66, 0):
+              assert 'transitionLength(playback.blendTicks())' in _item_src
+              assert 'WORN_ANIMATIONS.get(pose)' in _item_src
+              assert 'applyStrideClearance()' in _armor_model
+          else:
+              assert 'cape_controller", 8' in _item_src, 'sin transicion suave'
+              assert 'WORN_ANIMATIONS.get(stateFor(' in _item_src
           assert 'sendParticles' in _item_src and '0, backX * trail' in _item_src
           # Sólo la tela se mueve. Las raíces, piezas soldadas y montura
           # siguen el cuerpo, no una pista residual de posición o escala.
@@ -783,6 +788,9 @@ jobs:
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1640.py
           else
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py
+            if grep -qx 'mod_version=1.66.0' gradle.properties; then
+              OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1660.py
+            fi
           fi
           # v1240: el calibrador de energia es un lazo cerrado Jacobi; se
           # comprueba que siga siendo importable y que el perfil medido
@@ -794,13 +802,15 @@ jobs:
         run: |
           CLASSES="$RUNNER_TEMP/cape-state-test"
           mkdir -p "$CLASSES"
-          javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/CapeState.java \
-            src/main/java/com/capatest/client/CapeResponse.java \
-            src/main/java/com/capatest/client/CapeFit.java \
+          javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/{CapeState,CapePlayback}.java \
+            src/main/java/com/capatest/client/{CapeResponse,CapeFit,CapeStride,CapeTint}.java \
             src/test/java/com/capatest/item/CapeStateTest.java \
-            src/test/java/com/capatest/client/CapeFitTest.java
+            src/test/java/com/capatest/client/{CapeFitTest,CapeRuntimeTest}.java
           java -cp "$CLASSES" com.capatest.item.CapeStateTest
           java -cp "$CLASSES" com.capatest.client.CapeFitTest
+          java -cp "$CLASSES" com.capatest.client.CapeRuntimeTest
+          java -cp "$CLASSES" com.capatest.client.CapeRuntimeTest --stride-samples > "$CLASSES/stride.tsv"
+          OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_v1660.py --parity-only --java-samples "$CLASSES/stride.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeFitTest --samples > "$CLASSES/fit.tsv"
           OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/check_cape_fit.py "$CLASSES/fit.tsv"
           java -cp "$CLASSES" com.capatest.item.CapeStateTest --spark-samples > "$CLASSES/sparks.tsv"
@@ -878,6 +888,9 @@ jobs:
             grep -qx 'com/capatest/client/CapaArmorModel.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeResponse.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeFit.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapeStride.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapeTint.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/item/CapePlayback.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaArmorRenderer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapaDeteriorerItem.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeState.class' /tmp/jar-contents.txt

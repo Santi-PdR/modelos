@@ -10,6 +10,10 @@ const context = vm.createContext({ document:{getElementById:target}, indata });
 const src = fs.readFileSync(path.join(__dirname, '../preview/app.js'), 'utf8').split('\nboot().catch')[0];
 const matrices = vm.runInContext(`${src}
   (() => {
+    if (indata.strideSamples) {
+      return indata.strideSamples.map(([top,mid,arm,leg,stance,depth]) =>
+        strideLifts(indata.stride,top,mid,arm,leg,stance*indata.fit.bodyAngle,depth));
+    }
     if (indata.fitSamples) {
       const {fit}=indata;
       const rig={bones:[{name:fit.bone},{name:fit.drapeBone},{name:fit.gussetBone}]};

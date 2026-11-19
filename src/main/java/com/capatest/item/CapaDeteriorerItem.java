@@ -83,21 +83,29 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        // 8 ticks de transición: al pasar de andar a correr o de correr a
-        // volar la tela interpola, no pega un salto de pose.
-        controllers.add(new AnimationController<>(this, "cape_controller", 8, state -> {
+        CapePlayback playback = new CapePlayback();
+        controllers.add(new AnimationController<>(this, "cape_controller", CapePlayback.FIRST_BLEND, state -> {
             Entity entity = state.getData(DataTickets.ENTITY);
-
-            // Sin entidad = el ITEM 3D plegado en GUI/hotbar/mano.
-            state.setAnimation(entity == null ? ITEM_ANIM :
-                    WORN_ANIMATIONS.get(stateFor(entity, state.getData(DataTickets.ITEMSTACK))));
+            if (entity == null) {
+                playback.reset();
+                state.getController().transitionLength(CapePlayback.FIRST_BLEND);
+                state.setAnimation(ITEM_ANIM);
+            } else {
+                CapeState pose = playback.sample(readWearer(entity, state.getData(DataTickets.ITEMSTACK)), entity.tickCount);
+                state.getController().transitionLength(playback.blendTicks());
+                state.setAnimation(WORN_ANIMATIONS.get(pose));
+            }
             return PlayState.CONTINUE;
         }));
     }
 
     public static CapeState stateFor(Entity entity, ItemStack equipped) {
+        return readWearer(entity, equipped).cosmeticState();
+    }
+
+    private static CapeState.Wearer readWearer(Entity entity, ItemStack equipped) {
         if (entity == null || entity instanceof ArmorStand) {
-            return CapeState.IDLE;
+            return CapeState.Wearer.STILL;
         }
         Vec3 velocity = entity.getDeltaMovement();
         // Otros jugadores pueden estar interpolando la posición sin tener
@@ -117,7 +125,7 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
         int damage = equipped == null ? 0 : equipped.getDamageValue();
         int maxDamage = equipped == null ? 0 : equipped.getMaxDamage();
         boolean blight = CapeState.deteriorated(health, maxHealth, damage, maxDamage);
-        return CapeState.select(blight, elytra, entity.isInWater(), !entity.onGround(),
+        return new CapeState.Wearer(blight, elytra, entity.isInWater(), !entity.onGround(),
                 entity.isCrouching(), entity.isSprinting(), horizontal, dy);
     }
 
@@ -184,7 +192,7 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
         double backX = Math.sin(yaw), backZ = -Math.cos(yaw);
         double sideX = Math.cos(yaw), sideZ = Math.sin(yaw);
         RandomSource random = player.getRandom();
-        // Deterioro manda sobre los clips, pero una chispa de cuello no
+        // Deterioro manda sobre el aura, pero una chispa de cuello no
         // debe aparecer pegada a la cara si el portador va en vuelo/agua.
         boolean collarAllowed = player.onGround() && !player.isFallFlying() && !player.isInWater();
         double stature = Math.max(.36D, Math.min(1.0D, player.getBbHeight() / 1.80D));

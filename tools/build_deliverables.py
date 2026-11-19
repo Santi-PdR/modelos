@@ -32,6 +32,7 @@ from PIL import Image
 import cape_fit
 import cape_aura
 import cape_reference
+import cape_stride
 
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "src/main/resources/assets/capatest"
@@ -93,6 +94,7 @@ def step_recursos_visor() -> None:
         shutil.copy(RES / src, A / dst)
     (A / 'aura.json').write_text(json.dumps(cape_aura.profile(), separators=(',', ':')) + '\n')
     (A / 'fit.json').write_text(json.dumps(cape_fit.profile(), separators=(',', ':')) + '\n')
+    (A / 'stride.json').write_text(json.dumps(cape_stride.profile(), separators=(',', ':')) + '\n')
     (A / 'reference-frame.json').write_text(json.dumps(cape_reference.viewer_camera()) + '\n')
     with Image.open(cape_reference.SOURCE) as source:
         source.convert('RGB').crop(cape_reference.CROP).save(A / 'reference-crop.png', optimize=True)
@@ -124,9 +126,9 @@ def step_gifs_y_estados(ver: str) -> None:
     run(sys.executable, "tools/present_v1600.py", "--out", str(D), "--gif")
     shutil.copy(D / f"capa_v{ver.replace('.', '')}_antes_despues.png", A / "antes_despues.png")
     shutil.copy(D / f"capa_v{ver.replace('.', '')}_registro.png", A / "registro.png")
-    if ver in ('1.64.0', '1.65.0'):
+    if ver in ('1.64.0', '1.65.0', '1.66.0'):
         shutil.copy(D / 'capa_v1640_ajuste.png', A / 'ajuste.png')
-    if ver == '1.65.0':
+    if ver in ('1.65.0', '1.66.0'):
         shutil.copy(D / 'capa_v1650_cuello.png', A / 'cuello.png')
     shutil.copy(D / "capa_v1170_estados.png", A / "estados.png")
     shutil.copy(D / "capa_v1170_animaciones.gif", A / "animacion.gif")

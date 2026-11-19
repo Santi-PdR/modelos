@@ -73,7 +73,12 @@ details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summar
         <button id="fitReset">Centrar mirada</button>
       </div>
       <output id="fitValue" for="fitStance fitLook fitTurn">Mirada 0° · giro 0° · holgura 0 u</output>
-      <p class="muted">La base sigue unida al torso. El fuelle cede al girar la cabeza, y el paño se recoge desde la costura. El maniquí no simula toda la animación vanilla.</p>
+      <div class="controls fit">
+        <label><input type="checkbox" id="stridePlayer"> Zancada simulada</label>
+        <label for="strideAmount">Amplitud</label><input type="range" id="strideAmount" min="0" max="1" step="0.01" value="0.60" disabled>
+        <label><input type="checkbox" id="strideFit" checked disabled> Holgura del paño</label>
+      </div>
+      <p class="muted">Pausa y activa o desactiva la holgura para comparar la misma zancada. Sólo giran las bisagras del paño: el cuello y la montura conservan su ajuste. El maniquí no reproduce todas las poses ni los cambios de estado del juego.</p>
     </details>
     <p class="muted">«Referencia» fija la pose base, la luz y el zoom. Desliza la imagen original sobre el modelo sin mover la cámara. Elige otra vista, arrastra o reproduce un estado para salir. Las poses salen del JSON del mod; los FX son una simulación, no una captura de Minecraft.</p>
     <p class="muted"><span id="bones">—</span> huesos · <span id="faces">—</span> caras · UV del atlas real</p>

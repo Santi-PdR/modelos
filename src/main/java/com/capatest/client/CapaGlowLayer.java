@@ -15,10 +15,15 @@ import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.renderer.GeoArmorRenderer;
 import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 
+import java.util.Map;
+import java.util.WeakHashMap;
+
 /** Separate, depth-tested light on the same solids, without editing the opaque atlas. */
 public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
     private static final ResourceLocation EMISSION = new ResourceLocation(CapaTestMod.MOD_ID,
             "textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png");
+    // A colour history follows the entity that is rendered, not the last player in the renderer.
+    private final Map<Entity, CapeTint> colors = new WeakHashMap<>();
     private boolean disabled;
 
     public CapaGlowLayer(GeoArmorRenderer<CapaDeteriorerItem> renderer) {
@@ -63,7 +68,8 @@ public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
         Entity wearer = armor.getCurrentEntity();
         CapeState mode = CapaDeteriorerItem.stateFor(wearer, armor.getCurrentStack());
         double seconds = wearer == null ? 0.0 : (wearer.tickCount + (double) partialTick) / 20.0;
-        CapeState.Glow glow = mode.glow(seconds);
+        CapeState.Glow glow = wearer == null ? mode.glow(seconds) :
+                colors.computeIfAbsent(wearer, key -> new CapeTint()).sample(mode, seconds);
 
         getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, emissive,
                 bufferSource.getBuffer(emissive), partialTick,

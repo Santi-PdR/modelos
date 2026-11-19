@@ -11,7 +11,7 @@ async function loadJson(name) {
 function assetUrl(name) { return `assets/${name}`; }
 /* END LOCAL LOADER */
 
-let GEO, CLIPS, FIT, REF, ORIGINAL, ATLAS, GLOW, SPARKS, AURA, ATLAS_W = 128, ATLAS_H = 128;
+let GEO, CLIPS, FIT, STRIDE, REF, ORIGINAL, ATLAS, GLOW, SPARKS, AURA, ATLAS_W = 128, ATLAS_H = 128;
 const canvas = document.getElementById('view');
 const ctx = canvas.getContext('2d', { alpha: false });
 let SIZE = 480;
@@ -145,6 +145,35 @@ function wearerPose(geo, profile, stance, look, turn) {
   })};
 }
 
+function strideLifts(s, top, mid, arm, leg, lean, depth) {
+  const knee = Math.max(0, Math.min(s.MID_TARGET_LIMIT, s.LEG_GAIN*leg-s.LEG_INSET-lean-s.LEG_FIT*depth));
+  const want = Math.max(0, Math.min(s.TOP_LIMIT, Math.max(s.ARM_GAIN*arm-s.ARM_INSET-lean-s.ARM_FIT*depth, s.LEG_SHARE*knee)));
+  const lift = gap => {
+    if (gap<=0) return 0;
+    const p=Math.min(1,gap/s.SOFT_EDGE);
+    return gap*p*(2-p);
+  };
+  const a=want>0 ? lift(want-top) : 0;
+  return [a, knee>0 ? lift(knee-top-a-mid) : 0];
+}
+function stridePose(geo, s, arms, legs, stance, bodyAngle, depth) {
+  const top=geo.bones.find(b=>b.name==='cape_top'), mid=geo.bones.find(b=>b.name==='cape_mid');
+  // The synthetic gait stays within ±90° after the crouch arm offset,
+  // except at the outer edge. Use the same projected angle as Java there.
+  const back = deg => Math.asin(Math.max(0,Math.sin(deg*Math.PI/180)))*180/Math.PI;
+  const a=Math.max(...arms.map(v=>back(v+stance*.4*180/Math.PI)));
+  const k=Math.max(...legs.map(back));
+  const [x,y]=strideLifts(s,top.rotation[0],mid.rotation[0],a,k,bodyAngle*stance,depth);
+  return {...geo,bones:geo.bones.map(b => {
+    const d=b===top ? x : b===mid ? y : 0;
+    return d ? {...b,rotation:[b.rotation[0]+d,...b.rotation.slice(1)]} : b;
+  })};
+}
+function strideGait(phase, amplitude) {
+  const a=amplitude*Math.cos(2*Math.PI*phase)*180/Math.PI;
+  return {arms:[a,-a],legs:[-1.4*a,1.4*a]};
+}
+
 function matrices(geo) {
   const by = {}, out = {};
   for (const b of geo.bones) by[b.name] = b;
@@ -174,7 +203,7 @@ function faceUV(s) {
   return [[u+w,v],[u,v],[u,v+h],[u+w,v+h]];
 }
 
-function playerFaces(stance=0, look=0, turn=0) {
+function playerFaces(stance=0, look=0, turn=0, gait=null) {
   // Maniquí Steve/Alex a escala (1 bloque = 16 unidades). NO está en el
   // .geo.json ni en el .bbmodel: sólo se usa para juzgar el ajuste.
   const parts = [
@@ -188,12 +217,13 @@ function playerFaces(stance=0, look=0, turn=0) {
   const about=(pivot,rotation,offset)=>mul(T(pivot.map((v,i)=>v+offset[i])),mul(rotation,T(pivot.map(v=>-v))));
   const head=about([0,24,0],mul(R('y',turn),R('x',look)),[0,-4.2*stance,0]);
   const body=about([0,24,0],R('x',-(FIT?.bodyAngle || 0)*stance),[0,-3.2*stance,0]);
-  const arms=[-5,5].map(x=>about([x,22,0],R('x',-.4*(180/Math.PI)*stance),[0,-3.2*stance,0]));
-  const legs=T([0,-.2*stance,4*stance]);
+  const arms=[-5,5].map((x,i)=>about([x,22,0],R('x',-(gait?.arms[i]||0)-.4*(180/Math.PI)*stance),[0,-3.2*stance,0]));
+  const legs=[-1.9,1.9].map((x,i)=>about([x,12,0],R('x',-(gait?.legs[i]||0)),[0,-.2*stance,4*stance]));
   const out = [];
   for (const [i,[x,y,z,w,h,d,color]] of parts.entries()) {
-    const pose=i===0 ? head : i===1 ? body : i<4 ? arms[i-2] : legs;
-    const V = CORNERS.map(k => apply(pose,[x + k[0]*w, y + k[1]*h, z + k[2]*d]));
+    const pose=i===0 ? head : i===1 ? body : i<4 ? arms[i-2] : legs[i-4];
+    const legInset=gait && i>=4 ? (i===4 ? .1 : -.1) : 0;
+    const V = CORNERS.map(k => apply(pose,[x + legInset + k[0]*w, y + k[1]*h, z + k[2]*d]));
     for (const fn in FACE_ORDER) {
       const idx = FACE_ORDER[fn];
       out.push({ pts: idx.map(i => V[i]), uvs: [[0,0],[0,0],[0,0],[0,0]], color });
@@ -396,10 +426,12 @@ function drawRuntimeParticles(seconds, size, stance, pix, depth) {
 }
 
 let yaw=25, pitch=10, zoom=1.0, playing=true, t=0, elapsed=0;
-let lastFrame=null, dirty=true, hidden=null, frameBounds=null;
+let lastFrame=null, dirty=true, hidden=null, frameBounds=null, gaitBounds=null;
 let showPlayer=true, showFx=false, showGlow=false, referenceView=false;
 const stanceControl=document.getElementById('fitStance'), lookControl=document.getElementById('fitLook');
 const turnControl=document.getElementById('fitTurn'), fitValue=document.getElementById('fitValue');
+const stridePlayer=document.getElementById('stridePlayer'), strideFit=document.getElementById('strideFit');
+const strideAmount=document.getElementById('strideAmount');
 const fitReset=document.getElementById('fitReset'), fxControl=document.getElementById('l_particles');
 const glowControl=document.getElementById('l_glow');
 const seek=document.getElementById('seek'), play=document.getElementById('play');
@@ -428,12 +460,17 @@ function drawOriginal(size) {
     ctx.fillRect(Math.floor(x+amount*w),y,1,h);
   }
 }
+function refreshStrideControls() {
+  stridePlayer.disabled=referenceView;
+  strideFit.disabled=strideAmount.disabled=referenceView || !stridePlayer.checked;
+}
 function setReference(value) {
   referenceView=value;
   document.getElementById('v34').setAttribute('aria-pressed',String(value));
   compareControl.hidden=!value;
   for (const control of [stanceControl, lookControl, turnControl, fitReset, fxControl, glowControl, ambientControl, zoomControl])
     control.disabled=value;
+  refreshStrideControls();
   dirty=true;
 }
 function setPlaying(value) {
@@ -454,6 +491,10 @@ function updateBounds() {
     }
   }
   frameBounds=CORNERS.map(k=>k.map((v,i)=>v?hi[i]:lo[i]));
+  // Keep both A/B passes at one scale, even when the legs swing out.
+  for (const phase of [0,.5]) for (const {pts} of playerFaces(0,0,0,strideGait(phase,1)))
+    for (const p of pts) for (let a=0;a<3;a++) { lo[a]=Math.min(lo[a],p[a]); hi[a]=Math.max(hi[a],p[a]); }
+  gaitBounds=CORNERS.map(k=>k.map((v,i)=>v?hi[i]:lo[i]));
 }
 function draw(now) {
   requestAnimationFrame(draw);
@@ -467,13 +508,19 @@ function draw(now) {
   const stance=referenceView ? 0 : Number(stanceControl.checked);
   const look=referenceView ? 0 : +lookControl.value;
   const turn=referenceView ? 0 : +turnControl.value;
-  const posed=referenceView ? GEO : wearerPose(poseAt(GEO,clip,t),FIT,stance,look,turn);
+  const depth=backset(FIT,stance,look,turn);
+  // A synthetic stride has its own clock. Pausing freezes both it and the clip.
+  const amplitude=+strideAmount.value;
+  const gait=!referenceView && stridePlayer.checked ? strideGait(elapsed*(.8+.95*amplitude),amplitude) : null;
+  let base=referenceView ? GEO : poseAt(GEO,clip,t);
+  if (gait && strideFit.checked) base=stridePose(base,STRIDE,gait.arms,gait.legs,stance,FIT.bodyAngle,depth);
+  const posed=referenceView ? base : wearerPose(base,FIT,stance,look,turn);
   const faces=collect(posed,hidden);
-  if (showPlayer) faces.push(...playerFaces(stance,look,turn));
+  if (showPlayer) faces.push(...playerFaces(stance,look,turn,gait));
   fitValue.textContent=referenceView ? 'Pose base · ajuste desactivado' :
-    `Mirada ${look}° · giro ${turn}° · holgura ${backset(FIT,stance,look,turn).toFixed(2)} u`;
+    `Mirada ${look}° · giro ${turn}° · holgura ${depth.toFixed(2)} u`;
   const fx=showFx&&!referenceView;
-  render(faces,yaw,pitch,zoom,SIZE,frameBounds,showGlow&&!referenceView ? simulatedTint(t,clip.length) : null,
+  render(faces,yaw,pitch,zoom,SIZE,gait ? gaitBounds : frameBounds,showGlow&&!referenceView ? simulatedTint(t,clip.length) : null,
          referenceView ? 1 : +ambientControl.value, referenceView ? referenceFrame(SIZE) : null,
          fx ? (pixels,z)=>drawRuntimeParticles(elapsed,SIZE,stance,pixels,z) : null);
   if (referenceView) drawOriginal(SIZE);
@@ -494,14 +541,14 @@ function pixels(im) {
   return ctx.getImageData(0,0,im.width,im.height).data;
 }
 async function boot() {
-  const [geo,clips,fit,atlas,glow,aura,reference,original,sparks]=await Promise.all([
-    loadJson('armor.geo.json'), loadJson('armor.animation.json'), loadJson('fit.json'), image('armor.png'),
+  const [geo,clips,fit,stride,atlas,glow,aura,reference,original,sparks]=await Promise.all([
+    loadJson('armor.geo.json'), loadJson('armor.animation.json'), loadJson('fit.json'), loadJson('stride.json'), image('armor.png'),
     image('armor_glowmask.png'), loadJson('aura.json'), loadJson('reference-frame.json'), image('reference-crop.png'),
     Promise.all([0,1,2].map(i=>image(`capa_spark_${i}.png`)))]);
   if (original.width!==reference.cropSize[0] || original.height!==reference.cropSize[1])
     throw new Error('La imagen no coincide con el encuadre de referencia');
   REF=reference; ORIGINAL=original;
-  GEO=geo['minecraft:geometry'][0]; CLIPS=prepareClips(clips); FIT=fit; hidden=runtimeHidden(GEO);
+  GEO=geo['minecraft:geometry'][0]; CLIPS=prepareClips(clips); FIT=fit; STRIDE=stride; hidden=runtimeHidden(GEO);
   if (glow.width!==atlas.width || glow.height!==atlas.height) throw new Error('El atlas emisivo no coincide con el opaco');
   ATLAS=pixels(atlas); GLOW=pixels(glow); AURA=aura;
   SPARKS=sparks.map(pixels); ATLAS_W=atlas.width; ATLAS_H=atlas.height;
@@ -544,6 +591,8 @@ document.getElementById('state').onchange=e=>{
 for (const control of [stanceControl,lookControl,turnControl]) {
   control.oninput=()=>{ if (!referenceView) dirty=true; };
 }
+stridePlayer.onchange=()=>{ refreshStrideControls(); dirty=true; };
+strideFit.onchange=strideAmount.oninput=()=>{ dirty=true; };
 fitReset.onclick=()=>{
   stanceControl.checked=false; lookControl.value=turnControl.value=0; dirty=true;
 };

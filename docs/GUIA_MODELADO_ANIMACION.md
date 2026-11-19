@@ -88,15 +88,22 @@ animación y la documentación de GeckoLib._
    memoria. Para la referencia se fija la cámara y se ignoran pelo, ropa y
    partículas libres; el registro mide contorno sólido y RGB común.
 3. `cape_wearer_fit` está entre `chestplate` y el conjunto equipado. No
-   tiene cubos ni keyframes. El renderer lo rota, en ambos pases, según
-   cabeza y torso de `HumanoidModel`. No aplicar un segundo ajuste en
-   Curios ni hornear la corrección al proyecto de Blockbench.
+   tiene cubos ni keyframes. El renderer aplica la holgura de cabeza,
+   el fuelle y el contragiro del paño en ambos pases, según cabeza y torso
+   de `HumanoidModel`. No aplicar un segundo ajuste en Curios ni hornear
+   la corrección al proyecto de Blockbench.
 4. En juego, comprobar en F5 primero el pecho sin Curios, luego `back`
    con el pecho vacío, y finalmente ambos slots (una sola capa y glow).
    Probar agacharse mirando arriba y girando, caminar, esprintar, caer,
    planear y nadar. Probar de día y noche: el glow debe coincidir con los
    cortes. El barrido de cajas no reemplaza estas comprobaciones.
-5. En el visor, bajar **Luz ambiente** y activar **Luz de grietas**.
+5. En **Ajuste al portador → Zancada simulada**, pausar el clip y alternar
+   **Holgura del paño** con la misma amplitud y postura. El visor reproduce
+   la guía rotacional de Java, no el cambio de estados ni toda la pose
+   vanilla. `tools/verify_v1660.py` compara brazos, piernas y costuras con
+   y sin la guía. No usar una zancada sintética para certificar cascos,
+   armaduras ni las poses de vuelo/nado del cliente.
+6. En el visor, bajar **Luz ambiente** y activar **Luz de grietas**.
    **Chispas** se puede activar aparte para revisar el comportamiento.
    Comprobar que se iluminan los núcleos, no las placas o el forro entero;
    apagarlos no debe abrir un agujero. «Referencia» vuelve a luz fija y
