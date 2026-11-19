@@ -3,18 +3,19 @@
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
-[Descargar JAR v1.67.10 (prueba)](https://github.com/Santi-PdR/modelos/releases/download/v1.67.10/capatest-1.67.10.jar)
-· [JAR anterior v1.67.9](https://github.com/Santi-PdR/modelos/releases/download/v1.67.9/capatest-1.67.9.jar)
+[Descargar JAR v1.67.11 (prueba)](https://github.com/Santi-PdR/modelos/releases/download/v1.67.11/capatest-1.67.11.jar)
+· [JAR anterior v1.67.10](https://github.com/Santi-PdR/modelos/releases/download/v1.67.10/capatest-1.67.10.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
 · [Proyecto Blockbench de la rama](docs/CAPA_v1.67.11.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
-### v1.67.11 — unión sobre el torso y marcha (rama de pruebas)
+### v1.67.11 — unión sobre el torso y marcha
 
 - El yugo nace dentro del torso y su borde dobla sobre la camiseta; el balanceo de las mangas ya no manda el ajuste entero en cada paso.
 - Caminar y correr comparten la fase interpolada de las piernas. Se mezclan las ocho curvas originales sin reiniciar la fase, y la holgura de las bisagras se calcula para la zancada, no sólo para el pie que pasa en ese instante.
 - Cambia únicamente el manto equipado. Atlas, icono, destellos y Curios opcional se conservan.
+- **Prueba en Forge:** [comparación F5](docs/capa_v16711_union_forge.png) con el respaldo de v1.67.10 en el mismo encuadre. El canto visible de la camiseta pasó de 0% a 100% cenital y de 0% a 40,3% oblicuo en las zonas medidas. Al andar no se observaron reinicios de fase durante el paso estable; el movimiento brusco de la bisagra bajó de ~30 a ~2°/tick (p95) en ambas ranuras. [Prueba en mundo](https://github.com/Santi-PdR/modelos/actions/runs/44627426935).
 
 ### v1.67.10 — ajuste a media inclinación (rama de pruebas)
 
