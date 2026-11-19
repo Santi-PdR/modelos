@@ -995,6 +995,14 @@ jobs:
             exit 1
           fi
 
+      - name: Medir ciclos y transiciones reales al caminar en F5
+        if: steps.fx-smoke.outcome == 'success'
+        run: |
+          set -o pipefail
+          python3 tools/verify_forge_walk.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
+            printf '::notice title=Marcha en Forge::%s\n' "$line"
+          done
+
       - name: Verificar el desplazamiento visible del cuello y las dos hombreras en F5
         if: steps.fx-smoke.outcome == 'success'
         run: |

@@ -109,6 +109,7 @@ public final class CapeFxSmoke {
         MID_BARE("ajuste-medio-sin-manto", 6000), MID_PREVIOUS("ajuste-medio-v1679", 6000),
         MID_CHEST("ajuste-medio-pecho", 6000), MID_BACK("ajuste-medio-curios", 6000),
         LOOK_CHEST("mirada-pecho", 6000), LOOK_BACK("mirada-curios", 6000),
+        WALK_CHEST("paso-pecho", 6000), WALK_BACK("paso-curios", 6000),
         HOTBAR_BARE("hotbar-vacia", 6000), HOTBAR("hotbar", 6000),
         STRAFE_LEFT("traslacion-izquierda", 18000), STRAFE_RIGHT("traslacion-derecha", 18000),
         WINGS("espalda-con-elitros", 18000),
@@ -125,7 +126,7 @@ public final class CapeFxSmoke {
 
         boolean hotbar() { return this == HOTBAR_BARE || this == HOTBAR; }
         boolean elytra() { return this == WINGS || this == GLIDE; }
-        boolean usesBack() { return this == TOP_BACK || this == TURN_BACK || this == OBLIQUE_BACK || this == SIDE_BACK || this == FIT_BACK || this == FIT_SLIM_BACK || this == MID_BACK || this == LOOK_BACK || elytra(); }
+        boolean usesBack() { return this == TOP_BACK || this == TURN_BACK || this == OBLIQUE_BACK || this == SIDE_BACK || this == FIT_BACK || this == FIT_SLIM_BACK || this == MID_BACK || this == LOOK_BACK || this == WALK_BACK || elytra(); }
         boolean hasBack() { return this == BOTH || usesBack(); }
         boolean bare() { return this == TOP_BARE || this == TURN_BARE || this == OBLIQUE_BARE || this == SIDE_BARE || this == FIT_BARE || this == FIT_SLIM_BARE || this == MID_BARE; }
         boolean overhead() { return this == TOP_BARE || this == TOP_CHEST || this == TOP_BACK || turned(); }
@@ -139,6 +140,7 @@ public final class CapeFxSmoke {
         boolean slimFit() { return fit() && ordinal() >= FIT_SLIM_BARE.ordinal(); }
         boolean midFit() { return fit() && ordinal() >= MID_BARE.ordinal(); }
         boolean sweep() { return this == LOOK_CHEST || this == LOOK_BACK; }
+        boolean walk() { return this == WALK_CHEST || this == WALK_BACK; }
         boolean fixedCamera() { return overhead() || upperBack() || fit() || sweep(); }
         float yaw() { return fit() ? 3 : profile() ? 76 : turned() || oblique() || hotbar() ? 43 : 0; }
         float pitch() { return midFit() ? 58 : fit() ? 76 : profile() ? 21 : oblique() ? 58 : turned() || hotbar() ? 86 : 89; }
@@ -161,6 +163,8 @@ public final class CapeFxSmoke {
     private static double frameTopDegrees, frameSeating;
     private static CapeLookSweep lookSweep;
     private static CapeLookSweep.Draw seatDraw;
+    private static CapeWalkProbe.Route walkRoute;
+    private static CapeWalkProbe.Draw walkDraw;
     private static ItemStack rendered;
     private static Matrix4f playerPose, armorPose, upperBackProjection;
     private static int stableFrames;
@@ -399,6 +403,9 @@ public final class CapeFxSmoke {
     private static void equipScene(Minecraft game, Scene next) {
         resetDeadline();
         scene = next;
+        walkRoute = next.walk() ? new CapeWalkProbe.Route() : null;
+        if (next == Scene.WALK_CHEST) game.options.framerateLimit().set(60);
+        if (next == Scene.HOTBAR_BARE) game.options.framerateLimit().set(30);
         lookSweep = next.sweep() ? new CapeLookSweep() : null;
         stableFrames = observedBirths = 0;
         captured = false;
@@ -427,6 +434,10 @@ public final class CapeFxSmoke {
             game.options.fov().set(70);
         }
         game.options.keyLeft.setDown(false);
+        if (next == Scene.HOTBAR_BARE || next == Scene.WALK_BACK) {
+            game.options.keyUp.setDown(false);
+            game.options.keySprint.setDown(false);
+        }
         game.options.keyRight.setDown(false);
         if (next == Scene.SWIM) {
             game.options.keyUp.setDown(true);
@@ -508,6 +519,8 @@ public final class CapeFxSmoke {
 
     private static void driveScene(Minecraft game) {
         var player = game.player;
+        if (scene.walk() && (scene.usesBack() ? !backOf(player).getStacks().getStackInSlot(0).isEmpty()
+                : player.getItemBySlot(EquipmentSlot.CHEST).is(CapaTestMod.CAPA_DETERIORER.get()))) walkRoute.drive(game);
         if (scene.strafe()) {
             game.options.keyLeft.setDown(scene == Scene.STRAFE_LEFT);
             game.options.keyRight.setDown(scene == Scene.STRAFE_RIGHT);
@@ -535,6 +548,7 @@ public final class CapeFxSmoke {
         if (scene == null || !(event.getRenderer() instanceof CapaArmorRenderer renderer)
                 || renderer.getCurrentEntity() != Minecraft.getInstance().player) return;
         if (scene.sweep()) CapeLookSweep.Probe.arm(renderer);
+        if (scene.walk()) CapeWalkProbe.arm(renderer);
         if (scene.previousFit()) {
             // At 58° v1.67.9 was still fully open. The other controls
             // disable the complete original seating stroke from v1.67.9.
@@ -568,6 +582,7 @@ public final class CapeFxSmoke {
                     .mul(RenderSystem.getModelViewMatrix()).mul(armorPose).translate(0,1.5F,0).scale(-1,-1,1);
         }
         if (scene.sweep()) seatDraw = CapeLookSweep.Probe.finish(renderer);
+        if (scene.walk()) walkDraw = CapeWalkProbe.finish(renderer);
         if (scene.fit() || scene.sweep()) {
             try {
                 frameSeating = SEATING.getFloat(renderer);
@@ -588,6 +603,7 @@ public final class CapeFxSmoke {
             framePasses = 0;
             frameTopDegrees = frameSeating = Double.NaN;
             seatDraw = null;
+            walkDraw = null;
             rendered = ItemStack.EMPTY;
             playerPose = armorPose = upperBackProjection = null;
             // Hold the camera/head yaw relative to the torso, like looking
@@ -618,7 +634,7 @@ public final class CapeFxSmoke {
         boolean chestReady = switch (scene) {
             case TOP_BARE, TOP_BACK, TURN_BARE, TURN_BACK, OBLIQUE_BARE, OBLIQUE_BACK, SIDE_BARE, SIDE_BACK,
                     FIT_BARE, FIT_BACK, FIT_SLIM_BARE, FIT_SLIM_BACK, MID_BARE, MID_BACK,
-                    LOOK_BACK, HOTBAR_BARE, HOTBAR -> chest.isEmpty();
+                    LOOK_BACK, WALK_BACK, HOTBAR_BARE, HOTBAR -> chest.isEmpty();
             case WINGS, GLIDE -> chest.is(Items.ELYTRA);
             default -> chest.is(CapaTestMod.CAPA_DETERIORER.get());
         };
@@ -677,6 +693,10 @@ public final class CapeFxSmoke {
             }
             check(framePasses == expectedPasses && (expectedPasses == 0 || rendered == (scene.usesBack() ? back : chest)),
                     scene.file + ": incorrect worn draw count " + framePasses);
+            if (scene.walk()) {
+                captured = walkRoute.capture(game, framePartialTick, walkDraw, shots(game), scene.file);
+                return;
+            }
             String exposure = "";
             if (scene.compareLight()) {
                 int block = LightTexture.block(frameLight), sky = LightTexture.sky(frameLight);
