@@ -2,6 +2,7 @@ package com.capatest.client;
 
 import com.capatest.CapaTestMod;
 import com.capatest.item.CapaDeteriorerItem;
+import com.google.gson.JsonParseException;
 import net.minecraft.client.player.RemotePlayer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -13,6 +14,7 @@ import software.bernie.geckolib.constant.DataTickets;
 import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.model.DefaultedItemGeoModel;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -112,8 +114,8 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         }
         if (wornClips == null && !useDefaultSampler) {
             try {
-                wornClips = new CapeWornClips(this, item, animated);
-            } catch (IllegalArgumentException customAsset) {
+                wornClips = new CapeWornClips(getAnimationResource(item), animated);
+            } catch (IOException | IllegalArgumentException | IllegalStateException | JsonParseException customAsset) {
                 useDefaultSampler = true;
                 CapaTestMod.LOGGER.warn("Blight Star Mantle: se usa el muestreador de GeckoLib para el recurso equipado", customAsset);
             }
