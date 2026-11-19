@@ -7,6 +7,8 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 import cape_animation_pipeline as A
+from cape_icon import first_frame
+
 import cape_fit as F
 import cape_tracks as T
 import preview_cloth as P
@@ -60,12 +62,13 @@ def mount_panel(out, geo, atlas, clips):
 def icon_panel(path):
     board = Image.new('RGB',(906,444),BG)
     d = ImageDraw.Draw(board)
-    label(d,(26,20),'INVENTARIO / v1.64.0',16,ROSE,bold=True)
+    label(d,(26,20),f'INVENTARIO / v{P.mod_version()}',16,ROSE,bold=True)
     label(d,(26,51),'Un icono pensado para la ranura',35,bold=True)
-    for i,(name,src) in enumerate((('ANTES · v1.63.0',OLD_ICON),('AHORA · v1.64.0',P.ICON))):
+    previous = P.ROOT/'docs/respaldos/v1.65.0'/P.ICON.relative_to(P.ASSETS)
+    for i,(name,src) in enumerate((('ANTES · v1.67.5',previous),('NUEVO · TU REFERENCIA',P.ICON))):
         x = 28+i*448
         label(d,(x,113),name,17,ROSE if i else DIM,bold=True)
-        icon = Image.open(src).convert('RGBA').resize((16,16),Image.Resampling.NEAREST)
+        icon = first_frame(src)
         for j,stage in enumerate(((138,138,138),(58,47,67))):
             y = 145+j*121
             d.rounded_rectangle((x,y,x+395,y+105),8,fill=stage,outline=(102,80,110))
@@ -74,5 +77,5 @@ def icon_panel(path):
                 board.paste(im,(x+slot_x,y+(106-im.height)//2),im)
         for dx,mag in zip((30,117,248),('1×','3×','5×'),strict=True):
             label(d,(x+dx,376),mag,14,DIM)
-    label(d,(28,413),'✦ La noche arde en sus costuras.',18,ROSE)
+    label(d,(28,413),'Fotograma en reposo · muestreo sin suavizado a tres escalas.',18,DIM)
     board.save(path,optimize=True)

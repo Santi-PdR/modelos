@@ -67,10 +67,13 @@ Why procedural instead of AI-generated art:
     remain pristine. Ember and blight-mote particles each use three soft,
     anti-aliased 16x16 sprites.
 
-Outputs (all committed, so CI needs no Python deps):
+Current inventory art: the user’s original reference is recovered and
+animated by cape_icon.py. The 16×16 pixel map below is historical only.
+
+Outputs (all committed):
     textures/item/armor/capa_deteriorer_evilsaiyan.png            256x256
     textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png  256x256
-    textures/item/capa_deteriorer_evilsaiyan.png                  64x64
+    textures/item/capa_deteriorer_evilsaiyan.png                   16 frames of 80x80
     textures/item/cape_folded.png                                  128x128 (3D item atlas)
     textures/item/cape_folded_glowmask.png                         128x128 (efecto del item)
     textures/particle/capa_ember_0..2.png                          16x16  (brasas cálidas)
@@ -98,7 +101,6 @@ ORIGINALS = ROOT / "tools" / "originals"
 ASSETS = ROOT / "src" / "main" / "resources" / "assets" / "capatest"
 GEO = ASSETS / "geo" / "item" / "armor" / "capa_deteriorer_evilsaiyan.geo.json"
 ARMOR_DIR = ASSETS / "textures" / "item" / "armor"
-ICON = ASSETS / "textures" / "item" / "capa_deteriorer_evilsaiyan.png"
 
 SIZE = 128
 SEED = 20261111
@@ -621,7 +623,7 @@ def cloth_canvas_fitted(w: int, h: int) -> tuple[Image.Image, Image.Image]:
 # ampliado 4x con Image.NEAREST.
 # --------------------------------------------------------------------------
 
-# Inventory art is composed at 16 px, where it is actually read. The open
+# Historical v1.64–1.67.5 inventory art, composed at 16 px. The open
 # collar, steel shoulders, single star, and asymmetric hem have separate
 # value groups. Two stitches echo the worn cracks without a field of specks.
 ICON_PIXEL_MAP = (
@@ -664,10 +666,6 @@ def build_icon_artwork(size: int = 64) -> Image.Image:
     icon = Image.new("RGBA", (16, 16))
     icon.putdata([ICON_PALETTE[pixel] for row in ICON_PIXEL_MAP for pixel in row])
     return icon.resize((size, size), Image.NEAREST)
-
-
-def build_icon() -> Image.Image:
-    return build_icon_artwork(64)
 
 
 def build_folded_texture() -> tuple[Image.Image, Image.Image]:
@@ -1019,9 +1017,8 @@ def main() -> None:
     glowmask.save(ARMOR_DIR / "capa_deteriorer_evilsaiyan_glowmask.png")
     print("armor:", armor.size, "glowmask:", glowmask.size)
 
-    icon = build_icon()
-    icon.save(ICON)
-    print("icon:", icon.size)
+    from cape_icon import write as write_icon
+    write_icon()
 
     folded, folded_glow = build_folded_texture()
     folded.save(ASSETS / "textures/item/cape_folded.png")

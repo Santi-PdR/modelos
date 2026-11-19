@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 
 import cape_animation_pipeline as animations
+from cape_icon import ICON, SIZE as ICON_SIZE, first_frame
 import cape_tracks as tracks
 import json
 import math
@@ -33,7 +34,6 @@ FOLDED_GEO = ASSETS / "geo/item/cape_folded.geo.json"
 ARMOR_TEX = ASSETS / "textures/item/armor/capa_deteriorer_evilsaiyan.png"
 FOLDED_TEX = ASSETS / "textures/item/cape_folded.png"
 FOLDED_GLOW = ASSETS / "textures/item/cape_folded_glowmask.png"
-ICON = ASSETS / "textures/item/capa_deteriorer_evilsaiyan.png"
 PARTICLE_DIR = ASSETS / "textures/particle"
 
 
@@ -489,8 +489,7 @@ def main():
         (768, 384), Image.LANCZOS).save(args.out / "canvas.png")
     # v1.17.0: icono pixel art 16x16 conservando la forma aprobada, con
     # paleta Rosé, grietas, 5 puntas y microvóxeles; NEAREST sin AA.
-    Image.open(ICON).convert("RGBA").resize(
-        (256, 256), Image.NEAREST).save(args.out / "icon.png")
+    first_frame().resize((ICON_SIZE*3, ICON_SIZE*3), Image.Resampling.NEAREST).save(args.out / "icon.png")
     Image.open(FOLDED_GLOW).convert("RGBA").resize(
         (256, 256), Image.LANCZOS).save(args.out / "folded_glowmask.png")
     particle_sheet(args.out / "particles.png")

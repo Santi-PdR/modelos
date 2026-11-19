@@ -1,12 +1,27 @@
-# Mantle of the Blight Star — v1.67.5
+# Mantle of the Blight Star — v1.67.6
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
 [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench](docs/CAPA_v1.67.5.bbmodel)
+· [Proyecto Blockbench](docs/CAPA_v1.67.6.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+
+### v1.67.6 — unión visible al torso e icono animado
+
+- **Anclaje:** el asiento ya tocaba en el centro, pero la cámara cenital de
+  Forge mostraba suelo a ambos lados de la sujeción. El fuelle granate ahora
+  recorre el ancho del torso hasta las dos raíces del cuello, sin fijar el
+  manto a los brazos. Usa el mismo ajuste de cabeza en pecho y en Curios
+  `back`. Se mantienen los ocho clips, el paño, el halo y la holgura con alas.
+- **Icono:** usamos [tu dibujo](referencias/REFERENCIA_ICONO_v1676.png),
+  sin el damero y sin redibujar el contorno. La estrella pulsa y el destello
+  recorre las grietas en la hotbar. Son 16 cuadros del atlas vanilla; no
+  hace falta otro mod ni un paquete de recursos. [Antes y ahora, en reposo](docs/capa_v1170_icon_compare.png).
+- **Regresión en Forge:** F5 mirando casi recto hacia abajo, sin manto,
+  con manto en el pecho y en Curios. Se mide el suelo que queda visible
+  tras el torso; se comprueba el pulso del icono en la hotbar normal.
 
 ### v1.67.5 — holgura con élitros
 
@@ -1046,7 +1061,7 @@ en un dobladillo ancho de puntas desiguales.
   El icono APROBADO anterior sigue intacto en
   [`referencias/ICONO_APROBADO_BACKUP.png`](referencias/ICONO_APROBADO_BACKUP.png)
   y `tools/originals/icono_aprobado_v1130.png` (SHA `e88ccec0…4840`);
-  `python3 tools/restore_icon.py` lo restaura en un comando.
+  `python3 tools/restore_icon.py` exporta ese respaldo sin tocar el icono activo.
 
 ### Autoevaluación medida y acabado artesanal (v1214)
 

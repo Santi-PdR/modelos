@@ -22,9 +22,9 @@ VER = next(l.split("=", 1)[1].strip() for l in
            if l.startswith("mod_version="))
 BB = ROOT / "docs" / f"CAPA_v{VER}.bbmodel"
 
-# The new active icon is independently guarded. All historical sprites
-# remain byte-identical (including the previously preferred icon).
-ICON_SHA = "01b143728808c2b8ff4ea4e795816e3760c6ed9bd49505c1f37564dddf247b63"
+# Historical sprites remain byte-identical. The active strip is verified
+# against the supplied source, not against one of these static backups.
+ICON_V164_SHA = "01b143728808c2b8ff4ea4e795816e3760c6ed9bd49505c1f37564dddf247b63"
 ICON_V125_SHA = "c90670ba367557d7c7c003fa38dbe10c27cc88dcee1ef37fedc48f3a82820ee5"
 # El rediseño de la v1.27.0 no se borra: queda como histórico en
 # referencias/ICONO_V1270_REDISEÑO_BACKUP.png.
@@ -107,10 +107,8 @@ def static_checks() -> None:
                              '/capa_deteriorer_evilsaiyan.json').read_text())
     assert item_model['parent'] == 'minecraft:item/generated', 'el icono 2D no se ve'
     assert item_model['textures']['layer0'] == 'capatest:item/capa_deteriorer_evilsaiyan'
-    # v1.25.0: el usuario devolvió el icono anterior («el 1 era mucho
-    # mejor… no importa la animación»): ESTÁTICO, SIN overrides ni
-    # propiedad de modelo, y con un backup byte-idéntico obligatorio.
-    assert 'overrides' not in item_model, 'vuelven los frames del icono'
+    # The pulse is on the texture atlas, without stack/model overrides.
+    assert 'overrides' not in item_model
     assert not (ROOT / 'src/main/java/com/capatest/client/CapaIconAnimation.java').exists()
     pref = ROOT / 'referencias/ICONO_PREFERIDO_BACKUP.png'
     assert pref.is_file(), 'falta el backup del icono preferido'
@@ -138,8 +136,10 @@ def static_checks() -> None:
                for f in e['faces'].values())
     assert not any(e['name'] in ('head', 'torso', 'arm_L', 'arm_R',
                                  'leg_L', 'leg_R') for e in bb['elements'])
-    icon = ROOT / "src/main/resources/assets/capatest/textures/item/capa_deteriorer_evilsaiyan.png"
-    assert hashlib.sha256(icon.read_bytes()).hexdigest() == ICON_SHA, "icono alterado"
+    legacy = ROOT / "docs/respaldos/v1.65.0" / P.ICON.relative_to(P.ASSETS)
+    assert hashlib.sha256(legacy.read_bytes()).hexdigest() == ICON_V164_SHA
+    from cape_icon import verify as verify_icon
+    verify_icon()
     # El icono APROBADO sigue disponible, byte-identico, por si la
     # remasterizacion no convence: tools/restore_icon.py lo restaura.
     for backup in ("referencias/ICONO_APROBADO_BACKUP.png",
@@ -240,7 +240,7 @@ def static_checks() -> None:
     _chains = [b for b in bones if b["name"].startswith("v18_chain_")]
     assert len(_chains) == 8, len(_chains)
     from texture_pipeline import build_icon_artwork
-    pixels = np.asarray(Image.open(P.ICON).convert('RGBA'))
+    pixels = np.asarray(Image.open(legacy).convert('RGBA'))
     low = np.asarray(build_icon_artwork(16))
     assert np.array_equal(pixels,np.repeat(np.repeat(low,4,0),4,1))
     assert set(np.unique(low[...,3])) == {0,255}

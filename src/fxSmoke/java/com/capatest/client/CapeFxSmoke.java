@@ -76,10 +76,12 @@ public final class CapeFxSmoke {
     private static final String ATLAS = "assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan";
     private static final String FRAGMENT = "assets/capatest/shaders/core/cape_bloom.fsh";
     private static final String PACK_ID = "file/fx-probe";
+    private static final int HOTBAR_SLOT = 4, HOTBAR_SAMPLES = 18;
     private enum Scene {
         CHEST("pecho-dia", 6000), NIGHT("pecho-noche", 18000), LAMP("pecho-noche-con-luz", 18000),
         BOTH("ambos-noche-encantado", 18000),
         TOP_BARE("cenital-sin-manto", 6000), TOP_CHEST("cenital-pecho", 6000), TOP_BACK("cenital-curios", 6000),
+        HOTBAR("hotbar", 6000),
         STRAFE_LEFT("traslacion-izquierda", 18000), STRAFE_RIGHT("traslacion-derecha", 18000),
         WINGS("espalda-con-elitros", 18000),
         GLIDE("planeo-real", 6000), WADE("de-pie-en-agua", 6000), SWIM("nado-horizontal", 6000),
@@ -119,6 +121,7 @@ public final class CapeFxSmoke {
     private static int stableFrames;
     private static int observedBirths;
     private static boolean captured;
+    private static int hotbarCount, lastHotbarTick;
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void observeParticles(RegisterParticleProvidersEvent event) {
@@ -266,7 +269,7 @@ public final class CapeFxSmoke {
                     }
                     if (game.player.getSwimAmount(1) > 0) return;
                     check(!CapaDeteriorerItem.auraFrame(game.player).posed(), "swim frame persisted after blend");
-                    note("PASS: recarga, luz local, oclusión, equipo, paso lateral, alas plegadas, planeo y nado en cliente Forge");
+                    note("PASS: recarga, luz, oclusión, equipo cenital, hotbar, paso lateral, alas, planeo y nado en Forge");
                     game.stop();
                 }
                 default -> { return; }
@@ -353,7 +356,15 @@ public final class CapeFxSmoke {
         stableFrames = observedBirths = 0;
         captured = false;
         if (next == Scene.TOP_BARE) game.options.fov().set(34);
-        if (next == Scene.STRAFE_LEFT) game.options.fov().set(70);
+        if (next == Scene.HOTBAR) {
+            game.options.guiScale().set(2);
+            game.options.hideGui = false;
+            hotbarCount = 0;
+        }
+        if (next == Scene.STRAFE_LEFT) {
+            game.options.hideGui = true;
+            game.options.fov().set(70);
+        }
         game.options.keyLeft.setDown(false);
         game.options.keyRight.setDown(false);
         if (next == Scene.SWIM) {
@@ -383,10 +394,14 @@ public final class CapeFxSmoke {
             // for the three lighting captures.
             if (next == Scene.NIGHT || next == Scene.LAMP) return;
             ItemStack chest = next.elytra() ? new ItemStack(Items.ELYTRA)
-                    : next == Scene.TOP_BARE || next == Scene.TOP_BACK ? ItemStack.EMPTY : mantle();
+                    : next == Scene.TOP_BARE || next == Scene.TOP_BACK || next == Scene.HOTBAR ? ItemStack.EMPTY : mantle();
             if (next == Scene.BOTH) chest.enchant(Enchantments.UNBREAKING, 1);
             player.setItemSlot(EquipmentSlot.CHEST, chest);
             backOf(player).getStacks().setStackInSlot(0, next.hasBack() ? mantle() : ItemStack.EMPTY);
+            if (next == Scene.HOTBAR || next == Scene.STRAFE_LEFT) {
+                player.getInventory().setItem(HOTBAR_SLOT, next == Scene.HOTBAR ? mantle() : ItemStack.EMPTY);
+                player.inventoryMenu.broadcastChanges();
+            }
             if (next == Scene.TOP_BARE) {
                 // Flat, high-contrast floor. All three images use the same
                 // camera and body position, including the unequipped control.
@@ -471,11 +486,19 @@ public final class CapeFxSmoke {
         ItemStack chest = player.getItemBySlot(EquipmentSlot.CHEST);
         ItemStack back = backOf(player).getStacks().getStackInSlot(0);
         boolean chestReady = switch (scene) {
-            case TOP_BARE, TOP_BACK -> chest.isEmpty();
+            case TOP_BARE, TOP_BACK, HOTBAR -> chest.isEmpty();
             case WINGS, GLIDE -> chest.is(Items.ELYTRA);
             default -> chest.is(CapaTestMod.CAPA_DETERIORER.get());
         };
         if (back.isEmpty() == scene.hasBack() || (scene == Scene.BOTH && !chest.hasFoil()) || !chestReady) return;
+        if (scene == Scene.HOTBAR) {
+            try {
+                captureHotbar(game);
+            } catch (Exception | AssertionError error) {
+                fail(game, error);
+            }
+            return;
+        }
         float swim = player.getSwimAmount(1);
         Vec3 velocity = player.getDeltaMovement();
         double bodyYaw = Mth.rotLerp(framePartialTick, player.yBodyRotO, player.yBodyRot);
@@ -502,8 +525,11 @@ public final class CapeFxSmoke {
         }
         try {
             int expectedPasses = scene == Scene.TOP_BARE ? 0 : 1;
-            if (scene.overhead() && stableFrames < 6 && framePasses != expectedPasses) return;
-            check(framePasses == expectedPasses && rendered == (scene.usesBack() ? back : chest),
+            if (scene.overhead() && stableFrames < 6 && framePasses != expectedPasses) {
+                stableFrames++;
+                return;
+            }
+            check(framePasses == expectedPasses && (expectedPasses == 0 || rendered == (scene.usesBack() ? back : chest)),
                     scene.file + ": incorrect worn draw count " + framePasses);
             String exposure = "";
             if (scene.compareLight()) {
@@ -548,8 +574,7 @@ public final class CapeFxSmoke {
                     check(rootError < .08, scene.file + ": emitter/render frame gap " + rootError);
                 }
             }
-            Path shots = game.gameDirectory.toPath().resolve("fx-shots");
-            Files.createDirectories(shots);
+            Path shots = shots(game);
             try (NativeImage image = Screenshot.takeScreenshot(game.getMainRenderTarget())) {
                 image.writeToFile(shots.resolve(scene.file + ".png"));
             }
@@ -560,6 +585,47 @@ public final class CapeFxSmoke {
             captured = true;
         } catch (Exception | AssertionError error) {
             fail(game, error);
+        }
+    }
+
+    private static Path shots(Minecraft game) throws IOException {
+        return Files.createDirectories(game.gameDirectory.toPath().resolve("fx-shots"));
+    }
+
+    private static void captureHotbar(Minecraft game) throws IOException {
+        var player = game.player;
+        var stack = player.getInventory().getItem(HOTBAR_SLOT);
+        if (!stack.is(CapaTestMod.CAPA_DETERIORER.get()) || game.options.hideGui || ++stableFrames < 18) return;
+        int tick = player.tickCount;
+        if (hotbarCount > 0 && tick - lastHotbarTick < 2) return;
+        check(framePasses == 0 && player.getInventory().selected != HOTBAR_SLOT,
+                "hotbar fixture: worn or selected mantle");
+        if (hotbarCount == 0) {
+            check(!game.getItemRenderer().getModel(stack, game.level, player, 0).isCustomRenderer(),
+                    "hotbar no longer uses the vanilla item model");
+        }
+        var window = game.getWindow();
+        int guiWidth = window.getGuiScaledWidth(), guiHeight = window.getGuiScaledHeight();
+        int startX = guiWidth/2 - 28, startY = guiHeight - 22;
+        Path shots = shots(game);
+        try (NativeImage image = Screenshot.takeScreenshot(game.getMainRenderTarget());
+             NativeImage crop = new NativeImage(112, 44, false)) {
+            // Exactly 3 neighboring slots, normalized to two physical
+            // pixels per logical GUI pixel even if window dimensions round.
+            for (int y = 0; y < crop.getHeight(); y++) {
+                int iy = (int) ((startY + (y + .5)/2) * image.getHeight()/guiHeight);
+                for (int x = 0; x < crop.getWidth(); x++) {
+                    int ix = (int) ((startX + (x + .5)/2) * image.getWidth()/guiWidth);
+                    crop.setPixelRGBA(x, y, image.getPixelRGBA(ix, iy));
+                }
+            }
+            if (hotbarCount == 0) image.writeToFile(shots.resolve("hotbar-mundo.png"));
+            crop.writeToFile(shots.resolve(String.format(java.util.Locale.ROOT, "hotbar-%02d.png", hotbarCount)));
+        }
+        lastHotbarTick = tick;
+        if (++hotbarCount == HOTBAR_SAMPLES) {
+            note(hotbarCount + " capturas de la ranura vanilla a lo largo de un ciclo del atlas");
+            captured = true;
         }
     }
 

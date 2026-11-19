@@ -10,7 +10,7 @@ on:
         default: false
         type: boolean
       probar_halo:
-        description: 'Probar halo, brasas, equipo y élitros en un cliente Forge con pantalla virtual'
+        description: 'Probar equipo cenital, hotbar, halo y élitros en un cliente Forge con pantalla virtual'
         required: false
         default: false
         type: boolean
@@ -111,11 +111,10 @@ jobs:
               w, h = struct.unpack('>II', (base / 'textures/item' / name).read_bytes()[16:24])
               assert (w, h) == (armor_size, armor_size), (name, w, h)
           icon_path = base / 'textures/item/capa_deteriorer_evilsaiyan.png'
+          icon_meta = json.loads(icon_path.with_suffix('.png.mcmeta').read_text())['animation']
           w, h = struct.unpack('>II', icon_path.read_bytes()[16:24])
-          assert (w, h) == (64, 64), ('icon', w, h)
-          # v1.10.0/v1.17.0: un icono pixel art 16x16 ampliado con NEAREST comprime
-          # en menos de 2 KB. El de v1.9.0 (ilustración suave) pesaba ~6.5 KB.
-          assert 300 <= icon_path.stat().st_size < 2000, icon_path.stat().st_size
+          assert (w, h) == (80, 80 * 16) and w % 16 == 0, ('icon', w, h)
+          assert icon_meta == dict(width=w, height=w, frametime=2, interpolate=False)
           w, h = struct.unpack('>II', (base / 'textures/item/cape_folded.png').read_bytes()[16:24])
           assert (w, h) == (128, 128), ('folded atlas', w, h)
           # v1.23.0: UNA partícula EXCLUSIVA, con textura propia. Se
@@ -349,10 +348,7 @@ jobs:
           assert model['parent'] == 'minecraft:item/generated', model['parent']
           assert model['textures']['layer0'] == 'capatest:item/capa_deteriorer_evilsaiyan'
           assert {'gui', 'ground', 'fixed', 'firstperson_righthand'} <= set(model['display'])
-          icon_bytes = (base / 'textures/item/capa_deteriorer_evilsaiyan.png').read_bytes()
-          assert icon_bytes[:8] == b'\x89PNG\r\n\x1a\n'
-          assert struct.unpack('>II', icon_bytes[16:24]) == (64, 64)
-          assert len(icon_bytes) >= 300
+          assert icon_path.read_bytes().startswith(b'\x89PNG\r\n\x1a\n')
           item_java = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
           assert 'getCustomRenderer' not in item_java, 'el BEWLR vuelve a ocultar el icono'
 
@@ -455,57 +451,13 @@ jobs:
           assert 'def cloth_canvas_fitted(' in texture_src
           assert 'def build_icon_artwork(' in texture_src
           assert 'def build_folded_texture(' in texture_src
-          # v1.10.0: el icono DEBE ser pixel art 16x16 ampliado con NEAREST,
-          # no una ilustración con degradados/AA como la de v1.9.0.
-          assert 'ICON_PIXEL_MAP' in texture_src
-          assert 'ICON_PALETTE' in texture_src
-          assert 'build_icon_artwork(64)' in texture_src
-          assert 'Image.NEAREST' in texture_src
+          # El arte actual se comprueba píxel a píxel en audit_model.py.
+          # El generador anterior queda sólo para validar su backup.
+          assert 'from cape_icon import write as write_icon' in texture_src
           assert 'def build_armor_cloth_canvas(' in texture_src
           assert 'energy_ramp' in (root / 'tools/cloth_spec.py').read_text()
           assert 'def _fit_emissive_mask(' in texture_src
 
-          # REGRESIÓN v1.17.0: el icono debe tener SILUETA PROPIA, no la
-          # forma de las dos referencias (un pico de capucha centrado +
-          # hendidura central inferior). Se decodifica el PNG REAL del
-          # asset (RGBA8, stdlib puro) y se muestrea la máscara alfa 16x16.
-          import re as _re, zlib as _zlib
-          def icon_silhouette(path):
-              data = path.read_bytes()
-              assert data[:8] == b'\x89PNG\r\n\x1a\n'
-              pos, idat, w, h, bd, ct = 8, b'', 0, 0, 0, 0
-              while pos < len(data):
-                  ln = struct.unpack('>I', data[pos:pos+4])[0]
-                  typ = data[pos+4:pos+8]; chunk = data[pos+8:pos+8+ln]
-                  if typ == b'IHDR': w, h, bd, ct = struct.unpack('>IIBB', chunk[:10])
-                  elif typ == b'IDAT': idat += chunk
-                  elif typ == b'IEND': break
-                  pos += 12 + ln
-              assert (w, h, bd, ct) == (64, 64, 8, 6)
-              raw = _zlib.decompress(idat); bpp = 4; stride = w * bpp
-              prev = bytearray(stride); i = 0; rows = []
-              for _ in range(h):
-                  ft = raw[i]; i += 1
-                  scan = bytearray(raw[i:i+stride]); i += stride
-                  for x in range(stride):
-                      a = scan[x-bpp] if x >= bpp else 0
-                      b = prev[x]; c = prev[x-bpp] if x >= bpp else 0
-                      if ft == 1: scan[x] = (scan[x] + a) & 255
-                      elif ft == 2: scan[x] = (scan[x] + b) & 255
-                      elif ft == 3: scan[x] = (scan[x] + ((a+b)//2)) & 255
-                      elif ft == 4:
-                          p = a+b-c; pa = abs(p-a); pb = abs(p-b); pc = abs(p-c)
-                          pr = a if (pa <= pb and pa <= pc) else (b if pb <= pc else c)
-                          scan[x] = (scan[x] + pr) & 255
-                      elif ft != 0: raise AssertionError(ft)
-                  rows.append(scan); prev = scan
-              return [''.join('#' if rows[y*4][x*16+3] > 0 else '.'
-                             for x in range(16)) for y in range(16)]
-          sil = icon_silhouette(icon_path)
-          rows = _re.findall(r'"([.A-Z]{16})"', texture_src.split('ICON_PIXEL_MAP = (',1)[1].split(')',1)[0])
-          assert len(rows) == 16 and sil == [''.join('#' if c != '.' else '.' for c in row) for row in rows]
-          assert len(_re.findall(r'#+', sil[1])) == 2, 'cuello abierto'
-          assert any(len(_re.findall(r'#+', row)) >= 4 for row in sil[11:]), 'puntas rasgadas'
           # El volumen 3D REAL debe estar en la geometría, no sólo en el JSON.
           armor_src = (root / 'tools/armor_model_pipeline.py').read_text()
           assert 'INFLATE = (0.01, 0.03, 0.05)' in armor_src
@@ -558,7 +510,7 @@ jobs:
           assert not any(e['name'] in ('head','torso','arm_L','arm_R','leg_L','leg_R') for e in bb['elements'])
           assert all('faces' in e and e['faces'] for e in bb['elements'])
           assert bb['textures'][0]['source'].startswith('data:image/png;base64,')
-          _uuid = _re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+          _uuid = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
           _gids = {g['uuid'] for g in bb['groups']}
           assert len(bb['animations']) == 8, 'faltan estados de animacion'
           _kfs = 0
@@ -707,8 +659,6 @@ jobs:
           assert 'SPARK_INTERVAL_TICKS = 8' in java
           assert spark_budget(java) == (8, 3), spark_budget(java)
           assert 'CapaSparkParticle.Provider' in (root / 'src/main/java/com/capatest/client/CapaParticleRegistration.java').read_text()
-          # v1.9.0: icono rehecho desde las dos referencias 16x16 del usuario.
-          assert 'def build_icon_artwork(' in texture_src
           assert 'pixel art' in (root / 'README.md').read_text()
           assert 'hombreras' in (root / 'README.md').read_text()
           for doc in ('capa_v1170_preview.png', 'capa_v1170_icon.png',
@@ -804,6 +754,7 @@ jobs:
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1640.py
           elif grep -q '^mod_version=1\.67\.' gradle.properties; then
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py --fit-only
+            OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_mount.py
           else
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py
             if grep -qx 'mod_version=1.66.0' gradle.properties; then
@@ -958,7 +909,7 @@ jobs:
             for asset in \
               textures/item/armor/capa_deteriorer_evilsaiyan{,_glowmask,_halo}.png \
               shaders/core/cape_bloom.{json,vsh,fsh} \
-              textures/item/capa_deteriorer_evilsaiyan.png \
+              textures/item/capa_deteriorer_evilsaiyan.png{,.mcmeta} \
               textures/item/cape_folded{,_glowmask}.png \
               textures/particle/capa_spark_{0,1,2}.png particles/capa_spark.json \
               geo/item/cape_folded.geo.json animations/item/cape_folded.animation.json \
@@ -1032,31 +983,26 @@ jobs:
 
       - name: Recorte diagnóstico de la vista cenital
         if: steps.fx-smoke.outcome == 'success'
-        run: |
-          python3 - <<'PY'
-          # Recortes pequeños también en las anotaciones: la descarga del
-          # ZIP de Actions no está disponible desde todos los entornos.
-          import base64, io, pathlib
-          from PIL import Image
-          for path in sorted(pathlib.Path('build/fx-smoke-run/fx-shots').glob('cenital-*.png')):
-              with Image.open(path) as im:
-                  x,y = im.width//2, im.height//2
-                  cut = im.crop((x-120,y-70,x+120,y+122)).resize((180,144), Image.Resampling.NEAREST)
-                  out = io.BytesIO()
-                  cut.convert('RGB').quantize(colors=96).save(out, format='PNG', optimize=True)
-                  data = base64.b64encode(out.getvalue()).decode()
-                  for i in range(0,len(data),1700):
-                      print(f'::notice title=Cenital {path.stem} {i//1700:02}::{data[i:i+1700]}')
-          PY
+        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery cenital
+
+      - name: Recorte del ciclo de la hotbar
+        if: steps.fx-smoke.outcome == 'success'
+        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery hotbar
 
       - name: Subir capturas de la prueba en mundo
         if: steps.fx-smoke.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: capatest-fx-en-mundo
-          path: build/fx-smoke-run/fx-shots/*.png
+          path: |
+            build/fx-smoke-run/fx-shots/*.png
+            build/fx-smoke-run/fx-shots/hotbar-ciclo.gif
           if-no-files-found: error
           retention-days: 30
+
+      - name: Verificar la unión y el icono en el framebuffer de Forge
+        if: steps.fx-smoke.outcome == 'success'
+        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.

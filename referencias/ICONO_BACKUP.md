@@ -27,3 +27,9 @@ restauración sea permanente hay que desactivar `build_icon()` en `main()`.
 **No confundir**: `ICONO_V125_PREFERIDO_BACKUP.png` es el PREFERIDO;
 `ICONO_APROBADO_BACKUP.png` es el APROBADO de la v1.13. Son iconos distintos
 y tienen SHA distintos.
+
+## v1.67.6 — referencia elegida
+
+El icono activo procede de `REFERENCIA_ICONO_v1676.png`. El sprite anterior
+se conserva en `docs/respaldos/v1.65.0/textures/item/`; los PNG de este
+directorio siguen siendo copias históricas, no recursos del atlas animado.

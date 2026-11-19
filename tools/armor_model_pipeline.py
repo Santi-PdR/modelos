@@ -268,21 +268,22 @@ def mount_rib(start, end, width, depth):
 
 
 def mount_bones():
-    """Back plate → lined gusset → cloth saddle and pad under-cuffs.
+    """Torso seat → broad sewn yoke → fitted collar and pad under-cuffs.
 
-    The plate beds ~.05u into the vanilla back, with no coplanar surface.
-    The gusset starts in that plate and ends behind the inner folded seam;
-    its front stays seated even when it gives the head more room in Z.
+    The front beds .05u into the vanilla back. Carry the join across the
+    torso instead of reducing it to a central stem that leaves floor visible
+    from above. Both rising folds stay inside the arm line. The low front
+    clears the head when looking up and the same Z stretch follows the cowl.
     """
     def skin(origin, size):
         return cube16(origin, size, COLLAR_UV, DARK, INFLATE[0])
 
-    seat = [skin((-3.31,14.42,1.96), (6.62,1.90,.65)),
-            skin((-2.72,14.33,2.21), (5.44,1.91,.56)),
-            skin((-2.11,14.30,2.55), (4.22,1.87,.32))]
-    gusset = [skin((-2.57,14.22,2.09), (5.14,.45,2.95)),
-              mount_rib((0,14.46,4.43), (0,16.45,5.19), 4.84,.62),
-              mount_rib((0,16.36,5.04), (0,21.42,5.63), 4.38,.43)]
+    seat = [skin((-3.63,14.42,1.96), (7.26,1.90,.65)),
+            skin((-3.56,14.33,2.21), (7.12,1.91,.56)),
+            skin((-3.43,14.30,2.55), (6.86,1.87,.32))]
+    gusset = [skin((-3.62,14.15,2.09), (7.24,.43,2.65)),
+              mount_rib((0,14.38,4.23), (0,17.79,5.06), 7.12,.68),
+              mount_rib((0,17.70,4.97), (0,21.34,5.55), 6.95,.51)]
     saddle = [skin((-1.80,20.45,5.245), (3.60,1.75,.58)),
               mount_rib((-1.75,21.16,5.23), (-4.98,22.28,4.51), 1.14,.64),
               mount_rib((1.76,21.06,5.19), (5.12,21.66,4.63), 1.19,.71),

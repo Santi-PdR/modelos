@@ -29,6 +29,8 @@ HINGES = ('cape_top', 'cape_mid')
 
 
 def preservation(*, changed=()):
+    wide = tuple(map(int, P.mod_version().split('.'))) >= (1, 67, 6)
+    mount = (G.SEAT_BONE, G.GUSSET_BONE)
     for line in (BASE/'SHA256SUMS.txt').read_text().splitlines():
         digest, name = line.split('  ', 1)
         assert sha256((BASE/name).read_bytes()).hexdigest() == digest, name
@@ -37,13 +39,26 @@ def preservation(*, changed=()):
         elif name.endswith('.bbmodel'):
             old = json.loads((BASE/name).read_text())
             current = json.loads(B.DOC.read_text())
-            assert current == dict(old, name=current['name']), 'sólo el nombre del proyecto cambia'
+            if wide:
+                old,current = (dict(m, elements=[e for e in m['elements'] if not e['name'].startswith(mount)])
+                               for m in (old,current))
+            assert current == dict(old, name=current['name']), 'cambiaron piezas del proyecto fuera del asiento/fuelle'
+        elif wide and (P.ASSETS/name) == P.ARMOR_GEO:
+            old, current = (P.load(path) for path in (BASE/name, P.ARMOR_GEO))
+            old,current = (dict(g, bones=[b for b in g['bones'] if b['name'] not in mount])
+                           for g in (old,current))
+            assert old == current, 'cambió el GEO fuera del asiento y fuelle'
+        elif wide and (P.ASSETS/name) == P.ICON:
+            from cape_icon import verify as verify_icon
+            verify_icon()
         elif name not in changed:
             assert (P.ASSETS/name).read_bytes() == (BASE/name).read_bytes(), name
     html = (P.ROOT/'docs/capa_v1170_visor.html').read_text()
     assert json.loads(re.search(r'^const INLINE_STRIDE = (.+);$', html, re.M)[1]) == S.profile()
     skip = ' salvo los sprites de FX' if changed else ''
-    print(f'v1.65.0: GEO, clips, ajuste de cabeza, atlas, partículas, icono y lore intactos{skip}; mismo rig de Blockbench.', flush=True)
+    scope = ' (asiento, fuelle e icono actualizados)' if wide else ''
+    print(f'v1.65.0: resto del GEO, clips, ajuste de cabeza, atlas, partículas y lore intactos{skip}; '
+          f'mismo rig de Blockbench{scope}.', flush=True)
 
 
 def js_samples(samples):

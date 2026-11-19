@@ -29,6 +29,8 @@ from pathlib import Path
 
 from PIL import Image
 
+from cape_icon import first_frame
+
 import cape_fit
 import cape_aura
 import cape_nocturne
@@ -89,13 +91,13 @@ def step_recursos_visor() -> None:
         "textures/item/armor/capa_deteriorer_evilsaiyan.png": "armor.png",
         "textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png": "armor_glowmask.png",
         "textures/item/armor/capa_deteriorer_evilsaiyan_halo.png": "armor_halo.png",
-        "textures/item/capa_deteriorer_evilsaiyan.png": "icon.png",
         "textures/item/cape_folded.png": "folded.png",
         "textures/item/cape_folded_glowmask.png": "folded_glowmask.png",
     }
     copy.update({f"textures/particle/capa_spark_{i}.png": f"capa_spark_{i}.png" for i in range(3)})
     for src, dst in copy.items():
         shutil.copy(RES / src, A / dst)
+    first_frame().save(A / "icon.png", optimize=True)
     (A / 'aura.json').write_text(json.dumps(cape_aura.profile(), separators=(',', ':')) + '\n')
     (A / 'nocturne.json').write_text(json.dumps(cape_nocturne.profile(), separators=(',', ':')) + '\n')
     (A / 'fit.json').write_text(json.dumps(cape_fit.profile(), separators=(',', ':')) + '\n')
@@ -132,7 +134,7 @@ def step_gifs_y_estados(ver: str) -> None:
     print("5) comparativas")
     art_ver = cape_reference.registered_version(ver)
     if ver.startswith('1.67.'):
-        # FX only: reuse the registered silhouette and eight clips, not a
+        # Reuse the unchanged registered exterior and eight clips, not a
         # relabelled before/after plate of identical model pixels.
         run(sys.executable, "tools/present_v1670.py", "--out", str(D))
     else:

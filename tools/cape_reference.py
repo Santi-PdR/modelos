@@ -107,7 +107,7 @@ def lift(u, v, z):
 
 
 def registered_version(version):
-    """FX-only v1.67.x reuses the same registered mesh and albedo plates."""
+    """v1.67.x reuses the registered dorsal exterior and albedo plates."""
     return '1.66.0' if version.startswith('1.67.') else version
 
 
