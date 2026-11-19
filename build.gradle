@@ -31,6 +31,9 @@ minecraft {
         }
         client {
             property 'forge.enabledGameTestNamespaces', mod_id
+            // GeckoLib ships SRG mixin refs. Remap them only in the named dev client.
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', project.layout.buildDirectory.file('createSrgToMcp/output.srg').get().asFile.absolutePath
         }
         server {
             property 'forge.enabledGameTestNamespaces', mod_id
