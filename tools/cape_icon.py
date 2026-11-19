@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Recover the supplied pixel art and animate it as a vanilla item sprite."""
+"""Extract the chosen pixel art and animate its existing pink fissures."""
 from __future__ import annotations
 
 import hashlib
@@ -10,41 +10,34 @@ import numpy as np
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / 'referencias/REFERENCIA_ICONO_v1676.png'
-SOURCE_SHA = '5843b3c45a8f3a5a9630507a38236307a208cff1b391a18173d19bf92ab4d6d4'
+SOURCE = ROOT / 'referencias/REFERENCIA_ICONO_v1677.png'
+SOURCE_SHA = '0bc0ba2efea3bf9e03dbb3c266f34291b2b59af730044ded0f2e98ca38855e99'
+PREVIOUS = ROOT / 'referencias/ICONO_V1676_BACKUP.png'
 ICON = ROOT / 'src/main/resources/assets/capatest/textures/item/capa_deteriorer_evilsaiyan.png'
 META = ICON.with_suffix('.png.mcmeta')
-# An exact 80 × 80 crop of the half-cell raster, including all the original
-# sparks. A multiple of 16 keeps the vanilla atlas's four mip levels.
-SIZE, COUNT, TICKS = 80, 16, 2
-CROP = (7, 11, 87, 91)
-# Pink specks on the checkerboard have partial coverage. Coordinates are
-# in the source's 50 × 50 checkerboard, not in the cropped sprite.
-MOTES = ((11,19), (35,22), (10,26), (37,26), (37,32), (37,35), (18,36),
-         (38,37), (19,38), (19,39), (36,39), (34,40), (36,40), (18,41),
-         (25,40), (25,43), (25,44))
+# Fill a 16-pixel slot without drawing past its border. A multiple of 16
+# preserves the four mip levels of a normal vanilla item atlas.
+SIZE, COUNT, TICKS = 64, 16, 2
+ART_SIZE = (56, 62)
 
 
 def base_frame() -> Image.Image:
-    """Sample inside each half-cell, not across the compressed pixel edges."""
     with Image.open(SOURCE) as source:
         assert source.size == (1024,1024)
         raw = np.asarray(source.convert('RGB'))
-    center = np.rint((np.arange(100) + .5) * 1024/100).astype(int)
-    taps = center[:,None] + np.arange(-2,3)
-    rgb = np.rint(np.median(raw[taps[:,None,:,None], taps[None,:,None,:]], axis=(2,3)))
-    y,x = np.indices(rgb.shape[:2]) // 2
-    bg = np.where((x+y) % 2, 197, 141)
-    delta = rgb - bg[...,None]
-    mote = np.isin(y*50+x, [v*50+u for u,v in MOTES])
-    cloth = (np.max(abs(delta),axis=2) > 18) & ~mote
-    pink = np.clip((rgb[...,0] - rgb[...,1] - 4)/105, 0, 1)
-    pink[pink < .105] = 0  # compression noise on adjacent gray tiles
-    alpha = np.where(mote, pink, cloth)
-    # Remove the gray matte from the pale, translucent sparks too.
-    rgb[mote] = bg[mote,None] + delta[mote] / np.maximum(alpha[mote,None], 1e-6)
-    rgba = np.dstack((np.where(alpha[...,None] > 0, np.clip(rgb,0,255), 0), 255*alpha))
-    return Image.fromarray(np.rint(rgba).astype(np.uint8)).crop(CROP)
+    # Median from the centres of half-cells. Neither the rescaled tile
+    # borders nor the nearly neutral checker colors belong to the drawing.
+    axis = (np.arange(SIZE)*16 + 8)
+    taps = axis[:,None] + np.arange(-2,3)
+    rgb = np.median(raw[taps[:,None,:,None], taps[None,:,None,:]], axis=(2,3)).astype(np.uint8)
+    art = (rgb.max(2) < 158) | ((np.ptp(rgb,axis=2) > 27) & (rgb[...,1] < 154))
+    rgba = np.dstack((np.where(art[...,None],rgb,0), 255*art)).astype(np.uint8)
+    image = Image.fromarray(rgba)
+    assert image.getbbox() == (9,6,54,61), 'the source silhouette changed'
+    sprite = Image.new('RGBA',(SIZE,SIZE))
+    # A little extra width on the display raster: 13–14 px at GUI scale 1.
+    sprite.paste(image.crop(image.getbbox()).resize(ART_SIZE,Image.Resampling.NEAREST), (4,1))
+    return sprite
 
 
 def frames() -> list[Image.Image]:
@@ -52,20 +45,13 @@ def frames() -> list[Image.Image]:
     rgba = np.asarray(base).astype(float)
     y,x = np.indices((SIZE,SIZE))
     r,g,b,a = rgba.transpose(2,0,1)
-    hue = (r > 105) & (r-g > 42) & (b-g > 11)
-    # The reference's star, and only the existing pink seams below it.
-    dx,dy = x-45.5, y-23.5
-    star = ((abs(dx)+abs(dy) <= 8) & hue) * np.exp(-(dx*dx+dy*dy)/38)
-    vein = hue & (a == 255) & (y >= 30) & (star == 0)
-    mote = (a > 0) & (a < 255)
-    light = np.maximum(rgba[...,:3], [255,234,251]) - rgba[...,:3]
+    veins = (r >= 127) & (r-g >= 72) & (b-g >= 39) & (a == 255) & (y >= 13)
+    light = np.maximum(rgba[...,:3],[255,133,242]) - rgba[...,:3]
     out = [base]
     for phase in np.arange(1,COUNT)/COUNT:
-        envelope = np.sin(np.pi*phase)
-        flash = max(0, np.cos(2*np.pi*(phase-.3125)))**2 * envelope
-        flow = np.exp(-((y - (16 + 64*phase) + .14*(x-46))/9)**2)
-        amount = (.76*flash*star + .46*envelope*flow*vein
-                  + .30*mote*envelope*np.maximum(0, np.cos(2*np.pi*phase + y*.14)))
+        breath = np.sin(np.pi * phase)**2
+        sweep = np.exp(-((y+.17*(x-32) - (10+64*phase))/8.8)**2)
+        amount = breath*(.18+.63*sweep)*veins
         colored = rgba.copy()
         colored[...,:3] += light * amount[...,None]
         out.append(Image.fromarray(np.rint(colored).astype(np.uint8)))
@@ -73,13 +59,12 @@ def frames() -> list[Image.Image]:
 
 
 def metadata() -> dict:
-    # The strip is clocked by the block/item atlas in the game, including
-    # the hotbar. No stack state, overrides, BEWLR, or external pack needed.
+    # The item atlas advances this strip in hotbar/inventory. No custom
+    # renderer, stack state, resource pack or alternate model overrides.
     return {'animation': {'width': SIZE, 'height': SIZE, 'frametime': TICKS, 'interpolate': False}}
 
 
 def first_frame(path: Path = ICON) -> Image.Image:
-    """Return a still, not a vertically compressed contact sheet."""
     with Image.open(path) as texture:
         return texture.crop((0,0,texture.width,texture.width)).convert('RGBA')
 
@@ -90,7 +75,7 @@ def write() -> None:
         sheet.paste(image,(0,index*SIZE))
     sheet.save(ICON, optimize=True)
     META.write_text(json.dumps(metadata(), indent=2)+'\n')
-    print(f'Icono: {COUNT} × {SIZE}px, {TICKS} ticks por cuadro, alfa independiente del checker.')
+    print(f'Icono: {COUNT} cuadros de {SIZE}px, {TICKS} ticks/cuadro, pulso sobre la referencia nueva.')
 
 
 def verify() -> None:
@@ -100,19 +85,20 @@ def verify() -> None:
         assert baked.size == (SIZE,SIZE*COUNT) and baked.mode == 'RGBA'
         actual = np.asarray(baked).reshape(COUNT,SIZE,SIZE,4)
     generated = frames()
-    expected = np.stack([np.asarray(f) for f in generated])
-    np.testing.assert_array_equal(actual,expected)
+    np.testing.assert_array_equal(actual,np.stack([np.asarray(f) for f in generated]))
     a = actual[0,...,3]
-    assert first_frame().getbbox() == (9,3,71,79)
-    assert (a == 255).sum() > 2750 and 15 <= ((a > 0) & (a < 255)).sum() <= 60
-    assert not actual[:,a==0,:3].any(), 'checker or color outside the original sprite'
+    assert first_frame().getbbox() == (4,1,60,63)
+    assert set(np.unique(a)) == {0,255}
+    assert not actual[:,a==0,:3].any(), 'checker outside the artwork'
     assert np.all(actual[...,3] == a), 'outline changed during the pulse'
-    # On a 16 logical pixel slot the pulse still changes the star visibly.
     low = np.array([np.asarray(f.resize((16,16),Image.Resampling.NEAREST)) for f in generated])
+    prev = np.asarray(first_frame(PREVIOUS).resize((16,16),Image.Resampling.NEAREST))
+    count = np.count_nonzero(low[0,...,3])
+    assert count >= 1.14*np.count_nonzero(prev[...,3]), (count,np.count_nonzero(prev[...,3]))
     spread = np.ptp(low[...,:3],axis=0).max(axis=2)
-    assert spread[3:7,7:11].max() >= 28 and np.count_nonzero(spread > 8) >= 8
-    assert np.ptp(actual[...,:3],axis=0)[a > 0].max() > 45
-    print('Icono verificado: fuente original, silueta fija y pulso visible incluso a 16 px.', flush=True)
+    assert spread.max() >= 60 and np.count_nonzero(spread >= 14) >= 13
+    assert np.count_nonzero(spread[:3]) == 0, 'the collar must not flash'
+    print(f'Icono: {count}/256 píxeles de silueta a escala 1, sin damero y con animación sólo en las grietas.', flush=True)
 
 
 if __name__ == '__main__':

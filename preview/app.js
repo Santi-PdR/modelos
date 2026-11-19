@@ -134,12 +134,20 @@ function backset(profile, stance, look, turn) {
     lerp(table[k][sy+1][sp],table[k][sy+1][sp+1],fp),fy);
   return lerp(row(st),row(st+1),ft);
 }
-function wearerPose(geo, profile, stance, look, turn) {
+function shoulderScales(stance, look, turn, elytra=false) {
+  const yaw=Math.abs(((turn+180)%360+360)%360-180);
+  const down=smooth(34,62,-look)*(1-.62*smooth(44,73,yaw))*(1-.52*smooth(0,1,stance));
+  const ahead=.45*(1-smooth(0,3,yaw))*(1-smooth(0,42,Math.abs(look)))*(1-.66*smooth(0,.70,stance));
+  const length=elytra ? .245 : .245+.755*Math.max(down,ahead);
+  return [1,.27+.73*length,length];
+}
+function wearerPose(geo, profile, stance, look, turn, elytra=false) {
   const depth=backset(profile,stance,look,turn);
   return {...geo, bones:geo.bones.map(b => {
     if (b.name===profile.bone) return {...b,offset:[0,0,depth]};
     if (b.name===profile.drapeBone) return {...b,rotation:[-depth*profile.drapePerUnit,0,0]};
     if (b.name===profile.gussetBone) return {...b,scale:[1,1,1+depth/profile.gussetDepth]};
+    if (b.name==='v20_mount_shoulders') return {...b,scale:shoulderScales(stance,look,turn,elytra)};
     if (b.name==='chestplate') return {...b,rotation:[stance*profile.bodyAngle,0,0],offset:[0,-3.2*stance,0]};
     return b;
   })};
@@ -650,7 +658,7 @@ function draw(now) {
   const clearanceGait=strideFit.checked ? gait : null;
   const fit=(pose, goal)=>{
     if (clearanceGait || goal>0) pose=clearancePose(pose,clearanceGait,stance,depth,goal);
-    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn),hidden);
+    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn,!!wingPose),hidden);
   };
   const drift=demo ? swayPose(base,SWAY,t) : null;
   const current=drift && swayFit.checked ? drift : base;

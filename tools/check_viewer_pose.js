@@ -36,6 +36,9 @@ const matrices = vm.runInContext(`${src}
       return indata.strideSamples.map(([top,mid,arm,leg,stance,depth]) =>
         strideLifts(indata.stride,top,mid,arm,leg,stance*indata.fit.bodyAngle,depth));
     }
+    if (indata.shoulderSamples) {
+      return indata.shoulderSamples.map(([stance,look,yaw,wings]) => shoulderScales(stance,look,yaw,!!wings).slice(1));
+    }
     if (indata.fitSamples) {
       const {fit}=indata;
       const rig={bones:[{name:fit.bone},{name:fit.drapeBone},{name:fit.gussetBone}]};

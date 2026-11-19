@@ -86,11 +86,11 @@ animación y la documentación de GeckoLib._
   de hijos en F5.
 - **8 RMS distintos** por clip (validación). Cualquier edit debe
   preservarlos.
-- **Icono 2D:** `tools/cape_icon.py` usa la referencia elegida en v1.67.6,
+- **Icono 2D:** `tools/cape_icon.py` usa la referencia elegida en v1.67.7,
   retira el damero y conserva la silueta y el alfa en todos los cuadros.
   `item/generated` sigue siendo el modelo; anima el atlas con `.png.mcmeta`,
   no uses overrides ni BEWLR. El icono preferido histórico (SHA `c90670ba…`)
-  y el de v1.67.5 se conservan byte a byte en sus respaldos.
+  se conserva en su respaldo. La v1.67.6 tiene una copia de su primer cuadro.
 
 ## 6. Comparar y validar el ajuste equipado desde v1.61.0
 
@@ -173,12 +173,15 @@ animación y la documentación de GeckoLib._
   `tools/verify_cape_wings.py TSV --plate docs/capa_v1675_elitros.png`, usando
   `CapeWingFitTest --samples`. La prueba F5 lee `cape_top` del modelo equipado
   y toma una captura con las alas ya plegadas.
-- **Unión visible (v1.67.6):** asiento y fuelle bajo la línea de brazos,
-  fuelle ancho con caras superiores de forro mate. Se conservan sus pivotes,
-  el recorrido en Z y las dos raíces del cuello. `tools/verify_cape_mount.py`
-  comprueba solape en todo el recorrido y holgura de mangas/cabeza. La prueba
-  de Forge capta F5 a 89° sin manto, en pecho y en `back`, y lee cuadros de la
-  ranura vanilla; `tools/verify_forge_mount.py` valida ambos casos con píxeles.
+- **Unión lateral (v1.67.7):** asiento profundo más dos remates sobre las
+  mangas, cosidos a las hombreras. `CapeFit.shoulderReach` sólo recoge esos
+  remates para despejar cabeza y élitros; no toca el paño libre. El visor
+  aplica la misma escala, y el .bbmodel contiene la posición extendida de
+  edición. `verify_cape_mount.py` comprueba el solape, cabeza y mangas
+  Steve/Alex. Forge captura la unión a 89° recto y a 86° con 43° de giro
+  de cabeza, con controles sin manto y el mismo encuadre en pecho y `back`.
+  `verify_forge_mount.py` mide la banda central y cada remate por separado,
+  y verifica el nuevo ciclo de la hotbar vanilla.
 - **Lectura del diagnóstico:** la lámina de brasas compara los puntos de
   salida con los clips del JAR, no con todos los huesos animados en vivo.
   El servidor no ve el paño de cada cliente. El ajuste de élitros reduce el

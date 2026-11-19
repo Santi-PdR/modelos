@@ -14,6 +14,18 @@ public final class CapeFitTest {
     }
 
     public static void main(String[] args) {
+        if (args.length == 1 && args[0].equals("--shoulders")) {
+            for (double stance : new double[]{0,.18,.5,.81,1})
+                for (double pitch : new double[]{-90,-66,-51.5,-33,0,26,90})
+                    for (double yaw : new double[]{-187,-94,-43,0,2.25,42,51,65,89,196})
+                        for (int wings = 0; wings <= 1; wings++) {
+                            double k = CapeFit.shoulderReach(stance * CapeFit.CROUCH_RADIANS,
+                                    1.2, -Math.toRadians(pitch), 1.2 + Math.toRadians(yaw), wings == 1);
+                            System.out.printf(Locale.ROOT, "%.6f\t%.6f\t%.6f\t%d\t%.10f\t%.10f%n",
+                                    stance, pitch, yaw, wings, CapeFit.SHOULDER_HEIGHT + (1-CapeFit.SHOULDER_HEIGHT)*k, k);
+                        }
+            return;
+        }
         if (args.length == 1 && args[0].equals("--samples")) {
             for (double stance : new double[]{0,.18,.5,.81,1})
                 for (double pitch : new double[]{-90,-51.5,-3,0,18.75,63,90})

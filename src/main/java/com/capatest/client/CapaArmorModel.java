@@ -155,7 +155,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         collectFamily("v17_vein_", 10, details);
         collectFamily("v18_pad_", 2, details);
         collectFamily("v18_chain_", 8, details);
-        for (String name : new String[]{"v20_mount_seat", CapeFit.GUSSET_BONE, "v20_mount_saddle"})
+        for (String name : new String[]{"v20_mount_seat", CapeFit.GUSSET_BONE, "v20_mount_saddle", CapeFit.SHOULDERS_BONE})
             getBone(name).ifPresent(details::add);
         visibilidadAplicada = null;
         return true;

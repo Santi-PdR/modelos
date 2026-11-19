@@ -73,7 +73,7 @@ animated by cape_icon.py. The 16×16 pixel map below is historical only.
 Outputs (all committed):
     textures/item/armor/capa_deteriorer_evilsaiyan.png            256x256
     textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png  256x256
-    textures/item/capa_deteriorer_evilsaiyan.png                   16 frames of 80x80
+    textures/item/capa_deteriorer_evilsaiyan.png                   16 frames of 64x64
     textures/item/cape_folded.png                                  128x128 (3D item atlas)
     textures/item/cape_folded_glowmask.png                         128x128 (efecto del item)
     textures/particle/capa_ember_0..2.png                          16x16  (brasas cálidas)

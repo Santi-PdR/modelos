@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 import cape_animation_pipeline as A
-from cape_icon import first_frame
+from cape_icon import PREVIOUS, first_frame
 
 import cape_fit as F
 import cape_tracks as T
@@ -64,8 +64,7 @@ def icon_panel(path):
     d = ImageDraw.Draw(board)
     label(d,(26,20),f'INVENTARIO / v{P.mod_version()}',16,ROSE,bold=True)
     label(d,(26,51),'Un icono pensado para la ranura',35,bold=True)
-    previous = P.ROOT/'docs/respaldos/v1.65.0'/P.ICON.relative_to(P.ASSETS)
-    for i,(name,src) in enumerate((('ANTES · v1.67.5',previous),('NUEVO · TU REFERENCIA',P.ICON))):
+    for i,(name,src) in enumerate((('ANTES · v1.67.6',PREVIOUS),('NUEVO · TU REFERENCIA',P.ICON))):
         x = 28+i*448
         label(d,(x,113),name,17,ROSE if i else DIM,bold=True)
         icon = first_frame(src)

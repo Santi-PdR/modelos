@@ -15,6 +15,9 @@ public final class CapeFit {
     private static final double YAW_STEP = 7.5;
     private static final double GUSSET_DEPTH = 3.48;
     private static final double DRAPE_DEGREES_PER_UNIT = 1.65;
+    public static final String SHOULDERS_BONE = "v20_mount_shoulders";
+    public static final double SHOULDER_MIN = .245;
+    public static final double SHOULDER_HEIGHT = .27;
 
     // [Torso lean 0..0.5 rad][absolute relative yaw 0..90][look up -90..90].
     // Calibrated against the inflated vanilla head, eight clips and blends.
@@ -111,6 +114,28 @@ public final class CapeFit {
                 / YAW_STEP, BACKSET[0].length - 1);
         int row = Math.min((int) stance, BACKSET.length - 2);
         return lerp(at(BACKSET[row], yaw, pitch), at(BACKSET[row + 1], yaw, pitch), stance - row);
+    }
+
+    /** Shorten just the shoulder returns about their stitched ends, in
+     * body space. The seat remains bedded in the torso even with the wings
+     * on or when the sleeves/head need room. */
+    public static double shoulderReach(double bodyPitch, double bodyYaw, double headPitch, double headYaw,
+                                       boolean elytra) {
+        if (elytra || !Double.isFinite(bodyPitch) || !Double.isFinite(bodyYaw)
+                || !Double.isFinite(headPitch) || !Double.isFinite(headYaw))
+            return SHOULDER_MIN;
+        double stance = clamp(bodyPitch / CROUCH_RADIANS, 1);
+        double look = -Math.toDegrees(headPitch);
+        double yaw = Math.abs(Math.toDegrees(Math.IEEEremainder(headYaw - bodyYaw, 2 * Math.PI)));
+        double down = smooth(34, 62, -look) * (1 - .62 * smooth(44, 73, yaw)) * (1 - .52 * smooth(0, 1, stance));
+        double ahead = .45 * (1 - smooth(0, 3, yaw)) * (1 - smooth(0, 42, Math.abs(look)))
+                * (1 - .66 * smooth(0, .70, stance));
+        return lerp(SHOULDER_MIN, 1, Math.max(ahead, down));
+    }
+
+    private static double smooth(double lo, double hi, double x) {
+        double t = clamp((x - lo) / (hi - lo), 1);
+        return t * t * (3 - 2 * t);
     }
 
     public static double gussetScale(double depth) {

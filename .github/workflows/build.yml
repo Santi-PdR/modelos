@@ -113,7 +113,7 @@ jobs:
           icon_path = base / 'textures/item/capa_deteriorer_evilsaiyan.png'
           icon_meta = json.loads(icon_path.with_suffix('.png.mcmeta').read_text())['animation']
           w, h = struct.unpack('>II', icon_path.read_bytes()[16:24])
-          assert (w, h) == (80, 80 * 16) and w % 16 == 0, ('icon', w, h)
+          assert (w, h) == (64, 64 * 16) and w % 16 == 0, ('icon', w, h)
           assert icon_meta == dict(width=w, height=w, frametime=2, interpolate=False)
           w, h = struct.unpack('>II', (base / 'textures/item/cape_folded.png').read_bytes()[16:24])
           assert (w, h) == (128, 128), ('folded atlas', w, h)
@@ -259,13 +259,13 @@ jobs:
           mount = {b['name']: b for b in armor_geo['bones'] if b['name'].startswith('v20_mount_')}
           assert {n:b['parent'] for n,b in mount.items()} == {
               'v20_mount_seat': 'chestplate', 'v20_mount_gusset': 'chestplate',
-              'v20_mount_saddle': 'cape_wearer_fit'}
+              'v20_mount_saddle': 'cape_wearer_fit', 'v20_mount_shoulders': 'cape_wearer_fit'}
           mount_cubes = sum(len(b.get('cubes', [])) for b in mount.values())
-          assert mount_cubes == 12
+          assert mount_cubes == 14
           cowl_return = next(b for b in armor_geo['bones'] if b['name'] == 'v17_cowl_return')
           return_cubes = len(cowl_return['cubes'])
           assert cowl_return['parent'] == 'cape_wearer_fit' and return_cubes == 3
-          assert len(armor_geo['bones']) == 231
+          assert len(armor_geo['bones']) == 232
           assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 260 + fragments + mount_cubes + return_cubes
           hinge = next(b for b in armor_geo['bones'] if b['name'] == 'cape_wearer_fit')
           assert hinge['parent'] == 'chestplate' and not hinge['cubes']
@@ -502,7 +502,7 @@ jobs:
           assert bb['meta']['format_version'] == '5.0'
           # v1.17.3: el .bbmodel de Blockbench muestra SOLO la capa: sin
           # maniqui Steve/Alex y sin los 126 cubos de la armadura vieja.
-          assert len(bb['elements']) == 149+fragments+mount_cubes+return_cubes and len(bb['groups']) == 231
+          assert len(bb['elements']) == 149+fragments+mount_cubes+return_cubes and len(bb['groups']) == 232
           assert sum(e['visibility'] for e in bb['elements']) == 122+fragments+mount_cubes+return_cubes
           assert not any('Steve/Alex' in g['name'] for g in bb['groups'])
           assert bb['resolution'] == {'width': armor_size, 'height': armor_size}
@@ -798,7 +798,8 @@ jobs:
           java -cp "$CLASSES" com.capatest.client.CapeRuntimeTest --stride-samples > "$CLASSES/stride.tsv"
           OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_v1660.py --parity-only --java-samples "$CLASSES/stride.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeFitTest --samples > "$CLASSES/fit.tsv"
-          OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/check_cape_fit.py "$CLASSES/fit.tsv"
+          java -cp "$CLASSES" com.capatest.client.CapeFitTest --shoulders > "$CLASSES/shoulders.tsv"
+          OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/check_cape_fit.py "$CLASSES/fit.tsv" "$CLASSES/shoulders.tsv"
           java -cp "$CLASSES" com.capatest.item.CapeStateTest --spark-samples > "$CLASSES/sparks.tsv"
           PYTHONPATH=tools python3 -c 'import cape_aura as a,json; print(json.dumps(a.profile()))' | \
             node tools/check_viewer_embers.js "$CLASSES/sparks.tsv" "$CLASSES/embers.tsv"
@@ -984,6 +985,10 @@ jobs:
       - name: Recorte diagnóstico de la vista cenital
         if: always() && steps.fx-smoke.outcome != 'skipped'
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery cenital
+
+      - name: Recorte de los hombros con la cámara girada
+        if: always() && steps.fx-smoke.outcome != 'skipped'
+        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery giro
 
       - name: Recorte del ciclo de la hotbar
         if: always() && steps.fx-smoke.outcome != 'skipped'

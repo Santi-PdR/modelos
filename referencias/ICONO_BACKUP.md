@@ -30,3 +30,10 @@ y tienen SHA distintos.
 El icono activo procede de `REFERENCIA_ICONO_v1676.png`. El sprite anterior
 se conserva en `docs/respaldos/v1.65.0/textures/item/`; los PNG de este
 directorio siguen siendo copias históricas, no recursos del atlas animado.
+
+## v1.67.7 — referencia de jirones rosas
+
+`REFERENCIA_ICONO_v1677.png` es el nuevo dibujo tal cual se recibió.
+`tools/cape_icon.py` quita el damero, encuadra el sprite con más presencia y
+anima sus grietas. `ICONO_V1676_BACKUP.png` conserva el fotograma en reposo
+de la versión anterior; la tira completa está en el tag `v1.67.6`.

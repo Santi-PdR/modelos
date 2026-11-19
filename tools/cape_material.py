@@ -17,7 +17,7 @@ import cape_reference as R
 import cape_shape as shape
 import cape_surface as S
 import preview_cloth as P
-from armor_model_pipeline import COLLAR_RETURN, GUSSET_BONE, MOUNT_PREFIX, SADDLE_BONE, SEAT_BONE, source_cube
+from armor_model_pipeline import COLLAR_RETURN, GUSSET_BONE, MOUNT_PREFIX, SADDLE_BONE, SEAT_BONE, SHOULDERS_BONE, source_cube
 
 SIZE = 512
 GUARD = 1
@@ -163,7 +163,7 @@ def map_material(geo, *, paint=False):
             for side in c['uv']:
                 # Use the matte maroon lining on the exposed upper yoke,
                 # so the continuous join also reads as part of the cloth.
-                lining = side == 'north' or (name == GUSSET_BONE and side == 'up')
+                lining = side == 'north' or (name in (GUSSET_BONE, SHOULDERS_BONE) and side == 'up')
                 role = 'iron' if iron else ('red' if lining else 'edge')
                 c['uv'][side] = S.spec(slots[role])
     if not paint:

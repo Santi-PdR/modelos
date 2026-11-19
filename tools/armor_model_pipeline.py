@@ -112,6 +112,7 @@ MOUNT_PREFIX = "v20_mount_"
 SEAT_BONE = MOUNT_PREFIX + "seat"
 GUSSET_BONE = MOUNT_PREFIX + "gusset"
 SADDLE_BONE = MOUNT_PREFIX + "saddle"
+SHOULDERS_BONE = MOUNT_PREFIX + "shoulders"
 COLLAR_RETURN = "v17_cowl_return"
 FIT_PIVOT = (0., 4.6, 5.6)  # historical pivot; the wearer fit now slides in Z
 DRAPE_PIVOT = (0., 22.82, 4.89)  # seam at the start of the cloth
@@ -270,15 +271,15 @@ def mount_rib(start, end, width, depth):
 def mount_bones():
     """Torso seat → broad sewn yoke → fitted collar and pad under-cuffs.
 
-    The front beds .05u into the vanilla back. Carry the join across the
-    torso instead of reducing it to a central stem that leaves floor visible
-    from above. Both rising folds stay inside the arm line. The low front
-    clears the head when looking up and the same Z stretch follows the cowl.
+    The deep seat stays in the actual back, not just against its outer face.
+    The low gusset stretches up to the collar. Two independent shoulder
+    returns reach over the rear corners of the sleeves, and tuck into the
+    pads when the wearer needs head or wing room (see CapeFit.shoulderReach).
     """
     def skin(origin, size):
         return cube16(origin, size, COLLAR_UV, DARK, INFLATE[0])
 
-    seat = [skin((-3.63,14.42,1.96), (7.26,1.90,.65)),
+    seat = [skin((-3.63,14.42,1.60), (7.26,1.90,1.01)),
             skin((-3.56,14.33,2.21), (7.12,1.91,.56)),
             skin((-3.43,14.30,2.55), (6.86,1.87,.32))]
     gusset = [skin((-3.62,14.15,2.09), (7.24,.43,2.65)),
@@ -290,9 +291,18 @@ def mount_bones():
               skin((-5.31,21.45,3.05), (1.10,.56,1.97)),
               skin((4.22,20.87,2.88), (1.10,.84,1.95)),
               skin((-1.12,20.62,3.98), (2.24,1.13,1.41))]
+    returns = []
+    for side, end_y in ((-1,23.29),(1,23.15)):
+        x,y,z = side*5.73,24.68,2.08
+        dx,dy,dz = side*5.63-x,end_y-y,5.54-z
+        tab = skin((x-1.06,y-.20,z-.12), (2.12,.40,math.hypot(dx,dy,dz)+.24))
+        tab.update(pivot=[x,y,z], rotation=[round(math.degrees(math.atan2(dy,math.hypot(dx,dz))),6),
+                                           round(math.degrees(math.atan2(dx,dz)),6),0.])
+        returns.append(tab)
     return [bone(SEAT_BONE, 'chestplate', MOUNT_PIVOT, (0,0,0), seat),
             bone(GUSSET_BONE, 'chestplate', MOUNT_PIVOT, (0,0,0), gusset),
-            bone(SADDLE_BONE, FIT_BONE, (0,21.4,5.52), (0,0,0), saddle)]
+            bone(SADDLE_BONE, FIT_BONE, (0,21.4,5.52), (0,0,0), saddle),
+            bone(SHOULDERS_BONE, FIT_BONE, (0,23.20,5.35), (0,0,0), returns)]
 
 def collar_return():
     """Two tapered ends of the cowl, sharing the collar's live mount.

@@ -30,7 +30,17 @@ HINGES = ('cape_top', 'cape_mid')
 
 def preservation(*, changed=()):
     wide = tuple(map(int, P.mod_version().split('.'))) >= (1, 67, 6)
-    mount = (G.SEAT_BONE, G.GUSSET_BONE)
+    mount = (G.SEAT_BONE, G.GUSSET_BONE, G.SHOULDERS_BONE)
+
+    def omit_mount_edits(model):
+        # The new returns are the only new group, with no animation tracks.
+        new_groups = {g['uuid'] for g in model['groups'] if g['name'] == G.SHOULDERS_BONE}
+        def prune(tree):
+            return [dict(node, children=prune(node['children'])) if isinstance(node,dict) else node
+                    for node in tree if not isinstance(node,dict) or node['uuid'] not in new_groups]
+        return dict(model, elements=[e for e in model['elements'] if not e['name'].startswith(mount)],
+                    groups=prune(model['groups']),
+                    outliner=prune(model['outliner']))
     for line in (BASE/'SHA256SUMS.txt').read_text().splitlines():
         digest, name = line.split('  ', 1)
         assert sha256((BASE/name).read_bytes()).hexdigest() == digest, name
@@ -40,8 +50,7 @@ def preservation(*, changed=()):
             old = json.loads((BASE/name).read_text())
             current = json.loads(B.DOC.read_text())
             if wide:
-                old,current = (dict(m, elements=[e for e in m['elements'] if not e['name'].startswith(mount)])
-                               for m in (old,current))
+                old,current = map(omit_mount_edits, (old,current))
             assert current == dict(old, name=current['name']), 'cambiaron piezas del proyecto fuera del asiento/fuelle'
         elif wide and (P.ASSETS/name) == P.ARMOR_GEO:
             old, current = (P.load(path) for path in (BASE/name, P.ARMOR_GEO))

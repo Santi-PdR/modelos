@@ -1,13 +1,25 @@
-# Mantle of the Blight Star — v1.67.6
+# Mantle of the Blight Star — v1.67.7
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
-[Descargar JAR v1.67.6](https://github.com/Santi-PdR/modelos/releases/download/v1.67.6/capatest-1.67.6.jar)
+[Descargar JAR v1.67.7](https://github.com/Santi-PdR/modelos/releases/download/v1.67.7/capatest-1.67.7.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench](docs/CAPA_v1.67.6.bbmodel)
+· [Proyecto Blockbench](docs/CAPA_v1.67.7.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+
+### v1.67.7 — unión en los hombros e icono más grande
+
+- **Unión lateral:** el hueco de las capturas del jugador estaba al costado,
+  entre la manga y la hombrera; la medición anterior sólo cubría el centro.
+  El asiento entra más en el torso y dos remates cosidos llegan a los hombros.
+  Los remates se recogen con el giro de cabeza, al agacharse o con élitros;
+  el asiento sigue fijo. No cambia la caída libre del paño.
+- **Icono:** [nuevo dibujo de referencia](referencias/REFERENCIA_ICONO_v1677.png),
+  sin damero, con más silueta visible en 16 px y una luz que recorre las grietas
+  rosa. Dieciséis cuadros con el mismo alfa, sin estrella añadida ni render
+  propio para la ranura. [Comparación a tres escalas](docs/capa_v1170_icon_compare.png).
 
 ### v1.67.6 — unión visible al torso e icono animado
 
@@ -20,7 +32,7 @@ Se equipa en el pecho o en `back` con Curios opcional.
   sin el damero y sin redibujar el contorno. La estrella pulsa y el destello
   recorre las grietas en la hotbar. Son 16 cuadros del atlas vanilla; no
   hace falta otro mod ni un paquete de recursos. [Antes y ahora, en reposo](docs/capa_v1170_icon_compare.png).
-- **Verificado en Forge:** en la prueba F5 cenital, la banda de unión
+- **Prueba anterior:** en F5 cenital, la banda central de unión
   quedó cubierta tanto en el pecho como en Curios `back`. El icono se
   animó en la hotbar vanilla sin cambiar de silueta.
   [Comparación cenital](docs/capa_v1676_anclaje_forge.png) ·

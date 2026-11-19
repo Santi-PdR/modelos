@@ -28,6 +28,16 @@ def main():
             assert all(math.isclose(a, b, rel_tol=0, abs_tol=1e-7)
                        for a, b in zip(java, values, strict=True)), (row, values)
     print(f'Java → Python y visor JS: {len(rows)} ajustes de montura coinciden')
+    if len(sys.argv) > 2:
+        tabs = [tuple(map(float, row.split('\t'))) for row in Path(sys.argv[2]).read_text().splitlines()]
+        js = subprocess.run(['node', 'tools/check_viewer_pose.js'], cwd=P.ROOT, check=True,
+                            input=json.dumps(dict(shoulderSamples=[r[:4] for r in tabs])),
+                            capture_output=True, text=True)
+        for (s,p,y,w,*expected), actual in zip(tabs,json.loads(js.stdout),strict=True):
+            for out in (F.shoulder_scales(s,p,y,elytra=w == 1)[1:],actual):
+                assert all(math.isclose(a,b,rel_tol=0,abs_tol=1e-9)
+                           for a,b in zip(out,expected,strict=True)), (out,expected)
+        print(f'Remates de hombros: {len(tabs)} muestras coinciden en Java/Python/visor.')
 
 
 if __name__ == '__main__':

@@ -149,8 +149,10 @@ def fit_check(geo, clips, quick):
     old_parts = ref[np.r_[np.flatnonzero(is_cloth),heads]]
     old_gap = float(old_parts[...,2].min()-2)
     bed = overlap(ref[seat],torso[None]).max()
-    assert old_gap > .70 and .02 < bed < .09, (old_gap,bed)
-    assert ref[seat+gusset,...,2].min() > 1.9
+    deep_seat = G.SHOULDERS_BONE in groups
+    assert old_gap > .70
+    assert (.39 < bed < .44) if deep_seat else (.02 < bed < .09), bed
+    assert ref[seat+gusset,...,2].min() > (1.57 if deep_seat else 1.9)
     assert all(overlap(ref[groups[f'v18_pad_{i}']],ref[saddle]).max() > .14 for i in range(2))
     assert overlap(ref[saddle],ref[collar]).max() > .14
     assert min(overlap(ref[groups[f'v18_chain_{i}']],ref[collar]).max() for i in range(8)) > .14
