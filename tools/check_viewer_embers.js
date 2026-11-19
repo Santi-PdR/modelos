@@ -6,9 +6,10 @@ const path = require('node:path');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const aura = JSON.parse(fs.readFileSync(0, 'utf8'));
-const samples = process.argv[2] ? fs.readFileSync(process.argv[2], 'utf8').trim().split('\n') : [];
+const rows = file => file ? fs.readFileSync(file, 'utf8').trim().split('\n') : [];
+const samples = rows(process.argv[2]), looks = rows(process.argv[3]);
 const target = () => ({ getContext: () => ({}), addEventListener() {} });
-const context = vm.createContext({ document: { getElementById: target }, aura, samples, assert });
+const context = vm.createContext({ document: { getElementById: target }, aura, samples, looks, assert });
 const source = fs.readFileSync(path.join(__dirname, '../preview/app.js'), 'utf8').split('\nboot().catch')[0];
 vm.runInContext(`${source}
 {
@@ -19,6 +20,13 @@ vm.runInContext(`${source}
     const expected=[+x,+y,+z];
     assert(result.point.every((v,i)=>Math.abs(v-expected[i])<2e-15),line);
     assert.equal(result.collar,high==='true',line);
+  }
+  for (const line of looks) {
+    const [p,streak,phase,...expected] = line.trim().split('\\t').map(Number);
+    const look=emberLook(p,streak,phase);
+    [look.frame,look.alpha,look.scale,...look.tint].forEach((v,i)=>{
+      assert(Math.abs(v-expected[i])<2e-15,line);
+    });
   }
   // One half of the billboard is behind the wearer and one half is visible.
   const side=24, image=new Uint8ClampedArray(side*side*4).fill(32);
@@ -32,6 +40,8 @@ vm.runInContext(`${source}
   assert.equal(depth[12*side+15],-Infinity,'una chispa translúcida escribió profundidad');
   overEmber(image,depth,side,sprite,12,12,3,16,.5,[1,.5,.8]);
   assert.equal(image[(12*side+8)*4],144,'la chispa delante desapareció');
+  overEmber(image,depth,side,sprite,12,12,3,16,.08,[1,.5,.8]);
+  assert.equal(image[(12*side+8)*4],144,'no se respetó el corte de alfa vanilla al apagarse');
 }
 `, context, { filename: 'preview/app.js' });
-console.log(`Chispas visor: prueba de profundidad y ${samples.length} posiciones contrastadas con Java`);
+console.log(`Chispas visor: profundidad y corte de alfa; ${samples.length} posiciones y ${looks.length} apariencias contrastadas con Java`);

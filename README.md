@@ -1,11 +1,38 @@
-# Mantle of the Blight Star — v1.66.0
+# Mantle of the Blight Star — v1.67.0
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
 [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench](docs/CAPA_v1.66.0.bbmodel)
+· [Proyecto Blockbench](docs/CAPA_v1.67.0.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
+
+### v1.67.0 — bloom localizado y brasas que se enfrían
+
+![Núcleo y halo comparados con luz baja y alta, junto a los tres sprites](docs/capa_v1670_bloom.png)
+
+- **Bloom equipado:** los núcleos nítidos conservan su máscara. Dos radios de
+  luz, rosa cerca del corte y violeta en el borde, se hornean por cara del
+  paño. El halo suma color a la misma malla animada, con prueba de profundidad
+  y sin escribir profundidad ni alfa. No emiten el forro, el cuello ni el acero.
+  No es bloom de pantalla, no ilumina bloques y no requiere un shader pack.
+- **Brasas:** una sola partícula con tres fases, halo pequeño y enfriamiento
+  de rosa a violeta. Se encoge y desvanece; no hay una segunda partícula de
+  estela. Se conservan los impulsos, las cuatro zonas y el máximo de tres
+  chispas cada ocho ticks por portador. Sin cambios en la prioridad de equipo.
+- **Compatibilidad:** si no carga el programa de halo se conserva la emisión
+  estándar. Para forzar ese modo con un shader pack, añade
+  `-Dcapa.sinHalo=true` a los argumentos de Java del cliente. El GEO, los
+  clips y el ajuste de v1.66.0, el albedo opaco, el icono y el ítem plegado
+  quedan intactos. El `.bbmodel` lleva el mismo rig, sin hornear los FX.
+
+En el [visor](docs/capa_v1170_visor.html), pausa y alterna **Halo suave (A/B)**
+con **Luz de grietas** encendida. Mueve **Luz ambiente** para comparar noche y
+luz alta; **Chispas** se activa aparte. **Referencia** sigue sin efectos.
+`OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1670.py` comprueba el atlas,
+la oclusión, el color y la opacidad en la misma pose. El visor aproxima la
+luz de Minecraft y los impulsos de servidor. Falta probar el efecto equipado
+in-game en F5, de día y noche, con paredes, armadura y `Curios:back`.
 
 ### v1.66.0 — el paño cede a la zancada
 

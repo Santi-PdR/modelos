@@ -9,9 +9,9 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.66.0: el paño deja más holgura a la zancada y responde antes al saltar y aterrizar.
-Mantiene los ocho ciclos, el cuello, la montura y el ajuste compartido en pecho o Curios (opcional).
-El deterioro conserva su pulso y sus chispas sin tapar la animación de locomoción.
+v1.67.0: halo rosa y violeta sobre el paño equipado y brasas que se enfrían al subir.
+La luz respeta la profundidad; no requiere shaders de pantalla. Se conservan los ocho ciclos,
+la holgura del paño y el ajuste en pecho o Curios (opcional).
 '''
 
 [[dependencies.${mod_id}]]

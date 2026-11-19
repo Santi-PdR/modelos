@@ -48,10 +48,9 @@ animación y la documentación de GeckoLib._
   corta el recorrido de los hijos. En GeckoLib 4.8 son dos controles distintos.
   No cortar `cape_top/mid/bottom` ni el portador `cape_wearer_fit` al
   ocultar los cubos antiguos o al aplicar la visibilidad del slot.
-- **Plegado:** `AutoGlowingTexture` de GeckoLib conserva el camino anterior
-  con su `glowmask.png` de la misma resolución. En la capa equipada no se
-  usa `AutoGlowingTexture`: trasladaría píxeles al glow y los quitaría del
-  albedo, abriendo agujeros.
+- **Plegado:** conserva el pase `RenderType.eyes` con su `glowmask.png`
+  de 128². No usar `AutoGlowingTexture` en la capa equipada: trasladaría
+  píxeles al glow y los quitaría del albedo, abriendo agujeros.
 - **Equipado:** el alpha global del re-render queda en **1,0**. Se pulsa
   el color; el alpha de cada texel del atlas emisivo marca sólo su cobertura.
 
@@ -62,11 +61,14 @@ animación y la documentación de GeckoLib._
 - **Cartas UV:** cada cara lleva guarda de color. Al asignar espacio,
   dar prioridad a las caras expuestas sin bajar a cero la densidad de
   los cantos. Mantener el muestreo nearest en albedo y emisión.
-- **Capa equipada:** usa dos mapas alineados (512² en v1.63.0):
-  albedo siempre opaco y emisión RGBA, sólo en núcleos del paño. El pase
-  emisivo usa la geometría equipada y la misma profundidad que el opaco;
-  el opaco no usa el offset de armadura vanilla. GeckoLib no recorta ni
-  vuelve a subir el albedo. El ítem plegado conserva su atlas y máscara de 128².
+- **Capa equipada:** albedo opaco y emisión RGBA de 512². El pase
+  emisivo usa la misma geometría y profundidad que el opaco, sin el offset
+  de armadura vanilla. Desde v1.67, lee también un mapa RGB de halo en el
+  **mismo pase**: núcleo nearest y halo interpolado, sin mipmaps.
+  `tools/cape_bloom.py` deriva ambos radios del núcleo de cada carta, en
+  unidades del modelo. No difuminar globalmente el atlas: la guarda evita
+  que se cuelen colores a UV vecinas, y el forro y el acero quedan mates.
+  El halo suma RGB, sin cambiar la cobertura del núcleo ni el alfa del paño.
 
 ## 5. Restricciones VIGENTES de este proyecto (no revivir)
 
@@ -103,8 +105,13 @@ animación y la documentación de GeckoLib._
    vanilla. `tools/verify_v1660.py` compara brazos, piernas y costuras con
    y sin la guía. No usar una zancada sintética para certificar cascos,
    armaduras ni las poses de vuelo/nado del cliente.
-6. En el visor, bajar **Luz ambiente** y activar **Luz de grietas**.
-   **Chispas** se puede activar aparte para revisar el comportamiento.
-   Comprobar que se iluminan los núcleos, no las placas o el forro entero;
-   apagarlos no debe abrir un agujero. «Referencia» vuelve a luz fija y
-   permite deslizar el PNG original sobre la misma pose, escala y cámara.
+6. En el visor, pausar con **Luz de grietas** encendida y alternar
+   **Halo suave (A/B)**. Probar luz baja y alta, dorso y frente. **Chispas**
+   se puede activar aparte. «Referencia» desactiva los FX para comparar
+   el PNG original a la misma pose, escala y cámara. `tools/verify_v1670.py`
+   contrasta la oclusión, la opacidad, el halo regenerado y el visor offline.
+7. Probar en Minecraft el halo junto a una pared y con el maniquí real en F5.
+   No debe aparecer delante de una pared, en la cara interior ni en el pelo.
+   Si un shader pack altera el pase, relanzar con `-Dcapa.sinHalo=true`
+   conserva el núcleo estándar. Confirmar también el enfriamiento de las
+   brasas y la prioridad de pecho. El visor no ejecuta los shaders del juego.

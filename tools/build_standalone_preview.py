@@ -40,7 +40,7 @@ function assetUrl(name) { return INLINE_IMAGES[name]; }"""
         "INLINE_REFERENCE": json.loads((ASSETS / "reference-frame.json").read_text()),
         "INLINE_AURA": json.loads((ASSETS / "aura.json").read_text()),
         "INLINE_IMAGES": {name: data(ASSETS / name)
-                          for name in ("armor.png", "armor_glowmask.png", "reference-crop.png",
+                          for name in ("armor.png", "armor_glowmask.png", "armor_halo.png", "reference-crop.png",
                                        *(f"capa_spark_{i}.png" for i in range(3)))},
     }
     script = "<script>\n" + "".join(f"const {k} = {json.dumps(v, separators=(',', ':'))};\n"

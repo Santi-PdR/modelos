@@ -36,7 +36,9 @@ def static_checks() -> None:
     cal = json.loads((ROOT / "tools" / "color_calibration.json").read_text())
     assert len(cal["rows"]) == 10, "falta el perfil de calibración medido"
     assert (ROOT / 'tools/cape_surface.py').is_file()
-    assert (ROOT / f"docs/capa_v{VER.replace('.', '')}_registro.png").is_file()
+    from cape_reference import registered_version
+    stamp = registered_version(VER).replace('.', '')
+    assert (ROOT / f"docs/capa_v{stamp}_registro.png").is_file()
     assert BB.is_file(), f"falta el .bbmodel de la version {VER}"
     bb = json.loads(BB.read_text())
     assert bb["name"] == f'capa_deteriorer_evilsaiyan_v{VER.replace(".", "_")}'

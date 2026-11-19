@@ -176,7 +176,7 @@ MANNEQUIN_BOXES = (
 
 def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27),
            *, frame=None, mannequin=False, mannequin_pose=None,
-           ambient=1.0, emission=None, tint=(.89,.60,.77)):
+           ambient=1.0, emission=None, tint=(.89,.60,.77), bloom=None):
     faces = [(p, uv, None) for p, uv, _ in collect(geo, hidden)]
     if mannequin:
         parts = MANNEQUIN_BOXES if mannequin is True else mannequin
@@ -191,6 +191,11 @@ def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27),
                                                     else Image.open(emission)).convert('RGBA'))
     if light is not None:
         assert light.shape == atlas.shape
+    halo = None
+    if bloom is not None:
+        assert light is not None, 'el halo sólo acompaña la emisión'
+        halo = np.asarray((bloom if isinstance(bloom, Image.Image) else Image.open(bloom)).convert('RGB'))
+        assert halo.shape == atlas[..., :3].shape
     view = R("x", pitch) @ R("y", yaw)
     prepared, pts_all = [], []
     for pts, uvs, color in faces:
@@ -253,8 +258,17 @@ def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27),
                 col = tex[:, :, :3] * shade
                 if light is not None:
                     e = light[vi, ui].astype(float)
-                    a_glow = e[...,3:] / 255.
+                    a_glow = np.where(e[..., 3:] >= 26, e[..., 3:]/255., 0.)
                     col = col * (1-a_glow) + e[...,:3] * tint * a_glow
+                    if halo is not None:
+                        # GL linear sampling interpolates between texel centers.
+                        ux, vy = np.clip(uu-.5, 0, AW-1), np.clip(vv-.5, 0, AH-1)
+                        x, y = np.minimum(np.floor(ux).astype(int), AW-2), np.minimum(np.floor(vy).astype(int), AH-2)
+                        t, s = (ux-x)[..., None], (vy-y)[..., None]
+                        nearby = (1-t)*halo[y,x] + t*halo[y,x+1]
+                        far = (1-t)*halo[y+1,x] + t*halo[y+1,x+1]
+                        spill = (1-s)*nearby + s*far
+                        col += spill * (1-a_glow) * (.45 + .55*tint[0]) * tint
                 alpha = tex[:, :, 3:4] / 255.0
             else:
                 col = np.broadcast_to(np.asarray(solid) * shade, inside.shape + (3,))
@@ -382,9 +396,9 @@ def compose(images, labels, cols, size, bg=(13, 11, 18)):
 
 
 def particle_sheet(path):
-    """v1.23.0: los 3 sprites de la CHISPA exclusiva (16x16 ampliados)."""
+    """Las tres fases de la misma chispa (sprites de 16x16 ampliados)."""
     names = [f"capa_spark_{i}.png" for i in range(3)]
-    labels = ["SPARK 0", "SPARK 1", "SPARK 2"]
+    labels = ["BRASA", "DESTELLO", "CENIZA"]
     cell = 128
     sheet = Image.new("RGB", (3 * (cell + 10) + 5, cell + 33), (13, 11, 18))
     d = ImageDraw.Draw(sheet)

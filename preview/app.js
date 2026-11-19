@@ -11,7 +11,7 @@ async function loadJson(name) {
 function assetUrl(name) { return `assets/${name}`; }
 /* END LOCAL LOADER */
 
-let GEO, CLIPS, FIT, STRIDE, REF, ORIGINAL, ATLAS, GLOW, SPARKS, AURA, ATLAS_W = 128, ATLAS_H = 128;
+let GEO, CLIPS, FIT, STRIDE, REF, ORIGINAL, ATLAS, GLOW, HALO, SPARKS, AURA, ATLAS_W = 128, ATLAS_H = 128;
 const canvas = document.getElementById('view');
 const ctx = canvas.getContext('2d', { alpha: false });
 let SIZE = 480;
@@ -258,7 +258,11 @@ function collect(geo, hidden) {
 
 /* ---------- rasterizador con z-buffer ---------- */
 let lastScale = null, lastCx = 0, lastCy = 0, lastView = null;
-function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=null, overlay=null) {
+function spillAt(map, coord, stride, dx, dy) {
+  return (map[coord]*(1-dx)+map[coord+4]*dx)*(1-dy)
+       + (map[coord+stride]*(1-dx)+map[coord+stride+4]*dx)*dy;
+}
+function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=null, overlay=null, bloom=false) {
   const view = mul(R('x', pitch), R('y', yaw));
   lastView = view;
   const prepared = [];
@@ -294,6 +298,8 @@ function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=nu
   for (let i=0;i<size*size;i++) { pix[i*4]=BG[0]; pix[i*4+1]=BG[1]; pix[i*4+2]=BG[2]; pix[i*4+3]=255; }
   const depth = new Float32Array(size*size).fill(-1e9);
   const A = ATLAS, AW=ATLAS_W, AH=ATLAS_H;
+  const H = bloom && tint ? HALO : null;
+  const spillGain = H ? .45+.55*tint[0] : 0;
 
   for (const q of prepared) {
     const scr = q.pv.map(p => [size/2+(p[0]-cx)*scale, size/2-(p[1]-cy)*scale]);
@@ -332,11 +338,26 @@ function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=nu
           const cg=solid ? solid[1] : A[ti+1];
           const cb=solid ? solid[2] : A[ti+2];
           const lit = q.shade * ambient;
-          const emission = !solid && tint ? GLOW[ti+3]/255 : 0;
+          const emission = !solid && tint && GLOW[ti+3]>=26 ? GLOW[ti+3]/255 : 0;
           const diffuse = lit * (1-emission);
-          pix[di]   = pix[di]*(1-al) + (cr*diffuse + emission*GLOW[ti]  *(tint?.[0] || 0))*al;
-          pix[di+1] = pix[di+1]*(1-al) + (cg*diffuse + emission*GLOW[ti+1]*(tint?.[1] || 0))*al;
-          pix[di+2] = pix[di+2]*(1-al) + (cb*diffuse + emission*GLOW[ti+2]*(tint?.[2] || 0))*al;
+          let r=cr*diffuse + emission*GLOW[ti]  *(tint?.[0] || 0);
+          let g=cg*diffuse + emission*GLOW[ti+1]*(tint?.[1] || 0);
+          let bCol=cb*diffuse + emission*GLOW[ti+2]*(tint?.[2] || 0);
+          if (H && !solid) {
+            // The shader adds light without covering the diffuse. Linear
+            // halo sampling is independent from the pixel-sharp core.
+            const u=Math.max(0,Math.min(AW-1,uu-.5)), v=Math.max(0,Math.min(AH-1,vv-.5));
+            const i=Math.min(AW-2,Math.floor(u)), j=Math.min(AH-2,Math.floor(v)), row=AW*4, h=j*row+i*4;
+            if (H[h]||H[h+4]||H[h+row]||H[h+row+4]||H[h+2]||H[h+6]||H[h+row+2]||H[h+row+6]) {
+              const gain=(1-emission)*spillGain;
+              r += gain*tint[0]*spillAt(H,h,row,u-i,v-j);
+              g += gain*tint[1]*spillAt(H,h+1,row,u-i,v-j);
+              bCol += gain*tint[2]*spillAt(H,h+2,row,u-i,v-j);
+            }
+          }
+          pix[di]   = pix[di]*(1-al) + r*al;
+          pix[di+1] = pix[di+1]*(1-al) + g*al;
+          pix[di+2] = pix[di+2]*(1-al) + bCol*al;
           depth[idx]=zz;
         }
       }
@@ -385,9 +406,25 @@ function overEmber(pix,depth,size,sprite,x,y,z,width,opacity,tint) {
       if (z<=depth[dst]) continue; // native particles also test depth against the body/cloth
       const ti=(row*16+Math.min(15,Math.floor((xx-x0)*s)))*4;
       const a=opacity*sprite[ti+3]/255;
+      if (a<.1) continue; // vanilla particle shader's alpha test
       for (let j=0;j<3;j++) pix[dst*4+j]=pix[dst*4+j]*(1-a)+sprite[ti+j]*tint[j]*a;
     }
   }
+}
+
+// Same look curve as CapeEmber.java; the positions below are illustrative.
+function emberLook(progress, streak, phase) {
+  const p=Math.max(0,Math.min(1,progress));
+  const ease=(lo,hi)=>{
+    const t=Math.max(0,Math.min(1,(p-lo)/(hi-lo)));
+    return t*t*(3-2*t);
+  };
+  const glint=.5+.5*Math.sin(phase+p*7.5);
+  const fade=ease(0,.16)*(1-ease(.36,1));
+  const cool=ease(.22,.93);
+  return {frame:p<.25 ? 0 : p<.63 ? 1 : 2,
+          alpha:(.79+.06*glint+.07*streak)*fade, scale:1-.43*p+.05*glint,
+          tint:[1-.39*cool,.98-.18*cool,.93+.07*cool]};
 }
 
 function drawRuntimeParticles(seconds, size, stance, pix, depth) {
@@ -408,17 +445,17 @@ function drawRuntimeParticles(seconds, size, stance, pix, depth) {
       const dz=collar ? .005 : trail*(.75+.35*noise[2]);
       const streak=Math.min(1,Math.hypot(dx,dz)/.035);
       const life=39-Math.round(13*streak)+Math.floor(random(shot,i,3)*9);
-      const tick=age*20,p=tick/life;
-      if (p<=0 || p>=1) continue;
-      const glint=.5+.5*Math.sin(noise[1]*3.14+p*9);
+      const tick=age*20;
+      if (tick<=0 || tick>=life) continue;
+      const look=emberLook(Math.floor(tick)/life,streak,noise[1]*3.14);
+      if (look.alpha<.1) continue;
       const fly=(1-Math.pow(.94,tick))/(1-.94);
       const clamp=Math.min(1,.04/Math.max(1e-9,Math.hypot(dx,dz)));
       const pos=apply(lastView,[16*(x0+fly*dx*clamp),16*(y0*(stance ? 1.5/1.8 : 1)+fly*rise),16*(z0+fly*dz*clamp)]);
       const x=size/2+(pos[0]-lastCx)*lastScale,y=size/2-(pos[1]-lastCy)*lastScale;
       const quad=(.1+.1*noise[0])*(.28+.10*streak+.15*noise[2]);
-      const width=32*quad*(1-.37*p+.06*glint)*lastScale;
-      const alpha=(.66+.08*glint+.09*streak)*Math.min(1,p*6)*Math.min(1,(1-p)*2.4);
-      embers.push({x,y,z:pos[2],width,alpha,frame:Math.min(2,Math.floor(3*p)),tint:[1-.19*p,.98-.22*p,1]});
+      const width=32*quad*look.scale*lastScale;
+      embers.push({x,y,z:pos[2],width,...look});
     }
   }
   for (const e of embers.sort((a,b)=>a.z-b.z))
@@ -427,13 +464,13 @@ function drawRuntimeParticles(seconds, size, stance, pix, depth) {
 
 let yaw=25, pitch=10, zoom=1.0, playing=true, t=0, elapsed=0;
 let lastFrame=null, dirty=true, hidden=null, frameBounds=null, gaitBounds=null;
-let showPlayer=true, showFx=false, showGlow=false, referenceView=false;
+let showPlayer=true, showFx=false, referenceView=false;
 const stanceControl=document.getElementById('fitStance'), lookControl=document.getElementById('fitLook');
 const turnControl=document.getElementById('fitTurn'), fitValue=document.getElementById('fitValue');
 const stridePlayer=document.getElementById('stridePlayer'), strideFit=document.getElementById('strideFit');
 const strideAmount=document.getElementById('strideAmount');
 const fitReset=document.getElementById('fitReset'), fxControl=document.getElementById('l_particles');
-const glowControl=document.getElementById('l_glow');
+const glowControl=document.getElementById('l_glow'), haloControl=document.getElementById('l_halo');
 const seek=document.getElementById('seek'), play=document.getElementById('play');
 const ambientControl=document.getElementById('ambient');
 const zoomControl=document.getElementById('zoom');
@@ -464,13 +501,16 @@ function refreshStrideControls() {
   stridePlayer.disabled=referenceView;
   strideFit.disabled=strideAmount.disabled=referenceView || !stridePlayer.checked;
 }
+function refreshHaloControl() {
+  haloControl.disabled=referenceView || !glowControl.checked;
+}
 function setReference(value) {
   referenceView=value;
   document.getElementById('v34').setAttribute('aria-pressed',String(value));
   compareControl.hidden=!value;
   for (const control of [stanceControl, lookControl, turnControl, fitReset, fxControl, glowControl, ambientControl, zoomControl])
     control.disabled=value;
-  refreshStrideControls();
+  refreshStrideControls(); refreshHaloControl();
   dirty=true;
 }
 function setPlaying(value) {
@@ -520,9 +560,11 @@ function draw(now) {
   fitValue.textContent=referenceView ? 'Pose base · ajuste desactivado' :
     `Mirada ${look}° · giro ${turn}° · holgura ${depth.toFixed(2)} u`;
   const fx=showFx&&!referenceView;
-  render(faces,yaw,pitch,zoom,SIZE,gait ? gaitBounds : frameBounds,showGlow&&!referenceView ? simulatedTint(t,clip.length) : null,
+  render(faces,yaw,pitch,zoom,SIZE,gait ? gaitBounds : frameBounds,
+         glowControl.checked&&!referenceView ? simulatedTint(t,clip.length) : null,
          referenceView ? 1 : +ambientControl.value, referenceView ? referenceFrame(SIZE) : null,
-         fx ? (pixels,z)=>drawRuntimeParticles(elapsed,SIZE,stance,pixels,z) : null);
+         fx ? (pixels,z)=>drawRuntimeParticles(elapsed,SIZE,stance,pixels,z) : null,
+         haloControl.checked&&!referenceView);
   if (referenceView) drawOriginal(SIZE);
   document.getElementById('faces').textContent=faces.length;
   document.getElementById('clock').textContent=referenceView?'Pose base':`${t.toFixed(2).replace('.',',')} s`;
@@ -541,16 +583,18 @@ function pixels(im) {
   return ctx.getImageData(0,0,im.width,im.height).data;
 }
 async function boot() {
-  const [geo,clips,fit,stride,atlas,glow,aura,reference,original,sparks]=await Promise.all([
+  const [geo,clips,fit,stride,atlas,glow,halo,aura,reference,original,sparks]=await Promise.all([
     loadJson('armor.geo.json'), loadJson('armor.animation.json'), loadJson('fit.json'), loadJson('stride.json'), image('armor.png'),
-    image('armor_glowmask.png'), loadJson('aura.json'), loadJson('reference-frame.json'), image('reference-crop.png'),
+    image('armor_glowmask.png'), image('armor_halo.png'), loadJson('aura.json'), loadJson('reference-frame.json'), image('reference-crop.png'),
     Promise.all([0,1,2].map(i=>image(`capa_spark_${i}.png`)))]);
   if (original.width!==reference.cropSize[0] || original.height!==reference.cropSize[1])
     throw new Error('La imagen no coincide con el encuadre de referencia');
   REF=reference; ORIGINAL=original;
   GEO=geo['minecraft:geometry'][0]; CLIPS=prepareClips(clips); FIT=fit; STRIDE=stride; hidden=runtimeHidden(GEO);
-  if (glow.width!==atlas.width || glow.height!==atlas.height) throw new Error('El atlas emisivo no coincide con el opaco');
-  ATLAS=pixels(atlas); GLOW=pixels(glow); AURA=aura;
+  if ([glow,halo].some(im=>im.width!==atlas.width || im.height!==atlas.height))
+    throw new Error('Los mapas de luz no coinciden con el atlas opaco');
+  ATLAS=pixels(atlas); GLOW=pixels(glow); HALO=pixels(halo); AURA=aura;
+  refreshHaloControl();
   SPARKS=sparks.map(pixels); ATLAS_W=atlas.width; ATLAS_H=atlas.height;
   updateBounds();
   document.getElementById('bones').textContent=GEO.bones.length;
@@ -599,7 +643,7 @@ fitReset.onclick=()=>{
 zoomControl.oninput=e=>{ zoom=+e.target.value; dirty=true; };
 document.getElementById('l_player').onchange=e=>{ showPlayer=e.target.checked; dirty=true; };
 fxControl.onchange=e=>{ showFx=e.target.checked; dirty=true; };
-glowControl.onchange=e=>{ showGlow=e.target.checked; dirty=true; };
-ambientControl.oninput=wipe.oninput=()=>{ dirty=true; };
+glowControl.onchange=()=>{ refreshHaloControl(); dirty=true; };
+haloControl.onchange=ambientControl.oninput=wipe.oninput=()=>{ dirty=true; };
 
 boot().catch(error=>{ document.getElementById('loading').textContent=error.message; });

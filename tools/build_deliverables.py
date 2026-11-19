@@ -85,6 +85,7 @@ def step_recursos_visor() -> None:
         "animations/item/armor/capa_deteriorer_evilsaiyan.animation.json": "armor.animation.json",
         "textures/item/armor/capa_deteriorer_evilsaiyan.png": "armor.png",
         "textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png": "armor_glowmask.png",
+        "textures/item/armor/capa_deteriorer_evilsaiyan_halo.png": "armor_halo.png",
         "textures/item/capa_deteriorer_evilsaiyan.png": "icon.png",
         "textures/item/cape_folded.png": "folded.png",
         "textures/item/cape_folded_glowmask.png": "folded_glowmask.png",
@@ -122,13 +123,19 @@ def step_previews(out: Path) -> None:
 
 
 def step_gifs_y_estados(ver: str) -> None:
-    print("5) comparación a escala, GIF y 8 poses")
-    run(sys.executable, "tools/present_v1600.py", "--out", str(D), "--gif")
-    shutil.copy(D / f"capa_v{ver.replace('.', '')}_antes_despues.png", A / "antes_despues.png")
-    shutil.copy(D / f"capa_v{ver.replace('.', '')}_registro.png", A / "registro.png")
-    if ver in ('1.64.0', '1.65.0', '1.66.0'):
+    print("5) comparativas")
+    art_ver = cape_reference.registered_version(ver)
+    if ver == '1.67.0':
+        # FX only: reuse the registered silhouette and eight clips, not a
+        # relabelled before/after plate of identical model pixels.
+        run(sys.executable, "tools/present_v1670.py", "--out", str(D))
+    else:
+        run(sys.executable, "tools/present_v1600.py", "--out", str(D), "--gif")
+    shutil.copy(D / f"capa_v{art_ver.replace('.', '')}_antes_despues.png", A / "antes_despues.png")
+    shutil.copy(D / f"capa_v{art_ver.replace('.', '')}_registro.png", A / "registro.png")
+    if art_ver in ('1.64.0', '1.65.0', '1.66.0'):
         shutil.copy(D / 'capa_v1640_ajuste.png', A / 'ajuste.png')
-    if ver in ('1.65.0', '1.66.0'):
+    if art_ver in ('1.65.0', '1.66.0'):
         shutil.copy(D / 'capa_v1650_cuello.png', A / 'cuello.png')
     shutil.copy(D / "capa_v1170_estados.png", A / "estados.png")
     shutil.copy(D / "capa_v1170_animaciones.gif", A / "animacion.gif")

@@ -9,6 +9,11 @@ on:
         required: false
         default: false
         type: boolean
+      probar_halo:
+        description: 'Arrancar Forge con pantalla virtual y comprobar que enlaza el shader de halo'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -651,7 +656,17 @@ jobs:
           assert 'Exception | LinkageError' in glow_layer
           assert 'glow.red(), glow.green(), glow.blue(), 1.0F' in glow_layer, 'alpha del glow variable'
           assert 'stateFor(wearer, armor.getCurrentStack())' in glow_layer
-          assert 'entityTranslucentEmissive(EMISSION, false)' in glow_layer
+          if tuple(map(int, ver.split('.'))) >= (1, 67, 0):
+              bloom = (root / 'src/main/java/com/capatest/client/CapeBloom.java').read_text()
+              assert 'CapeBloom.wornLight()' in glow_layer and glow_layer.count('.reRender(') == 1
+              assert 'entityTranslucentEmissive(EMISSION, false)' in bloom
+              assert 'RegisterShadersEvent' in bloom and 'GL_LINK_STATUS' in bloom
+              assert '.setDepthTestState(LEQUAL_DEPTH_TEST)' in bloom and '.setWriteMaskState(COLOR_WRITE)' in bloom
+              shader = json.loads((base / 'shaders/core/cape_bloom.json').read_text())
+              assert shader['vertex'] == shader['fragment'] == 'capatest:cape_bloom'
+              assert shader['blend'] == dict(func='add', srcrgb='1', dstrgb='1-srcalpha', srcalpha='0', dstalpha='1')
+          else:
+              assert 'entityTranslucentEmissive(EMISSION, false)' in glow_layer
           assert 'AutoGlowingTexture.getRenderType(' not in glow_layer
           assert 'return RenderType.entityCutoutNoCull(texture, true);' in armor_renderer, 'opaco y emisión deben compartir profundidad sin offset'
           assert 'buffers, renderType, null, yaw, partialTick, light' in armor_renderer
@@ -786,6 +801,9 @@ jobs:
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1630.py
           elif grep -qx 'mod_version=1.64.0' gradle.properties; then
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1640.py
+          elif grep -qx 'mod_version=1.67.0' gradle.properties; then
+            OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py --fit-only
+            OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1670.py
           else
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py
             if grep -qx 'mod_version=1.66.0' gradle.properties; then
@@ -803,9 +821,11 @@ jobs:
           CLASSES="$RUNNER_TEMP/cape-state-test"
           mkdir -p "$CLASSES"
           javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/{CapeState,CapePlayback}.java \
-            src/main/java/com/capatest/client/{CapeResponse,CapeFit,CapeStride,CapeTint}.java \
+            src/main/java/com/capatest/client/{CapeResponse,CapeFit,CapeStride,CapeTint,CapeEmber}.java \
             src/test/java/com/capatest/item/CapeStateTest.java \
-            src/test/java/com/capatest/client/{CapeFitTest,CapeRuntimeTest}.java
+            src/test/java/com/capatest/client/{CapeFitTest,CapeRuntimeTest,CapeEmberTest}.java
+          java -cp "$CLASSES" com.capatest.client.CapeEmberTest
+          java -cp "$CLASSES" com.capatest.client.CapeEmberTest --samples > "$CLASSES/embers.tsv"
           java -cp "$CLASSES" com.capatest.item.CapeStateTest
           java -cp "$CLASSES" com.capatest.client.CapeFitTest
           java -cp "$CLASSES" com.capatest.client.CapeRuntimeTest
@@ -815,7 +835,7 @@ jobs:
           OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/check_cape_fit.py "$CLASSES/fit.tsv"
           java -cp "$CLASSES" com.capatest.item.CapeStateTest --spark-samples > "$CLASSES/sparks.tsv"
           PYTHONPATH=tools python3 -c 'import cape_aura as a,json; print(json.dumps(a.profile()))' | \
-            node tools/check_viewer_embers.js "$CLASSES/sparks.tsv"
+            node tools/check_viewer_embers.js "$CLASSES/sparks.tsv" "$CLASSES/embers.tsv"
 
       - name: Build
         id: build
@@ -890,6 +910,8 @@ jobs:
             grep -qx 'com/capatest/client/CapeFit.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeStride.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeTint.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapeBloom.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapeEmber.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapePlayback.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaArmorRenderer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapaDeteriorerItem.class' /tmp/jar-contents.txt
@@ -910,7 +932,8 @@ jobs:
             # Comprueba el contenido, no sólo el nombre: el JAR debe usar
             # el mismo atlas equipado que validaron los renders y el .bbmodel.
             for asset in \
-              textures/item/armor/capa_deteriorer_evilsaiyan{,_glowmask}.png \
+              textures/item/armor/capa_deteriorer_evilsaiyan{,_glowmask,_halo}.png \
+              shaders/core/cape_bloom.{json,vsh,fsh} \
               textures/item/capa_deteriorer_evilsaiyan.png \
               textures/item/cape_folded{,_glowmask}.png \
               textures/particle/capa_spark_{0,1,2}.png particles/capa_spark.json \
@@ -955,6 +978,23 @@ jobs:
             build/libs/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
+
+      # Comprueba la carga del programa en el cliente real, no una partida
+      # ni el orden de render en F5. No bloquea la construcción normal.
+      - name: Comprobar carga del halo en Forge (opcional)
+        if: github.event_name == 'workflow_dispatch' && inputs.probar_halo == true
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          ALSOFT_DRIVERS: 'null'
+        run: |
+          log="$RUNNER_TEMP/forge-client.log"
+          rc=0
+          timeout --kill-after=12s 160s xvfb-run -a gradle --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
+          tail -n 80 "$log"
+          # El menú permanece abierto hasta que timeout cierra el cliente.
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; then exit "$rc"; fi
+          grep -F 'Blight Star Mantle: halo de grietas listo' "$log"
+          ! grep -F 'Blight Star Mantle: sin halo' "$log"
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.

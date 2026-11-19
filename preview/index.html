@@ -26,7 +26,7 @@ details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summar
 <header>
   <div class="kicker">Desarrollo local · Capa equipada · Visor interactivo</div>
   <h1>Mantle of the Blight Star</h1>
-  <p>Cuello granate, carbón y jirones violetas. El borde apenas asoma por los hombros desde el frente.</p>
+  <p>Grietas de rosa vivo, luz violeta al borde y brasas que se enfrían al subir.</p>
 </header>
 <div class="grid">
   <section class="card" aria-label="Modelo equipado interactivo">
@@ -56,13 +56,16 @@ details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summar
     </div>
     <div class="controls">
       <label><input type="checkbox" id="l_player" checked> Maniquí</label>
-      <label><input type="checkbox" id="l_glow"> Luz de grietas</label>
-      <label><input type="checkbox" id="l_particles"> Chispas</label>
       <label for="zoom">Zoom</label><input id="zoom" type="range" min="0.72" max="2.5" step="0.02" value="1" aria-label="Zoom">
     </div>
+    <div class="controls" role="group" aria-label="Bloom y chispas">
+      <label><input type="checkbox" id="l_glow" checked> Luz de grietas</label>
+      <label><input type="checkbox" id="l_halo" checked> Halo suave (A/B)</label>
+      <label><input type="checkbox" id="l_particles"> Chispas</label>
+    </div>
     <div class="controls">
-      <label for="ambient">Luz ambiente</label><input type="range" id="ambient" min="0.18" max="1" step="0.02" value="1">
-      <span class="muted">Bájala con la emisión activada para ver los núcleos del paño.</span>
+      <label for="ambient">Luz ambiente</label><input type="range" id="ambient" min="0.18" max="1" step="0.02" value="0.56">
+      <span class="muted">Pausa y alterna «Halo suave» para comparar el mismo fotograma con sólo el núcleo.</span>
     </div>
     <details>
       <summary>Ajuste al portador</summary>
@@ -86,7 +89,7 @@ details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summar
   <aside class="stack">
     <section class="card">
       <div class="kicker">01 · Materiales</div><h2>Granate, violeta y carbón</h2>
-      <p>Las caras expuestas muestrean su región de referencia, con cartas UV locales. El forro y los cantos son mates. Los núcleos magenta emiten sobre el paño sin perforarlo.</p>
+      <p>El halo suma color alrededor de los núcleos, no pinta un velo sobre la capa. Sigue los jirones al moverse; el cuello, el forro y los cantos quedan mates. No es un posprocesado de pantalla.</p>
       <div class="split"><div><img src="assets/atlas.png" alt="Atlas real RGBA de la capa"><span class="muted">Atlas opaco 512 × 512</span></div><div><img src="assets/glowmask.png" alt="Atlas independiente de emisión"><span class="muted">Emisión RGBA</span></div></div>
     </section>
     <section class="card">

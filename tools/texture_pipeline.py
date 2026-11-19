@@ -844,27 +844,32 @@ def build_folded_texture() -> tuple[Image.Image, Image.Image]:
 
 
 def build_spark_sprites() -> list[Image.Image]:
-    """Three vertical, beveled embers, without an outline or a white plus."""
-    out=[]
-    for frame,(top,bottom) in enumerate(((2,13),(2,14),(4,13))):
-        img=Image.new('RGBA',(16,16),(0,0,0,0))
-        px=img.load()
-        gain=(.89,1.,.82)[frame]
-        for y in range(top-1,bottom+2):
-            lift=(bottom-y)/max(1,bottom-top)
-            for x in range(4,12):
-                if x in (4,11) or y in (top-1,bottom+1):
-                    px[x,y]=(227,32,132,int((34 if x in (5,6,7,8,9,10) else 19)*gain))
-                elif y==top:
-                    px[x,y]=(255,173,218,int(224*gain)) if 6<=x<=9 else (242,66,164,int(147*gain))
-                elif x<=6:
-                    px[x,y]=(180,23,106,int((218 if x==6 else 144)*gain))
-                elif x>=10:
-                    px[x,y]=(251,56,155,int(162*gain))
-                else:
-                    # Raspberries, hot pink then a pale bevel as ash rises.
-                    px[x,y]=(255,round(65+81*lift),round(161+49*lift),int(249*gain))
-        out.append(img)
+    """Incandescent rose → small violet ash, with a soft skirt on the same quad."""
+    n, aa = 16, 8
+    y, x = (np.mgrid[0:n*aa, 0:n*aa] + .5) / aa - n/2
+    out = []
+    for width, up, down, tilt, heat, hot, cool, halo in (
+        (2.65, 3.55, 5.6, -.14, .98, (255,191,218), (232,49,133), (245,49,139)),
+        (2.40, 3.10, 5.8, -.10, .94, (255,164,218), (216,52,159), (209,56,168)),
+        (1.95, 2.85, 4.2, -.06, .88, (214,139,249), (137,43,201), (161,58,227)),
+    ):
+        dy = y + .85
+        dx = x - tilt * dy
+        point = abs(dx)/width + np.where(dy < 0, -dy/up, dy/down)
+        core = (point <= 1) * heat
+        facet = np.clip(.82 - .55*dy/down - .48*abs(dx+.65)/width, .06, 1)
+        color = np.asarray(cool) + facet[..., None] * (np.asarray(hot) - cool)
+        # A tight, tinted halo; the outer ring is padding. Enough alpha
+        # beside the facet to survive vanilla's 0.1 cutoff at peak heat.
+        r = (dx/2.75)**2 + (dy/4.0)**2
+        skirt = np.exp(-.5*r) * .32 * np.clip((2.85 - r)/1.6, 0, 1)
+        skirt *= 1 - core
+        rgba = np.dstack((color * core[..., None] + np.asarray(halo)*skirt[..., None], core + skirt))
+        rgba = rgba.reshape(n, aa, n, aa, 4).mean((1, 3))
+        rgba[..., :3] /= np.maximum(rgba[..., 3:], 1e-8)
+        rgba[..., 3] *= 255
+        rgba[[0,-1], :] = rgba[:, [0,-1]] = 0
+        out.append(Image.fromarray(np.rint(rgba).astype(np.uint8)))
     return out
 
 
@@ -1034,7 +1039,11 @@ def main() -> None:
     (ASSETS / "particles/capa_spark.json").write_text(json.dumps({
         "textures": [f"capatest:capa_spark_{i}" for i in range(3)]
     }, indent=2) + "\n")
-    print(f"spark sprites: {len(sparks)} x 16x16 (rectangulares, centro brillante)")
+    print(f"spark sprites: {len(sparks)} x 16x16 (brasa, destello, ceniza)")
+
+    # A separate map: leave the approved opaque atlas and crack cores untouched.
+    from cape_bloom import write as write_halo
+    write_halo()
 
     # El atlas es NUEVO: todo opaco, y el glowmask enciende SÓLO el neón.
     armor_alpha = np.asarray(armor)[..., 3]

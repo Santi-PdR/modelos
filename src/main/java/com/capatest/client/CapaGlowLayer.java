@@ -9,7 +9,6 @@ import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.renderer.GeoArmorRenderer;
@@ -20,8 +19,6 @@ import java.util.WeakHashMap;
 
 /** Separate, depth-tested light on the same solids, without editing the opaque atlas. */
 public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
-    private static final ResourceLocation EMISSION = new ResourceLocation(CapaTestMod.MOD_ID,
-            "textures/item/armor/capa_deteriorer_evilsaiyan_glowmask.png");
     // A colour history follows the entity that is rendered, not the last player in the renderer.
     private final Map<Entity, CapeTint> colors = new WeakHashMap<>();
     private boolean disabled;
@@ -61,7 +58,7 @@ public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
         // The texture holds colored emission and coverage. Do not derive it
         // with AutoGlowingTexture: that path re-uploads a modified base image.
         // Match the unshifted opaque depth; the glow only writes color.
-        RenderType emissive = RenderType.entityTranslucentEmissive(EMISSION, false);
+        RenderType emissive = CapeBloom.wornLight();
 
         if (!(getRenderer() instanceof GeoArmorRenderer<?> armor))
             return;

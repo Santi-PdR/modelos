@@ -28,7 +28,7 @@ BASE = P.ROOT / 'docs/respaldos/v1.65.0'
 HINGES = ('cape_top', 'cape_mid')
 
 
-def preservation():
+def preservation(*, changed=()):
     for line in (BASE/'SHA256SUMS.txt').read_text().splitlines():
         digest, name = line.split('  ', 1)
         assert sha256((BASE/name).read_bytes()).hexdigest() == digest, name
@@ -38,11 +38,12 @@ def preservation():
             old = json.loads((BASE/name).read_text())
             current = json.loads(B.DOC.read_text())
             assert current == dict(old, name=current['name']), 'sólo el nombre del proyecto cambia'
-        else:
+        elif name not in changed:
             assert (P.ASSETS/name).read_bytes() == (BASE/name).read_bytes(), name
     html = (P.ROOT/'docs/capa_v1170_visor.html').read_text()
     assert json.loads(re.search(r'^const INLINE_STRIDE = (.+);$', html, re.M)[1]) == S.profile()
-    print('v1.65.0: GEO, clips, ajuste de cabeza, atlas, partículas, icono y lore intactos; mismo rig de Blockbench.', flush=True)
+    skip = ' salvo los sprites de FX' if changed else ''
+    print(f'v1.65.0: GEO, clips, ajuste de cabeza, atlas, partículas, icono y lore intactos{skip}; mismo rig de Blockbench.', flush=True)
 
 
 def js_samples(samples):

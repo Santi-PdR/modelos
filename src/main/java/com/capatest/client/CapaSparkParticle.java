@@ -40,17 +40,13 @@ public class CapaSparkParticle extends TextureSheetParticle {
     @Override
     public void tick() {
         super.tick();
-        float p = Math.min(1.0F, (float) this.age / this.lifetime);
-        float fade = Math.min(1.0F, p * 6.0F) * Math.min(1.0F, (1.0F - p) * 2.4F);
-        float glint = 0.5F + 0.5F * (float) Math.sin(this.phase + p * 9.0F);
-        this.alpha = (0.66F + 0.08F * glint + 0.09F * this.streak) * fade;
-        this.quadSize = this.baseSize * (1.0F - 0.37F * p + 0.06F * glint);
-        // La cara rosa pierde intensidad al envejecer, sin halo blanco.
-        this.rCol = 1.0F - 0.19F * p;
-        this.gCol = 0.98F - 0.22F * p;
-        this.bCol = 1.0F;
-        // Three equal phases; vanilla age interpolation hardly uses the last sprite.
-        this.setSprite(this.sprites.get(Math.min(2, 3 * this.age / this.lifetime), 2));
+        CapeEmber.Look look = CapeEmber.look((double) this.age / this.lifetime, this.streak, this.phase);
+        this.alpha = (float) look.alpha();
+        this.quadSize = this.baseSize * (float) look.scale();
+        this.rCol = (float) look.red();
+        this.gCol = (float) look.green();
+        this.bCol = (float) look.blue();
+        this.setSprite(this.sprites.get(look.frame(), 2));
     }
 
     @Override
