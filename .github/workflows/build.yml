@@ -991,6 +991,10 @@ jobs:
         if: always() && steps.fx-smoke.outcome != 'skipped'
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery giro
 
+      - name: Recorte de los controles sin manto
+        if: always() && steps.fx-smoke.outcome != 'skipped'
+        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery bare
+
       - name: Recorte del ciclo de la hotbar
         if: always() && steps.fx-smoke.outcome != 'skipped'
         run: |
@@ -1015,7 +1019,11 @@ jobs:
         run: |
           set -o pipefail
           python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
-            printf '::notice title=Anclaje y ranura en Forge::%s\n' "${line//%/%25}"
+            if [[ "$line" == '::error '* ]]; then
+              printf '%s\n' "$line"
+            else
+              printf '::notice title=Anclaje y ranura en Forge::%s\n' "${line//%/%25}"
+            fi
           done
 
       # [publicar] prepara una release verificable sin escribir a otras
@@ -1059,9 +1067,9 @@ jobs:
           - **Ocho clips**: las piezas rígidas no se hinchan ni bailan. El
             paño se flexiona desde las raíces cosidas hacia las puntas.
             Atlas, grietas emisivas, plegado y chispas conservados.
-          - **Inventario**: estrella rosa y pliegues en pixel art sin glint
-            forzado. «✦ La noche arde en sus costuras.» en español, con
-            traducción a inglés. ID, slot y atributos no cambian.
+          - **Inventario**: pixel art de la referencia con un pulso rosa en
+            las grietas, sin glint forzado. «✦ La noche arde en sus costuras.»
+            en español, con traducción a inglés. ID, slot y atributos no cambian.
 
           ### Descargas de esta Release
 
@@ -1104,6 +1112,9 @@ jobs:
                   docs/capa_v1170_estados.png docs/capa_v1170_animaciones.gif docs/capa_v1170_icon_compare.png)
           if [ -f "$COMPARISON" ]; then ASSETS+=("$COMPARISON"); fi
           if [ -f "$REGISTER" ]; then ASSETS+=("$REGISTER"); fi
+          for EVIDENCE in "docs/capa_v${VER//./}_hombros_forge.png" "docs/capa_v${VER//./}_hotbar.gif"; do
+            if [ -f "$EVIDENCE" ]; then ASSETS+=("$EVIDENCE"); fi
+          done
           for view in detalles luz ajuste; do
             IMAGE="docs/capa_v${VER//./}_$view.png"
             if [ -f "$IMAGE" ]; then ASSETS+=("$IMAGE"); fi

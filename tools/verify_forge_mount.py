@@ -64,25 +64,25 @@ def shoulder_rails(bare, worn, *, turned=False):
     floor = (abs(wr-wg) <= 2) & (wg-wb >= 3) & (wg-wb <= 16) & (wg >= 35)
     rails = []
     for direction in (-1,1):
-        result = []
-        for x in range(round(center-.42*width),round(center+.42*width)):
-            if not .32 <= direction*(x-center)/width <= .41 or not shirt[:,x].any():
-                continue
-            end = np.flatnonzero(shirt[:,x])[-1] + 1
-            # Preserve the row adjacent to the sleeve. Its placement is
-            # noisier when the sleeve bob and yaw straddle a physical pixel.
-            result.append(painted[end:end+max(3,round(.054*width)),x])
-        assert len(result) > .05*width
-        measured = np.stack(result)
+        columns = [(x,direction*(x-center)/width)
+                   for x in range(round(center-.43*width),round(center+.43*width))]
+        edge = {x: np.flatnonzero(shirt[:,x])[-1]+1 for x,_ in columns if shirt[:,x].any()}
+        outer = [(x,edge[x]) for x,f in columns if .32 <= f <= .41 and x in edge]
+        assert len(outer) > .05*width, ('no se ve la manga exterior',turned,direction,len(outer),width)
+        measured = np.stack([painted[y:y+max(3,round(.054*width)),x] for x,y in outer])
+        # At 43° the head hides some of the shirt pixels along one seam.
+        # Extrapolate the exposed sleeve edge under the head instead of
+        # dropping columns (which would miss the hole being tested).
+        rear = round(float(np.median([y for _,y in outer])))
         inner = []
-        for x in range(round(center-.36*width),round(center+.36*width)):
-            if not .22 <= direction*(x-center)/width <= .35 or not shirt[:,x].any():
-                continue
-            end = np.flatnonzero(shirt[:,x])[-1] + 1
-            inner.append(floor[end:end+max(6,round(.106*width)),x])
-        assert len(inner) > .075*width
+        for x,f in columns:
+            if .22 <= f <= .35:
+                y = edge.get(x,rear)
+                if abs(y-rear) > .027*width:
+                    y = rear
+                inner.append(floor[y:y+max(6,round(.106*width)),x])
         holes = np.stack(inner)
-        opening = (np.lib.stride_tricks.sliding_window_view(holes,(3,3)).all(axis=(-1,-2))).any()
+        opening = np.lib.stride_tricks.sliding_window_view(holes,(3,3)).all(axis=(-1,-2)).any()
         rails.append((float(measured.mean()),float(measured[:,:2].mean()),float(holes.mean()),bool(opening)))
     return rails
 
@@ -137,8 +137,10 @@ def gallery(root, kind):
     # cannot be downloaded. Full-resolution shots stay in the artifact.
     if kind != 'hotbar':
         prefix = 'cenital-giro' if kind == 'giro' else 'cenital'
-        for name in ('pecho','curios'):
-            path = root/f'{prefix}-{name}.png'
+        names = ('cenital-sin-manto','cenital-giro-sin-manto') if kind == 'bare' else (
+            f'{prefix}-pecho', f'{prefix}-curios')
+        for name in names:
+            path = root/f'{name}.png'
             if not path.exists(): continue
             with Image.open(path) as im:
                 x,y = im.width//2, im.height//2
@@ -167,7 +169,7 @@ def gallery(root, kind):
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument('shots',type=Path)
-    cli.add_argument('--gallery',choices=['cenital','giro','hotbar'])
+    cli.add_argument('--gallery',choices=['cenital','giro','bare','hotbar'])
     args = cli.parse_args()
     if args.gallery:
         gallery(args.shots,args.gallery)
@@ -195,4 +197,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except (AssertionError,ValueError,FileNotFoundError) as exc:
+        print(f'::error title=Anclaje y ranura en Forge::{exc}',flush=True)
+        raise

@@ -174,14 +174,16 @@ animación y la documentación de GeckoLib._
   `CapeWingFitTest --samples`. La prueba F5 lee `cape_top` del modelo equipado
   y toma una captura con las alas ya plegadas.
 - **Unión lateral (v1.67.7):** asiento profundo más dos remates sobre las
-  mangas, cosidos a las hombreras. `CapeFit.shoulderReach` sólo recoge esos
-  remates para despejar cabeza y élitros; no toca el paño libre. El visor
-  aplica la misma escala, y el .bbmodel contiene la posición extendida de
-  edición. `verify_cape_mount.py` comprueba el solape, cabeza y mangas
-  Steve/Alex. Forge captura la unión a 89° recto y a 86° con 43° de giro
-  de cabeza, con controles sin manto y el mismo encuadre en pecho y `back`.
-  `verify_forge_mount.py` mide la banda central y cada remate por separado,
-  y verifica el nuevo ciclo de la hotbar vanilla.
+  mangas, cosidos a las hombreras. El forro inferior cubre la unión entre
+  cada remate y el torso. `CapeFit.shoulderReach` recoge los remates para
+  despejar cabeza y alas; `CapeFit.yokeShape` estrecha el forro antes de
+  bajarlo al fuelle cuando un brazo va hacia atrás. El visor aplica ambos
+  ajustes, sin cambiar el paño libre; el .bbmodel está extendido para
+  edición. `verify_cape_mount.py` mide el solape, la holgura y el
+  alojamiento del forro con élitros. Forge compara una vista a 89° recta
+  y otra a 86° con 43° de giro de cabeza, con y sin manto en pecho y
+  `back`. `verify_forge_mount.py` busca suelo en el interior de ambas
+  uniones y mide el icono animado contra la misma ranura vacía.
 - **Lectura del diagnóstico:** la lámina de brasas compara los puntos de
   salida con los clips del JAR, no con todos los huesos animados en vivo.
   El servidor no ve el paño de cada cliente. El ajuste de élitros reduce el
