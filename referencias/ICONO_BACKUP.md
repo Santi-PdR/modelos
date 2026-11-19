@@ -37,3 +37,9 @@ directorio siguen siendo copias históricas, no recursos del atlas animado.
 `tools/cape_icon.py` quita el damero, encuadra el sprite con más presencia y
 anima sus grietas. `ICONO_V1676_BACKUP.png` conserva el fotograma en reposo
 de la versión anterior; la tira completa está en el tag `v1.67.6`.
+
+## v1.67.8 — mismo dibujo, pulso más fluido
+
+`ICONO_V1677_PULSO.png` conserva la tira anterior completa (64×1024,
+16 cuadros, 2 ticks por cuadro). Su primer fotograma es idéntico al del
+icono actual. La tira activa tiene 32 cuadros a 1 tick y el mismo ciclo.

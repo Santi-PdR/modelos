@@ -24,7 +24,7 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private float wearerDepth;
     private float shoulderReach = (float) CapeFit.SHOULDER_MIN;
     private CapeFit.YokeShape yoke = CapeFit.yokeShape(0, 0, 0, true);
-    private CapeBacking.Shape backing = CapeBacking.shape(0, 0, 0, 0, 0, true);
+    private CapeBacking.Shape backing = CapeBacking.TUCKED;
     private boolean armorPassSubmitted;
 
     public CapaArmorRenderer() {

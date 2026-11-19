@@ -6,7 +6,9 @@ final class CapeBacking {
     static final String RIGHT = "v20_mount_backing_right";
     private static final double Y_PIVOT = 14.27, Z_PIVOT = 1.58;
     private static final double INNER = .01, INFLATE = .01;
-    private static final double SPAN = 4.12, TUCK_Y = .019, TUCK_Z = .64;
+    private static final double SPAN = 4.12, MAX_BACKSET = 3.2;
+    private static final double TUCK_Y = .019, TUCK_Z = .64, WING_Z = .078;
+    private static final double FOLD_MIN = .14, FOLD_SPAN = .38;
     private static final double HEAD_HALF = 4.60, SOFT_RISE = .72;
     // Width, front center Y/Z, rise, reach, thickness. These same dimensions
     // are consumed by the GEO and Blockbench exporters (tools/cape_backing.py).
@@ -20,7 +22,9 @@ final class CapeBacking {
 
     record Shape(float left, float right, float depth) {}
     private record Panel(double width, double[] y, double[] z) {}
-    private static final Shape TUCKED = new Shape((float) TUCK_Y, (float) TUCK_Y, (float) TUCK_Z);
+    // The folded wings can occupy the whole gusset, not just its upper
+    // section. Hide the backing *inside* the torso, never inside the wings.
+    static final Shape TUCKED = new Shape((float) TUCK_Y, (float) TUCK_Y, (float) WING_Z);
 
     static Shape shape(double bodyPitch, double bodyYaw, double headPitch, double headYaw,
                        double backset, boolean elytra) {
@@ -38,10 +42,10 @@ final class CapeBacking {
         double[] z = {sy*co, -cl*si-sl*cy*co, -sl*si+cl*cy*co};
         double[] center = {4*y[0], 24-stance*cl+4*y[1], -stance*sl+4*y[2]};
         double[][] axes = {BODY_X, BODY_Y, BODY_Z, x, y, z};
-        double stretched = 1 + Math.min(3.2, Math.max(0, backset))/SPAN;
+        double stretched = 1 + Math.min(MAX_BACKSET, Math.max(0, backset))/SPAN;
         double left = rise(1,stretched,axes,center,x,y,z), right = rise(-1,stretched,axes,center,x,y,z);
         // Don't leave a long shelf below the collar when fully ducked.
-        double fold = clamp((Math.max(left,right)-.14)/.38);
+        double fold = clamp((Math.max(left,right)-FOLD_MIN)/FOLD_SPAN);
         double depth = TUCK_Z + (stretched-TUCK_Z)*fold*fold*(3-2*fold);
         if (depth < stretched - 1e-8) {
             left = Math.min(left, rise(1,depth,axes,center,x,y,z));

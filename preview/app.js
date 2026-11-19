@@ -148,7 +148,7 @@ function yokeScales(stance, look, arm, elytra=false) {
 }
 // Same head box and separating planes as CapeBacking, in body space.
 function backingShape(f, bodyAngle, stance, look, turn, depth, elytra) {
-  if (elytra) return [f.tuckY,f.tuckY,f.tuckZ];
+  if (elytra) return [f.tuckY,f.tuckY,f.wingZ];
   const tilt = stance*bodyAngle*Math.PI/180, p = look*Math.PI/180, a = turn*Math.PI/180;
   const [cl,sl,co,si,cy,sy] = [Math.cos(tilt),Math.sin(tilt),Math.cos(p),Math.sin(p),Math.cos(a),Math.sin(a)];
   const x = [cy,sl*sy,-cl*sy], y = [sy*si,cl*co-sl*cy*si,sl*co+cl*cy*si],
@@ -177,9 +177,9 @@ function backingShape(f, bodyAngle, stance, look, turn, depth, elytra) {
     }
     return Math.max(f.tuckY,height);
   }
-  const stretch = 1+Math.min(3.2,Math.max(0,depth))/f.span;
+  const stretch = 1+Math.min(f.maxBackset,Math.max(0,depth))/f.span;
   let l = rise(1,stretch), r = rise(-1,stretch);
-  const scale = f.tuckZ+(stretch-f.tuckZ)*smooth(.14,.52,Math.max(l,r));
+  const scale = f.tuckZ+(stretch-f.tuckZ)*smooth(f.foldMin,f.foldMin+f.foldSpan,Math.max(l,r));
   if (scale < stretch-1e-8) { l=Math.min(l,rise(1,scale)); r=Math.min(r,rise(-1,scale)); }
   return [l,r,scale];
 }

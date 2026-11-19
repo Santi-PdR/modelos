@@ -267,6 +267,7 @@ def static_checks() -> None:
 
 def main() -> None:
     from armor_model_pipeline import SHOULDERS_BONE, UNDER_YOKE_BONE
+    from cape_backing import profile as backing_profile
     from verify_v1630 import GEO_BASE, TEX_BASE, GLOW, registered_metrics, similarity
 
     ap=argparse.ArgumentParser(description=__doc__)
@@ -275,13 +276,14 @@ def main() -> None:
     static_checks()
     now=P.load(P.ARMOR_GEO)
     if args.check:
-        # The reference art has no sleeve fasteners. Protect the registered
-        # exterior unchanged, and separately bound the visible addition.
-        exterior = dict(now, bones=[b for b in now['bones'] if b['name'] not in (SHOULDERS_BONE, UNDER_YOKE_BONE)])
+        # The art does not show the fasteners/lining under the collar.
+        # Keep the registered exterior unchanged and also bound the full rig.
+        fittings = (SHOULDERS_BONE, UNDER_YOKE_BONE, *backing_profile()['names'])
+        exterior = dict(now,bones=[b for b in now['bones'] if b['name'] not in fittings])
         similarity(exterior,P.ARMOR_TEX,GLOW)
         (_, fitted),_ = registered_metrics(exterior,now,P.ARMOR_TEX)
         assert fitted['all'] > .95 and fitted['upper'] > .93, fitted['all']
-        print(f'Con remates: silueta {fitted["all"]:.2%}; las dos uniones se prueban aparte en Forge.')
+        print(f'Con la unión completa: silueta {fitted["all"]:.2%}; las dos uniones se prueban aparte en Forge.')
         print(f'OK: contorno y color registrados de v{VER}; recursos protegidos')
     else:
         (a,b),pink=registered_metrics(P.load(GEO_BASE),now,P.ARMOR_TEX,baseline_atlas=TEX_BASE)

@@ -78,7 +78,7 @@ animación y la documentación de GeckoLib._
 ## 5. Restricciones VIGENTES de este proyecto (no revivir)
 
 - El paño visible va en **+Z (espalda)**, sin atravesar el torso.
-  Sólo el asiento de la montura se embute una fracción de texel.
+  La montura interior se embute en la espalda; no atraviesa la cara frontal.
 - **Motion espacial PROHIBIDO** (fuerza/dirección del viento, oscilación
   en Z, cresta en Z): solo **rotación** o **cosmético**.
 - **Alpha del glow FIJO 1.0**; brillo en COLOR.
@@ -184,6 +184,17 @@ animación y la documentación de GeckoLib._
   y otra a 86° con 43° de giro de cabeza, con y sin manto en pecho y
   `back`. `verify_forge_mount.py` busca suelo en el interior de ambas
   uniones y mide el icono animado contra la misma ranura vacía.
+- **Respaldo alto (v1.67.8):** dos piezas de tres paneles en `chestplate`.
+  El apoyo toca el torso por encima del forro inferior y el bisel se solapa
+  con el cuello. `CapeBacking` limita la altura de cada mitad según el margen
+  real de la cabeza; con élitros se repliega dentro del torso. No altera la
+  animación del paño. `verify_cape_backing.py` comprueba el contacto en el
+  plano de la camiseta, las costuras y la holgura. En F5 se proyecta esa
+  franja desde el modelo en vista oblicua y de perfil, con el respaldo
+  habilitado en ambos slots y deshabilitado como control.
+- **Pulso del icono (v1.67.8):** 32 fotogramas a un tick por cuadro, mismo
+  contorno y duración de 1,6 s. Se comprueba el recorrido de la cresta de
+  luz en la hotbar vanilla; se conservan el dibujo y el reposo de v1.67.7.
 - **Lectura del diagnóstico:** la lámina de brasas compara los puntos de
   salida con los clips del JAR, no con todos los huesos animados en vivo.
   El servidor no ve el paño de cada cliente. El ajuste de élitros reduce el

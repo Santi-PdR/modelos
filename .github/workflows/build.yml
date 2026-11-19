@@ -757,6 +757,7 @@ jobs:
           elif grep -q '^mod_version=1\.67\.' gradle.properties; then
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py --fit-only
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_mount.py
+            OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_backing.py
             PYTHONPATH=tools python3 -c 'import cape_icon; cape_icon.verify()'
           else
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py

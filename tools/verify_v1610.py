@@ -272,7 +272,7 @@ def fit_check(geo, clips, quick=False, *, pads=False):
 def visor_fit(geo, runtime):
     check_visor(geo, runtime)
     html = (P.ROOT/'docs/capa_v1170_visor.html').read_text()
-    assert json.loads(re.search(r'^const INLINE_FIT = (.+);$',html,re.M)[1]) == F.profile()
+    assert json.loads(re.search(r'^const INLINE_FIT = (.+);$',html,re.M)[1]) == F.viewer_profile()
     tests = [dict(clip=n,t=.37*c['animation_length'],aim=aim) for n,c in runtime['animations'].items()
              for aim in ((0,0,0),(1.,0,0),(0.,67.5,-37.5),(1.,37.5,52.5))]
     run = subprocess.run(['node','tools/check_viewer_pose.js'],cwd=P.ROOT,check=True,
