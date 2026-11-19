@@ -3,7 +3,8 @@
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
-[Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
+[Descargar JAR v1.67.6](https://github.com/Santi-PdR/modelos/releases/download/v1.67.6/capatest-1.67.6.jar)
+· [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
 · [Proyecto Blockbench](docs/CAPA_v1.67.6.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
