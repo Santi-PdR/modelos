@@ -582,7 +582,7 @@ public final class CapeFxSmoke {
                     .mul(RenderSystem.getModelViewMatrix()).mul(armorPose).translate(0,1.5F,0).scale(-1,-1,1);
         }
         if (scene.sweep()) seatDraw = CapeLookSweep.Probe.finish(renderer);
-        if (scene.walk()) walkDraw = CapeWalkProbe.finish(renderer);
+        if (scene.walk()) walkDraw = CapeWalkProbe.finish(renderer, event.getPartialTick());
         if (scene.fit() || scene.sweep()) {
             try {
                 frameSeating = SEATING.getFloat(renderer);

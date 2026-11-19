@@ -14,10 +14,10 @@ import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.model.DefaultedItemGeoModel;
 
 import java.util.ArrayList;
-import java.util.WeakHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.WeakHashMap;
 
 /** Eight authored clips plus a bounded, rotational response on visible cloth. */
 public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {

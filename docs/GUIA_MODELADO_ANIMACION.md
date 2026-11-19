@@ -199,6 +199,13 @@ animación y la documentación de GeckoLib._
   transformación sólo de render, compartida por el albedo y la emisión en
   pecho y Curios; ni las claves ni las UV llevan ese ajuste. En Blockbench se
   edita el rig neutro. Con élitros la contracción queda desactivada.
+- **Torso y zancada (v1.67.11):** el respaldo tiene asiento, vuelta sobre
+  el canto de la camiseta y forro cosido al soporte de las hombreras.
+  Al andar el asiento se calcula para todo el paso, no para la posición
+  instantánea de una manga. El cliente toma `walkAnimation.position` y
+  `speed` interpolados para mezclar los clips de reposo, marcha y carrera;
+  no hace falta reiniciar a la primera clave. El proyecto editable y el
+  visor siguen mostrando los clips originales con sus duraciones.
 - **Pulso del icono (v1.67.8):** 32 fotogramas a un tick por cuadro, mismo
   contorno y duración de 1,6 s. Se comprueba el recorrido de la cresta de
   luz en la hotbar vanilla; se conservan el dibujo y el reposo de v1.67.7.

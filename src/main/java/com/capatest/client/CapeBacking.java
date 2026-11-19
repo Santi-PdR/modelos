@@ -18,7 +18,7 @@ final class CapeBacking {
     private static final double[][] PANELS = {
             {3.24, 19.19, 1.21, 0.00, 1.34, 9.73},
             {3.25, 24.05, 1.78, -2.35, 3.93, 1.56},
-            {3.20, 17.15, 2.13, 5.09, 3.27, 1.90}
+            {3.14, 17.15, 2.13, 5.09, 3.27, 1.90}
     };
     private static final Panel[] EDGES = edges();
     private static final double[] BODY_X = {1,0,0}, BODY_Y = {0,1,0}, BODY_Z = {0,0,1};

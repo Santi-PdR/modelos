@@ -8,9 +8,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import software.bernie.geckolib.cache.object.GeoBone;
+import software.bernie.geckolib.constant.DataTickets;
+import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 
 import java.io.IOException;
@@ -25,6 +30,7 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     static final int DURATION = 156;
     private final Matrix4f[] matrices = new Matrix4f[5];
     private boolean active;
+    private boolean testedRepeat;
 
     private CapeWalkProbe(CapaArmorRenderer renderer) { super(renderer); }
 
@@ -58,7 +64,7 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         if (i >= 0) matrices[i] = new Matrix4f(stack.last().pose());
     }
 
-    static Draw finish(CapaArmorRenderer renderer) {
+    static Draw finish(CapaArmorRenderer renderer, float partial) {
         CapeWalkProbe probe = get(renderer);
         probe.active = false;
         var matrices = probe.matrices;
@@ -68,6 +74,10 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         var tip = new Matrix4f(inverseBody).mul(matrices[4]);
         var player = Minecraft.getInstance().player;
         CapeWornMotion motion = CapaArmorModel.wornMotion(player);
+        if (!probe.testedRepeat && motion.weight(CapeState.WALK) > .98) {
+            probe.testedRepeat = true;
+            verifyInterleavedSample(renderer, player, partial);
+        }
         var mode = motion.weight(CapeState.SPRINT) > .5 ? CapeState.SPRINT
                 : motion.weight(CapeState.WALK) > .5 ? CapeState.WALK : CapeState.IDLE;
         return new Draw(mode.name(), motion.stride(), motion.weight(CapeState.WALK), motion.weight(CapeState.SPRINT),
@@ -75,6 +85,36 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 -Math.toDegrees(renderer.getGeoModel().getBone(TOP).orElseThrow().getRotX()),
                 -Math.toDegrees(renderer.getGeoModel().getBone(MID).orElseThrow().getRotX()),
                 tip.transformPosition(0, 0, .36F, new Vector3f()).mul(16));
+    }
+
+    private static void verifyInterleavedSample(CapaArmorRenderer renderer, LivingEntity walker, float partial) {
+        var model = renderer.getGeoModel();
+        var stack = renderer.getCurrentStack();
+        var item = (CapaDeteriorerItem) stack.getItem();
+        var bones = new GeoBone[] {model.getBone(TOP).orElseThrow(), model.getBone(MID).orElseThrow(), model.getBone(TIP).orElseThrow()};
+        var original = java.util.Arrays.stream(bones).map(CapeWalkProbe::rotation).toList();
+        // Exercise a second wearer on the same actual baked rig, at the
+        // same partial tick, then replay the visible wearer in the same frame.
+        var still = new ArmorStand(walker.level(), walker.getX(), walker.getY(), walker.getZ());
+        model.handleAnimations(item, Long.MIN_VALUE, state(item, still, stack, partial));
+        if (rotation(bones[2]).distance(original.get(2)) < .0002F)
+            throw new AssertionError("another wearer inherited the walk pose");
+        model.handleAnimations(item, renderer.getInstanceId(item), state(item, walker, stack, partial));
+        for (int i = 0; i < bones.length; ++i)
+            if (!original.get(i).equals(rotation(bones[i]), .000002F))
+                throw new AssertionError("repeated same-frame animation changed " + bones[i].getName());
+    }
+
+    private static AnimationState<CapaDeteriorerItem> state(CapaDeteriorerItem item, LivingEntity wearer,
+                                                           ItemStack stack, float partial) {
+        var state = new AnimationState<>(item, 0, 0, partial, false);
+        state.setData(DataTickets.ENTITY, wearer);
+        state.setData(DataTickets.ITEMSTACK, stack);
+        return state;
+    }
+
+    private static Vector3f rotation(GeoBone bone) {
+        return new Vector3f(bone.getRotX(),bone.getRotY(),bone.getRotZ());
     }
 
     record Draw(String clip, double stride, double walk, double run, double collarZ,
