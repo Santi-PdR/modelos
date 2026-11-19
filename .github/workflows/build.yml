@@ -996,6 +996,10 @@ jobs:
         if: always() && steps.fx-smoke.outcome != 'skipped'
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery ajuste
 
+      - name: Recorte F5 con mangas finas
+        if: always() && steps.fx-smoke.outcome != 'skipped'
+        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery ajuste-fino
+
       - name: Recorte en ángulo oblicuo
         if: always() && steps.fx-smoke.outcome != 'skipped'
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery oblicua
@@ -1034,6 +1038,14 @@ jobs:
             else
               printf '::notice title=Anclaje y ranura en Forge::%s\n' "${line//%/%25}"
             fi
+          done
+
+      - name: Verificar el desplazamiento visible del cuello y las dos hombreras en F5
+        if: steps.fx-smoke.outcome == 'success'
+        run: |
+          set -o pipefail
+          python3 tools/verify_forge_seat.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
+            printf '::notice title=Ajuste visible en Forge::%s\n' "${line//%/%25}"
           done
 
       # [publicar] prepara una release verificable sin escribir a otras

@@ -18,6 +18,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.screens.AccessibilityOnboardingScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -80,10 +81,13 @@ public final class CapeFxSmoke {
     private static final int HOTBAR_SLOT = 4, HOTBAR_SAMPLES = 34;
     // Negative control: opening only the new fitting frame leaves exactly
     // the v1.67.8 rig. No bypass ships outside this smoke-test source set.
-    private static final Field SEATING = field("seating");
-    private static Field field(String name) {
+    private static final Field SEATING = field(CapaArmorRenderer.class, "seating");
+    private static final Field SKIN_MODEL = field(PlayerInfo.class, "skinModel");
+    private static String savedModel;
+
+    private static Field field(Class<?> owner, String name) {
         try {
-            Field field = CapaArmorRenderer.class.getDeclaredField(name);
+            Field field = owner.getDeclaredField(name);
             field.setAccessible(true);
             return field;
         } catch (ReflectiveOperationException e) {
@@ -100,6 +104,8 @@ public final class CapeFxSmoke {
         SIDE_BARE("perfil-sin-manto", 6000), SIDE_UNLINED("perfil-sin-union", 6000), SIDE_CHEST("perfil-pecho", 6000), SIDE_BACK("perfil-curios", 6000),
         FIT_BARE("ajuste-sin-manto", 6000), FIT_PREVIOUS("ajuste-v1678", 6000),
         FIT_CHEST("ajuste-pecho", 6000), FIT_BACK("ajuste-curios", 6000),
+        FIT_SLIM_BARE("ajuste-fino-sin-manto", 6000), FIT_SLIM_PREVIOUS("ajuste-fino-v1678", 6000),
+        FIT_SLIM_CHEST("ajuste-fino-pecho", 6000), FIT_SLIM_BACK("ajuste-fino-curios", 6000),
         HOTBAR_BARE("hotbar-vacia", 6000), HOTBAR("hotbar", 6000),
         STRAFE_LEFT("traslacion-izquierda", 18000), STRAFE_RIGHT("traslacion-derecha", 18000),
         WINGS("espalda-con-elitros", 18000),
@@ -116,16 +122,18 @@ public final class CapeFxSmoke {
 
         boolean hotbar() { return this == HOTBAR_BARE || this == HOTBAR; }
         boolean elytra() { return this == WINGS || this == GLIDE; }
-        boolean usesBack() { return this == TOP_BACK || this == TURN_BACK || this == OBLIQUE_BACK || this == SIDE_BACK || this == FIT_BACK || elytra(); }
+        boolean usesBack() { return this == TOP_BACK || this == TURN_BACK || this == OBLIQUE_BACK || this == SIDE_BACK || this == FIT_BACK || this == FIT_SLIM_BACK || elytra(); }
         boolean hasBack() { return this == BOTH || usesBack(); }
-        boolean bare() { return this == TOP_BARE || this == TURN_BARE || this == OBLIQUE_BARE || this == SIDE_BARE || this == FIT_BARE; }
+        boolean bare() { return this == TOP_BARE || this == TURN_BARE || this == OBLIQUE_BARE || this == SIDE_BARE || this == FIT_BARE || this == FIT_SLIM_BARE; }
         boolean overhead() { return this == TOP_BARE || this == TOP_CHEST || this == TOP_BACK || turned(); }
         boolean turned() { return this == TURN_BARE || this == TURN_CHEST || this == TURN_BACK; }
         boolean unlined() { return this == OBLIQUE_UNLINED || this == SIDE_UNLINED; }
         boolean oblique() { return this == OBLIQUE_BARE || this == OBLIQUE_UNLINED || this == OBLIQUE_CHEST || this == OBLIQUE_BACK; }
         boolean profile() { return this == SIDE_BARE || this == SIDE_UNLINED || this == SIDE_CHEST || this == SIDE_BACK; }
         boolean upperBack() { return oblique() || profile(); }
-        boolean fit() { return this == FIT_BARE || this == FIT_PREVIOUS || this == FIT_CHEST || this == FIT_BACK; }
+        boolean fit() { return ordinal() >= FIT_BARE.ordinal() && ordinal() <= FIT_SLIM_BACK.ordinal(); }
+        boolean previousFit() { return this == FIT_PREVIOUS || this == FIT_SLIM_PREVIOUS; }
+        boolean slimFit() { return ordinal() >= FIT_SLIM_BARE.ordinal() && ordinal() <= FIT_SLIM_BACK.ordinal(); }
         boolean fixedCamera() { return overhead() || upperBack() || fit(); }
         float yaw() { return fit() ? 3 : profile() ? 76 : turned() || oblique() || hotbar() ? 43 : 0; }
         float pitch() { return fit() ? 76 : profile() ? 21 : oblique() ? 58 : turned() || hotbar() ? 86 : 89; }
@@ -388,6 +396,18 @@ public final class CapeFxSmoke {
         captured = false;
         if (next == Scene.TOP_BARE) game.options.fov().set(34);
         if (next == Scene.FIT_BARE) game.options.fov().set(42);
+        if (next == Scene.FIT_BARE || next == Scene.FIT_SLIM_BARE || next == Scene.HOTBAR_BARE) {
+            // Select the actual vanilla player renderer by model, without
+            // changing skin pixels, account, equipment, or the pose.
+            var info = game.player.connection.getPlayerInfo(game.player.getUUID());
+            check(info != null, "local player profile missing");
+            try {
+                if (next == Scene.FIT_BARE) savedModel = (String) SKIN_MODEL.get(info);
+                SKIN_MODEL.set(info, next == Scene.HOTBAR_BARE ? savedModel : next.slimFit() ? "slim" : "default");
+            } catch (IllegalAccessException e) {
+                throw new AssertionError(e);
+            }
+        }
         if (next.hotbar()) {
             game.options.guiScale().set(2);
             game.options.hideGui = false;
@@ -505,7 +525,7 @@ public final class CapeFxSmoke {
     private static void beforeArmor(GeoRenderEvent.Armor.Pre event) {
         if (scene == null || !(event.getRenderer() instanceof CapaArmorRenderer renderer)
                 || renderer.getCurrentEntity() != Minecraft.getInstance().player) return;
-        if (scene == Scene.FIT_PREVIOUS) {
+        if (scene.previousFit()) {
             try {
                 SEATING.setFloat(renderer, 0);
             } catch (IllegalAccessException e) {
@@ -582,7 +602,7 @@ public final class CapeFxSmoke {
         ItemStack back = backOf(player).getStacks().getStackInSlot(0);
         boolean chestReady = switch (scene) {
             case TOP_BARE, TOP_BACK, TURN_BARE, TURN_BACK, OBLIQUE_BARE, OBLIQUE_BACK, SIDE_BARE, SIDE_BACK,
-                    FIT_BARE, FIT_BACK, HOTBAR_BARE, HOTBAR -> chest.isEmpty();
+                    FIT_BARE, FIT_BACK, FIT_SLIM_BARE, FIT_SLIM_BACK, HOTBAR_BARE, HOTBAR -> chest.isEmpty();
             case WINGS, GLIDE -> chest.is(Items.ELYTRA);
             default -> chest.is(CapaTestMod.CAPA_DETERIORER.get());
         };
@@ -605,7 +625,8 @@ public final class CapeFxSmoke {
             case TOP_BARE, TOP_CHEST, TOP_BACK, TURN_BARE, TURN_CHEST, TURN_BACK,
                     OBLIQUE_BARE, OBLIQUE_UNLINED, OBLIQUE_CHEST, OBLIQUE_BACK,
                     SIDE_BARE, SIDE_UNLINED, SIDE_CHEST, SIDE_BACK,
-                    FIT_BARE, FIT_PREVIOUS, FIT_CHEST, FIT_BACK -> player.onGround()
+                    FIT_BARE, FIT_PREVIOUS, FIT_CHEST, FIT_BACK,
+                    FIT_SLIM_BARE, FIT_SLIM_PREVIOUS, FIT_SLIM_CHEST, FIT_SLIM_BACK -> player.onGround()
                     && !player.isCrouching() && Math.abs(player.getXRot()-scene.pitch()) < .05 && Math.abs(bodyYaw) < .05
                     && velocity.horizontalDistanceSqr() < .0001;
             case STRAFE_LEFT -> player.onGround() && velocity.x > .045 && lateral > .015;
@@ -678,8 +699,10 @@ public final class CapeFxSmoke {
                     check(rootError < .08, scene.file + ": emitter/render frame gap " + rootError);
                 }
             }
+            if (scene.fit()) check(player.getModelName().equals(scene.slimFit() ? "slim" : "default"),
+                    scene.file + ": incorrect vanilla sleeve model");
             if (scene.fit() && !scene.bare()) {
-                check(scene == Scene.FIT_PREVIOUS ? frameSeating == 0 : frameSeating > .88,
+                check(scene.previousFit() ? frameSeating == 0 : frameSeating > .88,
                         scene.file + ": incorrect fit control or live seating " + frameSeating);
                 exposure = "; ajuste de la montura activa = " + Math.round(frameSeating * 100) + "%";
             }
