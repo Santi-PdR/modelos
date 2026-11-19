@@ -37,3 +37,10 @@ antes, alineación de la katana en ambas manos, GUI, suelo y marcos. Verificar
 UV, reflejos, animación vanilla, daño, durabilidad, objetivo no cargado,
 PvP, expiración, distancia, cooldown y efectos en mobs y jugadores. No se
 considera validado en juego hasta realizar esas pruebas.
+
+## Icono de inventario
+
+El icono plano se preparó a partir de la imagen proporcionada por el usuario:
+se eliminó el fondo ajedrezado y se adaptó a 64×64 con transparencia. El
+renderer lo usa solo en GUI; la geometría 3D sigue usándose en mano, suelo y
+marco. Falta confirmar visualmente encuadre, orientación y contraste en juego.
