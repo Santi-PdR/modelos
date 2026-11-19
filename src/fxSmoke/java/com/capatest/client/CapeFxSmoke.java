@@ -446,6 +446,12 @@ public final class CapeFxSmoke {
         }
         if (scene == Scene.GLIDE && player != null && player.getY() > pane.getY() + 75
                 && player.getDeltaMovement().y < -.08 && player.tryToStartFallFlying()) {
+            // Start with a small lateral drift, so we test the vanilla
+            // yaw correction too. Exact alignment can round the normalized
+            // dot product above 1 in the renderer's unclamped acos.
+            Vec3 look = player.getViewVector(1);
+            player.setDeltaMovement(.42*look.x + .16*look.z, player.getDeltaMovement().y,
+                    .42*look.z - .16*look.x);
             player.connection.send(new ServerboundPlayerCommandPacket(player,
                     ServerboundPlayerCommandPacket.Action.START_FALL_FLYING));
         }
@@ -512,8 +518,12 @@ public final class CapeFxSmoke {
             case STRAFE_RIGHT -> player.onGround() && velocity.x < -.045 && lateral < -.015;
             case WINGS -> player.onGround() && !player.isCrouching() && velocity.horizontalDistanceSqr() < .0001
                     && Math.abs(Math.toDegrees(player.elytraRotZ) + 15) < .8;
-            case GLIDE -> player.isFallFlying() && player.getFallFlyingTicks() >= 12
-                    && Math.abs(player.elytraRotZ) > .8F;
+            case GLIDE -> {
+                Vec3 look = player.getViewVector(framePartialTick);
+                double cross = velocity.x*look.z - velocity.z*look.x;
+                yield player.isFallFlying() && player.getFallFlyingTicks() >= 12 && Math.abs(player.elytraRotZ) > .8F
+                        && Math.abs(cross) > .001 * Math.sqrt(look.horizontalDistanceSqr()*velocity.horizontalDistanceSqr());
+            }
             case WADE -> player.isInWater() && !player.isVisuallySwimming() && swim == 0;
             case SWIM -> player.isInWater() && player.isVisuallySwimming() && swim == 1;
             case SWIM_EXIT -> player.isInWater() && !player.isVisuallySwimming() && swim > .12F && swim < .9F;

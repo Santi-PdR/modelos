@@ -986,8 +986,12 @@ jobs:
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery cenital
 
       - name: Recorte del ciclo de la hotbar
-        if: steps.fx-smoke.outcome == 'success'
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery hotbar
+        if: always() && steps.fx-smoke.outcome != 'skipped'
+        run: |
+          shots=build/fx-smoke-run/fx-shots
+          if [ -f "$shots/hotbar-17.png" ]; then
+            python3 tools/verify_forge_mount.py "$shots" --gallery hotbar
+          fi
 
       - name: Subir capturas de la prueba en mundo
         if: always() && steps.fx-smoke.outcome != 'skipped'
@@ -1002,7 +1006,11 @@ jobs:
 
       - name: Verificar la unión y el icono en el framebuffer de Forge
         if: steps.fx-smoke.outcome == 'success'
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots
+        run: |
+          set -o pipefail
+          python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
+            printf '::notice title=Anclaje y ranura en Forge::%s\n' "${line//%/%25}"
+          done
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.
