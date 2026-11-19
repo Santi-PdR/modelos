@@ -1,8 +1,8 @@
 {
   "itemGroup.stainkatana.legados": "Combat Legacies",
   "item.stainkatana.katana_stain": "Hero Killer’s Katana",
-  "item.stainkatana.katana_stain.lore": "The notched blade of Stain, the Hero Killer.",
-  "item.stainkatana.katana_stain.hint": "Z: blood paralysis · X: quick slash · C: judgment (rebindable).",
+  "item.stainkatana.katana_stain.lore": "The Hero Killer’s notched blade. Every cut leaves a mark.",
+  "item.stainkatana.katana_stain.hint": "Rebind keys in Controls > Stain Katana.",
   "key.categories.stainkatana": "Stain Katana",
   "key.stainkatana.stun": "Blood paralysis",
   "key.stainkatana.slash": "Quick slash",
@@ -13,5 +13,9 @@
   "stainkatana.no_target": "No valid target in front.",
   "stainkatana.stun_used": "Blood paralysis",
   "stainkatana.slash_used": "Quick slash",
-  "stainkatana.ultimate_used": "Hero Killer Judgment"
+  "stainkatana.ultimate_used": "Hero Killer Judgment",
+  "item.stainkatana.katana_stain.mark": "Strike and use Blood Paralysis before the mark expires.",
+  "item.stainkatana.katana_stain.combat": "Quick Slash and Judgment: frontal attacks with separate cooldowns.",
+  "effect.stainkatana.blood_paralysis": "Blood Paralysis",
+  "stainkatana.resisted": "The target resisted paralysis."
 }

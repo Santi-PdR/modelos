@@ -26,7 +26,16 @@ public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
     public void renderByItem(ItemStack stack, ItemDisplayContext context, PoseStack poseStack,
                              MultiBufferSource buffers, int light, int overlay) {
         if (context != ItemDisplayContext.GUI) {
+            poseStack.pushPose();
+            // El modelo mide de y=-5.46 a y=23.25; el centro del mango
+            // está cerca de y=-2.0. Llevarlo al origen de la mano evita
+            // sujetar la katana por la guarda. Solo afecta las poses de mano.
+            if (context == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND || context == ItemDisplayContext.FIRST_PERSON_LEFT_HAND
+                    || context == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND || context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND) {
+                poseStack.translate(0, 2.0 / 16.0, 0);
+            }
             super.renderByItem(stack, context, poseStack, buffers, light, overlay);
+            poseStack.popPose();
             return;
         }
         // El renderer de ítems ya desplazó el origen -0.5; este cuadrado 0..1

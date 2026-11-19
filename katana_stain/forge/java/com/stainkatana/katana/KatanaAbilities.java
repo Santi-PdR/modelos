@@ -2,8 +2,6 @@ package com.stainkatana.katana;
 
 import java.util.Comparator;
 import java.util.List;
-import net.minecraft.core.particles.DustParticleOptions;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -12,18 +10,15 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Vector3f;
 
 /** Combate resuelto en servidor: blancos, PvP, daño y cooldown no vienen del cliente. */
 public final class KatanaAbilities {
-    private static final DustParticleOptions BLOOD = new DustParticleOptions(new Vector3f(0.62F, 0.025F, 0.04F), 0.85F);
-    private static final DustParticleOptions DARK = new DustParticleOptions(new Vector3f(0.24F, 0.015F, 0.025F), 1.0F);
     private static final String COOLDOWNS = "StainKatanaAbilities";
     private static final int[] COOLDOWN = {240, 100, 900};
     private KatanaAbilities() { }
@@ -80,11 +75,14 @@ public final class KatanaAbilities {
                 || player.distanceToSqr(target) > 64.0D) {
             player.displayClientMessage(Component.translatable("stainkatana.target_unavailable"), true); return false;
         }
-        target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 10));
-        target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 60, 4));
+        int duration = target instanceof Player ? 40 : 60;
+        if (!target.addEffect(new MobEffectInstance(KatanaEffects.PARALYSIS.get(), duration, 0, false, false, false))) {
+            player.displayClientMessage(Component.translatable("stainkatana.resisted"), true);
+            return false;
+        }
         tag.remove(StainKatanaItem.MARK);
-        spiral(level, target, 24);
-        level.sendParticles(BLOOD, target.getX(), target.getY(0.55), target.getZ(), 18, .3, .4, .3, .01);
+        level.sendParticles(KatanaParticles.PULSE.get(), target.getX(), target.getY(0.55), target.getZ(), 1, 0, 0, 0, 0);
+        level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(0.55), target.getZ(), 14, .26, .34, .26, .015);
         level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, .7F, .65F);
         player.displayClientMessage(Component.translatable("stainkatana.stun_used"), true);
         return true;
@@ -103,15 +101,18 @@ public final class KatanaAbilities {
         int hits = 0;
         for (LivingEntity target : targets) {
             if (hits >= maxTargets) break;
-            float damage = ultimate ? 9.0F : 5.0F;
+            // El arma tiene 7 de daño base; los atributos del jugador cuentan,
+            // con límites para que la habilidad no multiplique sin control otros mods.
+            double base = player.getAttributeValue(Attributes.ATTACK_DAMAGE);
+            float damage = (float)Math.max(4, Math.min(ultimate ? 18 : 12, base * (ultimate ? 1.6 : 1.15)));
             if (!target.hurt(player.damageSources().playerAttack(player), damage)) continue;
             hits++;
             if (ultimate) {
-                target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 50, 2));
-                level.sendParticles(DARK, target.getX(), target.getY(.5), target.getZ(), 12, .22, .25, .22, .01);
+                target.addEffect(new MobEffectInstance(KatanaEffects.PARALYSIS.get(), 15, 0, false, false, false));
+                level.sendParticles(KatanaParticles.PULSE.get(), target.getX(), target.getY(.5), target.getZ(), 1, 0, 0, 0, 0);
             }
-            level.sendParticles(ParticleTypes.SWEEP_ATTACK, target.getX(), target.getY(.55), target.getZ(), 1, 0, 0, 0, 0);
-            level.sendParticles(BLOOD, target.getX(), target.getY(.55), target.getZ(), ultimate ? 14 : 8, .22, .22, .22, .02);
+            level.sendParticles(KatanaParticles.SLASH.get(), target.getX(), target.getY(.6), target.getZ(), 1, 0, 0, 0, 0);
+            level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.55), target.getZ(), ultimate ? 12 : 7, .22, .22, .22, .02);
         }
         if (hits == 0) {
             player.displayClientMessage(Component.translatable("stainkatana.no_target"), true); return false;
@@ -124,22 +125,14 @@ public final class KatanaAbilities {
     }
 
     private static void arc(ServerLevel level, ServerPlayer player, Vec3 forward, boolean ultimate) {
-        double center = Math.atan2(forward.z, forward.x);
-        int points = ultimate ? 32 : 18;
-        double radius = ultimate ? 2.8 : 2.0;
-        for (int i=0; i<points; i++) {
-            double angle = center - 1.1 + 2.2*i/(points-1.0);
-            double x = player.getX() + Math.cos(angle)*radius;
-            double z = player.getZ() + Math.sin(angle)*radius;
-            double y = player.getY()+1.0 + .16*Math.sin(i*.45);
-            level.sendParticles(i % 3 == 0 ? DARK : BLOOD, x, y, z, 1, 0, 0, 0, 0);
-        }
-    }
-    private static void spiral(ServerLevel level, LivingEntity target, int points) {
-        for (int i=0; i<points; i++) {
-            double angle = i*Math.PI*4/points, y=target.getY(.1)+target.getBbHeight()*i/points;
-            level.sendParticles(i % 2 == 0 ? BLOOD : DARK, target.getX()+Math.cos(angle)*.4, y,
-                    target.getZ()+Math.sin(angle)*.4, 1, 0, 0, 0, 0);
+        // Dos cortes superpuestos para la ulti, uno para el ataque rápido.
+        Vec3 side = new Vec3(-forward.z, 0, forward.x);
+        int strokes = ultimate ? 3 : 1;
+        for (int i = 0; i < strokes; i++) {
+            double shift = (i - (strokes - 1) / 2.0) * .6;
+            Vec3 point = player.position().add(forward.scale(1.8 + i * .25)).add(side.scale(shift));
+            level.sendParticles(KatanaParticles.SLASH.get(), point.x, player.getY() + 1.05 + shift * .2,
+                    point.z, 1, 0, 0, 0, 0);
         }
     }
 }

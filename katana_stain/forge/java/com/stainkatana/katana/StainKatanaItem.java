@@ -5,7 +5,6 @@ import java.util.function.Consumer;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
-import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -18,7 +17,6 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Vector3f;
 import software.bernie.geckolib.animatable.GeoItem;
 import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;
@@ -28,11 +26,10 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 public class StainKatanaItem extends SwordItem implements GeoItem {
     static final String MARK = "StainBloodMark";
     private static final int MARK_TICKS = 200;
-    private static final DustParticleOptions BLOOD = new DustParticleOptions(new Vector3f(0.55F, 0.025F, 0.035F), 0.8F);
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public StainKatanaItem() {
-        super(Tiers.IRON, 3, -2.4F, new Properties().stacksTo(1));
+        super(Tiers.DIAMOND, 3, -2.25F, new Properties().stacksTo(1));
     }
 
     @Override
@@ -57,7 +54,7 @@ public class StainKatanaItem extends SwordItem implements GeoItem {
             mark.putString("Dimension", level.dimension().location().toString());
             mark.putLong("Expires", level.getGameTime() + MARK_TICKS);
             stack.getOrCreateTag().put(MARK, mark);
-            level.sendParticles(BLOOD, target.getX(), target.getY(0.55), target.getZ(), 8, 0.22, 0.25, 0.22, 0.015);
+            level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(0.55), target.getZ(), 8, 0.22, 0.25, 0.22, 0.015);
         }
         return super.hurtEnemy(stack, target, attacker);
     }
@@ -65,6 +62,8 @@ public class StainKatanaItem extends SwordItem implements GeoItem {
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> lines, TooltipFlag flag) {
         lines.add(Component.translatable("item.stainkatana.katana_stain.lore").withStyle(ChatFormatting.DARK_RED));
-        lines.add(Component.translatable("item.stainkatana.katana_stain.hint").withStyle(ChatFormatting.GRAY));
+        lines.add(Component.translatable("item.stainkatana.katana_stain.mark").withStyle(ChatFormatting.GRAY));
+        lines.add(Component.translatable("item.stainkatana.katana_stain.combat").withStyle(ChatFormatting.GRAY));
+        lines.add(Component.translatable("item.stainkatana.katana_stain.hint").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

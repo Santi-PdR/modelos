@@ -1,8 +1,8 @@
 {
   "itemGroup.stainkatana.legados": "Legados de Combate",
   "item.stainkatana.katana_stain": "Katana del Asesino de Héroes",
-  "item.stainkatana.katana_stain.lore": "La hoja mellada de Stain, el Asesino de Héroes.",
-  "item.stainkatana.katana_stain.hint": "Z: parálisis de sangre · X: corte rápido · C: sentencia (reasignable).",
+  "item.stainkatana.katana_stain.lore": "La hoja mellada del Asesino de Héroes. Cada corte deja su marca.",
+  "item.stainkatana.katana_stain.hint": "Teclas editables en Controles > Katana de Stain.",
   "key.categories.stainkatana": "Katana de Stain",
   "key.stainkatana.stun": "Parálisis de sangre",
   "key.stainkatana.slash": "Corte rápido",
@@ -13,5 +13,9 @@
   "stainkatana.no_target": "No hay objetivos válidos delante.",
   "stainkatana.stun_used": "Parálisis de sangre",
   "stainkatana.slash_used": "Corte rápido",
-  "stainkatana.ultimate_used": "Sentencia del Asesino"
+  "stainkatana.ultimate_used": "Sentencia del Asesino",
+  "item.stainkatana.katana_stain.mark": "Golpea y usa Parálisis de sangre antes de que expire la marca.",
+  "item.stainkatana.katana_stain.combat": "Corte rápido y Sentencia: ataques frontales con espera propia.",
+  "effect.stainkatana.blood_paralysis": "Parálisis de sangre",
+  "stainkatana.resisted": "La víctima resistió la parálisis."
 }

@@ -70,3 +70,22 @@ comprobación visual y de juego.
 - El agarre de ambas manos se ha ajustado siguiendo una pose tipo espada;
   aún necesita calibración visual real en primera y tercera persona. No
   hay clips slash personalizados: se usa el balanceo vanilla y las estelas.
+
+## Versión independiente 0.3.0-test
+
+Tres efectos gráficos originales del mod: corte de ocho fotogramas, astillas
+rojas de seis y pulso de ocho. Son partículas propias, no sprites ni
+partículas vanilla o de otros mods. Las texturas se generan reproduciblemente
+con `katana_stain/tools/crear_fx.py` (Pillow); no son capturas del juego.
+
+La espada pasa a daño base 7 y velocidad de ataque 1,75 (antes 6 y 1,6).
+X inflige 1,15 veces el ataque del portador (límite 12); C 1,6 veces
+(límite 18), antes de armadura y resistencias. Z aplica un efecto propio:
+velocidad anulada, ataques e interacciones bloqueados y salto frenado;
+dura 3 s en criaturas y 2 s en jugadores. La ulti aplica 0,75 s del mismo
+efecto a los objetivos alcanzados. No es invulnerabilidad ni inmovilización
+absoluta ante empujes, teletransporte o lógica de otros mods. Los cooldowns
+siguen siendo 12, 5 y 45 s. El daño, PvP, equipo y alcance se comprueban
+en el servidor. Pose de mano compensada hacia el centro del mango; ajuste
+preliminar, sin evaluación en juego. No hay clips propios de brazo: se usa
+el balanceo vanilla acompañado de los FX originales.

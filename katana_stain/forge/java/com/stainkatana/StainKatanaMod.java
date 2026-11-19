@@ -2,6 +2,8 @@ package com.stainkatana;
 
 import com.stainkatana.katana.StainKatanaItem;
 import com.stainkatana.katana.KatanaNetwork;
+import com.stainkatana.katana.KatanaParticles;
+import com.stainkatana.katana.KatanaEffects;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -33,6 +35,8 @@ public class StainKatanaMod {
         GeckoLib.initialize();
         KatanaNetwork.init();
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
+        KatanaParticles.register(bus);
+        KatanaEffects.register(bus);
         ITEMS.register(bus);
         TABS.register(bus);
         bus.addListener(this::addCreative);
