@@ -575,7 +575,7 @@ public final class CapeFxSmoke {
             renderer.getGeoModel().getBone(CapeBacking.LEFT).orElseThrow().setHidden(false);
             renderer.getGeoModel().getBone(CapeBacking.RIGHT).orElseThrow().setHidden(false);
         }
-        if (scene.upperBack() || scene.fit()) {
+        if (scene.upperBack() || scene.fit() || scene.overhead()) {
             // Measure the seam under the same world projection used for
             // the current armor pass (neither debug pixels nor the visor).
             upperBackProjection = new Matrix4f(RenderSystem.getProjectionMatrix())
@@ -758,6 +758,10 @@ public final class CapeFxSmoke {
                 image.writeToFile(shots.resolve(scene.file + ".png"));
                 if (scene.upperBack() && !scene.bare()) projectUpperBack(shots, image);
                 if (scene.fit() && !scene.bare()) projectFit(shots, image);
+                if (scene == Scene.MID_CHEST || scene == Scene.MID_BACK
+                        || scene == Scene.TOP_CHEST || scene == Scene.TOP_BACK
+                        || scene == Scene.OBLIQUE_CHEST || scene == Scene.OBLIQUE_BACK)
+                    projectBinding(shots, image);
             }
             if (scene.strafe()) exposure = "; entrada lateral = " + Math.round(100 * lateral) + "%";
             note(scene.file + ": " + framePasses + " manto en F5" + (scene.inspectBirths()
@@ -791,6 +795,20 @@ public final class CapeFxSmoke {
             data.append('\n');
         }
         Files.writeString(shots.resolve(scene.file + ".tsv"), data.toString());
+    }
+
+    private static void projectBinding(Path shots, NativeImage image) throws IOException {
+        StringBuilder out = new StringBuilder();
+        // Points ON the vanilla jacket's top rear edge, not a projection
+        // of the candidate cloth. Compare to a bare torso in the same pose.
+        for (int u = -16; u <= 16; ++u) for (int v = 0; v < 6; ++v) {
+            float x = u * .192F, z = 1.97F + .05F * v;
+            var p = upperBackProjection.transformProject(new Vector3f(x/16,24.251F/16,z/16));
+            out.append(u).append('\t').append(v).append('\t')
+                    .append((int) ((1+p.x)*image.getWidth()*.5F)).append('\t')
+                    .append((int) ((1-p.y)*image.getHeight()*.5F)).append('\n');
+        }
+        Files.writeString(shots.resolve(scene.file + "-borde.tsv"), out);
     }
 
     private static void projectUpperBack(Path shots, NativeImage image) throws IOException {

@@ -381,7 +381,7 @@ jobs:
           assert 'new CapaArmorModel(' in armor_renderer
           for token in ('setHidden(true)', 'setChildrenHidden(false)', 'HIDDEN_DETAILS',
                         'DataTickets.ENTITY', 'resolveRig', 'v15_cloth_',
-                        'Math.toRadians', 'LinkedHashMap', 'CapaTestMod.LOGGER',
+                        'Math.toRadians', 'WeakHashMap', 'CapaTestMod.LOGGER',
                         'Exception | LinkageError', 'private static final int COLUMNS = 9;'):
               assert token in armor_model, token
           if registered:
@@ -547,10 +547,10 @@ jobs:
           assert all(len(_a.get('markers', [])) >= 2 for _a in bb['animations'])
           _motion = (root / 'tools/cape_motion.py').read_text()
           assert 'def sample(' in _motion and 'def slope(' in _motion
-          # Java sólo suma la respuesta preexistente; no recalcula la coreografía.
+          # El reloj del portador muestrea los mismos clips y suma la respuesta.
           _armor_model = (root / 'src/main/java/com/capatest/client/CapaArmorModel.java').read_text()
           assert 'applyClothResponse(' in _armor_model and '0.62D * seg' in _armor_model
-          assert 'b.getRotX() +' in _armor_model, 'Java vuelve a pisar GeckoLib'
+          assert 'b.getRotX() +' in _armor_model, 'falta la respuesta sobre la pose muestreada'
           assert not re.search(r'\bsetPos[XYZ]\(', _armor_model), 'Java mueve la capa en XYZ'
           assert 'v17_mote_' not in _armor_model and 'v17_ash_' not in _armor_model
           assert 'RIBBONS = 12' in _armor_model and 'LAST_SEGMENT = 4' in _armor_model
@@ -779,9 +779,10 @@ jobs:
           CLASSES="$RUNNER_TEMP/cape-state-test"
           mkdir -p "$CLASSES"
           javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/{CapeState,CapePlayback,CapeSparkFrame}.java \
-            src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeBacking,CapeStride,CapeTint,CapeEmber,CapeNocturne,CapeWingFit}.java \
+            src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeBacking,CapeStride,CapeTint,CapeEmber,CapeNocturne,CapeWingFit,CapeWornMotion}.java \
             src/test/java/com/capatest/item/{CapeStateTest,CapeSparkFrameTest}.java \
-            src/test/java/com/capatest/client/{CapeFitTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeSettleTest,CapeSwayTest,CapeWingFitTest}.java
+            src/test/java/com/capatest/client/{CapeFitTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeSettleTest,CapeSwayTest,CapeWingFitTest,CapeWornMotionTest}.java
+          java -cp "$CLASSES" com.capatest.client.CapeWornMotionTest
           java -cp "$CLASSES" com.capatest.client.CapeWingFitTest
           java -cp "$CLASSES" com.capatest.client.CapeWingFitTest --samples > "$CLASSES/wings.tsv"
           OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_cape_wings.py "$CLASSES/wings.tsv"
@@ -881,13 +882,15 @@ jobs:
             grep -qx 'com/capatest/client/CapaSparkParticle.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeSparkFrame.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeSparkPath.class' /tmp/jar-contents.txt
-            if grep -q '^com/capatest/client/CapeFxSmoke' /tmp/jar-contents.txt; then
+            if grep -Eq '^com/capatest/client/(CapeFxSmoke|CapeWalkProbe|CapeLookSweep)' /tmp/jar-contents.txt; then
               echo '::error::El JAR de distribución incluye código de la prueba de cliente.'
               exit 1
             fi
             grep -qx 'com/capatest/client/CapaItemRenderer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaItemGlowLayer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaArmorModel.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapeWornMotion.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapeWornClips.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeResponse.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeTravel.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeWingFit.class' /tmp/jar-contents.txt
@@ -986,7 +989,7 @@ jobs:
             printf '::notice title=Recorrido de mirada en Forge::%s\n' "${line//%/%25}"
           done
           if [ "$rc" -ne 0 ] || ! grep -Fq 'FX smoke: PASS:' "$log" ||
-             grep -Fq -e 'FX smoke: FAIL' -e 'Blight Star Mantle: respuesta del paño desactivada' "$log" ||
+             grep -Fq -e 'FX smoke: FAIL' -e 'Blight Star Mantle: respuesta del paño desactivada' -e 'se usa el muestreador de GeckoLib' "$log" ||
              [ "$(grep -Fc 'Blight Star Mantle: falló el pase' "$log")" -ne 2 ]; then
             echo "::error title=FX en Forge::No se completó la prueba (salida $rc)."
             grep -Ei 'exception|assertionerror|\[.*ERROR\]|(failed|could not|error):? |^> Task .*FAILED|Blight Star Mantle:' "$log" | \
@@ -1000,7 +1003,7 @@ jobs:
         run: |
           set -o pipefail
           python3 tools/verify_forge_walk.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
-            printf '::notice title=Marcha en Forge::%s\n' "$line"
+            printf '::notice title=Marcha en Forge::%s\n' "${line//%/%25}"
           done
 
       - name: Verificar el desplazamiento visible del cuello y las dos hombreras en F5
@@ -1026,6 +1029,14 @@ jobs:
               printf '::notice title=Anclaje y ranura en Forge::%s\n' "${line//%/%25}"
             fi
           done
+
+      - name: Fotogramas de marcha en pecho
+        if: always() && steps.fx-smoke.outcome == 'success'
+        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery paso-pecho
+
+      - name: Fotogramas de marcha en Curios
+        if: always() && steps.fx-smoke.outcome == 'success'
+        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery paso-curios
 
       - name: Vista F5 de inclinación media, v1.67.9 frente a ajuste nuevo
         if: always() && steps.fx-smoke.outcome != 'skipped'

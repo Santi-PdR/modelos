@@ -46,6 +46,22 @@ def lap(cube, mesh):
     return float(-sat(np.broadcast_to(cube,mesh.shape),mesh).min())
 
 
+def check_edge(geo, names):
+    """Structural bed and a cloth lip over the actual rear edge of the shirt."""
+    edge = np.array(list(product(np.linspace(-3.13,3.13,43),[24.251],np.linspace(1.98,2.23,9))))
+    shirt = P.CORNERS*[8,12,4]+[-4,12,-2]
+    for (pitch,yaw,coverage),arm in product(((-89,0,.33),(-76,3,.33),(-58,3,.70),
+                                             (-58,43,.45),(-58,-43,.45)),(0,6,22,53)):
+        placed = patches(F.wearer_pose(geo,0,pitch,yaw,arm_back=arm))
+        panels = np.stack([placed[n] for n in names])
+        assert occupied(panels.reshape(-1,8,3),edge) >= coverage, (pitch,yaw,arm)
+        spine = np.concatenate([placed[k] for k in (G.SHOULDERS_BONE,G.SADDLE_BONE,G.GUSSET_BONE)])
+        for inside,fold,under in panels:
+            assert lap(inside,shirt[None]) > .24, (pitch,yaw,arm,'seat outside torso')
+            assert min(lap(inside,fold[None]),lap(fold,spine),lap(under,spine)) > .42, (pitch,yaw,arm)
+    print('El yugo ocupa y envuelve el canto superior real de la camiseta; solape continuo con el cuerpo y la montura durante la zancada.',flush=True)
+
+
 def check(geo):
     f = B.profile()
     names = f['names']
@@ -99,6 +115,7 @@ def check(geo):
         for box in (panels[0]-p)*[1,y,z]+p:
             arm_gap = min(arm_gap,sat(np.broadcast_to(box,arms.shape),arms).min())
     assert arm_gap > .01, arm_gap
+    check_edge(geo, names)
     print(f'Espalda alta: contacto en 5.7u de camiseta, solape de las costuras ≥{seam:.3f}u; '
           f'cabeza +{head_gap:.3f}u ({len(head_poses)} poses), mangas Steve/Alex +{arm_gap:.3f}u. '
           'Con élitros, el respaldo queda dentro del torso.',flush=True)

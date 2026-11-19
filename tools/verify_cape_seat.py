@@ -27,9 +27,9 @@ def preservation(geo):
     parts = {b['name']:b for b in geo['bones']}
     assert parts[frame] == G.bone(frame,'chestplate',(0,24,F.seat_profile()['plane']),(0,0,0),[])
     control = dict(geo,bones=[dict(b,parent='chestplate') if b.get('parent') == frame else b
-                              for b in geo['bones'] if b['name'] != frame])
+                              for b in geo['bones'] if b['name'] not in (frame,*B.profile()['names'])])
     digest = sha256(json.dumps(control,sort_keys=True,separators=(',',':')).encode()).hexdigest()
-    assert digest == '280e5e6ebf5b01a47c2e4353e81d5e5e4c95ab2037d453af4894adaffca352fa', 'cambiaron piezas fuera del marco'
+    assert digest == '02fedd26c50b04b3f049e5a88101ba217350297c48a9706499b0961d6b548829', 'cambiaron piezas fuera del respaldo'
     for path,expected in {
         A.ANIM: '23d1e0bb43123b4b86cea4e5f07e672ae5bd1d89e2cb5d4cc71c52409f968999',
         P.ARMOR_TEX: 'a4cf984ead41c6ac8a0a3b09e86743786ef9c71f3d00fc109934b8bca589e549',

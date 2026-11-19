@@ -103,7 +103,7 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
         return readWearer(entity, equipped).cosmeticState();
     }
 
-    private static CapeState.Wearer readWearer(Entity entity, ItemStack equipped) {
+    public static CapeState.Wearer readWearer(Entity entity, ItemStack equipped) {
         if (entity == null || entity instanceof ArmorStand) {
             return CapeState.Wearer.STILL;
         }

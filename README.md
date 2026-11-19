@@ -6,9 +6,15 @@ Se equipa en el pecho o en `back` con Curios opcional.
 [Descargar JAR v1.67.10 (prueba)](https://github.com/Santi-PdR/modelos/releases/download/v1.67.10/capatest-1.67.10.jar)
 · [JAR anterior v1.67.9](https://github.com/Santi-PdR/modelos/releases/download/v1.67.9/capatest-1.67.9.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench de la rama](docs/CAPA_v1.67.10.bbmodel)
+· [Proyecto Blockbench de la rama](docs/CAPA_v1.67.11.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+
+### v1.67.11 — unión sobre el torso y marcha (rama de pruebas)
+
+- El yugo nace dentro del torso y su borde dobla sobre la camiseta; el balanceo de las mangas ya no manda el ajuste entero en cada paso.
+- Caminar y correr comparten la fase interpolada de las piernas. Se mezclan las ocho curvas originales sin reiniciar la fase, y la holgura de las bisagras se calcula para la zancada, no sólo para el pie que pasa en ese instante.
+- Cambia únicamente el manto equipado. Atlas, icono, destellos y Curios opcional se conservan.
 
 ### v1.67.10 — ajuste a media inclinación (rama de pruebas)
 

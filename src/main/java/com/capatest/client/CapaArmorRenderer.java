@@ -16,6 +16,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
+import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.renderer.GeoArmorRenderer;
 import software.bernie.geckolib.util.RenderUtils;
@@ -28,6 +29,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private CapeFit.YokeShape yoke = CapeFit.yokeShape(0, 0, 0, true);
     private CapeBacking.Shape backing = CapeBacking.TUCKED;
     private boolean armorPassSubmitted;
+    private float wearerPartial;
+    private boolean sampleFit;
 
     public CapaArmorRenderer() {
         this(new CapaArmorModel(new ResourceLocation(CapaTestMod.MOD_ID, "armor/capa_deteriorer_evilsaiyan")));
@@ -58,15 +61,18 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                               @Nullable HumanoidModel<?> model) {
         super.prepForRender(wearer, stack, slot, model);
         armorPassSubmitted = false;
-        // Snapshot once for both the opaque pass and GeckoLib's emissive
-        // re-render, which calls preRender again with the same fitted body.
-        seating = 0;
-        if (model != null && wearer instanceof LivingEntity living && !living.isFallFlying()
-                && !living.isPassenger() && !living.isAutoSpinAttack()) {
-            seating = (float) CapeFit.seating(model.body.xRot, model.body.yRot, model.head.xRot,
-                    model.head.yRot, backArm(model), living.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA))
-                    * (1 - living.getSwimAmount(1));
-        }
+    }
+
+    @Override
+    public void preRender(PoseStack poseStack, CapaDeteriorerItem item,
+                          BakedGeoModel geometry,
+                          @Nullable MultiBufferSource buffers, @Nullable VertexConsumer consumer,
+                          boolean isReRender, float partial, int light, int overlay,
+                          float red, float green, float blue, float alpha) {
+        wearerPartial = partial;
+        sampleFit = !isReRender;
+        super.preRender(poseStack, item, geometry, buffers, consumer, isReRender, partial, light, overlay,
+                red, green, blue, alpha);
     }
 
     private static double backArm(HumanoidModel<?> model) {
@@ -97,6 +103,7 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     @Override
     protected void applyBaseTransformations(HumanoidModel<?> model) {
         super.applyBaseTransformations(model);
+        if (!sampleFit) return;
         wearerDepth = (float) CapeFit.backset(model.body.xRot, model.body.yRot,
                 model.head.xRot, model.head.yRot);
         double arm = backArm(model);
@@ -114,10 +121,20 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         }
         shoulderReach = (float) CapeFit.shoulderReach(model.body.xRot, model.body.yRot,
                 model.head.xRot, model.head.yRot, hasWings);
-        yoke = CapeFit.yokeShape(model.body.xRot, model.head.xRot, arm, hasWings);
+        // Fit against the stride envelope, not the instantaneous crossing
+        // of the arms. This keeps the top mount from pumping twice a step.
+        double mountArm = arm;
+        seating = 0;
+        if (getCurrentEntity() instanceof LivingEntity living && !living.isFallFlying()
+                && !living.isPassenger() && !living.isAutoSpinAttack()) {
+            double speed = Math.min(1, living.walkAnimation.speed(wearerPartial));
+            mountArm = CapeStride.walkEnvelope(arm, 0, speed, 1 - living.getSwimAmount(wearerPartial), 1);
+            seating = (float) CapeFit.seating(model.body.xRot, model.body.yRot, model.head.xRot,
+                    model.head.yRot, mountArm, hasWings) * (1 - living.getSwimAmount(wearerPartial));
+        }
+        yoke = CapeFit.yokeShape(model.body.xRot, model.head.xRot, mountArm, hasWings);
         backing = CapeBacking.shape(model.body.xRot, model.body.yRot, model.head.xRot, model.head.yRot, wearerDepth, hasWings);
-        capeModel.setClearanceGoals(CapeStride.armGoal(arm, model.body.xRot, wearerDepth),
-                CapeStride.legGoal(leg, model.body.xRot, wearerDepth), wings);
+        capeModel.setClearancePose(arm, leg, model.body.xRot, wearerDepth, wings);
     }
 
     @Override

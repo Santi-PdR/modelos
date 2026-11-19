@@ -184,6 +184,8 @@ def gallery(root, kind):
             names = tuple(f'{kind}-{n}' for n in ('sin-manto','v1679','pecho','curios'))
         elif kind in ('mirada-pecho','mirada-curios'):
             names = tuple(f'{kind}-{n:02}' for n in (0,8,16,48))
+        elif kind in ('paso-pecho','paso-curios'):
+            names = tuple(f'{kind}-{n:02}' for n in (16,44,63,110))
         elif kind == 'perfil-base':
             names = ('oblicua-sin-manto','perfil-sin-manto')
         elif kind in ('perfil','oblicua'):
@@ -199,7 +201,7 @@ def gallery(root, kind):
                 # Each GitHub job step retains up to ten notices. Reserve
                 # at most half of them for either slot, even in a busy shot.
                 close = kind in ('oblicua','perfil','ajuste','ajuste-fino')
-                cap = 2450 if kind.startswith(('ajuste','mirada')) else 3820 if close else 6350
+                cap = 2450 if kind.startswith(('ajuste','mirada','paso')) else 3820 if close else 6350
                 for width,colors in ((180,80),(160,64),(144,48),(128,40),(112,32),(96,28)):
                     buf = io.BytesIO()
                     small = cut.resize((width,round(width*.8)),Image.Resampling.NEAREST)
@@ -230,7 +232,7 @@ def gallery(root, kind):
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument('shots',type=Path)
-    cli.add_argument('--gallery',choices=['cenital','giro','bare','oblicua','perfil','perfil-base','hotbar','ajuste','ajuste-fino','ajuste-medio','mirada-pecho','mirada-curios'])
+    cli.add_argument('--gallery',choices=['cenital','giro','bare','oblicua','perfil','perfil-base','hotbar','ajuste','ajuste-fino','ajuste-medio','mirada-pecho','mirada-curios','paso-pecho','paso-curios'])
     args = cli.parse_args()
     if args.gallery:
         gallery(args.shots,args.gallery)

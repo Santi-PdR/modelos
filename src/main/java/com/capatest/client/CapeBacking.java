@@ -10,12 +10,15 @@ final class CapeBacking {
     private static final double TUCK_Y = .019, TUCK_Z = .64, WING_Z = .078;
     private static final double FOLD_MIN = .14, FOLD_SPAN = .38;
     private static final double HEAD_HALF = 4.60, SOFT_RISE = .72;
-    // Width, front center Y/Z, rise, reach, thickness. These same dimensions
-    // are consumed by the GEO and Blockbench exporters (tools/cape_backing.py).
+    // Width, front center Y/Z, rise, reach, thickness. Seat the first
+    // fold in the shirt, turn a lip *over* its upper rear edge, then lap
+    // both folds into the saddle. The old rising ramp reached the collar
+    // but left the shirt showing between it and the actual shoulder line.
+    // The same panels are used by the GEO and Blockbench exporters.
     private static final double[][] PANELS = {
-            {3.25, 18.42, 1.58, 0.00, .94, 8.14},
-            {3.23, 20.97, 1.98, 1.86, 3.43, 2.19},
-            {3.20, 16.58, 2.21, 4.96, 3.12, 1.39}
+            {3.24, 19.19, 1.21, 0.00, 1.34, 9.73},
+            {3.25, 24.05, 1.78, -2.35, 3.93, 1.56},
+            {3.20, 17.15, 2.13, 5.09, 3.27, 1.90}
     };
     private static final Panel[] EDGES = edges();
     private static final double[] BODY_X = {1,0,0}, BODY_Y = {0,1,0}, BODY_Z = {0,0,1};

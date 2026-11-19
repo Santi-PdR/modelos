@@ -17,16 +17,50 @@ def report(data, name):
     in_sprint = (t >= 107) & (t < 129)
     assert data['leg_speed'][in_walk].mean() > .36 and data['leg_speed'][in_sprint].mean() > .52, name
     mask = in_walk[1:] & in_walk[:-1] & (dt > .08) & (dt < 1.1)
-    jumped = (np.diff(data['clip_tick']) < 0) & mask
+    jumped = (np.diff(data['stride']) < 0) & mask
     delta = np.abs(np.diff(data['top']))
     tip = np.column_stack([data[k] for k in ('tip_x', 'tip_y', 'tip_z')])
     transfer = np.linalg.norm(np.diff(tip, axis=0), axis=1)
     depth = data['collar_z'][in_walk]
+    sway = np.ptp(depth)
+    hinge = np.quantile(delta[mask]/dt[mask], .95)
+    hem = np.quantile(transfer[mask]/dt[mask], .95)
     print(f'{name}: {len(t)} cuadros y {np.count_nonzero(mask)} pares en paso estable; '
-          f'vaivén del asiento {np.ptp(depth):.3f}u; reinicios de fase {jumped.sum()}; '
-          f'cambio de bisagra p95 {np.quantile(delta[mask]/dt[mask], .95):.2f}°/tick; '
-          f'movimiento del extremo p95 {np.quantile(transfer[mask]/dt[mask], .95):.3f}u/tick; '
-          f'velocidad de andar/estirar {data["leg_speed"][in_walk].mean():.2f}/{data["leg_speed"][in_sprint].mean():.2f}', flush=True)
+          f'vaivén del asiento {sway:.3f}u; reinicios de fase {jumped.sum()}; '
+          f'cambio de bisagra p95 {hinge:.2f}°/tick; movimiento del extremo p95 {hem:.3f}u/tick', flush=True)
+    # v1.67.10 live baseline: 2.309u, 2 resets, 30.44–30.72°/tick and
+    # 12.459–12.535u/tick. The mantle must also move, not just freeze.
+    assert np.isfinite(tip).all() and mask.sum() >= 35, name
+    assert sway < .26 and not jumped.any() and hinge < 10 and .02 < hem < 4.1, (name,sway,hinge,hem)
+    assert np.max(np.abs(data['stride'] - data['leg_pos'] * np.float32(.6662) / (2 * np.pi))) < 2e-6, name
+    assert (data['walk'][in_walk] >= .98).mean() > .95 and (data['run'][in_sprint] >= .98).mean() > .8, name
+    assert (data['walk'][t < 17] < .01).all() and (data['run'][t > 147] < .01).all(), name
+    for label, start, end in (('arranque',18,36),('giro',70,94),('carrera',95,109),('freno',128,151)):
+        select = (t[:-1] >= start) & (t[1:] < end) & (dt > .08) & (dt < 1.1)
+        assert np.count_nonzero(select) >= 12, (name,label)
+        max_turn = np.max(delta[select] / dt[select])
+        print(f'{name}, {label}: bisagra máx. {max_turn:.1f}°/tick.',flush=True)
+        assert max_turn < 25, (name,label,max_turn)
+
+
+
+def upper_edge(root):
+    from verify_forge_mount import read as image
+    for view in ('cenital','ajuste-medio','oblicua'):
+        bare = image(root / f'{view}-sin-manto.png')
+        for slot in ('pecho','curios'):
+            name = f'{view}-{slot}'
+            worn = image(root / f'{name}.png')
+            u,v,x,y = np.loadtxt(root / f'{name}-borde.tsv', dtype=int).T
+            assert len(u) == 198 and min(x.min(),y.min()) >= 0 and x.max() < bare.shape[1] and y.max() < bare.shape[0], name
+            rb,gb,bb = bare[y,x].T
+            r,g,b = worn[y,x].T
+            shirt = (gb-rb >= 19) & (bb-rb >= 19)
+            cloth = (gb-g >= 16) & (np.maximum(r,b)-g >= 9)
+            count = int(shirt.sum())
+            covered = (cloth & shirt).sum() / max(1,count)
+            print(f'{name}: {covered:.1%} del canto superior visible de la camiseta cubierto ({count} muestras).',flush=True)
+            assert count >= 30 and covered >= .30, (name,count,covered)
 
 
 if __name__ == '__main__':
@@ -36,3 +70,4 @@ if __name__ == '__main__':
     for slot in ('pecho', 'curios'):
         name = 'paso-' + slot
         report(read(args.shots / (name + '.tsv')), name)
+    upper_edge(args.shots)

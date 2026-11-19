@@ -14,7 +14,7 @@ import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.model.DefaultedItemGeoModel;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.WeakHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -58,18 +58,26 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     private final List<GeoBone> anchors = new ArrayList<>(27);
     private final List<GeoBone> details = new ArrayList<>();
     private final List<Cloth> cloth = new ArrayList<>(RIBBONS * (LAST_SEGMENT + 1));
-    // This is render-thread state. Evict only the least recently used wearer.
-    private final Map<Long, CapeResponse> motion = new LinkedHashMap<>(32, .75F, true);
+    // Render-thread state shared across chest and Curios. A weak wearer key
+    // survives an equipment change but never reuses another entity's clock.
+    private static final Map<LivingEntity, CapeWornMotion> MOTION = new WeakHashMap<>();
+    private final List<GeoBone> animated = new ArrayList<>();
+    private CapeWornClips wornClips;
+    private boolean useDefaultSampler;
     private GeoBone clothTop;
     private GeoBone clothMid;
-    private double armGoal;
-    private double legGoal;
+    private double armBack;
+    private double legBack;
+    private double bodyPitch;
+    private double wearerDepth;
     private double wingGoal;
     private boolean disabled;
 
-    void setClearanceGoals(double armGoal, double legGoal, double wingGoal) {
-        this.armGoal = armGoal;
-        this.legGoal = legGoal;
+    void setClearancePose(double arm, double leg, double pitch, double depth, double wingGoal) {
+        this.armBack = arm;
+        this.legBack = leg;
+        this.bodyPitch = pitch;
+        this.wearerDepth = depth;
         this.wingGoal = wingGoal;
     }
 
@@ -97,20 +105,59 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     }
 
     @Override
+    public void handleAnimations(CapaDeteriorerItem item, long instanceId, AnimationState<CapaDeteriorerItem> state) {
+        if (!(state.getData(DataTickets.ENTITY) instanceof LivingEntity wearer) || !resolveRig()) {
+            super.handleAnimations(item, instanceId, state);
+            return;
+        }
+        if (wornClips == null && !useDefaultSampler) {
+            try {
+                wornClips = new CapeWornClips(this, item, animated);
+            } catch (IllegalArgumentException customAsset) {
+                useDefaultSampler = true;
+                CapaTestMod.LOGGER.warn("Blight Star Mantle: se usa el muestreador de GeckoLib para el recurso equipado", customAsset);
+            }
+        }
+        if (useDefaultSampler) {
+            super.handleAnimations(item, instanceId, state);
+            return;
+        }
+        var motion = sampleMotion(wearer, state);
+        wornClips.apply(motion);
+        applyFit(wearer, state.getPartialTick(), motion, true);
+    }
+
+    @Override
     public void setCustomAnimations(CapaDeteriorerItem animatable, long instanceId,
                                     AnimationState<CapaDeteriorerItem> state) {
-        if (!resolveRig())
-            return;
+        // Resource packs may supply non-linear or Molang-driven tracks. In
+        // that case leave authored motion to GeckoLib rather than flatten it.
+        if (resolveRig() && state.getData(DataTickets.ENTITY) instanceof LivingEntity wearer)
+            applyFit(wearer, state.getPartialTick(), sampleMotion(wearer, state), false);
+    }
+
+    static CapeWornMotion wornMotion(LivingEntity wearer) {
+        return MOTION.get(wearer);
+    }
+
+    private static CapeWornMotion sampleMotion(LivingEntity wearer, AnimationState<CapaDeteriorerItem> state) {
+        var motion = MOTION.computeIfAbsent(wearer, key -> new CapeWornMotion());
+        float partial = state.getPartialTick();
+        float phase = wearer.walkAnimation.position(partial) * (wearer.isBaby() ? 3 : 1);
+        float speed = wearer.isPassenger() || !wearer.isAlive() ? 0 : wearer.walkAnimation.speed(partial);
+        motion.sample(CapaDeteriorerItem.readWearer(wearer, state.getData(DataTickets.ITEMSTACK)),
+                wearer.tickCount, partial, phase, speed);
+        return motion;
+    }
+
+    private void applyFit(LivingEntity wearer, float partial, CapeWornMotion motion, boolean coordinated) {
         applyVisibilidad();
-        if (disabled)
-            return;
+        if (disabled) return;
         try {
-            applyClothResponse(instanceId, state);
-            if (state.getData(DataTickets.ENTITY) instanceof LivingEntity)
-                applyClearance();
+            applyClothResponse(wearer, partial, motion);
+            applyClearance(coordinated ? motion : null);
         } catch (Exception | LinkageError error) {
             disabled = true;
-            motion.clear();
             CapaTestMod.LOGGER.error("Blight Star Mantle: respuesta del paño desactivada; se conservan los clips", error);
         }
     }
@@ -125,7 +172,10 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         cachedRoot = root;
         clothTop = root;
         clothMid = getBone(SECTIONS[1]).orElse(null);
-        motion.clear();
+        wornClips = null;
+        useDefaultSampler = false;
+        disabled = false;
+        animated.clear();
         cloth.clear();
         details.clear();
         anchors.clear();
@@ -133,6 +183,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             getBone(name).ifPresent(bone -> bone.setHidden(true));
         for (String section : SECTIONS) {
             getBone(section).ifPresent(bone -> {
+                animated.add(bone);
                 bone.setHidden(false);
                 bone.setChildrenHidden(false);
             });
@@ -142,6 +193,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             for (int seg=0; seg<=LAST_SEGMENT; seg++) {
                 GeoBone b = getBone("v17_ribbon_" + col + "_seg" + seg).orElse(null);
                 if (b != null) {
+                    if (seg > 0) animated.add(b);
                     cloth.add(new Cloth(b, col, seg));
                     details.add(b);
                 }
@@ -189,7 +241,14 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         visibilidadAplicada = visibilidad;
     }
 
-    private void applyClearance() {
+    private void applyClearance(CapeWornMotion motion) {
+        double arm = armBack, leg = legBack;
+        if (motion != null) {
+            arm = CapeStride.walkEnvelope(arm, motion.stride(), motion.amplitude(), motion.ground(), 1);
+            leg = CapeStride.walkEnvelope(leg, motion.stride(), motion.amplitude(), motion.ground(), 1.4);
+        }
+        double armGoal = CapeStride.armGoal(arm, bodyPitch, wearerDepth);
+        double legGoal = CapeStride.legGoal(leg, bodyPitch, wearerDepth);
         if (clothTop == null || clothMid == null || (armGoal <= 0 && legGoal <= 0 && wingGoal <= 0))
             return;
         // GeckoLib's baked X is the negative of the authored GEO pitch.
@@ -205,24 +264,19 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             clothMid.setRotX(clothMid.getRotX() - (float) Math.toRadians(midLift));
     }
 
-    private void applyClothResponse(long instanceId, AnimationState<CapaDeteriorerItem> state) {
-        if (!(state.getData(DataTickets.ENTITY) instanceof LivingEntity wearer))
-            return;
-        float partial = state.getPartialTick();
+    private void applyClothResponse(LivingEntity wearer, float partial, CapeWornMotion motion) {
         Vec3 velocity = wearer.getDeltaMovement();
         CapeTravel.Motion travel = CapeTravel.measure(new CapeTravel.Step(velocity.x, velocity.y, velocity.z),
                 new CapeTravel.Step(wearer.getX() - wearer.xo, wearer.getY() - wearer.yo, wearer.getZ() - wearer.zo),
                 wearer instanceof RemotePlayer, Mth.rotLerp(partial, wearer.yBodyRotO, wearer.yBodyRot));
-        double time = (wearer.tickCount + (double) partial) / 20.0D;
+        double time = motion.time() / 20.0D;
         double turnTarget = travel.cut() ? 0
                 : Mth.clamp(Mth.wrapDegrees(wearer.yBodyRot - wearer.yBodyRotO) / 14.0F, -1.0F, 1.0F);
         // Flight and rides have their own body frames. Fade with the actual
         // swim blend; standing in water only damps the response.
         double lateralFreedom = wearer.isFallFlying() || wearer.isPassenger() || wearer.isAutoSpinAttack()
                 ? 0 : 1 - Mth.clamp(wearer.getSwimAmount(partial), 0, 1);
-        CapeResponse response = motion.computeIfAbsent(instanceId, key -> new CapeResponse());
-        if (motion.size() > 128)
-            motion.remove(motion.keySet().iterator().next());
+        CapeResponse response = motion.response;
         if (travel.cut()) response.reset();
         response.sample(time, travel.speed(), travel.lift(), turnTarget,
                 wearer.isCrouching() ? 1 : 0, wearer.isInWater() ? 1 : 0,

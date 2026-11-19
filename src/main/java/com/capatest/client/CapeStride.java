@@ -21,6 +21,16 @@ public final class CapeStride {
         return Double.isFinite(back) ? Math.toDegrees(Math.asin(clamp(back, 1))) : 0;
     }
 
+    /** Keep room for the whole imminent step, instead of dropping the two
+     * heavy hinges between each pair of feet. The live limb is still a
+     * lower bound (it can also be holding an item, attacking or sitting). */
+    static double walkEnvelope(double actual, double stride, double amplitude, double ground, double scale) {
+        double wave = Math.cos(2 * Math.PI * stride);
+        double shape = Math.sqrt(.85 + .15 * wave * wave);
+        double anticipated = Math.toDegrees(amplitude * scale) * shape * ground;
+        return actual + raise(anticipated - actual);
+    }
+
     public static double armGoal(double arm, double bodyPitch, double depth) {
         return Math.max(0, ARM_GAIN * arm - ARM_INSET - lean(bodyPitch) - ARM_FIT * depth);
     }
