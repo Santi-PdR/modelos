@@ -1320,7 +1320,7 @@ jobs:
         run: |
           set -euo pipefail
           gradle clean build -PkatanaOnly --no-daemon
-          jar=build/libs/stainkatana-0.3.0-test.jar
+          jar=build/libs/stainkatana-0.3.1-test.jar
           test -f "$jar"
           python3 - "$jar" <<'PY'
           import json,sys,zipfile
@@ -1353,9 +1353,27 @@ jobs:
                   assert all('capa_deteriorer' not in k for k in keys)
               meta=z.read('META-INF/mods.toml').decode()
               assert 'modId="stainkatana"' in meta and 'modId="geckolib"' in meta
-              assert '0.3.0-test' in meta
+              assert '0.3.1-test' in meta
           print('OK: katana e icono presentes; sin clases ni recursos de la capa')
           PY
+      - name: Inicio de servidor dedicado de prueba
+        run: |
+          set -uo pipefail
+          mkdir -p run
+          printf 'eula=true\n' > run/eula.txt
+          printf 'server-ip=127.0.0.1\nonline-mode=false\n' > run/server.properties
+          printf 'stop\n' | timeout 150s gradle runServer -PkatanaOnly --no-daemon > /tmp/stain-server.log 2>&1
+          status=$?
+          tail -100 /tmp/stain-server.log
+          if ! grep -Fq 'For help, type "help"' /tmp/stain-server.log; then
+            echo "::error::El servidor no terminó de iniciar (status $status)"
+            exit 1
+          fi
+          if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then
+            echo "::error::El servidor o Gradle terminaron con error $status"
+            exit 1
+          fi
+          echo 'OK: Forge inició el servidor con el mod independiente de katana'
       - name: Guardar jar verificado en esta misma rama
         env:
           BRANCH: ${{ github.ref_name }}
@@ -1363,11 +1381,11 @@ jobs:
           set -euo pipefail
           out=katana_stain/descargas
           mkdir -p "$out"
-          cp build/libs/stainkatana-0.3.0-test.jar "$out/stainkatana-0.3.0-test.jar"
-          (cd "$out" && sha256sum stainkatana-0.3.0-test.jar > SHA256SUMS.txt)
+          cp build/libs/stainkatana-0.3.1-test.jar "$out/stainkatana-0.3.1-test.jar"
+          (cd "$out" && sha256sum stainkatana-0.3.1-test.jar > SHA256SUMS.txt)
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -f "$out/stainkatana-0.3.0-test.jar" "$out/SHA256SUMS.txt"
+          git add -f "$out/stainkatana-0.3.1-test.jar" "$out/SHA256SUMS.txt"
           if ! git diff --cached --quiet; then
             git commit -m 'Store isolated katana test jar'
             git push origin "HEAD:$BRANCH"

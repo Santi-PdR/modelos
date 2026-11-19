@@ -24,7 +24,8 @@ public final class KatanaAbilities {
     private KatanaAbilities() { }
 
     public static void activate(ServerPlayer player, int ability) {
-        if (ability < 0 || ability >= COOLDOWN.length || !player.isAlive() || player.isSpectator()) return;
+        if (ability < 0 || ability >= COOLDOWN.length || !player.isAlive() || player.isSpectator()
+                || player.hasEffect(KatanaEffects.PARALYSIS.get())) return;
         ItemStack stack = player.getMainHandItem();
         if (!(stack.getItem() instanceof StainKatanaItem)) return;
         ServerLevel level = player.serverLevel();
