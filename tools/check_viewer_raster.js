@@ -34,18 +34,29 @@ const result = vm.runInContext(`${source}
     for (const faces of [[emitter,matte],[matte,emitter]]) {
       const args=[faces,0,0,1,24,null,[.9,.67,.88],.8,[0,0,8],null];
       render(...args,false); const a=bytes(rendered());
-      render(...args,true); const b=bytes(rendered());
+      const dark=input.nocturne ? haloGains(input.nocturne,1,.61) : null;
+      render(...args,true,dark); const b=bytes(rendered());
       const back=(12*24+8)*4, front=(12*24+16)*4;
       assert.deepEqual(a.subarray(back,back+4),b.subarray(back,back+4),'el halo cruzó el oclusor');
       assert(b[front]>a[front]+10,'el halo visible no suma luz');
       assert.equal(b[front+3],a[front+3],'el halo cambió la opacidad');
     }
   }
+  if (input.nocturneSamples) {
+    const p=input.nocturne;
+    for (const [level,time,id,d,e,i,packed] of input.nocturneSamples) {
+      const dusk=haloDusk(p,level);
+      const [edge,inner]=haloGains(p,dusk,time,id);
+      assert(Math.abs(dusk-d)<1e-12 && Math.abs(edge-e)<1e-12 && Math.abs(inner-i)<1e-12,'halo Java/JS');
+      assert.equal(Math.round(edge*p.GAIN_UNITS) | (Math.round(inner*p.GAIN_UNITS)<<16),packed,'UV2 Java/JS');
+    }
+  }
   const mesh=collect(input.geo, runtimeHidden(input.geo));
-  input.tests.map(({yaw, pitch, ambient, tint, bloom, mannequin}) => {
+  input.tests.map(({yaw, pitch, ambient, tint, bloom, mannequin, dusk, time}) => {
     const frame=referenceFrame(input.size);
     const faces=mannequin ? [...mesh,...playerFaces()] : mesh;
-    render(faces, yaw, pitch, 1, input.size, null, tint, ambient, frame, null, bloom);
+    const gain=dusk===undefined ? null : haloGains(input.nocturne,dusk,time);
+    render(faces, yaw, pitch, 1, input.size, null, tint, ambient, frame, null, bloom, gain);
     return { frame, rgba: rendered() };
   });`, context, { filename: 'preview/app.js' });
 process.stdout.write(JSON.stringify(result));

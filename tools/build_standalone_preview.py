@@ -27,7 +27,7 @@ def main() -> None:
     loader = """async function loadJson(name) {
   return {'armor.geo.json': INLINE_GEO, 'armor.animation.json': INLINE_ANIMATIONS, 'fit.json': INLINE_FIT,
           'reference-frame.json': INLINE_REFERENCE, 'aura.json': INLINE_AURA,
-          'stride.json': INLINE_STRIDE}[name];
+          'nocturne.json': INLINE_NOCTURNE, 'stride.json': INLINE_STRIDE}[name];
 }
 function assetUrl(name) { return INLINE_IMAGES[name]; }"""
     app, n = re.subn(r"/\* BEGIN LOCAL LOADER \*/.*?/\* END LOCAL LOADER \*/", loader, app, flags=re.S)
@@ -39,6 +39,7 @@ function assetUrl(name) { return INLINE_IMAGES[name]; }"""
         "INLINE_STRIDE": json.loads((ASSETS / "stride.json").read_text()),
         "INLINE_REFERENCE": json.loads((ASSETS / "reference-frame.json").read_text()),
         "INLINE_AURA": json.loads((ASSETS / "aura.json").read_text()),
+        "INLINE_NOCTURNE": json.loads((ASSETS / "nocturne.json").read_text()),
         "INLINE_IMAGES": {name: data(ASSETS / name)
                           for name in ("armor.png", "armor_glowmask.png", "armor_halo.png", "reference-crop.png",
                                        *(f"capa_spark_{i}.png" for i in range(3)))},

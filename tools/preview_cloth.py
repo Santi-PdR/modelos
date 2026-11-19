@@ -176,7 +176,7 @@ MANNEQUIN_BOXES = (
 
 def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27),
            *, frame=None, mannequin=False, mannequin_pose=None,
-           ambient=1.0, emission=None, tint=(.89,.60,.77), bloom=None):
+           ambient=1.0, emission=None, tint=(.89,.60,.77), bloom=None, halo_gains=None):
     faces = [(p, uv, None) for p, uv, _ in collect(geo, hidden)]
     if mannequin:
         parts = MANNEQUIN_BOXES if mannequin is True else mannequin
@@ -268,7 +268,12 @@ def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27),
                         nearby = (1-t)*halo[y,x] + t*halo[y,x+1]
                         far = (1-t)*halo[y+1,x] + t*halo[y+1,x+1]
                         spill = (1-s)*nearby + s*far
-                        col += spill * (1-a_glow) * (.45 + .55*tint[0]) * tint
+                        gain = 1.0
+                        if halo_gains is not None:
+                            edge, inner, lo, hi = halo_gains
+                            close = np.clip((spill[..., :1]/255 - lo)/(hi - lo), 0, 1)
+                            gain = edge + (inner - edge)*close*close*(3-2*close)
+                        col += spill * (1-a_glow) * (.45 + .55*tint[0]) * tint * gain
                 alpha = tex[:, :, 3:4] / 255.0
             else:
                 col = np.broadcast_to(np.asarray(solid) * shade, inside.shape + (3,))

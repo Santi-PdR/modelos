@@ -1,12 +1,33 @@
-# Mantle of the Blight Star — v1.67.2
+# Mantle of the Blight Star — v1.67.3
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
 [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench](docs/CAPA_v1.67.2.bbmodel)
+· [Proyecto Blockbench](docs/CAPA_v1.67.3.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+
+### v1.67.3 — halo nocturno y caída del dobladillo
+
+![La misma capa sólo con núcleo y con halo en cueva, luz cercana y día; curvas de frenada y aterrizaje](docs/capa_v1673_nocturna.png)
+
+- **Halo que responde a la luz:** se refuerza de noche y en cuevas, y se
+  atenúa con el sol o cerca de una fuente de luz. La transición es gradual
+  por portador. En la oscuridad, el borde violeta pulsa un poco después del
+  rosa. El núcleo conserva su cobertura y su emisión.
+- **Dobladillo con inercia:** al frenar o aterrizar, los últimos tramos
+  tardan un poco más en recogerse. Es una rotación amortiguada en agua;
+  no cambia la montura, el cuello, las raíces cosidas ni los ocho clips.
+- **Alcance:** el halo sigue sobre el paño y queda oculto por los bloques.
+  No ilumina el mundo ni es bloom de pantalla. Se conserva el núcleo
+  estándar como alternativa (`-Dcapa.sinHalo=true`). No cambian las brasas,
+  el rig, el atlas ni el icono. El retardo sólo se aplica al equipar en juego.
+
+En el [visor](docs/capa_v1170_visor.html), pulsa **Cueva**, pausa y alterna
+**Halo suave (A/B)**. Luego prueba **Antorcha** y **Día** en esa misma pose.
+La lámina compara renders software y curvas de la respuesta Java; no es
+una captura F5 ni una certificación de holgura con élitros.
 
 ### v1.67.2 — brasas que siguen el planeo y el nado
 
@@ -71,8 +92,8 @@ con **Luz de grietas** encendida. Mueve **Luz ambiente** para comparar noche y
 luz alta; **Chispas** se activa aparte. **Referencia** sigue sin efectos.
 `OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1670.py` comprueba el atlas,
 la oclusión, el color y la opacidad en la misma pose. El visor aproxima la
-luz de Minecraft y los impulsos de servidor. Falta probar el efecto equipado
-in-game en F5, de día y noche, con paredes, armadura y `Curios:back`.
+luz de Minecraft y los impulsos de servidor. La prueba optativa de Forge
+comprueba el render equipado en mundo; no valida todos los shader packs.
 
 ### v1.66.0 — el paño cede a la zancada
 

@@ -209,7 +209,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         CapeResponse response = motion.computeIfAbsent(instanceId, key -> new CapeResponse());
         if (motion.size() > 128)
             motion.remove(motion.keySet().iterator().next());
-        double[] m = response.sample(time,
+        response.sample(time,
                 Mth.clamp(velocity.horizontalDistance() * 2.2D, 0.0D, 1.0D),
                 Mth.clamp(-velocity.y * 1.3D, -0.45D, 1.0D), turnTarget,
                 wearer.isCrouching() ? 1 : 0, wearer.isInWater() ? 1 : 0,
@@ -219,8 +219,6 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
                 + Math.sin(time * 2.73D + seed * 0.11D) * 0.35D;
         double gust = Math.sin(time * 0.23D + seed * 0.07D);
         double sweep = Math.sin(time * 0.41D + seed * 0.11D);
-        double offX = Mth.clamp(-(m[6] * 1.3D + m[5] * 0.9D + m[1] * 0.65D + m[0] * 0.62D)
-                + (m[3] + m[4]) * 0.72D, -CapeResponse.MAX_BACK, CapeResponse.MAX_IN);
         // Only the cloth below the seam reacts to gait and wind.
         for (Cloth piece : cloth) {
             GeoBone b = piece.bone();
@@ -237,7 +235,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
                     -CapeResponse.MAX_YAW, CapeResponse.MAX_YAW);
             double offZ = Mth.clamp((gust * 0.68D + wind * 0.24D) * (0.6D + 0.4D * Math.abs(lateral))
                     + ripple + turn * 0.86D * lateral, -CapeResponse.MAX_ROLL, CapeResponse.MAX_ROLL);
-            b.setRotX(b.getRotX() + (float) Math.toRadians(offX * weight));
+            b.setRotX(b.getRotX() + (float) Math.toRadians(response.pitchAt(weight)));
             b.setRotY(b.getRotY() + (float) Math.toRadians(offY * weight));
             b.setRotZ(b.getRotZ() + (float) Math.toRadians(offZ * weight));
         }

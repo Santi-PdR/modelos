@@ -11,6 +11,10 @@ public final class CapeResponse {
     private final double[] values = new double[7];
     private double lastSeconds = Double.NaN;
     private double hemTurn;
+    private double hemSpeed;
+    private double hemAir;
+    private double pitchBase;
+    private double pitchLag;
 
     public double[] sample(double seconds, double speed, double lift, double turn,
                            double crouch, double water, double air, double sprint) {
@@ -27,6 +31,8 @@ public final class CapeResponse {
             values[5] = air;
             values[6] = sprint;
             hemTurn = turn;
+            hemSpeed = speed;
+            hemAir = air;
         } else if (dt > 0.0) {
             values[0] = toward(values[0], speed, dt, 8.0);
             values[1] = toward(values[1], lift, dt, 6.2);
@@ -36,8 +42,22 @@ public final class CapeResponse {
             values[5] = toward(values[5], air, dt, 8.0);
             values[6] = toward(values[6], sprint, dt, 8.0);
             hemTurn = toward(hemTurn, turn, dt, 4.2);
+            hemSpeed = toward(hemSpeed, speed, dt, 3.1);
+            hemAir = toward(hemAir, air, dt, 3.55);
         }
+        pitchBase = (values[3] + values[4]) * .72 - (values[6] * 1.3 + values[5] * .9
+                + values[1] * .65 + values[0] * .62);
+        // A slower tail keeps the opening briefly during braking or landing.
+        // No new force at steady speed; water damps the extra rotation.
+        pitchLag = Math.max(0, Math.max(3.8 * (hemSpeed - values[0]), 3.1 * (hemAir - values[5])))
+                * (1 - .65 * values[4]);
         return values;
+    }
+
+    /** Degrees in the baked rig's X convention (negative opens the drape). */
+    public double pitchAt(double weight) {
+        double bias = pitchBase - pitchLag * weight;
+        return weight * Math.max(-MAX_BACK, Math.min(MAX_IN, bias));
     }
 
     /** The upper fold answers a turn first; inertia delays the free hem. */

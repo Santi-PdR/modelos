@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""Verify local bloom, embers and preservation against the exact package assets."""
+"""Verify the bloom (including adaptive exposure), embers and packaged assets."""
 from __future__ import annotations
 
+import argparse
 import base64
 import json
 import re
 import subprocess
+from pathlib import Path
 
 import numpy as np
 from PIL import Image
 
 import cape_bloom as B
+import cape_nocturne as N
 import cape_reference as R
 import preview_cloth as P
 from present_v1600 import NEUTRAL_PALETTE
@@ -63,7 +66,7 @@ def assets(geo, core):
     return Image.fromarray(halo)
 
 
-def samples(geo, albedo, core, halo):
+def samples(geo, albedo, core, halo, java_samples=None):
     # Check the *shipped* offline data first. Existing render/fit tests cover
     # the no-halo mode: A/B is a switch in the same software rasterizer.
     html = (P.ROOT/'docs/capa_v1170_visor.html').read_text()
@@ -71,20 +74,34 @@ def samples(geo, albedo, core, halo):
     assert base64.b64decode(images['armor_halo.png'].split(',', 1)[1]) == B.HALO.read_bytes()
     visor_material(geo, albedo, core)
 
+    p = N.profile()
+    assert json.loads(re.search(r'^const INLINE_NOCTURNE = (.+);$', html, re.M)[1]) == p
+    rows = np.loadtxt(java_samples).tolist() if java_samples else []
+    for light, time, entity, d, e, i, packed in rows:
+        dusk = N.darkness(p, light)
+        edge, inner, _, _ = N.gains(p, dusk, time, entity)
+        assert np.allclose((dusk, edge, inner), (d, e, i), atol=1e-12, rtol=0)
+        lo, hi = (int(g*p['GAIN_UNITS']+.5) for g in (edge, inner))
+        assert (lo | (hi << 16)) == int(packed)
+
     size = 360
     ref = R.viewer_camera()
     frame = (*ref['center'], size*R.SCALE/max(ref['cropSize']))
-    cases = [(R.YAW, R.PITCH, .34), (R.YAW, R.PITCH, 1), (-40, 16, .5), (180., 8, .5)]
-    tests = [dict(yaw=yaw, pitch=pitch, ambient=a, tint=(.932,.69,.91), mannequin=True, bloom=enabled)
-             for yaw,pitch,a in cases for enabled in (False,True)]
+    # Also keep a light, relatively matte view and a night view of the lining.
+    cases = [('cueva', R.YAW, R.PITCH, .18), ('luz cercana', R.YAW, R.PITCH, .88),
+             ('día', R.YAW, R.PITCH, 1), ('tres cuartos', -40, 16, .5), ('forro', 180., 8, .18)]
+    tests = [dict(yaw=yaw, pitch=pitch, ambient=a, tint=(.932,.69,.91), mannequin=True,
+                  bloom=enabled, dusk=N.darkness(p, 15*(a-.18)/.82), time=.61)
+             for _,yaw,pitch,a in cases for enabled in (False,True)]
     rgb = np.asarray(halo)[..., 0]
     y, x = np.unravel_index(np.argmax(np.where(np.asarray(core)[..., 3] == 0, rgb, 0)), rgb.shape)
     encode = lambda im: base64.b64encode(im.convert('RGBA').tobytes()).decode()
     packet = dict(geo=geo, reference=ref, size=size, atlasSize=512, tests=tests,
-                  probe=[x+.5,y+.5], albedo=encode(albedo), emission=encode(core), halo=encode(halo))
+                  probe=[x+.5,y+.5], albedo=encode(albedo), emission=encode(core), halo=encode(halo),
+                  nocturne=p, nocturneSamples=rows)
     run = subprocess.run(['node','tools/check_viewer_raster.js'],cwd=P.ROOT,check=True,
                          input=json.dumps(packet),capture_output=True,text=True)
-    rendered = []
+    rendered, energies = [], []
     for i, (test, result) in enumerate(zip(tests, json.loads(run.stdout), strict=True)):
         js = np.frombuffer(base64.b64decode(result['rgba']), np.uint8).reshape(size,size,4)
         assert np.all(js[...,3] == 255)
@@ -95,8 +112,10 @@ def samples(geo, albedo, core, halo):
         # both modes with an independent rasterization of the same depth test.
         player = [(o,s,c) for (o,s,_),c in zip(P.MANNEQUIN_BOXES, NEUTRAL_PALETTE, strict=True)]
         py = P.render(geo, albedo, P.effective_hidden(geo), frame=frame, size=size,
-                      bg=(18,14,26), emission=core,
-                      **dict(test, mannequin=player, bloom=halo if test['bloom'] else None))
+                      bg=(18,14,26), emission=core, yaw=test['yaw'], pitch=test['pitch'],
+                      ambient=test['ambient'], tint=test['tint'], mannequin=player,
+                      bloom=halo if test['bloom'] else None,
+                      halo_gains=N.gains(p, test['dusk'], test['time']))
         diff = np.abs(rgb - np.asarray(py))
         assert (diff <= 1).mean() > .997, (test, diff.mean())
         if not i % 2:
@@ -106,22 +125,30 @@ def samples(geo, albedo, core, halo):
         assert delta.min() == 0, 'la luz de borde no debe oscurecer'
         assert not delta[(baseline == (18,14,26)).all(2)].any(), 'el halo salió del contorno'
         pixels = int((delta.max(2) >= 8).sum())
-        if i <= 5:
-            assert pixels > 600, (test,pixels)
-        else:
-            assert pixels < 40, (test,pixels)
-        print(f'{test["yaw"]:+.0f}° ambiente {test["ambient"]:.2f}: {pixels} píxeles con halo ≥8/255, '
+        name = cases[i//2][0]
+        energies.append(int(delta.sum()))
+        visible = pixels < 40 if name == 'forro' else pixels > 400
+        assert visible, (test, pixels)
+        print(f'{name}, {test["yaw"]:+.0f}°: {pixels} píxeles con halo ≥8/255; '
               'misma opacidad y fondo. JS/Python coinciden.')
-    print('Profundidad A/B: la mitad tapada no cambia en ninguno de los dos órdenes de dibujo.')
+    dark, lamp, day, _, _ = energies
+    assert dark > 2.7 * max(lamp, day) > 0
+    print(f'Cueva: {dark/day:.2f}× el aporte RGB del día, misma pose y fase. '
+          'La mitad tapada no cambia en ninguno de los dos órdenes de dibujo.')
+    if rows:
+        print(f'{len(rows)} muestras de exposición, pulso y UV2 coinciden en Java/JS/Python.')
 
 
 def main():
+    cli = argparse.ArgumentParser(description=__doc__)
+    cli.add_argument('--nocturne-samples', type=Path, help='muestras TSV de CapeNocturneTest --samples')
+    args = cli.parse_args()
     preservation(changed=SPARKS)
     geo = P.load(P.ARMOR_GEO)
     with Image.open(P.ARMOR_TEX) as albedo, Image.open(B.CORE) as core:
         assert np.all(np.asarray(albedo)[..., 3] == 255)
         halo = assets(geo, core)
-        samples(geo, albedo, core, halo)
+        samples(geo, albedo, core, halo, args.nocturne_samples)
 
 
 if __name__ == '__main__':

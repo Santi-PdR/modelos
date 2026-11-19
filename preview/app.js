@@ -11,7 +11,7 @@ async function loadJson(name) {
 function assetUrl(name) { return `assets/${name}`; }
 /* END LOCAL LOADER */
 
-let GEO, CLIPS, FIT, STRIDE, REF, ORIGINAL, ATLAS, GLOW, HALO, SPARKS, AURA, ATLAS_W = 128, ATLAS_H = 128;
+let GEO, CLIPS, FIT, STRIDE, REF, ORIGINAL, ATLAS, GLOW, HALO, NOCTURNE, SPARKS, AURA, ATLAS_W = 128, ATLAS_H = 128;
 const canvas = document.getElementById('view');
 const ctx = canvas.getContext('2d', { alpha: false });
 let SIZE = 480;
@@ -262,7 +262,21 @@ function spillAt(map, coord, stride, dx, dy) {
   return (map[coord]*(1-dx)+map[coord+4]*dx)*(1-dy)
        + (map[coord+stride]*(1-dx)+map[coord+stride+4]*dx)*dy;
 }
-function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=null, overlay=null, bloom=false) {
+function smooth(lo, hi, x) {
+  const t=Math.max(0, Math.min(1, (x-lo)/(hi-lo)));
+  return t*t*(3-2*t);
+}
+function haloDusk(p, light) {
+  return 1-smooth(p.DARK_LEVEL,p.LIGHT_LEVEL,light);
+}
+function haloGains(p, dusk, seconds, seed=0) {
+  const phase=seconds/p.PERIOD+seed*p.SEED_SHIFT;
+  const wave=t=>.5+.5*Math.cos(2*Math.PI*t);
+  const edge=p.EDGE_BASE+p.EDGE_PULSE*wave(phase-p.EDGE_DELAY);
+  const inner=p.INNER_BASE+p.INNER_PULSE*wave(phase);
+  return [p.DAY_GAIN+dusk*(edge-p.DAY_GAIN), p.DAY_GAIN+dusk*(inner-p.DAY_GAIN), p.EDGE_LO, p.EDGE_HI];
+}
+function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=null, overlay=null, bloom=false, gains=null) {
   const view = mul(R('x', pitch), R('y', yaw));
   lastView = view;
   const prepared = [];
@@ -349,8 +363,10 @@ function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=nu
             const u=Math.max(0,Math.min(AW-1,uu-.5)), v=Math.max(0,Math.min(AH-1,vv-.5));
             const i=Math.min(AW-2,Math.floor(u)), j=Math.min(AH-2,Math.floor(v)), row=AW*4, h=j*row+i*4;
             if (H[h]||H[h+4]||H[h+row]||H[h+row+4]||H[h+2]||H[h+6]||H[h+row+2]||H[h+row+6]) {
-              const gain=(1-emission)*spillGain;
-              r += gain*tint[0]*spillAt(H,h,row,u-i,v-j);
+              const red=spillAt(H,h,row,u-i,v-j);
+              const envelope=gains ? gains[0]+(gains[1]-gains[0])*smooth(gains[2],gains[3],red/255) : 1;
+              const gain=(1-emission)*spillGain*envelope;
+              r += gain*tint[0]*red;
               g += gain*tint[1]*spillAt(H,h+1,row,u-i,v-j);
               bCol += gain*tint[2]*spillAt(H,h+2,row,u-i,v-j);
             }
@@ -473,6 +489,8 @@ const fitReset=document.getElementById('fitReset'), fxControl=document.getElemen
 const glowControl=document.getElementById('l_glow'), haloControl=document.getElementById('l_halo');
 const seek=document.getElementById('seek'), play=document.getElementById('play');
 const ambientControl=document.getElementById('ambient');
+const lightPresets=[['lightCave',.18],['lightTorch',.88],['lightDay',1]]
+    .map(([id,value])=>[document.getElementById(id),value]);
 const zoomControl=document.getElementById('zoom');
 const compareControl=document.getElementById('referenceCompare');
 const wipe=document.getElementById('wipe');
@@ -510,6 +528,7 @@ function setReference(value) {
   compareControl.hidden=!value;
   for (const control of [stanceControl, lookControl, turnControl, fitReset, fxControl, glowControl, ambientControl, zoomControl])
     control.disabled=value;
+  for (const [button] of lightPresets) button.disabled=value;
   refreshStrideControls(); refreshHaloControl();
   dirty=true;
 }
@@ -560,11 +579,16 @@ function draw(now) {
   fitValue.textContent=referenceView ? 'Pose base · ajuste desactivado' :
     `Mirada ${look}° · giro ${turn}° · holgura ${depth.toFixed(2)} u`;
   const fx=showFx&&!referenceView;
+  const ambient=referenceView ? 1 : +ambientControl.value;
+  const bloom=haloControl.checked&&!referenceView;
+  // The slider stands in for local block/sky light. It snaps to the target
+  // so a paused frame can be compared at identical pose and pulse phase.
+  const gains=bloom ? haloGains(NOCTURNE,haloDusk(NOCTURNE,15*(ambient-.18)/.82),elapsed) : null;
   render(faces,yaw,pitch,zoom,SIZE,gait ? gaitBounds : frameBounds,
          glowControl.checked&&!referenceView ? simulatedTint(t,clip.length) : null,
-         referenceView ? 1 : +ambientControl.value, referenceView ? referenceFrame(SIZE) : null,
+         ambient, referenceView ? referenceFrame(SIZE) : null,
          fx ? (pixels,z)=>drawRuntimeParticles(elapsed,SIZE,stance,pixels,z) : null,
-         haloControl.checked&&!referenceView);
+         bloom, gains);
   if (referenceView) drawOriginal(SIZE);
   document.getElementById('faces').textContent=faces.length;
   document.getElementById('clock').textContent=referenceView?'Pose base':`${t.toFixed(2).replace('.',',')} s`;
@@ -583,9 +607,10 @@ function pixels(im) {
   return ctx.getImageData(0,0,im.width,im.height).data;
 }
 async function boot() {
-  const [geo,clips,fit,stride,atlas,glow,halo,aura,reference,original,sparks]=await Promise.all([
+  const [geo,clips,fit,stride,atlas,glow,halo,aura,nocturne,reference,original,sparks]=await Promise.all([
     loadJson('armor.geo.json'), loadJson('armor.animation.json'), loadJson('fit.json'), loadJson('stride.json'), image('armor.png'),
-    image('armor_glowmask.png'), image('armor_halo.png'), loadJson('aura.json'), loadJson('reference-frame.json'), image('reference-crop.png'),
+    image('armor_glowmask.png'), image('armor_halo.png'), loadJson('aura.json'), loadJson('nocturne.json'),
+    loadJson('reference-frame.json'), image('reference-crop.png'),
     Promise.all([0,1,2].map(i=>image(`capa_spark_${i}.png`)))]);
   if (original.width!==reference.cropSize[0] || original.height!==reference.cropSize[1])
     throw new Error('La imagen no coincide con el encuadre de referencia');
@@ -593,7 +618,7 @@ async function boot() {
   GEO=geo['minecraft:geometry'][0]; CLIPS=prepareClips(clips); FIT=fit; STRIDE=stride; hidden=runtimeHidden(GEO);
   if ([glow,halo].some(im=>im.width!==atlas.width || im.height!==atlas.height))
     throw new Error('Los mapas de luz no coinciden con el atlas opaco');
-  ATLAS=pixels(atlas); GLOW=pixels(glow); HALO=pixels(halo); AURA=aura;
+  ATLAS=pixels(atlas); GLOW=pixels(glow); HALO=pixels(halo); AURA=aura; NOCTURNE=nocturne;
   refreshHaloControl();
   SPARKS=sparks.map(pixels); ATLAS_W=atlas.width; ATLAS_H=atlas.height;
   updateBounds();
@@ -644,6 +669,15 @@ zoomControl.oninput=e=>{ zoom=+e.target.value; dirty=true; };
 document.getElementById('l_player').onchange=e=>{ showPlayer=e.target.checked; dirty=true; };
 fxControl.onchange=e=>{ showFx=e.target.checked; dirty=true; };
 glowControl.onchange=()=>{ refreshHaloControl(); dirty=true; };
-haloControl.onchange=ambientControl.oninput=wipe.oninput=()=>{ dirty=true; };
+haloControl.onchange=wipe.oninput=()=>{ dirty=true; };
+ambientControl.oninput=()=>{
+  for (const [button,value] of lightPresets)
+    button.setAttribute('aria-pressed',String(+ambientControl.value===value));
+  dirty=true;
+};
+for (const [button,value] of lightPresets) button.onclick=()=>{
+  ambientControl.value=value;
+  ambientControl.oninput();
+};
 
 boot().catch(error=>{ document.getElementById('loading').textContent=error.message; });

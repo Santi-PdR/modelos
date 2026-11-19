@@ -15,6 +15,7 @@ h2{margin:0 0 8px;font-size:1.13rem}p{margin:5px 0;color:var(--dim)}.grid{displa
 .stage{position:relative;border-radius:9px;overflow:hidden;background:#100e18}#view{display:block;width:100%;max-height:590px;object-fit:contain;touch-action:none;cursor:grab}#view:active{cursor:grabbing}
 #loading{position:absolute;inset:0;display:grid;place-content:center;color:var(--dim);pointer-events:none}#loading[hidden]{display:none}
 .controls{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-top:11px}button,select{font:inherit;font-size:.87rem;color:var(--ink);background:#282031;border:1px solid var(--line);border-radius:7px;padding:7px 11px}button:hover{border-color:var(--rose);cursor:pointer}
+button[aria-pressed="true"]{border-color:var(--rose);background:#3f263d}button:disabled{opacity:.55;cursor:default}
 button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--rose);outline-offset:3px}.muted,label,output{color:var(--dim);font-size:.85rem}input{accent-color:var(--rose)}
 details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summary{cursor:pointer;color:var(--ink);font-size:.9rem}.fit input[type=range]{width:clamp(90px,24vw,142px)}
 #seek{flex:1;min-width:80px}.sample{image-rendering:pixelated;width:min(100%,330px);height:auto;border:1px solid var(--line);border-radius:7px;margin-top:9px}.split{display:grid;grid-template-columns:1fr 1fr;gap:10px}.split img,.plate{display:block;width:100%;height:auto;border-radius:8px;margin:9px 0}.split img{image-rendering:pixelated}.foot{padding:12px 0 40px;color:var(--dim);font-size:.88rem}
@@ -26,7 +27,7 @@ details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summar
 <header>
   <div class="kicker">Desarrollo local · Capa equipada · Visor interactivo</div>
   <h1>Mantle of the Blight Star</h1>
-  <p>Grietas de rosa vivo, luz violeta al borde y brasas que se enfrían al subir.</p>
+  <p>Grietas de rosa vivo y un halo violeta que se abre en la oscuridad sin tapar la textura del paño.</p>
 </header>
 <div class="grid">
   <section class="card" aria-label="Modelo equipado interactivo">
@@ -64,9 +65,10 @@ details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summar
       <label><input type="checkbox" id="l_particles"> Chispas</label>
     </div>
     <div class="controls">
-      <label for="ambient">Luz ambiente</label><input type="range" id="ambient" min="0.18" max="1" step="0.02" value="0.56">
-      <span class="muted">Pausa y alterna «Halo suave» para comparar el mismo fotograma con sólo el núcleo.</span>
+      <label for="ambient">Luz ambiente</label><input type="range" id="ambient" min="0.18" max="1" step="0.02" value="0.38">
+      <button id="lightCave" type="button" aria-pressed="false">Cueva</button><button id="lightTorch" type="button" aria-pressed="false">Antorcha</button><button id="lightDay" type="button" aria-pressed="false">Día</button>
     </div>
+    <p class="muted">Pausa en «Cueva» y alterna «Halo suave» para ver el mismo fotograma con o sin el halo. Al reproducir, el borde violeta pulsa con un ligero retardo.</p>
     <details>
       <summary>Ajuste al portador</summary>
       <div class="controls fit">

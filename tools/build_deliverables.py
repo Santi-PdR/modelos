@@ -31,6 +31,7 @@ from PIL import Image
 
 import cape_fit
 import cape_aura
+import cape_nocturne
 import cape_reference
 import cape_stride
 
@@ -94,6 +95,7 @@ def step_recursos_visor() -> None:
     for src, dst in copy.items():
         shutil.copy(RES / src, A / dst)
     (A / 'aura.json').write_text(json.dumps(cape_aura.profile(), separators=(',', ':')) + '\n')
+    (A / 'nocturne.json').write_text(json.dumps(cape_nocturne.profile(), separators=(',', ':')) + '\n')
     (A / 'fit.json').write_text(json.dumps(cape_fit.profile(), separators=(',', ':')) + '\n')
     (A / 'stride.json').write_text(json.dumps(cape_stride.profile(), separators=(',', ':')) + '\n')
     (A / 'reference-frame.json').write_text(json.dumps(cape_reference.viewer_camera()) + '\n')

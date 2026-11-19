@@ -11,6 +11,7 @@ uniform float FogEnd;
 in float vertexDistance;
 in vec4 coreTint;
 in vec3 haloTint;
+flat in vec2 haloGains;
 in vec2 texCoord0;
 
 out vec4 fragColor;
@@ -26,7 +27,10 @@ void main() {
     float alpha = cover * fade;
     // Keep the fallback core and softly add light in its uncovered fraction.
     // A colored halo texel alone must never darken a lit fabric or write depth.
+    // The low-energy skirt peaks after the lip of the crack in darkness.
+    float closeToCore = smoothstep(0.04, 0.36, halo.r);
+    float gain = mix(haloGains.x, haloGains.y, closeToCore);
     vec3 light = core.rgb * coreTint.rgb * (alpha * fade);
-    light += halo * haloTint * ((1.0 - cover) * (0.45 + 0.55 * haloTint.r) * ColorModulator.a * fade);
+    light += halo * haloTint * ((1.0 - cover) * (0.45 + 0.55 * haloTint.r) * gain * ColorModulator.a * fade);
     fragColor = vec4(light * ColorModulator.rgb, alpha);
 }

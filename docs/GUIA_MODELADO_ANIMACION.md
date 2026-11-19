@@ -69,6 +69,11 @@ animación y la documentación de GeckoLib._
   unidades del modelo. No difuminar globalmente el atlas: la guarda evita
   que se cuelen colores a UV vecinas, y el forro y el acero quedan mates.
   El halo suma RGB, sin cambiar la cobertura del núcleo ni el alfa del paño.
+  Desde v1.67.3 la luz de bloque y el cielo, ponderado por la hora y el clima,
+  controlan sólo la intensidad del halo. Se filtra por portador y se envían
+  dos ganancias por vértice en `UV2` del pase propio (borde e interior).
+  No usar un uniforme por portador: varios pueden compartir un lote. El
+  núcleo estándar conserva sus coordenadas de luz fullbright.
 
 ## 5. Restricciones VIGENTES de este proyecto (no revivir)
 
@@ -106,7 +111,9 @@ animación y la documentación de GeckoLib._
    y sin la guía. No usar una zancada sintética para certificar cascos,
    armaduras ni las poses de vuelo/nado del cliente.
 6. En el visor, pausar con **Luz de grietas** encendida y alternar
-   **Halo suave (A/B)**. Probar luz baja y alta, dorso y frente. **Chispas**
+   **Halo suave (A/B)**. Comparar **Cueva**, **Antorcha** y **Día** sin
+   mover la cámara. El visor aplica la luz elegida de inmediato; en juego
+   se adapta gradualmente. Probar dorso y frente. **Chispas**
    se puede activar aparte. «Referencia» desactiva los FX para comparar
    el PNG original a la misma pose, escala y cámara. `tools/verify_v1670.py`
    contrasta la oclusión, la opacidad, el halo regenerado y el visor offline.
@@ -136,7 +143,17 @@ animación y la documentación de GeckoLib._
   planeo con Curios `back`, entra en el agua de pie, nada y vuelve a erguirse.
   Mide la diferencia entre el marco de emisión y la transformación del
   renderer, y comprueba que el cliente recibe brasas en esas posturas.
-- **Lectura del diagnóstico:** la lámina del README compara los puntos de
+  En v1.67.3 también comprueba el shader y la subida real de vértices en
+  Forge: dos ganancias distintas en un mismo lote, fondo mate, profundidad
+  y alfa. Toma F5 de día, de noche y de noche junto a una linterna,
+  comprobando la luz del portador y el valor que el pase envía al shader.
+- **Dobladillo:** `CapeSettleTest` mide el retardo con entradas de frenada
+  y aterrizaje controladas. `tools/verify_cape_settle.py` aplica esas
+  muestras a mezclas de los clips del JAR: contrasta las raíces, el solape
+  de cada costura y el contacto con brazos y piernas al aplicar la holgura.
+  Con `--plate docs/capa_v1673_nocturna.png` regenera la comparativa usando
+  el TSV de `CapeSettleTest --samples`.
+- **Lectura del diagnóstico:** la lámina de brasas compara los puntos de
   salida con los clips del JAR, no con todos los huesos animados en vivo.
   El servidor no ve el paño de cada cliente. Las alas usan el mismo montaje
   que antes; la prueba no certifica holgura para todas las alas o skins.

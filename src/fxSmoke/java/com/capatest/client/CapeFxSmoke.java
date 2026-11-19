@@ -5,10 +5,13 @@ import com.capatest.compat.CuriosCompat;
 import com.capatest.item.CapaDeteriorerItem;
 import com.capatest.item.CapeSparkPath;
 import com.capatest.particle.CapaParticles;
+import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexSorting;
 import com.mojang.math.Axis;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
@@ -16,13 +19,16 @@ import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.screens.AccessibilityOnboardingScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.particle.Particle;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Difficulty;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.item.ItemStack;
@@ -70,7 +76,8 @@ public final class CapeFxSmoke {
     private static final String FRAGMENT = "assets/capatest/shaders/core/cape_bloom.fsh";
     private static final String PACK_ID = "file/fx-probe";
     private enum Scene {
-        CHEST("pecho-dia", 6000), BOTH("ambos-noche-encantado", 18000), WINGS("espalda-con-elitros", 18000),
+        CHEST("pecho-dia", 6000), NIGHT("pecho-noche", 18000), LAMP("pecho-noche-con-luz", 18000),
+        BOTH("ambos-noche-encantado", 18000), WINGS("espalda-con-elitros", 18000),
         GLIDE("planeo-real", 6000), WADE("de-pie-en-agua", 6000), SWIM("nado-horizontal", 6000),
         SWIM_EXIT("fin-del-nado", 6000);
 
@@ -85,6 +92,7 @@ public final class CapeFxSmoke {
         boolean elytra() { return this == WINGS || this == GLIDE; }
         boolean hasBack() { return this == BOTH || elytra(); }
         boolean inspectBirths() { return this == GLIDE || this == WADE || this == SWIM; }
+        boolean compareLight() { return this == CHEST || this == NIGHT || this == LAMP; }
     }
 
     private static int step;
@@ -93,8 +101,11 @@ public final class CapeFxSmoke {
     private static CompletableFuture<?> pending;
     private static GlowProbe probe;
     private static BlockPos pane;
+    private static BlockPos lamp;
     private static Scene scene;
     private static int framePasses;
+    private static int frameLight;
+    private static float framePartialTick;
     private static ItemStack rendered;
     private static Matrix4f playerPose, armorPose;
     private static int stableFrames;
@@ -206,6 +217,7 @@ public final class CapeFxSmoke {
                 case 6 -> {
                     expectMode(CapeBloom.Mode.HALO, "recursos reparados: el halo vuelve en el mismo renderer");
                     probe.run(CapeBloom.Mode.HALO, false);
+                    checkHaloBatch(game);
                     game.options.pauseOnLostFocus = false;
                     game.options.hideGui = true;
                     game.options.renderDistance().set(4);
@@ -246,7 +258,7 @@ public final class CapeFxSmoke {
                     }
                     if (game.player.getSwimAmount(1) > 0) return;
                     check(!CapaDeteriorerItem.auraFrame(game.player).posed(), "swim frame persisted after blend");
-                    note("PASS: recarga, oclusión, equipo, planeo y nado en cliente Forge");
+                    note("PASS: recarga, luz local, oclusión, equipo, planeo y nado en cliente Forge");
                     game.stop();
                 }
                 default -> { return; }
@@ -349,6 +361,15 @@ public final class CapeFxSmoke {
             ServerPlayer player = server.getPlayerList().getPlayer(uuid);
             var level = player.serverLevel();
             level.setDayTime(next.dayTime);
+            if (next == Scene.LAMP) {
+                lamp = BlockPos.containing(player.getX(), player.getEyeY(), player.getZ()).east();
+                level.setBlockAndUpdate(lamp, Blocks.SEA_LANTERN.defaultBlockState());
+            } else if (next == Scene.BOTH) {
+                level.removeBlock(lamp, false);
+            }
+            // Keep the same displayed item, camera and unenchanted material
+            // for the three lighting captures.
+            if (next == Scene.NIGHT || next == Scene.LAMP) return;
             ItemStack chest = next.elytra() ? new ItemStack(Items.ELYTRA) : mantle();
             if (next == Scene.BOTH) chest.enchant(Enchantments.UNBREAKING, 1);
             player.setItemSlot(EquipmentSlot.CHEST, chest);
@@ -397,6 +418,8 @@ public final class CapeFxSmoke {
         framePasses++;
         rendered = renderer.getCurrentStack();
         armorPose = new Matrix4f(event.getPoseStack().last().pose());
+        frameLight = event.getPackedLight();
+        framePartialTick = event.getPartialTick();
     }
 
     private static void frame(TickEvent.RenderTickEvent event) {
@@ -430,6 +453,23 @@ public final class CapeFxSmoke {
         try {
             check(framePasses == 1 && rendered == (scene.elytra() ? back : chest),
                     scene.file + ": incorrect worn draw count " + framePasses);
+            String exposure = "";
+            if (scene.compareLight()) {
+                int block = LightTexture.block(frameLight), sky = LightTexture.sky(frameLight);
+                // Wait for the light engine to catch the lantern placement.
+                if (sky < 14 || (scene == Scene.LAMP ? block < 13 : block > 2)) return;
+                int payload = probe.wearerLight(player, rendered, framePartialTick, frameLight);
+                double edge = (short) payload / 4096.0;
+                double inner = (short) (payload >>> 16) / 4096.0;
+                if (scene == Scene.NIGHT ? edge < 1.27 || inner < 1.12
+                        : edge < .45 || inner < .45 || edge > .54 || inner > .54) {
+                    check(stableFrames < 60, scene.file + ": unexpected worn halo " + edge + "/" + inner);
+                    stableFrames++;
+                    return;
+                }
+                exposure = "; UV2 borde=" + Math.round(100*edge) + "%, interior=" + Math.round(100*inner)
+                        + "%, luz bloque/cielo=" + block + "/" + sky;
+            }
             if (scene != Scene.SWIM_EXIT && ++stableFrames < 18) return;
             if (scene.inspectBirths() && observedBirths == 0) return;
             double rootError = 0;
@@ -458,11 +498,80 @@ public final class CapeFxSmoke {
             }
             note(scene.file + ": una sola capa en F5" + (scene.inspectBirths()
                     ? "; nacimientos recibidos=" + observedBirths + ", diferencia de marco=" + Math.round(rootError * 1000) + " mm de bloque"
-                    : ""));
+                    : exposure));
             captured = true;
         } catch (Exception | AssertionError error) {
             fail(game, error);
         }
+    }
+
+    private static void checkHaloBatch(Minecraft game) {
+        // An actual NEW_ENTITY upload and the installed RenderType, not a
+        // shader test that binds the attributes in its own order. Mix two
+        // payloads in one batch and test the edge and lip independently.
+        TextureTarget target = new TextureTarget(96, 16, true, Minecraft.ON_OSX);
+        PoseStack view = RenderSystem.getModelViewStack();
+        float start = RenderSystem.getShaderFogStart(), end = RenderSystem.getShaderFogEnd();
+        float[] color = RenderSystem.getShaderColor().clone();
+        RenderSystem.backupProjectionMatrix();
+        view.pushPose();
+        try {
+            view.setIdentity();
+            RenderSystem.applyModelViewMatrix();
+            RenderSystem.setProjectionMatrix(new Matrix4f(), VertexSorting.ORTHOGRAPHIC_Z);
+            RenderSystem.setShaderFogStart(2);
+            RenderSystem.setShaderFogEnd(4);
+            RenderSystem.setShaderColor(1, 1, 1, 1);
+            RenderSystem.depthMask(true);
+            target.setClearColor(22/255F, 16/255F, 28/255F, 128/255F);
+            target.clear(Minecraft.ON_OSX);
+            target.bindWrite(true);
+            RenderSystem.enableScissor(64, 0, 16, 16);
+            RenderSystem.clearDepth(.25);
+            RenderSystem.clear(org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
+            RenderSystem.disableScissor();
+            RenderSystem.clearDepth(1);
+            int edge = new CapeNocturne.Gains(1.5, .5).packed();
+            int inner = new CapeNocturne.Gains(.5, 1.5).packed();
+            MultiBufferSource.BufferSource buffers = MultiBufferSource.immediate(new BufferBuilder(1024));
+            var type = CapeBloom.wornLight(CapeBloom.Mode.HALO);
+            var vertices = buffers.getBuffer(type);
+            probeQuad(vertices, 0, 251, 2, edge);
+            probeQuad(vertices, 1, 251, 2, inner);
+            probeQuad(vertices, 2, 259, 11, edge);
+            probeQuad(vertices, 3, 259, 11, inner);
+            probeQuad(vertices, 4, 259, 11, inner); // behind the depth-only occluder
+            probeQuad(vertices, 5, 0, 0, edge);      // matte UV
+            buffers.endBatch(type);
+            int[] red = {37, 27, 79, 193, 22, 22};
+            try (NativeImage image = Screenshot.takeScreenshot(target)) {
+                for (int i = 0; i < red.length; i++) {
+                    int rgba = image.getPixelRGBA(i * 16 + 8, 8);
+                    check(Math.abs((rgba & 255) - red[i]) <= 1 && (rgba >>> 24) == 128,
+                            "UV2/alpha/depth sample " + i + ": " + Integer.toHexString(rgba));
+                }
+            }
+        } finally {
+            RenderSystem.disableScissor();
+            RenderSystem.clearDepth(1);
+            target.destroyBuffers();
+            game.getMainRenderTarget().bindWrite(true);
+            RenderSystem.setShaderColor(color[0], color[1], color[2], color[3]);
+            RenderSystem.setShaderFogStart(start);
+            RenderSystem.setShaderFogEnd(end);
+            RenderSystem.restoreProjectionMatrix();
+            view.popPose();
+            RenderSystem.applyModelViewMatrix();
+        }
+        note("NEW_ENTITY en GPU: dos intensidades UV2 en un lote, borde/interior, oclusión y alfa intacto");
+    }
+
+    private static void probeQuad(VertexConsumer vertices, int col, int x, int y, int light) {
+        float left = col/3F - 1, right = (col+1)/3F - 1;
+        float u = (x+.5F)/512, v = (y+.5F)/512;
+        for (int i = 0; i < 4; i++)
+            vertices.vertex(i < 2 ? left : right, i == 0 || i == 3 ? -1 : 1, 0,
+                    1, 1, 1, 1, u, v, OverlayTexture.NO_OVERLAY, light, 0, 0, 1);
     }
 
     private static ICurioStacksHandler backOf(net.minecraft.world.entity.LivingEntity player) {
@@ -505,6 +614,9 @@ public final class CapeFxSmoke {
         private final PoseStack caller = new PoseStack();
         private final BufferBuilder sink = new BufferBuilder(256);
         private RenderType submitted;
+        private int submittedLight;
+        private Entity sampleWearer;
+        private ItemStack sampleStack;
         private boolean failing;
 
         GlowProbe() {
@@ -514,13 +626,43 @@ public final class CapeFxSmoke {
 
         void run(CapeBloom.Mode expected, boolean fail) {
             this.failing = fail;
-            this.submitted = null;
             var before = new Matrix4f(caller.last().pose());
             var normal = new Matrix3f(caller.last().normal());
-            BakedGeoModel model = getGeoModel().getBakedModel(getGeoModel().getModelResource(item, this));
-            layer.render(caller, item, model, null, type -> sink, sink, 0, 0, 0);
+            submit(expected, 0, 0);
             check(caller.clear() && caller.last().pose().equals(before) && caller.last().normal().equals(normal),
                     "glow mutated the caller's stack");
+            if (expected == CapeBloom.Mode.CORE)
+                check(submittedLight == LightTexture.FULL_BRIGHT, "fallback received a halo payload");
+        }
+
+        int wearerLight(Entity wearer, ItemStack stack, float partialTick, int light) {
+            // Replay just the actual layer's setup on the recorded world
+            // inputs, with no extra vertex submission or animation advance.
+            sampleWearer = wearer;
+            sampleStack = stack;
+            try {
+                submit(CapeBloom.Mode.HALO, partialTick, light);
+                return submittedLight;
+            } finally {
+                sampleWearer = null;
+                sampleStack = null;
+            }
+        }
+
+        @Override
+        public Entity getCurrentEntity() {
+            return sampleWearer != null ? sampleWearer : super.getCurrentEntity();
+        }
+
+        @Override
+        public ItemStack getCurrentStack() {
+            return sampleStack != null ? sampleStack : super.getCurrentStack();
+        }
+
+        private void submit(CapeBloom.Mode expected, float partialTick, int light) {
+            submitted = null;
+            BakedGeoModel model = getGeoModel().getBakedModel(getGeoModel().getModelResource(item, this));
+            layer.render(caller, item, model, null, type -> sink, sink, partialTick, light, 0);
             check(submitted == (expected == CapeBloom.Mode.OFF ? null : CapeBloom.wornLight(expected)),
                     "unexpected light pass: expected " + expected + ", got " + submitted);
         }
@@ -530,6 +672,7 @@ public final class CapeFxSmoke {
                              RenderType type, VertexConsumer buffer, float partialTick, int light, int overlay,
                              float r, float g, float b, float a) {
             submitted = type;
+            submittedLight = light;
             check(stack.last().pose().equals(caller.last().pose()) && stack.last().normal().equals(caller.last().normal()),
                     "emission transform differs from opaque transform");
             stack.pushPose();

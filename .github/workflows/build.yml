@@ -804,7 +804,6 @@ jobs:
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1640.py
           elif grep -q '^mod_version=1\.67\.' gradle.properties; then
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py --fit-only
-            OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1670.py
           else
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py
             if grep -qx 'mod_version=1.66.0' gradle.properties; then
@@ -822,9 +821,15 @@ jobs:
           CLASSES="$RUNNER_TEMP/cape-state-test"
           mkdir -p "$CLASSES"
           javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/{CapeState,CapePlayback,CapeSparkFrame}.java \
-            src/main/java/com/capatest/client/{CapeResponse,CapeFit,CapeStride,CapeTint,CapeEmber}.java \
+            src/main/java/com/capatest/client/{CapeResponse,CapeFit,CapeStride,CapeTint,CapeEmber,CapeNocturne}.java \
             src/test/java/com/capatest/item/{CapeStateTest,CapeSparkFrameTest}.java \
-            src/test/java/com/capatest/client/{CapeFitTest,CapeRuntimeTest,CapeEmberTest}.java
+            src/test/java/com/capatest/client/{CapeFitTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeSettleTest}.java
+          java -cp "$CLASSES" com.capatest.client.CapeNocturneTest
+          java -cp "$CLASSES" com.capatest.client.CapeNocturneTest --samples > "$CLASSES/nocturne.tsv"
+          OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_v1670.py --nocturne-samples "$CLASSES/nocturne.tsv"
+          java -cp "$CLASSES" com.capatest.client.CapeSettleTest
+          java -cp "$CLASSES" com.capatest.client.CapeSettleTest --samples > "$CLASSES/settle.tsv"
+          OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_cape_settle.py "$CLASSES/settle.tsv"
           java -cp "$CLASSES" com.capatest.item.CapeSparkFrameTest
           java -cp "$CLASSES" com.capatest.item.CapeSparkFrameTest --samples > "$CLASSES/spark-frames.tsv"
           OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_cape_spark_fit.py "$CLASSES/spark-frames.tsv"
@@ -909,7 +914,10 @@ jobs:
             grep -qx 'com/capatest/client/CapaSparkParticle.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeSparkFrame.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeSparkPath.class' /tmp/jar-contents.txt
-            ! grep -q '^com/capatest/client/CapeFxSmoke' /tmp/jar-contents.txt
+            if grep -q '^com/capatest/client/CapeFxSmoke' /tmp/jar-contents.txt; then
+              echo '::error::El JAR de distribución incluye código de la prueba de cliente.'
+              exit 1
+            fi
             grep -qx 'com/capatest/client/CapaItemRenderer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaItemGlowLayer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaArmorModel.class' /tmp/jar-contents.txt
@@ -918,6 +926,7 @@ jobs:
             grep -qx 'com/capatest/client/CapeStride.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeTint.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeBloom.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapeNocturne.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeEmber.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapePlayback.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaArmorRenderer.class' /tmp/jar-contents.txt
