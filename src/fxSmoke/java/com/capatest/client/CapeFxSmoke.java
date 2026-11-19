@@ -13,6 +13,7 @@ import com.mojang.math.Axis;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
+import net.minecraft.client.gui.screens.AccessibilityOnboardingScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -103,7 +104,10 @@ public final class CapeFxSmoke {
             }
             switch (step) {
                 case 0 -> {
-                    if (!(game.screen instanceof TitleScreen) || game.getOverlay() != null) return;
+                    // A clean 1.20.1 install may stop at accessibility onboarding
+                    // instead of TitleScreen. Neither screen needs interaction here.
+                    if (game.getOverlay() != null || (!(game.screen instanceof TitleScreen)
+                            && !(game.screen instanceof AccessibilityOnboardingScreen))) return;
                     expectMode(CapeBloom.Mode.HALO, "shader inicial compilado y enlazado");
                     probe = new GlowProbe();
                     probe.run(CapeBloom.Mode.HALO, true);
