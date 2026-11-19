@@ -1318,30 +1318,30 @@ jobs:
         run: |
           set -euo pipefail
           gradle clean build -PkatanaOnly --no-daemon
-          jar=build/libs/capatest-0.1.0-katana-test.jar
+          jar=build/libs/stainkatana-0.1.0-test.jar
           test -f "$jar"
           python3 - "$jar" <<'PY'
           import json,sys,zipfile
           with zipfile.ZipFile(sys.argv[1]) as z:
               names=set(z.namelist())
-              required={'com/capatest/CapaTestMod.class',
-                        'com/capatest/katana/StainKatanaItem.class',
-                        'com/capatest/katana/KatanaRenderer.class',
-                        'assets/capatest/geo/item/katana_stain.geo.json',
-                        'assets/capatest/textures/item/katana_stain_icon.png',
-                        'assets/capatest/textures/item/katana_stain.png',
-                        'assets/capatest/models/item/katana_stain.json',
+              required={'com/stainkatana/StainKatanaMod.class',
+                        'com/stainkatana/katana/StainKatanaItem.class',
+                        'com/stainkatana/katana/KatanaRenderer.class',
+                        'assets/stainkatana/geo/item/katana_stain.geo.json',
+                        'assets/stainkatana/textures/item/katana_stain_icon.png',
+                        'assets/stainkatana/textures/item/katana_stain.png',
+                        'assets/stainkatana/models/item/katana_stain.json',
                         'META-INF/mods.toml'}
               assert required <= names, required-names
               forbidden=[n for n in names if any(x in n.lower() for x in
                   ('capa_deteriorer','cape_folded','capaarmor','capaparticl','capaspark','curios'))]
               assert not forbidden, forbidden
               for lang in ('en_us','es_es'):
-                  keys=json.loads(z.read('assets/capatest/lang/'+lang+'.json'))
+                  keys=json.loads(z.read('assets/stainkatana/lang/'+lang+'.json'))
                   assert all('capa_deteriorer' not in k for k in keys)
               meta=z.read('META-INF/mods.toml').decode()
-              assert 'modId="capatest"' in meta and 'modId="geckolib"' in meta
-              assert '0.1.0-katana-test' in meta
+              assert 'modId="stainkatana"' in meta and 'modId="geckolib"' in meta
+              assert '0.1.0-test' in meta
           print('OK: katana e icono presentes; sin clases ni recursos de la capa')
           PY
       - name: Guardar jar verificado en esta misma rama
@@ -1351,11 +1351,11 @@ jobs:
           set -euo pipefail
           out=katana_stain/descargas
           mkdir -p "$out"
-          cp build/libs/capatest-0.1.0-katana-test.jar "$out/capatest-0.1.0-katana-test.jar"
-          (cd "$out" && sha256sum capatest-0.1.0-katana-test.jar > SHA256SUMS.txt)
+          cp build/libs/stainkatana-0.1.0-test.jar "$out/stainkatana-0.1.0-test.jar"
+          (cd "$out" && sha256sum stainkatana-0.1.0-test.jar > SHA256SUMS.txt)
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -f "$out/capatest-0.1.0-katana-test.jar" "$out/SHA256SUMS.txt"
+          git add -f "$out/stainkatana-0.1.0-test.jar" "$out/SHA256SUMS.txt"
           if ! git diff --cached --quiet; then
             git commit -m 'Store isolated katana test jar'
             git push origin "HEAD:$BRANCH"

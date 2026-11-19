@@ -1,1 +1,0 @@
-4e704bc7c9196a971e4605f75cc81416f229b7d43ecb2efadab45f6be85b4234  capatest-0.1.0-katana-test.jar

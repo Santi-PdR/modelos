@@ -49,8 +49,9 @@ marco. Falta confirmar visualmente encuadre, orientación y contraste en juego.
 
 La variante `-PkatanaOnly` usa una entrada y recursos aislados preparados
 por `python3 katana_stain/tools/preparar_test.py`; no incluye ni registra
-la capa ni su integración Curios. Conserva `capatest` como identificador,
-por lo que no debe instalarse junto con otro jar que use el mismo mod ID.
+la capa ni su integración Curios. Su mod ID es `stainkatana`, separado de
+`capatest`: ambos pueden coexistir. En esta variante el comando es
+`/give @s stainkatana:katana_stain`. El mod completo sigue siendo independiente.
 Requiere Forge 47 para Minecraft 1.20.1 y GeckoLib Forge 4.8.1 o compatible.
 Es un prototipo; las posiciones del arma y el comportamiento necesitan
 comprobación visual y de juego.
