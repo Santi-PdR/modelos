@@ -1,0 +1,17 @@
+{
+  "itemGroup.stainkatana.legados": "Legados de Combate",
+  "item.stainkatana.katana_stain": "Katana del Asesino de Héroes",
+  "item.stainkatana.katana_stain.lore": "La hoja mellada de Stain, el Asesino de Héroes.",
+  "item.stainkatana.katana_stain.hint": "Z: parálisis de sangre · X: corte rápido · C: sentencia (reasignable).",
+  "key.categories.stainkatana": "Katana de Stain",
+  "key.stainkatana.stun": "Parálisis de sangre",
+  "key.stainkatana.slash": "Corte rápido",
+  "key.stainkatana.ultimate": "Sentencia del Asesino",
+  "stainkatana.cooldown": "Habilidad disponible en %s s.",
+  "stainkatana.no_mark": "Primero golpea para marcar con sangre.",
+  "stainkatana.target_unavailable": "La víctima marcada está fuera de alcance, oculta o ausente.",
+  "stainkatana.no_target": "No hay objetivos válidos delante.",
+  "stainkatana.stun_used": "Parálisis de sangre",
+  "stainkatana.slash_used": "Corte rápido",
+  "stainkatana.ultimate_used": "Sentencia del Asesino"
+}

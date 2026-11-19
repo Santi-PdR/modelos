@@ -1,0 +1,39 @@
+package com.stainkatana.katana;
+
+import com.stainkatana.StainKatanaMod;
+import java.util.Optional;
+import java.util.function.Supplier;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.network.NetworkEvent;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.simple.SimpleChannel;
+
+/** Solo acepta un identificador de habilidad, nunca blancos ni daño enviados por el cliente. */
+public final class KatanaNetwork {
+    private static final String VERSION = "1";
+    public static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder
+            .named(new ResourceLocation(StainKatanaMod.MOD_ID, "abilities"))
+            .networkProtocolVersion(() -> VERSION).clientAcceptedVersions(VERSION::equals)
+            .serverAcceptedVersions(VERSION::equals).simpleChannel();
+    private KatanaNetwork() { }
+    public static void init() {
+        CHANNEL.registerMessage(0, AbilityMessage.class, AbilityMessage::encode,
+                AbilityMessage::decode, AbilityMessage::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+    }
+    public record AbilityMessage(int ability) {
+        public static void encode(AbilityMessage msg, FriendlyByteBuf buf) { buf.writeVarInt(msg.ability); }
+        public static AbilityMessage decode(FriendlyByteBuf buf) { return new AbilityMessage(buf.readVarInt()); }
+        public static void handle(AbilityMessage msg, Supplier<NetworkEvent.Context> supplier) {
+            NetworkEvent.Context context = supplier.get();
+            context.enqueueWork(() -> {
+                ServerPlayer player = context.getSender();
+                if (player != null && msg.ability >= 0 && msg.ability < 3)
+                    KatanaAbilities.activate(player, msg.ability);
+            });
+            context.setPacketHandled(true);
+        }
+    }
+}

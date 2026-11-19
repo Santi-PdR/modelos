@@ -55,3 +55,18 @@ la capa ni su integración Curios. Su mod ID es `stainkatana`, separado de
 Requiere Forge 47 para Minecraft 1.20.1 y GeckoLib Forge 4.8.1 o compatible.
 Es un prototipo; las posiciones del arma y el comportamiento necesitan
 comprobación visual y de juego.
+
+## Versión independiente 0.2.0-test
+
+- Nuevo icono derivado de la imagen suministrada, con vaina, y sin fondo.
+- Z: parálisis de sangre (marca por golpe, alcance 8, 3 s, 12 s de espera).
+  Aplica lentitud extrema y debilidad: no impide mirar ni garantiza bloquear
+  ataques a distancia. X: corte frontal (hasta 3, 5 de daño, espera 5 s).
+  C: Sentencia del Asesino (hasta 5, 9 de daño, espera 45 s). No consumen
+  espera si no encuentran un objetivo válido.
+- Las teclas se pueden cambiar en Controles > Katana de Stain. Se procesan
+  en servidor, respetan distancia, línea de visión, equipos y PvP. Partículas
+  y arcos propios diseñados con partículas vanilla, sin dependencia de VFX.
+- El agarre de ambas manos se ha ajustado siguiendo una pose tipo espada;
+  aún necesita calibración visual real en primera y tercera persona. No
+  hay clips slash personalizados: se usa el balanceo vanilla y las estelas.

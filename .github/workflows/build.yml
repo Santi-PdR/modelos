@@ -1318,7 +1318,7 @@ jobs:
         run: |
           set -euo pipefail
           gradle clean build -PkatanaOnly --no-daemon
-          jar=build/libs/stainkatana-0.1.0-test.jar
+          jar=build/libs/stainkatana-0.2.0-test.jar
           test -f "$jar"
           python3 - "$jar" <<'PY'
           import json,sys,zipfile
@@ -1327,6 +1327,9 @@ jobs:
               required={'com/stainkatana/StainKatanaMod.class',
                         'com/stainkatana/katana/StainKatanaItem.class',
                         'com/stainkatana/katana/KatanaRenderer.class',
+                        'com/stainkatana/katana/KatanaAbilities.class',
+                        'com/stainkatana/katana/KatanaKeys.class',
+                        'com/stainkatana/katana/KatanaNetwork.class',
                         'assets/stainkatana/geo/item/katana_stain.geo.json',
                         'assets/stainkatana/textures/item/katana_stain_icon.png',
                         'assets/stainkatana/textures/item/katana_stain.png',
@@ -1341,7 +1344,7 @@ jobs:
                   assert all('capa_deteriorer' not in k for k in keys)
               meta=z.read('META-INF/mods.toml').decode()
               assert 'modId="stainkatana"' in meta and 'modId="geckolib"' in meta
-              assert '0.1.0-test' in meta
+              assert '0.2.0-test' in meta
           print('OK: katana e icono presentes; sin clases ni recursos de la capa')
           PY
       - name: Guardar jar verificado en esta misma rama
@@ -1351,11 +1354,11 @@ jobs:
           set -euo pipefail
           out=katana_stain/descargas
           mkdir -p "$out"
-          cp build/libs/stainkatana-0.1.0-test.jar "$out/stainkatana-0.1.0-test.jar"
-          (cd "$out" && sha256sum stainkatana-0.1.0-test.jar > SHA256SUMS.txt)
+          cp build/libs/stainkatana-0.2.0-test.jar "$out/stainkatana-0.2.0-test.jar"
+          (cd "$out" && sha256sum stainkatana-0.2.0-test.jar > SHA256SUMS.txt)
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -f "$out/stainkatana-0.1.0-test.jar" "$out/SHA256SUMS.txt"
+          git add -f "$out/stainkatana-0.2.0-test.jar" "$out/SHA256SUMS.txt"
           if ! git diff --cached --quiet; then
             git commit -m 'Store isolated katana test jar'
             git push origin "HEAD:$BRANCH"
