@@ -161,10 +161,18 @@ animación y la documentación de GeckoLib._
   contrastar el visor, el giro en el espacio del portador y el solape de las
   costuras. El cliente de prueba da pasos en ambas direcciones de noche y
   toma capturas F5; el A/B pausado del visor no es una captura del juego.
+- **Élitros (v1.67.5):** Curios `back` lee los ángulos ya interpolados del
+  ala vanilla en el pecho. Usa una corrección X en `cape_top` y toma su
+  máximo con la holgura de zancada. No traslada el paño ni vuelve a animar
+  el ala. Verificar los ángulos de Java y los volúmenes grises del visor con
+  `tools/verify_cape_wings.py TSV --plate docs/capa_v1675_elitros.png`, usando
+  `CapeWingFitTest --samples`. La prueba F5 lee `cape_top` del modelo equipado
+  y toma una captura con las alas ya plegadas.
 - **Lectura del diagnóstico:** la lámina de brasas compara los puntos de
   salida con los clips del JAR, no con todos los huesos animados en vivo.
-  El servidor no ve el paño de cada cliente. Las alas usan el mismo montaje
-  que antes; la prueba no certifica holgura para todas las alas o skins.
+  El servidor no ve el paño de cada cliente. El ajuste de élitros reduce el
+  cruce del paño libre; conserva la montura y sus contactos con el ala.
+  No certifica holgura para todas las alas o skins.
 - **Prueba manual pendiente para packs concretos:** repetir con shaders
   de terceros y gráficos Fabulosos; agacharse, planear y nadar junto a
   losas y paredes. Cambiar el ojo de `back` y probar un cosmético encima.

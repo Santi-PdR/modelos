@@ -10,6 +10,16 @@ const context = vm.createContext({ document:{getElementById:target}, indata });
 const src = fs.readFileSync(path.join(__dirname, '../preview/app.js'), 'utf8').split('\nboot().catch')[0];
 const matrices = vm.runInContext(`${src}
   (() => {
+    if (indata.wingSamples) {
+      const { wings, stride, wingSamples, wingPoses }=indata;
+      return {
+        angles:wingSamples.map(([pitch,roll,lean,depth,arm,leg,top,mid])=>{
+          const goal=wingGoal(wings,pitch,roll,lean,depth);
+          return [goal,...strideLifts(stride,top,mid,arm,leg,lean,depth,wingLift(wings,top,goal))];
+        }),
+        hulls:wingPoses.map(angles=>wingHulls(wings,angles))
+      };
+    }
     if (indata.swayTimes) {
       const rig={bones:[{name:'v20_mount_seat',rotation:[3,1,1]},
                         ...Array.from({length:6},(_,i)=>({name:'v17_ribbon_0_seg'+i,rotation:[4,2,3]}))]};

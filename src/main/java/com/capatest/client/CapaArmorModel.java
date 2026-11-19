@@ -60,15 +60,17 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     private final List<Cloth> cloth = new ArrayList<>(RIBBONS * (LAST_SEGMENT + 1));
     // This is render-thread state. Evict only the least recently used wearer.
     private final Map<Long, CapeResponse> motion = new LinkedHashMap<>(32, .75F, true);
-    private GeoBone strideTop;
-    private GeoBone strideMid;
+    private GeoBone clothTop;
+    private GeoBone clothMid;
     private double armGoal;
     private double legGoal;
+    private double wingGoal;
     private boolean disabled;
 
-    void setStrideGoals(double armGoal, double legGoal) {
+    void setClearanceGoals(double armGoal, double legGoal, double wingGoal) {
         this.armGoal = armGoal;
         this.legGoal = legGoal;
+        this.wingGoal = wingGoal;
     }
 
     private record Cloth(GeoBone bone, int column, int segment) {}
@@ -105,7 +107,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         try {
             applyClothResponse(instanceId, state);
             if (state.getData(DataTickets.ENTITY) instanceof LivingEntity)
-                applyStrideClearance();
+                applyClearance();
         } catch (Exception | LinkageError error) {
             disabled = true;
             motion.clear();
@@ -121,8 +123,8 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         if (root == cachedRoot)
             return true;
         cachedRoot = root;
-        strideTop = root;
-        strideMid = getBone(SECTIONS[1]).orElse(null);
+        clothTop = root;
+        clothMid = getBone(SECTIONS[1]).orElse(null);
         motion.clear();
         cloth.clear();
         details.clear();
@@ -186,19 +188,20 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         visibilidadAplicada = visibilidad;
     }
 
-    private void applyStrideClearance() {
-        if (strideTop == null || strideMid == null || (armGoal <= 0 && legGoal <= 0))
+    private void applyClearance() {
+        if (clothTop == null || clothMid == null || (armGoal <= 0 && legGoal <= 0 && wingGoal <= 0))
             return;
         // GeckoLib's baked X is the negative of the authored GEO pitch.
-        // The two shared hinges carry their seams; no cubes are offset or scaled.
-        double top = -Math.toDegrees(strideTop.getRotX());
-        double mid = -Math.toDegrees(strideMid.getRotX());
-        double topLift = CapeStride.topLift(top, armGoal, legGoal);
+        // Take the greater clearance, not the sum. The existing hinge below
+        // the collar carries its seam; the seat, fit and atlas stay unchanged.
+        double top = -Math.toDegrees(clothTop.getRotX());
+        double mid = -Math.toDegrees(clothMid.getRotX());
+        double topLift = Math.max(CapeStride.topLift(top, armGoal, legGoal), CapeWingFit.topLift(top, wingGoal));
         double midLift = CapeStride.midLift(top + topLift, mid, legGoal);
         if (topLift > 0)
-            strideTop.setRotX(strideTop.getRotX() - (float) Math.toRadians(topLift));
+            clothTop.setRotX(clothTop.getRotX() - (float) Math.toRadians(topLift));
         if (midLift > 0)
-            strideMid.setRotX(strideMid.getRotX() - (float) Math.toRadians(midLift));
+            clothMid.setRotX(clothMid.getRotX() - (float) Math.toRadians(midLift));
     }
 
     private void applyClothResponse(long instanceId, AnimationState<CapaDeteriorerItem> state) {

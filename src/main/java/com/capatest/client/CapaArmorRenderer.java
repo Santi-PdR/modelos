@@ -6,12 +6,14 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.renderer.GeoArmorRenderer;
@@ -82,8 +84,16 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                 CapeStride.backDegrees(model.rightArm.xRot, model.rightArm.yRot));
         double leg = Math.max(CapeStride.backDegrees(model.leftLeg.xRot, model.leftLeg.yRot),
                 CapeStride.backDegrees(model.rightLeg.xRot, model.rightLeg.yRot));
-        capeModel.setStrideGoals(CapeStride.armGoal(arm, model.body.xRot, wearerDepth),
-                CapeStride.legGoal(leg, model.body.xRot, wearerDepth));
+        // Curios renders after the vanilla ElytraLayer has updated these
+        // smoothed angles. Don't recalculate that animation or touch the wings.
+        double wings = 0;
+        if (getCurrentEntity() instanceof AbstractClientPlayer player
+                && player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA)) {
+            wings = CapeWingFit.topGoal(Math.toDegrees(player.elytraRotX), Math.toDegrees(player.elytraRotZ),
+                    Math.toDegrees(model.body.xRot), wearerDepth);
+        }
+        capeModel.setClearanceGoals(CapeStride.armGoal(arm, model.body.xRot, wearerDepth),
+                CapeStride.legGoal(leg, model.body.xRot, wearerDepth), wings);
     }
 
     @Override

@@ -110,6 +110,7 @@ public final class CapeFxSmoke {
     private static int framePasses;
     private static int frameLight;
     private static float framePartialTick;
+    private static double frameTopDegrees;
     private static ItemStack rendered;
     private static Matrix4f playerPose, armorPose;
     private static int stableFrames;
@@ -262,7 +263,7 @@ public final class CapeFxSmoke {
                     }
                     if (game.player.getSwimAmount(1) > 0) return;
                     check(!CapaDeteriorerItem.auraFrame(game.player).posed(), "swim frame persisted after blend");
-                    note("PASS: recarga, luz local, oclusión, equipo, paso lateral, planeo y nado en cliente Forge");
+                    note("PASS: recarga, luz local, oclusión, equipo, paso lateral, alas plegadas, planeo y nado en cliente Forge");
                     game.stop();
                 }
                 default -> { return; }
@@ -433,11 +434,16 @@ public final class CapeFxSmoke {
         armorPose = new Matrix4f(event.getPoseStack().last().pose());
         frameLight = event.getPackedLight();
         framePartialTick = event.getPartialTick();
+        if (scene == Scene.WINGS) {
+            frameTopDegrees = renderer.getGeoModel().getBone("cape_top")
+                    .map(bone -> -Math.toDegrees(bone.getRotX())).orElse(Double.NaN);
+        }
     }
 
     private static void frame(TickEvent.RenderTickEvent event) {
         if (event.phase == TickEvent.Phase.START) {
             framePasses = 0;
+            frameTopDegrees = Double.NaN;
             rendered = ItemStack.EMPTY;
             playerPose = armorPose = null;
             return;
@@ -459,6 +465,8 @@ public final class CapeFxSmoke {
         boolean posed = switch (scene) {
             case STRAFE_LEFT -> player.onGround() && velocity.x > .045 && lateral > .015;
             case STRAFE_RIGHT -> player.onGround() && velocity.x < -.045 && lateral < -.015;
+            case WINGS -> player.onGround() && !player.isCrouching() && velocity.horizontalDistanceSqr() < .0001
+                    && Math.abs(Math.toDegrees(player.elytraRotZ) + 15) < .8;
             case GLIDE -> player.isFallFlying() && player.getFallFlyingTicks() >= 12
                     && Math.abs(player.elytraRotZ) > .8F;
             case WADE -> player.isInWater() && !player.isVisuallySwimming() && swim == 0;
@@ -492,6 +500,11 @@ public final class CapeFxSmoke {
             }
             if (scene != Scene.SWIM_EXIT && ++stableFrames < 18) return;
             if (scene.inspectBirths() && observedBirths == 0) return;
+            if (scene == Scene.WINGS) {
+                check(frameTopDegrees > 24 && frameTopDegrees < 34,
+                        "folded elytra guide not applied to cape_top: " + frameTopDegrees);
+                exposure = "; bisagra del paño en reposo = " + Math.round(frameTopDegrees * 10) / 10.0 + "°";
+            }
             double rootError = 0;
             if (scene.inspectBirths() || scene == Scene.SWIM_EXIT) {
                 var frame = CapaDeteriorerItem.auraFrame(player);

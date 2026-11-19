@@ -9,9 +9,9 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.67.4: las puntas del paño arrastran al desplazarse de lado e invertir el paso.
-La montura, el cuello y las raíces cosidas conservan su ajuste. Se mantienen
-los ocho ciclos, la inercia al frenar y aterrizar, el halo nocturno y las brasas.
+v1.67.5: el paño gana holgura con élitros vanilla plegados y Curios back.
+Al abrir las alas se retira el ajuste. Se conservan la montura, los ocho clips,
+la inercia del paño, el halo nocturno y las brasas.
 '''
 
 [[dependencies.${mod_id}]]

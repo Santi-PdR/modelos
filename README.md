@@ -1,12 +1,27 @@
-# Mantle of the Blight Star — v1.67.4
+# Mantle of the Blight Star — v1.67.5
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
 [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench](docs/CAPA_v1.67.4.bbmodel)
+· [Proyecto Blockbench](docs/CAPA_v1.67.5.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+
+### v1.67.5 — holgura con élitros
+
+![Dorso y perfil con alas plegadas: misma fase con y sin ajuste del paño](docs/capa_v1675_elitros.png)
+
+- Con **élitros vanilla en el pecho** y el manto en **Curios `back`**,
+  el paño gira hacia atrás en su bisagra para salvar el volumen del ala
+  plegada. Se toma la mayor holgura entre alas y zancada, no se suman ambas.
+  La corrección disminuye al abrir las alas. No modifica la montura, el
+  cuello, las alas ni los ocho clips, y no se aplica sin élitros.
+- En el [visor](docs/capa_v1170_visor.html), pausa y abre **Élitros · A/B →
+  Plegadas**. Alterna **Holgura para alas** en **Espalda** o **Perfil**.
+  Los volúmenes grises representan las alas vanilla, sin su textura. El
+  contacto cerca de la unión no desaparece; no se garantiza compatibilidad
+  con alas de otros mods.
 
 ### v1.67.4 — arrastre en el paso lateral
 

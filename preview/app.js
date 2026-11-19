@@ -11,7 +11,7 @@ async function loadJson(name) {
 function assetUrl(name) { return `assets/${name}`; }
 /* END LOCAL LOADER */
 
-let GEO, CLIPS, FIT, STRIDE, SWAY, REF, ORIGINAL, ATLAS, GLOW, HALO, NOCTURNE, SPARKS, AURA, ATLAS_W = 128, ATLAS_H = 128;
+let GEO, CLIPS, FIT, STRIDE, SWAY, WINGS, REF, ORIGINAL, ATLAS, GLOW, HALO, NOCTURNE, SPARKS, AURA, ATLAS_W = 128, ATLAS_H = 128;
 const canvas = document.getElementById('view');
 const ctx = canvas.getContext('2d', { alpha: false });
 let SIZE = 480;
@@ -145,7 +145,7 @@ function wearerPose(geo, profile, stance, look, turn) {
   })};
 }
 
-function strideLifts(s, top, mid, arm, leg, lean, depth) {
+function strideLifts(s, top, mid, arm, leg, lean, depth, wingLift=0) {
   const knee = Math.max(0, Math.min(s.MID_TARGET_LIMIT, s.LEG_GAIN*leg-s.LEG_INSET-lean-s.LEG_FIT*depth));
   const want = Math.max(0, Math.min(s.TOP_LIMIT, Math.max(s.ARM_GAIN*arm-s.ARM_INSET-lean-s.ARM_FIT*depth, s.LEG_SHARE*knee)));
   const lift = gap => {
@@ -153,17 +153,29 @@ function strideLifts(s, top, mid, arm, leg, lean, depth) {
     const p=Math.min(1,gap/s.SOFT_EDGE);
     return gap*p*(2-p);
   };
-  const a=want>0 ? lift(want-top) : 0;
+  const a=Math.max(wingLift, want>0 ? lift(want-top) : 0);
   return [a, knee>0 ? lift(knee-top-a-mid) : 0];
 }
-function stridePose(geo, s, arms, legs, stance, bodyAngle, depth) {
+function wingGoal(w, pitch, roll, lean, depth) {
+  const clamp=(n,limit)=>Math.max(0,Math.min(n,limit));
+  const cut=(w.CLEAR_SPAN-Math.abs(roll))/(w.CLEAR_SPAN-w.FOLDED);
+  const target=w.PITCH_BIAS+w.PITCH_GAIN*clamp(pitch,45)-w.BODY_GAIN*clamp(lean,30)-w.DEPTH_GAIN*Math.max(0,depth);
+  return smooth(0,1,cut)*clamp(target,w.GOAL_LIMIT);
+}
+function wingLift(w, top, wanted) {
+  if (wanted<=0) return 0;
+  const gap=Math.max(wanted-top,0);
+  const t=Math.min(1,gap/w.SOFT_EDGE);
+  return Math.min(w.LIFT_LIMIT,w.CARRY*gap*t*(2-t));
+}
+function clearancePose(geo, gait, stance, depth, wings) {
   const top=geo.bones.find(b=>b.name==='cape_top'), mid=geo.bones.find(b=>b.name==='cape_mid');
-  // The synthetic gait stays within ±90° after the crouch arm offset,
-  // except at the outer edge. Use the same projected angle as Java there.
+  // Same projection of the synthetic limb rotations as the live ModelParts.
   const back = deg => Math.asin(Math.max(0,Math.sin(deg*Math.PI/180)))*180/Math.PI;
-  const a=Math.max(...arms.map(v=>back(v+stance*.4*180/Math.PI)));
-  const k=Math.max(...legs.map(back));
-  const [x,y]=strideLifts(s,top.rotation[0],mid.rotation[0],a,k,bodyAngle*stance,depth);
+  const arm=gait ? Math.max(...gait.arms.map(v=>back(v+stance*.4*180/Math.PI))) : 0;
+  const leg=gait ? Math.max(...gait.legs.map(back)) : 0;
+  const lift=wings>0 ? wingLift(WINGS,top.rotation[0],wings) : 0;
+  const [x,y]=strideLifts(STRIDE,top.rotation[0],mid.rotation[0],arm,leg,FIT.bodyAngle*stance,depth,lift);
   return {...geo,bones:geo.bones.map(b => {
     const d=b===top ? x : b===mid ? y : 0;
     return d ? {...b,rotation:[b.rotation[0]+d,...b.rotation.slice(1)]} : b;
@@ -254,6 +266,25 @@ function playerFaces(stance=0, look=0, turn=0, gait=null) {
     }
   }
   return out;
+}
+
+function wingHulls(profile, [pitch,yaw,roll,down]) {
+  const [x,y,z]=profile.pivot;
+  return [1,-1].map(sign=>{
+    const rot=mul(R('z',-sign*roll),mul(R('y',sign*yaw),R('x',pitch)));
+    return CORNERS.map(k=>{
+      const local=profile.origin.map((v,i)=>v+k[i]*profile.size[i]);
+      local[0]*=sign;
+      const [a,b,c]=apply(rot,local);
+      return [-sign*x-a,24-y-down-b,z+c];
+    });
+  });
+}
+function wingFaces(profile, pose) {
+  return wingHulls(profile, pose).flatMap(V=>Object.entries(FACE_ORDER).map(([side,idx])=>({
+    pts:idx.map(i=>V[i]), uvs:[[0,0],[0,0],[0,0],[0,0]],
+    color:side==='north' || side==='south' ? [109,107,130] : [76,71,91],
+  })));
 }
 
 function collect(geo, hidden) {
@@ -515,6 +546,7 @@ const strideAmount=document.getElementById('strideAmount');
 const swayDemo=document.getElementById('swayDemo'), swayFit=document.getElementById('swayFit');
 const swayValue=document.getElementById('swayValue'), swayMoment=document.getElementById('swayMoment');
 const stateControl=document.getElementById('state');
+const wingMode=document.getElementById('wingMode'), wingFit=document.getElementById('wingFit');
 const fitReset=document.getElementById('fitReset'), fxControl=document.getElementById('l_particles');
 const glowControl=document.getElementById('l_glow'), haloControl=document.getElementById('l_halo');
 const seek=document.getElementById('seek'), play=document.getElementById('play');
@@ -556,6 +588,10 @@ function refreshSwayControls() {
   swayDemo.disabled=referenceView;
   swayFit.disabled=referenceView || !swayDemo.checked;
 }
+function refreshWingControls() {
+  wingMode.disabled=referenceView;
+  wingFit.disabled=referenceView || wingMode.value==='none';
+}
 function setReference(value) {
   referenceView=value;
   document.getElementById('v34').setAttribute('aria-pressed',String(value));
@@ -563,7 +599,7 @@ function setReference(value) {
   for (const control of [stanceControl, lookControl, turnControl, fitReset, fxControl, glowControl, ambientControl, zoomControl])
     control.disabled=value;
   for (const [button] of lightPresets) button.disabled=value;
-  refreshStrideControls(); refreshHaloControl(); refreshSwayControls();
+  refreshStrideControls(); refreshHaloControl(); refreshSwayControls(); refreshWingControls();
   dirty=true;
 }
 function setPlaying(value) {
@@ -609,15 +645,23 @@ function draw(now) {
   const gait=!referenceView && stridePlayer.checked ? strideGait(elapsed*(.8+.95*amplitude),amplitude) : null;
   const clipTime=demo ? elapsed%clip.length : t;
   const base=referenceView ? GEO : poseAt(GEO,clip,clipTime);
-  const fit=pose=>{
-    if (gait && strideFit.checked) pose=stridePose(pose,STRIDE,gait.arms,gait.legs,stance,FIT.bodyAngle,depth);
+  const wingPose=referenceView ? null : WINGS[wingMode.value === 'folded' && stance ? 'crouched' : wingMode.value];
+  const guide=wingPose ? wingGoal(WINGS,wingPose[0],wingPose[2],FIT.bodyAngle*stance,depth) : 0;
+  const clearanceGait=strideFit.checked ? gait : null;
+  const fit=(pose, goal)=>{
+    if (clearanceGait || goal>0) pose=clearancePose(pose,clearanceGait,stance,depth,goal);
     return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn),hidden);
   };
   const drift=demo ? swayPose(base,SWAY,t) : null;
-  const withDrift=demo && swayFit.checked;
-  const faces=fit(withDrift ? drift : base);
-  const comparison=demo ? fit(withDrift ? base : drift) : null;
+  const current=drift && swayFit.checked ? drift : base;
+  const currentGuide=wingFit.checked ? guide : 0;
+  const faces=fit(current,currentGuide);
+  const comparison=[];
+  for (const pose of drift ? [base,drift] : [base]) for (const goal of guide>0 ? [0,guide] : [0]) {
+    if (pose!==current || goal!==currentGuide) comparison.push(...fit(pose,goal));
+  }
   if (showPlayer) faces.push(...playerFaces(stance,look,turn,gait));
+  if (wingPose) faces.push(...wingFaces(WINGS,wingPose));
   fitValue.textContent=referenceView ? 'Pose base · ajuste desactivado' :
     `Mirada ${look}° · giro ${turn}° · holgura ${depth.toFixed(2)} u`;
   const fx=showFx&&!referenceView;
@@ -651,20 +695,21 @@ function pixels(im) {
   return ctx.getImageData(0,0,im.width,im.height).data;
 }
 async function boot() {
-  const [geo,clips,fit,stride,sway,atlas,glow,halo,aura,nocturne,reference,original,sparks]=await Promise.all([
+  const [geo,clips,fit,stride,sway,wings,atlas,glow,halo,aura,nocturne,reference,original,sparks]=await Promise.all([
     loadJson('armor.geo.json'), loadJson('armor.animation.json'), loadJson('fit.json'), loadJson('stride.json'),
-    loadJson('sway.json'), image('armor.png'),
+    loadJson('sway.json'), loadJson('wings.json'), image('armor.png'),
     image('armor_glowmask.png'), image('armor_halo.png'), loadJson('aura.json'), loadJson('nocturne.json'),
     loadJson('reference-frame.json'), image('reference-crop.png'),
     Promise.all([0,1,2].map(i=>image(`capa_spark_${i}.png`)))]);
   if (original.width!==reference.cropSize[0] || original.height!==reference.cropSize[1])
     throw new Error('La imagen no coincide con el encuadre de referencia');
   REF=reference; ORIGINAL=original;
-  GEO=geo['minecraft:geometry'][0]; CLIPS=prepareClips(clips); FIT=fit; STRIDE=stride; SWAY=sway; hidden=runtimeHidden(GEO);
+  GEO=geo['minecraft:geometry'][0]; CLIPS=prepareClips(clips); FIT=fit; STRIDE=stride; SWAY=sway; WINGS=wings;
+  hidden=runtimeHidden(GEO);
   if ([glow,halo].some(im=>im.width!==atlas.width || im.height!==atlas.height))
     throw new Error('Los mapas de luz no coinciden con el atlas opaco');
   ATLAS=pixels(atlas); GLOW=pixels(glow); HALO=pixels(halo); AURA=aura; NOCTURNE=nocturne;
-  refreshHaloControl();
+  refreshHaloControl(); refreshWingControls();
   SPARKS=sparks.map(pixels); ATLAS_W=atlas.width; ATLAS_H=atlas.height;
   updateBounds();
   document.getElementById('bones').textContent=GEO.bones.length;
@@ -718,7 +763,8 @@ swayMoment.onclick=()=>{
   t=elapsed=SWAY.DEMO_SECONDS/2+.10;
   yaw=0; pitch=9;
 };
-swayFit.onchange=()=>{ dirty=true; };
+swayFit.onchange=wingFit.onchange=()=>{ dirty=true; };
+wingMode.onchange=()=>{ refreshWingControls(); dirty=true; };
 stateControl.onchange=e=>{
   swayDemo.checked=false;
   setMotion(e.target.value);

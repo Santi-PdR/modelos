@@ -24,7 +24,7 @@ def back_degrees(pitch, yaw):
     return math.degrees(math.asin(max(0., min(1., math.sin(pitch) * math.cos(yaw)))))
 
 
-def lifts(top, mid, arm, leg, stance, depth):
+def lifts(top, mid, arm, leg, stance, depth, *, wing_lift=0.):
     s = profile()
     lean = max(0., min(1., stance)) * F.profile()['bodyAngle']
     arm = max(0., s['ARM_GAIN'] * arm - s['ARM_INSET'] - lean - s['ARM_FIT'] * depth)
@@ -37,7 +37,7 @@ def lifts(top, mid, arm, leg, stance, depth):
         t = min(1., gap / s['SOFT_EDGE'])
         return gap * t * (2 - t)
 
-    upper = raise_pitch(want - top) if want > 0 else 0.
+    upper = max(wing_lift, raise_pitch(want - top) if want > 0 else 0.)
     return upper, raise_pitch(leg - top - upper - mid) if leg > 0 else 0.
 
 

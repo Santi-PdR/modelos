@@ -95,6 +95,15 @@ details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summar
       </div>
       <p class="muted">«Ver el giro» pausa a 1,10 s: empieza la vuelta y las puntas aún siguen la ida. Alterna «Arrastre del paño» con la misma cámara, pose y luz. Pulsa «Reproducir» para ver el ciclo de ida y vuelta.</p>
     </details>
+    <details>
+      <summary>Élitros · A/B</summary>
+      <div class="controls">
+        <label for="wingMode">Alas de referencia</label>
+        <select id="wingMode"><option value="none">Sin alas</option><option value="folded">Plegadas</option><option value="open">Abiertas</option></select>
+        <label><input type="checkbox" id="wingFit" checked disabled> Holgura para alas</label>
+      </div>
+      <p class="muted">Pausa con las alas plegadas y alterna la holgura. La vista «Perfil» muestra cómo el paño cae por detrás. Las alas grises representan el volumen vanilla, sin textura.</p>
+    </details>
     <p class="muted">«Referencia» fija la pose base, la luz y el zoom. Desliza la imagen original sobre el modelo sin mover la cámara. Elige otra vista, arrastra o reproduce un estado para salir. Las poses salen del JSON del mod; los FX son una simulación, no una captura de Minecraft.</p>
     <p class="muted"><span id="bones">—</span> huesos · <span id="faces">—</span> caras · UV del atlas real</p>
   </section>
