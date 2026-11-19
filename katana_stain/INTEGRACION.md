@@ -23,8 +23,8 @@ del portador. Las poses y escala son provisionales hasta verificarlas en juego.
   víctima marcada si sigue viva, cargada y a 8 bloques o menos. Consume la
   marca y activa 10 s de enfriamiento. No bloquea giro ni ataques y no es una
   parálisis completa. No fuerza la carga de chunks ni rastrea entre dimensiones.
-- Partículas rojas discretas al golpear y activar; usa el sonido vanilla de
-  barrido. Esto es una aproximación de juego, no la reproducción exacta del don.
+- Partículas rojas discretas al golpear y activar, sin sonidos adicionales.
+  Esto es una aproximación de juego, no la reproducción exacta del don.
 - El corte usa **la animación vanilla de brazo**. Los clips personalizados,
   combos y VFX de estela aún no están implementados; requieren coordinación
   cliente/servidor y pruebas en primera y tercera persona.

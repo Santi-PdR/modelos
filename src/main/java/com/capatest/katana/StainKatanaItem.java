@@ -10,8 +10,6 @@ import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -90,7 +88,6 @@ public class StainKatanaItem extends SwordItem implements GeoItem {
         // Una fuerte ralentización, no una inmovilización absoluta: el objetivo puede atacar y mirar.
         target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 6));
         ((ServerLevel) level).sendParticles(BLOOD, target.getX(), target.getY(0.55), target.getZ(), 16, 0.3, 0.35, 0.3, 0.01);
-        level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 0.6F, 0.75F);
         tag.remove(MARK);
         player.getCooldowns().addCooldown(this, COOLDOWN_TICKS);
         return InteractionResultHolder.consume(stack);
