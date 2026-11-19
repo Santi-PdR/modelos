@@ -54,7 +54,7 @@ public class StainKatanaItem extends SwordItem implements GeoItem {
             mark.putString("Dimension", level.dimension().location().toString());
             mark.putLong("Expires", level.getGameTime() + MARK_TICKS);
             stack.getOrCreateTag().put(MARK, mark);
-            level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(0.55), target.getZ(), 8, 0.22, 0.25, 0.22, 0.015);
+            level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(0.55), target.getZ(), 1, 0, 0, 0, 0);
         }
         return super.hurtEnemy(stack, target, attacker);
     }
@@ -62,8 +62,5 @@ public class StainKatanaItem extends SwordItem implements GeoItem {
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> lines, TooltipFlag flag) {
         lines.add(Component.translatable("item.stainkatana.katana_stain.lore").withStyle(ChatFormatting.DARK_RED));
-        lines.add(Component.translatable("item.stainkatana.katana_stain.mark").withStyle(ChatFormatting.GRAY));
-        lines.add(Component.translatable("item.stainkatana.katana_stain.combat").withStyle(ChatFormatting.GRAY));
-        lines.add(Component.translatable("item.stainkatana.katana_stain.hint").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

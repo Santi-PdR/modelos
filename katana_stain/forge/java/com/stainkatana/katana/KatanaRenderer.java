@@ -41,7 +41,7 @@ public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
         // El renderer de ítems ya desplazó el origen -0.5; este cuadrado 0..1
         // ocupa exactamente el espacio de un ítem GUI. UV (0,0) es arriba.
         VertexConsumer vertices = ItemRenderer.getFoilBufferDirect(buffers,
-                RenderType.entityCutoutNoCull(ICON), true, stack.hasFoil());
+                RenderType.entityTranslucentEmissive(ICON), true, stack.hasFoil());
         PoseStack.Pose pose = poseStack.last();
         vertex(vertices, pose, 0, 0, 0, 1, overlay);
         vertex(vertices, pose, 1, 0, 1, 1, overlay);

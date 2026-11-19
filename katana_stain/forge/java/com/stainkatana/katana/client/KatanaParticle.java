@@ -8,7 +8,7 @@ import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.particle.TextureSheetParticle;
 import net.minecraft.core.particles.SimpleParticleType;
 
-/** Sprites propios animados; sin física de bloques y con presupuestos acotados. */
+/** Adaptador de fotogramas de Better Combat Particle; ver licencia y atribución. */
 public final class KatanaParticle extends TextureSheetParticle {
     private final SpriteSet sprites;
     private final int style;
@@ -18,16 +18,16 @@ public final class KatanaParticle extends TextureSheetParticle {
         super(level, x, y, z, dx, dy, dz);
         this.sprites = sprites; this.style = style;
         this.hasPhysics = false;
-        this.lifetime = style == 0 ? 8 : style == 1 ? 15 : 12;
-        this.quadSize = style == 0 ? 1.2F : style == 1 ? 0.12F + this.random.nextFloat() * 0.10F : 1.15F;
+        this.lifetime = style == 0 ? 8 : style == 1 ? 8 : 10;
+        this.quadSize = style == 0 ? 1.2F : style == 1 ? 0.7F : 1.4F;
         this.initialSize = this.quadSize;
-        this.gravity = style == 1 ? 0.12F : 0;
+        this.gravity = 0;
         this.friction = 0.93F;
         if (style == 1) {
-            this.xd = dx + (this.random.nextDouble() - 0.5) * 0.06;
-            this.yd = dy + this.random.nextDouble() * 0.06;
-            this.zd = dz + (this.random.nextDouble() - 0.5) * 0.06;
-            this.roll = this.random.nextFloat() * 6.28F;
+            this.xd = 0;
+            this.yd = 0;
+            this.zd = 0;
+            this.roll = 0;
             this.oRoll = this.roll;
         } else {
             this.xd = 0; this.yd = 0; this.zd = 0;
@@ -41,7 +41,7 @@ public final class KatanaParticle extends TextureSheetParticle {
         this.alpha = Math.min(1F, (1F-progress)*4F);
         if (style == 1) {
             this.oRoll = this.roll;
-            this.roll += 0.07F;
+            this.roll += 0;
             this.quadSize = this.initialSize * (1F-0.35F*progress);
         }
         this.setSpriteFromAge(this.sprites);

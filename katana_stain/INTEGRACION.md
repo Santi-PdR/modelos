@@ -89,3 +89,14 @@ siguen siendo 12, 5 y 45 s. El daño, PvP, equipo y alcance se comprueban
 en el servidor. Pose de mano compensada hacia el centro del mango; ajuste
 preliminar, sin evaluación en juego. No hay clips propios de brazo: se usa
 el balanceo vanilla acompañado de los FX originales.
+
+## Versión independiente 0.4.0-test
+
+Se retiran los sprites originales del prototipo y se distribuyen fotogramas
+sin modificar de Better Combat Particle, de Malfu (MIT): fuentes, revisión y
+licencia en `META-INF/BETTER_COMBAT_PARTICLE_LICENSE.txt`. El adaptador de
+partículas es propio y no reproduce el renderer ni las animaciones de ese mod;
+no se afirma que tenga su mismo aspecto en juego. Se cambia el shader del
+icono a uno emisivo, se ensaya otra pose de tercera persona, y se acorta el
+nombre y el tooltip. Estos cambios aún requieren prueba visual en cliente,
+incluyendo ambas manos, primera persona, iluminación y las tres habilidades.

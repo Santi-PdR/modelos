@@ -83,7 +83,7 @@ public final class KatanaAbilities {
         }
         tag.remove(StainKatanaItem.MARK);
         level.sendParticles(KatanaParticles.PULSE.get(), target.getX(), target.getY(0.55), target.getZ(), 1, 0, 0, 0, 0);
-        level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(0.55), target.getZ(), 14, .26, .34, .26, .015);
+        level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(0.55), target.getZ(), 1, 0, 0, 0, 0);
         level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, .7F, .65F);
         player.displayClientMessage(Component.translatable("stainkatana.stun_used"), true);
         return true;
@@ -113,7 +113,7 @@ public final class KatanaAbilities {
                 level.sendParticles(KatanaParticles.PULSE.get(), target.getX(), target.getY(.5), target.getZ(), 1, 0, 0, 0, 0);
             }
             level.sendParticles(KatanaParticles.SLASH.get(), target.getX(), target.getY(.6), target.getZ(), 1, 0, 0, 0, 0);
-            level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.55), target.getZ(), ultimate ? 12 : 7, .22, .22, .22, .02);
+            level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.55), target.getZ(), 1, 0, 0, 0, 0);
         }
         if (hits == 0) {
             player.displayClientMessage(Component.translatable("stainkatana.no_target"), true); return false;
