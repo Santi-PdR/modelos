@@ -67,6 +67,10 @@ def check(geo):
         left,right,z = B.solve(F.head_in_body(*pose,outer=True),d)
         fitted = (panels-p)*np.array([[1,left,z],[1,right,z]])[:,None,None,:]+p
         assert occupied(fitted.reshape(-1,8,3),strip) >= .97, pose
+        if pose[1] == -21:
+            section = np.array(list(product([0],np.linspace(21.87,22.57,8),np.linspace(2.775,3.585,31))))
+            assert occupied(prior,section) == 0, 'the old collar does not reach the section'
+            assert occupied(fitted.reshape(-1,8,3),section) >= .97, pose
         spine = np.concatenate(((gusset-G.MOUNT_PIVOT)*[1,1,1+d/F.profile()['gussetDepth']]+G.MOUNT_PIVOT,
                                 saddle + [0,0,d]))
         for a,b,c in fitted:

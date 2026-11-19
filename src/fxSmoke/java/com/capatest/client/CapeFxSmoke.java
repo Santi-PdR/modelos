@@ -498,8 +498,8 @@ public final class CapeFxSmoke {
             renderer.getGeoModel().getBone(CapeBacking.RIGHT).orElseThrow().setHidden(false);
         }
         if (scene.upperBack()) {
-            // Project the upper rear face of the vanilla jersey, on the
-            // same world projection used for the current armor pass.
+            // Measure the seam under the same world projection used for
+            // the current armor pass (neither debug pixels nor the visor).
             upperBackProjection = new Matrix4f(RenderSystem.getProjectionMatrix())
                     .mul(RenderSystem.getModelViewMatrix()).mul(armorPose).translate(0,1.5F,0).scale(-1,-1,1);
         }
@@ -660,13 +660,17 @@ public final class CapeFxSmoke {
     private static void projectUpperBack(Path shots, NativeImage image) throws IOException {
         check(upperBackProjection != null, "missing armor projection");
         StringBuilder points = new StringBuilder();
-        // Not the floor under the cape: a strip on the upper rear torso.
-        // Physical skin units are recorded for a boundary/width regression.
+        // Oblique: exactly on the exposed upper back of the vanilla jersey.
+        // Profile: a section through the high join, between shirt and collar.
+        // At 76° the old collar projects over most of the jersey probe and
+        // would conceal the open seam we need to test in that view.
+        boolean side = scene.profile();
         for (int u = -15; u <= 15; u++) {
-            float x = u * .19F;
+            float x = side ? 0 : u * .19F;
+            float z = side ? 3.18F + .027F*u : 2.251F;
             for (int v = 0; v <= 7; v++) {
-                float y = 19.65F + .18F*v;
-                Vector3f p = upperBackProjection.transformProject(new Vector3f(x/16,y/16,2.251F/16));
+                float y = side ? 21.87F + .10F*v : 19.65F + .18F*v;
+                Vector3f p = upperBackProjection.transformProject(new Vector3f(x/16,y/16,z/16));
                 int px = (int) ((1+p.x)*image.getWidth()*.5F);
                 int py = (int) ((1-p.y)*image.getHeight()*.5F);
                 points.append(u).append('\t').append(v).append('\t')

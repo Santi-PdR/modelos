@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'referencias/REFERENCIA_ICONO_v1677.png'
 SOURCE_SHA = '0bc0ba2efea3bf9e03dbb3c266f34291b2b59af730044ded0f2e98ca38855e99'
 PREVIOUS = ROOT / 'referencias/ICONO_V1677_PULSO.png'
+PREVIOUS_SHA = '460273e99c6a60b532b18c4a36773be53000292a984965e44d12b69d68bcad17'
 ICON = ROOT / 'src/main/resources/assets/capatest/textures/item/capa_deteriorer_evilsaiyan.png'
 META = ICON.with_suffix('.png.mcmeta')
 # Fill a 16-pixel slot without drawing past its border. A multiple of 16
@@ -113,7 +114,9 @@ def verify() -> None:
     assert not actual[:,a==0,:3].any(), 'checker outside the artwork'
     assert np.all(actual[...,3] == a), 'outline changed during the pulse'
     low = np.array([np.asarray(f.resize((16,16),Image.Resampling.NEAREST)) for f in generated])
-    old_strip = np.asarray(Image.open(PREVIOUS).convert('RGBA')).reshape(16,SIZE,SIZE,4)
+    assert hashlib.sha256(PREVIOUS.read_bytes()).hexdigest() == PREVIOUS_SHA
+    with Image.open(PREVIOUS) as saved:
+        old_strip = np.asarray(saved.convert('RGBA')).reshape(16,SIZE,SIZE,4)
     np.testing.assert_array_equal(actual[0], old_strip[0])
     old = np.asarray([np.asarray(Image.fromarray(frame).resize((16,16),Image.Resampling.NEAREST)) for frame in old_strip])
     count = np.count_nonzero(low[0,...,3])

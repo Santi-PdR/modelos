@@ -96,14 +96,16 @@ def upper_back(root, prefix):
     u,v,x,y = points.T
     h,w = bare.shape[:2]
     assert (0 <= x.min() < x.max() < w) and (0 <= y.min() < y.max() < h), 'contact strip outside the view'
-    # Only samples on the exposed upper back count; the head and sleeves
-    # can occlude parts of this strip. Never give credit for hiding floor.
     r,g,b = bare[y,x].T
-    shirt = (g-r >= 19) & (b-r >= 19)
-    assert shirt.sum() >= 55 and np.ptp(u[shirt]) >= 9, (key, 'no se ve la espalda', int(shirt.sum()))
+    # Only samples on the exposed jersey count in the oblique view: the
+    # head and sleeves can hide some, and replacing floor does not count.
+    # For profile the probe is a cross-section of the solid bevel, so its
+    # projection lies between the shirt and collar, not on the jersey.
+    visible = (g-r >= 19) & (b-r >= 19) if prefix == 'oblicua' else np.ones(len(points),dtype=bool)
+    assert visible.sum() >= 55 and np.ptp(u[visible]) >= 9, (key, 'no se ve la unión', int(visible.sum()))
     def cloth(im):
         r,g1,b = im[y,x].T
-        return shirt & (g-g1 >= 16) & (np.maximum(r,b)-g1 >= 10)
+        return visible & (g-g1 >= 16) & (np.maximum(r,b)-g1 >= 10)
     prev = cloth(control)
     failures = []
     for slot in ('pecho','curios'):
@@ -111,11 +113,11 @@ def upper_back(root, prefix):
         resolved = np.loadtxt(root/f'{name}.tsv', dtype=int)
         assert np.array_equal(resolved[:,:2],points[:,:2]) and np.max(abs(resolved[:,2:]-points[:,2:])) <= 1, (name, 'cámara distinta')
         now = cloth(read(root/f'{name}.png'))
-        old, new = prev.sum()/shirt.sum(), now.sum()/shirt.sum()
+        old, new = prev.sum()/visible.sum(), now.sum()/visible.sum()
         # Demand a panel across the visible strip, not one clasp or tooth.
-        rails = [now[shirt & (u == col)].mean() for col in np.unique(u[shirt])]
+        rails = [now[visible & (u == col)].mean() for col in np.unique(u[visible])]
         joined = np.mean(np.asarray(rails) >= .7)
-        print(f'{name}: unión visible en espalda alta {old:.1%} → {new:.1%}; ancho {joined:.1%} ({shirt.sum()} muestras).',flush=True)
+        print(f'{name}: unión visible en espalda alta {old:.1%} → {new:.1%}; ancho {joined:.1%} ({visible.sum()} muestras).',flush=True)
         if old > .55 or new < .84 or new-old < .28 or joined < .77:
             failures.append((name,old,new,joined))
     return failures
@@ -228,10 +230,12 @@ def main():
         gallery(args.shots,args.gallery)
         return
     bare = read(args.shots/'cenital-sin-manto.png')
-    for name in ('cenital-pecho','cenital-curios'):
-        all_,left,right = contact(bare,read(args.shots/f'{name}.png'))
-        print(f'{name}: anclaje {all_:.1%}, márgenes {left:.1%}/{right:.1%}.',flush=True)
+    center = []
+    for slot in ('pecho','curios'):
+        all_,left,right = contact(bare,read(args.shots/f'cenital-{slot}.png'))
+        center.append(f'{slot} {all_:.1%} (márgenes {left:.1%}/{right:.1%})')
         assert all_ >= .93 and min(left,right) >= .85, 'suelo visible entre torso y unión del cuello'
+    print('Anclaje cenital: ' + '; '.join(center),flush=True)
     failures = []
     for turned in (False,True):
         prefix = 'cenital-giro' if turned else 'cenital'

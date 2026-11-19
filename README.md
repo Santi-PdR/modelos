@@ -18,6 +18,8 @@ Se equipa en el pecho o en `back` con Curios opcional.
 - Se conserva [tu dibujo](referencias/REFERENCIA_ICONO_v1677.png) y su
   contorno. La luz recorre las grietas con tres destellos y un reflejo
   sobre la tela. Son 32 cuadros con el mismo ciclo de 1,6 s.
+- **Prueba en Forge:** [unión oblicua y de perfil, en pecho y Curios](docs/capa_v1678_espalda_forge.png)
+  · [ciclo capturado en la hotbar vanilla](docs/capa_v1678_hotbar.gif).
 
 ### v1.67.7 — unión en los hombros e icono más grande
 

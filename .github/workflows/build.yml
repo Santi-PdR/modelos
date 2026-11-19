@@ -10,7 +10,7 @@ on:
         default: false
         type: boolean
       probar_halo:
-        description: 'Probar equipo cenital, hotbar, halo y élitros en un cliente Forge con pantalla virtual'
+        description: 'Probar la unión al torso, hotbar, halo y élitros en un cliente Forge con pantalla virtual'
         required: false
         default: false
         type: boolean
@@ -1114,7 +1114,7 @@ jobs:
                   docs/capa_v1170_estados.png docs/capa_v1170_animaciones.gif docs/capa_v1170_icon_compare.png)
           if [ -f "$COMPARISON" ]; then ASSETS+=("$COMPARISON"); fi
           if [ -f "$REGISTER" ]; then ASSETS+=("$REGISTER"); fi
-          for EVIDENCE in "docs/capa_v${VER//./}_hombros_forge.png" "docs/capa_v${VER//./}_hotbar.gif"; do
+          for EVIDENCE in "docs/capa_v${VER//./}_"{hombros_forge.png,espalda_forge.png,hotbar.gif}; do
             if [ -f "$EVIDENCE" ]; then ASSETS+=("$EVIDENCE"); fi
           done
           for view in detalles luz ajuste; do
