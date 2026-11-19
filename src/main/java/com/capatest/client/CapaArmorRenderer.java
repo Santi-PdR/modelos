@@ -9,6 +9,9 @@ import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.renderer.GeoArmorRenderer;
@@ -17,6 +20,7 @@ import software.bernie.geckolib.util.RenderUtils;
 public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private final CapaArmorModel capeModel;
     private float wearerDepth;
+    private boolean armorPassSubmitted;
 
     public CapaArmorRenderer() {
         this(new CapaArmorModel(new ResourceLocation(CapaTestMod.MOD_ID, "armor/capa_deteriorer_evilsaiyan")));
@@ -40,6 +44,24 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                                     @Nullable MultiBufferSource bufferSource,
                                     float partialTick) {
         return RenderType.entityCutoutNoCull(texture, true);
+    }
+
+    @Override
+    public void prepForRender(@Nullable Entity wearer, ItemStack stack, @Nullable EquipmentSlot slot,
+                              @Nullable HumanoidModel<?> model) {
+        super.prepForRender(wearer, stack, slot, model);
+        armorPassSubmitted = false;
+    }
+
+    @Override
+    public void renderToBuffer(PoseStack poseStack, VertexConsumer buffer, int light, int overlay,
+                               float red, float green, float blue, float alpha) {
+        // Forge prepares one model, then calls it for base, trim and foil.
+        // GeckoLib obtains its own buffer; the latter two calls would replay
+        // the whole opaque + light render, not just the requested material.
+        if (armorPassSubmitted) return;
+        armorPassSubmitted = true;
+        super.renderToBuffer(poseStack, buffer, light, overlay, red, green, blue, alpha);
     }
 
     @Override

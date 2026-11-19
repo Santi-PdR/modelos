@@ -25,6 +25,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelSettings;
@@ -34,9 +35,12 @@ import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
@@ -51,15 +55,17 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 /** Dev client only, in build/fx-smoke-run. No probes or extra mods in the distribution. */
-@Mod.EventBusSubscriber(modid = CapaTestMod.MOD_ID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = CapaTestMod.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class CapeFxSmoke {
     private static final String ATLAS = "assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan";
     private static final String FRAGMENT = "assets/capatest/shaders/core/cape_bloom.fsh";
     private static final String PACK_ID = "file/fx-probe";
-    private static final String[] SCENES = {"pecho-dia", "ambos-noche", "espalda-con-elitros"};
+    private static final String[] SCENES = {"pecho-dia", "ambos-noche-encantado", "espalda-con-elitros"};
     private static int step;
+    private static long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(75);
     private static Path pack;
     private static CompletableFuture<?> pending;
     private static GlowProbe probe;
@@ -71,10 +77,25 @@ public final class CapeFxSmoke {
     private static boolean captured;
 
     @SubscribeEvent
-    public static void tick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void setup(FMLClientSetupEvent event) {
+        event.enqueueWork(() -> {
+            note("probe registrado (Curios=" + ModList.get().isLoaded("curios") + ")");
+            resetDeadline();
+            MinecraftForge.EVENT_BUS.addListener(CapeFxSmoke::tick);
+            MinecraftForge.EVENT_BUS.addListener(CapeFxSmoke::afterArmor);
+            MinecraftForge.EVENT_BUS.addListener(CapeFxSmoke::frame);
+        });
+    }
+
+    private static void tick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || step < 0) return;
         Minecraft game = Minecraft.getInstance();
         try {
+            if (System.nanoTime() - deadline > 0) {
+                throw new AssertionError("stalled step " + step + ", scene " + scene + ", screen " + game.screen
+                        + ", dayTime " + (game.level == null ? "no level" : game.level.getDayTime())
+                        + ", pending " + (pending != null));
+            }
             if (pending != null) {
                 if (!pending.isDone()) return;
                 pending.join();
@@ -178,6 +199,7 @@ public final class CapeFxSmoke {
                 default -> { return; }
             }
             step++;
+            resetDeadline();
         } catch (Exception | AssertionError error) {
             fail(game, error);
         }
@@ -240,7 +262,12 @@ public final class CapeFxSmoke {
         note("brasa real frenada por el panel; impulso libre intacto");
     }
 
+    private static void resetDeadline() {
+        deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(75);
+    }
+
     private static void equipScene(Minecraft game, int index) {
+        resetDeadline();
         scene = index;
         stableFrames = 0;
         captured = false;
@@ -249,21 +276,21 @@ public final class CapeFxSmoke {
         pending = server.submit(() -> {
             ServerPlayer player = server.getPlayerList().getPlayer(uuid);
             player.serverLevel().setDayTime(index == 0 ? 6000 : 18000);
-            player.setItemSlot(EquipmentSlot.CHEST, index == 2 ? new ItemStack(Items.ELYTRA) : mantle());
+            ItemStack chest = index == 2 ? new ItemStack(Items.ELYTRA) : mantle();
+            if (index == 1) chest.enchant(Enchantments.UNBREAKING, 1);
+            player.setItemSlot(EquipmentSlot.CHEST, chest);
             backOf(player).getStacks().setStackInSlot(0, index == 0 ? ItemStack.EMPTY : mantle());
         });
     }
 
-    @SubscribeEvent
-    public static void afterArmor(GeoRenderEvent.Armor.Post event) {
+    private static void afterArmor(GeoRenderEvent.Armor.Post event) {
         if (scene < 0 || !(event.getRenderer() instanceof CapaArmorRenderer renderer)
                 || renderer.getCurrentEntity() != Minecraft.getInstance().player) return;
         framePasses++;
         rendered = renderer.getCurrentStack();
     }
 
-    @SubscribeEvent
-    public static void frame(TickEvent.RenderTickEvent event) {
+    private static void frame(TickEvent.RenderTickEvent event) {
         if (event.phase == TickEvent.Phase.START) {
             framePasses = 0;
             rendered = ItemStack.EMPTY;
@@ -275,7 +302,7 @@ public final class CapeFxSmoke {
                 || game.level.getDayTime() != (scene == 0 ? 6000 : 18000)) return;
         ItemStack chest = game.player.getItemBySlot(EquipmentSlot.CHEST);
         ItemStack back = backOf(game.player).getStacks().getStackInSlot(0);
-        if (back.isEmpty() != (scene == 0)
+        if (back.isEmpty() != (scene == 0) || (scene == 1 && !chest.hasFoil())
                 || (scene == 2 ? !chest.is(Items.ELYTRA) : !chest.is(CapaTestMod.CAPA_DETERIORER.get()))) return;
         try {
             check(framePasses == 1 && rendered == (scene == 2 ? back : chest),

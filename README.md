@@ -23,6 +23,8 @@ Se equipa en el pecho o en `back` con Curios opcional.
 - **Curios:** el efecto sigue la pieza mostrada, no sólo la equipada.
   El pecho tiene prioridad; a falta de éste, sólo un `back` visible emite
   y se dibuja. El cosmético reemplaza a la pieza funcional en su slot.
+- **Encantamientos:** el pase extra de brillo vanilla ya no vuelve a pintar
+  el manto equipado en el pecho. El glint del icono se conserva.
 
 Los ocho clips, el GEO, el ajuste, los mapas de luz, los sprites y el icono
 no cambian. El visor A/B sigue siendo una referencia de aspecto, no una

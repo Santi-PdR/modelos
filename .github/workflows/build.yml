@@ -1082,7 +1082,7 @@ jobs:
           if [ -f "$REGISTER" ]; then
             printf '| `%s` | Diferencias de la silueta respecto de la referencia |\n' "$(basename "$REGISTER")" >> "$NOTES"
           fi
-          printf '\nLos previews son render software: la prueba in-game sigue pendiente.\n' >> "$NOTES"
+          printf '\nLos previews de esta tabla son renders software; las pruebas en Forge se informan por separado en Actions.\n' >> "$NOTES"
           sed -i "s/__TAG__/$TAG/g; s/__VER__/$VER/g; s|__BBURL__|$BB_URL|g" "$NOTES"
           if gh release view "$TAG" --json isDraft,targetCommitish > "$RUNNER_TEMP/release.json"; then
             # Reintentos del mismo SHA sí; nunca escribir sobre lo publicado.

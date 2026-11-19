@@ -131,8 +131,9 @@ animación y la documentación de GeckoLib._
 - **Qué comprueba:** elección de pase con PNG corrupto, tamaño incorrecto,
   shader inválido, núcleo corrupto y opción sin halo; recuperación y pila de
   poses ante un fallo inyectado; nacimiento y movimiento de brasas ante un
-  panel; visibilidad de Curios y un único render en pecho, ambos slots y
-  espalda con élitros. Las capturas son de pie, no de un vuelo completo.
+  panel; visibilidad de Curios y un único render en pecho, ambos slots con
+  el pecho encantado y espalda con élitros. Las capturas son de pie, no de
+  un vuelo completo.
 - **Prueba manual pendiente para packs concretos:** repetir con shaders
   de terceros y gráficos Fabulosos; agacharse, planear y nadar junto a
   losas y paredes. Cambiar el ojo de `back` y probar un cosmético encima.
