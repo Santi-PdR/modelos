@@ -1362,8 +1362,10 @@ jobs:
           mkdir -p run
           printf 'eula=true\n' > run/eula.txt
           printf 'server-ip=127.0.0.1\nonline-mode=false\n' > run/server.properties
+          set +e
           printf 'stop\n' | timeout 150s gradle runServer -PkatanaOnly --no-daemon > /tmp/stain-server.log 2>&1
           status=$?
+          set -e
           tail -100 /tmp/stain-server.log
           if ! grep -Fq 'For help, type "help"' /tmp/stain-server.log; then
             echo "::error::El servidor no terminó de iniciar (status $status)"
