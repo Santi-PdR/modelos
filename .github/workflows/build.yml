@@ -968,7 +968,7 @@ jobs:
           log="$RUNNER_TEMP/forge-client.log"
           rc=0
           timeout --kill-after=12s 300s xvfb-run -a gradle -PcapeFxSmoke --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
-          awk 'sub(/.*FX smoke: /, "")' "$log" | while IFS= read -r line; do
+          awk 'sub(/.*FX smoke: /, "")' "$log" | tail -n 10 | while IFS= read -r line; do
             printf '::notice title=FX en Forge::%s\n' "$line"
           done
           if [ "$rc" -ne 0 ] || ! grep -Fq 'FX smoke: PASS:' "$log" ||
@@ -976,13 +976,13 @@ jobs:
              [ "$(grep -Fc 'Blight Star Mantle: falló el pase' "$log")" -ne 2 ]; then
             echo "::error title=FX en Forge::No se completó la prueba (salida $rc)."
             grep -Ei 'exception|assertionerror|\[.*ERROR\]|(failed|could not|error):? |^> Task .*FAILED|Blight Star Mantle:' "$log" | \
-              grep -Eiv 'token|password|session|https?://|intentional FX smoke' | tail -n 18 | cut -c1-340 | \
+              grep -Eiv 'token|password|session|https?://|intentional FX smoke' | tail -n 8 | cut -c1-340 | \
               while IFS= read -r line; do printf '::warning title=Diagnóstico de cliente::%s\n' "${line//%/%25}"; done
             exit 1
           fi
 
       - name: Recorte diagnóstico de la vista cenital
-        if: steps.fx-smoke.outcome == 'success'
+        if: always() && steps.fx-smoke.outcome != 'skipped'
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery cenital
 
       - name: Recorte del ciclo de la hotbar
@@ -990,7 +990,7 @@ jobs:
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery hotbar
 
       - name: Subir capturas de la prueba en mundo
-        if: steps.fx-smoke.outcome == 'success'
+        if: always() && steps.fx-smoke.outcome != 'skipped'
         uses: actions/upload-artifact@v4
         with:
           name: capatest-fx-en-mundo

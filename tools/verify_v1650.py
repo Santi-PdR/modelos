@@ -25,27 +25,24 @@ from verify_v1640 import fit_check, motion, overlap
 
 
 def preservation(geo, atlas):
-    wide = tuple(map(int,P.mod_version().split('.'))) >= (1,67,6)
     for line in (BASE/'SHA256SUMS.txt').read_text().splitlines():
         digest, name = line.split('  ',1)
         prior = (BASE/name).read_bytes()
         assert sha256(prior).hexdigest() == digest, name
         if name not in ('CAPA_v1.64.0.bbmodel','fit.json'):
             live = P.ASSETS/name
-            if live not in (P.ARMOR_GEO,A.ANIM) and not (wide and live == P.ICON):
+            if live not in (P.ARMOR_GEO,A.ANIM):
                 assert live.read_bytes() == prior, name
     old = P.load(OLD_GEO)
     assert geo['description'] == old['description']
-    updated = {G.SEAT_BONE,G.GUSSET_BONE} if wide else set()
-    assert [b for b in geo['bones'] if b['name'] not in updated | {G.COLLAR_RETURN}] \
-           == [b for b in old['bones'] if b['name'] not in updated]
+    assert [b for b in geo['bones'] if b['name'] != G.COLLAR_RETURN] == old['bones']
     assert P.effective_hidden(geo) == P.effective_hidden(old)
     (before,after),_ = registered_metrics(old,geo,atlas,baseline_atlas=OLD_TEX)
     assert np.array_equal(before['match'],after['match']), 'cambió el contorno registrado del dorso'
     assert before['seam'] == after['seam']
     assert np.array_equal(views(old,OLD_TEX),views(geo,atlas)), 'cambió la vista registrada del dorso'
     print(f'Dorso: contorno, color y costura registrados idénticos; error RGB {after["mae"]:.2f}/255. '
-          'Atlas, emisión dorsal y lore intactos.',flush=True)
+          'Atlas, emisión, arte, lore y geometría de la montura intactos.',flush=True)
 
     # Test what actually comes through in front of a worn avatar, not the
     # silhouette of a cape by itself. The cenital/locked rear shots don't
