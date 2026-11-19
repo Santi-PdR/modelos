@@ -1153,7 +1153,7 @@ jobs:
                   docs/capa_v1170_estados.png docs/capa_v1170_animaciones.gif docs/capa_v1170_icon_compare.png)
           if [ -f "$COMPARISON" ]; then ASSETS+=("$COMPARISON"); fi
           if [ -f "$REGISTER" ]; then ASSETS+=("$REGISTER"); fi
-          for EVIDENCE in "docs/capa_v${VER//./}_"{hombros_forge.png,espalda_forge.png,hotbar.gif}; do
+          for EVIDENCE in "docs/capa_v${VER//./}_"{hombros_forge.png,espalda_forge.png,inclinacion_forge.png,hotbar.gif}; do
             if [ -f "$EVIDENCE" ]; then ASSETS+=("$EVIDENCE"); fi
           done
           for view in detalles luz ajuste; do
