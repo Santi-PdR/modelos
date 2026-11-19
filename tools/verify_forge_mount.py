@@ -136,15 +136,19 @@ def gallery(root, kind):
     # Thumbnail evidence also available where Actions' artifact storage
     # cannot be downloaded. Full-resolution shots stay in the artifact.
     if kind != 'hotbar':
-        prefix = 'cenital-giro' if kind == 'giro' else 'cenital'
-        names = ('cenital-sin-manto','cenital-giro-sin-manto') if kind == 'bare' else (
-            f'{prefix}-pecho', f'{prefix}-curios')
+        prefix = {'giro':'cenital-giro', 'perfil':'perfil', 'oblicua':'oblicua'}.get(kind,'cenital')
+        if kind == 'bare':
+            names = ('cenital-sin-manto','cenital-giro-sin-manto')
+        elif kind == 'perfil-base':
+            names = ('oblicua-sin-manto','perfil-sin-manto')
+        else:
+            names = (f'{prefix}-pecho',f'{prefix}-curios')
         for name in names:
             path = root/f'{name}.png'
             if not path.exists(): continue
             with Image.open(path) as im:
                 x,y = im.width//2, im.height//2
-                cut = im.crop((x-120,y-70,x+120,y+122))
+                cut = im.crop((x-120,y-70,x+120,y+122)) if path.stem.startswith('cenital') else im.crop((x-128,y-80,x+128,y+130))
                 # Each GitHub job step retains up to ten notices. Reserve
                 # at most half of them for either slot, even in a busy shot.
                 for width,colors in ((180,80),(160,64),(144,48),(128,40)):
@@ -169,7 +173,7 @@ def gallery(root, kind):
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument('shots',type=Path)
-    cli.add_argument('--gallery',choices=['cenital','giro','bare','hotbar'])
+    cli.add_argument('--gallery',choices=['cenital','giro','bare','oblicua','perfil','perfil-base','hotbar'])
     args = cli.parse_args()
     if args.gallery:
         gallery(args.shots,args.gallery)
