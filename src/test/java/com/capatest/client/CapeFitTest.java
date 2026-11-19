@@ -17,7 +17,40 @@ public final class CapeFitTest {
         return minimum + (1-minimum)*spread;
     }
 
+    private static float plate(double stance, double look, double yaw, double arm, boolean wings) {
+        return CapePlateFit.influence(stance * CapeFit.CROUCH_RADIANS, Math.toRadians(yaw),
+                -Math.toRadians(look), arm, wings);
+    }
+
+    private static void plateChecks() {
+        check(plate(0,-89.5,0,2.85,false) == 1, "el canto no se asienta sobre la manga");
+        check(plate(0,-89.5,0,5.3,false) == 0 && plate(0,-89.5,0,2.85,true) == 0,
+                "la placa no deja pasar la manga o los élitros");
+        check(plate(0,0,0,0,false) == 0 && plate(1,-89.5,0,0,false) == 0,
+                "el ajuste invade la cabeza en otra postura");
+        check(plate(0,-65,12,3.8,false) == plate(0,-65,372,3.8,false), "salto al dar la vuelta");
+        float last = 0;
+        for (double pitch = -40; pitch >= -89.5; pitch -= .25) {
+            float next = plate(0,pitch,0,0,false);
+            check(next >= last && next-last < .012F, "ajuste de placa no continuo");
+            last = next;
+        }
+        check(plate(0,-89,0,Double.NaN,false) == 0, "esfuerzo no finito");
+        check(CapePlateFit.forBone("cape_top") == null && CapePlateFit.forBone(CapePlateFit.WIDE) != null,
+                "el ajuste no debe alcanzar el paño");
+    }
+
     public static void main(String[] args) {
+        if (args.length == 1 && args[0].equals("--plates")) {
+            for (double stance : new double[]{0,.18,.39,.58,1})
+                for (double look : new double[]{-89.5,-78,-71.2,-62,-58,-48,-41,0})
+                    for (double turn : new double[]{-381,-43,-17,0,16,36,59,390})
+                        for (double arm : new double[]{0,2.8,3.5,4.8,5.3,42})
+                            for (int wings = 0; wings < 2; wings++)
+                                System.out.printf(Locale.ROOT, "%.4f\t%.4f\t%.4f\t%d\t%.4f\t%.9f%n",
+                                        stance,look,turn,wings,arm,plate(stance,look,turn,arm,wings==1));
+            return;
+        }
         if (args.length == 1 && args[0].equals("--shoulders")) {
             for (double stance : new double[]{0,.18,.5,.81,1})
                 for (double pitch : new double[]{-90,-66,-51.5,-33,0,26,90})
@@ -106,6 +139,7 @@ public final class CapeFitTest {
         check(CapeFit.seating(0, 0, -down, 0, 1, false) == 0, "el ceñido invade la cabeza");
         check(CapeFit.seating(0, 0, down, 0, 17, false) == 0, "el ceñido invade la manga");
         check(CapeFit.seating(0, 0, down, 0, Double.NaN, false) == 0, "ángulo de brazo no finito");
-        System.out.println("CapeFit: reposo, ceñido, signos, giro relativo, límites e interpolación verificados");
+        plateChecks();
+        System.out.println("CapeFit: reposo, ceñido, hombreras, giro relativo, límites e interpolación verificados");
     }
 }

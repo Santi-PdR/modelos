@@ -36,6 +36,15 @@ const matrices = vm.runInContext(`${src}
       return indata.strideSamples.map(([top,mid,arm,leg,stance,depth]) =>
         strideLifts(indata.stride,top,mid,arm,leg,stance*indata.fit.bodyAngle,depth));
     }
+    if (indata.plateSamples) {
+      const f=indata.fit, names=f.plates.names;
+      const rig={bones:[...names.map(name=>({name})),{name:'cape_top'}]};
+      return indata.plateSamples.map(([s,p,y,w,arm])=>{
+        const model=matrices(wearerPose(rig,f,s,p,y,!!w,0,arm));
+        if (model.cape_top.some((v,i)=>v!==ident()[i])) throw Error('ajuste de placas fuera de la montura');
+        return [plateInfluence(f.plates,s,p,y,arm,!!w), ...names.map(name=>model[name])];
+      });
+    }
     if (indata.seatSamples) {
       const f=indata.fit;
       const rig={bones:[{name:f.seat.frame},{name:'v20_mount_shoulders'},{name:f.drapeBone}]};

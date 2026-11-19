@@ -344,13 +344,13 @@ function plateFrame(bone, target, k) {
     rotation:[-k*rx,-k*ry,0], scale:[1+k*(sx-1),1+k*(sy-1),1+k*(sz-1)], cubes:[]};
 }
 
-function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0) {
+function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm) {
   const depth=backset(profile,stance,look,turn);
   const anchor = profile.backing;
   const seat = profile.seat;
   const snug = seat && geo.bones.some(b => b.name===seat.frame) ? seating(seat,stance,look,turn,arm,elytra) : 0;
   const backing = anchor && backingShape(anchor,profile.bodyAngle,stance,look,turn,depth,elytra);
-  const plate = plateInfluence(profile.plates,stance,look,turn,arm,elytra);
+  const plate = plateInfluence(profile.plates,stance,look,turn,effort,elytra);
   const bones = geo.bones.map(b => {
     if (b.name===seat?.frame) return {...b,scale:[1,1,1-seat.depth*snug]};
     const half = anchor?.names.indexOf(b.name) ?? -1;
@@ -882,9 +882,10 @@ function draw(now) {
   const clearanceGait=strideFit.checked ? gait : null;
   const backArm=Math.max(...(gait?.arms || [0,0]).map(
     a=>Math.asin(Math.sin(a*Math.PI/180+stance*.4))*180/Math.PI));
+  const armEffort=Math.max(backArm,...(gait?.arms || [0,0]).map(a=>Math.abs(a+stance*FIT.bodyAngle)));
   const fit=(pose, goal)=>{
     if (clearanceGait || goal>0) pose=clearancePose(pose,clearanceGait,stance,depth,goal);
-    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn,!!wingPose,backArm),hidden);
+    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn,!!wingPose,backArm,armEffort),hidden);
   };
   const drift=demo ? swayPose(base,SWAY,t) : null;
   const current=drift && swayFit.checked ? drift : base;

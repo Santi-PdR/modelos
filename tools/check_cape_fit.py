@@ -68,6 +68,22 @@ def main():
                 assert all(abs(a-b) < 1e-8 for a,b in zip(tested,python,strict=True)), (s,p,y,w,arm,tested,python)
         print(f'Ceñido del borde y remates: {len(rows)} poses coinciden en Java/Python/visor.')
 
+    if len(sys.argv) > 5:
+        import numpy as np
+        rows = np.loadtxt(sys.argv[5]).tolist()
+        assert len(rows) == 5 * 8 * 8 * 6 * 2
+        profile = F.viewer_profile()
+        names = profile['plates']['names']
+        js = subprocess.run(['node','tools/check_viewer_pose.js'],cwd=P.ROOT,check=True,text=True,capture_output=True,
+                            input=json.dumps(dict(fit=profile,plateSamples=[r[:5] for r in rows])))
+        for (s,p,y,w,arm,java), (amount,*mats) in zip(rows,json.loads(js.stdout),strict=True):
+            k = F.plate_influence(s,p,y,arm,elytra=bool(w))
+            assert abs(java-k) < 4e-8 and abs(amount-k) < 1e-8, (s,p,y,w,arm,java,k,amount)
+            geo = {'bones':[{'name':n} for n in names]}
+            posed = P.matrices(F.wearer_pose(geo,s,p,y,elytra=bool(w),arm_effort=arm))
+            assert np.allclose(mats,[posed[n].ravel() for n in names],atol=1e-9,rtol=0), (s,p,y,w,arm)
+        print(f'Placas visibles: {len(rows)} poses Java/Python/visor coinciden.')
+
 
 if __name__ == '__main__':
     main()

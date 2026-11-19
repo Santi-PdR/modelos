@@ -103,8 +103,11 @@ def moderate_fit(geo):
 def clearance(geo, clips):
     rig = WornModel(geo)
     fasteners = np.array([n.startswith('v20_mount_') for n in rig.names])
-    def placed(frame,aim,arm,effort,close):
-        mats = P.matrices(F.wearer_pose(frame,*aim,arm_back=arm,arm_effort=effort,close=close))
+    plate_names = F.plate_profile()['names']
+    plates = np.array([name in plate_names for name in rig.names])
+
+    def placed(frame,aim,arm,effort,close,fit_plates=True):
+        mats = P.matrices(F.wearer_pose(frame,*aim,arm_back=arm,arm_effort=effort,close=close,plates=fit_plates))
         packed = np.array([mats[n] for n in rig.names])
         return rig.coords @ packed[:,:3,:3].transpose(0,2,1) + packed[:,None,:3,3]
     samples = {n:[P.pose_at(geo,T.prepare_clip(c),c['animation_length']*t) for t in (0,.33,.67)]
@@ -119,6 +122,7 @@ def clearance(geo, clips):
         [((0.,0.),(0.,0.)), ((4.,-4.),(17.,-17.)), ((-6.,6.),(-20.,20.))])]
     count = 0
     clearance = .5
+    plate_sleeves = .5
     stitch = (.5,.5)
     for aim,name,frame,arms,legs in still+in_motion:
         arm,leg = S.demand(aim[0],arms,legs)
@@ -136,12 +140,19 @@ def clearance(geo, clips):
         regressed[0,fasteners] = False
         assert not regressed.any(), (name,aim,arms,[(int(b),rig.names[i],now[b+1,i],was[b+1,i])
                                                     for b,i in zip(*np.where(regressed),strict=True)])
+        if F.plate_influence(*aim,effort) > 0:
+            control = placed(pose,aim,arm,effort,True,False)
+            assert np.array_equal(control[~plates],after[~plates]), 'el ajuste de placas también movió el resto del manto'
+            sleeves = now[2:-2,plates]
+            assert sleeves.min() > .012, (name,aim,arms,'placa contra manga',sleeves.min())
+            plate_sleeves = min(plate_sleeves,float(sleeves.min()))
         clearance = min(clearance,float(now[0].min()))
         stitch = tuple(map(min, zip(stitch,rig.joins(after),strict=True)))
         count += 1
     assert stitch[0] > .038 and stitch[1] > .025, stitch
     print(f'{count} poses ceñidas (Steve/Alex, clips y mezclas): cabeza ≥{clearance:.3f}u, '
-          f'sin cruces nuevos; solape de costuras/raíces ≥{stitch[0]:.3f}/{stitch[1]:.3f}u.',flush=True)
+          f'placas activas a ≥{plate_sleeves:.3f}u de las mangas, sin cruces nuevos; '
+          f'solape de costuras/raíces ≥{stitch[0]:.3f}/{stitch[1]:.3f}u.',flush=True)
 
 
 if __name__ == '__main__':

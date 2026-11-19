@@ -779,7 +779,7 @@ jobs:
           CLASSES="$RUNNER_TEMP/cape-state-test"
           mkdir -p "$CLASSES"
           javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/{CapeState,CapePlayback,CapeSparkFrame}.java \
-            src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeBacking,CapeStride,CapeTint,CapeEmber,CapeNocturne,CapeWingFit,CapeWornMotion}.java \
+            src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeBacking,CapePlateFit,CapeStride,CapeTint,CapeEmber,CapeNocturne,CapeWingFit,CapeWornMotion}.java \
             src/test/java/com/capatest/item/{CapeStateTest,CapeSparkFrameTest}.java \
             src/test/java/com/capatest/client/{CapeFitTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeSettleTest,CapeSwayTest,CapeWingFitTest,CapeWornMotionTest}.java
           java -cp "$CLASSES" com.capatest.client.CapeWornMotionTest
@@ -809,7 +809,8 @@ jobs:
           java -cp "$CLASSES" com.capatest.client.CapeFitTest --shoulders > "$CLASSES/shoulders.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeFitTest --backing > "$CLASSES/backing.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeFitTest --seating > "$CLASSES/seating.tsv"
-          OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/check_cape_fit.py "$CLASSES/fit.tsv" "$CLASSES/shoulders.tsv" "$CLASSES/backing.tsv" "$CLASSES/seating.tsv"
+          java -cp "$CLASSES" com.capatest.client.CapeFitTest --plates > "$CLASSES/plates.tsv"
+          OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/check_cape_fit.py "$CLASSES/fit.tsv" "$CLASSES/shoulders.tsv" "$CLASSES/backing.tsv" "$CLASSES/seating.tsv" "$CLASSES/plates.tsv"
           java -cp "$CLASSES" com.capatest.item.CapeStateTest --spark-samples > "$CLASSES/sparks.tsv"
           PYTHONPATH=tools python3 -c 'import cape_aura as a,json; print(json.dumps(a.profile()))' | \
             node tools/check_viewer_embers.js "$CLASSES/sparks.tsv" "$CLASSES/embers.tsv"
@@ -999,8 +1000,24 @@ jobs:
             exit 1
           fi
 
-      - name: Medir ciclos y transiciones reales al caminar en F5
+      - name: Comparar v1.67.11 y las nuevas hombreras en F5 cenital
+        if: always() && steps.fx-smoke.outcome != 'skipped'
+        run: python3 tools/verify_forge_plates.py build/fx-smoke-run/fx-shots --gallery
+
+      - name: Medir el borde de las placas contra las mangas en F5
         if: steps.fx-smoke.outcome == 'success'
+        run: |
+          set -o pipefail
+          python3 tools/verify_forge_plates.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
+            case "$line" in
+              'A 89,5°,'*) printf '::notice title=Manga y placa en Forge::%s\n' "$line" ;;
+              'AssertionError:'*) printf '::error title=Diagnóstico de hombreras::%s\n' "$line" ;;
+              *) printf '%s\n' "$line" ;;
+            esac
+          done
+
+      - name: Medir ciclos y transiciones reales al caminar en F5
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
           set -o pipefail
           python3 tools/verify_forge_walk.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
@@ -1029,16 +1046,6 @@ jobs:
             else
               printf '::notice title=Anclaje y ranura en Forge::%s\n' "${line//%/%25}"
             fi
-          done
-
-      - name: Comparar v1.67.11 y las nuevas hombreras en F5 cenital
-        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
-        run: |
-          set -o pipefail
-          shots=build/fx-smoke-run/fx-shots
-          python3 tools/verify_forge_plates.py "$shots" --gallery
-          python3 tools/verify_forge_plates.py "$shots" | while IFS= read -r line; do
-            printf '::notice title=Manga y placa en Forge::%s\n' "$line"
           done
 
       - name: Comparar el canto de la camiseta en F5 cenital

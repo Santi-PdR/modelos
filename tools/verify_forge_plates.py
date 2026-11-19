@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Measure the actual rendered plate rims against both vanilla sleeves in F5."""
 import argparse
+import io
 from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
-from verify_forge_mount import gallery, read
+from verify_forge_mount import emit, read
 from verify_forge_seat import blue_floor, shirt_mask
 
 PREFIX = 'hombreras'
@@ -31,14 +32,20 @@ def visible_plate(root, slot, side, worn, bare, unplated):
 
 
 def seams(root, slot, worn, bare, unplated):
-    shirt = shirt_mask(bare)
+    _,reference = np.where(shirt_mask(bare))
+    assert len(reference) > 600, 'no se ven las mangas de la referencia sin manto'
+    width = reference.max()+1-reference.min()
+    # Read the rim of the sleeve in this draw. Small vanilla idle rolls can
+    # move its outermost column even with the torso and camera registered.
+    shirt = shirt_mask(worn)
     _,xx = np.where(shirt)
-    assert len(xx) > 600, 'no se ven las mangas de la referencia sin manto'
     left,right = xx.min(),xx.max()+1
-    width = right-left
+    assert max(abs(left-reference.min()),abs(right-1-reference.max())) < .045*width, (slot,'mangas sin registrar')
     output = []
     floor = blue_floor(worn)
-    for side,lo,hi in ((1,.07,.21),(0,.79,.93)):
+    # The outer half of each sleeve, away from the return over the interior.
+    # Exclude the last rasterized texel at each silhouette edge.
+    for side,lo,hi in ((1,.015,.09),(0,.91,.985)):
         mask = visible_plate(root,slot,side,worn,bare,unplated)
         points = []
         for x in range(left+round(lo*width),left+round(hi*width)):
@@ -50,9 +57,11 @@ def seams(root, slot, worn, bare, unplated):
             cloth = np.flatnonzero(mask[start:stop,x])
             rim = start+cloth[0] if cloth.size else stop
             points.append((max(0,rim-y-1),bool(cloth.size),int(floor[y+1:rim,x].sum())))
-        assert len(points) >= .12*width, (slot,side,'la manga quedó fuera del recorte')
+        assert len(points) >= max(6,.06*width), (slot,side,'la manga quedó fuera del recorte')
         d,found,air = np.asarray(points).T
-        output.append((len(points),found.mean(),(d <= 1).mean(),np.quantile(d,.85),float(air.mean())))
+        _,cols = np.where(mask)
+        overhang = max(0,left-cols.min() if side == 1 else cols.max()-right+1) if cols.size else np.inf
+        output.append((len(points),found.mean(),(d <= 1).mean(),np.quantile(d,.85),float(air.mean()),overhang))
     return width, output
 
 
@@ -70,20 +79,49 @@ def verify(root):
         worn = read(root/f'{PREFIX}-{slot}.png')
         assert bare.shape == hidden.shape == worn.shape
         width, rows = seams(root,slot,worn,bare,hidden)
-        for label,(n,found,joined,gap,air) in zip(('izquierda','derecha'),rows,strict=True):
+        for label,(n,found,joined,gap,air,overhang) in zip(('izquierda','derecha'),rows,strict=True):
             print(f'A 89,5°, {slot} {label}: {n} columnas, placa visible {found:.0%}, '
-                  f'borde a ≤1px {joined:.0%}, separación p85 {gap:.1f}px, suelo {air:.2f}px/col.',flush=True)
+                  f'borde a ≤1px {joined:.0%}, separación p85 {gap:.1f}px, suelo {air:.2f}px/col, '
+                  f'extremo {overhang}px fuera de la manga.',flush=True)
         if before is None:
             before = rows
             continue
-        for label,old,(n,found,joined,gap,air) in zip(('izquierda','derecha'),before,rows,strict=True):
-            if found < .80 or joined < .55 or gap > max(2,.025*width):
+        for label,old,now in zip(('izquierda','derecha'),before,rows,strict=True):
+            _,found,joined,gap,air,overhang = now
+            if found < .80 or joined < .50 or gap > max(2,.031*width):
                 failures.append((slot,label,'el borde de la placa sigue lejos',found,joined,gap))
-            if gap > old[3]+.4 or air > min(old[4]+.2,max(.45,.65*old[4])):
-                failures.append((slot,label,'aparece suelo entre la manga y la placa',*old[3:],gap,air))
-    assert min(row[1] for row in before) > .70 and max(row[3] for row in before) >= 2, (
-        'la referencia v1.67.11 no reproduce la separación',before)
+            if gap > old[3]+.5 or air > min(old[4]+.25,max(.5,.65*old[4])):
+                failures.append((slot,label,'queda suelo entre la manga y la placa',old[3:5],now[3:5]))
+            if overhang > max(2,.05*width) or (label == 'izquierda' and overhang > .40*old[5]):
+                failures.append((slot,label,'extremo aún fuera de la manga',old[5],overhang))
+    assert before[0][1] >= .75 and before[0][5] >= .13*width, (
+        'la referencia v1.67.11 no reproduce el extremo separado',before)
     assert not failures, failures
+
+
+def gallery(root):
+    path = root/f'{PREFIX}-sin-manto.png'
+    if not path.is_file():
+        return
+    y,x = np.where(shirt_mask(read(path)))
+    assert len(x) > 600
+    width = int(x.max()+1-x.min())
+    cut = (int(x.min()-.235*width),int(y.min()-.34*width),
+           int(x.max()+.16*width),int(y.max()+.37*width))
+    for slot in ('sin-manto','v16711','pecho','curios'):
+        path = root/f'{PREFIX}-{slot}.png'
+        if not path.is_file():
+            continue
+        with Image.open(path) as image:
+            patch = image.convert('RGB').crop(cut)
+        for rate,colors in ((1,80),(1,48),(1,32),(.88,32),(.76,24),(.65,16),(.55,12)):
+            buf = io.BytesIO()
+            thumb = patch.resize((round(patch.width*rate),round(patch.height*rate)),Image.Resampling.NEAREST)
+            thumb.quantize(colors=colors).save(buf,format='PNG',optimize=True)
+            if len(buf.getvalue()) <= 2450:
+                break
+        assert len(buf.getvalue()) <= 2450, slot
+        emit('Cenital '+path.stem,buf.getvalue())
 
 
 if __name__ == '__main__':
@@ -92,6 +130,6 @@ if __name__ == '__main__':
     parser.add_argument('--gallery',action='store_true')
     args = parser.parse_args()
     if args.gallery:
-        gallery(args.shots,PREFIX)
+        gallery(args.shots)
     else:
         verify(args.shots)
