@@ -982,7 +982,9 @@ jobs:
       # Comprueba la carga del programa en el cliente real, no una partida
       # ni el orden de render en F5. No bloquea la construcción normal.
       - name: Comprobar carga del halo en Forge (opcional)
-        if: github.event_name == 'workflow_dispatch' && inputs.probar_halo == true
+        if: >-
+          (github.event_name == 'push' && contains(github.event.head_commit.message, '[probar-halo]')) ||
+          (github.event_name == 'workflow_dispatch' && inputs.probar_halo == true)
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
           ALSOFT_DRIVERS: 'null'
