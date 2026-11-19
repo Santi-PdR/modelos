@@ -31,16 +31,29 @@ def visible_plate(root, slot, side, worn, bare, unplated):
     return projected & material & changed
 
 
+def sleeve_rim(image):
+    # Track the cyan test skin, not sparse pixels from the blue floor, sparks
+    # or a colour fringe. At this angle a sleeve is tens of pixels tall.
+    aqua = shirt_mask(image) & (image[...,1] > 95) & (np.abs(image[...,2]-image[...,1]) < 30)
+    run = aqua[:-2] & aqua[1:-1] & aqua[2:]
+    solid = np.zeros_like(aqua)
+    solid[:-2] |= run
+    solid[1:-1] |= run
+    solid[2:] |= run
+    height = solid.sum(axis=0)
+    columns = np.flatnonzero(height >= max(6, .35*height.max()))
+    assert solid.sum() > 600 and len(columns) > 60, 'no se ven ambas mangas'
+    return solid, int(columns[0]), int(columns[-1])+1
+
+
 def seams(root, slot, worn, bare, unplated):
-    _,reference = np.where(shirt_mask(bare))
-    assert len(reference) > 600, 'no se ven las mangas de la referencia sin manto'
-    width = reference.max()+1-reference.min()
+    _,ref_left,ref_right = sleeve_rim(bare)
+    width = ref_right-ref_left
     # Read the rim of the sleeve in this draw. Small vanilla idle rolls can
     # move its outermost column even with the torso and camera registered.
-    shirt = shirt_mask(worn)
-    _,xx = np.where(shirt)
-    left,right = xx.min(),xx.max()+1
-    assert max(abs(left-reference.min()),abs(right-1-reference.max())) < .045*width, (slot,'mangas sin registrar')
+    shirt,left,right = sleeve_rim(worn)
+    assert max(abs(left-ref_left),abs(right-ref_right)) < .045*width, (
+        slot,'mangas sin registrar',(ref_left,ref_right),(left,right))
     output = []
     floor = blue_floor(worn)
     # The outer half of each sleeve, away from the return over the interior.
@@ -57,7 +70,8 @@ def seams(root, slot, worn, bare, unplated):
             cloth = np.flatnonzero(mask[start:stop,x])
             rim = start+cloth[0] if cloth.size else stop
             points.append((max(0,rim-y-1),bool(cloth.size),int(floor[y+1:rim,x].sum())))
-        assert len(points) >= max(6,.06*width), (slot,side,'la manga quedó fuera del recorte')
+        assert len(points) >= max(6,.06*width), (
+            slot,side,'la manga quedó fuera del recorte',(left,right),width,len(points))
         d,found,air = np.asarray(points).T
         _,cols = np.where(mask)
         overhang = max(0,left-cols.min() if side == 1 else cols.max()-right+1) if cols.size else np.inf
@@ -103,11 +117,11 @@ def gallery(root):
     path = root/f'{PREFIX}-sin-manto.png'
     if not path.is_file():
         return
-    y,x = np.where(shirt_mask(read(path)))
-    assert len(x) > 600
-    width = int(x.max()+1-x.min())
-    cut = (int(x.min()-.235*width),int(y.min()-.34*width),
-           int(x.max()+.16*width),int(y.max()+.37*width))
+    shirt,left,right = sleeve_rim(read(path))
+    y,_ = np.where(shirt[:,left:right])
+    width = right-left
+    cut = (int(left-.235*width),int(y.min()-.34*width),
+           int(right-1+.16*width),int(y.max()+.37*width))
     for slot in ('sin-manto','v16711','pecho','curios'):
         path = root/f'{PREFIX}-{slot}.png'
         if not path.is_file():

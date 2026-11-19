@@ -1025,7 +1025,7 @@ jobs:
           done
 
       - name: Verificar el desplazamiento visible del cuello y las dos hombreras en F5
-        if: steps.fx-smoke.outcome == 'success'
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
           set -o pipefail
           python3 tools/verify_forge_seat.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
