@@ -43,7 +43,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from armor_model_pipeline import legacy_element, relief, mount_bones
+from armor_model_pipeline import collar_return, legacy_element, mount_bones, relief
 import cape_motion as M
 import cape_animation_pipeline as animation
 
@@ -350,7 +350,8 @@ def main() -> None:
     _raw = base64.b64decode(model["textures"][0]["source"].split(",", 1)[1])
     _im = Image.open(io.BytesIO(_raw))
     assert _im.size == tuple(model["resolution"][axis] for axis in ("width", "height")) == atlas_texture().size
-    n_visible = 122 + sum(map(len, relief()['fragments'].values())) + sum(len(b['cubes']) for b in mount_bones())
+    n_visible = (122 + sum(map(len, relief()['fragments'].values()))
+                 + sum(len(b['cubes']) for b in mount_bones()) + len(collar_return()['cubes']))
     assert len(model['elements']) == n_visible + 27, len(model['elements'])
     assert sum(e['visibility'] for e in model['elements']) == n_visible
     assert not any(e["name"].startswith(("v17_mote_", "v17_ash_",

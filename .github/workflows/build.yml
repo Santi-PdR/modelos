@@ -258,8 +258,11 @@ jobs:
               'v20_mount_saddle': 'cape_wearer_fit'}
           mount_cubes = sum(len(b.get('cubes', [])) for b in mount.values())
           assert mount_cubes == 12
-          assert len(armor_geo['bones']) == 230
-          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 260 + fragments + mount_cubes
+          cowl_return = next(b for b in armor_geo['bones'] if b['name'] == 'v17_cowl_return')
+          return_cubes = len(cowl_return['cubes'])
+          assert cowl_return['parent'] == 'cape_wearer_fit' and return_cubes == 3
+          assert len(armor_geo['bones']) == 231
+          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 260 + fragments + mount_cubes + return_cubes
           hinge = next(b for b in armor_geo['bones'] if b['name'] == 'cape_wearer_fit')
           assert hinge['parent'] == 'chestplate' and not hinge['cubes']
           new_bones = armor_geo['bones'][72:]
@@ -542,8 +545,8 @@ jobs:
           assert bb['meta']['format_version'] == '5.0'
           # v1.17.3: el .bbmodel de Blockbench muestra SOLO la capa: sin
           # maniqui Steve/Alex y sin los 126 cubos de la armadura vieja.
-          assert len(bb['elements']) == 149+fragments+mount_cubes and len(bb['groups']) == 230
-          assert sum(e['visibility'] for e in bb['elements']) == 122+fragments+mount_cubes
+          assert len(bb['elements']) == 149+fragments+mount_cubes+return_cubes and len(bb['groups']) == 231
+          assert sum(e['visibility'] for e in bb['elements']) == 122+fragments+mount_cubes+return_cubes
           assert not any('Steve/Alex' in g['name'] for g in bb['groups'])
           assert bb['resolution'] == {'width': armor_size, 'height': armor_size}
           assert all(max(f['uv']) <= armor_size for e in bb['elements'] for f in e['faces'].values())
@@ -776,8 +779,10 @@ jobs:
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1620.py
           elif grep -qx 'mod_version=1.63.0' gradle.properties; then
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1630.py
-          else
+          elif grep -qx 'mod_version=1.64.0' gradle.properties; then
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1640.py
+          else
+            OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py
           fi
           # v1240: el calibrador de energia es un lazo cerrado Jacobi; se
           # comprueba que siga siendo importable y que el perfil medido

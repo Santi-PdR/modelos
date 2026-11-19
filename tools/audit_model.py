@@ -74,10 +74,14 @@ def static_checks() -> None:
     geo = json.loads((ROOT / "src/main/resources/assets/capatest/geo/item"
                       "/armor/capa_deteriorer_evilsaiyan.geo.json").read_text())
     bones = geo["minecraft:geometry"][0]["bones"]
-    from armor_model_pipeline import FIT_BONE, mount_bones, relief
+    from armor_model_pipeline import COLLAR_RETURN, FIT_BONE, mount_bones, relief
     n_fragments = sum(map(len, relief()['fragments'].values()))
     n_mount = sum(len(b['cubes']) for b in mount_bones())
-    assert len(bones) == 230 and sum(len(b.get('cubes', [])) for b in bones) == 260+n_fragments+n_mount
+    edge = next(b for b in bones if b['name'] == COLLAR_RETURN)
+    n_edge = len(edge['cubes'])
+    assert edge['parent'] == FIT_BONE and n_edge == 3
+    extras = n_fragments + n_mount + n_edge
+    assert len(bones) == 231 and sum(len(b.get('cubes', [])) for b in bones) == 260+extras
     rig = next(b for b in bones if b['name'] == FIT_BONE)
     assert rig['parent'] == 'chestplate' and not rig['cubes']
     forbidden = ("v17_mote_", "v17_ash_", "v17_yoke_",
@@ -125,8 +129,8 @@ def static_checks() -> None:
     # NO puede volver a incluir el maniquí ni los cubos de armadura vieja.
     assert (ROOT / 'docs' / f'CAPA_v{VER}.bbmodel').read_bytes() == BB.read_bytes()
     bb = json.loads(BB.read_text())
-    assert len(bb['elements']) == 149+n_fragments+n_mount
-    assert sum(e['visibility'] for e in bb['elements']) == 122+n_fragments+n_mount
+    assert len(bb['elements']) == 149+extras
+    assert sum(e['visibility'] for e in bb['elements']) == 122+extras
     assert bb['resolution'] == {'width': 512, 'height': 512}
     assert all(max(f['uv']) <= 512 for e in bb['elements']
                for f in e['faces'].values())

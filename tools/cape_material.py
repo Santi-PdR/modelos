@@ -17,7 +17,7 @@ import cape_reference as R
 import cape_shape as shape
 import cape_surface as S
 import preview_cloth as P
-from armor_model_pipeline import source_cube, MOUNT_PREFIX, SEAT_BONE, SADDLE_BONE
+from armor_model_pipeline import COLLAR_RETURN, MOUNT_PREFIX, SADDLE_BONE, SEAT_BONE, source_cube
 
 SIZE = 512
 GUARD = 1
@@ -147,10 +147,15 @@ def map_material(geo, *, paint=False):
                 uv = dict(uv=[x+.5,round(y+.5+(h-1)*lo,4)],
                           uv_size=[w-1.,round(max(.5,(h-1)*(hi-lo)),4)])
         f['c']['uv'][side] = uv
-    # The concealed mounting pieces use the existing matte swatches. Do
+    # Fit pieces and collar ends share the existing matte swatches. Do
     # not repack or resample the approved albedo and its emitting cracks.
     for b in geo['bones']:
         name = b['name']
+        if name == COLLAR_RETURN:
+            for c in b['cubes']:
+                for side in c['uv']:
+                    c['uv'][side] = S.spec(slots['edge' if side == 'down' else 'red'])
+            continue
         if not name.startswith(MOUNT_PREFIX):
             continue
         for ci,c in enumerate(b['cubes']):

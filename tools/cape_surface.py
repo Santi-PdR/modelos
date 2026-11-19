@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import math
 
-from armor_model_pipeline import source_cube, MOUNT_PREFIX
+from armor_model_pipeline import COLLAR_RETURN, MOUNT_PREFIX, source_cube
 
 import numpy as np
 from PIL import Image
@@ -116,7 +116,10 @@ def visible_faces(geometry, *, skip_mount=False):
     matrices=P.matrices(geometry)
     faces=[]
     for b in geometry['bones'][72:]:
-        if b['name'].startswith(('v15_cloth_','v17_vein_')) or (skip_mount and b['name'].startswith(MOUNT_PREFIX)):
+        name = b['name']
+        if name.startswith(('v15_cloth_', 'v17_vein_')):
+            continue
+        if skip_mount and (name.startswith(MOUNT_PREFIX) or name == COLLAR_RETURN):
             continue
         for ci,c in enumerate(b.get('cubes',())):
             v=P.cube_points(c,matrices[b['name']])

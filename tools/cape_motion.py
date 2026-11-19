@@ -19,18 +19,19 @@ class Style:
     roll: tuple[float, float, float]
     spread: float                    # abre o recoge ambos lados
     ripple: float                    # acento local en los gajos
-    phase: float = 0.0
+    phase: float
+    lag: float                       # propagación de la onda hacia el borde
 
 
 STYLES = {
-    "idle":       Style(3.60, (0.4, 0.5, -0.7), (.6, 1.0, 1.7), (.14, .62, .96), 0.45, 1.8, .25),
-    "caminar":    Style(1.00, (8, 5, -2), (1.8, 3.4, 4.5), (.74, 1.8, 3.2), 2.2, 4.0, .4),
-    "correr":     Style(0.72, (27, 12, -7), (2.1, 3.2, 5.3), (.64, 1.8, 3.8), -5.5, 6.4, .8),
-    "volar":      Style(1.35, (45, 11, -5), (2.7, 4.2, 5.0), (.74, 1.5, 2.8), 11.5, 8.4, 1.5),
-    "caer":       Style(0.90, (18, 19, 22), (2.5, 4.7, 6.3), (.85, 2.4, 4.2), 5.0, 7.8, 2.0),
-    "agachado":   Style(2.60, (9, -4, -6), (.8, 1.2, 1.8), (.18, .53, 1.1), -10.5, 2.1, .3),
-    "agua":       Style(3.20, (12, 7, -12), (1.7, 3.6, 5.1), (.65, 3.6, 8.1), 3.6, 5.2, 2.3),
-    "deterioro":  Style(3.00, (6, 2, 9), (1.8, 2.8, 4.7), (.72, 2.4, 3.6), 4.2, 7.0, 1.1),
+    "idle":       Style(3.60, (.35, .65, -.55), (.44, .87, 1.48), (.12, .48, .89), .38, 1.56, .25, 1.04),
+    "caminar":    Style(1.00, (7, 4.8, -2.7), (1.22, 2.7, 4.3), (.51, 1.35, 2.6), 2.4, 4.2, .42, 1.13),
+    "correr":     Style(0.72, (26, 12, -7.4), (1.3, 2.75, 4.6), (.39, .97, 1.95), -6.0, 5.6, .82, .80),
+    "volar":      Style(1.35, (44, 11, -4.7), (1.42, 2.72, 4.0), (.63, 1.76, 3.5), 10.8, 7.60, 1.46, .83),
+    "caer":       Style(0.90, (17, 17, 19), (1.5, 3.1, 5.1), (.79, 1.95, 3.8), 5.1, 7.0, 1.65, 1.08),
+    "agachado":   Style(2.60, (7.5, -3.25, -4.75), (.66, 1.09, 1.5), (.13, .45, .91), -9.5, 1.85, .28, 1.0),
+    "agua":       Style(3.20, (11.5, 7, -11.8), (1.55, 3.1, 4.7), (.58, 3.28, 7.9), 3.6, 5.4, 2.2, 1.35),
+    "deterioro":  Style(3.00, (5.8, 2.15, 8.3), (1.7, 2.68, 4.35), (.69, 2.23, 3.55), 4.3, 6.8, 1.10, 1.12),
 }
 SECTIONS = ("cape_top", "cape_mid", "cape_bottom")
 RIBBON = re.compile(r"v17_ribbon_(\d+)_seg(\d+)")
@@ -49,20 +50,29 @@ def sample(name: str, style: str, f: float) -> tuple[float, float, float]:
     t = 2 * math.pi * (f % 1.0)
     if name in SECTIONS:
         i = SECTIONS.index(name)
-        phase = t + spec.phase - i * 0.92
-        # Barrido de hombros a dobladillo; cada estilo vive durante todo
-        # el ciclo, en vez de volver a reposo cada vuelta.
+        phase = t + spec.phase - spec.lag * i
+        # La onda se propaga desde la costura sin volver a reposo al cerrar
+        # el ciclo. La sección superior es la más contenida.
         pitch = spec.pitch[i] + spec.flex[i] * (
-            0.78 * math.sin(phase) + 0.22 * math.sin(2 * t + spec.phase - i * 0.68))
-        roll = spec.roll[i] * math.sin(phase - .8)
-        yaw = (.45 + i * .45) * math.sin(phase + 1.1)
+            .86 * math.sin(phase) + .14 * math.sin(2 * phase + .45))
+        roll = spec.roll[i] * math.sin(phase - .7)
+        yaw = (.36 + i * .39) * math.sin(phase + 1.1)
         if style == "caminar":
-            pitch += (0.8 + i * 0.65) * math.sin(2 * phase - .6)
+            # Dos pasos por vuelta; la oscilación lateral cambia de pie.
+            pitch += (.65 + i*.67) * math.cos(2*phase - .6)
+            yaw += (.25 + i*.31) * math.sin(phase - .66)
+        elif style == "volar":
+            # Planeo más sostenido, con balanceo, no aleteo desde el cuello.
+            yaw += (.18 + i*.48) * math.cos(phase - .48)
+        elif style == "caer":
+            # La subida de la orilla tiene un impulso y una recuperación.
+            pulse = (.5 + .5*math.cos(phase - .25))**3
+            pitch += (1.9 + i*2.0) * pulse
         elif style == "deterioro":
-            pitch += (2 + i * 2.2) * beat(phase)
-            roll += (0.8 + i * .75) * math.sin(3 * t - i * .95) * beat(phase)
+            pitch += (1.8 + i * 2.20) * beat(phase)
+            roll += (.75 + i * .71) * math.sin(3 * t - i * .95) * beat(phase)
         elif style == "agua":
-            yaw *= 2.1
+            yaw *= 2.2
         return pitch, yaw, roll
 
     m = RIBBON.fullmatch(name)
@@ -76,22 +86,24 @@ def sample(name: str, style: str, f: float) -> tuple[float, float, float]:
         # segment three solids share one rotation; no flapping loose tip.
         tail = seg / LAST_JOINT
         q = tail**1.45
-        a = t + spec.phase - .62 * seg + .32 * side
-        wave = math.sin(a) + .13 * math.sin(2 * a + .4)
-        ensemble = math.sin(t + spec.phase - .62 * seg - .68)
+        a = t + spec.phase - spec.lag * (.36 * seg + .038 * seg**2)
+        wave = math.sin(a + .35 * side) + .14 * math.sin(2 * a + .42)
         amp = spec.ripple * q * (.76 + .24 * abs(side))
-        pitch = .44 * amp * wave
-        yaw = .26 * amp * math.cos(a) - .22 * spec.spread * side * q
-        roll = amp * (.64 * ensemble + .25 * side * wave) - .72 * side * spec.spread * q
+        pitch = .42 * amp * wave
+        yaw = .24 * amp * math.cos(a + .35*side) - .22 * spec.spread * side * q
+        roll = amp * (.60 * math.sin(a - .62) + .27 * side * wave) - .71 * side * spec.spread * q
         if style == "caminar":
-            roll += hand * 2.4 * q * math.sin(t - .54 * seg)
+            pitch += 1.55 * side * q * math.sin(a - .45)
+            roll += hand * 1.75 * q * math.sin(a - .63)
         elif style == "correr":
-            pitch += 1.50 * q * math.sin(2 * a + .9)
+            pitch += 1.32 * q * math.sin(2 * a + .82 + .55*side)
         elif style == "caer":
-            pitch += 2.30 * q * math.sin(2 * a - .6)
+            pitch += 2.36 * q * (.5 + .5 * math.cos(a - .22))**3
+        elif style == "agua":
+            yaw += 1.32 * q * math.cos(a - .55)
         elif style == "deterioro":
-            pitch += 3.6 * q * beat(a)
-            roll += 3.6 * q * hand * beat(a) * math.sin(2 * t + .32 * side - .42 * seg)
+            pitch += 3.15 * q * beat(a)
+            roll += 3.35 * q * hand * beat(a) * math.sin(2*a + .32*side)
         if col in (0, 10):
             pitch, yaw, roll = pitch*.63, yaw*.56, roll*.60
         return pitch, yaw, roll

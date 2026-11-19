@@ -124,8 +124,10 @@ def step_gifs_y_estados(ver: str) -> None:
     run(sys.executable, "tools/present_v1600.py", "--out", str(D), "--gif")
     shutil.copy(D / f"capa_v{ver.replace('.', '')}_antes_despues.png", A / "antes_despues.png")
     shutil.copy(D / f"capa_v{ver.replace('.', '')}_registro.png", A / "registro.png")
-    if ver == '1.64.0':
+    if ver in ('1.64.0', '1.65.0'):
         shutil.copy(D / 'capa_v1640_ajuste.png', A / 'ajuste.png')
+    if ver == '1.65.0':
+        shutil.copy(D / 'capa_v1650_cuello.png', A / 'cuello.png')
     shutil.copy(D / "capa_v1170_estados.png", A / "estados.png")
     shutil.copy(D / "capa_v1170_animaciones.gif", A / "animacion.gif")
 

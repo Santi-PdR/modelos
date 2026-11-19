@@ -141,15 +141,19 @@ def main():
     out.mkdir(exist_ok=True,parents=True)
     geo=P.load(P.ARMOR_GEO);ver=P.mod_version();atlas=P.ARMOR_TEX
     clips=json.loads(A.ANIM.read_text())['animations']
-    prior = {'1.60.0':'1.59.0','1.61.0':'1.60.0','1.62.0':'1.61.0','1.63.0':'1.62.0','1.64.0':'1.63.0'}[ver]
+    prior = {'1.60.0':'1.59.0','1.61.0':'1.60.0','1.62.0':'1.61.0','1.63.0':'1.62.0',
+             '1.64.0':'1.63.0','1.65.0':'1.64.0'}[ver]
     panel(out,ver,geo,atlas,prior=prior)
-    if ver in ("1.62.0", "1.63.0", "1.64.0"):
+    if ver in ("1.62.0", "1.63.0", "1.64.0", "1.65.0"):
         lighting_panel(out,ver,geo,atlas)
     if ver == "1.63.0":
         detail_panel(out,geo,atlas)
     if ver == "1.64.0":
         from present_v1640 import mount_panel
         mount_panel(out,geo,atlas,clips)
+    if ver == "1.65.0":
+        from present_v1650 import collar_panel
+        collar_panel(out,geo,atlas,clips)
     suffix = ver.replace('.', '')
     shutil.copyfile(out/f'capa_v{suffix}_antes_despues.png',out/'capa_v1170_comparativa.png')
     shutil.copyfile(out/f'capa_v{suffix}_registro.png',out/'capa_v1170_silhouette_compare.png')

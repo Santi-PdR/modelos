@@ -84,6 +84,15 @@ public final class CapeStateTest {
         double first = filter.sample(9.03,1,0,0,0,0,0,0)[0];
         check(filter.sample(9.03,1,0,0,0,0,0,0)[0] == first, "dos pasadas avanzan el filtro");
         check(filter.sample(0,.5,0,0,0,0,0,0)[0] == .5, "arrastre de otro reloj");
+        check(Math.abs(simulateTurn(30)-simulateTurn(144)) < 1e-12, "retardo distinto con FPS");
+        filter.sample(10,0,0,0,0,0,0,0);
+        filter.sample(10.1,0,0,1,0,0,0,0);
+        double upper = filter.turnAt(.2), hem = filter.turnAt(1);
+        check(upper > hem && hem > 0, "el dobladillo responde antes que la tela alta");
+        filter.sample(10.1,0,0,-1,0,0,0,0);
+        check(filter.turnAt(1) == hem, "la emisión vuelve a avanzar el dobladillo");
+        filter.sample(10.75,0,0,-1,0,0,0,0);
+        check(filter.turnAt(1) == -1, "se conserva un giro de una entidad anterior");
         System.out.println("CapeState: ocho clips, aura con cuatro zonas y filtro independiente de FPS verificados");
     }
 
@@ -103,6 +112,14 @@ public final class CapeStateTest {
                 }
             }
         }
+    }
+
+    private static double simulateTurn(int fps) {
+        CapeResponse filter = new CapeResponse();
+        filter.sample(0,0,0,0,0,0,0,0);
+        for (int i = 1; i <= fps; i++)
+            filter.sample(i / (double) fps,0,0,1,0,0,0,0);
+        return filter.turnAt(1);
     }
 
     private static double simulateResponse(int fps) {

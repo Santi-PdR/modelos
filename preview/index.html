@@ -26,13 +26,13 @@ details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summar
 <header>
   <div class="kicker">Desarrollo local · Capa equipada · Visor interactivo</div>
   <h1>Mantle of the Blight Star</h1>
-  <p>La capa de la referencia: cuello plegado, carbón, granate y jirones violetas.</p>
+  <p>Cuello granate, carbón y jirones violetas. El borde apenas asoma por los hombros desde el frente.</p>
 </header>
 <div class="grid">
   <section class="card" aria-label="Modelo equipado interactivo">
     <div class="stage"><canvas id="view" width="480" height="480" aria-label="Render interactivo de la capa"></canvas><div id="loading" role="status">Cargando el modelo…</div></div>
     <div class="controls" aria-label="Ángulo de cámara">
-      <button id="vBack">Espalda</button><button id="v34" aria-pressed="false" title="Pose base y cámara de la imagen original">Referencia</button><button id="vSide">Perfil</button><button id="vFront">Forro</button><button id="vTop">Cenital</button>
+      <button id="vBack">Espalda</button><button id="v34" aria-pressed="false" title="Pose base y cámara de la imagen original">Referencia</button><button id="vSide">Perfil</button><button id="vFront" title="Frente equipado; sin maniquí se ve el forro">Frente</button><button id="vTop">Cenital</button>
     </div>
     <div id="referenceCompare" class="controls" hidden>
       <label for="wipe">Imagen original</label><input id="wipe" type="range" min="0" max="100" value="50" aria-label="Porcentaje de la imagen original sobre el modelo">
@@ -91,8 +91,9 @@ details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summar
     </section>
   </aside>
 </div>
-<section class="card"><div class="kicker">03 · Ajuste equipado</div><h2>Montura, vista desde arriba y de perfil</h2>
-<a href="assets/ajuste.png"><img class="plate" src="assets/ajuste.png" loading="lazy" alt="Comparación de la sujeción al torso con la misma postura y escala"></a>
+<section class="card"><div class="kicker">03 · Ajuste equipado</div><h2>El cuello desde el frente y de perfil</h2>
+<a href="assets/cuello.png"><img class="plate" src="assets/cuello.png" loading="lazy" alt="Antes y después de los bordes del cuello con el portador de frente, girado y agachado"></a>
+<a href="assets/ajuste.png">Montura interior: comparativa cenital de v1.64.0</a>
 </section>
 <section class="card"><div class="kicker">04 · Comparación</div><h2>Modelo y referencia a la misma escala</h2>
 <a href="assets/antes_despues.png"><img class="plate" src="assets/antes_despues.png" loading="lazy" alt="Imagen original, modelo anterior y nuevo a la misma cámara"></a>

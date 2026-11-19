@@ -20,6 +20,7 @@ import preview_cloth as P
 SOURCE = P.ROOT / 'src/main/java/com/capatest/client/CapeFit.java'
 HEAD_PIVOT = np.array([0., 24., 0.])
 HEAD = P.CORNERS * 8.5 + [-4.25, -.25, -4.25]
+HEAD_OUTER = P.CORNERS * 9 + [-4.5, -.5, -4.5]  # vanilla player's hat layer
 
 
 @lru_cache(maxsize=1)
@@ -80,10 +81,10 @@ def rotate(p, pivot, degrees):
     return (p-pivot) @ P.R('x', degrees)[:3,:3].T + pivot
 
 
-def head_in_body(stance, pitch, yaw):
+def head_in_body(stance, pitch, yaw, *, outer=False):
     # Head.y=4.2 and body.y=3.2 in crouch. Undo the chest transform in
     # model coordinates, so measurement is relative to the fitted torso.
-    head = HEAD @ (P.R('y', yaw) @ P.R('x', pitch))[:3,:3].T
+    head = (HEAD_OUTER if outer else HEAD) @ (P.R('y', yaw) @ P.R('x', pitch))[:3,:3].T
     return rotate(head + HEAD_PIVOT - [0., stance, 0.], HEAD_PIVOT,
                   stance * profile()['bodyAngle'])
 

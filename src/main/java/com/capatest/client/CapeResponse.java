@@ -10,6 +10,7 @@ public final class CapeResponse {
 
     private final double[] values = new double[7];
     private double lastSeconds = Double.NaN;
+    private double hemTurn;
 
     public double[] sample(double seconds, double speed, double lift, double turn,
                            double crouch, double water, double air, double sprint) {
@@ -25,6 +26,7 @@ public final class CapeResponse {
             values[4] = water;
             values[5] = air;
             values[6] = sprint;
+            hemTurn = turn;
         } else if (dt > 0.0) {
             values[0] = toward(values[0], speed, dt, 8.0);
             values[1] = toward(values[1], lift, dt, 6.2);
@@ -33,8 +35,14 @@ public final class CapeResponse {
             values[4] = toward(values[4], water, dt, 4.4);
             values[5] = toward(values[5], air, dt, 8.0);
             values[6] = toward(values[6], sprint, dt, 8.0);
+            hemTurn = toward(hemTurn, turn, dt, 4.2);
         }
         return values;
+    }
+
+    /** The upper fold answers a turn first; inertia delays the free hem. */
+    public double turnAt(double weight) {
+        return values[2] + weight * (hemTurn - values[2]);
     }
 
     private static double toward(double old, double target, double dt, double rate) {

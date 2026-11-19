@@ -9,9 +9,9 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.64.0: montura unida a la espalda, cuello y hombreras estables entre clips.
-Ocho ciclos de paño y un ajuste compartido en pecho o Curios (opcional).
-Nuevo icono pixel art y una línea de lore localizada.
+v1.65.0: los dos bordes del cuello asoman apenas por los hombros.
+Ocho ciclos de paño refinados, con retardo al girar y ajuste compartido en pecho o Curios (opcional).
+Conserva el icono pixel art y la línea de lore localizada.
 '''
 
 [[dependencies.${mod_id}]]

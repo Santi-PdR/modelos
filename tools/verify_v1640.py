@@ -133,6 +133,12 @@ def fit_check(geo, clips, quick):
     fold = lambda v,d: F.rotate(v,np.array(G.DRAPE_PIVOT),f['drapePerUnit']*d)
     stretch = lambda v,d: (v-G.MOUNT_PIVOT)*[1.,1.,1.+d/f['gussetDepth']]+G.MOUNT_PIVOT
     shift = lambda d: np.array([0.,0.,d])
+    core = list(itertools.product((0.,.5,1.),range(-90,91,15),range(-90,91,15)))
+    fine = list(itertools.product((0.,.25,.5,.75,1.),np.linspace(-90,90,33),np.linspace(-90,90,33)))
+    # Cull cloth far below the head in the same space as the SAT sweep,
+    # including the inverse drape correction at the largest look angles.
+    head_floor = min(fold(F.head_in_body(*aim)-shift(d),-d)[:,1].min()
+                     for aim in core+fine for d in (F.depth(*aim),)) - .22
 
     def sample(model):
         m=P.matrices(model)
@@ -178,7 +184,7 @@ def fit_check(geo, clips, quick):
             roots = min(roots,(root.min(),title,d,root_names[int(root.argmin())]))
             cloth = fold(v[is_cloth],d)+shift(d)
             body = min(body,(cloth[...,2].min(),title,d))
-        points = v[is_cloth & (v[...,1].max(1)>14.5)]
+        points = v[is_cloth & (v[...,1].max(1)>head_floor)]
         if not quick or control:
             cloth_sample.append(points)
         if control:
@@ -216,8 +222,6 @@ def fit_check(geo, clips, quick):
             worst = clearance(head,(mount,mount.min(1),mount.max(1)),(*mark,'montura'),worst)
         return worst
 
-    core = list(itertools.product((0.,.5,1.),range(-90,91,15),range(-90,91,15)))
-    fine = list(itertools.product((0.,.25,.5,.75,1.),np.linspace(-90,90,33),np.linspace(-90,90,33)))
     worst = min(sweep(cloth_sample,core),sweep(control_sample,fine))
     print(f'Cabeza: {len(core)} orientaciones × {len(cloth_sample)} poses, '
           f'{len(fine)} × {len(control_sample)} controles, mínimo {worst[0]:+.3f} u.',flush=True)

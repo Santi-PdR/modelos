@@ -134,6 +134,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         collectFamily("v17_cowl_front_", 7, details);
         collectFamily("v17_cowl_tooth_", 7, details);
         collectFamily("v17_cowl_back_", 5, details);
+        getBone("v17_cowl_return").ifPresent(details::add);
         collectFamily("v19_cuellito_", 3, details);
         collectFamily("v17_vein_", 10, details);
         collectFamily("v18_pad_", 2, details);
@@ -203,10 +204,11 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             double lag = 0.62D * seg;
             double weight = Math.pow(seg / (double) LAST_SEGMENT, 1.45D);
             double ripple = Math.sin(time * 1.7D - lag + seed * 0.05D) * 0.44D;
-            double offY = Mth.clamp(m[2] * 1.84D * lateral + wind * 0.38D + sweep * 0.35D,
+            double turn = response.turnAt(weight);
+            double offY = Mth.clamp(turn * 1.84D * lateral + wind * 0.38D + sweep * 0.35D,
                     -CapeResponse.MAX_YAW, CapeResponse.MAX_YAW);
             double offZ = Mth.clamp((gust * 0.68D + wind * 0.24D) * (0.6D + 0.4D * Math.abs(lateral))
-                    + ripple + m[2] * 0.86D * lateral, -CapeResponse.MAX_ROLL, CapeResponse.MAX_ROLL);
+                    + ripple + turn * 0.86D * lateral, -CapeResponse.MAX_ROLL, CapeResponse.MAX_ROLL);
             b.setRotX(b.getRotX() + (float) Math.toRadians(offX * weight));
             b.setRotY(b.getRotY() + (float) Math.toRadians(offY * weight));
             b.setRotZ(b.getRotZ() + (float) Math.toRadians(offZ * weight));

@@ -112,6 +112,7 @@ MOUNT_PREFIX = "v20_mount_"
 SEAT_BONE = MOUNT_PREFIX + "seat"
 GUSSET_BONE = MOUNT_PREFIX + "gusset"
 SADDLE_BONE = MOUNT_PREFIX + "saddle"
+COLLAR_RETURN = "v17_cowl_return"
 FIT_PIVOT = (0., 4.6, 5.6)  # historical pivot; the wearer fit now slides in Z
 DRAPE_PIVOT = (0., 22.82, 4.89)  # seam at the start of the cloth
 MOUNT_PIVOT = (0., 16., 2.04)   # distance from the torso rear = .04u
@@ -291,6 +292,29 @@ def mount_bones():
     return [bone(SEAT_BONE, 'chestplate', MOUNT_PIVOT, (0,0,0), seat),
             bone(GUSSET_BONE, 'chestplate', MOUNT_PIVOT, (0,0,0), gusset),
             bone(SADDLE_BONE, FIT_BONE, (0,21.4,5.52), (0,0,0), saddle)]
+
+def collar_return():
+    """Two tapered ends of the cowl, sharing the collar's live mount.
+
+    Each tab runs toward the front from an overlapping fold in the cowl.
+    Keep the centre open and the shoulder plates exactly as authored.
+    Coordinates are in GEO space, from the front tip back into the cowl.
+    """
+    folds = (
+        ((-5.18,24.62,3.56), (-5.08,24.50,4.58), .82,.78,-4),
+        ((-5.08,24.50,4.58), (-4.14,24.86,6.44), .83,.86,-6),
+        ((5.58,24.51,4.14), (5.88,24.53,4.95), 1.16,.79,12),
+    )
+    cubes = []
+    for (x,y,z),(end_x,end_y,end_z),width,height,roll in folds:
+        dx,dy,dz = end_x-x,end_y-y,end_z-z
+        c = cube16((x-width/2,y-height/2,z-.12), (width,height,math.hypot(dx,dy,dz)+.24),
+                   COLLAR_UV, DARK, INFLATE[0])
+        c.update(pivot=[x,y,z], rotation=[round(math.degrees(math.atan2(dy,math.hypot(dx,dz))),4),
+                                          round(math.degrees(math.atan2(dx,dz)),4),roll])
+        cubes.append(c)
+    return bone(COLLAR_RETURN, FIT_BONE, (0.,24.,4.8), (0.,0.,0.), cubes)
+
 
 def build_base() -> dict:
     data = json.loads(ORIGINAL.read_text())
@@ -494,7 +518,7 @@ def build_base() -> dict:
             assert b['parent'] == 'chestplate'
             b['parent'] = FIT_BONE
     bones.insert(72, bone(FIT_BONE, 'chestplate', FIT_PIVOT, (0,0,0), []))
-    bones.extend([bone(DRAPE_BONE, FIT_BONE, DRAPE_PIVOT, (0,0,0), []), *mount_bones()])
+    bones.extend([bone(DRAPE_BONE, FIT_BONE, DRAPE_PIVOT, (0,0,0), []), *mount_bones(), collar_return()])
     return data
 
 

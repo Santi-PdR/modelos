@@ -1,11 +1,38 @@
-# Mantle of the Blight Star — v1.64.0
+# Mantle of the Blight Star — v1.65.0
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
 [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench](docs/CAPA_v1.64.0.bbmodel)
+· [Proyecto Blockbench](docs/CAPA_v1.65.0.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
+
+### v1.65.0 — un poco de cuello desde el frente
+
+![El cuello de la capa equipada de frente, en tres cuartos y al agacharse](docs/capa_v1650_cuello.png)
+
+- **Cuello:** dos bordes cortos de tela granate asoman por los hombros.
+  Son prolongaciones del mismo cuello, no solapas separadas sobre el pecho.
+  El contorno y la costura del dorso coinciden a la cámara fija de referencia.
+- **Movimiento:** la parte alta ondea menos; el dobladillo sigue con retardo.
+  Al caminar alternan los lados, en planeo el paño se sostiene, y en caída
+  el borde sube y vuelve a bajar. Los ocho ciclos conservan sus duraciones
+  y la mezcla de ocho ticks. El giro del cuerpo afecta más tarde a la tela libre.
+- **Anclaje:** se conserva el asiento sobre el torso. Se afina la holgura
+  de los nuevos remates respecto a la capa exterior de la cabeza vanilla.
+  El fuelle conserva el contacto con el asiento durante el recorrido. No cambian el
+  atlas, el brillo, las chispas, el icono, el lore ni la prioridad de equipo.
+
+[Registro del dorso](docs/capa_v1650_antes_despues.png) ·
+[Ocho ciclos](docs/capa_v1170_animaciones.gif) ·
+[Respaldo exacto v1.64.0](docs/respaldos/v1.64.0/)
+
+`OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py` comprueba las costuras,
+la sujeción y la holgura en 1.345 poses y mezclas, además de 21.609 posturas
+para los dos nuevos bordes. No es una prueba dentro del juego. Al límite de
+mirar recto hacia arriba agachado, la capa exterior de la skin puede rozar
+la montura interior ya existente; la cabeza base y los remates se comprueban
+por separado. No se certifican cascos ni poses de otros mods.
 
 ### v1.64.0 — la capa sí se apoya en la espalda
 
@@ -898,10 +925,10 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Descargas v1.64.0
+### Descargas v1.65.0
 
 El [workflow de Forge](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-compila `capatest-1.64.0.jar` con JDK 17 y Gradle 8.8. Desde un run exitoso
+compila `capatest-1.65.0.jar` con JDK 17 y Gradle 8.8. Desde un run exitoso
 para esta versión, baja **capatest-jar** en Artifacts. El ZIP incluye
 `SHA256SUMS.txt`: sólo se sube tras comparar dos builds y verificar los
 recursos exactos dentro del JAR. La [v1.63.0 publicada](https://github.com/Santi-PdR/modelos/releases/tag/v1.63.0)
@@ -933,7 +960,7 @@ El script prueba **dos fuentes** (asset de release y artifact histórico)
 y exige el MISMO digest en ambas: si el binario no coincide byte a
 byte, no escribe nada.
 
-**Modelo de Blockbench:** [CAPA_v1.64.0.bbmodel](docs/CAPA_v1.64.0.bbmodel),
+**Modelo de Blockbench:** [CAPA_v1.65.0.bbmodel](docs/CAPA_v1.65.0.bbmodel),
 byte a byte igual a la descarga que ofrece el visor offline.
 
 Regla de entrega: **el `.bbmodel` cambia de nombre con `mod_version`** y
