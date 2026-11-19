@@ -19,6 +19,12 @@ const result = vm.runInContext(`${source}
   ATLAS_W=ATLAS_H=input.atlasSize;
   ATLAS=bytes(input.albedo);
   GLOW=bytes(input.emission);
+  // A point outside the neutral envelope must still fit at default zoom.
+  // The fixed reference framing is tested separately below.
+  const moved=[{pts:[[10,0,0],[12,0,0],[12,3,0],[10,3,0]],uvs:Array(4).fill([0,0]),color:[92,23,51]}];
+  render(moved,0,0,1,input.size,[[0,0,0],[5,5,5]],null);
+  if (moved[0].pts.some(([x,y]) => Math.max(Math.abs(x-lastCx),Math.abs(y-lastCy))*lastScale > input.size/2))
+    throw new Error('La cámara de ajuste corta el modelo desplazado');
   const mesh=collect(input.geo, runtimeHidden(input.geo));
   input.tests.map(({yaw, pitch, ambient, tint}) => {
     const frame=referenceFrame(input.size);

@@ -233,11 +233,19 @@ function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=nu
   lastView = view;
   const prepared = [];
   let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+  const include=([x,y])=>{
+    x0=Math.min(x0,x); x1=Math.max(x1,x);
+    y0=Math.min(y0,y); y1=Math.max(y1,y);
+  };
+  // Keep the neutral framing during each cycle, but include the displaced
+  // cape and posed wearer if they extend past it. The reference stays locked.
+  if (!frame && bounds) for (const p of bounds) include(apply(view,p));
   const LIGHT = [-0.35, 0.65, 0.68];
   const ln = Math.hypot(...LIGHT);
   for (let i=0;i<3;i++) LIGHT[i] /= ln;
   for (const f of faces) {
     const pv = f.pts.map(p => apply(view, p));
+    if (!frame) for (const p of pv) include(p);
     const e1=[pv[1][0]-pv[0][0],pv[1][1]-pv[0][1],pv[1][2]-pv[0][2]];
     const e2=[pv[2][0]-pv[0][0],pv[2][1]-pv[0][1],pv[2][2]-pv[0][2]];
     const n=[e1[1]*e2[2]-e1[2]*e2[1], e1[2]*e2[0]-e1[0]*e2[2], e1[0]*e2[1]-e1[1]*e2[0]];
@@ -245,11 +253,6 @@ function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=nu
     // Misma luz aproximada que el render de comparación registrado.
     const shade=l>1e-6 ? .40+.60*Math.abs((n[0]*LIGHT[0]+n[1]*LIGHT[1]+n[2]*LIGHT[2])/l) : .45;
     prepared.push({pv, uvs:f.uvs, shade, color:f.color || null});
-  }
-  if (bounds) {
-    const points=bounds.map(p=>apply(view,p));
-    x0=Math.min(...points.map(p=>p[0])); x1=Math.max(...points.map(p=>p[0]));
-    y0=Math.min(...points.map(p=>p[1])); y1=Math.max(...points.map(p=>p[1]));
   }
   const [cx,cy,scale] = frame || [(x0+x1)/2, (y0+y1)/2,
     Math.min((size-46)/(x1-x0||1), (size-46)/(y1-y0||1)) * zoom];
