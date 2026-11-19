@@ -113,6 +113,7 @@ SEAT_BONE = MOUNT_PREFIX + "seat"
 GUSSET_BONE = MOUNT_PREFIX + "gusset"
 SADDLE_BONE = MOUNT_PREFIX + "saddle"
 SHOULDERS_BONE = MOUNT_PREFIX + "shoulders"
+UNDER_YOKE_BONE = MOUNT_PREFIX + "under_yoke"
 COLLAR_RETURN = "v17_cowl_return"
 FIT_PIVOT = (0., 4.6, 5.6)  # historical pivot; the wearer fit now slides in Z
 DRAPE_PIVOT = (0., 22.82, 4.89)  # seam at the start of the cloth
@@ -275,6 +276,8 @@ def mount_bones():
     The low gusset stretches up to the collar. Two independent shoulder
     returns reach over the rear corners of the sleeves, and tuck into the
     pads when the wearer needs head or wing room (see CapeFit.shoulderReach).
+    A thin lower fold closes the cloth between the returns and the torso.
+    It nests in the bottom of the gusset during an arm swing.
     """
     def skin(origin, size):
         return cube16(origin, size, COLLAR_UV, DARK, INFLATE[0])
@@ -299,10 +302,14 @@ def mount_bones():
         tab.update(pivot=[x,y,z], rotation=[round(math.degrees(math.atan2(dy,math.hypot(dx,dz))),6),
                                            round(math.degrees(math.atan2(dx,dz)),6),0.])
         returns.append(tab)
+    y,z,dy,dz = 18.58,1.88,.57,3.83
+    under_yoke = skin((-5.74,y-.16,z), (11.48,.32,math.hypot(dy,dz)))
+    under_yoke.update(pivot=[0,y,z], rotation=[round(math.degrees(math.atan2(dy,dz)),6),0.,0.])
     return [bone(SEAT_BONE, 'chestplate', MOUNT_PIVOT, (0,0,0), seat),
             bone(GUSSET_BONE, 'chestplate', MOUNT_PIVOT, (0,0,0), gusset),
             bone(SADDLE_BONE, FIT_BONE, (0,21.4,5.52), (0,0,0), saddle),
-            bone(SHOULDERS_BONE, FIT_BONE, (0,23.20,5.35), (0,0,0), returns)]
+            bone(SHOULDERS_BONE, FIT_BONE, (0,23.20,5.35), (0,0,0), returns),
+            bone(UNDER_YOKE_BONE, 'chestplate', (0,14.23,2.10), (0,0,0), [under_yoke])]
 
 def collar_return():
     """Two tapered ends of the cowl, sharing the collar's live mount.

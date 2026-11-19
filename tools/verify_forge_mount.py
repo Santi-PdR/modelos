@@ -57,6 +57,11 @@ def shoulder_rails(bare, worn, *, turned=False):
     width = xx.max() - xx.min() + 1
     center = xx.min() + width/2
     painted = g - worn[...,1] >= 16
+    # Light grey concrete is grey-green even under the vanilla entity shadow.
+    # Tests against the matching bare shirt alone miss holes *between* the
+    # external tabs and the seat: check concrete in those inner strips too.
+    wr,wg,wb = worn.transpose(2,0,1)
+    floor = (abs(wr-wg) <= 2) & (wg-wb >= 3) & (wg-wb <= 16) & (wg >= 35)
     rails = []
     for direction in (-1,1):
         result = []
@@ -69,7 +74,16 @@ def shoulder_rails(bare, worn, *, turned=False):
             result.append(painted[end:end+max(3,round(.054*width)),x])
         assert len(result) > .05*width
         measured = np.stack(result)
-        rails.append((float(measured.mean()),float(measured[:,:2].mean())))
+        inner = []
+        for x in range(round(center-.36*width),round(center+.36*width)):
+            if not .22 <= direction*(x-center)/width <= .35 or not shirt[:,x].any():
+                continue
+            end = np.flatnonzero(shirt[:,x])[-1] + 1
+            inner.append(floor[end:end+max(6,round(.106*width)),x])
+        assert len(inner) > .075*width
+        holes = np.stack(inner)
+        opening = (np.lib.stride_tricks.sliding_window_view(holes,(3,3)).all(axis=(-1,-2))).any()
+        rails.append((float(measured.mean()),float(measured[:,:2].mean()),float(holes.mean()),bool(opening)))
     return rails
 
 
@@ -79,6 +93,12 @@ def hotbar(root):
     pixels = np.stack([read(p) for p in paths])
     assert pixels.shape[1:] == (44,112,3)
     slot = pixels[:,6:38,40:72]
+    bare = read(root/'hotbar-vacia.png')
+    silhouette = np.median(np.abs(slot-bare[6:38,40:72]).max(axis=3),axis=0) >= 20
+    area = int(silhouette.sum())
+    old_area = int(np.count_nonzero(np.asarray(I.first_frame(I.PREVIOUS)
+                    .resize((32,32),Image.Resampling.NEAREST))[...,3]))
+    assert area >= 1.14*old_area, (area,old_area)
     spread = np.ptp(pixels,axis=0).max(axis=-1)
     change = spread[6:38,40:72]
     peak = int(change.max())
@@ -97,7 +117,12 @@ def hotbar(root):
               for frame in slot for x in (-1,0,1) for y in (-1,0,1)
               for sample in (np.roll(frame, (y,x), axis=(0,1)),))
     assert err <= 26, f'hotbar shape/colors did not match the shipped art: {err}'
-    print(f'Hotbar de Forge: pulso Δ{peak}/255, {seams} px de grietas animados, fondo estable y nuevo arte reconocido.',flush=True)
+    overlap = max(np.count_nonzero(sample & opaque)/np.count_nonzero(sample | opaque)
+                  for x in (-1,0,1) for y in (-1,0,1)
+                  for sample in (np.roll(silhouette, (y,x), axis=(0,1)),))
+    assert overlap >= .87, overlap
+    print(f'Hotbar de Forge: {area} px visibles a 2× (antes {old_area}), pulso Δ{peak}/255 y '
+          f'{seams} px de grietas animados; fondo estable.',flush=True)
     return pixels
 
 
@@ -160,8 +185,10 @@ def main():
             key = f'{prefix}-{name}'
             rails = shoulder_rails(control,read(args.shots/f'{key}.png'),turned=turned)
             print(f'{key}: remates laterales {rails[0][0]:.1%}/{rails[1][0]:.1%}; '
-                  f'junto a manga {rails[0][1]:.1%}/{rails[1][1]:.1%}.',flush=True)
-            if not all(total >= .78 and edge >= .55 for total,edge in rails):
+                  f'junto a manga {rails[0][1]:.1%}/{rails[1][1]:.1%}; '
+                  f'suelo interior {rails[0][2]:.1%}/{rails[1][2]:.1%}.',flush=True)
+            if not all(total >= .78 and edge >= .55 and floor <= .04 and not opening
+                       for total,edge,floor,opening in rails):
                 failures.append((key,rails))
     hotbar(args.shots)
     assert not failures, ('hueco entre manga y remate',failures)

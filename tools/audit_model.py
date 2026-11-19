@@ -83,7 +83,7 @@ def static_checks() -> None:
     n_edge = len(edge['cubes'])
     assert edge['parent'] == FIT_BONE and n_edge == 3
     extras = n_fragments + n_mount + n_edge
-    assert len(bones) == 232 and sum(len(b.get('cubes', [])) for b in bones) == 260+extras
+    assert len(bones) == 233 and sum(len(b.get('cubes', [])) for b in bones) == 260+extras
     rig = next(b for b in bones if b['name'] == FIT_BONE)
     assert rig['parent'] == 'chestplate' and not rig['cubes']
     forbidden = ("v17_mote_", "v17_ash_", "v17_yoke_",
@@ -266,7 +266,7 @@ def static_checks() -> None:
 
 
 def main() -> None:
-    from armor_model_pipeline import SHOULDERS_BONE
+    from armor_model_pipeline import SHOULDERS_BONE, UNDER_YOKE_BONE
     from verify_v1630 import GEO_BASE, TEX_BASE, GLOW, registered_metrics, similarity
 
     ap=argparse.ArgumentParser(description=__doc__)
@@ -277,7 +277,7 @@ def main() -> None:
     if args.check:
         # The reference art has no sleeve fasteners. Protect the registered
         # exterior unchanged, and separately bound the visible addition.
-        exterior = dict(now, bones=[b for b in now['bones'] if b['name'] != SHOULDERS_BONE])
+        exterior = dict(now, bones=[b for b in now['bones'] if b['name'] not in (SHOULDERS_BONE, UNDER_YOKE_BONE)])
         similarity(exterior,P.ARMOR_TEX,GLOW)
         (_, fitted),_ = registered_metrics(exterior,now,P.ARMOR_TEX)
         assert fitted['all'] > .95 and fitted['upper'] > .93, fitted['all']

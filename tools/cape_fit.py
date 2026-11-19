@@ -109,11 +109,20 @@ def mannequin_pose(stance, pitch, yaw, arm_swing=(0.,0.), leg_swing=(0.,0.)):
     return [head, body, *arms, *legs]
 
 
+def smooth(lo, hi, x):
+    t = max(0.,min(1.,(x-lo)/(hi-lo)))
+    return t*t*(3-2*t)
+
+
+def yoke_scales(stance, pitch, arm_back, *, elytra=False):
+    posture = 0. if elytra else (1-smooth(0,.60,stance))*(1-smooth(42,83,pitch))
+    sleeve = 1-smooth(2.9,6.1,arm_back)
+    spread = posture*sleeve
+    return [.51+.49*spread,.065+.935*posture*smooth(0,.44,sleeve),.62+.38*spread]
+
+
 def shoulder_scales(stance, pitch, yaw, *, elytra=False):
     # Same pose envelope as CapeFit.shoulderReach; pitch here is +look up.
-    def smooth(lo, hi, x):
-        t = max(0.,min(1.,(x-lo)/(hi-lo)))
-        return t*t*(3-2*t)
     yaw = abs(math.remainder(yaw,360.))
     down = smooth(34,62,-pitch)*(1-.62*smooth(44,73,yaw))*(1-.52*smooth(0,1,stance))
     ahead = .45*(1-smooth(0,3,yaw))*(1-smooth(0,42,abs(pitch)))*(1-.66*smooth(0,.70,stance))
@@ -121,7 +130,7 @@ def shoulder_scales(stance, pitch, yaw, *, elytra=False):
     return [1.,.27+.73*length,length]
 
 
-def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False):
+def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back=0.):
     """Bake render transforms for a frame, not animation keyframes."""
     changes = {'chestplate': dict(rotation=[stance*profile()['bodyAngle'], 0., 0.],
                                   offset=[0., -3.2*stance, 0.])}
@@ -135,5 +144,6 @@ def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False):
             G.DRAPE_BONE: dict(rotation=[-d*f['drapePerUnit'],0.,0.]),
             G.GUSSET_BONE: dict(scale=[1.,1.,1.+d/f['gussetDepth']]),
             G.SHOULDERS_BONE: dict(scale=shoulder_scales(stance,pitch,yaw,elytra=elytra)),
+            G.UNDER_YOKE_BONE: dict(scale=yoke_scales(stance,pitch,arm_back,elytra=elytra)),
         })
     return dict(geo, bones=[dict(b, **changes.get(b['name'], {})) for b in geo['bones']])

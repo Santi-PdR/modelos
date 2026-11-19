@@ -13,16 +13,24 @@ public final class CapeFitTest {
                 -Math.toRadians(lookUp), Math.toRadians(turn));
     }
 
+    private static double axis(double minimum, double spread) {
+        return minimum + (1-minimum)*spread;
+    }
+
     public static void main(String[] args) {
         if (args.length == 1 && args[0].equals("--shoulders")) {
             for (double stance : new double[]{0,.18,.5,.81,1})
                 for (double pitch : new double[]{-90,-66,-51.5,-33,0,26,90})
                     for (double yaw : new double[]{-187,-94,-43,0,2.25,42,51,65,89,196})
-                        for (int wings = 0; wings <= 1; wings++) {
+                        for (int wings = 0; wings <= 1; wings++)
+                          for (double arm : new double[]{-11,0,2.9,4.8,5.3,6.1,42}) {
                             double k = CapeFit.shoulderReach(stance * CapeFit.CROUCH_RADIANS,
                                     1.2, -Math.toRadians(pitch), 1.2 + Math.toRadians(yaw), wings == 1);
-                            System.out.printf(Locale.ROOT, "%.6f\t%.6f\t%.6f\t%d\t%.10f\t%.10f%n",
-                                    stance, pitch, yaw, wings, CapeFit.SHOULDER_HEIGHT + (1-CapeFit.SHOULDER_HEIGHT)*k, k);
+                            CapeFit.YokeShape yoke = CapeFit.yokeShape(stance * CapeFit.CROUCH_RADIANS,
+                                    -Math.toRadians(pitch), arm, wings == 1);
+                            System.out.printf(Locale.ROOT, "%.6f\t%.6f\t%.6f\t%d\t%.6f\t%.10f\t%.10f\t%.10f\t%.10f\t%.10f%n",
+                                    stance, pitch, yaw, wings, arm, axis(CapeFit.SHOULDER_HEIGHT,k), k,
+                                    yoke.width(),yoke.height(),yoke.depth());
                         }
             return;
         }
@@ -57,6 +65,9 @@ public final class CapeFitTest {
                 }
             }
         }
+        check(CapeFit.yokeShape(0, 0, 2.9, false).width() == 1, "el forro no se extiende en reposo");
+        check(CapeFit.yokeShape(0, 0, 6.1, false).width() == .51F, "el forro no deja pasar el brazo");
+        check(CapeFit.yokeShape(0, 0, 0, true).width() == .51F, "el forro no se recoge con élitros");
         System.out.println("CapeFit: reposo, signos, giro relativo, límites e interpolación verificados");
     }
 }

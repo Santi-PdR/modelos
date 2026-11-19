@@ -31,13 +31,14 @@ def main():
     if len(sys.argv) > 2:
         tabs = [tuple(map(float, row.split('\t'))) for row in Path(sys.argv[2]).read_text().splitlines()]
         js = subprocess.run(['node', 'tools/check_viewer_pose.js'], cwd=P.ROOT, check=True,
-                            input=json.dumps(dict(shoulderSamples=[r[:4] for r in tabs])),
+                            input=json.dumps(dict(shoulderSamples=[r[:5] for r in tabs])),
                             capture_output=True, text=True)
-        for (s,p,y,w,*expected), actual in zip(tabs,json.loads(js.stdout),strict=True):
-            for out in (F.shoulder_scales(s,p,y,elytra=w == 1)[1:],actual):
-                assert all(math.isclose(a,b,rel_tol=0,abs_tol=1e-9)
+        for (s,p,y,w,arm,*expected), actual in zip(tabs,json.loads(js.stdout),strict=True):
+            python = F.shoulder_scales(s,p,y,elytra=w == 1)[1:] + F.yoke_scales(s,p,arm,elytra=w == 1)
+            for out in (python,actual):
+                assert all(math.isclose(a,b,rel_tol=0,abs_tol=4e-8)
                            for a,b in zip(out,expected,strict=True)), (out,expected)
-        print(f'Remates de hombros: {len(tabs)} muestras coinciden en Java/Python/visor.')
+        print(f'Remates y forro: {len(tabs)} muestras coinciden en Java/Python/visor.')
 
 
 if __name__ == '__main__':

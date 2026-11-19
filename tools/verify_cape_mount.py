@@ -65,6 +65,8 @@ def check(geo):
     assert arm > .08, arm
     if shoulders:
         returns_fit(parts, matrices, max_depth)
+    if G.UNDER_YOKE_BONE in parts:
+        lining_fit(parts, matrices, seat[0], yoke[0], max_depth)
     print(f'Anclaje: costura continua {width:.2f}/8u de torso; solape ≥{worst:.3f}u en ambos lados, '
           f'margen de mangas {arm:.3f}u, capa exterior de cabeza {eye:+.3f}u en {len(poses)} posturas.',flush=True)
 
@@ -115,6 +117,58 @@ def returns_fit(parts, mats, max_depth):
     assert F.shoulder_scales(0,-89,43)[-1] == 1
     print(f'Remates: ambos cosidos a la hombrera ≥{lap:.3f}u; cabeza ≥{eye:.3f}u en {len(poses)} poses, '
           f'mangas Steve/Alex {clearance:+.3f}u (incluido el borde exterior).',flush=True)
+
+
+def lining_fit(parts, mats, seat, lower_gusset, max_depth):
+    piece = parts[G.UNDER_YOKE_BONE]
+    assert piece['parent'] == 'chestplate' and len(piece['cubes']) == 1
+    pivot = np.array(piece['pivot']) * [-1,1,1]
+    v = P.cube_points(piece['cubes'][0],mats[piece['name']])
+    pose = lambda scales: (v-pivot)*np.asarray(scales)[...,None,:]+pivot
+    torso = P.CORNERS*[8,12,4] + [-4,12,-2]
+    extended = F.yoke_scales(0,-89,2.86)
+    assert extended == F.yoke_scales(0,-86,2.86) == [1.,1.,1.]
+    contracted = pose(F.yoke_scales(0,-89,0,elytra=True))
+    # The fully tucked lining occupies the *existing* seat/gusset volume.
+    # The front stays within the seat even at maximum backset; the back
+    # stays within the lowest gusset segment, never reaching the wings.
+    a,b = contracted.min(0),contracted.max(0)
+    gusset_start = G.MOUNT_PIVOT[2] + (lower_gusset[:,2].min()-G.MOUNT_PIVOT[2])*(1+max_depth/F.profile()['gussetDepth'])
+    assert np.all(a[:2] > np.maximum(seat.min(0),lower_gusset.min(0))[:2])
+    assert np.all(b[:2] < np.minimum(seat.max(0),lower_gusset.max(0))[:2])
+    assert seat[:,2].min() < a[2] < gusset_start < seat[:,2].max()
+    assert b[2] < lower_gusset[:,2].max()
+    for arm_back in np.linspace(2.9,6.1,51):
+        assert overlap(pose(F.yoke_scales(0,-89,arm_back))[None],torso[None]).item() > .05
+    angles = list(product(np.linspace(0,1,9),np.linspace(-90,90,61),np.linspace(-90,90,61)))
+    h = np.array([F.head_in_body(*aim,outer=True) for aim in angles])
+    head_clear = min(sat(pose([F.yoke_scales(st,pitch,arm) for st,pitch,_ in angles]),h).min()
+                     for arm in (0,4,4.9,5.4,5.9,6.1))
+    assert head_clear > .18, head_clear
+    # The relaxed liner beds just under the sleeves, like the seat in the
+    # torso. Its edge must not pierce a sleeve wall during gait or lean.
+    normal,core,scales = [],[],[]
+    for slim,stance,swing,roll in product((False,True),np.linspace(0,1,7),np.linspace(-60,60,121),(-3.4,0,3.4)):
+        t = F.mannequin_pose(stance,0,0,arm_swing=(swing,swing))
+        inv = np.linalg.inv(t[1])
+        for side,((o,s,_),arm) in enumerate(zip(P.MANNEQUIN_BOXES[2:4],t[2:4],strict=True)):
+            o,s = np.array(o,dtype=float),np.array(s,dtype=float)
+            if slim:
+                o += [1 if side==0 else 0,-.5,0]
+                s[0] -= 1
+            p = np.array([-5 if side==0 else 5,22-3.2*stance,0.])
+            m = inv @ P.T(p) @ P.R('z',roll) @ P.T(-p) @ arm
+            skin = o-.25 + P.CORNERS*(s+.5)
+            rear_trimmed = o-.25 + P.CORNERS*(s+[.50,.50,-.32])
+            normal.append(skin@m[:3,:3].T+m[:3,3])
+            core.append(rear_trimmed@m[:3,:3].T+m[:3,3])
+            scales.append(F.yoke_scales(stance,0,swing+np.degrees(.4)*stance))
+    states = pose(scales)
+    graze = sat(states,np.array(normal)).min()
+    clearance = sat(states,np.array(core)).min()
+    assert graze > -.70 and clearance > .035, (graze,clearance)
+    print(f'Forro interior: solape con torso en todo el recorrido; cabeza +{head_clear:.3f}u, '
+          f'holgura bajo la unión de mangas +{clearance:.3f}u. Se aloja dentro del fuelle con élitros.',flush=True)
 
 
 if __name__ == '__main__':

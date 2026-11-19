@@ -16,6 +16,10 @@ public final class CapeFit {
     private static final double GUSSET_DEPTH = 3.48;
     private static final double DRAPE_DEGREES_PER_UNIT = 1.65;
     public static final String SHOULDERS_BONE = "v20_mount_shoulders";
+    public static final String UNDER_YOKE_BONE = "v20_mount_under_yoke";
+    public record YokeShape(float width, float height, float depth) {}
+    private static final YokeShape TUCKED_YOKE = new YokeShape(.51F, .065F, .62F);
+    private static final YokeShape OPEN_YOKE = new YokeShape(1, 1, 1);
     public static final double SHOULDER_MIN = .245;
     public static final double SHOULDER_HEIGHT = .27;
 
@@ -131,6 +135,25 @@ public final class CapeFit {
         double ahead = .45 * (1 - smooth(0, 3, yaw)) * (1 - smooth(0, 42, Math.abs(look)))
                 * (1 - .66 * smooth(0, .70, stance));
         return lerp(SHOULDER_MIN, 1, Math.max(ahead, down));
+    }
+
+    /** Close the inside of both shoulder seams with a tucked lining.
+     * As an arm sweeps into the join, fold the lining down against the seat.
+     * The wings use the fully tucked shape, inside the existing gusset. */
+    public static YokeShape yokeShape(double bodyPitch, double headPitch, double armBack, boolean elytra) {
+        if (elytra || !Double.isFinite(bodyPitch) || !Double.isFinite(headPitch) || !Double.isFinite(armBack))
+            return TUCKED_YOKE;
+        double stance = clamp(bodyPitch / CROUCH_RADIANS, 1);
+        double posture = (1 - smooth(0, .60, stance)) * (1 - smooth(42, 83, -Math.toDegrees(headPitch)));
+        double sleeve = 1 - smooth(2.9, 6.1, armBack);
+        double spread = posture * sleeve;
+        if (spread == 0) return TUCKED_YOKE;
+        if (spread == 1) return OPEN_YOKE;
+        // Narrow the lining before lowering it, so the moving fold never
+        // sweeps down through the elbow. Crouch/looking up lower all of it.
+        return new YokeShape((float) lerp(.51, 1, spread),
+                (float) lerp(.065, 1, posture * smooth(0, .44, sleeve)),
+                (float) lerp(.62, 1, spread));
     }
 
     private static double smooth(double lo, double hi, double x) {

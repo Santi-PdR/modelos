@@ -141,13 +141,19 @@ function shoulderScales(stance, look, turn, elytra=false) {
   const length=elytra ? .245 : .245+.755*Math.max(down,ahead);
   return [1,.27+.73*length,length];
 }
-function wearerPose(geo, profile, stance, look, turn, elytra=false) {
+function yokeScales(stance, look, arm, elytra=false) {
+  const posture=elytra ? 0 : (1-smooth(0,.60,stance))*(1-smooth(42,83,look));
+  const sleeve=1-smooth(2.9,6.1,arm), spread=posture*sleeve;
+  return [.51+.49*spread,.065+.935*posture*smooth(0,.44,sleeve),.62+.38*spread];
+}
+function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0) {
   const depth=backset(profile,stance,look,turn);
   return {...geo, bones:geo.bones.map(b => {
     if (b.name===profile.bone) return {...b,offset:[0,0,depth]};
     if (b.name===profile.drapeBone) return {...b,rotation:[-depth*profile.drapePerUnit,0,0]};
     if (b.name===profile.gussetBone) return {...b,scale:[1,1,1+depth/profile.gussetDepth]};
     if (b.name==='v20_mount_shoulders') return {...b,scale:shoulderScales(stance,look,turn,elytra)};
+    if (b.name==='v20_mount_under_yoke') return {...b,scale:yokeScales(stance,look,arm,elytra)};
     if (b.name==='chestplate') return {...b,rotation:[stance*profile.bodyAngle,0,0],offset:[0,-3.2*stance,0]};
     return b;
   })};
@@ -656,9 +662,11 @@ function draw(now) {
   const wingPose=referenceView ? null : WINGS[wingMode.value === 'folded' && stance ? 'crouched' : wingMode.value];
   const guide=wingPose ? wingGoal(WINGS,wingPose[0],wingPose[2],FIT.bodyAngle*stance,depth) : 0;
   const clearanceGait=strideFit.checked ? gait : null;
+  const backArm=Math.max(...(gait?.arms || [0,0]).map(
+    a=>Math.asin(Math.sin(a*Math.PI/180+stance*.4))*180/Math.PI));
   const fit=(pose, goal)=>{
     if (clearanceGait || goal>0) pose=clearancePose(pose,clearanceGait,stance,depth,goal);
-    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn,!!wingPose),hidden);
+    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn,!!wingPose,backArm),hidden);
   };
   const drift=demo ? swayPose(base,SWAY,t) : null;
   const current=drift && swayFit.checked ? drift : base;

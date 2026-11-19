@@ -30,11 +30,12 @@ HINGES = ('cape_top', 'cape_mid')
 
 def preservation(*, changed=()):
     wide = tuple(map(int, P.mod_version().split('.'))) >= (1, 67, 6)
-    mount = (G.SEAT_BONE, G.GUSSET_BONE, G.SHOULDERS_BONE)
+    new_mount = (G.SHOULDERS_BONE, G.UNDER_YOKE_BONE)
+    mount = (G.SEAT_BONE, G.GUSSET_BONE, *new_mount)
 
     def omit_mount_edits(model):
-        # The new returns are the only new group, with no animation tracks.
-        new_groups = {g['uuid'] for g in model['groups'] if g['name'] == G.SHOULDERS_BONE}
+        # The returns and lining are the only added groups, without tracks.
+        new_groups = {g['uuid'] for g in model['groups'] if g['name'] in new_mount}
         def prune(tree):
             return [dict(node, children=prune(node['children'])) if isinstance(node,dict) else node
                     for node in tree if not isinstance(node,dict) or node['uuid'] not in new_groups]

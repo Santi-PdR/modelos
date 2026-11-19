@@ -23,6 +23,7 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private final CapaArmorModel capeModel;
     private float wearerDepth;
     private float shoulderReach = (float) CapeFit.SHOULDER_MIN;
+    private CapeFit.YokeShape yoke = CapeFit.yokeShape(0, 0, 0, true);
     private boolean armorPassSubmitted;
 
     public CapaArmorRenderer() {
@@ -88,14 +89,16 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         // Curios renders after the vanilla ElytraLayer has updated these
         // smoothed angles. Don't recalculate that animation or touch the wings.
         double wings = 0;
-        boolean hasWings = getCurrentEntity() instanceof AbstractClientPlayer player
-                && player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA);
-        shoulderReach = (float) CapeFit.shoulderReach(model.body.xRot, model.body.yRot,
-                model.head.xRot, model.head.yRot, hasWings);
-        if (hasWings && getCurrentEntity() instanceof AbstractClientPlayer player) {
+        boolean hasWings = false;
+        if (getCurrentEntity() instanceof AbstractClientPlayer player
+                && player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA)) {
+            hasWings = true;
             wings = CapeWingFit.topGoal(Math.toDegrees(player.elytraRotX), Math.toDegrees(player.elytraRotZ),
                     Math.toDegrees(model.body.xRot), wearerDepth);
         }
+        shoulderReach = (float) CapeFit.shoulderReach(model.body.xRot, model.body.yRot,
+                model.head.xRot, model.head.yRot, hasWings);
+        yoke = CapeFit.yokeShape(model.body.xRot, model.head.xRot, arm, hasWings);
         capeModel.setClearanceGoals(CapeStride.armGoal(arm, model.body.xRot, wearerDepth),
                 CapeStride.legGoal(leg, model.body.xRot, wearerDepth), wings);
     }
@@ -107,7 +110,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                                   float red, float green, float blue, float alpha) {
         String name = bone.getName();
         boolean shoulder = CapeFit.SHOULDERS_BONE.equals(name);
-        boolean fitted = shoulder || wearerDepth > 0 && (CapeFit.BONE.equals(name)
+        boolean underYoke = CapeFit.UNDER_YOKE_BONE.equals(name);
+        boolean fitted = shoulder || underYoke || wearerDepth > 0 && (CapeFit.BONE.equals(name)
                 || CapeFit.DRAPE_BONE.equals(name) || CapeFit.GUSSET_BONE.equals(name));
         if (fitted)
             poseStack.pushPose();
@@ -121,6 +125,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                 if (shoulder)
                     poseStack.scale(1, (float) (CapeFit.SHOULDER_HEIGHT + (1 - CapeFit.SHOULDER_HEIGHT) * shoulderReach),
                             shoulderReach);
+                else if (underYoke)
+                    poseStack.scale(yoke.width(), yoke.height(), yoke.depth());
                 else if (CapeFit.DRAPE_BONE.equals(name))
                     poseStack.mulPose(Axis.XP.rotationDegrees((float) CapeFit.drapeDegrees(wearerDepth)));
                 else

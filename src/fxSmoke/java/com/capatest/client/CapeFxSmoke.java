@@ -82,7 +82,7 @@ public final class CapeFxSmoke {
         BOTH("ambos-noche-encantado", 18000),
         TOP_BARE("cenital-sin-manto", 6000), TOP_CHEST("cenital-pecho", 6000), TOP_BACK("cenital-curios", 6000),
         TURN_BARE("cenital-giro-sin-manto", 6000), TURN_CHEST("cenital-giro-pecho", 6000), TURN_BACK("cenital-giro-curios", 6000),
-        HOTBAR("hotbar", 6000),
+        HOTBAR_BARE("hotbar-vacia", 6000), HOTBAR("hotbar", 6000),
         STRAFE_LEFT("traslacion-izquierda", 18000), STRAFE_RIGHT("traslacion-derecha", 18000),
         WINGS("espalda-con-elitros", 18000),
         GLIDE("planeo-real", 6000), WADE("de-pie-en-agua", 6000), SWIM("nado-horizontal", 6000),
@@ -96,6 +96,7 @@ public final class CapeFxSmoke {
             this.dayTime = dayTime;
         }
 
+        boolean hotbar() { return this == HOTBAR_BARE || this == HOTBAR; }
         boolean elytra() { return this == WINGS || this == GLIDE; }
         boolean usesBack() { return this == TOP_BACK || this == TURN_BACK || elytra(); }
         boolean hasBack() { return this == BOTH || usesBack(); }
@@ -359,7 +360,7 @@ public final class CapeFxSmoke {
         stableFrames = observedBirths = 0;
         captured = false;
         if (next == Scene.TOP_BARE) game.options.fov().set(34);
-        if (next == Scene.HOTBAR) {
+        if (next.hotbar()) {
             game.options.guiScale().set(2);
             game.options.hideGui = false;
             hotbarCount = 0;
@@ -397,11 +398,11 @@ public final class CapeFxSmoke {
             // for the three lighting captures.
             if (next == Scene.NIGHT || next == Scene.LAMP) return;
             ItemStack chest = next.elytra() ? new ItemStack(Items.ELYTRA)
-                    : next.bare() || next.usesBack() || next == Scene.HOTBAR ? ItemStack.EMPTY : mantle();
+                    : next.bare() || next.usesBack() || next.hotbar() ? ItemStack.EMPTY : mantle();
             if (next == Scene.BOTH) chest.enchant(Enchantments.UNBREAKING, 1);
             player.setItemSlot(EquipmentSlot.CHEST, chest);
             backOf(player).getStacks().setStackInSlot(0, next.hasBack() ? mantle() : ItemStack.EMPTY);
-            if (next == Scene.HOTBAR || next == Scene.STRAFE_LEFT) {
+            if (next.hotbar() || next == Scene.STRAFE_LEFT) {
                 player.getInventory().setItem(HOTBAR_SLOT, next == Scene.HOTBAR ? mantle() : ItemStack.EMPTY);
                 player.inventoryMenu.broadcastChanges();
             }
@@ -490,9 +491,10 @@ public final class CapeFxSmoke {
             // around in F5 while the feet have not turned yet. Don't rotate
             // the mantle renderer independently of the vanilla player.
             var player = Minecraft.getInstance().player;
-            if (player != null && scene != null && scene.overhead()) {
-                float yaw = scene.turned() ? 43 : 0;
-                float pitch = scene.turned() ? 86 : 89;
+            if (player != null && scene != null && (scene.overhead() || scene.hotbar())) {
+                boolean turned = scene.turned() || scene.hotbar();
+                float yaw = turned ? 43 : 0;
+                float pitch = turned ? 86 : 89;
                 player.setYRot(yaw);
                 player.yRotO = yaw;
                 player.setXRot(pitch);
@@ -511,12 +513,12 @@ public final class CapeFxSmoke {
         ItemStack chest = player.getItemBySlot(EquipmentSlot.CHEST);
         ItemStack back = backOf(player).getStacks().getStackInSlot(0);
         boolean chestReady = switch (scene) {
-            case TOP_BARE, TOP_BACK, TURN_BARE, TURN_BACK, HOTBAR -> chest.isEmpty();
+            case TOP_BARE, TOP_BACK, TURN_BARE, TURN_BACK, HOTBAR_BARE, HOTBAR -> chest.isEmpty();
             case WINGS, GLIDE -> chest.is(Items.ELYTRA);
             default -> chest.is(CapaTestMod.CAPA_DETERIORER.get());
         };
         if (back.isEmpty() == scene.hasBack() || (scene == Scene.BOTH && !chest.hasFoil()) || !chestReady) return;
-        if (scene == Scene.HOTBAR) {
+        if (scene.hotbar()) {
             try {
                 captureHotbar(game);
             } catch (Exception | AssertionError error) {
@@ -625,12 +627,14 @@ public final class CapeFxSmoke {
     private static void captureHotbar(Minecraft game) throws IOException {
         var player = game.player;
         var stack = player.getInventory().getItem(HOTBAR_SLOT);
-        if (!stack.is(CapaTestMod.CAPA_DETERIORER.get()) || game.options.hideGui || ++stableFrames < 18) return;
+        boolean empty = scene == Scene.HOTBAR_BARE;
+        if ((empty ? !stack.isEmpty() : !stack.is(CapaTestMod.CAPA_DETERIORER.get()))
+                || game.options.hideGui || ++stableFrames < 18) return;
         int tick = player.tickCount;
         if (hotbarCount > 0 && tick - lastHotbarTick < 2) return;
         check(framePasses == 0 && player.getInventory().selected != HOTBAR_SLOT,
                 "hotbar fixture: worn or selected mantle");
-        if (hotbarCount == 0) {
+        if (!empty && hotbarCount == 0) {
             check(!game.getItemRenderer().getModel(stack, game.level, player, 0).isCustomRenderer(),
                     "hotbar no longer uses the vanilla item model");
         }
@@ -648,6 +652,11 @@ public final class CapeFxSmoke {
                     int ix = (int) ((startX + (x + .5)/2) * image.getWidth()/guiWidth);
                     crop.setPixelRGBA(x, y, image.getPixelRGBA(ix, iy));
                 }
+            }
+            if (empty) {
+                crop.writeToFile(shots.resolve("hotbar-vacia.png"));
+                captured = true;
+                return;
             }
             if (hotbarCount == 0) image.writeToFile(shots.resolve("hotbar-mundo.png"));
             crop.writeToFile(shots.resolve(String.format(java.util.Locale.ROOT, "hotbar-%02d.png", hotbarCount)));
