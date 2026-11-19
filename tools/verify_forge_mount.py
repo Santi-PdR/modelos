@@ -78,7 +78,6 @@ def gallery(root, kind):
     # cannot be downloaded. Full-resolution shots stay in the artifact.
     if kind == 'cenital':
         for path in sorted(root.glob('cenital-*.png')):
-            if path.stem == 'cenital-sin-manto': continue
             with Image.open(path) as im:
                 x,y = im.width//2, im.height//2
                 cut = im.crop((x-120,y-70,x+120,y+122)).resize((180,144),Image.Resampling.NEAREST)

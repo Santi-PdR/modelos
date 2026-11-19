@@ -81,6 +81,7 @@ public final class CapeFxSmoke {
         CHEST("pecho-dia", 6000), NIGHT("pecho-noche", 18000), LAMP("pecho-noche-con-luz", 18000),
         BOTH("ambos-noche-encantado", 18000),
         TOP_BARE("cenital-sin-manto", 6000), TOP_CHEST("cenital-pecho", 6000), TOP_BACK("cenital-curios", 6000),
+        TURN_BARE("cenital-giro-sin-manto", 6000), TURN_CHEST("cenital-giro-pecho", 6000), TURN_BACK("cenital-giro-curios", 6000),
         HOTBAR("hotbar", 6000),
         STRAFE_LEFT("traslacion-izquierda", 18000), STRAFE_RIGHT("traslacion-derecha", 18000),
         WINGS("espalda-con-elitros", 18000),
@@ -96,9 +97,11 @@ public final class CapeFxSmoke {
         }
 
         boolean elytra() { return this == WINGS || this == GLIDE; }
-        boolean usesBack() { return this == TOP_BACK || elytra(); }
+        boolean usesBack() { return this == TOP_BACK || this == TURN_BACK || elytra(); }
         boolean hasBack() { return this == BOTH || usesBack(); }
-        boolean overhead() { return this == TOP_BARE || this == TOP_CHEST || this == TOP_BACK; }
+        boolean bare() { return this == TOP_BARE || this == TURN_BARE; }
+        boolean overhead() { return this == TOP_BARE || this == TOP_CHEST || this == TOP_BACK || turned(); }
+        boolean turned() { return this == TURN_BARE || this == TURN_CHEST || this == TURN_BACK; }
         boolean inspectBirths() { return this == GLIDE || this == WADE || this == SWIM; }
         boolean compareLight() { return this == CHEST || this == NIGHT || this == LAMP; }
         boolean strafe() { return this == STRAFE_LEFT || this == STRAFE_RIGHT; }
@@ -394,7 +397,7 @@ public final class CapeFxSmoke {
             // for the three lighting captures.
             if (next == Scene.NIGHT || next == Scene.LAMP) return;
             ItemStack chest = next.elytra() ? new ItemStack(Items.ELYTRA)
-                    : next == Scene.TOP_BARE || next == Scene.TOP_BACK || next == Scene.HOTBAR ? ItemStack.EMPTY : mantle();
+                    : next.bare() || next.usesBack() || next == Scene.HOTBAR ? ItemStack.EMPTY : mantle();
             if (next == Scene.BOTH) chest.enchant(Enchantments.UNBREAKING, 1);
             player.setItemSlot(EquipmentSlot.CHEST, chest);
             backOf(player).getStacks().setStackInSlot(0, next.hasBack() ? mantle() : ItemStack.EMPTY);
@@ -483,6 +486,22 @@ public final class CapeFxSmoke {
             frameTopDegrees = Double.NaN;
             rendered = ItemStack.EMPTY;
             playerPose = armorPose = null;
+            // Hold the camera/head yaw relative to the torso, like looking
+            // around in F5 while the feet have not turned yet. Don't rotate
+            // the mantle renderer independently of the vanilla player.
+            var player = Minecraft.getInstance().player;
+            if (player != null && scene != null && scene.overhead()) {
+                float yaw = scene.turned() ? 43 : 0;
+                float pitch = scene.turned() ? 86 : 89;
+                player.setYRot(yaw);
+                player.yRotO = yaw;
+                player.setXRot(pitch);
+                player.xRotO = pitch;
+                player.setYHeadRot(yaw);
+                player.yHeadRotO = yaw;
+                player.setYBodyRot(0);
+                player.yBodyRotO = 0;
+            }
             return;
         }
         if (scene == null || captured || pending != null) return;
@@ -492,7 +511,7 @@ public final class CapeFxSmoke {
         ItemStack chest = player.getItemBySlot(EquipmentSlot.CHEST);
         ItemStack back = backOf(player).getStacks().getStackInSlot(0);
         boolean chestReady = switch (scene) {
-            case TOP_BARE, TOP_BACK, HOTBAR -> chest.isEmpty();
+            case TOP_BARE, TOP_BACK, TURN_BARE, TURN_BACK, HOTBAR -> chest.isEmpty();
             case WINGS, GLIDE -> chest.is(Items.ELYTRA);
             default -> chest.is(CapaTestMod.CAPA_DETERIORER.get());
         };
@@ -512,8 +531,9 @@ public final class CapeFxSmoke {
                 new CapeTravel.Step(player.getX() - player.xo, player.getY() - player.yo, player.getZ() - player.zo),
                 false, bodyYaw).side() : 0;
         boolean posed = switch (scene) {
-            case TOP_BARE, TOP_CHEST, TOP_BACK -> player.onGround() && !player.isCrouching()
-                    && player.getXRot() > 88 && Math.abs(bodyYaw) < .05 && velocity.horizontalDistanceSqr() < .0001;
+            case TOP_BARE, TOP_CHEST, TOP_BACK, TURN_BARE, TURN_CHEST, TURN_BACK -> player.onGround()
+                    && !player.isCrouching() && player.getXRot() > 85 && Math.abs(bodyYaw) < .05
+                    && velocity.horizontalDistanceSqr() < .0001;
             case STRAFE_LEFT -> player.onGround() && velocity.x > .045 && lateral > .015;
             case STRAFE_RIGHT -> player.onGround() && velocity.x < -.045 && lateral < -.015;
             case WINGS -> player.onGround() && !player.isCrouching() && velocity.horizontalDistanceSqr() < .0001
@@ -534,7 +554,7 @@ public final class CapeFxSmoke {
             return;
         }
         try {
-            int expectedPasses = scene == Scene.TOP_BARE ? 0 : 1;
+            int expectedPasses = scene.bare() ? 0 : 1;
             if (scene.overhead() && stableFrames < 6 && framePasses != expectedPasses) {
                 stableFrames++;
                 return;
