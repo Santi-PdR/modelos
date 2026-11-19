@@ -2,5 +2,9 @@
   "item.capatest.capa_deteriorer_evilsaiyan": "Mantle of the Blight Star",
   "item.capatest.capa_deteriorer_evilsaiyan.lore1": "Tejido con la última luz de Blight Star",
   "item.capatest.capa_deteriorer_evilsaiyan.lore2": "Sarga violeta · constelaciones marchitas · aura de brasas serena",
-  "item.capatest.capa_deteriorer_evilsaiyan.lore3": "Un broche de diamante guarda el pliegue; su estrella aún recuerda la noche"
+  "item.capatest.capa_deteriorer_evilsaiyan.lore3": "Un broche de diamante guarda el pliegue; su estrella aún recuerda la noche",
+  "itemGroup.capatest.legados": "Legados de Combate",
+  "item.capatest.katana_stain": "Katana del Asesino de Héroes",
+  "item.capatest.katana_stain.lore": "La hoja mellada de Stain, el Asesino de Héroes.",
+  "item.capatest.katana_stain.hint": "Golpea para marcar; clic derecho para ralentizar al objetivo cercano."
 }

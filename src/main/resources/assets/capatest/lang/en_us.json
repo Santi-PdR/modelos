@@ -2,5 +2,9 @@
   "item.capatest.capa_deteriorer_evilsaiyan": "Mantle of the Blight Star",
   "item.capatest.capa_deteriorer_evilsaiyan.lore1": "Woven from the last light of Blight Star",
   "item.capatest.capa_deteriorer_evilsaiyan.lore2": "Violet twill · blighted constellations · calm ember aura",
-  "item.capatest.capa_deteriorer_evilsaiyan.lore3": "A diamond clasp holds the fold; its star still remembers the night"
+  "item.capatest.capa_deteriorer_evilsaiyan.lore3": "A diamond clasp holds the fold; its star still remembers the night",
+  "itemGroup.capatest.legados": "Combat Legacies",
+  "item.capatest.katana_stain": "Hero Killer’s Katana",
+  "item.capatest.katana_stain.lore": "The notched blade of Stain, the Hero Killer.",
+  "item.capatest.katana_stain.hint": "Strike to mark; right-click to slow the nearby target."
 }
