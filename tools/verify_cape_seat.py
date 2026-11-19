@@ -39,22 +39,28 @@ def preservation(geo):
         assert sha256(path.read_bytes()).hexdigest() == expected, path
 
 
+def plate_mesh(parts, name):
+    return np.concatenate((parts[name],parts['rim_'+name])) if 'rim_'+name in parts else parts[name]
+
+
+def mean_depth(parts, prefix):
+    return np.concatenate([v for k,v in parts.items() if k.startswith((prefix,'rim_'+prefix))])[...,2].mean()
+
+
 def visible_shift(geo):
     # Pose chosen to approximate the reported F5 view (not a camera input to
     # the fit). Measure the real outer collar/plates/cloth roots, not the tabs.
     aim = (0.,-76.,3.)
     old,new = (patches(F.wearer_pose(geo,*aim,close=close)) for close in (False,True))
-    def center(parts, prefix):
-        return np.concatenate([v for k,v in parts.items() if k.startswith(prefix)])[...,2].mean()
     trim = ('v17_cowl_back_', 'v18_pad_0', 'v18_pad_1', 'v18_chain_')
-    advance = [center(old,k)-center(new,k) for k in trim]
+    advance = [mean_depth(old,k)-mean_depth(new,k) for k in trim]
     root = [old[k][...,2].mean()-new[k][...,2].mean() for k in new
             if k.startswith('v17_ribbon_') and k.endswith('_seg0')]
     assert min(advance) > 1.05 and advance[0] > 1.9 and min(root) > .70, (advance,root)
     stripe = np.array(list(product(np.linspace(-2.85,2.85,31),np.linspace(19.65,20.91,8),[2.251])))
     panels = np.concatenate([new[n] for n in B.profile()['names']])
     assert occupied(panels,stripe) >= .98, 'el marco ya no toca la camiseta alta'
-    seams = [lap(t,new[f'v18_pad_{i}']) for i,t in enumerate(new[G.SHOULDERS_BONE])]
+    seams = [lap(t,plate_mesh(new,f'v18_pad_{i}')) for i,t in enumerate(new[G.SHOULDERS_BONE])]
     assert min(seams) > .14, seams
     for pose,wings,arm in [((0,0,0),False,0), ((0,-76,3),True,0), ((0,-76,3),False,17),
                            ((1,-76,3),False,0), ((0,-76,-74),False,0)]:
@@ -89,12 +95,10 @@ def moderate_fit(geo):
     # and pads nearer without adding a cube or closing the free hem.
     aim = (0.,-58.,3.)
     old,new = (patches(F.wearer_pose(geo,*aim,close=close)) for close in (False,True))
-    def depth(parts, prefix):
-        return np.concatenate([v for k,v in parts.items() if k.startswith(prefix)])[...,2].mean()
-    d = [depth(old,k) - depth(new,k) for k in ('v17_cowl_back_', 'v18_pad_0', 'v18_pad_1')]
+    d = [mean_depth(old,k) - mean_depth(new,k) for k in ('v17_cowl_back_', 'v18_pad_0', 'v18_pad_1')]
     assert .39 < F.seating(*aim) < .43 and d[0] >= .90 and min(d[1:]) >= .46, d
     assert F.seating(0.,-42.,3.) == 0 and F.seating(*aim,arm_back=10.) == 0
-    seam = min(lap(t,new[f'v18_pad_{i}']) for i,t in enumerate(new[G.SHOULDERS_BONE]))
+    seam = min(lap(t,plate_mesh(new,f'v18_pad_{i}')) for i,t in enumerate(new[G.SHOULDERS_BONE]))
     assert seam > .17, seam
     print(f'A 58°: cuello {d[0]:.2f}u, hombreras {d[1]:.2f}/{d[2]:.2f}u más cerca; '
           f'los remates conservan ≥{seam:.2f}u de solape.',flush=True)
@@ -108,8 +112,7 @@ def clearance(geo, clips):
 
     def placed(frame,aim,arm,effort,close,fit_plates=True):
         mats = P.matrices(F.wearer_pose(frame,*aim,arm_back=arm,arm_effort=effort,close=close,plates=fit_plates))
-        packed = np.array([mats[n] for n in rig.names])
-        return rig.coords @ packed[:,:3,:3].transpose(0,2,1) + packed[:,None,:3,3]
+        return rig.place(mats)
     samples = {n:[P.pose_at(geo,T.prepare_clip(c),c['animation_length']*t) for t in (0,.33,.67)]
                for n,c in clips.items()}
     moving = [(n,f) for n,frames in samples.items() for f in frames]

@@ -76,12 +76,17 @@ def main():
         names = profile['plates']['names']
         js = subprocess.run(['node','tools/check_viewer_pose.js'],cwd=P.ROOT,check=True,text=True,capture_output=True,
                             input=json.dumps(dict(fit=profile,plateSamples=[r[:5] for r in rows])))
-        for (s,p,y,w,arm,java), (amount,*mats) in zip(rows,json.loads(js.stdout),strict=True):
+        lip = profile['plates']['lips']
+        for (s,p,y,w,arm,java,rise,reach), (amount,*mats) in zip(rows,json.loads(js.stdout),strict=True):
             k = F.plate_influence(s,p,y,arm,elytra=bool(w))
             assert abs(java-k) < 4e-8 and abs(amount-k) < 1e-8, (s,p,y,w,arm,java,k,amount)
-            geo = {'bones':[{'name':n} for n in names]}
+            # The renderer passes the already rounded float influence here.
+            assert abs(rise-F.smooth(*lip[:2],java)) < 4e-8, (s,p,y,w,arm,java,rise)
+            assert abs(reach-F.smooth(*lip[2:],java)) < 4e-8, (s,p,y,w,arm,java,reach)
+            geo = {'bones':[{'name':n,'cubes':[{},{}]} for n in names]}
             posed = P.matrices(F.wearer_pose(geo,s,p,y,elytra=bool(w),arm_effort=arm))
-            assert np.allclose(mats,[posed[n].ravel() for n in names],atol=1e-9,rtol=0), (s,p,y,w,arm)
+            expected = [posed[n].ravel() for n in names] + [posed.get('rim_'+n,posed[n]).ravel() for n in names]
+            assert np.allclose(mats,expected,atol=1e-9,rtol=0), (s,p,y,w,arm)
         print(f'Placas visibles: {len(rows)} poses Java/Python/visor coinciden.')
 
 

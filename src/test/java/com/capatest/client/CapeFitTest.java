@@ -36,6 +36,9 @@ public final class CapeFitTest {
             last = next;
         }
         check(plate(0,-89,0,Double.NaN,false) == 0, "esfuerzo no finito");
+        check(CapePlateFit.rimRise(.65F) > 0 && CapePlateFit.rimReach(.65F) == 0
+                && CapePlateFit.rimRise(1) == 1 && CapePlateFit.rimReach(1) == 1,
+                "el canto debe elevarse antes de alcanzar la manga");
         check(CapePlateFit.forBone("cape_top") == null && CapePlateFit.forBone(CapePlateFit.WIDE) != null,
                 "el ajuste no debe alcanzar el paño");
     }
@@ -46,9 +49,11 @@ public final class CapeFitTest {
                 for (double look : new double[]{-89.5,-78,-71.2,-62,-58,-48,-41,0})
                     for (double turn : new double[]{-381,-43,-17,0,16,36,59,390})
                         for (double arm : new double[]{0,2.8,3.5,4.8,5.3,42})
-                            for (int wings = 0; wings < 2; wings++)
-                                System.out.printf(Locale.ROOT, "%.4f\t%.4f\t%.4f\t%d\t%.4f\t%.9f%n",
-                                        stance,look,turn,wings,arm,plate(stance,look,turn,arm,wings==1));
+                            for (int wings = 0; wings < 2; wings++) {
+                                float fit = plate(stance,look,turn,arm,wings==1);
+                                System.out.printf(Locale.ROOT, "%.4f\t%.4f\t%.4f\t%d\t%.4f\t%.9f\t%.9f\t%.9f%n",
+                                        stance,look,turn,wings,arm,fit,CapePlateFit.rimRise(fit),CapePlateFit.rimReach(fit));
+                            }
             return;
         }
         if (args.length == 1 && args[0].equals("--shoulders")) {

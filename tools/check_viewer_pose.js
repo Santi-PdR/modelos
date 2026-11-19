@@ -38,11 +38,12 @@ const matrices = vm.runInContext(`${src}
     }
     if (indata.plateSamples) {
       const f=indata.fit, names=f.plates.names;
-      const rig={bones:[...names.map(name=>({name})),{name:'cape_top'}]};
+      const rig={bones:[...names.map(name=>({name,cubes:[{},{}]})),{name:'cape_top'}]};
       return indata.plateSamples.map(([s,p,y,w,arm])=>{
         const model=matrices(wearerPose(rig,f,s,p,y,!!w,0,arm));
         if (model.cape_top.some((v,i)=>v!==ident()[i])) throw Error('ajuste de placas fuera de la montura');
-        return [plateInfluence(f.plates,s,p,y,arm,!!w), ...names.map(name=>model[name])];
+        return [plateInfluence(f.plates,s,p,y,arm,!!w), ...names.map(name=>model[name]),
+          ...names.map(name=>model['rim_'+name] || model[name])];
       });
     }
     if (indata.seatSamples) {

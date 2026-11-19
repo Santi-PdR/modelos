@@ -203,6 +203,15 @@ function plateFrame(bone, target, k) {
     rotation:[-k*rx,-k*ry,0], scale:[1+k*(sx-1),1+k*(sy-1),1+k*(sz-1)], cubes:[]};
 }
 
+function plateRim(bone, profile, target, k) {
+  const [a,b,c,d] = profile.lips;
+  const rise=smooth(a,b,k), reach=smooth(c,d,k);
+  const [x,y,z,across,lift,advance,sx,sy,sz,pitch] = target;
+  return {name:'rim_'+bone.name,parent:bone.name,pivot:[-x,y,z],
+    offset:[-reach*across,rise*lift,reach*advance],rotation:[-rise*pitch,0,0],
+    scale:[1+reach*(sx-1),1+rise*(sy-1),1+reach*(sz-1)],cubes:[bone.cubes[profile.rimCube]]};
+}
+
 function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm) {
   const depth=backset(profile,stance,look,turn);
   const anchor = profile.backing;
@@ -230,8 +239,13 @@ function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effor
     const index=bones.findIndex(b => b.name===name);
     if (index < 0) continue;
     const frame=plateFrame(bones[index],profile.plates.targets[i],plate);
-    bones[index]={...bones[index],parent:frame.name};
+    const piece={...bones[index],parent:frame.name};
+    bones[index]=piece;
     bones.push(frame);
+    if (piece.cubes?.length>profile.plates.rimCube) {
+      bones.push(plateRim(piece,profile.plates,profile.plates.rims[i],plate));
+      piece.cubes=piece.cubes.filter((_,j)=>j!==profile.plates.rimCube);
+    }
   }
   return {...geo,bones};
 }

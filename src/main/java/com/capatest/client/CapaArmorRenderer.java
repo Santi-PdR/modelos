@@ -18,6 +18,7 @@ import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.cache.object.GeoBone;
+import software.bernie.geckolib.cache.object.GeoCube;
 import software.bernie.geckolib.renderer.GeoArmorRenderer;
 import software.bernie.geckolib.util.RenderUtils;
 
@@ -199,6 +200,40 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
             if (fitted)
                 poseStack.popPose();
         }
+    }
+
+    @Override
+    public void renderCubesOfBone(PoseStack poseStack, GeoBone bone, VertexConsumer buffer,
+                                  int light, int overlay, float red, float green, float blue, float alpha) {
+        if (plateFit <= 0 || CapePlateFit.forBone(bone.getName()) == null) {
+            super.renderCubesOfBone(poseStack, bone, buffer, light, overlay, red, green, blue, alpha);
+            return;
+        }
+        if (bone.isHidden()) return;
+        for (GeoCube cube : bone.getCubes()) {
+            poseStack.pushPose();
+            try {
+                applyPlateRim(poseStack, bone, cube);
+                renderCube(poseStack, cube, buffer, light, overlay, red, green, blue, alpha);
+            } finally {
+                poseStack.popPose();
+            }
+        }
+    }
+
+    // Used in both passes before GeckoLib applies the cube's own authored pivot.
+    void applyPlateRim(PoseStack poseStack, GeoBone bone, GeoCube cube) {
+        var plate = plateFit > 0 ? CapePlateFit.forBone(bone.getName()) : null;
+        if (plate == null || bone.getCubes().size() <= CapePlateFit.RIM_CUBE
+                || cube != bone.getCubes().get(CapePlateFit.RIM_CUBE)) return;
+        var rim = plate.rim();
+        float rise = CapePlateFit.rimRise(plateFit), reach = CapePlateFit.rimReach(plateFit);
+        if (rise == 0 && reach == 0) return;
+        poseStack.translate((rim.x()+reach*rim.across())/16F, (rim.y()+rise*rim.lift())/16F,
+                (rim.z()+reach*rim.advance())/16F);
+        poseStack.mulPose(Axis.XP.rotationDegrees(rim.pitch()*rise));
+        poseStack.scale(1+reach*(rim.width()-1), 1+rise*(rim.height()-1), 1+reach*(rim.depth()-1));
+        poseStack.translate(-rim.x()/16F, -rim.y()/16F, -rim.z()/16F);
     }
 
     private GeoBone bone(String name) {

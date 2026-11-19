@@ -155,14 +155,19 @@ def seating(stance, pitch, yaw, arm_back=0., *, elytra=False):
 @lru_cache(maxsize=1)
 def plate_profile():
     code = SOURCE.with_name('CapePlateFit.java').read_text()
-    targets = re.search(r'\bTARGETS = \{(.*?)\n    \};', code, re.S)[1]
     numeric = r'-?(?:\d+(?:\.\d+)?|\.\d+)'
-    shape = [list(map(float,re.findall(numeric,row))) for row in re.findall(r'\{(.*?)\}', targets)]
-    keys = ('DOWN_START','DOWN_FULL','TURN_START','TURN_END','LEAN_START','LEAN_END','ARM_START','ARM_END')
-    limits = [float(re.search(r'\b'+key+r' = ('+numeric+r')[;,]', code)[1]) for key in keys]
+    def table(name):
+        source = re.search(r'\b'+name+r' = \{(.*?)\n    \};',code,re.S)[1]
+        data = [list(map(float,re.findall(numeric,row))) for row in re.findall(r'\{(.*?)\}',source)]
+        assert len(data) == 2 and all(len(row) == 10 for row in data)
+        return data
+    def values(keys):
+        return [float(re.search(r'\b'+key+r' = ('+numeric+r')[;,]',code)[1]) for key in keys]
+    limits = values(('DOWN_START','DOWN_FULL','TURN_START','TURN_END','LEAN_START','LEAN_END','ARM_START','ARM_END'))
+    lips = values(('LIP_RISE_START','LIP_RISE_END','LIP_REACH_START','LIP_REACH_END'))
     names = [re.search(r'\b'+key+r' = "([^"]+)"', code)[1] for key in ('SMALL','WIDE')]
-    assert len(shape) == 2 and all(len(row) == 10 for row in shape)
-    return dict(names=names, targets=shape, limits=limits)
+    return dict(names=names,targets=table('TARGETS'),limits=limits,rims=table('RIMS'),lips=lips,
+                rimCube=int(values(('RIM_CUBE',))[0]))
 
 
 def plate_influence(stance,pitch,yaw,arm,*,elytra=False):
@@ -180,6 +185,15 @@ def plate_frame(name, parent, target, amount):
     return dict(name='fit_'+name,parent=parent,pivot=[-x,y,z],
                 offset=[0,lift*amount,advance*amount],rotation=[-rx*amount,-ry*amount,0],
                 scale=[1+(sx-1)*amount,1+(sy-1)*amount,1+(sz-1)*amount],cubes=[])
+
+
+def rim_frame(name, target, amount):
+    a,b,c,d = plate_profile()['lips']
+    rise,reach = smooth(a,b,amount),smooth(c,d,amount)
+    x,y,z,across,lift,advance,sx,sy,sz,pitch = target
+    return dict(name='rim_'+name,parent=name,pivot=[-x,y,z],
+                offset=[-reach*across,rise*lift,reach*advance],rotation=[-rise*pitch,0,0],
+                scale=[1+reach*(sx-1),1+rise*(sy-1),1+reach*(sz-1)],cubes=[])
 
 
 def viewer_profile():
@@ -220,7 +234,16 @@ def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back
         if mix:
             for b in tuple(bones):
                 if b['name'] in data['names']:
-                    frame = plate_frame(b['name'],b.get('parent'),data['targets'][data['names'].index(b['name'])],mix)
+                    i = data['names'].index(b['name'])
+                    frame = plate_frame(b['name'],b.get('parent'),data['targets'][i],mix)
                     b['parent'] = frame['name']
                     bones.append(frame)
+                    # Mirror applyPlateRim; move just the existing crest cube,
+                    # retaining its own pivot, face UVs and alpha.
+                    j = data['rimCube']
+                    if len(b.get('cubes',[])) > j:
+                        rim = rim_frame(b['name'],data['rims'][i],mix)
+                        rim['cubes'] = [b['cubes'][j]]
+                        b['cubes'] = b['cubes'][:j]+b['cubes'][j+1:]
+                        bones.append(rim)
     return dict(geo, bones=bones)

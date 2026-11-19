@@ -24,8 +24,12 @@ final class CapePlateProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     private final List<Face> faces = new ArrayList<>();
     private final Matrix4f[] solid = new Matrix4f[2];
     private boolean active;
+    private final CapaArmorRenderer renderer;
 
-    private CapePlateProbe(CapaArmorRenderer renderer) { super(renderer); }
+    private CapePlateProbe(CapaArmorRenderer renderer) {
+        super(renderer);
+        this.renderer = renderer;
+    }
 
     static void arm(CapaArmorRenderer renderer) {
         var probe = renderer.getRenderLayers().stream().filter(CapePlateProbe.class::isInstance)
@@ -57,6 +61,7 @@ final class CapePlateProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         for (var cube : bone.getCubes()) {
             pose.pushPose();
             try {
+                renderer.applyPlateRim(pose, bone, cube);
                 RenderUtils.translateToPivotPoint(pose, cube);
                 RenderUtils.rotateMatrixAroundCube(pose, cube);
                 RenderUtils.translateAwayFromPivotPoint(pose, cube);

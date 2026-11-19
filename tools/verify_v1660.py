@@ -136,6 +136,8 @@ class WornModel:
         parts = [(b['name'],i,P.cube_points(c,np.eye(4))) for b in geo['bones'] if b['name'] not in hidden
                  for i,c in enumerate(b.get('cubes',[]))]
         self.names = [n for n,i,c in parts]
+        lip = F.plate_profile()['rimCube']
+        self.rims = ['rim_'+n if i == lip else n for n,i,c in parts]
         self.coords = np.array([c for n,i,c in parts])
         self.pivots = [np.asarray(self.by[n]['pivot'])*[-1,1,1] for n in HINGES]
         masks = [[n in self.parents(part) for part in self.names] for n in HINGES]
@@ -157,10 +159,13 @@ class WornModel:
             yield part
             part=self.by[part].get('parent')
 
+    def place(self, mm):
+        mats = np.array([mm.get(rim,mm[n]) for n,rim in zip(self.names,self.rims,strict=True)])
+        return self.coords @ mats[:,:3,:3].transpose(0,2,1) + mats[:,None,:3,3]
+
     def vertices(self, frame, aim):
         mm = P.matrices(F.wearer_pose(frame,*aim))
-        mats = np.array([mm[n] for n in self.names])
-        verts = self.coords @ mats[:,:3,:3].transpose(0,2,1) + mats[:,None,:3,3]
+        verts = self.place(mm)
         pivots = [mm[n][:3,:3]@p+mm[n][:3,3] for n,p in zip(HINGES,self.pivots,strict=True)]
         axes = [mm[n][:3,0] for n in HINGES]
         return verts,pivots,axes
