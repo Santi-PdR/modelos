@@ -32,7 +32,7 @@ final class CapeLookSweep {
         // set the matching camera and vanilla head pose in CapeFxSmoke.
         if (frame <= 2 * LEG) {
             float t = 1 - Math.abs(frame - LEG) / (float) LEG;
-            return new Pose(80 - 22 * t, 3);
+            return new Pose(80 - 34 * t, 3);
         }
         float t = 1 - Math.abs(frame - 3 * LEG) / (float) LEG;
         return new Pose(80, 3 + 50 * t);

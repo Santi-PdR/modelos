@@ -106,6 +106,8 @@ public final class CapeFxSmoke {
         FIT_CHEST("ajuste-pecho", 6000), FIT_BACK("ajuste-curios", 6000),
         FIT_SLIM_BARE("ajuste-fino-sin-manto", 6000), FIT_SLIM_PREVIOUS("ajuste-fino-v1678", 6000),
         FIT_SLIM_CHEST("ajuste-fino-pecho", 6000), FIT_SLIM_BACK("ajuste-fino-curios", 6000),
+        MID_BARE("ajuste-medio-sin-manto", 6000), MID_PREVIOUS("ajuste-medio-v1679", 6000),
+        MID_CHEST("ajuste-medio-pecho", 6000), MID_BACK("ajuste-medio-curios", 6000),
         LOOK_CHEST("mirada-pecho", 6000), LOOK_BACK("mirada-curios", 6000),
         HOTBAR_BARE("hotbar-vacia", 6000), HOTBAR("hotbar", 6000),
         STRAFE_LEFT("traslacion-izquierda", 18000), STRAFE_RIGHT("traslacion-derecha", 18000),
@@ -123,22 +125,23 @@ public final class CapeFxSmoke {
 
         boolean hotbar() { return this == HOTBAR_BARE || this == HOTBAR; }
         boolean elytra() { return this == WINGS || this == GLIDE; }
-        boolean usesBack() { return this == TOP_BACK || this == TURN_BACK || this == OBLIQUE_BACK || this == SIDE_BACK || this == FIT_BACK || this == FIT_SLIM_BACK || this == LOOK_BACK || elytra(); }
+        boolean usesBack() { return this == TOP_BACK || this == TURN_BACK || this == OBLIQUE_BACK || this == SIDE_BACK || this == FIT_BACK || this == FIT_SLIM_BACK || this == MID_BACK || this == LOOK_BACK || elytra(); }
         boolean hasBack() { return this == BOTH || usesBack(); }
-        boolean bare() { return this == TOP_BARE || this == TURN_BARE || this == OBLIQUE_BARE || this == SIDE_BARE || this == FIT_BARE || this == FIT_SLIM_BARE; }
+        boolean bare() { return this == TOP_BARE || this == TURN_BARE || this == OBLIQUE_BARE || this == SIDE_BARE || this == FIT_BARE || this == FIT_SLIM_BARE || this == MID_BARE; }
         boolean overhead() { return this == TOP_BARE || this == TOP_CHEST || this == TOP_BACK || turned(); }
         boolean turned() { return this == TURN_BARE || this == TURN_CHEST || this == TURN_BACK; }
         boolean unlined() { return this == OBLIQUE_UNLINED || this == SIDE_UNLINED; }
         boolean oblique() { return this == OBLIQUE_BARE || this == OBLIQUE_UNLINED || this == OBLIQUE_CHEST || this == OBLIQUE_BACK; }
         boolean profile() { return this == SIDE_BARE || this == SIDE_UNLINED || this == SIDE_CHEST || this == SIDE_BACK; }
         boolean upperBack() { return oblique() || profile(); }
-        boolean fit() { return ordinal() >= FIT_BARE.ordinal() && ordinal() <= FIT_SLIM_BACK.ordinal(); }
-        boolean previousFit() { return this == FIT_PREVIOUS || this == FIT_SLIM_PREVIOUS; }
-        boolean slimFit() { return ordinal() >= FIT_SLIM_BARE.ordinal() && ordinal() <= FIT_SLIM_BACK.ordinal(); }
+        boolean fit() { return ordinal() >= FIT_BARE.ordinal() && ordinal() <= MID_BACK.ordinal(); }
+        boolean previousFit() { return this == FIT_PREVIOUS || this == FIT_SLIM_PREVIOUS || this == MID_PREVIOUS; }
+        boolean slimFit() { return fit() && ordinal() >= FIT_SLIM_BARE.ordinal(); }
+        boolean midFit() { return fit() && ordinal() >= MID_BARE.ordinal(); }
         boolean sweep() { return this == LOOK_CHEST || this == LOOK_BACK; }
         boolean fixedCamera() { return overhead() || upperBack() || fit() || sweep(); }
         float yaw() { return fit() ? 3 : profile() ? 76 : turned() || oblique() || hotbar() ? 43 : 0; }
-        float pitch() { return fit() ? 76 : profile() ? 21 : oblique() ? 58 : turned() || hotbar() ? 86 : 89; }
+        float pitch() { return midFit() ? 58 : fit() ? 76 : profile() ? 21 : oblique() ? 58 : turned() || hotbar() ? 86 : 89; }
         boolean inspectBirths() { return this == GLIDE || this == WADE || this == SWIM; }
         boolean compareLight() { return this == CHEST || this == NIGHT || this == LAMP; }
         boolean strafe() { return this == STRAFE_LEFT || this == STRAFE_RIGHT; }
@@ -533,6 +536,8 @@ public final class CapeFxSmoke {
                 || renderer.getCurrentEntity() != Minecraft.getInstance().player) return;
         if (scene.sweep()) CapeLookSweep.Probe.arm(renderer);
         if (scene.previousFit()) {
+            // At 58° v1.67.9 was still fully open. The other controls
+            // disable the complete original seating stroke from v1.67.9.
             try {
                 SEATING.setFloat(renderer, 0);
             } catch (IllegalAccessException e) {
@@ -612,7 +617,8 @@ public final class CapeFxSmoke {
         ItemStack back = backOf(player).getStacks().getStackInSlot(0);
         boolean chestReady = switch (scene) {
             case TOP_BARE, TOP_BACK, TURN_BARE, TURN_BACK, OBLIQUE_BARE, OBLIQUE_BACK, SIDE_BARE, SIDE_BACK,
-                    FIT_BARE, FIT_BACK, FIT_SLIM_BARE, FIT_SLIM_BACK, LOOK_BACK, HOTBAR_BARE, HOTBAR -> chest.isEmpty();
+                    FIT_BARE, FIT_BACK, FIT_SLIM_BARE, FIT_SLIM_BACK, MID_BARE, MID_BACK,
+                    LOOK_BACK, HOTBAR_BARE, HOTBAR -> chest.isEmpty();
             case WINGS, GLIDE -> chest.is(Items.ELYTRA);
             default -> chest.is(CapaTestMod.CAPA_DETERIORER.get());
         };
@@ -636,7 +642,8 @@ public final class CapeFxSmoke {
                     OBLIQUE_BARE, OBLIQUE_UNLINED, OBLIQUE_CHEST, OBLIQUE_BACK,
                     SIDE_BARE, SIDE_UNLINED, SIDE_CHEST, SIDE_BACK,
                     FIT_BARE, FIT_PREVIOUS, FIT_CHEST, FIT_BACK,
-                    FIT_SLIM_BARE, FIT_SLIM_PREVIOUS, FIT_SLIM_CHEST, FIT_SLIM_BACK -> player.onGround()
+                    FIT_SLIM_BARE, FIT_SLIM_PREVIOUS, FIT_SLIM_CHEST, FIT_SLIM_BACK,
+                    MID_BARE, MID_PREVIOUS, MID_CHEST, MID_BACK -> player.onGround()
                     && !player.isCrouching() && Math.abs(player.getXRot()-scene.pitch()) < .05 && Math.abs(bodyYaw) < .05
                     && velocity.horizontalDistanceSqr() < .0001;
             case LOOK_CHEST, LOOK_BACK -> player.onGround() && !player.isCrouching()
@@ -721,7 +728,8 @@ public final class CapeFxSmoke {
             if (scene.fit()) check(player.getModelName().equals(scene.slimFit() ? "slim" : "default"),
                     scene.file + ": incorrect vanilla sleeve model");
             if (scene.fit() && !scene.bare()) {
-                check(scene.previousFit() ? frameSeating == 0 : frameSeating > .88,
+                boolean seated = scene.midFit() ? frameSeating > .24 && frameSeating < .36 : frameSeating > .88;
+                check(scene.previousFit() ? frameSeating == 0 : seated,
                         scene.file + ": incorrect fit control or live seating " + frameSeating);
                 exposure = "; ajuste de la montura activa = " + Math.round(frameSeating * 100) + "%";
             }

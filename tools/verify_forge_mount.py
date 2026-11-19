@@ -180,6 +180,8 @@ def gallery(root, kind):
             names = ('cenital-sin-manto','cenital-giro-sin-manto')
         elif kind in ('ajuste','ajuste-fino'):
             names = tuple(f'{kind}-{n}' for n in ('sin-manto','v1678','pecho','curios'))
+        elif kind == 'ajuste-medio':
+            names = tuple(f'{kind}-{n}' for n in ('sin-manto','v1679','pecho','curios'))
         elif kind in ('mirada-pecho','mirada-curios'):
             names = tuple(f'{kind}-{n:02}' for n in (0,8,16,48))
         elif kind == 'perfil-base':
@@ -228,7 +230,7 @@ def gallery(root, kind):
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument('shots',type=Path)
-    cli.add_argument('--gallery',choices=['cenital','giro','bare','oblicua','perfil','perfil-base','hotbar','ajuste','ajuste-fino','mirada-pecho','mirada-curios'])
+    cli.add_argument('--gallery',choices=['cenital','giro','bare','oblicua','perfil','perfil-base','hotbar','ajuste','ajuste-fino','ajuste-medio','mirada-pecho','mirada-curios'])
     args = cli.parse_args()
     if args.gallery:
         gallery(args.shots,args.gallery)

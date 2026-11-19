@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the v1.67.9 visible fit against the uncompressed v1.67.8 rig.
+"""Check the visible fit against the uncompressed v1.67.8 rig.
 
 Uses inflated 1.20.1 player hulls in model pixels. The separate Forge test
 checks visibility and offset in F5, not just these geometric distances.
@@ -84,6 +84,22 @@ def wardrobe(aim, arms, legs):
     return np.array(poses)[None]
 
 
+def moderate_fit(geo):
+    # This frame stayed completely open in 1.67.9. Keep the actual cowl
+    # and pads nearer without adding a cube or closing the free hem.
+    aim = (0.,-58.,3.)
+    old,new = (patches(F.wearer_pose(geo,*aim,close=close)) for close in (False,True))
+    def depth(parts, prefix):
+        return np.concatenate([v for k,v in parts.items() if k.startswith(prefix)])[...,2].mean()
+    d = [depth(old,k) - depth(new,k) for k in ('v17_cowl_back_', 'v18_pad_0', 'v18_pad_1')]
+    assert .27 < F.seating(*aim) < .32 and d[0] >= .60 and min(d[1:]) >= .30, d
+    assert F.seating(0.,-46.,3.) == 0 and F.seating(*aim,arm_back=10.) == 0
+    seam = min(lap(t,new[f'v18_pad_{i}']) for i,t in enumerate(new[G.SHOULDERS_BONE]))
+    assert seam > .17, seam
+    print(f'A 58°: cuello {d[0]:.2f}u, hombreras {d[1]:.2f}/{d[2]:.2f}u más cerca; '
+          f'los remates conservan ≥{seam:.2f}u de solape.',flush=True)
+
+
 def clearance(geo, clips):
     rig = WornModel(geo)
     fasteners = np.array([n.startswith('v20_mount_') for n in rig.names])
@@ -97,9 +113,9 @@ def clearance(geo, clips):
     moving += [(f'{a} → {b}',interpolate(samples[a][-1],samples[b][0],.5))
                for a,b in zip(samples,list(samples)[1:]+[next(iter(samples))],strict=True)]
     still = [(aim,'reposo',geo,(a,-a),(0.,0.)) for aim,a in product(
-              product((0.,.18,.39,.60),(-63.,-68.,-76.,-89.),(-43.,-25.,-8.,3.,18.,38.)),(0.,3.9,-6.7))]
+              product((0.,.18,.39,.60),(-50.,-54.,-58.,-63.,-68.,-76.,-89.),(-43.,-25.,-8.,3.,18.,38.)),(0.,3.9,-6.7))]
     in_motion = [(aim,name,f,arms,legs) for aim,(name,f),(arms,legs) in product(
-        [(0.,-76.,3.),(0.,-68.,-15.),(.19,-87.,23.),(.33,-77.,-8.)],moving,
+        [(0.,-54.,3.),(.18,-58.,-18.),(0.,-76.,3.),(0.,-68.,-15.),(.19,-87.,23.),(.33,-77.,-8.)],moving,
         [((0.,0.),(0.,0.)), ((4.,-4.),(17.,-17.)), ((-6.,6.),(-20.,20.))])]
     count = 0
     clearance = .5
@@ -131,4 +147,5 @@ if __name__ == '__main__':
     geo = P.load(P.ARMOR_GEO)
     preservation(geo)
     visible_shift(geo)
+    moderate_fit(geo)
     clearance(geo,json.loads(A.ANIM.read_text())['animations'])

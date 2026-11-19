@@ -9,6 +9,7 @@ import argparse
 from pathlib import Path
 
 import numpy as np
+from PIL import Image, ImageDraw
 
 
 SLOTS = ('pecho','curios')
@@ -21,6 +22,11 @@ BANDS = ((-.67,-.54),(-.18,.18),(.40,.465))
 def shirt_mask(bare):
     r,g,b = bare.transpose(2,0,1)
     return (g-r >= 19) & (b-r >= 19)
+
+
+def blue_floor(image):
+    r,g,b = image.transpose(2,0,1)
+    return (b-r >= 37) & (b-g >= 37) & (np.abs(r-g) <= 10)
 
 
 def score(bare, previous, fitted, width):
@@ -53,13 +59,9 @@ def score(bare, previous, fitted, width):
         reports.append((float(front/width),float(rearward/width),float(linger),len(b)/len(a)))
     # Check the slivers of blue concrete immediately behind each shoulder
     # return, inside the sleeve edges. Exclude the open sides and free hem.
-    def floor(im):
-        r,g,b = im.transpose(2,0,1)
-        return (b-r >= 37) & (b-g >= 37) & (np.abs(r-g) <= 10)
-
     def joint(im):
         r,g,b = im.transpose(2,0,1)
-        blue = floor(im)
+        blue = blue_floor(im)
         return blue,~blue & (np.abs(im-bare).max(2) >= 18) & (g <= 85) & (np.maximum(r,b)-g >= 7)
 
     layers = tuple(map(joint,(previous,fitted)))
@@ -90,6 +92,58 @@ def passes(reports):
                for front,rear,far,area in reports)
 
 
+def enclosed_floor(bare, worn):
+    # Reject background outside the silhouette (including the gap behind
+    # the free hem), not just pixels in a rectangular crop of the player.
+    # Seed the whole border so even a mouth touching a crop edge is open.
+    seed = Image.fromarray(np.pad(blue_floor(worn).astype(np.uint8),1,constant_values=1)).copy()
+    ImageDraw.floodfill(seed,(0,0),2)
+    return (np.asarray(seed)[1:-1,1:-1] == 1) & blue_floor(bare) & (np.abs(worn-bare).max(2) <= 8)
+
+
+def pockets(bare, worn, width):
+    shirt = shirt_mask(bare)
+    _,x = np.where(shirt)
+    assert x.size, 'no se ven las mangas en la vista de 58°'
+    center = (x.min()+x.max()+1)/2
+    rear = np.median([np.flatnonzero(shirt[:,x])[-1]
+                      for x in range(round(center-.29*width),round(center+.29*width)) if shirt[:,x].any()])
+    closed = enclosed_floor(bare,worn)
+    rows = slice(round(rear-.13*width),round(rear+.16*width))
+    return [int(closed[rows,round(center+a*width):round(center+b*width)].sum())
+            for a,b in ((-.40,-.13),(.13,.40))]
+
+
+def check_moderate(root, read):
+    prefix = 'ajuste-medio'
+    bare = read(root/f'{prefix}-sin-manto.png')
+    previous = read(root/f'{prefix}-v1679.png')
+    _,cols = np.where(shirt_mask(bare))
+    assert cols.size
+    width = int(cols.max()+1-cols.min())
+    anchor = np.loadtxt(root/f'{prefix}-v1679.tsv')
+    assert anchor.shape == (3,4) and np.isfinite(anchor).all()
+    old = pockets(bare,previous,width)
+    tolerance = max(2,round(.045*width))
+    failures = []
+    for slot in SLOTS:
+        name = f'{prefix}-{slot}'
+        actual = np.loadtxt(root/f'{name}.tsv')
+        assert actual.shape == anchor.shape and np.max(np.abs(actual-anchor)) < .55, (name,'se movió la cámara F5')
+        fitted = read(root/f'{name}.png')
+        new = pockets(bare,fitted,width)
+        report,gaps = score(bare,previous,fitted,width)
+        collar = report[1][1]*width
+        print(f'F5 58°, {slot}: cuello {collar:.1f}px más cerca, '
+              f'suelo encerrado {old[0]}/{old[1]} → {new[0]}/{new[1]} px; '
+              'mangas y remates '+ ' / '.join(f'{a:.1%} → {b:.1%}' for a,b in gaps)+'.',flush=True)
+        if collar < .014*width or min(r[0] for r in report) < -.043:
+            failures.append((name,'el borde visible no se acerca',np.round(report,3).tolist()))
+        if sum(new) > max(tolerance,sum(old)*.57) or max(new) > max(tolerance,max(old)*.57):
+            failures.append((name,'queda suelo dentro de la unión',old,new,tolerance))
+    return failures
+
+
 def check(root: Path):
     from verify_forge_mount import read
 
@@ -97,7 +151,7 @@ def check(root: Path):
     _,cols = np.where(shirt_mask(slim_bare))
     assert cols.size, 'no se ve la camiseta de mangas finas'
     width = cols.max()+1-cols.min()
-    failures = []
+    failures = check_moderate(root,read)
     for prefix,label in (('ajuste','clásico'),('ajuste-fino','fino')):
         bare = read(root/f'{prefix}-sin-manto.png')
         previous = read(root/f'{prefix}-v1678.png')

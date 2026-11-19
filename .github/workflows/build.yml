@@ -1019,6 +1019,10 @@ jobs:
             fi
           done
 
+      - name: Vista F5 de inclinación media, v1.67.9 frente a ajuste nuevo
+        if: always() && steps.fx-smoke.outcome != 'skipped'
+        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery ajuste-medio
+
       - name: Fotogramas del giro y la inclinación en pecho
         if: always() && steps.fx-smoke.outcome != 'skipped'
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery mirada-pecho
