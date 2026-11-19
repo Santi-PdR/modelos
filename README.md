@@ -20,6 +20,9 @@ Se equipa en el pecho o en `back` con Curios opcional.
   la cabeza, al mover los brazos o al inclinar el torso, y no se aplica
   con élitros. El rig editable conserva cubos, texturas y los ocho clips;
   el ajuste a la postura lo calcula Minecraft. El icono y su pulso no cambian.
+- **Prueba en Forge:** [mismo encuadre en F5 con mangas clásicas y finas,
+  en pecho y Curios](docs/capa_v1679_ajuste.png). El control conserva todo
+  el respaldo de v1.67.8; sólo se desactiva el ajuste nuevo.
 
 ### v1.67.8 — unión alta a la espalda y pulso del icono
 

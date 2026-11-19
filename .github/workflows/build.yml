@@ -1004,6 +1004,18 @@ jobs:
             fi
           done
 
+      - name: Verificar la unión y el icono en el framebuffer de Forge
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
+        run: |
+          set -o pipefail
+          python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
+            if [[ "$line" == '::error '* ]]; then
+              printf '%s\n' "$line"
+            else
+              printf '::notice title=Anclaje y ranura en Forge::%s\n' "${line//%/%25}"
+            fi
+          done
+
       - name: Recorte comparativo F5 del ajuste de cuello y hombreras
         if: always() && steps.fx-smoke.outcome != 'skipped'
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery ajuste
@@ -1039,18 +1051,6 @@ jobs:
             build/fx-smoke-run/fx-shots/hotbar-ciclo.gif
           if-no-files-found: error
           retention-days: 30
-
-      - name: Verificar la unión y el icono en el framebuffer de Forge
-        if: steps.fx-smoke.outcome == 'success'
-        run: |
-          set -o pipefail
-          python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
-            if [[ "$line" == '::error '* ]]; then
-              printf '%s\n' "$line"
-            else
-              printf '::notice title=Anclaje y ranura en Forge::%s\n' "${line//%/%25}"
-            fi
-          done
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.

@@ -78,7 +78,7 @@ public final class CapeFxSmoke {
     private static final String ATLAS = "assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan";
     private static final String FRAGMENT = "assets/capatest/shaders/core/cape_bloom.fsh";
     private static final String PACK_ID = "file/fx-probe";
-    private static final int HOTBAR_SLOT = 4, HOTBAR_SAMPLES = 34;
+    private static final int HOTBAR_SLOT = 4, HOTBAR_SAMPLES = 34, HOTBAR_QUIET_TICKS = 52;
     // Negative control: opening only the new fitting frame leaves exactly
     // the v1.67.8 rig. No bypass ships outside this smoke-test source set.
     private static final Field SEATING = field(CapaArmorRenderer.class, "seating");
@@ -159,7 +159,7 @@ public final class CapeFxSmoke {
     private static int stableFrames;
     private static int observedBirths;
     private static boolean captured;
-    private static int hotbarCount, lastHotbarTick;
+    private static int hotbarCount, lastHotbarTick, hotbarUnequippedTick;
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void observeParticles(RegisterParticleProvidersEvent event) {
@@ -412,6 +412,7 @@ public final class CapeFxSmoke {
             game.options.guiScale().set(2);
             game.options.hideGui = false;
             hotbarCount = 0;
+            hotbarUnequippedTick = -1;
         }
         if (next == Scene.STRAFE_LEFT) {
             game.options.hideGui = true;
@@ -776,6 +777,13 @@ public final class CapeFxSmoke {
         if ((empty ? !stack.isEmpty() : !stack.is(CapaTestMod.CAPA_DETERIORER.get()))
                 || game.options.hideGui || ++stableFrames < 18) return;
         int tick = player.tickCount;
+        // The previous fitting scene leaves real embers alive for up to 47
+        // ticks. In a transparent hotbar they can change the pixels behind
+        // an otherwise static slot. Wait from confirmed unequip, not FPS.
+        if (empty) {
+            if (hotbarUnequippedTick < 0) hotbarUnequippedTick = tick;
+            if (tick - hotbarUnequippedTick < HOTBAR_QUIET_TICKS) return;
+        }
         if (hotbarCount > 0 && tick == lastHotbarTick) return;
         check(framePasses == 0 && player.getInventory().selected != HOTBAR_SLOT,
                 "hotbar fixture: worn or selected mantle");
