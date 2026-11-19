@@ -10,6 +10,14 @@ const context = vm.createContext({ document:{getElementById:target}, indata });
 const src = fs.readFileSync(path.join(__dirname, '../preview/app.js'), 'utf8').split('\nboot().catch')[0];
 const matrices = vm.runInContext(`${src}
   (() => {
+    if (indata.fitSamples) {
+      const {fit}=indata;
+      const rig={bones:[{name:fit.bone},{name:fit.drapeBone},{name:fit.gussetBone}]};
+      return indata.fitSamples.map(aim => {
+        const [move,drape,gusset]=wearerPose(rig,fit,...aim).bones;
+        return [move.offset[2],gusset.scale[2],-drape.rotation[0]];
+      });
+    }
     const clips=prepareClips(indata.clips), geo=indata.geo;
     return {hidden:[...runtimeHidden(geo)], poses:indata.tests.map(({clip,t,aim}) => {
       const base=poseAt(geo,clips[clip],t);

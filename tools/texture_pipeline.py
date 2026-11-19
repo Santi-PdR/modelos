@@ -621,192 +621,49 @@ def cloth_canvas_fitted(w: int, h: int) -> tuple[Image.Image, Image.Image]:
 # ampliado 4x con Image.NEAREST.
 # --------------------------------------------------------------------------
 
-# v1.14.0: el usuario APROBO el icono "Blight Star" de v1.13.0 y pidio
-# actualizarlo segun la capa nueva (Deterioro / Evil Saiyan Rose). Se
-# conserva EXACTAMENTE su silueta y su logica de 5 tonos cercanos; cambian
-# la paleta (carmesi oscuro + morado desvaido + gris ceniza, acentos rosa y
-# magenta), las grietas de energia, el dobladillo mas deshilachado y 4
-# microvoxeles flotantes. Sigue siendo 16x16 plano, NEAREST, sin AA,
-# degradados ni bloom. ICON_ALTERNATIVE guarda la forma aprobada para que el
-# visor permita comparar antes/despues.
-ICON_ALTERNATIVE = (
-    "..KKGG....GGKK..",
-    "...HGHHHKKHGH...",
-    "....HHHHHHKKK...",
-    "...HMLMGKKLLLK..",
-    "...HELGWGMLEDK..",
-    "...GDLLGMMLLGK..",
-    "...HDLLMHLLLLK..",
-    "...HMLLMHLLMLHK.",
-    "...HMLMCKLMDLDK.",
-    "..HEMLECEHMDLDHK",
-    ".HDMLDMEKKMDEDDK",
-    ".HDMDDMDKHMLMDDK",
-    "KHMDDMLDKDMDDDDK",
-    "KHDDMDDHKLDDDDK.",
-    ".KKGHDHGKDHKGK..",
-    "...KK.KKK.KK....",
-)
-
-# Icono ACTIVO v1.28.0.
-#
-# v1.28.0: VUELVE EL ICONO PREFERIDO DE LA v1.25.0. El usuario comparo el
-# icono de la v1.27.0 (el rediseño con hombrera y cadena de acero) con
-# este, y se quedo con ESTE: "era mejor el anterior, ese quiero". El mapa
-# activo es por tanto el mismo de la v1.25.0 (rose_v1140), byte a byte.
-#
-# La v1.27.0 no se borra: queda como histórico en
-# referencias/ICONO_V1270_REDISEÑO_BACKUP.png.
+# Inventory art is composed at 16 px, where it is actually read. The open
+# collar, steel shoulders, single star, and asymmetric hem have separate
+# value groups. Two stitches echo the worn cracks without a field of specks.
 ICON_PIXEL_MAP = (
-    "..KKGG....GGKK..",
-    "...HGHHHKKHGH...",
-    ".P..HHHHHHKKK...",
-    "...HMLMGKKLLLK..",
-    "...HELGWGMLEDK..",
-    "...GDLLGMMLLGK..",
-    "...HELLMHLLELK..",
-    "...HCLLMHLLMLHK.",
-    "...HMLMCKLMPLDP.",
-    "..HEELECEHMDLDHK",
-    ".HDMLDMEKKMGEDDK",
-    "PHDMDDMDKHMLMDDK",
-    "KHMDPMLDKDMEDDDK",
-    "KHDDMDDHKLDDDDKP",
-    ".KK.HD.GKDH.GK..",
-    "..K.KK..K.K.K...",
+    "................",
+    "...KRK....KLK...",
+    "..KLRHK..KRRHK..",
+    ".KSLRHHKKHHDTSK.",
+    ".KSSHRRHGHHTSSK.",
+    "..KDHLHGWGHHDK..",
+    "..KDLRHDGHDHDK..",
+    "..KDLCHDKMDHDK..",
+    "..KLCMDKDVHDMK..",
+    ".KDLRHDKDLHDVMK.",
+    ".KDRVHMKDMHDVMK.",
+    ".KDRVKVKDMKDVHK.",
+    ".KHMKDVKDMKDVHK.",
+    ".KK.KVK.KMK.KVK.",
+    "...KHK..KVK..K..",
+    "...KK....K......",
 )
-
-ICON_CANDIDATES = {"aprobado_v1130": ICON_ALTERNATIVE, "rose_v1140": ICON_PIXEL_MAP}
-
-
-
-# Paleta plana (9 tonos opacos + transparente): mismos violetas que v1.10.0,
-# más los acentos fríos de Blight Star y el oro de cuello/hombreras/dobladillo.
 ICON_PALETTE = {
     ".": (0, 0, 0, 0),
-    "K": (12, 5, 18, 255),       # contorno violeta-negro
-    "H": (42, 11, 28, 255),     # carmesi muy oscuro
-    "D": (66, 24, 70, 255),     # morado desvaido
-    "M": (88, 30, 84, 255),     # tono medio
-    "L": (112, 52, 108, 255),   # luz del pliegue
-    "G": (232, 104, 172, 255),  # rosa encendido (broche / hombreras)
-    "W": (255, 222, 238, 255),  # nucleo del broche
-    "C": (214, 34, 138, 255),   # magenta Evil Saiyan
-    "E": (96, 22, 72, 255),     # veta de energia apagada
-    "P": (140, 20, 96, 255),    # microvoxel / chispa de ceniza
+    "K": (36, 21, 43, 255),
+    "H": (60, 22, 43, 255),
+    "D": (80, 35, 75, 255),
+    "M": (105, 48, 105, 255),
+    "V": (137, 73, 136, 255),
+    "R": (145, 46, 73, 255),
+    "L": (193, 75, 109, 255),
+    "S": (94, 77, 110, 255),
+    "T": (153, 127, 154, 255),
+    "C": (220, 63, 145, 255),
+    "G": (247, 112, 182, 255),
+    "W": (255, 221, 242, 255),
 }
 
 
-
-
-# Motas y chispas sueltas: la referencia tiene energía FLOTANDO alrededor
-# del paño. Se añaden en huecos del mapa, SIN tocar la silueta aprobada.
-ICON_FLOATING = (
-    # v1.28.0: las ocho motas de la v1.25.0 (este es el icono que el
-    # usuario ha elegido). La v1.27.0 las redujo a tres: ya no aplica.
-    (1, 2, "P"), (14, 3, "G"), (0, 8, "P"), (15, 10, "P"),
-    (2, 14, "C"), (13, 15, "G"), (0, 12, "P"), (15, 5, "P"),
-)
-
-# Grietas de energia en guiones CORTOS y costuras oscuras entre jirones:
-# la referencia no es un bloque liso, son hebras separadas con rosa dentro.
-ICON_CRACKS = (
-    # v1.28.0: la lista de la v1.25.0 (el icono elegido por el usuario).
-    # Cuchilladas diagonales de 2-3 px: el icono cuenta lo mismo que
-    # la capa 3D, no una lluvia de cuadrados magenta.
-    (4, 7, "C"), (5, 8, "C"), (5, 9, "E"), (6, 10, "C"),
-    (10, 7, "C"), (10, 8, "E"), (9, 9, "C"), (9, 10, "C"),
-    (3, 11, "C"), (4, 12, "E"), (12, 11, "C"), (12, 12, "E"),
-    (6, 12, "C"), (7, 13, "E"), (9, 12, "C"), (8, 13, "E"),
-    (3, 14, "C"), (12, 14, "C"), (11, 13, "C"), (5, 13, "E"),
-    # Costuras oscuras entre lóbulos.
-    (6, 8, "H"), (6, 10, "H"), (9, 8, "H"), (9, 11, "H"),
-    (4, 14, "H"), (11, 14, "H"),
-)
-
-
-def _icon_row_palette(y: int) -> dict[str, tuple[int, int, int, int]]:
-    """Los 5 tonos del paño derivan de la MEDIANA MEDIDA del PNG por altura.
-
-    v1221: antes el icono usaba una paleta Rose fija; ahora cada fila toma
-    el carmesí -> violeta real de la referencia, así el icono y la capa 3D
-    cuentan el mismo color. Sigue siendo paleta PLANA, sin degradado suave.
-    """
-    base = np.asarray(CS.palette_at(y / 15.0), dtype=np.float32)
-
-    def tone(mul: float, add: tuple[int, int, int] = (0, 0, 0)):
-        col = np.clip(base * mul + np.array(add, np.float32), 0, 255)
-        return (int(col[0]), int(col[1]), int(col[2]), 255)
-
-    return {
-        ".": (0, 0, 0, 0),              # transparente
-        "K": (12, 5, 18, 255),          # contorno violeta-negro
-        # v1.28.0: tonos de la v1.25.0 (el icono elegido por el usuario).
-        # El contraste extra de la v1.27.0 ya no aplica.
-        "H": tone(0.62),                # carmesí en sombra
-        "D": tone(0.92, (0, 0, 6)),     # violeta desvaído
-        "M": tone(1.20),                # tono medio
-        "L": tone(1.62, (4, 2, 6)),     # luz del pliegue
-        "E": tone(0.80, (18, 0, 14)),   # veta de energía apagada
-        "P": (208, 62, 142, 255),       # mota / microvóxel
-        "G": (236, 92, 168, 255),       # rosa encendido
-        "W": (255, 214, 236, 255),      # núcleo del broche
-        "C": (226, 44, 146, 255),       # magenta de las grietas
-    }
-
-
 def build_icon_artwork(size: int = 64) -> Image.Image:
-    """Icono 64x64 REMASTERIZADO v1221 (16x16 -> 4x, NEAREST).
-
-    Conserva EXACTAMENTE la silueta y el mapa de 16x16 que el usuario
-    aprobó (backup en tools/originals/icono_aprobado_v1130.png), pero:
-
-      * cada fila usa la paleta MEDIDA en REFERENCIA_CAPA.png en vez de la
-        paleta Rose fija (carmesí arriba -> violeta abajo);
-      * relieve 3D por píxel: luz arriba-izquierda, sombra abajo-derecha,
-        para que los pliegues se lean como tela y no como un dibujo plano;
-      * 8 motas/chispas flotando alrededor, como en la captura;
-      * cero antialiasing, cero degradado continuo, cero bloom: todo el
-        detalle sigue viviendo en la rejilla de 16x16.
-    """
-    rows = ICON_PIXEL_MAP
-    assert len(rows) == 16 and all(len(r) == 16 for r in rows), "icono base 16x16"
-    grid = [list(r) for r in rows]
-    for x, y, ch in ICON_FLOATING:
-        if grid[y][x] == ".":
-            grid[y][x] = ch
-    for x, y, ch in ICON_CRACKS:
-        if grid[y][x] in ("H", "D", "M", "L", "E"):
-            grid[y][x] = ch
-
-    px = np.zeros((16, 16, 4), dtype=np.uint8)
-    for y in range(16):
-        pal = _icon_row_palette(y)
-        for x in range(16):
-            px[y, x] = pal[grid[y][x]]
-
-    opaque = px[..., 3] > 0
-    for y in range(16):
-        for x in range(16):
-            ch = grid[y][x]
-            if not opaque[y, x] or ch in (".", "K", "G", "W", "C", "P"):
-                continue
-            lift = 0.0
-            if x == 0 or not opaque[y, x - 1]:
-                lift += 11.0
-            if y == 0 or not opaque[y - 1, x]:
-                lift += 15.0
-            if x == 15 or not opaque[y, x + 1]:
-                lift -= 9.0
-            if y == 15 or not opaque[y + 1, x]:
-                lift -= 11.0
-            delta = np.array([lift, lift * 0.34, lift * 0.78], np.float32)
-            px[y, x, :3] = np.clip(
-                px[y, x, :3].astype(np.float32) + delta, 0, 255
-            ).astype(np.uint8)
-
-    small = Image.fromarray(px, "RGBA")
-    return small.resize((size, size), Image.NEAREST)
+    assert len(ICON_PIXEL_MAP) == 16 and all(len(row) == 16 for row in ICON_PIXEL_MAP)
+    icon = Image.new("RGBA", (16, 16))
+    icon.putdata([ICON_PALETTE[pixel] for row in ICON_PIXEL_MAP for pixel in row])
+    return icon.resize((size, size), Image.NEAREST)
 
 
 def build_icon() -> Image.Image:

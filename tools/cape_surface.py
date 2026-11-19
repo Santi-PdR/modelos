@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import math
 
-from armor_model_pipeline import source_cube
+from armor_model_pipeline import source_cube, MOUNT_PREFIX
 
 import numpy as np
 from PIL import Image
@@ -111,12 +111,12 @@ def face_record(b,c,ci,vertices,fn):
                 family=family,mat=mat,shade=.40+.60*abs(n@light))
 
 
-def visible_faces(geometry):
+def visible_faces(geometry, *, skip_mount=False):
     """Mapa de propietarios de píxel, con el portador como oclusor."""
     matrices=P.matrices(geometry)
     faces=[]
     for b in geometry['bones'][72:]:
-        if b['name'].startswith(('v15_cloth_','v17_vein_')):
+        if b['name'].startswith(('v15_cloth_','v17_vein_')) or (skip_mount and b['name'].startswith(MOUNT_PREFIX)):
             continue
         for ci,c in enumerate(b.get('cubes',())):
             v=P.cube_points(c,matrices[b['name']])

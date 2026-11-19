@@ -118,8 +118,8 @@ function poseAt(geo, clip, t) {
   })};
 }
 
-function degreeFold(profile, stance, look, turn) {
-  const table=profile.fold;
+function backset(profile, stance, look, turn) {
+  const table=profile.backset;
   const axis=(v,n)=>{
     v=Math.min(n-1, Math.max(0,v));
     const i=Math.min(Math.floor(v),n-2);
@@ -135,9 +135,11 @@ function degreeFold(profile, stance, look, turn) {
   return lerp(row(st),row(st+1),ft);
 }
 function wearerPose(geo, profile, stance, look, turn) {
-  const angle=degreeFold(profile,stance,look,turn);
+  const depth=backset(profile,stance,look,turn);
   return {...geo, bones:geo.bones.map(b => {
-    if (b.name===profile.bone) return {...b,rotation:[-angle,0,0]};
+    if (b.name===profile.bone) return {...b,offset:[0,0,depth]};
+    if (b.name===profile.drapeBone) return {...b,rotation:[-depth*profile.drapePerUnit,0,0]};
+    if (b.name===profile.gussetBone) return {...b,scale:[1,1,1+depth/profile.gussetDepth]};
     if (b.name==='chestplate') return {...b,rotation:[stance*profile.bodyAngle,0,0],offset:[0,-3.2*stance,0]};
     return b;
   })};
@@ -186,10 +188,11 @@ function playerFaces(stance=0, look=0, turn=0) {
   const about=(pivot,rotation,offset)=>mul(T(pivot.map((v,i)=>v+offset[i])),mul(rotation,T(pivot.map(v=>-v))));
   const head=about([0,24,0],mul(R('y',turn),R('x',look)),[0,-4.2*stance,0]);
   const body=about([0,24,0],R('x',-(FIT?.bodyAngle || 0)*stance),[0,-3.2*stance,0]);
+  const arms=[-5,5].map(x=>about([x,22,0],R('x',-.4*(180/Math.PI)*stance),[0,-3.2*stance,0]));
   const legs=T([0,-.2*stance,4*stance]);
   const out = [];
   for (const [i,[x,y,z,w,h,d,color]] of parts.entries()) {
-    const pose=i===0 ? head : i<4 ? body : legs;
+    const pose=i===0 ? head : i===1 ? body : i<4 ? arms[i-2] : legs;
     const V = CORNERS.map(k => apply(pose,[x + k[0]*w, y + k[1]*h, z + k[2]*d]));
     for (const fn in FACE_ORDER) {
       const idx = FACE_ORDER[fn];
@@ -465,7 +468,7 @@ function draw(now) {
   const faces=collect(posed,hidden);
   if (showPlayer) faces.push(...playerFaces(stance,look,turn));
   fitValue.textContent=referenceView ? 'Pose base · ajuste desactivado' :
-    `Mirada ${look}° · giro ${turn}° · bisagra ${degreeFold(FIT,stance,look,turn).toFixed(1)}°`;
+    `Mirada ${look}° · giro ${turn}° · holgura ${backset(FIT,stance,look,turn).toFixed(2)} u`;
   const fx=showFx&&!referenceView;
   render(faces,yaw,pitch,zoom,SIZE,frameBounds,showGlow&&!referenceView ? simulatedTint(t,clip.length) : null,
          referenceView ? 1 : +ambientControl.value, referenceView ? referenceFrame(SIZE) : null,
@@ -515,7 +518,7 @@ canvas.addEventListener('pointermove',e=>{
   drag=[e.clientX,e.clientY]; dirty=true;
 });
 for (const type of ['pointerup','pointercancel','lostpointercapture']) canvas.addEventListener(type,()=>drag=null);
-for (const [id,y,p] of [['vBack',0,9],['vFront',180,8],['vSide',-87,8],['vTop',8,58]]) {
+for (const [id,y,p] of [['vBack',0,9],['vFront',180,8],['vSide',-87,8],['vTop',0,78]]) {
   document.getElementById(id).onclick=()=>{setReference(false); yaw=y; pitch=p;};
 }
 document.getElementById('v34').onclick=()=>{

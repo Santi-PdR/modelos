@@ -138,6 +138,8 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         collectFamily("v17_vein_", 10, details);
         collectFamily("v18_pad_", 2, details);
         collectFamily("v18_chain_", 8, details);
+        for (String name : new String[]{"v20_mount_seat", CapeFit.GUSSET_BONE, "v20_mount_saddle"})
+            getBone(name).ifPresent(details::add);
         visibilidadAplicada = null;
         return true;
     }
@@ -190,15 +192,16 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         double sweep = Math.sin(time * 0.41D + seed * 0.11D);
         double offX = Mth.clamp(-(m[6] * 1.3D + m[5] * 0.9D + m[1] * 0.65D + m[0] * 0.62D)
                 + (m[3] + m[4]) * 0.72D, -CapeResponse.MAX_BACK, CapeResponse.MAX_IN);
-        // Pads keep the GeckoLib clip exactly. The old runtime rewrote their
-        // sculpted angles and made the equipped silhouette differ from the editor.
+        // Only the cloth below the seam reacts to gait and wind.
         for (Cloth piece : cloth) {
             GeoBone b = piece.bone();
             int seg = piece.segment();
+            if (seg == 0)
+                continue; // the sewn root only follows its section hinge
             double axis = (RIBBONS - 1) / 2.0D;
             double lateral = (piece.column() - axis) / axis;
             double lag = 0.62D * seg;
-            double weight = 0.35D + 0.65D * seg / 6.0D;
+            double weight = Math.pow(seg / (double) LAST_SEGMENT, 1.45D);
             double ripple = Math.sin(time * 1.7D - lag + seed * 0.05D) * 0.44D;
             double offY = Mth.clamp(m[2] * 1.84D * lateral + wind * 0.38D + sweep * 0.35D,
                     -CapeResponse.MAX_YAW, CapeResponse.MAX_YAW);

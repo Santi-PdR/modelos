@@ -17,7 +17,6 @@ Uso:
 from __future__ import annotations
 
 import io
-import re
 from pathlib import Path
 
 from PIL import Image
@@ -81,18 +80,6 @@ ICON_V1130_PALETTE = {
     "E": (96, 22, 72, 255),
     "P": (140, 20, 96, 255),
 }
-
-
-def _palette_actual() -> dict[str, tuple[int, int, int, int]]:
-    """El ICON_PALETTE del texture_pipeline (el del icono ACTIVO)."""
-    src = (ROOT / "tools/texture_pipeline.py").read_text()
-    m = re.search(r"^ICON_PALETTE = \{(.*?)^\}", src, re.S | re.M)
-    assert m, "no se encontró ICON_PALETTE en tools/texture_pipeline.py"
-    out: dict[str, tuple[int, int, int, int]] = {}
-    for key, r, g, b, a in re.findall(
-            r'"(\w)":\s*\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)', m.group(1)):
-        out[key] = (int(r), int(g), int(b), int(a))
-    return out
 
 
 def _render(rows: tuple[str, ...], palette: dict, scale: int = 4) -> Image.Image:

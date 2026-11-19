@@ -27,7 +27,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image
 
 import cape_fit
 import cape_aura
@@ -124,6 +124,8 @@ def step_gifs_y_estados(ver: str) -> None:
     run(sys.executable, "tools/present_v1600.py", "--out", str(D), "--gif")
     shutil.copy(D / f"capa_v{ver.replace('.', '')}_antes_despues.png", A / "antes_despues.png")
     shutil.copy(D / f"capa_v{ver.replace('.', '')}_registro.png", A / "registro.png")
+    if ver == '1.64.0':
+        shutil.copy(D / 'capa_v1640_ajuste.png', A / 'ajuste.png')
     shutil.copy(D / "capa_v1170_estados.png", A / "estados.png")
     shutil.copy(D / "capa_v1170_animaciones.gif", A / "animacion.gif")
 
@@ -132,25 +134,9 @@ def step_comparativas(ver: str) -> None:
     print("6) comparativas")
     # La comparación registrada y su máscara ya salen de present_v1600.
     shutil.copy(D / "capa_v1170_comparativa.png", A / "comparativa_final.png")
-    aprobado = Image.open(ROOT / "referencias/ICONO_APROBADO_BACKUP.png").convert(
-        "RGBA").resize((256, 256), Image.NEAREST)
-    activo = Image.open(RES / "textures/item/capa_deteriorer_evilsaiyan.png").convert(
-        "RGBA").resize((256, 256), Image.NEAREST)
-    thumb = Image.open(ROOT / "referencias/REFERENCIA_CAPA_thumb.png").convert(
-        "RGBA").resize((256, 256), Image.NEAREST)
-    ic = Image.new("RGB", (798, 296), (14, 12, 20))
-    ic.paste(thumb, (6, 34))
-    ic.paste(aprobado, (270, 34))
-    ic.paste(activo, (534, 34))
-    d = ImageDraw.Draw(ic)
-    d.text((10, 12), "referencia 200x200", fill=(235, 228, 245))
-    d.text((274, 12), "icono APROBADO (backup intocable)", fill=(235, 228, 245))
-    # v1.28.0: el icono activo es el PREFERIDO de la v1.25.0 (el que eligio
-    # el usuario): no lleva acero ni el rediseño de la v1.27.0.
-    d.text((538, 12), f"icono v{ver} (PREFERIDO v1.25.0, byte a byte)",
-           fill=(235, 228, 245))
-    ic.save(D / "capa_v1170_icon_compare.png")
-    ic.save(D / "capa_v1170_icon_remaster.png")
+    from present_v1640 import icon_panel
+    icon_panel(D / 'capa_v1170_icon_compare.png')
+    shutil.copy(D / 'capa_v1170_icon_compare.png', D / 'capa_v1170_icon_remaster.png')
 
 
 def step_visor() -> None:

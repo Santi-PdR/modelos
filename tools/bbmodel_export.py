@@ -43,7 +43,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from armor_model_pipeline import legacy_element, relief
+from armor_model_pipeline import legacy_element, relief, mount_bones
 import cape_motion as M
 import cape_animation_pipeline as animation
 
@@ -266,7 +266,7 @@ def build(geo: dict | None = None, atlas: Image.Image | None = None,
     bones = geo["bones"]
     bounds = atlas.size
     assert bounds == tuple(geo['description'][f'texture_{axis}'] for axis in ('width','height')), bounds
-    CAPE_BONES = ("v15_", "v16_", "v17_", "v18_", "v19_")
+    CAPE_BONES = ("v15_", "v16_", "v17_", "v18_", "v19_", "v20_mount_")
 
     elements, groups, node_by_name = [], [], {}
     anim_bones: list[tuple[str, str]] = []
@@ -350,7 +350,7 @@ def main() -> None:
     _raw = base64.b64decode(model["textures"][0]["source"].split(",", 1)[1])
     _im = Image.open(io.BytesIO(_raw))
     assert _im.size == tuple(model["resolution"][axis] for axis in ("width", "height")) == atlas_texture().size
-    n_visible = 122 + sum(map(len, relief()['fragments'].values()))
+    n_visible = 122 + sum(map(len, relief()['fragments'].values())) + sum(len(b['cubes']) for b in mount_bones())
     assert len(model['elements']) == n_visible + 27, len(model['elements'])
     assert sum(e['visibility'] for e in model['elements']) == n_visible
     assert not any(e["name"].startswith(("v17_mote_", "v17_ash_",
@@ -361,7 +361,7 @@ def main() -> None:
     assert not any("Steve/Alex" in g["name"] for g in model["groups"])
     _visible = {e["uuid"] for e in model["elements"]}
     assert all(not ({c for c in g["children"] if isinstance(c, str)} & _visible)
-               or g["name"].startswith(("v15_", "v16_", "v17_", "v18_", "v19_"))
+               or g["name"].startswith(("v15_", "v16_", "v17_", "v18_", "v19_", "v20_mount_"))
                for g in model["groups"]), "un grupo viejo tiene cubos visibles"
     for e in model["elements"]:
         for f in e["faces"].values():
@@ -389,7 +389,7 @@ def main() -> None:
     assert '"channel":"particle"' not in text and '"effects"' not in text \
         and 'particles/' not in text, \
         "el .bbmodel no puede referenciar partículas externas"
-    assert total >= 11000, total
+    assert total == len(anims) * 51 * (animation.SAMPLES + 1), total
     print(f"wrote {OUT.relative_to(ROOT)}: {len(model['elements'])} cubos, "
           f"{len(model['groups'])} grupos, {len(anims)} animaciones, "
           f"{total} keyframes, {len(text)} bytes")

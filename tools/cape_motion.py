@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""Coreografía rotacional del paño equipado. Grados en espacio GeckoLib.
+"""Eight periodic poses for a rigid yoke and a delayed cloth hem.
 
-Las tres bisagras construyen la silueta del estado; los gajos reaccionan
-con retardo desde la costura y los faldones del cuello casi no se mueven.
-Sin traslaciones, escala, viento nuevo ni FX en estas curvas. Los canales
-espaciales preexistentes se conservan por separado en el bake.
+Render and editor sample the same curves. Only the cloth flexes; hardware,
+collar and the fastening pads have no breathing/scale or free translation.
 """
 from __future__ import annotations
 
@@ -25,36 +23,20 @@ class Style:
 
 
 STYLES = {
-    "idle":       Style(3.60, (1.2, 0.9, -0.4), (1.1, 1.7, 2.0), (.3, 1.0, 1.35), 0.4, 2.3),
-    "caminar":    Style(1.00, (12, 6, -2), (2.6, 4.4, 4.5), (1.4, 2.6, 4.8), 2.0, 5.2, .4),
-    "correr":     Style(0.72, (32, 14, -5), (3.8, 4.6, 6.2), (1.0, 2.3, 4.4), -6.0, 8.4, .8),
-    "volar":      Style(1.35, (51, 12, -2), (4.0, 5.5, 5.8), (1.1, 1.9, 3.2), 14.0, 12.0, 1.5),
-    "caer":       Style(0.90, (21, 21, 27), (3.7, 5.6, 8.2), (1.5, 3.0, 5.0), 6.0, 10.3, 2.0),
-    "agachado":   Style(2.60, (10, -6, -7), (1.3, 1.1, 1.9), (.3, .7, 1.2), -14.0, 2.5, .3),
-    "agua":       Style(3.20, (14, 9, -14), (3.1, 4.5, 5.5), (1.5, 5.5, 12.0), 4.0, 6.9, 2.3),
-    "deterioro":  Style(3.00, (8, 4, 11), (2.3, 3.4, 5.6), (1.1, 3.4, 4.3), 5.5, 9.0, 1.1),
+    "idle":       Style(3.60, (0.4, 0.5, -0.7), (.6, 1.0, 1.7), (.14, .62, .96), 0.45, 1.8, .25),
+    "caminar":    Style(1.00, (8, 5, -2), (1.8, 3.4, 4.5), (.74, 1.8, 3.2), 2.2, 4.0, .4),
+    "correr":     Style(0.72, (27, 12, -7), (2.1, 3.2, 5.3), (.64, 1.8, 3.8), -5.5, 6.4, .8),
+    "volar":      Style(1.35, (45, 11, -5), (2.7, 4.2, 5.0), (.74, 1.5, 2.8), 11.5, 8.4, 1.5),
+    "caer":       Style(0.90, (18, 19, 22), (2.5, 4.7, 6.3), (.85, 2.4, 4.2), 5.0, 7.8, 2.0),
+    "agachado":   Style(2.60, (9, -4, -6), (.8, 1.2, 1.8), (.18, .53, 1.1), -10.5, 2.1, .3),
+    "agua":       Style(3.20, (12, 7, -12), (1.7, 3.6, 5.1), (.65, 3.6, 8.1), 3.6, 5.2, 2.3),
+    "deterioro":  Style(3.00, (6, 2, 9), (1.8, 2.8, 4.7), (.72, 2.4, 3.6), 4.2, 7.0, 1.1),
 }
 SECTIONS = ("cape_top", "cape_mid", "cape_bottom")
 RIBBON = re.compile(r"v17_ribbon_(\d+)_seg(\d+)")
 
 
-def side_of(name: str, column: int) -> float:
-    """Cada familia usa su propio centro, no el de los 12 jirones."""
-    if name.startswith("v17_ribbon_"):
-        axis = 5.5
-    elif name.startswith("v15_cloth_"):
-        axis = 4.0
-    elif name.startswith("v17_vein_"):
-        axis = 4.5
-    elif name.startswith("v17_cowl_back_"):
-        axis = 2.0
-    elif name.startswith("v18_chain_"):
-        axis = 3.5
-    elif name.startswith("v18_pad_"):
-        axis = 0.5
-    else:
-        axis = 3.0
-    return (column - axis) / axis
+LAST_JOINT = 4
 
 
 def beat(angle: float) -> float:
@@ -86,46 +68,37 @@ def sample(name: str, style: str, f: float) -> tuple[float, float, float]:
     m = RIBBON.fullmatch(name)
     if m:
         col, seg = map(int, m.groups())
-        side = side_of(name, col)
+        if not 1 <= seg <= LAST_JOINT:
+            return 0., 0., 0.
+        side = (col - 5.5) / 5.5
         hand = math.copysign(1.0, side)
-        tail = (seg / 6) ** 1.20
-        q = .16 + .84 * tail
-        a = t + spec.phase - .57 * seg + .25 * col
-        wave = math.sin(a) + .23 * math.sin(2 * a + .4)
-        lag = math.sin(t + hand * .62 - .28 * seg)
-        amp = spec.ripple * q * (.82 + .18 * abs(side))
-        # Seg0 ancora la tela al cuello. Las puntas obedecen al resto
-        # del paño; el rotZ abre las alas sin fabricar otro offset XYZ.
-        pitch = amp * .44 * wave
-        yaw = amp * .45 * math.cos(a) - spec.spread * side * (.08 + .24 * tail)
-        roll = amp * (.66 * wave + .34 * hand * lag) - side * spec.spread * q
+        # The sewn root has no extra local swing. At the last articulated
+        # segment three solids share one rotation; no flapping loose tip.
+        tail = seg / LAST_JOINT
+        q = tail**1.45
+        a = t + spec.phase - .62 * seg + .32 * side
+        wave = math.sin(a) + .13 * math.sin(2 * a + .4)
+        ensemble = math.sin(t + spec.phase - .62 * seg - .68)
+        amp = spec.ripple * q * (.76 + .24 * abs(side))
+        pitch = .44 * amp * wave
+        yaw = .26 * amp * math.cos(a) - .22 * spec.spread * side * q
+        roll = amp * (.64 * ensemble + .25 * side * wave) - .72 * side * spec.spread * q
         if style == "caminar":
-            roll += hand * 4.3 * q * math.sin(t - .44 * seg)
+            roll += hand * 2.4 * q * math.sin(t - .54 * seg)
         elif style == "correr":
-            pitch += 2.8 * q * math.sin(2 * a + .9)
+            pitch += 1.50 * q * math.sin(2 * a + .9)
         elif style == "caer":
-            pitch += 4.1 * q * math.sin(2 * a - .6)
+            pitch += 2.30 * q * math.sin(2 * a - .6)
         elif style == "deterioro":
-            roll += 10.0 * q * hand * beat(a) * math.sin(3 * t + .48 * col - .33 * seg)
-        if col in (0, 10):       # gajos cortos cosidos junto a la hombrera
-            pitch, yaw, roll = pitch*.58, yaw*.55, roll*.57
+            pitch += 3.6 * q * beat(a)
+            roll += 3.6 * q * hand * beat(a) * math.sin(2 * t + .32 * side - .42 * seg)
+        if col in (0, 10):
+            pitch, yaw, roll = pitch*.63, yaw*.56, roll*.60
         return pitch, yaw, roll
 
-    col = int(name.rsplit("_", 1)[1]) if name.rsplit("_", 1)[-1].isdigit() else 0
-    side = side_of(name, col)
-    a = t + spec.phase + side * .73
-    if name.startswith("v17_cowl_tooth_"):
-        # Solapa de tela pesada: rebote corto. El resto del cuello ancla.
-        return .18 * spec.ripple * math.sin(a - .5), 0.0, .12 * spec.ripple * math.sin(a)
-    if name.startswith(('v17_cowl_front_', 'v17_cowl_back_', 'v18_chain_')):
-        # El pliegue del cuello y su costura quedan reunidos.
-        return 0.0, 0.0, 0.0
-    if name.startswith("v18_pad_"):
-        return .55 * math.sin(a), 0.0, .37 * side * math.cos(a)
-    if name.startswith("v17_vein_"):
-        # Grabadas en su jirón. Rotan con él, escala heredada sin cambios.
-        return 0.0, 0.0, 0.0
-    return .45 * math.sin(a), 0.0, .47 * math.sin(a + .6)
+    # The yoke is stitched, not a collection of independently pumping
+    # plates. Keep those tracks at their neutral values for raw clip swaps.
+    return 0.0, 0.0, 0.0
 
 
 def slope(name: str, style: str, f: float) -> tuple[float, float, float]:
@@ -136,13 +109,15 @@ def slope(name: str, style: str, f: float) -> tuple[float, float, float]:
 
 
 def _self_test() -> None:
-    tip = "v17_ribbon_4_seg6"
+    tip = "v17_ribbon_4_seg4"
     assert len(STYLES) == 8
     for style in STYLES:
-        for name in (*SECTIONS, tip, "v17_ribbon_7_seg0", "v17_cowl_tooth_3", "v18_pad_1"):
+        for name in (*SECTIONS, tip, "v17_ribbon_7_seg2"):
             assert sample(name, style, 0) == sample(name, style, 1)
             assert max(abs(a - b) for a, b in zip(slope(name, style, 0), slope(name, style, 1))) < 1e-6
             assert any(abs(a - b) > .1 for a, b in zip(sample(name, style, 0), sample(name, style, .31)))
+        for n in ("v17_ribbon_7_seg0", "v17_cowl_tooth_3", "v18_pad_1", "v18_chain_0"):
+            assert sample(n, style, .37) == (0., 0., 0.)
     assert sample("cape_top", "volar", .5)[0] > sample("cape_top", "correr", .5)[0] + 8
     assert sample("cape_bottom", "caer", .5)[0] > sample("cape_bottom", "volar", .5)[0] + 18
     assert sample(tip, "agachado", .25)[2] < sample(tip, "volar", .25)[2]

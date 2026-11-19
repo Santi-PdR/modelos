@@ -107,9 +107,14 @@ def trim_edge(cube, adjustment):
 
 
 FIT_BONE = "cape_wearer_fit"
-# Long-radius rotation: clears the head without threading the lower hem
-# through the torso. Neutral in both GEO and Blockbench; Forge/visor pose it.
-FIT_PIVOT = (0., 4.6, 5.6)
+DRAPE_BONE = "cape_drape_fit"
+MOUNT_PREFIX = "v20_mount_"
+SEAT_BONE = MOUNT_PREFIX + "seat"
+GUSSET_BONE = MOUNT_PREFIX + "gusset"
+SADDLE_BONE = MOUNT_PREFIX + "saddle"
+FIT_PIVOT = (0., 4.6, 5.6)  # historical pivot; the wearer fit now slides in Z
+DRAPE_PIVOT = (0., 22.82, 4.89)  # seam at the start of the cloth
+MOUNT_PIVOT = (0., 16., 2.04)   # distance from the torso rear = .04u
 
 
 @lru_cache(maxsize=1)
@@ -248,6 +253,45 @@ def arc_strip(prefix, route, height, depth, front, *, overlap=.20, pitch=0., bac
     return out
 
 
+
+def mount_rib(start, end, width, depth):
+    """A solid bias-cut panel between two points in GEO coordinates."""
+    x, y, z = (b-a for a,b in zip(start,end,strict=True))
+    lean = -math.degrees(math.atan2(z, math.hypot(x,y)))
+    roll = math.degrees(math.atan2(x,y))
+    sx, sy, sz = start
+    panel = cube16((sx-width/2, sy-.17, sz-depth/2),
+                   (width, math.hypot(x,y,z)+.34, depth), COLLAR_UV, DARK, INFLATE[0])
+    panel.update(pivot=list(start), rotation=[round(lean, 6), 0., round(roll, 6)])
+    return panel
+
+
+def mount_bones():
+    """Back plate → lined gusset → cloth saddle and pad under-cuffs.
+
+    The plate beds ~.05u into the vanilla back, with no coplanar surface.
+    The gusset starts in that plate and ends behind the inner folded seam;
+    its front stays seated even when it gives the head more room in Z.
+    """
+    def skin(origin, size):
+        return cube16(origin, size, COLLAR_UV, DARK, INFLATE[0])
+
+    seat = [skin((-3.31,14.42,1.96), (6.62,1.90,.65)),
+            skin((-2.72,14.33,2.21), (5.44,1.91,.56)),
+            skin((-2.11,14.30,2.55), (4.22,1.87,.32))]
+    gusset = [skin((-2.57,14.22,2.09), (5.14,.45,2.95)),
+              mount_rib((0,14.46,4.43), (0,16.45,5.19), 4.84,.62),
+              mount_rib((0,16.36,5.04), (0,21.42,5.63), 4.38,.43)]
+    saddle = [skin((-1.80,20.45,5.245), (3.60,1.75,.58)),
+              mount_rib((-1.75,21.16,5.23), (-4.98,22.28,4.51), 1.14,.64),
+              mount_rib((1.76,21.06,5.19), (5.12,21.66,4.63), 1.19,.71),
+              skin((-5.31,21.45,3.05), (1.10,.56,1.97)),
+              skin((4.22,20.87,2.88), (1.10,.84,1.95)),
+              skin((-1.12,20.62,3.98), (2.24,1.13,1.41))]
+    return [bone(SEAT_BONE, 'chestplate', MOUNT_PIVOT, (0,0,0), seat),
+            bone(GUSSET_BONE, 'chestplate', MOUNT_PIVOT, (0,0,0), gusset),
+            bone(SADDLE_BONE, FIT_BONE, (0,21.4,5.52), (0,0,0), saddle)]
+
 def build_base() -> dict:
     data = json.loads(ORIGINAL.read_text())
     geo = data["minecraft:geometry"][0]
@@ -273,7 +317,7 @@ def build_base() -> dict:
                 if _slab == "cape_top":
                     # Bisagra en la costura externa, no dentro del torso.
                     # El borde alto gira fuera del volumen de la cabeza.
-                    _b["pivot"] = [0.0, 22.82, 4.89]
+                    _b["pivot"] = list(DRAPE_PIVOT)
                 elif _slab == "cape_mid":
                     _b["pivot"] = [0.0, CS.Y_TOP - CS.HEIGHT * 0.34, 4.61]
                 else:
@@ -440,15 +484,17 @@ def build_base() -> dict:
     assert thick and all(0.40 <= v <= 0.85 for v in thick), (min(thick), max(thick))
 
     apply_relief(geo)
-    # Add one empty correction parent; there is no extra animation track.
-    # A zero angle leaves every authored pose and local pivot untouched.
+    # Keep the rigid trim together. Head clearance shifts it relative to
+    # the fitted back plate, but does not swing the whole model off a low
+    # hinge. The drape compensates at its seam to stay closer at the hem.
     for b in bones:
-        if b['name'] == 'cape_top' or b['name'].startswith(
-                ('v17_cowl_', 'v19_cuellito_', 'v18_pad_', 'v18_chain_')):
+        if b['name'] == 'cape_top':
+            b['parent'] = DRAPE_BONE
+        elif b['name'].startswith(('v17_cowl_', 'v19_cuellito_', 'v18_pad_', 'v18_chain_')):
             assert b['parent'] == 'chestplate'
             b['parent'] = FIT_BONE
-    # The first 72 records still keep their historical indices.
     bones.insert(72, bone(FIT_BONE, 'chestplate', FIT_PIVOT, (0,0,0), []))
+    bones.extend([bone(DRAPE_BONE, FIT_BONE, DRAPE_PIVOT, (0,0,0), []), *mount_bones()])
     return data
 
 

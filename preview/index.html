@@ -72,8 +72,8 @@ details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summar
         <label for="fitTurn">Giro de cabeza</label><input type="range" id="fitTurn" min="-90" max="90" value="0">
         <button id="fitReset">Centrar mirada</button>
       </div>
-      <output id="fitValue" for="fitStance fitLook fitTurn">Mirada 0° · giro 0° · bisagra 0°</output>
-      <p class="muted">Usa la misma corrección rotacional que el mod. El maniquí simula cabeza y torso, no el movimiento de brazos y piernas.</p>
+      <output id="fitValue" for="fitStance fitLook fitTurn">Mirada 0° · giro 0° · holgura 0 u</output>
+      <p class="muted">La base sigue unida al torso. El fuelle cede al girar la cabeza, y el paño se recoge desde la costura. El maniquí no simula toda la animación vanilla.</p>
     </details>
     <p class="muted">«Referencia» fija la pose base, la luz y el zoom. Desliza la imagen original sobre el modelo sin mover la cámara. Elige otra vista, arrastra o reproduce un estado para salir. Las poses salen del JSON del mod; los FX son una simulación, no una captura de Minecraft.</p>
     <p class="muted"><span id="bones">—</span> huesos · <span id="faces">—</span> caras · UV del atlas real</p>
@@ -87,11 +87,14 @@ details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summar
     <section class="card">
       <div class="kicker">02 · Proyecto</div><h2>Editable en Blockbench</h2>
       <p>Textura embebida, grupos con UUIDs estables y ocho clips con las tres bisagras. No hay maniquí ni emisores en el archivo.</p>
-      <div class="controls"><a href="assets/capa_deteriorer_evilsaiyan.bbmodel">Descargar .bbmodel</a><img width="42" height="42" src="assets/icon.png" alt="Icono preferido, sin cambios"></div>
+      <div class="controls"><a href="assets/capa_deteriorer_evilsaiyan.bbmodel">Descargar .bbmodel</a><img width="42" height="42" src="assets/icon.png" alt="Nuevo icono: cuello granate, estrella rosa y pliegues violetas"></div>
     </section>
   </aside>
 </div>
-<section class="card"><div class="kicker">03 · Comparación</div><h2>Modelo y referencia a la misma escala</h2>
+<section class="card"><div class="kicker">03 · Ajuste equipado</div><h2>Montura, vista desde arriba y de perfil</h2>
+<a href="assets/ajuste.png"><img class="plate" src="assets/ajuste.png" loading="lazy" alt="Comparación de la sujeción al torso con la misma postura y escala"></a>
+</section>
+<section class="card"><div class="kicker">04 · Comparación</div><h2>Modelo y referencia a la misma escala</h2>
 <a href="assets/antes_despues.png"><img class="plate" src="assets/antes_despues.png" loading="lazy" alt="Imagen original, modelo anterior y nuevo a la misma cámara"></a>
 <a href="assets/registro.png">Ver el mapa de coincidencia de silueta</a>
 </section>

@@ -83,16 +83,19 @@ jobs:
           for clip, anim in armor_anim['animations'].items():
               length = float(anim['animation_length'])
               assert length > 0 and anim['loop'], clip
-              ribs = [b for b in anim['bones'] if b.startswith('v17_ribbon_')]
-              assert len(ribs) == 84 and all('position' in anim['bones'][b] for b in ribs)
+              ribs = {f'v17_ribbon_{k}_seg{j}' for k in range(12) for j in range(1,5)}
+              assert ribs == {b for b in anim['bones'] if b.startswith('v17_ribbon_')}, clip
+              assert not any(n.startswith(('v17_cowl_', 'v18_', 'v20_mount_', 'cape_wearer_', 'cape_drape_'))
+                             for n in anim['bones']), clip
               for b in (*ribs, 'cape_top', 'cape_mid', 'cape_bottom'):
+                  assert set(anim['bones'][b]) == {'rotation'}, (clip,b)
                   rotation = anim['bones'][b]['rotation']
                   assert len(rotation) >= 25 and all(k['easing'] == 'linear' for k in rotation.values()), (clip,b)
                   keys = sorted(rotation, key=float)
                   assert float(keys[0]) == 0 and float(keys[-1]) == length
                   assert rotation[keys[0]]['vector'] == rotation[keys[-1]]['vector'], (clip,b)
           # No se fuerza el primer frame a idle: la pose se sostiene en
-          # bucle. Position/scale idénticos y tangentes se prueban más abajo.
+          # bucle. Las tangentes y los empalmes se prueban más abajo.
           orig_geo_path = root / 'tools/originals/capa_deteriorer_evilsaiyan.geo.json'
           assert hashlib.sha256(orig_geo_path.read_bytes()).hexdigest() == \
               'e01e347c5be0678b18907d91452d7a0c405ec430ef3fc751096532c804d43b8c'
@@ -249,8 +252,14 @@ jobs:
                   assert _nb_c == [], _ob['name']
               else:
                   assert _ob_c == _nb_c, _ob['name']
-          assert len(armor_geo['bones']) == 226
-          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 260 + fragments
+          mount = {b['name']: b for b in armor_geo['bones'] if b['name'].startswith('v20_mount_')}
+          assert {n:b['parent'] for n,b in mount.items()} == {
+              'v20_mount_seat': 'chestplate', 'v20_mount_gusset': 'chestplate',
+              'v20_mount_saddle': 'cape_wearer_fit'}
+          mount_cubes = sum(len(b.get('cubes', [])) for b in mount.values())
+          assert mount_cubes == 12
+          assert len(armor_geo['bones']) == 230
+          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 260 + fragments + mount_cubes
           hinge = next(b for b in armor_geo['bones'] if b['name'] == 'cape_wearer_fit')
           assert hinge['parent'] == 'chestplate' and not hinge['cubes']
           new_bones = armor_geo['bones'][72:]
@@ -335,7 +344,7 @@ jobs:
           icon_bytes = (base / 'textures/item/capa_deteriorer_evilsaiyan.png').read_bytes()
           assert icon_bytes[:8] == b'\x89PNG\r\n\x1a\n'
           assert struct.unpack('>II', icon_bytes[16:24]) == (64, 64)
-          assert len(icon_bytes) > 800
+          assert len(icon_bytes) >= 300
           item_java = (root / 'src/main/java/com/capatest/item/CapaDeteriorerItem.java').read_text()
           assert 'getCustomRenderer' not in item_java, 'el BEWLR vuelve a ocultar el icono'
 
@@ -485,31 +494,10 @@ jobs:
               return [''.join('#' if rows[y*4][x*16+3] > 0 else '.'
                              for x in range(16)) for y in range(16)]
           sil = icon_silhouette(icon_path)
-          def runs(row): return len(_re.findall(r'[^.]+', row))
-          # Dos picos de cuello separados por un escote en V abierto.
-          # (icono PREFERIDO por el usuario; v1.25.0 revirtió el v1.24.0)
-          assert runs(sil[0]) == 2 and sil[0][6:10] == '....', sil[0]
-          # Dobladillo de CINCO puntas deshilachadas, no la hendidura central
-          # de las referencias, que parte el borde inferior en dos patas.
-          assert runs(sil[15]) == 5, sil[15]
-          # Centro opaco en el faldón: NO hay split central.
-          assert sil[12][7] == '#' and sil[12][8] == '#', sil[12]
-          # La silueta coincide exactamente con ICON_PIXEL_MAP del código.
-          _m = _re.search(r'ICON_PIXEL_MAP = \((.*?)\)', texture_src, _re.S).group(1)
-          _rows = _re.findall(r'"([.A-Z]{16})"', _m)
-          assert len(_rows) == 16
-          # v1221: la remasterizacion anade MOTAS FLOTANTES en huecos del
-          # mapa. La silueta esperada es el mapa aprobado MAS esas motas.
-          _grid = [list(r) for r in _rows]
-          _f = texture_src.split('ICON_FLOATING = (', 1)[1].split('ICON_CRACKS', 1)[0]
-          for _x, _y, _ch in _re.findall(r'\((\d+), (\d+), "([A-Z])"\)', _f):
-              if _grid[int(_y)][int(_x)] == '.':
-                  _grid[int(_y)][int(_x)] = _ch
-          assert sil == [''.join('#' if c != '.' else '.' for c in r) for r in _grid]
-          # No es la silueta copiada de v1.10.0 (capucha de un pico).
-          assert _rows[0] != '.......HKK......'
-          # Tampoco es el icono RECHAZADO de v1.11.0.
-          assert _rows[0] != '....GG....GG....'
+          rows = _re.findall(r'"([.A-Z]{16})"', texture_src.split('ICON_PIXEL_MAP = (',1)[1].split(')',1)[0])
+          assert len(rows) == 16 and sil == [''.join('#' if c != '.' else '.' for c in row) for row in rows]
+          assert len(_re.findall(r'#+', sil[1])) == 2, 'cuello abierto'
+          assert any(len(_re.findall(r'#+', row)) >= 4 for row in sil[11:]), 'puntas rasgadas'
           # El volumen 3D REAL debe estar en la geometría, no sólo en el JSON.
           armor_src = (root / 'tools/armor_model_pipeline.py').read_text()
           assert 'INFLATE = (0.01, 0.03, 0.05)' in armor_src
@@ -554,8 +542,8 @@ jobs:
           assert bb['meta']['format_version'] == '5.0'
           # v1.17.3: el .bbmodel de Blockbench muestra SOLO la capa: sin
           # maniqui Steve/Alex y sin los 126 cubos de la armadura vieja.
-          assert len(bb['elements']) == 149+fragments and len(bb['groups']) == 226
-          assert sum(e['visibility'] for e in bb['elements']) == 122+fragments
+          assert len(bb['elements']) == 149+fragments+mount_cubes and len(bb['groups']) == 230
+          assert sum(e['visibility'] for e in bb['elements']) == 122+fragments+mount_cubes
           assert not any('Steve/Alex' in g['name'] for g in bb['groups'])
           assert bb['resolution'] == {'width': armor_size, 'height': armor_size}
           assert all(max(f['uv']) <= armor_size for e in bb['elements'] for f in e['faces'].values())
@@ -579,11 +567,11 @@ jobs:
                       assert _k['data_points']
                       assert _k['interpolation'] in ('linear', 'catmullrom', 'bezier', 'step')
                   _kfs += len(_an['keyframes'])
-          assert _kfs >= 25000, _kfs
+          assert _kfs == 10200, _kfs
           _channels = {_k['channel'] for _a in bb['animations']
                        for _an in _a['animators'].values()
                        for _k in _an['keyframes']}
-          assert _channels == {'rotation', 'position', 'scale'}, _channels
+          assert _channels == {'rotation'}, _channels
           assert all(k['interpolation'] == ('bezier' if k['channel'] == 'rotation' else 'linear')
                      for a in bb['animations'] for an in a['animators'].values() for k in an['keyframes'])
           # rev. B: las partículas SON RUNTIME. El .bbmodel no lleva pista
@@ -603,7 +591,7 @@ jobs:
           assert 'v17_mote_' not in _armor_model and 'v17_ash_' not in _armor_model
           assert 'RIBBONS = 12' in _armor_model and 'LAST_SEGMENT = 4' in _armor_model
           assert 'rearPadBaseX' not in _armor_model
-          assert 'CapeFit.foldDegrees(model.body.xRot' in armor_renderer
+          assert 'CapeFit.backset(model.body.xRot' in armor_renderer
           # v1.22.0: OCHO estados reales, no cuatro clonados.
           assert all(f'"{k}"' in _motion for k in
                      ('volar', 'caer', 'agachado', 'agua'))
@@ -613,22 +601,11 @@ jobs:
           assert 'cape_controller", 8' in _item_src, 'sin transicion suave'
           assert 'WORN_ANIMATIONS.get(stateFor(' in _item_src
           assert 'sendParticles' in _item_src and '0, backX * trail' in _item_src
-          # Retardo por tramo y respiracion de la capucha, no solo rotacion.
-          _names = {_an['name']: _an for _a in bb['animations']
-                    for _an in _a['animators'].values() if _an['type'] == 'bone'}
-          assert any(_n == 'v17_ribbon_0_seg4'
-                     and any(_k['channel'] == 'position' for _k in _an['keyframes'])
-                     for _n, _an in _names.items())
-          # v1.21.0: incluso el PRIMER tramo se desplaza (curva acumulada),
-          # no solo las puntas. Antes era has_pos = seg >= 4.
-          assert any(_n == 'v17_ribbon_0_seg0'
-                     and any(_k['channel'] == 'position' for _k in _an['keyframes'])
-                     for _n, _an in _names.items())
-          assert any(_n.startswith('v17_cowl_')
-                     and any(_k['channel'] == 'scale' for _k in _an['keyframes'])
-                     for _n, _an in _names.items())
-          # Igualdad de tiempos, RMS y muestreo entre frames en Verify equipped model.
-          assert set(('cape_top','cape_mid','cape_bottom')) <= set(_names)
+          # Sólo la tela se mueve. Las raíces, piezas soldadas y montura
+          # siguen el cuerpo, no una pista residual de posición o escala.
+          moving = {f'v17_ribbon_{k}_seg{j}' for k in range(12) for j in range(1,5)}
+          for clip in bb['animations']:
+              assert {an['name'] for an in clip['animators'].values()} == moving | {'cape_top','cape_mid','cape_bottom'}
           _visor_html = (root / 'docs/capa_v1170_visor.html').read_text()
           assert 'INLINE_ANIMATIONS' in _visor_html and 'poseAt(' in _visor_html
           assert 'function drawRuntimeParticles(' in _visor_html
@@ -695,8 +672,13 @@ jobs:
           assert f'v{ver}' in (root / 'src/main/resources/pack.mcmeta').read_text()
           assert ver in (root / 'src/main/resources/META-INF/mods.toml').read_text()
           assert f'v{ver}' in (root / 'README.md').read_text()
-          assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/en_us.json').read_text()
-          assert 'Mantle of the Blight Star' in (root / 'src/main/resources/assets/capatest/lang/es_es.json').read_text()
+          key = 'item.capatest.capa_deteriorer_evilsaiyan'
+          for locale in ('en_us','es_ar','es_cl','es_ec','es_es','es_mx','es_uy','es_ve'):
+              words = json.loads((base / 'lang' / (locale+'.json')).read_text())
+              assert set(words) == {key, key+'.lore'}, locale
+              assert words[key] == ('Mantle of the Blight Star' if locale == 'en_us' else 'Manto de Blight Star')
+              assert len(words[key+'.lore']) <= 36 and '\n' not in words[key+'.lore'], locale
+          assert java.count('Component.translatable(') == 1 and 'boolean isFoil(' not in java
           assert 'CAPA_SPARK' in java
           assert 'animation.item' in java and 'ITEM_ANIM' in java
           assert 'SPARK_INTERVAL_TICKS = 8' in java
@@ -766,7 +748,7 @@ jobs:
           assert 'capatest-{ver}.jar' in _fetch
           print(f'OK: v{ver}, geometria rehecha (12 mechones anchos en 2 capas), '
                 'cuello alto + hombreras + cadena, albedo más emisión fullbright '
-                'independiente, chispa EXCLUSIVA sin particulas vanilla, icono PREFERIDO revertido con backup byte-identico y sin lag')
+                'independiente, chispa EXCLUSIVA sin particulas vanilla, montura y nuevo icono con archivos históricos protegidos')
           PY
 
       # v1220: la autoevaluacion MEDIDA se ejecuta AQUI, en GitHub Actions,
@@ -792,8 +774,10 @@ jobs:
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1610.py
           elif grep -qx 'mod_version=1.62.0' gradle.properties; then
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1620.py
-          else
+          elif grep -qx 'mod_version=1.63.0' gradle.properties; then
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1630.py
+          else
+            OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1640.py
           fi
           # v1240: el calibrador de energia es un lazo cerrado Jacobi; se
           # comprueba que siga siendo importable y que el perfil medido
@@ -812,6 +796,8 @@ jobs:
             src/test/java/com/capatest/client/CapeFitTest.java
           java -cp "$CLASSES" com.capatest.item.CapeStateTest
           java -cp "$CLASSES" com.capatest.client.CapeFitTest
+          java -cp "$CLASSES" com.capatest.client.CapeFitTest --samples > "$CLASSES/fit.tsv"
+          OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/check_cape_fit.py "$CLASSES/fit.tsv"
           java -cp "$CLASSES" com.capatest.item.CapeStateTest --spark-samples > "$CLASSES/sparks.tsv"
           PYTHONPATH=tools python3 -c 'import cape_aura as a,json; print(json.dumps(a.profile()))' | \
             node tools/check_viewer_embers.js "$CLASSES/sparks.tsv"
@@ -916,7 +902,10 @@ jobs:
               asset="assets/capatest/$asset"
               unzip -p "$jar" "$asset" | cmp - "src/main/resources/$asset"
             done
-            echo "OK: atlas equipado, glowmask, icono, geometría y clips byte a byte dentro del jar"
+            for locale in src/main/resources/assets/capatest/lang/*.json; do
+              unzip -p "$jar" "${locale#src/main/resources/}" | cmp - "$locale"
+            done
+            echo "OK: atlas equipado, glowmask, icono, geometría, clips y traducciones byte a byte dentro del jar"
             grep -qx 'data/curios/tags/items/back.json' /tmp/jar-contents.txt
             grep -qx 'data/capatest/curios/entities/player.json' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaCurioRenderer.class' /tmp/jar-contents.txt
@@ -984,15 +973,15 @@ jobs:
           - **Silueta equipada**: cuello granate alto, costura en U,
             hombreras de carbón y doce jirones a alturas escalonadas.
             Comparativa registrada con la misma cámara que la imagen original.
-          - **Materiales**: cartas UV de la superficie visible, forro y cantos
-            mates. Luz de las grietas en su propio atlas, sin recortar el paño.
-            Plegado, glow del plegado e icono intactos.
-          - **Ocho clips**: poses rotacionales en tres bisagras. El visor y
-            proyecto usan los mismos assets que lleva el JAR. No se añaden
-            cambios de posición ni escala en el mod.
-          - **Mod**: las chispas rosadas nacen en cuello, flancos, aberturas
-            y borde inferior; no atraviesan el portador en el visor. La
-            prioridad del pecho sobre Curios:back y los ocho clips se conservan.
+          - **Sujeción**: la base se apoya en el torso y el fuelle sigue unido
+            al cuello y las placas. Pecho y Curios:back comparten el ajuste;
+            el pecho tiene prioridad si hay dos capas equipadas.
+          - **Ocho clips**: las piezas rígidas no se hinchan ni bailan. El
+            paño se flexiona desde las raíces cosidas hacia las puntas.
+            Atlas, grietas emisivas, plegado y chispas conservados.
+          - **Inventario**: estrella rosa y pliegues en pixel art sin glint
+            forzado. «✦ La noche arde en sus costuras.» en español, con
+            traducción a inglés. ID, slot y atributos no cambian.
 
           ### Descargas de esta Release
 
@@ -1032,10 +1021,10 @@ jobs:
           done > "$SUMS"
           ASSETS=("$JAR" "$BBF" "$SUMS" docs/capa_v1170_visor.html
                   docs/capa_v1170_preview.png docs/capa_v1170_comparativa.png
-                  docs/capa_v1170_estados.png docs/capa_v1170_animaciones.gif)
+                  docs/capa_v1170_estados.png docs/capa_v1170_animaciones.gif docs/capa_v1170_icon_compare.png)
           if [ -f "$COMPARISON" ]; then ASSETS+=("$COMPARISON"); fi
           if [ -f "$REGISTER" ]; then ASSETS+=("$REGISTER"); fi
-          for view in detalles luz; do
+          for view in detalles luz ajuste; do
             IMAGE="docs/capa_v${VER//./}_$view.png"
             if [ -f "$IMAGE" ]; then ASSETS+=("$IMAGE"); fi
           done

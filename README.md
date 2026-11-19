@@ -1,11 +1,46 @@
-# Mantle of the Blight Star — v1.63.0
+# Mantle of the Blight Star — v1.64.0
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
 [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench](docs/CAPA_v1.63.0.bbmodel)
+· [Proyecto Blockbench](docs/CAPA_v1.64.0.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
+
+### v1.64.0 — la capa sí se apoya en la espalda
+
+![Antes y ahora desde arriba y de perfil con las mismas posturas](docs/capa_v1640_ajuste.png)
+
+- **Montura interior:** una base rígida apoya en el torso y conecta con el
+  cuello y las dos placas mediante un fuelle. Pecho y `Curios:back`
+  usan los mismos pivotes y pases de render. Se mantiene la prioridad del pecho.
+- **Caída:** la corrección de cabeza da holgura con un desplazamiento en
+  profundidad, no con una rotación de toda la capa desde abajo. El fuelle
+  sigue unido al torso y el paño se recoge en su propia costura. Los ocho
+  clips ahora mueven sólo el paño: raíces sujetas, amplitud progresiva hacia
+  las puntas, sin las antiguas pistas de desplazamiento ni escala.
+- **Inventario:** icono dibujado a 16 px con la estrella rosa, el cuello granate
+  y los pliegues violetas; sin reflejo de encantamiento forzado. En español,
+  **Manto de Blight Star** · «✦ La noche arde en sus costuras.» Conserva
+  el ID del item y las líneas de equipo y atributos de Minecraft/Curios.
+- **Acabado conservado:** los dos atlas de 512², la geometría exterior,
+  los desgarros, el plegado y las chispas de v1.63.0 no se repintan.
+
+[Icono: antes/después](docs/capa_v1170_icon_compare.png) ·
+[Comparación con la referencia](docs/capa_v1640_antes_despues.png) ·
+[Respaldo de recursos v1.63.0](docs/respaldos/v1.63.0/)
+
+`OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1640.py` comprueba el asiento
+sobre el torso, las uniones, la holgura de cabeza y la continuidad durante
+1.345 poses y mezclas. En reposo, la silueta registrada coincide con la de
+v1.63.0; la montura queda por dentro del contorno. Las pruebas usan el
+portador vanilla, no cascos ni poses procedentes de otros mods.
+
+**Prueba en Minecraft pendiente.** En F5, mirar desde arriba y de perfil,
+girar la cabeza, agacharse y cambiar de estado. Repetir con la capa sólo en
+pecho, sólo en `Curios:back` y en ambos; en este último caso debe verse sólo
+la del pecho, sin brillo ni chispas duplicados. Revisar también el icono y la
+línea de lore en el inventario. Las comparativas no son capturas del juego.
 
 ### v1.63.0 — hombrera sin perforar, desgarros sólidos y chispas rosadas
 
@@ -863,13 +898,13 @@ energía 100 → 69 pp, color 265 → 107, silueta 1.74× → 1.50×.
   se apaga con `variable.ParticleAge`. 11950 keyframes, tangentes C1 en
   las curvas de rotación.
 
-### Descargas v1.63.0
+### Descargas v1.64.0
 
 El [workflow de Forge](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-compila `capatest-1.63.0.jar` con JDK 17 y Gradle 8.8. Abre el run de la
-rama de este rediseño y baja **capatest-jar** en Artifacts. El ZIP incluye
+compila `capatest-1.64.0.jar` con JDK 17 y Gradle 8.8. Desde un run exitoso
+para esta versión, baja **capatest-jar** en Artifacts. El ZIP incluye
 `SHA256SUMS.txt`: sólo se sube tras comparar dos builds y verificar los
-recursos exactos dentro del JAR. La [v1.59.0 publicada](https://github.com/Santi-PdR/modelos/releases/tag/v1.59.0)
+recursos exactos dentro del JAR. La [v1.63.0 publicada](https://github.com/Santi-PdR/modelos/releases/tag/v1.63.0)
 sigue disponible por separado.
 
 ```sh
@@ -898,7 +933,7 @@ El script prueba **dos fuentes** (asset de release y artifact histórico)
 y exige el MISMO digest en ambas: si el binario no coincide byte a
 byte, no escribe nada.
 
-**Modelo de Blockbench:** [CAPA_v1.63.0.bbmodel](docs/CAPA_v1.63.0.bbmodel),
+**Modelo de Blockbench:** [CAPA_v1.64.0.bbmodel](docs/CAPA_v1.64.0.bbmodel),
 byte a byte igual a la descarga que ofrece el visor offline.
 
 Regla de entrega: **el `.bbmodel` cambia de nombre con `mod_version`** y

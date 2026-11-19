@@ -111,9 +111,9 @@ def response_variants():
     def response(x,y,z):
         def sample(name):
             m=M.RIBBON.fullmatch(name)
-            if not m or int(m[2])>4:
+            if not m or int(m[2])>M.LAST_JOINT:
                 return (0.,0.,0.)  # collar, costura, cortes quedan fijos
-            r=.35+.65*int(m[2])/6
+            r=(int(m[2])/M.LAST_JOINT)**1.45
             # Java suma a las rotaciones ya reflejadas por GeckoLib.
             return (-x*r,-y*r,z*r)
         return sample

@@ -22,12 +22,9 @@ VER = next(l.split("=", 1)[1].strip() for l in
            if l.startswith("mod_version="))
 BB = ROOT / "docs" / f"CAPA_v{VER}.bbmodel"
 
-# v1.28.0: el icono PREFERIDO vuelve a ser el ACTIVO. El usuario comparo
-# el rediseño de la v1.27.0 con el de la v1.25.0 y se quedo con el de la
-# v1.25.0 ("era mejor el anterior, ese quiero"). El PNG activo es por
-# tanto byte-idéntico a aquel, y el pipeline lo regenera igual (mismo mapa,
-# misma paleta, mismo sombreado).
-ICON_SHA = "c90670ba367557d7c7c003fa38dbe10c27cc88dcee1ef37fedc48f3a82820ee5"
+# The new active icon is independently guarded. All historical sprites
+# remain byte-identical (including the previously preferred icon).
+ICON_SHA = "01b143728808c2b8ff4ea4e795816e3760c6ed9bd49505c1f37564dddf247b63"
 ICON_V125_SHA = "c90670ba367557d7c7c003fa38dbe10c27cc88dcee1ef37fedc48f3a82820ee5"
 # El rediseño de la v1.27.0 no se borra: queda como histórico en
 # referencias/ICONO_V1270_REDISEÑO_BACKUP.png.
@@ -50,10 +47,10 @@ def static_checks() -> None:
     assert all("effects" not in a["animators"] for a in bb["animations"])
     chans = {k["channel"] for a in bb["animations"]
              for an in a["animators"].values() for k in an["keyframes"]}
-    assert chans == {"rotation", "position", "scale"}, chans
+    assert chans == {"rotation"}, chans
     kfs = sum(len(an["keyframes"]) for a in bb["animations"]
               for an in a["animators"].values())
-    assert kfs >= 25000, kfs
+    assert kfs == 10200, kfs
     import cape_motion as motion
     assert len(motion.STYLES) == 8
     # GeckoLib: los 8 clips deben animar huesos v17_ de verdad (antes
@@ -77,9 +74,10 @@ def static_checks() -> None:
     geo = json.loads((ROOT / "src/main/resources/assets/capatest/geo/item"
                       "/armor/capa_deteriorer_evilsaiyan.geo.json").read_text())
     bones = geo["minecraft:geometry"][0]["bones"]
-    from armor_model_pipeline import FIT_BONE, relief
+    from armor_model_pipeline import FIT_BONE, mount_bones, relief
     n_fragments = sum(map(len, relief()['fragments'].values()))
-    assert len(bones) == 226 and sum(len(b.get('cubes', [])) for b in bones) == 260+n_fragments
+    n_mount = sum(len(b['cubes']) for b in mount_bones())
+    assert len(bones) == 230 and sum(len(b.get('cubes', [])) for b in bones) == 260+n_fragments+n_mount
     rig = next(b for b in bones if b['name'] == FIT_BONE)
     assert rig['parent'] == 'chestplate' and not rig['cubes']
     forbidden = ("v17_mote_", "v17_ash_", "v17_yoke_",
@@ -110,11 +108,9 @@ def static_checks() -> None:
     assert not (ROOT / 'src/main/java/com/capatest/client/CapaIconAnimation.java').exists()
     pref = ROOT / 'referencias/ICONO_PREFERIDO_BACKUP.png'
     assert pref.is_file(), 'falta el backup del icono preferido'
-    assert hashlib.sha256(pref.read_bytes()).hexdigest() == ICON_SHA, \
+    assert hashlib.sha256(pref.read_bytes()).hexdigest() == ICON_V125_SHA, \
         'el backup no es byte-idéntico al icono preferido'
-    # v1.28.0: el icono de la v1.25.0 vuelve a ser el ACTIVO. Se conserva
-    # su propio backup byte-idéntico, y el rediseño de la v1.27.0 queda
-    # guardado como histórico (no se borra ningún icono).
+    # Conserva las dos versiones históricas aunque se rediseñe el activo.
     v125 = ROOT / 'referencias/ICONO_V125_PREFERIDO_BACKUP.png'
     assert v125.is_file(), 'falta el icono preferido de la v1.25.0'
     assert hashlib.sha256(v125.read_bytes()).hexdigest() == ICON_V125_SHA, \
@@ -129,7 +125,8 @@ def static_checks() -> None:
     # NO puede volver a incluir el maniquí ni los cubos de armadura vieja.
     assert (ROOT / 'docs' / f'CAPA_v{VER}.bbmodel').read_bytes() == BB.read_bytes()
     bb = json.loads(BB.read_text())
-    assert len(bb['elements']) == 149+n_fragments and sum(e['visibility'] for e in bb['elements']) == 122+n_fragments
+    assert len(bb['elements']) == 149+n_fragments+n_mount
+    assert sum(e['visibility'] for e in bb['elements']) == 122+n_fragments+n_mount
     assert bb['resolution'] == {'width': 512, 'height': 512}
     assert all(max(f['uv']) <= 512 for e in bb['elements']
                for f in e['faces'].values())
@@ -236,34 +233,13 @@ def static_checks() -> None:
         'la hombrera vuelve a ser un cubo'
     _chains = [b for b in bones if b["name"].startswith("v18_chain_")]
     assert len(_chains) == 8, len(_chains)
-    # ------------------------------------------------------------------
-    # v1.28.0: VUELVE EL ICONO PREFERIDO DE LA v1.25.0 (el usuario comparo
-    # el rediseño de la v1.27.0 con este y eligio este). El contrato ya no
-    # es "cuatro pixeles magenta y acero", sino el del icono elegido:
-    # tres pixeles magenta en el mapa base, ocho motas flotando y veinte
-    # grietas, con el nucleo blanco-rosa del broche (W).
-    # ------------------------------------------------------------------
-    _icon_src = (ROOT / 'tools/texture_pipeline.py').read_text()
-    _map_rows = _re.findall(r'"([.A-Z]{16})"',
-                             _re.search(r'ICON_PIXEL_MAP = \((.*?)\n\)',
-                                        _icon_src, _re.S).group(1))
-    assert len(_map_rows) == 16, len(_map_rows)
-    _flat = ''.join(_map_rows)
-    assert _flat.count('C') == 3, ('el icono vuelve a llenarse de magenta',
-                                   _flat.count('C'))
-    assert 'B' not in _flat and 'S' not in _flat, \
-        'vuelve el acero del rediseño de la v1.27.0'
-    assert 'W' in _flat, 'el icono pierde el núcleo brillante del broche'
-    _mot = _re.findall(r'\((\d+), (\d+), "([A-Z])"\)',
-                       _icon_src.split('ICON_FLOATING = (', 1)[1]
-                                   .split('ICON_CRACKS', 1)[0])
-    assert len(_mot) == 8, ('las motas flotantes no son las ocho '
-                            f'preferidas: {len(_mot)}')
-    _crk = _re.findall(r'\((\d+), (\d+), "([A-Z])"\)',
-                       _icon_src.split('ICON_CRACKS = (', 1)[1]
-                                   .split('\n)', 1)[0])
-    assert len(_crk) == 26, ('las grietas no son las veintiséis preferidas: '
-                             f'{len(_crk)}')
+    from texture_pipeline import build_icon_artwork
+    pixels = np.asarray(Image.open(P.ICON).convert('RGBA'))
+    low = np.asarray(build_icon_artwork(16))
+    assert np.array_equal(pixels,np.repeat(np.repeat(low,4,0),4,1))
+    assert set(np.unique(low[...,3])) == {0,255}
+    assert np.count_nonzero(low[...,1] >= 210) == 1, 'un solo foco: la estrella'
+    assert 'boolean isFoil(' not in item_java, 'el destello tapa el dibujo de la ranura'
     # ------------------------------------------------------------------
     # v1.26.0: PRESUPUESTO DE CHISPAS POR VALOR EFECTIVO. La CI pedía
     # el literal 'MAX_SPARKS_PER_TICK = 4', que sólo sobrevivía en un

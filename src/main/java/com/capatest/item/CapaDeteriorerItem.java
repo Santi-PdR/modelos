@@ -2,7 +2,6 @@ package com.capatest.item;
 
 import com.capatest.client.CapaArmorRenderer;
 import com.capatest.particle.CapaParticles;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -137,21 +136,13 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
         return "capatest:textures/item/armor/capa_deteriorer_evilsaiyan.png";
     }
 
-    /** Brillo de encantamiento permanente en inventario / mano. */
-    @Override
-    public boolean isFoil(ItemStack stack) {
-        return true;
-    }
-
+    // Do not force foil over the pixel-art star. Real enchantments keep
+    // Minecraft's usual glint and all equipment/attribute lines stay intact.
     @Override
     public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.capatest.capa_deteriorer_evilsaiyan.lore1")
-                .withStyle(ChatFormatting.DARK_PURPLE));
-        tooltip.add(Component.translatable("item.capatest.capa_deteriorer_evilsaiyan.lore2")
-                .withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("item.capatest.capa_deteriorer_evilsaiyan.lore3")
-                .withStyle(ChatFormatting.DARK_PURPLE, ChatFormatting.ITALIC));
         super.appendHoverText(stack, level, tooltip, flag);
+        tooltip.add(Component.translatable("item.capatest.capa_deteriorer_evilsaiyan.lore")
+                .withStyle(style -> style.withColor(0xCA91C0).withItalic(true)));
     }
 
     @Override

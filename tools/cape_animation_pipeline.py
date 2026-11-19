@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Hornea la coreografía rotacional para GeckoLib.
+"""Bake the mounted cape motion for GeckoLib, preserving hidden legacy tracks.
 
-La base v1.59.0 es la fuente de los canales espaciales BLOQUEADOS y de las
-pistas de la armadura oculta. Se reemplazan sólo las rotaciones del rig
-visible y de sus anclas. Nunca se lee la propia salida como entrada.
+Visible bones only rotate. Retire the old independent positions and scales
+that drifted even the first seam and breathed the metal shoulder pads.
 """
 from __future__ import annotations
 
@@ -34,11 +33,12 @@ STYLE_BY_CLIP = {
 # El runtime consume muestras densas de la curva continua; el proyecto
 # editable añade tangentes a esas mismas muestras, no otra animación.
 SAMPLES = 24
-GENERATED_PREFIXES = ("v17_", "v18_", "v15_cloth_", "v15_hem_")
+RETIRED = ("v15_cloth_", "v15_hem_", "v17_", "v18_")
 
 
 def animated(name: str) -> bool:
-    return name in M.SECTIONS or name.startswith(GENERATED_PREFIXES)
+    ribbon = M.RIBBON.fullmatch(name)
+    return name in M.SECTIONS or (ribbon is not None and 1 <= int(ribbon[2]) <= M.LAST_JOINT)
 
 
 def _time(t: float) -> str:
@@ -50,15 +50,19 @@ def build(geo: dict | None = None) -> dict:
     if geo is None:
         geo = json.loads(GEO.read_text())["minecraft:geometry"][0]
     names = [b["name"] for b in geo["bones"] if animated(b["name"])]
-    assert len(names) == 153, len(names)
+    assert len(names) == 51, len(names)
     assert set(data["animations"]) == set(STYLE_BY_CLIP)
     for clip, style in STYLE_BY_CLIP.items():
         anim = data["animations"][clip]
         length = M.STYLES[style].length
         assert length == float(anim["animation_length"]), (clip, length)
         anim["loop"] = True
+        # Keep unused pre-rig data for history. Replace the visible rig
+        # wholesale so a retired scale/translation can't leak back in.
+        anim['bones'] = {n:t for n,t in anim['bones'].items()
+                         if n not in M.SECTIONS and not n.startswith(RETIRED)}
         for name in names:
-            tracks = anim["bones"].setdefault(name, {})
+            tracks = anim['bones'][name] = {}
             tracks["rotation"] = {
                 _time(length * j / SAMPLES): {
                     "vector": [round(v, 4) for v in M.sample(name, style, j / SAMPLES)],

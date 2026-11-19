@@ -15,7 +15,7 @@ import software.bernie.geckolib.renderer.GeoArmorRenderer;
 import software.bernie.geckolib.util.RenderUtils;
 
 public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
-    private float wearerFold;
+    private float wearerDepth;
 
     public CapaArmorRenderer() {
         // Apunta a:
@@ -49,15 +49,15 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     public void defaultRender(PoseStack poseStack, CapaDeteriorerItem animatable,
                               MultiBufferSource buffers, @Nullable RenderType renderType,
                               @Nullable VertexConsumer buffer, float yaw, float partialTick, int light) {
-        // The item keeps its foil in the inventory, but worn cloth should not
-        // receive a second purple glint over the reference-matched material.
+        // Actual enchantments still show on the icon. Do not tint the worn
+        // reference-matched material with the incoming foil buffer.
         super.defaultRender(poseStack, animatable, buffers, renderType, null, yaw, partialTick, light);
     }
 
     @Override
     protected void applyBaseTransformations(HumanoidModel<?> model) {
         super.applyBaseTransformations(model);
-        wearerFold = (float) CapeFit.foldDegrees(model.body.xRot, model.body.yRot,
+        wearerDepth = (float) CapeFit.backset(model.body.xRot, model.body.yRot,
                 model.head.xRot, model.head.yRot);
     }
 
@@ -66,20 +66,28 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                                   RenderType renderType, MultiBufferSource buffers, VertexConsumer buffer,
                                   boolean isReRender, float partialTick, int light, int overlay,
                                   float red, float green, float blue, float alpha) {
-        boolean fit = wearerFold != 0 && CapeFit.BONE.equals(bone.getName());
-        if (fit) {
-            // A rigid, common rotation about the GEO pivot, in both passes.
-            // No animation snapshot or pose from another wearer is changed.
+        String name = bone.getName();
+        boolean fitted = wearerDepth > 0 && (CapeFit.BONE.equals(name)
+                || CapeFit.DRAPE_BONE.equals(name) || CapeFit.GUSSET_BONE.equals(name));
+        if (fitted)
             poseStack.pushPose();
-            RenderUtils.translateToPivotPoint(poseStack, bone);
-            poseStack.mulPose(Axis.XP.rotationDegrees(wearerFold));
-            RenderUtils.translateAwayFromPivotPoint(poseStack, bone);
-        }
         try {
+            // Apply the same deformation in the cutout and emission passes.
+            // It is relative to the live chestplate, never to camera/world.
+            if (fitted && CapeFit.BONE.equals(name)) {
+                poseStack.translate(0, 0, wearerDepth / 16.0F);
+            } else if (fitted) {
+                RenderUtils.translateToPivotPoint(poseStack, bone);
+                if (CapeFit.DRAPE_BONE.equals(name))
+                    poseStack.mulPose(Axis.XP.rotationDegrees((float) CapeFit.drapeDegrees(wearerDepth)));
+                else
+                    poseStack.scale(1, 1, (float) CapeFit.gussetScale(wearerDepth));
+                RenderUtils.translateAwayFromPivotPoint(poseStack, bone);
+            }
             super.renderRecursively(poseStack, animatable, bone, renderType, buffers, buffer,
                     isReRender, partialTick, light, overlay, red, green, blue, alpha);
         } finally {
-            if (fit)
+            if (fitted)
                 poseStack.popPose();
         }
     }

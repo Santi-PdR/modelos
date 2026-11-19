@@ -175,11 +175,14 @@ MANNEQUIN_BOXES = (
 
 
 def render(geo, atlas_path, hidden, yaw=0, pitch=8, size=700, bg=(20, 16, 27),
-           *, frame=None, mannequin=False, ambient=1.0, emission=None, tint=(.89,.60,.77)):
+           *, frame=None, mannequin=False, mannequin_pose=None,
+           ambient=1.0, emission=None, tint=(.89,.60,.77)):
     faces = [(p, uv, None) for p, uv, _ in collect(geo, hidden)]
     if mannequin:
-        for origin, dim, color in (MANNEQUIN_BOXES if mannequin is True else mannequin):
-            points = np.asarray(origin) + CORNERS * np.asarray(dim)
+        parts = MANNEQUIN_BOXES if mannequin is True else mannequin
+        transforms = [np.eye(4)] * len(parts) if mannequin_pose is None else mannequin_pose
+        for (origin, dim, color), matrix in zip(parts, transforms, strict=True):
+            points = (np.asarray(origin) + CORNERS * np.asarray(dim)) @ matrix[:3,:3].T + matrix[:3,3]
             faces.extend((points[idx], np.zeros((4, 2)), color) for idx in FACE_ORDER.values())
     atlas = np.asarray((atlas_path if isinstance(atlas_path, Image.Image)
                         else Image.open(atlas_path)).convert("RGBA"))

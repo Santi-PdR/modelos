@@ -17,7 +17,7 @@ import cape_reference as R
 import cape_shape as shape
 import cape_surface as S
 import preview_cloth as P
-from armor_model_pipeline import source_cube
+from armor_model_pipeline import source_cube, MOUNT_PREFIX, SEAT_BONE, SADDLE_BONE
 
 SIZE = 512
 GUARD = 1
@@ -124,7 +124,7 @@ def map_material(geo, *, paint=False):
         if b['name'].startswith('v17_vein_'):
             # Preserve anchors/IDs, but no glued-on geometry over the splits.
             b['cubes'] = []
-    faces, owners = S.visible_faces(geo)
+    faces, owners = S.visible_faces(geo, skip_mount=True)
     slots, layout = tiles(faces, owners)
     for i, f in enumerate(faces):
         mat = f['mat']
@@ -147,6 +147,19 @@ def map_material(geo, *, paint=False):
                 uv = dict(uv=[x+.5,round(y+.5+(h-1)*lo,4)],
                           uv_size=[w-1.,round(max(.5,(h-1)*(hi-lo)),4)])
         f['c']['uv'][side] = uv
+    # The concealed mounting pieces use the existing matte swatches. Do
+    # not repack or resample the approved albedo and its emitting cracks.
+    for b in geo['bones']:
+        name = b['name']
+        if not name.startswith(MOUNT_PREFIX):
+            continue
+        for ci,c in enumerate(b['cubes']):
+            iron = (name == SEAT_BONE and ci == 0) or (name == SADDLE_BONE and ci in (3,4))
+            for side in c['uv']:
+                # Even in the overhead view the joint reads as lining,
+                # rather than a bright slat between shoulder and torso.
+                role = 'iron' if iron else ('red' if side == 'north' else 'edge')
+                c['uv'][side] = S.spec(slots[role])
     if not paint:
         return layout
     base = np.full((SIZE,SIZE,4),(22,13,26,255),np.uint8)
