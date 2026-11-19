@@ -2,6 +2,7 @@ package com.capatest.client;
 
 import com.capatest.CapaTestMod;
 import com.capatest.item.CapaDeteriorerItem;
+import net.minecraft.client.player.RemotePlayer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -203,17 +204,26 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     private void applyClothResponse(long instanceId, AnimationState<CapaDeteriorerItem> state) {
         if (!(state.getData(DataTickets.ENTITY) instanceof LivingEntity wearer))
             return;
+        float partial = state.getPartialTick();
         Vec3 velocity = wearer.getDeltaMovement();
-        double time = (wearer.tickCount + (double) state.getPartialTick()) / 20.0D;
-        double turnTarget = Mth.clamp(Mth.wrapDegrees(wearer.yBodyRot - wearer.yBodyRotO) / 14.0F, -1.0F, 1.0F);
+        CapeTravel.Motion travel = CapeTravel.measure(new CapeTravel.Step(velocity.x, velocity.y, velocity.z),
+                new CapeTravel.Step(wearer.getX() - wearer.xo, wearer.getY() - wearer.yo, wearer.getZ() - wearer.zo),
+                wearer instanceof RemotePlayer, Mth.rotLerp(partial, wearer.yBodyRotO, wearer.yBodyRot));
+        double time = (wearer.tickCount + (double) partial) / 20.0D;
+        double turnTarget = travel.cut() ? 0
+                : Mth.clamp(Mth.wrapDegrees(wearer.yBodyRot - wearer.yBodyRotO) / 14.0F, -1.0F, 1.0F);
+        // Flight and rides have their own body frames. Fade with the actual
+        // swim blend; standing in water only damps the response.
+        double lateralFreedom = wearer.isFallFlying() || wearer.isPassenger() || wearer.isAutoSpinAttack()
+                ? 0 : 1 - Mth.clamp(wearer.getSwimAmount(partial), 0, 1);
         CapeResponse response = motion.computeIfAbsent(instanceId, key -> new CapeResponse());
         if (motion.size() > 128)
             motion.remove(motion.keySet().iterator().next());
-        response.sample(time,
-                Mth.clamp(velocity.horizontalDistance() * 2.2D, 0.0D, 1.0D),
-                Mth.clamp(-velocity.y * 1.3D, -0.45D, 1.0D), turnTarget,
+        if (travel.cut()) response.reset();
+        response.sample(time, travel.speed(), travel.lift(), turnTarget,
                 wearer.isCrouching() ? 1 : 0, wearer.isInWater() ? 1 : 0,
-                wearer.onGround() ? 0 : 1, wearer.isSprinting() ? 1 : 0);
+                wearer.onGround() ? 0 : 1, wearer.isSprinting() ? 1 : 0,
+                lateralFreedom > 0 ? travel.side() : 0);
         double seed = wearer.getId();
         double wind = Math.sin(time * 1.31D + seed * 0.37D) * 0.65D
                 + Math.sin(time * 2.73D + seed * 0.11D) * 0.35D;
@@ -228,16 +238,16 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             double axis = (RIBBONS - 1) / 2.0D;
             double lateral = (piece.column() - axis) / axis;
             double lag = 0.62D * seg;
-            double weight = Math.pow(seg / (double) LAST_SEGMENT, 1.45D);
+            double weight = CapeResponse.weightAt(seg, LAST_SEGMENT);
             double ripple = Math.sin(time * 1.7D - lag + seed * 0.05D) * 0.44D;
             double turn = response.turnAt(weight);
-            double offY = Mth.clamp(turn * 1.84D * lateral + wind * 0.38D + sweep * 0.35D,
-                    -CapeResponse.MAX_YAW, CapeResponse.MAX_YAW);
-            double offZ = Mth.clamp((gust * 0.68D + wind * 0.24D) * (0.6D + 0.4D * Math.abs(lateral))
-                    + ripple + turn * 0.86D * lateral, -CapeResponse.MAX_ROLL, CapeResponse.MAX_ROLL);
+            double side = lateralFreedom * response.sideAt(weight);
+            double offY = turn * 1.84D * lateral + wind * 0.38D + sweep * 0.35D;
+            double offZ = (gust * 0.68D + wind * 0.24D) * (0.6D + 0.4D * Math.abs(lateral))
+                    + ripple + turn * 0.86D * lateral;
             b.setRotX(b.getRotX() + (float) Math.toRadians(response.pitchAt(weight)));
-            b.setRotY(b.getRotY() + (float) Math.toRadians(offY * weight));
-            b.setRotZ(b.getRotZ() + (float) Math.toRadians(offZ * weight));
+            b.setRotY(b.getRotY() + (float) Math.toRadians(CapeResponse.sideYaw(offY, side, weight)));
+            b.setRotZ(b.getRotZ() + (float) Math.toRadians(CapeResponse.sideRoll(offZ, side, weight)));
         }
     }
 }

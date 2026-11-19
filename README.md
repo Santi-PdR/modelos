@@ -1,12 +1,30 @@
-# Mantle of the Blight Star — v1.67.3
+# Mantle of the Blight Star — v1.67.4
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
 [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench](docs/CAPA_v1.67.3.bbmodel)
+· [Proyecto Blockbench](docs/CAPA_v1.67.4.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+
+### v1.67.4 — arrastre en el paso lateral
+
+![Comparación del mismo fotograma y del retardo de las puntas al invertir el paso](docs/capa_v1674_arrastre.png)
+
+- **Sólo el paño libre:** los jirones se inclinan en contra del desplazamiento
+  lateral. Al volver, el primer tramo libre cambia de lado antes que las
+  puntas. Cuello, montura y raíces cosidas conservan su ajuste.
+- **Por portador:** el cliente usa el movimiento relativo al torso; para
+  otros jugadores lee su desplazamiento aunque no tengan velocidad local.
+  El efecto se amortigua en agua y se retira en planeo. No modifica el
+  shader, las brasas, el atlas, los ocho clips ni la respuesta de frenada
+  y aterrizaje. Blockbench contiene el rig y los clips, no el filtro.
+- **Comparación:** en el visor, abre **Cambio de lado · A/B → Ver el giro**.
+  Pausa a **1,10 s** con la vuelta iniciada. Alterna **Arrastre del paño**
+  en esa pose; también puedes seleccionar **Cueva** para ver el halo.
+  El visor y la lámina simulan la respuesta; las capturas F5 de la prueba
+  en Forge van aparte en Actions.
 
 ### v1.67.3 — halo nocturno y caída del dobladillo
 

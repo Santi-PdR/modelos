@@ -11,7 +11,7 @@ async function loadJson(name) {
 function assetUrl(name) { return `assets/${name}`; }
 /* END LOCAL LOADER */
 
-let GEO, CLIPS, FIT, STRIDE, REF, ORIGINAL, ATLAS, GLOW, HALO, NOCTURNE, SPARKS, AURA, ATLAS_W = 128, ATLAS_H = 128;
+let GEO, CLIPS, FIT, STRIDE, SWAY, REF, ORIGINAL, ATLAS, GLOW, HALO, NOCTURNE, SPARKS, AURA, ATLAS_W = 128, ATLAS_H = 128;
 const canvas = document.getElementById('view');
 const ctx = canvas.getContext('2d', { alpha: false });
 let SIZE = 480;
@@ -174,6 +174,30 @@ function strideGait(phase, amplitude) {
   return {arms:[a,-a],legs:[-1.4*a,1.4*a]};
 }
 
+function swayAngles(p, time, segment) {
+  const half=p.DEMO_SECONDS/2, t=time%p.DEMO_SECONDS;
+  const sign=t<half ? 1 : -1;
+  const step=k=>sign*(1-(1+Math.tanh(k*half/2))*Math.exp(-k*(t%half)));
+  const q=Math.pow(segment/p.LAST_SEGMENT,p.SEGMENT_POWER);
+  const near=step(p.SIDE_NEAR_RATE), hem=step(p.SIDE_HEM_RATE);
+  const pull=near+q*(hem-near);
+  return [p.SIDE_YAW,p.SIDE_ROLL].map((gain,i)=>{
+    const cap=i===0 ? p.MAX_YAW : p.MAX_ROLL;
+    return q*Math.max(-cap,Math.min(cap,pull*gain));
+  });
+}
+function swayPose(geo,p,time) {
+  const angles=Array.from({length:p.LAST_SEGMENT+1},(_,segment)=>swayAngles(p,time,segment));
+  return {...geo, bones:geo.bones.map(b=>{
+    const segment=+(/^v17_ribbon_\d+_seg(\d+)$/.exec(b.name)?.[1]);
+    if (!(segment>0 && segment<=p.LAST_SEGMENT)) return b;
+    const [y,z]=angles[segment];
+    const r=b.rotation;
+    // Apply the same signed, local rotations as the baked rig in Forge.
+    return {...b,rotation:[r[0],r[1]-y,r[2]+z]};
+  })};
+}
+
 function matrices(geo) {
   const by = {}, out = {};
   for (const b of geo.bones) by[b.name] = b;
@@ -276,7 +300,7 @@ function haloGains(p, dusk, seconds, seed=0) {
   const inner=p.INNER_BASE+p.INNER_PULSE*wave(phase);
   return [p.DAY_GAIN+dusk*(edge-p.DAY_GAIN), p.DAY_GAIN+dusk*(inner-p.DAY_GAIN), p.EDGE_LO, p.EDGE_HI];
 }
-function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=null, overlay=null, bloom=false, gains=null) {
+function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=null, overlay=null, bloom=false, gains=null, comparison=null) {
   const view = mul(R('x', pitch), R('y', yaw));
   lastView = view;
   const prepared = [];
@@ -288,6 +312,9 @@ function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=nu
   // Keep the neutral framing during each cycle, but include the displaced
   // cape and posed wearer if they extend past it. The reference stays locked.
   if (!frame && bounds) for (const p of bounds) include(apply(view,p));
+  // Fit to the union, not just the currently selected A/B pose. Even if a
+  // tip sticks out of the neutral bounds, toggling the effect can't reframe.
+  if (!frame && comparison) for (const {pts} of comparison) for (const p of pts) include(apply(view,p));
   const LIGHT = [-0.35, 0.65, 0.68];
   const ln = Math.hypot(...LIGHT);
   for (let i=0;i<3;i++) LIGHT[i] /= ln;
@@ -485,6 +512,9 @@ const stanceControl=document.getElementById('fitStance'), lookControl=document.g
 const turnControl=document.getElementById('fitTurn'), fitValue=document.getElementById('fitValue');
 const stridePlayer=document.getElementById('stridePlayer'), strideFit=document.getElementById('strideFit');
 const strideAmount=document.getElementById('strideAmount');
+const swayDemo=document.getElementById('swayDemo'), swayFit=document.getElementById('swayFit');
+const swayValue=document.getElementById('swayValue'), swayMoment=document.getElementById('swayMoment');
+const stateControl=document.getElementById('state');
 const fitReset=document.getElementById('fitReset'), fxControl=document.getElementById('l_particles');
 const glowControl=document.getElementById('l_glow'), haloControl=document.getElementById('l_halo');
 const seek=document.getElementById('seek'), play=document.getElementById('play');
@@ -522,6 +552,10 @@ function refreshStrideControls() {
 function refreshHaloControl() {
   haloControl.disabled=referenceView || !glowControl.checked;
 }
+function refreshSwayControls() {
+  swayDemo.disabled=referenceView;
+  swayFit.disabled=referenceView || !swayDemo.checked;
+}
 function setReference(value) {
   referenceView=value;
   document.getElementById('v34').setAttribute('aria-pressed',String(value));
@@ -529,7 +563,7 @@ function setReference(value) {
   for (const control of [stanceControl, lookControl, turnControl, fitReset, fxControl, glowControl, ambientControl, zoomControl])
     control.disabled=value;
   for (const [button] of lightPresets) button.disabled=value;
-  refreshStrideControls(); refreshHaloControl();
+  refreshStrideControls(); refreshHaloControl(); refreshSwayControls();
   dirty=true;
 }
 function setPlaying(value) {
@@ -558,9 +592,11 @@ function updateBounds() {
 function draw(now) {
   requestAnimationFrame(draw);
   const clip=CLIPS[motionState];
+  const demo=!referenceView && swayDemo.checked;
+  const duration=demo ? SWAY.DEMO_SECONDS : clip.length;
   if (playing && lastFrame!==null) {
     const step=Math.min(.05,(now-lastFrame)/1000);
-    t=(t+step)%clip.length; elapsed+=step; dirty=true;
+    t=(t+step)%duration; elapsed+=step; dirty=true;
   }
   lastFrame=now;
   if (!dirty) return;
@@ -571,10 +607,16 @@ function draw(now) {
   // A synthetic stride has its own clock. Pausing freezes both it and the clip.
   const amplitude=+strideAmount.value;
   const gait=!referenceView && stridePlayer.checked ? strideGait(elapsed*(.8+.95*amplitude),amplitude) : null;
-  let base=referenceView ? GEO : poseAt(GEO,clip,t);
-  if (gait && strideFit.checked) base=stridePose(base,STRIDE,gait.arms,gait.legs,stance,FIT.bodyAngle,depth);
-  const posed=referenceView ? base : wearerPose(base,FIT,stance,look,turn);
-  const faces=collect(posed,hidden);
+  const clipTime=demo ? elapsed%clip.length : t;
+  const base=referenceView ? GEO : poseAt(GEO,clip,clipTime);
+  const fit=pose=>{
+    if (gait && strideFit.checked) pose=stridePose(pose,STRIDE,gait.arms,gait.legs,stance,FIT.bodyAngle,depth);
+    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn),hidden);
+  };
+  const drift=demo ? swayPose(base,SWAY,t) : null;
+  const withDrift=demo && swayFit.checked;
+  const faces=fit(withDrift ? drift : base);
+  const comparison=demo ? fit(withDrift ? base : drift) : null;
   if (showPlayer) faces.push(...playerFaces(stance,look,turn,gait));
   fitValue.textContent=referenceView ? 'Pose base · ajuste desactivado' :
     `Mirada ${look}° · giro ${turn}° · holgura ${depth.toFixed(2)} u`;
@@ -585,14 +627,16 @@ function draw(now) {
   // so a paused frame can be compared at identical pose and pulse phase.
   const gains=bloom ? haloGains(NOCTURNE,haloDusk(NOCTURNE,15*(ambient-.18)/.82),elapsed) : null;
   render(faces,yaw,pitch,zoom,SIZE,gait ? gaitBounds : frameBounds,
-         glowControl.checked&&!referenceView ? simulatedTint(t,clip.length) : null,
+         glowControl.checked&&!referenceView ? simulatedTint(clipTime,clip.length) : null,
          ambient, referenceView ? referenceFrame(SIZE) : null,
          fx ? (pixels,z)=>drawRuntimeParticles(elapsed,SIZE,stance,pixels,z) : null,
-         bloom, gains);
+         bloom, gains, comparison);
   if (referenceView) drawOriginal(SIZE);
   document.getElementById('faces').textContent=faces.length;
   document.getElementById('clock').textContent=referenceView?'Pose base':`${t.toFixed(2).replace('.',',')} s`;
-  seek.value=Math.round(t/clip.length*1000);
+  seek.value=Math.round(t/duration*1000);
+  const direction=demo ? (t%duration>=duration/2 ? 'Vuelta' : 'Ida') : '';
+  if (swayValue.textContent!==direction) swayValue.textContent=direction;
   dirty=false;
 }
 function image(name) {
@@ -607,15 +651,16 @@ function pixels(im) {
   return ctx.getImageData(0,0,im.width,im.height).data;
 }
 async function boot() {
-  const [geo,clips,fit,stride,atlas,glow,halo,aura,nocturne,reference,original,sparks]=await Promise.all([
-    loadJson('armor.geo.json'), loadJson('armor.animation.json'), loadJson('fit.json'), loadJson('stride.json'), image('armor.png'),
+  const [geo,clips,fit,stride,sway,atlas,glow,halo,aura,nocturne,reference,original,sparks]=await Promise.all([
+    loadJson('armor.geo.json'), loadJson('armor.animation.json'), loadJson('fit.json'), loadJson('stride.json'),
+    loadJson('sway.json'), image('armor.png'),
     image('armor_glowmask.png'), image('armor_halo.png'), loadJson('aura.json'), loadJson('nocturne.json'),
     loadJson('reference-frame.json'), image('reference-crop.png'),
     Promise.all([0,1,2].map(i=>image(`capa_spark_${i}.png`)))]);
   if (original.width!==reference.cropSize[0] || original.height!==reference.cropSize[1])
     throw new Error('La imagen no coincide con el encuadre de referencia');
   REF=reference; ORIGINAL=original;
-  GEO=geo['minecraft:geometry'][0]; CLIPS=prepareClips(clips); FIT=fit; STRIDE=stride; hidden=runtimeHidden(GEO);
+  GEO=geo['minecraft:geometry'][0]; CLIPS=prepareClips(clips); FIT=fit; STRIDE=stride; SWAY=sway; hidden=runtimeHidden(GEO);
   if ([glow,halo].some(im=>im.width!==atlas.width || im.height!==atlas.height))
     throw new Error('Los mapas de luz no coinciden con el atlas opaco');
   ATLAS=pixels(atlas); GLOW=pixels(glow); HALO=pixels(halo); AURA=aura; NOCTURNE=nocturne;
@@ -650,12 +695,33 @@ document.getElementById('v34').onclick=()=>{
 play.onclick=()=>setPlaying(!playing);
 seek.oninput=e=>{
   if (!CLIPS) return;
-  setPlaying(false); setReference(false); t=CLIPS[motionState].length*(+e.target.value)/1000; elapsed=t; dirty=true;
+  setPlaying(false); setReference(false);
+  t=(swayDemo.checked ? SWAY.DEMO_SECONDS : CLIPS[motionState].length)*(+e.target.value)/1000;
+  elapsed=t; dirty=true;
 };
-document.getElementById('state').onchange=e=>{
-  motionState=e.target.value; t=elapsed=0;
-  stanceControl.checked=motionState==='animation.sneak';
+function setMotion(state) {
+  stateControl.value=motionState=state;
+  stanceControl.checked=state==='animation.sneak';
+  t=elapsed=0;
   setReference(false);
+}
+swayDemo.onchange=()=>{
+  if (swayDemo.checked) setMotion('animation.moving');
+  else t=elapsed=0;
+  refreshSwayControls(); dirty=true;
+};
+swayMoment.onclick=()=>{
+  if (!SWAY) return;
+  swayDemo.checked=swayFit.checked=true;
+  setMotion('animation.moving');
+  setPlaying(false);
+  t=elapsed=SWAY.DEMO_SECONDS/2+.10;
+  yaw=0; pitch=9;
+};
+swayFit.onchange=()=>{ dirty=true; };
+stateControl.onchange=e=>{
+  swayDemo.checked=false;
+  setMotion(e.target.value);
 };
 for (const control of [stanceControl,lookControl,turnControl]) {
   control.oninput=()=>{ if (!referenceView) dirty=true; };

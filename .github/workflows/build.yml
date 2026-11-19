@@ -10,7 +10,7 @@ on:
         default: false
         type: boolean
       probar_halo:
-        description: 'Probar halo, recarga y brasas en un cliente Forge con pantalla virtual'
+        description: 'Probar halo, brasas, equipo y paso lateral en un cliente Forge con pantalla virtual'
         required: false
         default: false
         type: boolean
@@ -821,9 +821,12 @@ jobs:
           CLASSES="$RUNNER_TEMP/cape-state-test"
           mkdir -p "$CLASSES"
           javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/{CapeState,CapePlayback,CapeSparkFrame}.java \
-            src/main/java/com/capatest/client/{CapeResponse,CapeFit,CapeStride,CapeTint,CapeEmber,CapeNocturne}.java \
+            src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeStride,CapeTint,CapeEmber,CapeNocturne}.java \
             src/test/java/com/capatest/item/{CapeStateTest,CapeSparkFrameTest}.java \
-            src/test/java/com/capatest/client/{CapeFitTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeSettleTest}.java
+            src/test/java/com/capatest/client/{CapeFitTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeSettleTest,CapeSwayTest}.java
+          java -cp "$CLASSES" com.capatest.client.CapeSwayTest
+          java -cp "$CLASSES" com.capatest.client.CapeSwayTest --samples > "$CLASSES/sway.tsv"
+          OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_cape_sway.py "$CLASSES/sway.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeNocturneTest
           java -cp "$CLASSES" com.capatest.client.CapeNocturneTest --samples > "$CLASSES/nocturne.tsv"
           OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_v1670.py --nocturne-samples "$CLASSES/nocturne.tsv"
@@ -922,6 +925,7 @@ jobs:
             grep -qx 'com/capatest/client/CapaItemGlowLayer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaArmorModel.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeResponse.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapeTravel.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeFit.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeStride.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeTint.class' /tmp/jar-contents.txt
@@ -1013,7 +1017,7 @@ jobs:
             printf '::notice title=FX en Forge::%s\n' "$line"
           done
           if [ "$rc" -ne 0 ] || ! grep -Fq 'FX smoke: PASS:' "$log" ||
-             grep -Fq 'FX smoke: FAIL' "$log" ||
+             grep -Fq -e 'FX smoke: FAIL' -e 'Blight Star Mantle: respuesta del paño desactivada' "$log" ||
              [ "$(grep -Fc 'Blight Star Mantle: falló el pase' "$log")" -ne 2 ]; then
             echo "::error title=FX en Forge::No se completó la prueba (salida $rc)."
             grep -Ei 'exception|assertionerror|\[.*ERROR\]|(failed|could not|error):? |^> Task .*FAILED|Blight Star Mantle:' "$log" | \

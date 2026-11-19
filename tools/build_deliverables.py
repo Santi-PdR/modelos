@@ -34,6 +34,7 @@ import cape_aura
 import cape_nocturne
 import cape_reference
 import cape_stride
+import cape_sway
 
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "src/main/resources/assets/capatest"
@@ -98,6 +99,7 @@ def step_recursos_visor() -> None:
     (A / 'nocturne.json').write_text(json.dumps(cape_nocturne.profile(), separators=(',', ':')) + '\n')
     (A / 'fit.json').write_text(json.dumps(cape_fit.profile(), separators=(',', ':')) + '\n')
     (A / 'stride.json').write_text(json.dumps(cape_stride.profile(), separators=(',', ':')) + '\n')
+    (A / 'sway.json').write_text(json.dumps(cape_sway.profile(), separators=(',', ':')) + '\n')
     (A / 'reference-frame.json').write_text(json.dumps(cape_reference.viewer_camera()) + '\n')
     with Image.open(cape_reference.SOURCE) as source:
         source.convert('RGB').crop(cape_reference.CROP).save(A / 'reference-crop.png', optimize=True)

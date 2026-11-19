@@ -27,6 +27,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -77,7 +78,9 @@ public final class CapeFxSmoke {
     private static final String PACK_ID = "file/fx-probe";
     private enum Scene {
         CHEST("pecho-dia", 6000), NIGHT("pecho-noche", 18000), LAMP("pecho-noche-con-luz", 18000),
-        BOTH("ambos-noche-encantado", 18000), WINGS("espalda-con-elitros", 18000),
+        BOTH("ambos-noche-encantado", 18000),
+        STRAFE_LEFT("traslacion-izquierda", 18000), STRAFE_RIGHT("traslacion-derecha", 18000),
+        WINGS("espalda-con-elitros", 18000),
         GLIDE("planeo-real", 6000), WADE("de-pie-en-agua", 6000), SWIM("nado-horizontal", 6000),
         SWIM_EXIT("fin-del-nado", 6000);
 
@@ -93,6 +96,7 @@ public final class CapeFxSmoke {
         boolean hasBack() { return this == BOTH || elytra(); }
         boolean inspectBirths() { return this == GLIDE || this == WADE || this == SWIM; }
         boolean compareLight() { return this == CHEST || this == NIGHT || this == LAMP; }
+        boolean strafe() { return this == STRAFE_LEFT || this == STRAFE_RIGHT; }
     }
 
     private static int step;
@@ -258,7 +262,7 @@ public final class CapeFxSmoke {
                     }
                     if (game.player.getSwimAmount(1) > 0) return;
                     check(!CapaDeteriorerItem.auraFrame(game.player).posed(), "swim frame persisted after blend");
-                    note("PASS: recarga, luz local, oclusión, equipo, planeo y nado en cliente Forge");
+                    note("PASS: recarga, luz local, oclusión, equipo, paso lateral, planeo y nado en cliente Forge");
                     game.stop();
                 }
                 default -> { return; }
@@ -344,6 +348,8 @@ public final class CapeFxSmoke {
         scene = next;
         stableFrames = observedBirths = 0;
         captured = false;
+        game.options.keyLeft.setDown(false);
+        game.options.keyRight.setDown(false);
         if (next == Scene.SWIM) {
             game.options.keyUp.setDown(true);
             game.options.keySprint.setDown(true);
@@ -374,7 +380,10 @@ public final class CapeFxSmoke {
             if (next == Scene.BOTH) chest.enchant(Enchantments.UNBREAKING, 1);
             player.setItemSlot(EquipmentSlot.CHEST, chest);
             backOf(player).getStacks().setStackInSlot(0, next.hasBack() ? mantle() : ItemStack.EMPTY);
-            if (next == Scene.GLIDE) {
+            if (next == Scene.STRAFE_LEFT) {
+                // An unobstructed strip beside the lamp/panel fixtures.
+                player.teleportTo(level, pane.getX() - 6, player.getY(), pane.getZ() - 6, 0, 0);
+            } else if (next == Scene.GLIDE) {
                 player.getAbilities().flying = false;
                 player.onUpdateAbilities();
                 player.teleportTo(level, player.getX(), pane.getY() + 132, player.getZ(), 21, 18);
@@ -399,6 +408,10 @@ public final class CapeFxSmoke {
 
     private static void driveScene(Minecraft game) {
         var player = game.player;
+        if (scene.strafe()) {
+            game.options.keyLeft.setDown(scene == Scene.STRAFE_LEFT);
+            game.options.keyRight.setDown(scene == Scene.STRAFE_RIGHT);
+        }
         if (scene == Scene.GLIDE && player != null && player.getY() > pane.getY() + 75
                 && player.getDeltaMovement().y < -.08 && player.tryToStartFallFlying()) {
             player.connection.send(new ServerboundPlayerCommandPacket(player,
@@ -438,7 +451,14 @@ public final class CapeFxSmoke {
         if (back.isEmpty() == scene.hasBack() || (scene == Scene.BOTH && !chest.hasFoil())
                 || (scene.elytra() ? !chest.is(Items.ELYTRA) : !chest.is(CapaTestMod.CAPA_DETERIORER.get()))) return;
         float swim = player.getSwimAmount(1);
+        Vec3 velocity = player.getDeltaMovement();
+        double bodyYaw = Mth.rotLerp(framePartialTick, player.yBodyRotO, player.yBodyRot);
+        double lateral = scene.strafe() ? CapeTravel.measure(new CapeTravel.Step(velocity.x, velocity.y, velocity.z),
+                new CapeTravel.Step(player.getX() - player.xo, player.getY() - player.yo, player.getZ() - player.zo),
+                false, bodyYaw).side() : 0;
         boolean posed = switch (scene) {
+            case STRAFE_LEFT -> player.onGround() && velocity.x > .045 && lateral > .015;
+            case STRAFE_RIGHT -> player.onGround() && velocity.x < -.045 && lateral < -.015;
             case GLIDE -> player.isFallFlying() && player.getFallFlyingTicks() >= 12
                     && Math.abs(player.elytraRotZ) > .8F;
             case WADE -> player.isInWater() && !player.isVisuallySwimming() && swim == 0;
@@ -496,6 +516,7 @@ public final class CapeFxSmoke {
             try (NativeImage image = Screenshot.takeScreenshot(game.getMainRenderTarget())) {
                 image.writeToFile(shots.resolve(scene.file + ".png"));
             }
+            if (scene.strafe()) exposure = "; entrada lateral = " + Math.round(100 * lateral) + "%";
             note(scene.file + ": una sola capa en F5" + (scene.inspectBirths()
                     ? "; nacimientos recibidos=" + observedBirths + ", diferencia de marco=" + Math.round(rootError * 1000) + " mm de bloque"
                     : exposure));

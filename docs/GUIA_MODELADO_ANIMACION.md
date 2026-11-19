@@ -153,6 +153,14 @@ animación y la documentación de GeckoLib._
   de cada costura y el contacto con brazos y piernas al aplicar la holgura.
   Con `--plate docs/capa_v1673_nocturna.png` regenera la comparativa usando
   el TSV de `CapeSettleTest --samples`.
+- **Paso lateral (v1.67.4):** proyectar la trayectoria sobre el eje lateral
+  del torso, no el de la cámara. El arrastre empieza después del segmento 0,
+  sólo en Y/Z y dentro de las cotas previas. Las puntas tardan más en invertir
+  el giro que el primer tramo libre. Las pruebas usan `CapeSwayTest --samples`
+  y `tools/verify_cape_sway.py TSV --plate docs/capa_v1674_arrastre.png` para
+  contrastar el visor, el giro en el espacio del portador y el solape de las
+  costuras. El cliente de prueba da pasos en ambas direcciones de noche y
+  toma capturas F5; el A/B pausado del visor no es una captura del juego.
 - **Lectura del diagnóstico:** la lámina de brasas compara los puntos de
   salida con los clips del JAR, no con todos los huesos animados en vivo.
   El servidor no ve el paño de cada cliente. Las alas usan el mismo montaje

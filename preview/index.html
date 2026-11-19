@@ -85,6 +85,16 @@ details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summar
       </div>
       <p class="muted">Pausa y activa o desactiva la holgura para comparar la misma zancada. Sólo giran las bisagras del paño: el cuello y la montura conservan su ajuste. El maniquí no reproduce todas las poses ni los cambios de estado del juego.</p>
     </details>
+    <details>
+      <summary>Cambio de lado · A/B</summary>
+      <div class="controls">
+        <button id="swayMoment">Ver el giro</button>
+        <label><input type="checkbox" id="swayDemo"> Simular cambio de lado</label>
+        <label><input type="checkbox" id="swayFit" checked disabled> Arrastre del paño</label>
+        <output id="swayValue" for="swayDemo seek"></output>
+      </div>
+      <p class="muted">«Ver el giro» pausa a 1,10 s: empieza la vuelta y las puntas aún siguen la ida. Alterna «Arrastre del paño» con la misma cámara, pose y luz. Pulsa «Reproducir» para ver el ciclo de ida y vuelta.</p>
+    </details>
     <p class="muted">«Referencia» fija la pose base, la luz y el zoom. Desliza la imagen original sobre el modelo sin mover la cámara. Elige otra vista, arrastra o reproduce un estado para salir. Las poses salen del JSON del mod; los FX son una simulación, no una captura de Minecraft.</p>
     <p class="muted"><span id="bones">—</span> huesos · <span id="faces">—</span> caras · UV del atlas real</p>
   </section>

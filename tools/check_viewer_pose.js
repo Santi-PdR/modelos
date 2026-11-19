@@ -10,6 +10,18 @@ const context = vm.createContext({ document:{getElementById:target}, indata });
 const src = fs.readFileSync(path.join(__dirname, '../preview/app.js'), 'utf8').split('\nboot().catch')[0];
 const matrices = vm.runInContext(`${src}
   (() => {
+    if (indata.swayTimes) {
+      const rig={bones:[{name:'v20_mount_seat',rotation:[3,1,1]},
+                        ...Array.from({length:6},(_,i)=>({name:'v17_ribbon_0_seg'+i,rotation:[4,2,3]}))]};
+      return indata.swayTimes.map(t=>{
+        const posed=swayPose(rig,indata.sway,t).bones;
+        if ([0,1,6].some(i=>posed[i]!==rig.bones[i])) throw Error('arrastre fuera de los tramos libres');
+        return posed.slice(2,6).flatMap(b=>{
+          if (b.rotation[0]!==4) throw Error('el arrastre sobreescribió el eje X');
+          return [2-b.rotation[1],b.rotation[2]-3];
+        });
+      });
+    }
     if (indata.strideSamples) {
       return indata.strideSamples.map(([top,mid,arm,leg,stance,depth]) =>
         strideLifts(indata.stride,top,mid,arm,leg,stance*indata.fit.bodyAngle,depth));
