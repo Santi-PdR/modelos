@@ -1030,6 +1030,25 @@ jobs:
             exit 1
           fi
 
+      - name: Recorte diagnóstico de la vista cenital
+        if: steps.fx-smoke.outcome == 'success'
+        run: |
+          python3 - <<'PY'
+          # Recortes pequeños también en las anotaciones: la descarga del
+          # ZIP de Actions no está disponible desde todos los entornos.
+          import base64, io, pathlib
+          from PIL import Image
+          for path in sorted(pathlib.Path('build/fx-smoke-run/fx-shots').glob('cenital-*.png')):
+              with Image.open(path) as im:
+                  x,y = im.width//2, im.height//2
+                  cut = im.crop((x-120,y-70,x+120,y+122)).resize((180,144), Image.Resampling.NEAREST)
+                  out = io.BytesIO()
+                  cut.convert('RGB').quantize(colors=96).save(out, format='PNG', optimize=True)
+                  data = base64.b64encode(out.getvalue()).decode()
+                  for i in range(0,len(data),1700):
+                      print(f'::notice title=Cenital {path.stem} {i//1700:02}::{data[i:i+1700]}')
+          PY
+
       - name: Subir capturas de la prueba en mundo
         if: steps.fx-smoke.outcome == 'success'
         uses: actions/upload-artifact@v4

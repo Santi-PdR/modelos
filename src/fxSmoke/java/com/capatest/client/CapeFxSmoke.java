@@ -79,6 +79,7 @@ public final class CapeFxSmoke {
     private enum Scene {
         CHEST("pecho-dia", 6000), NIGHT("pecho-noche", 18000), LAMP("pecho-noche-con-luz", 18000),
         BOTH("ambos-noche-encantado", 18000),
+        TOP_BARE("cenital-sin-manto", 6000), TOP_CHEST("cenital-pecho", 6000), TOP_BACK("cenital-curios", 6000),
         STRAFE_LEFT("traslacion-izquierda", 18000), STRAFE_RIGHT("traslacion-derecha", 18000),
         WINGS("espalda-con-elitros", 18000),
         GLIDE("planeo-real", 6000), WADE("de-pie-en-agua", 6000), SWIM("nado-horizontal", 6000),
@@ -93,7 +94,9 @@ public final class CapeFxSmoke {
         }
 
         boolean elytra() { return this == WINGS || this == GLIDE; }
-        boolean hasBack() { return this == BOTH || elytra(); }
+        boolean usesBack() { return this == TOP_BACK || elytra(); }
+        boolean hasBack() { return this == BOTH || usesBack(); }
+        boolean overhead() { return this == TOP_BARE || this == TOP_CHEST || this == TOP_BACK; }
         boolean inspectBirths() { return this == GLIDE || this == WADE || this == SWIM; }
         boolean compareLight() { return this == CHEST || this == NIGHT || this == LAMP; }
         boolean strafe() { return this == STRAFE_LEFT || this == STRAFE_RIGHT; }
@@ -349,6 +352,8 @@ public final class CapeFxSmoke {
         scene = next;
         stableFrames = observedBirths = 0;
         captured = false;
+        if (next == Scene.TOP_BARE) game.options.fov().set(34);
+        if (next == Scene.STRAFE_LEFT) game.options.fov().set(70);
         game.options.keyLeft.setDown(false);
         game.options.keyRight.setDown(false);
         if (next == Scene.SWIM) {
@@ -377,11 +382,22 @@ public final class CapeFxSmoke {
             // Keep the same displayed item, camera and unenchanted material
             // for the three lighting captures.
             if (next == Scene.NIGHT || next == Scene.LAMP) return;
-            ItemStack chest = next.elytra() ? new ItemStack(Items.ELYTRA) : mantle();
+            ItemStack chest = next.elytra() ? new ItemStack(Items.ELYTRA)
+                    : next == Scene.TOP_BARE || next == Scene.TOP_BACK ? ItemStack.EMPTY : mantle();
             if (next == Scene.BOTH) chest.enchant(Enchantments.UNBREAKING, 1);
             player.setItemSlot(EquipmentSlot.CHEST, chest);
             backOf(player).getStacks().setStackInSlot(0, next.hasBack() ? mantle() : ItemStack.EMPTY);
-            if (next == Scene.STRAFE_LEFT) {
+            if (next == Scene.TOP_BARE) {
+                // Flat, high-contrast floor. All three images use the same
+                // camera and body position, including the unequipped control.
+                BlockPos floor = pane.offset(-6, -2, -6);
+                for (int x = -3; x <= 3; x++) {
+                    for (int z = -3; z <= 3; z++) {
+                        level.setBlockAndUpdate(floor.offset(x, 0, z), Blocks.LIGHT_GRAY_CONCRETE.defaultBlockState());
+                    }
+                }
+                player.teleportTo(level, floor.getX() + .5, floor.getY() + 1, floor.getZ() + .5, 0, 89);
+            } else if (next == Scene.STRAFE_LEFT) {
                 // An unobstructed strip beside the lamp/panel fixtures.
                 player.teleportTo(level, pane.getX() - 6, player.getY(), pane.getZ() - 6, 0, 0);
             } else if (next == Scene.GLIDE) {
@@ -454,8 +470,12 @@ public final class CapeFxSmoke {
         if (player == null || game.screen != null || game.level.getDayTime() != scene.dayTime) return;
         ItemStack chest = player.getItemBySlot(EquipmentSlot.CHEST);
         ItemStack back = backOf(player).getStacks().getStackInSlot(0);
-        if (back.isEmpty() == scene.hasBack() || (scene == Scene.BOTH && !chest.hasFoil())
-                || (scene.elytra() ? !chest.is(Items.ELYTRA) : !chest.is(CapaTestMod.CAPA_DETERIORER.get()))) return;
+        boolean chestReady = switch (scene) {
+            case TOP_BARE, TOP_BACK -> chest.isEmpty();
+            case WINGS, GLIDE -> chest.is(Items.ELYTRA);
+            default -> chest.is(CapaTestMod.CAPA_DETERIORER.get());
+        };
+        if (back.isEmpty() == scene.hasBack() || (scene == Scene.BOTH && !chest.hasFoil()) || !chestReady) return;
         float swim = player.getSwimAmount(1);
         Vec3 velocity = player.getDeltaMovement();
         double bodyYaw = Mth.rotLerp(framePartialTick, player.yBodyRotO, player.yBodyRot);
@@ -463,6 +483,8 @@ public final class CapeFxSmoke {
                 new CapeTravel.Step(player.getX() - player.xo, player.getY() - player.yo, player.getZ() - player.zo),
                 false, bodyYaw).side() : 0;
         boolean posed = switch (scene) {
+            case TOP_BARE, TOP_CHEST, TOP_BACK -> player.onGround() && !player.isCrouching()
+                    && player.getXRot() > 88 && Math.abs(bodyYaw) < .05 && velocity.horizontalDistanceSqr() < .0001;
             case STRAFE_LEFT -> player.onGround() && velocity.x > .045 && lateral > .015;
             case STRAFE_RIGHT -> player.onGround() && velocity.x < -.045 && lateral < -.015;
             case WINGS -> player.onGround() && !player.isCrouching() && velocity.horizontalDistanceSqr() < .0001
@@ -479,7 +501,9 @@ public final class CapeFxSmoke {
             return;
         }
         try {
-            check(framePasses == 1 && rendered == (scene.elytra() ? back : chest),
+            int expectedPasses = scene == Scene.TOP_BARE ? 0 : 1;
+            if (scene.overhead() && stableFrames < 6 && framePasses != expectedPasses) return;
+            check(framePasses == expectedPasses && rendered == (scene.usesBack() ? back : chest),
                     scene.file + ": incorrect worn draw count " + framePasses);
             String exposure = "";
             if (scene.compareLight()) {
@@ -530,7 +554,7 @@ public final class CapeFxSmoke {
                 image.writeToFile(shots.resolve(scene.file + ".png"));
             }
             if (scene.strafe()) exposure = "; entrada lateral = " + Math.round(100 * lateral) + "%";
-            note(scene.file + ": una sola capa en F5" + (scene.inspectBirths()
+            note(scene.file + ": " + framePasses + " manto en F5" + (scene.inspectBirths()
                     ? "; nacimientos recibidos=" + observedBirths + ", diferencia de marco=" + Math.round(rootError * 1000) + " mm de bloque"
                     : exposure));
             captured = true;
