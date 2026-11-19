@@ -23,6 +23,11 @@ Se equipa en el pecho o en `back` con Curios opcional.
 - **Prueba en Forge:** [mismo encuadre en F5 con mangas clásicas y finas,
   en pecho y Curios](docs/capa_v1679_ajuste.png). El control conserva todo
   el respaldo de v1.67.8; sólo se desactiva el ajuste nuevo.
+- **Al mover la cabeza:** [recorrido en F5](docs/capa_v1679_recorrido_forge.png).
+  Con el torso fijo, el cliente midió 65 fotogramas en pecho y otros 65 en
+  Curios: el marco se abre gradualmente al levantar la mirada o girar, se
+  vuelve a ceñir al volver a la postura inicial y coincide en los pases
+  opaco y emisivo. [Prueba de Forge y trazas](https://github.com/Santi-PdR/modelos/actions/runs/44604430193).
 
 ### v1.67.8 — unión alta a la espalda y pulso del icono
 
