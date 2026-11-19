@@ -58,6 +58,20 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                               @Nullable HumanoidModel<?> model) {
         super.prepForRender(wearer, stack, slot, model);
         armorPassSubmitted = false;
+        // Snapshot once for both the opaque pass and GeckoLib's emissive
+        // re-render, which calls preRender again with the same fitted body.
+        seating = 0;
+        if (model != null && wearer instanceof LivingEntity living && !living.isFallFlying()
+                && !living.isPassenger() && !living.isAutoSpinAttack()) {
+            seating = (float) CapeFit.seating(model.body.xRot, model.body.yRot, model.head.xRot,
+                    model.head.yRot, backArm(model), living.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA))
+                    * (1 - living.getSwimAmount(1));
+        }
+    }
+
+    private static double backArm(HumanoidModel<?> model) {
+        return Math.max(CapeStride.backDegrees(model.leftArm.xRot, model.leftArm.yRot),
+                CapeStride.backDegrees(model.rightArm.xRot, model.rightArm.yRot));
     }
 
     @Override
@@ -85,8 +99,7 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         super.applyBaseTransformations(model);
         wearerDepth = (float) CapeFit.backset(model.body.xRot, model.body.yRot,
                 model.head.xRot, model.head.yRot);
-        double arm = Math.max(CapeStride.backDegrees(model.leftArm.xRot, model.leftArm.yRot),
-                CapeStride.backDegrees(model.rightArm.xRot, model.rightArm.yRot));
+        double arm = backArm(model);
         double leg = Math.max(CapeStride.backDegrees(model.leftLeg.xRot, model.leftLeg.yRot),
                 CapeStride.backDegrees(model.rightLeg.xRot, model.rightLeg.yRot));
         // Curios renders after the vanilla ElytraLayer has updated these
@@ -98,12 +111,6 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
             hasWings = true;
             wings = CapeWingFit.topGoal(Math.toDegrees(player.elytraRotX), Math.toDegrees(player.elytraRotZ),
                     Math.toDegrees(model.body.xRot), wearerDepth);
-        }
-        seating = (float) CapeFit.seating(model.body.xRot, model.body.yRot, model.head.xRot,
-                model.head.yRot, arm, hasWings);
-        if (getCurrentEntity() instanceof LivingEntity wearer) {
-            seating *= wearer.isFallFlying() || wearer.isPassenger() || wearer.isAutoSpinAttack()
-                    ? 0 : 1 - wearer.getSwimAmount(1);
         }
         shoulderReach = (float) CapeFit.shoulderReach(model.body.xRot, model.body.yRot,
                 model.head.xRot, model.head.yRot, hasWings);
@@ -124,8 +131,10 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         boolean backingLeft = CapeBacking.LEFT.equals(name);
         boolean backingRight = CapeBacking.RIGHT.equals(name);
         boolean seatFrame = seating > 0 && CapeFit.SEAT_FRAME.equals(name);
-        boolean fitted = seatFrame || shoulder || underYoke || backingLeft || backingRight || wearerDepth > 0 && (CapeFit.BONE.equals(name)
-                || CapeFit.DRAPE_BONE.equals(name) || CapeFit.GUSSET_BONE.equals(name));
+        boolean drape = CapeFit.DRAPE_BONE.equals(name);
+        boolean fitted = seatFrame || shoulder || underYoke || backingLeft || backingRight
+                || drape && (wearerDepth > 0 || seating > 0)
+                || wearerDepth > 0 && (CapeFit.BONE.equals(name) || CapeFit.GUSSET_BONE.equals(name));
         if (fitted)
             poseStack.pushPose();
         try {
@@ -144,8 +153,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                     poseStack.scale(yoke.width(), yoke.height(), yoke.depth());
                 else if (backingLeft || backingRight)
                     poseStack.scale(1, backingLeft ? backing.left() : backing.right(), backing.depth());
-                else if (CapeFit.DRAPE_BONE.equals(name))
-                    poseStack.mulPose(Axis.XP.rotationDegrees((float) CapeFit.drapeDegrees(wearerDepth)));
+                else if (drape)
+                    poseStack.mulPose(Axis.XP.rotationDegrees((float) CapeFit.seatedDrapeDegrees(wearerDepth, seating)));
                 else
                     poseStack.scale(1, 1, (float) CapeFit.gussetScale(wearerDepth));
                 RenderUtils.translateAwayFromPivotPoint(poseStack, bone);

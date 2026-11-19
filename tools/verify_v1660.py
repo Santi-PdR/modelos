@@ -34,14 +34,26 @@ def preservation(*, changed=()):
     new_mount = (G.SHOULDERS_BONE, G.UNDER_YOKE_BONE, *backing_profile()['names'])
     mount = (G.SEAT_BONE, G.GUSSET_BONE, *new_mount)
 
+    frame = F.seat_profile()['frame']
+
     def omit_mount_edits(model):
-        # The returns and lining are the only added groups, without tracks.
         new_groups = {g['uuid'] for g in model['groups'] if g['name'] in new_mount}
+        fitting_group = next((g['uuid'] for g in model['groups'] if g['name'] == frame),None)
+        assert all(fitting_group not in a['animators'] for a in model['animations'])
         def prune(tree):
-            return [dict(node, children=prune(node['children'])) if isinstance(node,dict) else node
-                    for node in tree if not isinstance(node,dict) or node['uuid'] not in new_groups]
+            nodes = []
+            for node in tree:
+                if not isinstance(node,dict):
+                    nodes.append(node)
+                elif node['uuid'] not in new_groups:
+                    children = prune(node['children'])
+                    if node['uuid'] == fitting_group:
+                        nodes.extend(children)
+                    else:
+                        nodes.append(dict(node,children=children))
+            return nodes
         return dict(model, elements=[e for e in model['elements'] if not e['name'].startswith(mount)],
-                    groups=prune(model['groups']),
+                    groups=prune([g for g in model['groups'] if g['uuid'] != fitting_group]),
                     outliner=prune(model['outliner']))
     for line in (BASE/'SHA256SUMS.txt').read_text().splitlines():
         digest, name = line.split('  ', 1)
@@ -56,7 +68,8 @@ def preservation(*, changed=()):
             assert current == dict(old, name=current['name']), 'cambiaron piezas del proyecto fuera del asiento/fuelle'
         elif wide and (P.ASSETS/name) == P.ARMOR_GEO:
             old, current = (P.load(path) for path in (BASE/name, P.ARMOR_GEO))
-            old,current = (dict(g, bones=[b for b in g['bones'] if b['name'] not in mount])
+            old,current = (dict(g, bones=[dict(b,parent='chestplate') if b.get('parent') == frame else b
+                                          for b in g['bones'] if b['name'] not in (*mount,frame)])
                            for g in (old,current))
             assert old == current, 'cambió el GEO fuera del asiento y fuelle'
         elif wide and (P.ASSETS/name) == P.ICON:

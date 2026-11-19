@@ -36,6 +36,14 @@ const matrices = vm.runInContext(`${src}
       return indata.strideSamples.map(([top,mid,arm,leg,stance,depth]) =>
         strideLifts(indata.stride,top,mid,arm,leg,stance*indata.fit.bodyAngle,depth));
     }
+    if (indata.seatSamples) {
+      const f=indata.fit;
+      const rig={bones:[{name:f.seat.frame},{name:'v20_mount_shoulders'},{name:f.drapeBone}]};
+      return indata.seatSamples.map(([s,p,y,w,arm])=>{
+        const [frame,returns,drape]=wearerPose(rig,f,s,p,y,!!w,arm).bones;
+        return [seating(f.seat,s,p,y,arm,!!w),frame.scale[2],returns.scale[0],-drape.rotation[0]];
+      });
+    }
     if (indata.backingSamples) {
       const f=indata.fit;
       return indata.backingSamples.map(([s,p,y,w]) => backingShape(f.backing,f.bodyAngle,s,p,y,backset(f,s,p,y),!!w));

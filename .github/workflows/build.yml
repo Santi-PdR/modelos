@@ -760,6 +760,7 @@ jobs:
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py --fit-only
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_mount.py
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_backing.py
+            OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_seat.py
             PYTHONPATH=tools python3 -c 'import cape_icon; cape_icon.verify()'
           else
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py
@@ -806,7 +807,8 @@ jobs:
           java -cp "$CLASSES" com.capatest.client.CapeFitTest --samples > "$CLASSES/fit.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeFitTest --shoulders > "$CLASSES/shoulders.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeFitTest --backing > "$CLASSES/backing.tsv"
-          OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/check_cape_fit.py "$CLASSES/fit.tsv" "$CLASSES/shoulders.tsv" "$CLASSES/backing.tsv"
+          java -cp "$CLASSES" com.capatest.client.CapeFitTest --seating > "$CLASSES/seating.tsv"
+          OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/check_cape_fit.py "$CLASSES/fit.tsv" "$CLASSES/shoulders.tsv" "$CLASSES/backing.tsv" "$CLASSES/seating.tsv"
           java -cp "$CLASSES" com.capatest.item.CapeStateTest --spark-samples > "$CLASSES/sparks.tsv"
           PYTHONPATH=tools python3 -c 'import cape_aura as a,json; print(json.dumps(a.profile()))' | \
             node tools/check_viewer_embers.js "$CLASSES/sparks.tsv" "$CLASSES/embers.tsv"

@@ -201,7 +201,7 @@ function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0) {
     const half = anchor?.names.indexOf(b.name) ?? -1;
     if (half>=0) return {...b,scale:[1,backing[half],backing[2]]};
     if (b.name===profile.bone) return {...b,offset:[0,0,depth]};
-    if (b.name===profile.drapeBone) return {...b,rotation:[-depth*profile.drapePerUnit,0,0]};
+    if (b.name===profile.drapeBone) return {...b,rotation:[-depth*profile.drapePerUnit+(seat?.hem ?? 0)*snug,0,0]};
     if (b.name===profile.gussetBone) return {...b,scale:[1,1,1+depth/profile.gussetDepth]};
     if (b.name==='v20_mount_shoulders') {
       const scale = shoulderScales(stance,look,turn,elytra);

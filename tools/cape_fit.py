@@ -135,7 +135,7 @@ def shoulder_scales(stance, pitch, yaw, *, elytra=False):
 def seat_profile():
     code = SOURCE.read_text()
     names = dict(frame=re.search(r'\bSEAT_FRAME = "([^"]+)";', code)[1])
-    pairs = dict(plane='PLANE', depth='TAKE_IN', width='RETURN_IN', downStart='DOWN_START', downFull='DOWN_FULL',
+    pairs = dict(plane='PLANE', depth='TAKE_IN', width='RETURN_IN', hem='HEM_DEGREES', downStart='DOWN_START', downFull='DOWN_FULL',
                  turnStart='TURN_START', turnEnd='TURN_END', leanStart='LEAN_START', leanEnd='LEAN_END',
                  armStart='ARM_START', armEnd='ARM_END')
     return dict(names, **{key: float(re.search(r'\bSEAT_' + const + r' = ([\d.]+);', code)[1])
@@ -177,6 +177,7 @@ def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back
             snug = seating(stance,pitch,yaw,arm_back,elytra=elytra)
             changes[q['frame']] = dict(scale=[1.,1.,1-q['depth']*snug])
             changes[G.SHOULDERS_BONE]['scale'][0] = 1-q['width']*snug
+            changes[G.DRAPE_BONE]['rotation'][0] += q['hem']*snug
         names = B.profile()['names']
         if any(b['name'] in names for b in geo['bones']):
             a,b,z = B.solve(head_in_body(stance,pitch,yaw,outer=True),d,elytra=elytra)

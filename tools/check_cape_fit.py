@@ -53,6 +53,20 @@ def main():
             assert all(abs(a-b) < 1e-8 for a,b in zip(out,python,strict=True)), (s,p,y,out,python)
         print(f'Respaldo alto: {len(rows)} poses coinciden en Java/Python/visor.')
 
+    if len(sys.argv) > 4:
+        rows = [tuple(map(float, row.split('\t'))) for row in Path(sys.argv[4]).read_text().splitlines()]
+        assert len(rows) == 3150
+        q = F.seat_profile()
+        js = subprocess.run(['node','tools/check_viewer_pose.js'],cwd=P.ROOT,check=True,text=True,capture_output=True,
+                            input=json.dumps(dict(fit=F.viewer_profile(),seatSamples=[r[:5] for r in rows])))
+        for (s,p,y,w,arm,*java), actual in zip(rows,json.loads(js.stdout),strict=True):
+            snug = F.seating(s,p,y,arm,elytra=bool(w))
+            python = [snug,1-q['depth']*snug,1-q['width']*snug,
+                      F.depth(s,p,y)*profile['drapePerUnit']-q['hem']*snug]
+            for tested in (java,actual):
+                assert all(abs(a-b) < 1e-8 for a,b in zip(tested,python,strict=True)), (s,p,y,w,arm,tested,python)
+        print(f'Ceñido del borde y remates: {len(rows)} poses coinciden en Java/Python/visor.')
+
 
 if __name__ == '__main__':
     main()

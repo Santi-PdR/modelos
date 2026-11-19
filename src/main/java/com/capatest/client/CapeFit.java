@@ -13,6 +13,7 @@ public final class CapeFit {
     public static final double SEAT_PLANE = 2.38;
     private static final double SEAT_TAKE_IN = .46;
     private static final double SEAT_RETURN_IN = .11;
+    private static final double SEAT_HEM_DEGREES = 4.2;
     private static final double SEAT_DOWN_START = 61;
     private static final double SEAT_DOWN_FULL = 76;
     private static final double SEAT_TURN_START = 13;
@@ -185,6 +186,11 @@ public final class CapeFit {
     static double seatDepthScale(double seating) { return 1 - SEAT_TAKE_IN * seating; }
 
     static double seatReturnWidth(double seating) { return 1 - SEAT_RETURN_IN * seating; }
+
+    // Keep the free end of the drape out of the legs as its root moves in.
+    static double seatedDrapeDegrees(double depth, double seating) {
+        return drapeDegrees(depth) - SEAT_HEM_DEGREES * seating;
+    }
 
     private static double smooth(double lo, double hi, double x) {
         double t = clamp((x - lo) / (hi - lo), 1);

@@ -46,6 +46,21 @@ public final class CapeFitTest {
                         }
             return;
         }
+        if (args.length == 1 && args[0].equals("--seating")) {
+            for (double stance : new double[]{0,.19,.27,.54,.90})
+                for (double look : new double[]{-89,-76,-72.3,-63.1,-60,-12,47})
+                    for (double turn : new double[]{-376,-45.8,-23,0,3,17.8,38,74,386})
+                        for (int wings = 0; wings < 2; wings++)
+                            for (double arm : new double[]{0,3.1,3.7,6.3,16.5}) {
+                                double snug = CapeFit.seating(stance * CapeFit.CROUCH_RADIANS, 2.4,
+                                        -Math.toRadians(look), 2.4 + Math.toRadians(turn), arm, wings == 1);
+                                System.out.printf(Locale.ROOT, "%.5f\t%.5f\t%.5f\t%d\t%.5f\t%.10f\t%.10f\t%.10f\t%.10f%n",
+                                        stance,look,turn,wings,arm,snug,
+                                        CapeFit.seatDepthScale(snug),CapeFit.seatReturnWidth(snug),
+                                        CapeFit.seatedDrapeDegrees(depth(stance,look,turn),snug));
+                            }
+            return;
+        }
         if (args.length == 1 && args[0].equals("--samples")) {
             for (double stance : new double[]{0,.18,.5,.81,1})
                 for (double pitch : new double[]{-90,-51.5,-3,0,18.75,63,90})
@@ -80,6 +95,13 @@ public final class CapeFitTest {
         check(CapeFit.yokeShape(0, 0, 2.9, false).width() == 1, "el forro no se extiende en reposo");
         check(CapeFit.yokeShape(0, 0, 6.1, false).width() == .51F, "el forro no deja pasar el brazo");
         check(CapeFit.yokeShape(0, 0, 0, true).width() == .51F, "el forro no se recoge con élitros");
-        System.out.println("CapeFit: reposo, signos, giro relativo, límites e interpolación verificados");
+        double down = Math.toRadians(76);
+        check(CapeFit.seating(0, .8, down, .8 + Math.toRadians(3), 2.4, false) > .98,
+                "cuello y hombreras no se ciñen con la cabeza baja y los brazos en reposo");
+        check(CapeFit.seating(0, 0, down, 0, 1, true) == 0, "el ceñido invade los élitros");
+        check(CapeFit.seating(0, 0, -down, 0, 1, false) == 0, "el ceñido invade la cabeza");
+        check(CapeFit.seating(0, 0, down, 0, 17, false) == 0, "el ceñido invade la manga");
+        check(CapeFit.seating(0, 0, down, 0, Double.NaN, false) == 0, "ángulo de brazo no finito");
+        System.out.println("CapeFit: reposo, ceñido, signos, giro relativo, límites e interpolación verificados");
     }
 }
