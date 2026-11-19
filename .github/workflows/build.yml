@@ -994,9 +994,17 @@ jobs:
           timeout --kill-after=12s 160s xvfb-run -a gradle --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
           tail -n 80 "$log"
           # El menú permanece abierto hasta que timeout cierra el cliente.
-          if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; then exit "$rc"; fi
-          grep -F 'Blight Star Mantle: halo de grietas listo' "$log"
-          ! grep -F 'Blight Star Mantle: sin halo' "$log"
+          if { [ "$rc" -eq 0 ] || [ "$rc" -eq 124 ]; } &&
+            grep -F 'Blight Star Mantle: halo de grietas listo' "$log" &&
+            ! grep -F 'Blight Star Mantle: sin halo' "$log"; then
+            echo '::notice title=Arranque Forge::El programa de halo compiló y enlazó en el cliente.'
+          else
+            echo "::error title=Arranque Forge::No se confirmó el shader (salida $rc)."
+            grep -Ei 'exception|\[.*ERROR\]|(failed|could not|error):? |^> Task .*FAILED|Blight Star Mantle:' "$log" | \
+              grep -Eiv 'token|password|session|https?://' | tail -n 10 | cut -c1-340 | \
+              while IFS= read -r line; do printf '::warning title=Diagnóstico de cliente::%s\n' "${line//%/%25}"; done
+            exit 1
+          fi
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.
