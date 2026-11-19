@@ -14,7 +14,9 @@ from verify_v1600 import sat
 def check(geo):
     parts = {b['name']: b for b in geo['bones']}
     names = (G.SEAT_BONE, G.GUSSET_BONE, G.SADDLE_BONE)
-    assert tuple(parts[n]['parent'] for n in names) == ('chestplate','chestplate',G.FIT_BONE)
+    frame = F.seat_profile()['frame']
+    body = frame if frame in parts else 'chestplate'
+    assert tuple(parts[n]['parent'] for n in names) == (body,body,G.FIT_BONE)
     matrices = P.matrices(geo)
     seat, yoke, saddle = (np.array([P.cube_points(c, matrices[n]) for c in parts[n]['cubes']]) for n in names)
     fit = F.profile()
@@ -121,7 +123,7 @@ def returns_fit(parts, mats, max_depth):
 
 def lining_fit(parts, mats, seat, lower_gusset, max_depth):
     piece = parts[G.UNDER_YOKE_BONE]
-    assert piece['parent'] == 'chestplate' and len(piece['cubes']) == 1
+    assert piece['parent'] == parts[G.SEAT_BONE]['parent'] and len(piece['cubes']) == 1
     pivot = np.array(piece['pivot']) * [-1,1,1]
     v = P.cube_points(piece['cubes'][0],mats[piece['name']])
     pose = lambda scales: (v-pivot)*np.asarray(scales)[...,None,:]+pivot
