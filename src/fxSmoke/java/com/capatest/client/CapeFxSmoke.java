@@ -544,7 +544,11 @@ public final class CapeFxSmoke {
             probeQuad(vertices, 5, 0, 0, edge);      // matte UV
             buffers.endBatch(type);
             int[] red = {37, 27, 79, 193, 22, 22};
-            try (NativeImage image = Screenshot.takeScreenshot(target)) {
+            // Screenshot.takeScreenshot forces alpha to 255. Read the same
+            // attachment here without that conversion to test the blend mask.
+            try (NativeImage image = new NativeImage(target.width, target.height, false)) {
+                RenderSystem.bindTexture(target.getColorTextureId());
+                image.downloadTexture(0, false);
                 for (int i = 0; i < red.length; i++) {
                     int rgba = image.getPixelRGBA(i * 16 + 8, 8);
                     check(Math.abs((rgba & 255) - red[i]) <= 1 && (rgba >>> 24) == 128,
