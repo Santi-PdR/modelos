@@ -30,7 +30,8 @@ HINGES = ('cape_top', 'cape_mid')
 
 def preservation(*, changed=()):
     wide = tuple(map(int, P.mod_version().split('.'))) >= (1, 67, 6)
-    new_mount = (G.SHOULDERS_BONE, G.UNDER_YOKE_BONE)
+    from cape_backing import profile as backing_profile
+    new_mount = (G.SHOULDERS_BONE, G.UNDER_YOKE_BONE, *backing_profile()['names'])
     mount = (G.SEAT_BONE, G.GUSSET_BONE, *new_mount)
 
     def omit_mount_edits(model):

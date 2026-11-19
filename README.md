@@ -1,13 +1,23 @@
-# Mantle of the Blight Star — v1.67.7
+# Mantle of the Blight Star — v1.67.8
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
-[Descargar JAR v1.67.7](https://github.com/Santi-PdR/modelos/releases/download/v1.67.7/capatest-1.67.7.jar)
+[Descargar JAR v1.67.8](https://github.com/Santi-PdR/modelos/releases/download/v1.67.8/capatest-1.67.8.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench](docs/CAPA_v1.67.7.bbmodel)
+· [Proyecto Blockbench](docs/CAPA_v1.67.8.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+
+### v1.67.8 — unión alta a la espalda y pulso del icono
+
+- La unión anterior tocaba el torso por abajo: quedaba una franja de
+  camiseta visible detrás del cuello en F5 oblicuo. El manto ahora tiene
+  un respaldo alto que nace en la espalda y se cose al cuello; sus dos
+  mitades ceden por separado al girar la cabeza. Conserva el paño libre.
+- Se conserva [tu dibujo](referencias/REFERENCIA_ICONO_v1677.png) y su
+  contorno. La luz recorre las grietas con tres destellos y un reflejo
+  sobre la tela. Son 32 cuadros con el mismo ciclo de 1,6 s.
 
 ### v1.67.7 — unión en los hombros e icono más grande
 

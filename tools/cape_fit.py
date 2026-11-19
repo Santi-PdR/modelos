@@ -15,6 +15,7 @@ from functools import lru_cache
 import numpy as np
 
 import armor_model_pipeline as G
+import cape_backing as B
 import preview_cloth as P
 
 SOURCE = P.ROOT / 'src/main/java/com/capatest/client/CapeFit.java'
@@ -130,6 +131,10 @@ def shoulder_scales(stance, pitch, yaw, *, elytra=False):
     return [1.,.27+.73*length,length]
 
 
+def viewer_profile():
+    return dict(profile(),backing=B.profile())
+
+
 def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back=0.):
     """Bake render transforms for a frame, not animation keyframes."""
     changes = {'chestplate': dict(rotation=[stance*profile()['bodyAngle'], 0., 0.],
@@ -146,4 +151,8 @@ def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back
             G.SHOULDERS_BONE: dict(scale=shoulder_scales(stance,pitch,yaw,elytra=elytra)),
             G.UNDER_YOKE_BONE: dict(scale=yoke_scales(stance,pitch,arm_back,elytra=elytra)),
         })
+        names = B.profile()['names']
+        if any(b['name'] in names for b in geo['bones']):
+            a,b,z = B.solve(head_in_body(stance,pitch,yaw,outer=True),d,elytra=elytra)
+            changes.update({name:dict(scale=[1.,s,z]) for name,s in zip(names,(a,b),strict=True)})
     return dict(geo, bones=[dict(b, **changes.get(b['name'], {})) for b in geo['bones']])

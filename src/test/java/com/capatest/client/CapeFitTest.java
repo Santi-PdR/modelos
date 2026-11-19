@@ -34,6 +34,18 @@ public final class CapeFitTest {
                         }
             return;
         }
+        if (args.length == 1 && args[0].equals("--backing")) {
+            for (double stance : new double[]{0,.15,.42,.71,1})
+                for (double look : new double[]{-89,-86,-66,-58,-21,0,31,80,90})
+                    for (double yaw : new double[]{-179,-93,-76,-43,-12,0,12,43,76,93,179})
+                        for (int wings = 0; wings < 2; wings++) {
+                            double p = -Math.toRadians(look), a = .7 + Math.toRadians(yaw);
+                            var s = CapeBacking.shape(stance*CapeFit.CROUCH_RADIANS,.7,p,a,depth(stance,look,yaw),wings == 1);
+                            System.out.printf(Locale.ROOT, "%.4f\t%.4f\t%.4f\t%d\t%.9f\t%.9f\t%.9f%n",
+                                    stance,look,yaw,wings,s.left(),s.right(),s.depth());
+                        }
+            return;
+        }
         if (args.length == 1 && args[0].equals("--samples")) {
             for (double stance : new double[]{0,.18,.5,.81,1})
                 for (double pitch : new double[]{-90,-51.5,-3,0,18.75,63,90})

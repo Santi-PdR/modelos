@@ -164,7 +164,7 @@ def map_material(geo, *, paint=False):
                 # Use the matte maroon lining on the exposed upper yoke,
                 # so the continuous join also reads as part of the cloth.
                 lining = side == 'north' or (name in (GUSSET_BONE, SHOULDERS_BONE, UNDER_YOKE_BONE) and side == 'up')
-                role = 'iron' if iron else ('red' if lining else 'edge')
+                role = 'iron' if iron else ('red' if lining or name.startswith('v20_mount_backing_') else 'edge')
                 c['uv'][side] = S.spec(slots[role])
     if not paint:
         return layout

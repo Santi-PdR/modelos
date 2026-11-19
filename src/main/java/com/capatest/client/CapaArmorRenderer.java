@@ -24,6 +24,7 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private float wearerDepth;
     private float shoulderReach = (float) CapeFit.SHOULDER_MIN;
     private CapeFit.YokeShape yoke = CapeFit.yokeShape(0, 0, 0, true);
+    private CapeBacking.Shape backing = CapeBacking.shape(0, 0, 0, 0, 0, true);
     private boolean armorPassSubmitted;
 
     public CapaArmorRenderer() {
@@ -99,6 +100,7 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         shoulderReach = (float) CapeFit.shoulderReach(model.body.xRot, model.body.yRot,
                 model.head.xRot, model.head.yRot, hasWings);
         yoke = CapeFit.yokeShape(model.body.xRot, model.head.xRot, arm, hasWings);
+        backing = CapeBacking.shape(model.body.xRot, model.body.yRot, model.head.xRot, model.head.yRot, wearerDepth, hasWings);
         capeModel.setClearanceGoals(CapeStride.armGoal(arm, model.body.xRot, wearerDepth),
                 CapeStride.legGoal(leg, model.body.xRot, wearerDepth), wings);
     }
@@ -111,7 +113,9 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         String name = bone.getName();
         boolean shoulder = CapeFit.SHOULDERS_BONE.equals(name);
         boolean underYoke = CapeFit.UNDER_YOKE_BONE.equals(name);
-        boolean fitted = shoulder || underYoke || wearerDepth > 0 && (CapeFit.BONE.equals(name)
+        boolean backingLeft = CapeBacking.LEFT.equals(name);
+        boolean backingRight = CapeBacking.RIGHT.equals(name);
+        boolean fitted = shoulder || underYoke || backingLeft || backingRight || wearerDepth > 0 && (CapeFit.BONE.equals(name)
                 || CapeFit.DRAPE_BONE.equals(name) || CapeFit.GUSSET_BONE.equals(name));
         if (fitted)
             poseStack.pushPose();
@@ -127,6 +131,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                             shoulderReach);
                 else if (underYoke)
                     poseStack.scale(yoke.width(), yoke.height(), yoke.depth());
+                else if (backingLeft || backingRight)
+                    poseStack.scale(1, backingLeft ? backing.left() : backing.right(), backing.depth());
                 else if (CapeFit.DRAPE_BONE.equals(name))
                     poseStack.mulPose(Axis.XP.rotationDegrees((float) CapeFit.drapeDegrees(wearerDepth)));
                 else

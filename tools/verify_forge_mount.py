@@ -87,28 +87,65 @@ def shoulder_rails(bare, worn, *, turned=False):
     return rails
 
 
+def upper_back(root, prefix):
+    bare = read(root/f'{prefix}-sin-manto.png')
+    key = f'{prefix}-sin-union'
+    control = read(root/f'{key}.png')
+    points = np.loadtxt(root/f'{key}.tsv', dtype=int)
+    assert points.shape == (31*8,4)
+    u,v,x,y = points.T
+    h,w = bare.shape[:2]
+    assert (0 <= x.min() < x.max() < w) and (0 <= y.min() < y.max() < h), 'contact strip outside the view'
+    # Only samples on the exposed upper back count; the head and sleeves
+    # can occlude parts of this strip. Never give credit for hiding floor.
+    r,g,b = bare[y,x].T
+    shirt = (g-r >= 19) & (b-r >= 19)
+    assert shirt.sum() >= 55 and np.ptp(u[shirt]) >= 9, (key, 'no se ve la espalda', int(shirt.sum()))
+    def cloth(im):
+        r,g1,b = im[y,x].T
+        return shirt & (g-g1 >= 16) & (np.maximum(r,b)-g1 >= 10)
+    prev = cloth(control)
+    failures = []
+    for slot in ('pecho','curios'):
+        name = f'{prefix}-{slot}'
+        resolved = np.loadtxt(root/f'{name}.tsv', dtype=int)
+        assert np.array_equal(resolved[:,:2],points[:,:2]) and np.max(abs(resolved[:,2:]-points[:,2:])) <= 1, (name, 'cámara distinta')
+        now = cloth(read(root/f'{name}.png'))
+        old, new = prev.sum()/shirt.sum(), now.sum()/shirt.sum()
+        # Demand a panel across the visible strip, not one clasp or tooth.
+        rails = [now[shirt & (u == col)].mean() for col in np.unique(u[shirt])]
+        joined = np.mean(np.asarray(rails) >= .7)
+        print(f'{name}: unión visible en espalda alta {old:.1%} → {new:.1%}; ancho {joined:.1%} ({shirt.sum()} muestras).',flush=True)
+        if old > .55 or new < .84 or new-old < .28 or joined < .77:
+            failures.append((name,old,new,joined))
+    return failures
+
+
 def hotbar(root):
     paths = sorted(root.glob('hotbar-[0-9][0-9].png'))
-    assert len(paths) == 18, len(paths)
+    assert len(paths) == I.COUNT+2, len(paths)
     pixels = np.stack([read(p) for p in paths])
     assert pixels.shape[1:] == (44,112,3)
     slot = pixels[:,6:38,40:72]
     bare = read(root/'hotbar-vacia.png')
     silhouette = np.median(np.abs(slot-bare[6:38,40:72]).max(axis=3),axis=0) >= 20
     area = int(silhouette.sum())
-    old_area = int(np.count_nonzero(np.asarray(I.first_frame(I.PREVIOUS)
-                    .resize((32,32),Image.Resampling.NEAREST))[...,3]))
-    assert area >= 1.14*old_area, (area,old_area)
     spread = np.ptp(pixels,axis=0).max(axis=-1)
     change = spread[6:38,40:72]
     peak = int(change.max())
     seams = int((change[6:] >= 14).sum())
+    # Check the crest moves vertically, not a single global change in tint.
+    rest = np.min(slot, axis=0)
+    energy = np.maximum(np.abs(slot-rest).max(axis=-1)-10,0)
+    active = energy.sum((1,2)) >= 400
+    centroids = (energy[active]*np.arange(32)[None,:,None]).sum((1,2))/energy[active].sum((1,2))
+    assert len(centroids) >= 15 and np.ptp(centroids) >= 5, ('pulso fijo',centroids)
     # The player is standing still and unequipped: the rest of the hotbar
     # must not be what moves. These are actual game framebuffer pixels.
     outside = [spread[:6].max(),spread[38:].max(),spread[:,:40].max(),spread[:,72:].max()]
     assert max(outside) <= 4, outside
-    assert peak >= 55 and seams >= 38, (peak,seams)
-    assert len(np.unique(slot.reshape(len(slot),-1), axis=0)) >= 10
+    assert peak >= 90 and seams >= 130, (peak,seams)
+    assert len(np.unique(slot.reshape(len(slot),-1), axis=0)) >= 24
     target = np.asarray(I.first_frame().resize((32,32),Image.Resampling.NEAREST),dtype=np.int16)
     opaque = target[...,3] == 255
     # The nearest-neighbor sampling origin can round a physical pixel at
@@ -121,8 +158,8 @@ def hotbar(root):
                   for x in (-1,0,1) for y in (-1,0,1)
                   for sample in (np.roll(silhouette, (y,x), axis=(0,1)),))
     assert overlap >= .87, overlap
-    print(f'Hotbar de Forge: {area} px visibles a 2× (antes {old_area}), pulso Δ{peak}/255 y '
-          f'{seams} px de grietas animados; fondo estable.',flush=True)
+    print(f'Hotbar de Forge: {area} px visibles a 2×, pulso Δ{peak}/255 en '
+          f'{seams} px, recorrido {np.ptp(centroids):.1f}px; fondo estable.',flush=True)
     return pixels
 
 
@@ -141,6 +178,8 @@ def gallery(root, kind):
             names = ('cenital-sin-manto','cenital-giro-sin-manto')
         elif kind == 'perfil-base':
             names = ('oblicua-sin-manto','perfil-sin-manto')
+        elif kind in ('perfil','oblicua'):
+            names = tuple(f'{prefix}-{slot}' for slot in ('sin-union','pecho','curios'))
         else:
             names = (f'{prefix}-pecho',f'{prefix}-curios')
         for name in names:
@@ -151,22 +190,32 @@ def gallery(root, kind):
                 cut = im.crop((x-120,y-70,x+120,y+122)) if path.stem.startswith('cenital') else im.crop((x-128,y-80,x+128,y+130))
                 # Each GitHub job step retains up to ten notices. Reserve
                 # at most half of them for either slot, even in a busy shot.
-                for width,colors in ((180,80),(160,64),(144,48),(128,40)):
+                close = kind in ('oblicua','perfil')
+                cap = 3820 if close else 6350
+                for width,colors in ((180,80),(160,64),(144,48),(128,40),(112,32),(96,28)):
                     buf = io.BytesIO()
                     small = cut.resize((width,round(width*.8)),Image.Resampling.NEAREST)
                     small.convert('RGB').quantize(colors=colors).save(buf,format='PNG',optimize=True)
-                    if len(buf.getvalue()) <= 6350: break
+                    if len(buf.getvalue()) <= cap: break
+                assert len(buf.getvalue()) <= cap, name
                 emit('Cenital '+path.stem,buf.getvalue())
     else:
         paths = sorted(root.glob('hotbar-[0-9][0-9].png'))[:I.COUNT]
         assert len(paths) == I.COUNT
         frames = [Image.fromarray(read(p).astype(np.uint8)) for p in paths]
-        palette = Image.fromarray(np.concatenate([np.asarray(f) for f in frames])).quantize(colors=128)
-        frames = [f.quantize(palette=palette,dither=Image.Dither.NONE) for f in frames]
-        buf = io.BytesIO()
-        frames[0].save(buf,format='GIF',save_all=True,append_images=frames[1:],loop=0,duration=50*I.TICKS)
-        data = buf.getvalue()
+        # Keep the native-resolution slot. The rest does not move, so use
+        # a smaller margin around the real slot for check-run previews.
+        frames = [f.crop((24,2,88,42)) for f in frames]
+        full = np.concatenate([np.asarray(f) for f in frames])
+        for colors in (96,64,48,32):
+            palette = Image.fromarray(full).quantize(colors=colors)
+            indexed = [f.quantize(palette=palette,dither=Image.Dither.NONE) for f in frames]
+            buf = io.BytesIO()
+            indexed[0].save(buf,format='GIF',save_all=True,append_images=indexed[1:],loop=0,duration=50*I.TICKS)
+            data = buf.getvalue()
+            if len(data) <= 12700: break
         (root/'hotbar-ciclo.gif').write_bytes(data)
+        assert len(data) <= 12700, 'hotbar preview exceeds the annotation budget'
         emit('Ranura hotbar-ciclo',data)
 
 
@@ -196,8 +245,10 @@ def main():
             if not all(total >= .78 and edge >= .55 and floor <= .04 and not opening
                        for total,edge,floor,opening in rails):
                 failures.append((key,rails))
+    high = [failure for prefix in ('oblicua','perfil') for failure in upper_back(args.shots,prefix)]
     hotbar(args.shots)
     assert not failures, ('hueco entre manga y remate',failures)
+    assert not high, ('unión alta no visible',high)
 
 
 if __name__ == '__main__':

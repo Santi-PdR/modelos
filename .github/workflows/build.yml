@@ -113,8 +113,8 @@ jobs:
           icon_path = base / 'textures/item/capa_deteriorer_evilsaiyan.png'
           icon_meta = json.loads(icon_path.with_suffix('.png.mcmeta').read_text())['animation']
           w, h = struct.unpack('>II', icon_path.read_bytes()[16:24])
-          assert (w, h) == (64, 64 * 16) and w % 16 == 0, ('icon', w, h)
-          assert icon_meta == dict(width=w, height=w, frametime=2, interpolate=False)
+          assert (w, h) == (64, 64 * 32) and w % 16 == 0, ('icon', w, h)
+          assert icon_meta == dict(width=w, height=w, frametime=1, interpolate=False)
           w, h = struct.unpack('>II', (base / 'textures/item/cape_folded.png').read_bytes()[16:24])
           assert (w, h) == (128, 128), ('folded atlas', w, h)
           # v1.23.0: UNA partícula EXCLUSIVA, con textura propia. Se
@@ -260,13 +260,14 @@ jobs:
           assert {n:b['parent'] for n,b in mount.items()} == {
               'v20_mount_seat': 'chestplate', 'v20_mount_gusset': 'chestplate',
               'v20_mount_saddle': 'cape_wearer_fit', 'v20_mount_shoulders': 'cape_wearer_fit',
-              'v20_mount_under_yoke': 'chestplate'}
+              'v20_mount_under_yoke': 'chestplate', 'v20_mount_backing_left': 'chestplate',
+              'v20_mount_backing_right': 'chestplate'}
           mount_cubes = sum(len(b.get('cubes', [])) for b in mount.values())
-          assert mount_cubes == 15
+          assert mount_cubes == 21
           cowl_return = next(b for b in armor_geo['bones'] if b['name'] == 'v17_cowl_return')
           return_cubes = len(cowl_return['cubes'])
           assert cowl_return['parent'] == 'cape_wearer_fit' and return_cubes == 3
-          assert len(armor_geo['bones']) == 233
+          assert len(armor_geo['bones']) == 235
           assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 260 + fragments + mount_cubes + return_cubes
           hinge = next(b for b in armor_geo['bones'] if b['name'] == 'cape_wearer_fit')
           assert hinge['parent'] == 'chestplate' and not hinge['cubes']
@@ -503,7 +504,7 @@ jobs:
           assert bb['meta']['format_version'] == '5.0'
           # v1.17.3: el .bbmodel de Blockbench muestra SOLO la capa: sin
           # maniqui Steve/Alex y sin los 126 cubos de la armadura vieja.
-          assert len(bb['elements']) == 149+fragments+mount_cubes+return_cubes and len(bb['groups']) == 233
+          assert len(bb['elements']) == 149+fragments+mount_cubes+return_cubes and len(bb['groups']) == 235
           assert sum(e['visibility'] for e in bb['elements']) == 122+fragments+mount_cubes+return_cubes
           assert not any('Steve/Alex' in g['name'] for g in bb['groups'])
           assert bb['resolution'] == {'width': armor_size, 'height': armor_size}
@@ -756,6 +757,7 @@ jobs:
           elif grep -q '^mod_version=1\.67\.' gradle.properties; then
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py --fit-only
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_mount.py
+            PYTHONPATH=tools python3 -c 'import cape_icon; cape_icon.verify()'
           else
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py
             if grep -qx 'mod_version=1.66.0' gradle.properties; then
@@ -773,7 +775,7 @@ jobs:
           CLASSES="$RUNNER_TEMP/cape-state-test"
           mkdir -p "$CLASSES"
           javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/{CapeState,CapePlayback,CapeSparkFrame}.java \
-            src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeStride,CapeTint,CapeEmber,CapeNocturne,CapeWingFit}.java \
+            src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeBacking,CapeStride,CapeTint,CapeEmber,CapeNocturne,CapeWingFit}.java \
             src/test/java/com/capatest/item/{CapeStateTest,CapeSparkFrameTest}.java \
             src/test/java/com/capatest/client/{CapeFitTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeSettleTest,CapeSwayTest,CapeWingFitTest}.java
           java -cp "$CLASSES" com.capatest.client.CapeWingFitTest
@@ -800,7 +802,8 @@ jobs:
           OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_v1660.py --parity-only --java-samples "$CLASSES/stride.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeFitTest --samples > "$CLASSES/fit.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeFitTest --shoulders > "$CLASSES/shoulders.tsv"
-          OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/check_cape_fit.py "$CLASSES/fit.tsv" "$CLASSES/shoulders.tsv"
+          java -cp "$CLASSES" com.capatest.client.CapeFitTest --backing > "$CLASSES/backing.tsv"
+          OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/check_cape_fit.py "$CLASSES/fit.tsv" "$CLASSES/shoulders.tsv" "$CLASSES/backing.tsv"
           java -cp "$CLASSES" com.capatest.item.CapeStateTest --spark-samples > "$CLASSES/sparks.tsv"
           PYTHONPATH=tools python3 -c 'import cape_aura as a,json; print(json.dumps(a.profile()))' | \
             node tools/check_viewer_embers.js "$CLASSES/sparks.tsv" "$CLASSES/embers.tsv"
@@ -884,6 +887,7 @@ jobs:
             grep -qx 'com/capatest/client/CapeTravel.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeWingFit.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeFit.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/client/CapeBacking.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeStride.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeTint.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapeBloom.class' /tmp/jar-contents.txt
@@ -970,7 +974,7 @@ jobs:
           log="$RUNNER_TEMP/forge-client.log"
           rc=0
           timeout --kill-after=12s 300s xvfb-run -a gradle -PcapeFxSmoke --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
-          awk 'sub(/.*FX smoke: /, "")' "$log" | tail -n 10 | while IFS= read -r line; do
+          awk 'sub(/.*FX smoke: /, "")' "$log" | tail -n 5 | while IFS= read -r line; do
             printf '::notice title=FX en Forge::%s\n' "$line"
           done
           if [ "$rc" -ne 0 ] || ! grep -Fq 'FX smoke: PASS:' "$log" ||
@@ -983,18 +987,6 @@ jobs:
             exit 1
           fi
 
-      - name: Recorte diagnóstico de la vista cenital
-        if: always() && steps.fx-smoke.outcome != 'skipped'
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery cenital
-
-      - name: Recorte de los hombros con la cámara girada
-        if: always() && steps.fx-smoke.outcome != 'skipped'
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery giro
-
-      - name: Recorte de los controles sin manto
-        if: always() && steps.fx-smoke.outcome != 'skipped'
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery bare
-
       - name: Recorte en ángulo oblicuo
         if: always() && steps.fx-smoke.outcome != 'skipped'
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery oblicua
@@ -1003,15 +995,11 @@ jobs:
         if: always() && steps.fx-smoke.outcome != 'skipped'
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery perfil
 
-      - name: Control oblicuo y lateral sin equipo
-        if: always() && steps.fx-smoke.outcome != 'skipped'
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery perfil-base
-
       - name: Recorte del ciclo de la hotbar
         if: always() && steps.fx-smoke.outcome != 'skipped'
         run: |
           shots=build/fx-smoke-run/fx-shots
-          if [ -f "$shots/hotbar-17.png" ]; then
+          if [ -f "$shots/hotbar-31.png" ]; then
             python3 tools/verify_forge_mount.py "$shots" --gallery hotbar
           fi
 
@@ -1022,6 +1010,7 @@ jobs:
           name: capatest-fx-en-mundo
           path: |
             build/fx-smoke-run/fx-shots/*.png
+            build/fx-smoke-run/fx-shots/*.tsv
             build/fx-smoke-run/fx-shots/hotbar-ciclo.gif
           if-no-files-found: error
           retention-days: 30

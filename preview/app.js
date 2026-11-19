@@ -146,9 +146,50 @@ function yokeScales(stance, look, arm, elytra=false) {
   const sleeve=1-smooth(2.9,6.1,arm), spread=posture*sleeve;
   return [.51+.49*spread,.065+.935*posture*smooth(0,.44,sleeve),.62+.38*spread];
 }
+// Same head box and separating planes as CapeBacking, in body space.
+function backingShape(f, bodyAngle, stance, look, turn, depth, elytra) {
+  if (elytra) return [f.tuckY,f.tuckY,f.tuckZ];
+  const tilt = stance*bodyAngle*Math.PI/180, p = look*Math.PI/180, a = turn*Math.PI/180;
+  const [cl,sl,co,si,cy,sy] = [Math.cos(tilt),Math.sin(tilt),Math.cos(p),Math.sin(p),Math.cos(a),Math.sin(a)];
+  const x = [cy,sl*sy,-cl*sy], y = [sy*si,cl*co-sl*cy*si,sl*co+cl*cy*si],
+        z = [sy*co,-cl*si-sl*cy*co,-sl*si+cl*cy*co];
+  const center = [4*y[0],24-stance*cl+4*y[1],-stance*sl+4*y[2]];
+  const dot = (u,v) => u[0]*v[0]+u[1]*v[1]+u[2]*v[2];
+  const planes = [];
+  for (const n of [[1,0,0],[0,1,0],[0,0,1],x,y,z]) {
+    const extent = f.headHalf*(Math.abs(dot(n,x))+Math.abs(dot(n,y))+Math.abs(dot(n,z)));
+    for (const sign of [1,-1]) {
+      const [ax,ay,az] = n.map(v => sign*v);
+      planes.push([ax,ay,az,sign*dot(n,center)-extent-ay*f.pivot[1]-az*f.pivot[2]]);
+    }
+  }
+  function rise(side, depthScale) {
+    let height = 1;
+    for (const [width,edges] of f.edges) {
+      let best = 0;
+      for (const [ax,ay,az,clear] of planes) {
+        const room = clear - Math.max(side*ax*(f.inner-f.inflate),side*ax*(f.inner+width+f.inflate));
+        let safe = 1;
+        for (const [h,d] of edges) safe = Math.min(safe,(room-az*depthScale*d)/Math.max(f.softRise,ay*h));
+        best = Math.max(best,safe);
+      }
+      height = Math.min(height,best);
+    }
+    return Math.max(f.tuckY,height);
+  }
+  const stretch = 1+Math.min(3.2,Math.max(0,depth))/f.span;
+  let l = rise(1,stretch), r = rise(-1,stretch);
+  const scale = f.tuckZ+(stretch-f.tuckZ)*smooth(.14,.52,Math.max(l,r));
+  if (scale < stretch-1e-8) { l=Math.min(l,rise(1,scale)); r=Math.min(r,rise(-1,scale)); }
+  return [l,r,scale];
+}
 function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0) {
   const depth=backset(profile,stance,look,turn);
+  const anchor = profile.backing;
+  const backing = anchor && backingShape(anchor,profile.bodyAngle,stance,look,turn,depth,elytra);
   return {...geo, bones:geo.bones.map(b => {
+    const half = anchor?.names.indexOf(b.name) ?? -1;
+    if (half>=0) return {...b,scale:[1,backing[half],backing[2]]};
     if (b.name===profile.bone) return {...b,offset:[0,0,depth]};
     if (b.name===profile.drapeBone) return {...b,rotation:[-depth*profile.drapePerUnit,0,0]};
     if (b.name===profile.gussetBone) return {...b,scale:[1,1,1+depth/profile.gussetDepth]};

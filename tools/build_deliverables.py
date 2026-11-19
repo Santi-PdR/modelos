@@ -100,7 +100,7 @@ def step_recursos_visor() -> None:
     first_frame().save(A / "icon.png", optimize=True)
     (A / 'aura.json').write_text(json.dumps(cape_aura.profile(), separators=(',', ':')) + '\n')
     (A / 'nocturne.json').write_text(json.dumps(cape_nocturne.profile(), separators=(',', ':')) + '\n')
-    (A / 'fit.json').write_text(json.dumps(cape_fit.profile(), separators=(',', ':')) + '\n')
+    (A / 'fit.json').write_text(json.dumps(cape_fit.viewer_profile(), separators=(',', ':')) + '\n')
     (A / 'stride.json').write_text(json.dumps(cape_stride.profile(), separators=(',', ':')) + '\n')
     (A / 'sway.json').write_text(json.dumps(cape_sway.profile(), separators=(',', ':')) + '\n')
     (A / 'wings.json').write_text(json.dumps(cape_wings.profile(), separators=(',', ':')) + '\n')

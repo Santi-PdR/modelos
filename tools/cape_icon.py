@@ -7,17 +7,17 @@ import json
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'referencias/REFERENCIA_ICONO_v1677.png'
 SOURCE_SHA = '0bc0ba2efea3bf9e03dbb3c266f34291b2b59af730044ded0f2e98ca38855e99'
-PREVIOUS = ROOT / 'referencias/ICONO_V1676_BACKUP.png'
+PREVIOUS = ROOT / 'referencias/ICONO_V1677_PULSO.png'
 ICON = ROOT / 'src/main/resources/assets/capatest/textures/item/capa_deteriorer_evilsaiyan.png'
 META = ICON.with_suffix('.png.mcmeta')
 # Fill a 16-pixel slot without drawing past its border. A multiple of 16
 # preserves the four mip levels of a normal vanilla item atlas.
-SIZE, COUNT, TICKS = 64, 16, 2
+SIZE, COUNT, TICKS = 64, 32, 1
 ART_SIZE = (56, 62)
 
 
@@ -45,15 +45,36 @@ def frames() -> list[Image.Image]:
     rgba = np.asarray(base).astype(float)
     y,x = np.indices((SIZE,SIZE))
     r,g,b,a = rgba.transpose(2,0,1)
-    veins = (r >= 127) & (r-g >= 72) & (b-g >= 39) & (a == 255) & (y >= 13)
-    light = np.maximum(rgba[...,:3],[255,133,242]) - rgba[...,:3]
+    fabric = (a == 255) & (y >= 13)
+    veins = (r >= 116) & (r-g >= 67) & (b-g >= 33) & fabric
+    # Light can hit the reverse lining adjacent to a crack, not the void
+    # between the frayed tips. The collar and exterior rim are unlit.
+    inset = np.asarray(Image.fromarray(a.astype(np.uint8)).filter(ImageFilter.MinFilter(3))) > 0
+    dusk = np.maximum(rgba[...,:3],[176,63,142]) - rgba[...,:3]
+    core = np.maximum(rgba[...,:3],[255,199,247]) - rgba[...,:3]
+    length = y + .21*(x-32)
+    # Use actual fissure pixels for three glints rather than painting dots
+    # or a new star onto the reference artwork.
+    yy,xx = np.where(veins)
+    glints = []
+    for gx,gy,delay in ((23,22,.25),(37,35,.47),(29,49,.69)):
+        at = np.argmin((xx-gx)**2 + (yy-gy)**2)
+        glints.append((np.exp(-((x-xx[at])**2+(y-yy[at])**2)/5.5),delay))
     out = [base]
     for phase in np.arange(1,COUNT)/COUNT:
-        breath = np.sin(np.pi * phase)**2
-        sweep = np.exp(-((y+.17*(x-32) - (10+64*phase))/8.8)**2)
-        amount = breath*(.18+.63*sweep)*veins
+        fade = np.sin(np.pi*phase)**1.7
+        crest = 4 + 66*phase
+        wave = np.exp(-((length-crest)/7.0)**2)
+        tail = np.exp(-((length-crest+11)/12.0)**2)
+        spark = sum(spot*np.exp(-((phase-delay)/.071)**2) for spot,delay in glints)
+        intensity = np.clip(fade*(.13 + .79*wave + .19*tail + .61*spark),0,1)*veins
+        bounce = Image.fromarray(np.rint(255*intensity).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.70))
+        bounce = np.minimum(1.,np.asarray(bounce)/95.) * (fabric & (inset | veins))
         colored = rgba.copy()
-        colored[...,:3] += light * amount[...,None]
+        colored[...,:3] += .66*bounce[...,None]*dusk
+        # Mix towards the hot rose core after the diffuse bounce, but never
+        # go darker than the original. No alpha motion or enchantment glint.
+        colored[...,:3] += intensity[...,None]*np.maximum(core - (colored[...,:3]-rgba[...,:3]),0.)
         out.append(Image.fromarray(np.rint(colored).astype(np.uint8)))
     return out
 
@@ -92,13 +113,23 @@ def verify() -> None:
     assert not actual[:,a==0,:3].any(), 'checker outside the artwork'
     assert np.all(actual[...,3] == a), 'outline changed during the pulse'
     low = np.array([np.asarray(f.resize((16,16),Image.Resampling.NEAREST)) for f in generated])
-    prev = np.asarray(first_frame(PREVIOUS).resize((16,16),Image.Resampling.NEAREST))
+    old_strip = np.asarray(Image.open(PREVIOUS).convert('RGBA')).reshape(16,SIZE,SIZE,4)
+    np.testing.assert_array_equal(actual[0], old_strip[0])
+    old = np.asarray([np.asarray(Image.fromarray(frame).resize((16,16),Image.Resampling.NEAREST)) for frame in old_strip])
     count = np.count_nonzero(low[0,...,3])
-    assert count >= 1.14*np.count_nonzero(prev[...,3]), (count,np.count_nonzero(prev[...,3]))
     spread = np.ptp(low[...,:3],axis=0).max(axis=2)
-    assert spread.max() >= 60 and np.count_nonzero(spread >= 14) >= 13
+    previous = np.ptp(old[...,:3],axis=0).max(axis=2)
+    assert spread.max() >= 90 and np.count_nonzero(spread >= 14) >= 1.32*np.count_nonzero(previous >= 14)
     assert np.count_nonzero(spread[:3]) == 0, 'the collar must not flash'
-    print(f'Icono: {count}/256 píxeles de silueta a escala 1, sin damero y con animación sólo en las grietas.', flush=True)
+    assert np.unique(low.reshape(COUNT,-1),axis=0).shape[0] >= 29
+    # A travelling wave rather than a global opacity or color flash.
+    delta = np.abs(low[...,:3].astype(int)-low[0,...,:3]).max(axis=-1)
+    y = np.arange(16)
+    centroid = [np.sum((d.sum(1))*y)/d.sum() for d in (delta[8],delta[23])]
+    assert centroid[1]-centroid[0] >= 3., centroid
+    print(f'Icono: {count}/256 px de silueta intacta a 1×; '
+          f'{np.count_nonzero(previous >= 14)} → {np.count_nonzero(spread >= 14)} px de luz animada, '
+          'núcleo rosa y rebote dentro de la tela.',flush=True)
 
 
 if __name__ == '__main__':

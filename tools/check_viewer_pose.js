@@ -36,6 +36,10 @@ const matrices = vm.runInContext(`${src}
       return indata.strideSamples.map(([top,mid,arm,leg,stance,depth]) =>
         strideLifts(indata.stride,top,mid,arm,leg,stance*indata.fit.bodyAngle,depth));
     }
+    if (indata.backingSamples) {
+      const f=indata.fit;
+      return indata.backingSamples.map(([s,p,y,w]) => backingShape(f.backing,f.bodyAngle,s,p,y,backset(f,s,p,y),!!w));
+    }
     if (indata.shoulderSamples) {
       return indata.shoulderSamples.map(([stance,look,yaw,wings,arm]) => [
         ...shoulderScales(stance,look,yaw,!!wings).slice(1), ...yokeScales(stance,look,arm,!!wings)]);

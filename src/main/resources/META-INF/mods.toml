@@ -9,7 +9,7 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.67.7: la unión del cuello abarca el torso en pecho y Curios back.
+v1.67.8: unión alta a la espalda en pecho y Curios back; grietas animadas en el icono.
 El icono de referencia pulsa en la hotbar. Se conservan los ocho clips,
 la holgura con élitros, la inercia del paño, el halo nocturno y las brasas.
 '''

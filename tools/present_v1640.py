@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 import cape_animation_pipeline as A
-from cape_icon import PREVIOUS, first_frame
+from cape_icon import PREVIOUS, frames, first_frame
 
 import cape_fit as F
 import cape_tracks as T
@@ -63,11 +63,10 @@ def icon_panel(path):
     board = Image.new('RGB',(906,444),BG)
     d = ImageDraw.Draw(board)
     label(d,(26,20),f'INVENTARIO / v{P.mod_version()}',16,ROSE,bold=True)
-    label(d,(26,51),'Un icono pensado para la ranura',35,bold=True)
-    for i,(name,src) in enumerate((('ANTES · v1.67.6',PREVIOUS),('NUEVO · TU REFERENCIA',P.ICON))):
+    label(d,(26,51),'De la grieta al destello',35,bold=True)
+    for i,(name,icon) in enumerate((('TU DIBUJO · EN REPOSO',first_frame(PREVIOUS)),('PULSO · EN MOVIMIENTO',frames()[17]))):
         x = 28+i*448
         label(d,(x,113),name,17,ROSE if i else DIM,bold=True)
-        icon = first_frame(src)
         for j,stage in enumerate(((138,138,138),(58,47,67))):
             y = 145+j*121
             d.rounded_rectangle((x,y,x+395,y+105),8,fill=stage,outline=(102,80,110))
@@ -76,5 +75,5 @@ def icon_panel(path):
                 board.paste(im,(x+slot_x,y+(106-im.height)//2),im)
         for dx,mag in zip((30,117,248),('1×','3×','5×'),strict=True):
             label(d,(x+dx,376),mag,14,DIM)
-    label(d,(28,413),'Fotograma en reposo · muestreo sin suavizado a tres escalas.',18,DIM)
+    label(d,(28,413),'La silueta no cambia · cuadros del atlas a tres escalas.',18,DIM)
     board.save(path,optimize=True)

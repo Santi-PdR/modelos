@@ -305,11 +305,22 @@ def mount_bones():
     y,z,dy,dz = 18.58,1.88,.57,3.83
     under_yoke = skin((-5.74,y-.16,z), (11.48,.32,math.hypot(dy,dz)))
     under_yoke.update(pivot=[0,y,z], rotation=[round(math.degrees(math.atan2(dy,dz)),6),0.,0.])
+    from cape_backing import profile
+    shape = profile()
+    backing = []
+    for name, side in zip(shape['names'], (1,-1), strict=True):
+        cubes = []
+        for width,y,z,dy,dz,th in shape['panels']:
+            x = -shape['inner']-width if side == 1 else shape['inner']
+            c = skin((x,y-th/2,z),(width,th,math.hypot(dy,dz)))
+            c.update(pivot=[0,y,z], rotation=[round(math.degrees(math.atan2(dy,dz)),6),0.,0.])
+            cubes.append(c)
+        backing.append(bone(name,'chestplate',shape['pivot'],(0,0,0),cubes))
     return [bone(SEAT_BONE, 'chestplate', MOUNT_PIVOT, (0,0,0), seat),
             bone(GUSSET_BONE, 'chestplate', MOUNT_PIVOT, (0,0,0), gusset),
             bone(SADDLE_BONE, FIT_BONE, (0,21.4,5.52), (0,0,0), saddle),
             bone(SHOULDERS_BONE, FIT_BONE, (0,23.20,5.35), (0,0,0), returns),
-            bone(UNDER_YOKE_BONE, 'chestplate', (0,14.23,2.10), (0,0,0), [under_yoke])]
+            bone(UNDER_YOKE_BONE, 'chestplate', (0,14.23,2.10), (0,0,0), [under_yoke]), *backing]
 
 def collar_return():
     """Two tapered ends of the cowl, sharing the collar's live mount.

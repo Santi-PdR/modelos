@@ -8,6 +8,7 @@ from pathlib import Path
 import subprocess
 import sys
 
+import cape_backing as B
 import cape_fit as F
 import preview_cloth as P
 
@@ -39,6 +40,18 @@ def main():
                 assert all(math.isclose(a,b,rel_tol=0,abs_tol=4e-8)
                            for a,b in zip(out,expected,strict=True)), (out,expected)
         print(f'Remates y forro: {len(tabs)} muestras coinciden en Java/Python/visor.')
+
+    if len(sys.argv) > 3:
+        rows = [tuple(map(float, row.split('\t'))) for row in Path(sys.argv[3]).read_text().splitlines()]
+        assert len(rows) == 990
+        poses = [r[:4] for r in rows]
+        js = subprocess.run(['node','tools/check_viewer_pose.js'],cwd=P.ROOT,check=True,text=True,capture_output=True,
+                            input=json.dumps(dict(fit=F.viewer_profile(),backingSamples=poses)))
+        for (s,p,y,w,*java), out in zip(rows,json.loads(js.stdout),strict=True):
+            python = B.solve(F.head_in_body(s,p,y,outer=True),F.depth(s,p,y),elytra=bool(w))
+            assert all(abs(a-b) < 9e-8 for a,b in zip(java,python,strict=True)), (s,p,y,java,python)
+            assert all(abs(a-b) < 1e-8 for a,b in zip(out,python,strict=True)), (s,p,y,out,python)
+        print(f'Respaldo alto: {len(rows)} poses coinciden en Java/Python/visor.')
 
 
 if __name__ == '__main__':
