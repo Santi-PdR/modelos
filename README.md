@@ -16,6 +16,16 @@ El cuello, las placas y el nacimiento de la tela empiezan a acercarse a
 agregan piezas a la unión ni se retoca el dobladillo, el atlas o el icono.
 La descarga publicada de v1.67.9 queda intacta.
 
+- **Prueba en Forge:** [comparación F5 a 58° con mangas finas](docs/capa_v16710_inclinacion_forge.png).
+  El borde posterior del cuello avanzó **2 px** hacia el torso, tanto en
+  pecho como en Curios. La detección de suelo marcó 6 px en un lateral de
+  pecho y 0 en Curios: la prueba verifica el acercamiento, no que se
+  hayan eliminado todas las rendijas.
+- **Regresión:** 658 poses de geometría con ambos modelos de manga, sin
+  cruces nuevos en la muestra. En Forge se midieron 65 fotogramas por
+  ranura al levantar, bajar y girar la cabeza; el manto y el brillo se
+  mantuvieron alineados. [Compilación y capturas de Forge](https://github.com/Santi-PdR/modelos/actions/runs/44607403078).
+
 ### v1.67.9 — el borde del manto vuelve al torso
 
 - El respaldo de v1.67.8 cubría la espalda, pero al mirar desde arriba
