@@ -19,9 +19,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
   sin el damero y sin redibujar el contorno. La estrella pulsa y el destello
   recorre las grietas en la hotbar. Son 16 cuadros del atlas vanilla; no
   hace falta otro mod ni un paquete de recursos. [Antes y ahora, en reposo](docs/capa_v1170_icon_compare.png).
-- **Regresión en Forge:** F5 mirando casi recto hacia abajo, sin manto,
-  con manto en el pecho y en Curios. Se mide el suelo que queda visible
-  tras el torso; se comprueba el pulso del icono en la hotbar normal.
+- **Verificado en Forge:** en la prueba F5 cenital, la banda de unión
+  quedó cubierta tanto en el pecho como en Curios `back`. El icono se
+  animó en la hotbar vanilla sin cambiar de silueta.
+  [Comparación cenital](docs/capa_v1676_anclaje_forge.png) ·
+  [Pulso en la hotbar](docs/capa_v1676_hotbar.gif) ·
+  [Compilación y prueba en mundo](https://github.com/Santi-PdR/modelos/actions/runs/44519985291).
 
 ### v1.67.5 — holgura con élitros
 
