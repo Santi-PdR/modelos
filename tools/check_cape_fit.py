@@ -55,7 +55,8 @@ def main():
 
     if len(sys.argv) > 4:
         rows = [tuple(map(float, row.split('\t'))) for row in Path(sys.argv[4]).read_text().splitlines()]
-        assert len(rows) == 3150
+        # Stance × pitch (including the shallow end of the stroke) × yaw × wings × arm.
+        assert len(rows) == 5 * 11 * 9 * 2 * 5
         q = F.seat_profile()
         js = subprocess.run(['node','tools/check_viewer_pose.js'],cwd=P.ROOT,check=True,text=True,capture_output=True,
                             input=json.dumps(dict(fit=F.viewer_profile(),seatSamples=[r[:5] for r in rows])))
