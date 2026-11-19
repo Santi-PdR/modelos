@@ -107,8 +107,8 @@ def lift(u, v, z):
 
 
 def registered_version(version):
-    """FX-only v1.67 reuses the same registered mesh and albedo plates."""
-    return '1.66.0' if version == '1.67.0' else version
+    """FX-only v1.67.x reuses the same registered mesh and albedo plates."""
+    return '1.66.0' if version.startswith('1.67.') else version
 
 
 def render_frame(crop=CROP):

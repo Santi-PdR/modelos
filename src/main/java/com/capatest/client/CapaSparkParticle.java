@@ -28,7 +28,9 @@ public class CapaSparkParticle extends TextureSheetParticle {
         this.setParticleSpeed(dx * clamp, Math.max(0.007D, Math.min(0.021D, dy)), dz * clamp);
         this.lifetime = 39 - Math.round(13 * this.streak) + this.random.nextInt(9);
         this.alpha = 0.0F;
-        this.hasPhysics = false;
+        // Stop at block shapes (including panes and slabs). This does not
+        // change the free-air impulse or add gravity/bounces.
+        this.hasPhysics = true;
         this.gravity = 0.0F;
         this.friction = 0.94F;
         this.phase = this.random.nextFloat() * 3.14F;

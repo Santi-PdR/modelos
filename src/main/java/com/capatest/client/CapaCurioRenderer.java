@@ -1,5 +1,6 @@
 package com.capatest.client;
 
+import com.capatest.compat.CuriosCompat;
 import com.capatest.item.CapaDeteriorerItem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.EntityModel;
@@ -51,9 +52,10 @@ public class CapaCurioRenderer implements ICurioRenderer {
         // con otros mods de render instalados; no intentar prepForRender().
         if (wearer == null)
             return;
-        // Si también está en el pecho, sólo se dibuja esa copia: evita
-        // z-fighting y el doble glow, con la misma prioridad que el aura.
-        if (wearer.getItemBySlot(EquipmentSlot.CHEST).is(stack.getItem()))
+        // Share the winner with the server aura: chest first, then one
+        // displayed back slot, including Curios' cosmetic replacement.
+        CuriosCompat.BackCape displayed = CuriosCompat.visibleBack(wearer);
+        if (displayed == null || !displayed.matches(slotContext))
             return;
         // GeckoLib already copies the pitched/lowered HumanoidModel body.
         // Applying Curios' sneak helpers on top tilted and lowered it twice.

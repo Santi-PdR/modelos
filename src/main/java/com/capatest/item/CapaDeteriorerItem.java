@@ -161,17 +161,18 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
         }
     }
 
+    public static boolean isAuraTick(int tick) {
+        return tick % SPARK_INTERVAL_TICKS == 0;
+    }
+
     /** FX del servidor, una sola emisión como máximo cada 8 ticks (hasta
      *  3 chispas). Los demás clientes ven el mismo impulso, sin geometría
      *  de partículas ni emisores en Blockbench. */
     public static void spawnAura(Level level, Player player, ItemStack equipped) {
-        if (!(level instanceof ServerLevel server) || player.isSpectator()) {
+        if (!(level instanceof ServerLevel server) || player.isSpectator() || !isAuraTick(player.tickCount)) {
             return;
         }
         int tick = player.tickCount;
-        if (tick % SPARK_INTERVAL_TICKS != 0) {
-            return;
-        }
         CompoundTag data = player.getPersistentData();
         if (data.contains(AURA_TICK) && data.getInt(AURA_TICK) == tick) {
             return;
@@ -204,12 +205,16 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
             double depth = spark.depth();
             double trail = spark.collar() ? 0.005D : aura.trail() * (0.75D + 0.35D * random.nextDouble());
             double outward = Math.copySign(aura.sideways() * (0.75D + 0.35D * random.nextDouble()), side);
+            Vec3 birth = new Vec3(player.getX() + backX * depth + sideX * side,
+                    player.getY() + height, player.getZ() + backZ * depth + sideZ * side);
+            // Do not spawn inside or across a block. No retry: keeping the
+            // position of other sparks and the same per-wearer budget.
+            if (!CapeSparkPath.clearBirth(server, player, birth)) {
+                continue;
+            }
             // count=0 del protocolo de Minecraft: una partícula, impulso
             // exacto = (dx,dy,dz)*speed; count=1 lo volvía ruido gaussiano.
-            server.sendParticles(CapaParticles.CAPA_SPARK.get(),
-                    player.getX() + backX * depth + sideX * side,
-                    player.getY() + height,
-                    player.getZ() + backZ * depth + sideZ * side,
+            server.sendParticles(CapaParticles.CAPA_SPARK.get(), birth.x, birth.y, birth.z,
                     0, backX * trail + sideX * outward, aura.lift(),
                     backZ * trail + sideZ * outward, 1.0D);
         }

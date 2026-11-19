@@ -1,4 +1,4 @@
-# Mantle of the Blight Star — v1.67.0
+# Mantle of the Blight Star — v1.67.1
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
@@ -6,6 +6,28 @@ Se equipa en el pecho o en `back` con Curios opcional.
 [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
 · [Proyecto Blockbench](docs/CAPA_v1.67.0.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
+· [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+
+### v1.67.1 — robustez de los efectos
+
+- **Degradación y recuperación:** el cliente decodifica los atlas emisivos
+  al recargar. Halo ausente, ilegible, de tamaño incompatible o con shader
+  inválido → sólo núcleo. Si tampoco sirve el núcleo → sólo paño opaco.
+  Si falla el envío de la emisión, el pase no comparte la pila de poses
+  con el resto del render y vuelve a intentarse tras recargar (`F3+T`).
+  `-Dcapa.sinHalo=true` conserva el núcleo estándar.
+- **Paredes y paneles:** no se envía una brasa si un bloque separa su punto
+  de nacimiento del portador. Una vez emitida, choca con bloques y se
+  apaga como antes. En aire libre sigue el mismo impulso; el tope es
+  **3 cada 8 ticks por portador**, sin reintentos en puntos bloqueados.
+- **Curios:** el efecto sigue la pieza mostrada, no sólo la equipada.
+  El pecho tiene prioridad; a falta de éste, sólo un `back` visible emite
+  y se dibuja. El cosmético reemplaza a la pieza funcional en su slot.
+
+Los ocho clips, el GEO, el ajuste, los mapas de luz, los sprites y el icono
+no cambian. El visor A/B sigue siendo una referencia de aspecto, no una
+simulación de paredes, packs o inventario de Curios. Para reproducir la
+prueba automática con un cliente real, consulta la [guía de FX](docs/GUIA_MODELADO_ANIMACION.md#7-verificación-de-los-fx-en-forge-desde-v1671).
 
 ### v1.67.0 — bloom localizado y brasas que se enfrían
 

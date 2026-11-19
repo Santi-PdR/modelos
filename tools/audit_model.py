@@ -261,7 +261,8 @@ def static_checks() -> None:
     assert int(_max.group(1)) == 3, ("maximo de chispas", _max.group(1))
     assert "Math.min(aura.count(), MAX_SPARKS_PER_TICK)" in _item
     curios = (ROOT / "src/main/java/com/capatest/compat/CuriosCompat.java").read_text()
-    assert "spawnAura(player.level(), player, stack)" in curios
+    assert "spawnAura(player.level(), player, displayed.stack())" in curios
+    assert "CapeSparkPath.clearBirth(server, player, birth)" in _item
 
 
 def main() -> None:

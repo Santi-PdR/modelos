@@ -125,7 +125,7 @@ def step_previews(out: Path) -> None:
 def step_gifs_y_estados(ver: str) -> None:
     print("5) comparativas")
     art_ver = cape_reference.registered_version(ver)
-    if ver == '1.67.0':
+    if ver.startswith('1.67.'):
         # FX only: reuse the registered silhouette and eight clips, not a
         # relabelled before/after plate of identical model pixels.
         run(sys.executable, "tools/present_v1670.py", "--out", str(D))

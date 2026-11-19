@@ -10,7 +10,7 @@ on:
         default: false
         type: boolean
       probar_halo:
-        description: 'Arrancar Forge con pantalla virtual y comprobar que enlaza el shader de halo'
+        description: 'Probar halo, recarga y brasas en un cliente Forge con pantalla virtual'
         required: false
         default: false
         type: boolean
@@ -658,7 +658,7 @@ jobs:
           assert 'stateFor(wearer, armor.getCurrentStack())' in glow_layer
           if tuple(map(int, ver.split('.'))) >= (1, 67, 0):
               bloom = (root / 'src/main/java/com/capatest/client/CapeBloom.java').read_text()
-              assert 'CapeBloom.wornLight()' in glow_layer and glow_layer.count('.reRender(') == 1
+              assert 'CapeBloom.wornLight(' in glow_layer and glow_layer.count('.reRender(') == 1
               assert 'entityTranslucentEmissive(EMISSION, false)' in bloom
               assert 'RegisterShadersEvent' in bloom and 'GL_LINK_STATUS' in bloom
               assert '.setDepthTestState(LEQUAL_DEPTH_TEST)' in bloom and '.setWriteMaskState(COLOR_WRITE)' in bloom
@@ -741,8 +741,9 @@ jobs:
           assert f'download="CAPA_v{ver}.bbmodel"' in stand, 'visor sin version'
 
           assert 'spawnAura(Level level, Player player, ItemStack equipped)' in java
-          assert 'spawnAura(player.level(), player, stack)' in (root / 'src/main/java/com/capatest/compat/CuriosCompat.java').read_text()
-          assert 'wearer.getItemBySlot(EquipmentSlot.CHEST).is(stack.getItem())' in curio
+          assert 'spawnAura(player.level(), player, displayed.stack())' in (root / 'src/main/java/com/capatest/compat/CuriosCompat.java').read_text()
+          assert 'CuriosCompat.visibleBack(wearer)' in curio
+          assert 'CapeSparkPath.clearBirth(server, player, birth)' in java
           assert (root / 'tools/audit_model.py').is_file()
           assert '--check' in (root / 'tools/audit_model.py').read_text()
           assert 'tools/audit_model.py --check' in (root / '.github/workflows/build.yml').read_text()
@@ -801,7 +802,7 @@ jobs:
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1630.py
           elif grep -qx 'mod_version=1.64.0' gradle.properties; then
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1640.py
-          elif grep -qx 'mod_version=1.67.0' gradle.properties; then
+          elif grep -q '^mod_version=1\.67\.' gradle.properties; then
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py --fit-only
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1670.py
           else
@@ -903,6 +904,8 @@ jobs:
             grep -qx 'com/capatest/CapaTestMod.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaGlowLayer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaSparkParticle.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/item/CapeSparkPath.class' /tmp/jar-contents.txt
+            ! grep -q '^com/capatest/client/CapeFxSmoke' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaItemRenderer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaItemGlowLayer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaArmorModel.class' /tmp/jar-contents.txt
@@ -979,9 +982,10 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      # Comprueba la carga del programa en el cliente real, no una partida
-      # ni el orden de render en F5. No bloquea la construcción normal.
-      - name: Comprobar carga del halo en Forge (opcional)
+      # Cliente real en mundo desechable. Se prueba aparte del JAR:
+      # el código de diagnóstico y Curios nunca se empaquetan en él.
+      - name: Probar FX y equipo en Forge (opcional)
+        id: fx-smoke
         if: >-
           (github.event_name == 'push' && contains(github.event.head_commit.message, '[probar-halo]')) ||
           (github.event_name == 'workflow_dispatch' && inputs.probar_halo == true)
@@ -991,20 +995,28 @@ jobs:
         run: |
           log="$RUNNER_TEMP/forge-client.log"
           rc=0
-          timeout --kill-after=12s 160s xvfb-run -a gradle --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
-          tail -n 80 "$log"
-          # El menú permanece abierto hasta que timeout cierra el cliente.
-          if { [ "$rc" -eq 0 ] || [ "$rc" -eq 124 ]; } &&
-            grep -F 'Blight Star Mantle: halo de grietas listo' "$log" &&
-            ! grep -F 'Blight Star Mantle: sin halo' "$log"; then
-            echo '::notice title=Arranque Forge::El programa de halo compiló y enlazó en el cliente.'
-          else
-            echo "::error title=Arranque Forge::No se confirmó el shader (salida $rc)."
-            grep -Ei 'exception|\[.*ERROR\]|(failed|could not|error):? |^> Task .*FAILED|Blight Star Mantle:' "$log" | \
-              grep -Eiv 'token|password|session|https?://' | tail -n 10 | cut -c1-340 | \
+          timeout --kill-after=12s 300s xvfb-run -a gradle -PcapeFxSmoke --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
+          grep -F 'FX smoke: ' "$log" | sed 's/.*FX smoke: //' | while IFS= read -r line; do
+            printf '::notice title=FX en Forge::%s\n' "$line"
+          done
+          if [ "$rc" -ne 0 ] || ! grep -Fq 'FX smoke: PASS:' "$log" ||
+             grep -Fq 'FX smoke: FAIL' "$log" ||
+             [ "$(grep -Fc 'Blight Star Mantle: falló el pase' "$log")" -ne 2 ]; then
+            echo "::error title=FX en Forge::No se completó la prueba (salida $rc)."
+            grep -Ei 'exception|assertionerror|\[.*ERROR\]|(failed|could not|error):? |^> Task .*FAILED|Blight Star Mantle:' "$log" | \
+              grep -Eiv 'token|password|session|https?://|intentional FX smoke' | tail -n 18 | cut -c1-340 | \
               while IFS= read -r line; do printf '::warning title=Diagnóstico de cliente::%s\n' "${line//%/%25}"; done
             exit 1
           fi
+
+      - name: Subir capturas de la prueba en mundo
+        if: steps.fx-smoke.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: capatest-fx-en-mundo
+          path: build/fx-smoke-run/fx-shots/*.png
+          if-no-files-found: error
+          retention-days: 30
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.

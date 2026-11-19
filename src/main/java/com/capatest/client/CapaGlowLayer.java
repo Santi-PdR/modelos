@@ -21,7 +21,8 @@ import java.util.WeakHashMap;
 public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
     // A colour history follows the entity that is rendered, not the last player in the renderer.
     private final Map<Entity, CapeTint> colors = new WeakHashMap<>();
-    private boolean disabled;
+    private int resourceGeneration = -1;
+    private CapeBloom.Mode ceiling = CapeBloom.Mode.HALO;
 
     public CapaGlowLayer(GeoArmorRenderer<CapaDeteriorerItem> renderer) {
         super(renderer);
@@ -37,16 +38,31 @@ public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
                        float partialTick,
                        int packedLight,
                        int packedOverlay) {
-        if (disabled || bakedModel == null || bufferSource == null)
+        if (bakedModel == null || bufferSource == null)
+            return;
+        int generation = CapeBloom.generation();
+        if (resourceGeneration != generation) {
+            resourceGeneration = generation;
+            ceiling = CapeBloom.Mode.HALO;
+        }
+        CapeBloom.Mode mode = CapeBloom.availableMode();
+        if (mode.ordinal() > ceiling.ordinal())
+            mode = ceiling;
+        if (mode == CapeBloom.Mode.OFF)
             return;
         try {
-            renderGlow(poseStack, animatable, bakedModel, bufferSource,
-                    partialTick);
-        } catch (Exception | LinkageError error) {
-            // El pass emisivo es decorativo: nunca debe tumbar el render.
-            disabled = true;
-            CapaTestMod.LOGGER.error(
-                    "Blight Star Mantle: capa emisiva desactivada", error);
+            // GeckoLib needn't balance its internal pushes on an exception.
+            // Give this optional pass its own stack with the exact same top.
+            PoseStack copy = new PoseStack();
+            copy.last().pose().set(poseStack.last().pose());
+            copy.last().normal().set(poseStack.last().normal());
+            renderGlow(copy, animatable, bakedModel, bufferSource, mode, partialTick);
+        } catch (RuntimeException | LinkageError error) {
+            // Don't submit a second copy in the same frame. Retry at a lower
+            // mode next frame and clear the failure on a resource reload.
+            ceiling = mode == CapeBloom.Mode.HALO ? CapeBloom.Mode.CORE : CapeBloom.Mode.OFF;
+            CapaTestMod.LOGGER.warn("Blight Star Mantle: falló el pase {}; siguiente pase: {}",
+                    mode, ceiling, error);
         }
     }
 
@@ -54,11 +70,10 @@ public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
                             CapaDeteriorerItem animatable,
                             BakedGeoModel bakedModel,
                             MultiBufferSource bufferSource,
+                            CapeBloom.Mode mode,
                             float partialTick) {
-        // The texture holds colored emission and coverage. Do not derive it
-        // with AutoGlowingTexture: that path re-uploads a modified base image.
         // Match the unshifted opaque depth; the glow only writes color.
-        RenderType emissive = CapeBloom.wornLight();
+        RenderType emissive = CapeBloom.wornLight(mode);
 
         if (!(getRenderer() instanceof GeoArmorRenderer<?> armor))
             return;

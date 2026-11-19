@@ -14,6 +14,15 @@ base {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
+// Opt-in integration probes. Neither the probe code nor Curios ships in the JAR.
+def fxSmokeRun = providers.gradleProperty('capeFxSmoke').isPresent()
+if (fxSmokeRun) {
+    sourceSets.create('fxSmoke') {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.runtimeClasspath
+    }
+}
+
 minecraft {
     mappings channel: mapping_channel, version: mapping_version
     copyIdeResources = true
@@ -34,6 +43,14 @@ minecraft {
             // GeckoLib ships SRG mixin refs. Remap them only in the named dev client.
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', project.layout.buildDirectory.file('createSrgToMcp/output.srg').get().asFile.absolutePath
+            if (fxSmokeRun) {
+                workingDirectory project.layout.buildDirectory.dir('fx-smoke-run').get().asFile
+                mods {
+                    "${mod_id}" {
+                        source sourceSets.fxSmoke
+                    }
+                }
+            }
         }
         server {
             property 'forge.enabledGameTestNamespaces', mod_id
@@ -70,6 +87,9 @@ dependencies {
     // Curios 5.14.1 para Forge 1.20.1. compileOnly => el mod funciona sin Curios;
     // las clases de compat se cargan por reflexión sólo si el mod está presente.
     compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}:api")
+    if (fxSmokeRun) {
+        runtimeOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}")
+    }
 }
 
 tasks.named('processResources', ProcessResources).configure {

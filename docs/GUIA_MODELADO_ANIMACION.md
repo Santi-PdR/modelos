@@ -115,3 +115,25 @@ animación y la documentación de GeckoLib._
    Si un shader pack altera el pase, relanzar con `-Dcapa.sinHalo=true`
    conserva el núcleo estándar. Confirmar también el enfriamiento de las
    brasas y la prioridad de pecho. El visor no ejecuta los shaders del juego.
+
+## 7. Verificación de los FX en Forge desde v1.67.1
+
+- **Atlas:** 512×512 o un múltiplo entero cuadrado con las mismas UV. La
+  máscara de núcleo necesita alfa; sin ella se omite la emisión, no el paño.
+  Un halo corrupto o incompatible no debe dibujar el damero de textura
+  ausente. Al quitar el pack y pulsar `F3+T`, vuelve la luz sin reiniciar.
+- **Prueba automática (desarrollo):** `gradle -PcapeFxSmoke runClient`
+  incluye Curios 5.14.1 solo en esa ejecución, usa un mundo de prueba en
+  `build/fx-smoke-run/` y cierra el cliente al terminar. Para repetir desde
+  cero usa un directorio de build limpio. La opción `probar_halo` de Actions
+  (o el marcador `[probar-halo]` en el commit) ejecuta la misma prueba en
+  pantalla virtual y adjunta las capturas si termina correctamente.
+- **Qué comprueba:** elección de pase con PNG corrupto, tamaño incorrecto,
+  shader inválido, núcleo corrupto y opción sin halo; recuperación y pila de
+  poses ante un fallo inyectado; nacimiento y movimiento de brasas ante un
+  panel; visibilidad de Curios y un único render en pecho, ambos slots y
+  espalda con élitros. Las capturas son de pie, no de un vuelo completo.
+- **Prueba manual pendiente para packs concretos:** repetir con shaders
+  de terceros y gráficos Fabulosos; agacharse, planear y nadar junto a
+  losas y paredes. Cambiar el ojo de `back` y probar un cosmético encima.
+  Las brasas emitidas antes de ocultarlo se apagan con su vida normal.
