@@ -100,3 +100,19 @@ no se afirma que tenga su mismo aspecto en juego. Se cambia el shader del
 icono a uno emisivo, se ensaya otra pose de tercera persona, y se acorta el
 nombre y el tooltip. Estos cambios aún requieren prueba visual en cliente,
 incluyendo ambas manos, primera persona, iluminación y las tres habilidades.
+
+## Versión independiente 0.5.0-test
+
+Requiere también `player-animation-lib-forge-1.0.2-rc1+1.20` (PlayerAnimator)
+instalado en cliente y servidor. No se incluye la biblioteca en el JAR.
+La confirmación del servidor activa las animaciones del jugador para el propio
+jugador y los clientes que lo observan; una habilidad rechazada no anima.
+Se reutilizan `sword_attack`, `sword_attack2` y `eating_right` de Serious
+Player Animations de McVader (MIT), desde el port de avectus, revisión
+`5ff26dbfc7d9fcea984ea49c7f380ed52a2ff28e`. Se cambió `loop` a `false`
+en `eating_right` para que la parálisis no deje una animación infinita.
+Licencia incluida en `META-INF/SERIOUS_PLAYER_ANIMATIONS_LICENSE.txt`.
+Son movimientos reutilizados, no animaciones específicas de Stain; el gesto
+para Z es una aproximación. Daño y efectos siguen siendo instantáneos en el
+servidor, no sincronizados a un fotograma concreto. La vista en primera persona,
+poses y compatibilidad con otros mods requieren comprobación en cliente.

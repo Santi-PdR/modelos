@@ -7,13 +7,16 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkDirection;
+import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 /** Solo acepta un identificador de habilidad, nunca blancos ni daño enviados por el cliente. */
 public final class KatanaNetwork {
-    private static final String VERSION = "1";
+    private static final String VERSION = "2";
     public static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder
             .named(new ResourceLocation(StainKatanaMod.MOD_ID, "abilities"))
             .networkProtocolVersion(() -> VERSION).clientAcceptedVersions(VERSION::equals)
@@ -22,6 +25,8 @@ public final class KatanaNetwork {
     public static void init() {
         CHANNEL.registerMessage(0, AbilityMessage.class, AbilityMessage::encode,
                 AbilityMessage::decode, AbilityMessage::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(1, AnimationMessage.class, AnimationMessage::encode,
+                AnimationMessage::decode, AnimationMessage::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
     public record AbilityMessage(int ability) {
         public static void encode(AbilityMessage msg, FriendlyByteBuf buf) { buf.writeVarInt(msg.ability); }
@@ -33,6 +38,24 @@ public final class KatanaNetwork {
                 if (player != null && msg.ability >= 0 && msg.ability < 3)
                     KatanaAbilities.activate(player, msg.ability);
             });
+            context.setPacketHandled(true);
+        }
+    }
+    public static void broadcastAnimation(ServerPlayer player, int ability) {
+        CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player),
+                new AnimationMessage(player.getId(), ability));
+    }
+    public record AnimationMessage(int entityId, int ability) {
+        public static void encode(AnimationMessage msg, FriendlyByteBuf buf) {
+            buf.writeVarInt(msg.entityId); buf.writeVarInt(msg.ability);
+        }
+        public static AnimationMessage decode(FriendlyByteBuf buf) {
+            return new AnimationMessage(buf.readVarInt(), buf.readVarInt());
+        }
+        public static void handle(AnimationMessage msg, Supplier<NetworkEvent.Context> supplier) {
+            NetworkEvent.Context context = supplier.get();
+            context.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
+                    () -> () -> com.stainkatana.katana.client.KatanaAnimations.play(msg.entityId, msg.ability)));
             context.setPacketHandled(true);
         }
     }

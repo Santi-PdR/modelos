@@ -4,7 +4,7 @@ license="All Rights Reserved"
 
 [[mods]]
 modId="stainkatana"
-version="0.4.0-test"
+version="0.5.0-test"
 displayName="Legados de Combate: prueba de katana"
 authors="EternalCraft"
 description='''Prueba aislada de la katana de Stain. No contiene la capa.'''
@@ -28,4 +28,11 @@ modId="geckolib"
 mandatory=true
 versionRange="[4.8.1,)"
 ordering="NONE"
+side="BOTH"
+
+[[dependencies.stainkatana]]
+modId="playeranimator"
+mandatory=true
+versionRange="[1.0.2-rc1,)"
+ordering="AFTER"
 side="BOTH"

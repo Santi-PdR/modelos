@@ -20,3 +20,11 @@ assert 'NetworkDirection.PLAY_TO_SERVER' in java and 'player.canHarmPlayer' in j
 assert 'capatest' not in java
 assert 'paralysis' in (a/'lang/en_us.json').read_text().lower()
 print('OK: 18 fotogramas de Better Combat Particle, tres teclas, seguridad de red e independencia de capatest')
+clips = ('eating_right', 'sword_attack', 'sword_attack2')
+for clip in clips:
+    animation = json.loads((a/'player_animation'/f'{clip}.json').read_text())['animations'][clip]
+    assert animation.get('loop', False) is False and animation['animation_length'] > 0
+assert 'PLAY_TO_CLIENT' in java and 'TRACKING_ENTITY_AND_SELF' in java
+assert 'playeranimator' in (root/'resources/META-INF/mods.toml').read_text()
+assert (root/'resources/META-INF/SERIOUS_PLAYER_ANIMATIONS_LICENSE.txt').is_file()
+print('OK: tres clips externos no cíclicos, mensaje de animación y licencia')

@@ -40,6 +40,9 @@ minecraft {
 }
 
 repositories {
+    if (project.hasProperty('katanaOnly')) {
+        maven { name = 'KosmX'; url = 'https://maven.kosmx.dev/' }
+    }
     // Curios API: dependencia BLANDA (sólo compile-time), el jar no se incluye.
     maven {
         name = 'Curios'
@@ -64,6 +67,9 @@ dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     // GeckoLib 4.8.1 para Forge 1.20.1 (Modrinth Maven)
     implementation fg.deobf("maven.modrinth:8BmcQJ2H:${geckolib_modrinth_version}")
+    if (project.hasProperty('katanaOnly')) {
+        implementation fg.deobf("dev.kosmx.player-anim:player-animation-lib-forge:1.0.2-rc1+1.20")
+    }
     // Curios 5.14.1 para Forge 1.20.1. compileOnly => el mod funciona sin Curios;
     // las clases de compat se cargan por reflexión sólo si el mod está presente.
     compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}:api")
@@ -125,7 +131,7 @@ tasks.withType(JavaCompile).configureEach {
 // Variante optativa y aislada para test-1: no cambia el mod completo.
 // Ejecutar primero python3 katana_stain/tools/preparar_test.py.
 if (project.hasProperty('katanaOnly')) {
-    version = '0.4.0-test'
+    version = '0.5.0-test'
     base.archivesName = 'stainkatana'
     sourceSets.main.java.setSrcDirs(['build-katana-input/java'])
     sourceSets.main.resources.setSrcDirs(['build-katana-input/resources'])

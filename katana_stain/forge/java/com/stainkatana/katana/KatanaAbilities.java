@@ -50,7 +50,7 @@ public final class KatanaAbilities {
         if (success) {
             state.putLong(key, now + COOLDOWN[ability]);
             player.getPersistentData().put(COOLDOWNS, state);
-            player.swing(InteractionHand.MAIN_HAND, true);
+            KatanaNetwork.broadcastAnimation(player, ability);
         }
     }
 
