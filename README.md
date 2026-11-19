@@ -6,9 +6,15 @@ Se equipa en el pecho o en `back` con Curios opcional.
 [Descargar JAR v1.67.11 (prueba)](https://github.com/Santi-PdR/modelos/releases/download/v1.67.11/capatest-1.67.11.jar)
 · [JAR anterior v1.67.10](https://github.com/Santi-PdR/modelos/releases/download/v1.67.10/capatest-1.67.10.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench de la rama](docs/CAPA_v1.67.11.bbmodel)
+· [Proyecto Blockbench de la rama](docs/CAPA_v1.67.12.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+
+### v1.67.12 — ajuste de las hombreras (en validación)
+
+El canto de las dos placas se acerca a las mangas cuando la postura lo permite. Conserva
+la sujeción interior y el movimiento de v1.67.11. El visor muestra el ajuste en la vista equipada;
+el proyecto Blockbench conserva las piezas y curvas de base.
 
 ### v1.67.11 — unión sobre el torso y marcha
 

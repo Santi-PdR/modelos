@@ -882,7 +882,7 @@ jobs:
             grep -qx 'com/capatest/client/CapaSparkParticle.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeSparkFrame.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeSparkPath.class' /tmp/jar-contents.txt
-            if grep -Eq '^(com/capatest/client/(CapeFxSmoke|CapeWalkProbe|CapeLookSweep)|assets/capatest/geo/test/)' /tmp/jar-contents.txt; then
+            if grep -Eq '^(com/capatest/client/(CapeFxSmoke|CapeWalkProbe|CapeLookSweep|CapePlateProbe)|assets/capatest/geo/test/)' /tmp/jar-contents.txt; then
               echo '::error::El JAR de distribución incluye código de la prueba de cliente.'
               exit 1
             fi
@@ -1029,6 +1029,16 @@ jobs:
             else
               printf '::notice title=Anclaje y ranura en Forge::%s\n' "${line//%/%25}"
             fi
+          done
+
+      - name: Comparar v1.67.11 y las nuevas hombreras en F5 cenital
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
+        run: |
+          set -o pipefail
+          shots=build/fx-smoke-run/fx-shots
+          python3 tools/verify_forge_plates.py "$shots" --gallery
+          python3 tools/verify_forge_plates.py "$shots" | while IFS= read -r line; do
+            printf '::notice title=Manga y placa en Forge::%s\n' "$line"
           done
 
       - name: Comparar el canto de la camiseta en F5 cenital

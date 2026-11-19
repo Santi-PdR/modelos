@@ -190,13 +190,27 @@ function seating(q, stance, look, turn, arm, elytra) {
       * (1-smooth(q.leanStart,q.leanEnd,stance)) * (1-smooth(q.armStart,q.armEnd,arm));
 }
 
+function plateInfluence(profile, stance, look, turn, arm, elytra) {
+  if (!profile || elytra || ![stance, look, turn, arm].every(Number.isFinite)) return 0;
+  const [a,b,c,d,e,f,g,h] = profile.limits;
+  const yaw = Math.abs(((turn+180)%360+360)%360-180);
+  return smooth(a,b,-look) * (1-smooth(c,d,yaw)) * (1-smooth(e,f,stance)) * (1-smooth(g,h,arm));
+}
+
+function plateFrame(bone, target, k) {
+  const [x,y,z,sx,sy,sz,lift,advance,rx,ry] = target;
+  return {name:'fit_'+bone.name, parent:bone.parent, pivot:[-x,y,z], offset:[0,k*lift,k*advance],
+    rotation:[-k*rx,-k*ry,0], scale:[1+k*(sx-1),1+k*(sy-1),1+k*(sz-1)], cubes:[]};
+}
+
 function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0) {
   const depth=backset(profile,stance,look,turn);
   const anchor = profile.backing;
   const seat = profile.seat;
   const snug = seat && geo.bones.some(b => b.name===seat.frame) ? seating(seat,stance,look,turn,arm,elytra) : 0;
   const backing = anchor && backingShape(anchor,profile.bodyAngle,stance,look,turn,depth,elytra);
-  return {...geo, bones:geo.bones.map(b => {
+  const plate = plateInfluence(profile.plates,stance,look,turn,arm,elytra);
+  const bones = geo.bones.map(b => {
     if (b.name===seat?.frame) return {...b,scale:[1,1,1-seat.depth*snug]};
     const half = anchor?.names.indexOf(b.name) ?? -1;
     if (half>=0) return {...b,scale:[1,backing[half],backing[2]]};
@@ -211,7 +225,15 @@ function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0) {
     if (b.name==='v20_mount_under_yoke') return {...b,scale:yokeScales(stance,look,arm,elytra)};
     if (b.name==='chestplate') return {...b,rotation:[stance*profile.bodyAngle,0,0],offset:[0,-3.2*stance,0]};
     return b;
-  })};
+  });
+  if (plate > 0) for (const [i,name] of profile.plates.names.entries()) {
+    const index=bones.findIndex(b => b.name===name);
+    if (index < 0) continue;
+    const frame=plateFrame(bones[index],profile.plates.targets[i],plate);
+    bones[index]={...bones[index],parent:frame.name};
+    bones.push(frame);
+  }
+  return {...geo,bones};
 }
 
 function strideLifts(s, top, mid, arm, leg, lean, depth, wingLift=0) {

@@ -152,11 +152,42 @@ def seating(stance, pitch, yaw, arm_back=0., *, elytra=False):
             * (1-smooth(q['armStart'],q['armEnd'],arm_back)))
 
 
+@lru_cache(maxsize=1)
+def plate_profile():
+    code = SOURCE.with_name('CapePlateFit.java').read_text()
+    targets = re.search(r'\bTARGETS = \{(.*?)\n    \};', code, re.S)[1]
+    numeric = r'-?(?:\d+(?:\.\d+)?|\.\d+)'
+    shape = [list(map(float,re.findall(numeric,row))) for row in re.findall(r'\{(.*?)\}', targets)]
+    keys = ('DOWN_START','DOWN_FULL','TURN_START','TURN_END','LEAN_START','LEAN_END','ARM_START','ARM_END')
+    limits = [float(re.search(r'\b'+key+r' = ('+numeric+r')[;,]', code)[1]) for key in keys]
+    names = [re.search(r'\b'+key+r' = "([^"]+)"', code)[1] for key in ('SMALL','WIDE')]
+    assert len(shape) == 2 and all(len(row) == 10 for row in shape)
+    return dict(names=names, targets=shape, limits=limits)
+
+
+def plate_influence(stance,pitch,yaw,arm,*,elytra=False):
+    if elytra or not all(map(math.isfinite,(stance,pitch,yaw,arm))):
+        return 0.
+    a,b,c,d,e,f,g,h = plate_profile()['limits']
+    return (smooth(a,b,-pitch)*(1-smooth(c,d,abs(math.remainder(yaw,360))))
+            *(1-smooth(e,f,stance))*(1-smooth(g,h,arm)))
+
+
+def plate_frame(name, parent, target, amount):
+    # Parent-space transform used for rendering only. No extra bone is
+    # exported in the rig: the existing plate keeps its pivot and all UVs.
+    x,y,z,sx,sy,sz,lift,advance,rx,ry = target
+    return dict(name='fit_'+name,parent=parent,pivot=[-x,y,z],
+                offset=[0,lift*amount,advance*amount],rotation=[-rx*amount,-ry*amount,0],
+                scale=[1+(sx-1)*amount,1+(sy-1)*amount,1+(sz-1)*amount],cubes=[])
+
+
 def viewer_profile():
-    return dict(profile(),backing=B.profile(),seat=seat_profile())
+    return dict(profile(),backing=B.profile(),seat=seat_profile(),plates=plate_profile())
 
 
-def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back=0., close=True):
+def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back=0., close=True,
+                plates=True, arm_effort=None):
     """Bake render transforms for a frame, not animation keyframes."""
     changes = {'chestplate': dict(rotation=[stance*profile()['bodyAngle'], 0., 0.],
                                   offset=[0., -3.2*stance, 0.])}
@@ -182,4 +213,14 @@ def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back
         if any(b['name'] in names for b in geo['bones']):
             a,b,z = B.solve(head_in_body(stance,pitch,yaw,outer=True),d,elytra=elytra)
             changes.update({name:dict(scale=[1.,s,z]) for name,s in zip(names,(a,b),strict=True)})
-    return dict(geo, bones=[dict(b, **changes.get(b['name'], {})) for b in geo['bones']])
+    bones = [dict(b, **changes.get(b['name'], {})) for b in geo['bones']]
+    if close and plates and not legacy:
+        mix = plate_influence(stance,pitch,yaw,arm_back if arm_effort is None else arm_effort,elytra=elytra)
+        data = plate_profile()
+        if mix:
+            for b in tuple(bones):
+                if b['name'] in data['names']:
+                    frame = plate_frame(b['name'],b.get('parent'),data['targets'][data['names'].index(b['name'])],mix)
+                    b['parent'] = frame['name']
+                    bones.append(frame)
+    return dict(geo, bones=bones)

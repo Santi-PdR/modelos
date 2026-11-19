@@ -16,7 +16,7 @@ SLOTS = ('pecho','curios')
 # Bands on the wide plate, center of the collar, and compact plate. Units
 # are widths of the slim model's bare shirt, even in the classic run.
 # This keeps the bands on the same plates regardless of sleeve width.
-BANDS = ((-.67,-.54),(-.18,.18),(.40,.465))
+BANDS = ((-.462,-.372),(-.18,.18),(.382,.442))
 
 
 def shirt_mask(bare):

@@ -185,6 +185,8 @@ def gallery(root, kind):
             names = tuple(f'{kind}-{n}' for n in ('sin-manto','v1678','pecho','curios'))
         elif kind == 'ajuste-medio':
             names = tuple(f'{kind}-{n}' for n in ('sin-manto','v1679','pecho','curios'))
+        elif kind == 'hombreras':
+            names = tuple(f'{kind}-{n}' for n in ('sin-manto','v16711','pecho','curios'))
         elif kind in ('mirada-pecho','mirada-curios'):
             names = tuple(f'{kind}-{n:02}' for n in (0,8,16,48))
         elif kind in ('paso-pecho','paso-curios'):
@@ -204,7 +206,7 @@ def gallery(root, kind):
                 # Each GitHub job step retains up to ten notices. Reserve
                 # at most half of them for either slot, even in a busy shot.
                 close = kind in ('oblicua','perfil','ajuste','ajuste-fino')
-                cap = 2450 if kind.startswith(('ajuste','mirada','paso','union')) else 3820 if close else 6350
+                cap = 2450 if kind.startswith(('ajuste','mirada','paso','union','hombreras')) else 3820 if close else 6350
                 for width,colors in ((180,80),(160,64),(144,48),(128,40),(112,32),(96,28),(80,24),(64,16),(48,8)):
                     buf = io.BytesIO()
                     small = cut.resize((width,round(width*.8)),Image.Resampling.NEAREST)

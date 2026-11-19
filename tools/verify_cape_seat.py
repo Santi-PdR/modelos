@@ -103,8 +103,8 @@ def moderate_fit(geo):
 def clearance(geo, clips):
     rig = WornModel(geo)
     fasteners = np.array([n.startswith('v20_mount_') for n in rig.names])
-    def placed(frame,aim,arm,close):
-        mats = P.matrices(F.wearer_pose(frame,*aim,arm_back=arm,close=close))
+    def placed(frame,aim,arm,effort,close):
+        mats = P.matrices(F.wearer_pose(frame,*aim,arm_back=arm,arm_effort=effort,close=close))
         packed = np.array([mats[n] for n in rig.names])
         return rig.coords @ packed[:,:3,:3].transpose(0,2,1) + packed[:,None,:3,3]
     samples = {n:[P.pose_at(geo,T.prepare_clip(c),c['animation_length']*t) for t in (0,.33,.67)]
@@ -126,7 +126,8 @@ def clearance(geo, clips):
             continue
         pose = S.adjust(frame,arm,leg,aim)
         boxes = wardrobe(aim,arms,legs)
-        before,after = (placed(pose,aim,arm,close) for close in (False,True))
+        effort = max(arm, *(abs(a+np.degrees(.4*aim[0])) for a in arms))
+        before,after = (placed(pose,aim,arm,effort,close) for close in (False,True))
         was,now = (contacts(v[None],boxes,pad=.5)[0] for v in (before,after))
         assert now[0].min() > .025, (name,aim,arms,now[0].min(),rig.names[now[0].argmin()])
         # Contact of the internal fastener with the shirt is intentional.
