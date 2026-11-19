@@ -982,6 +982,9 @@ jobs:
           awk 'sub(/.*FX smoke: /, "")' "$log" | tail -n 5 | while IFS= read -r line; do
             printf '::notice title=FX en Forge::%s\n' "$line"
           done
+          awk 'sub(/.*FX smoke: Recorrido de mirada /, "")' "$log" | while IFS= read -r line; do
+            printf '::notice title=Recorrido de mirada en Forge::%s\n' "${line//%/%25}"
+          done
           if [ "$rc" -ne 0 ] || ! grep -Fq 'FX smoke: PASS:' "$log" ||
              grep -Fq -e 'FX smoke: FAIL' -e 'Blight Star Mantle: respuesta del paño desactivada' "$log" ||
              [ "$(grep -Fc 'Blight Star Mantle: falló el pase' "$log")" -ne 2 ]; then
@@ -1015,6 +1018,14 @@ jobs:
               printf '::notice title=Anclaje y ranura en Forge::%s\n' "${line//%/%25}"
             fi
           done
+
+      - name: Fotogramas del giro y la inclinación en pecho
+        if: always() && steps.fx-smoke.outcome != 'skipped'
+        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery mirada-pecho
+
+      - name: Fotogramas del giro y la inclinación en Curios
+        if: always() && steps.fx-smoke.outcome != 'skipped'
+        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery mirada-curios
 
       - name: Recorte comparativo F5 del ajuste de cuello y hombreras
         if: always() && steps.fx-smoke.outcome != 'skipped'

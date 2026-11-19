@@ -106,6 +106,7 @@ public final class CapeFxSmoke {
         FIT_CHEST("ajuste-pecho", 6000), FIT_BACK("ajuste-curios", 6000),
         FIT_SLIM_BARE("ajuste-fino-sin-manto", 6000), FIT_SLIM_PREVIOUS("ajuste-fino-v1678", 6000),
         FIT_SLIM_CHEST("ajuste-fino-pecho", 6000), FIT_SLIM_BACK("ajuste-fino-curios", 6000),
+        LOOK_CHEST("mirada-pecho", 6000), LOOK_BACK("mirada-curios", 6000),
         HOTBAR_BARE("hotbar-vacia", 6000), HOTBAR("hotbar", 6000),
         STRAFE_LEFT("traslacion-izquierda", 18000), STRAFE_RIGHT("traslacion-derecha", 18000),
         WINGS("espalda-con-elitros", 18000),
@@ -122,7 +123,7 @@ public final class CapeFxSmoke {
 
         boolean hotbar() { return this == HOTBAR_BARE || this == HOTBAR; }
         boolean elytra() { return this == WINGS || this == GLIDE; }
-        boolean usesBack() { return this == TOP_BACK || this == TURN_BACK || this == OBLIQUE_BACK || this == SIDE_BACK || this == FIT_BACK || this == FIT_SLIM_BACK || elytra(); }
+        boolean usesBack() { return this == TOP_BACK || this == TURN_BACK || this == OBLIQUE_BACK || this == SIDE_BACK || this == FIT_BACK || this == FIT_SLIM_BACK || this == LOOK_BACK || elytra(); }
         boolean hasBack() { return this == BOTH || usesBack(); }
         boolean bare() { return this == TOP_BARE || this == TURN_BARE || this == OBLIQUE_BARE || this == SIDE_BARE || this == FIT_BARE || this == FIT_SLIM_BARE; }
         boolean overhead() { return this == TOP_BARE || this == TOP_CHEST || this == TOP_BACK || turned(); }
@@ -134,7 +135,8 @@ public final class CapeFxSmoke {
         boolean fit() { return ordinal() >= FIT_BARE.ordinal() && ordinal() <= FIT_SLIM_BACK.ordinal(); }
         boolean previousFit() { return this == FIT_PREVIOUS || this == FIT_SLIM_PREVIOUS; }
         boolean slimFit() { return ordinal() >= FIT_SLIM_BARE.ordinal() && ordinal() <= FIT_SLIM_BACK.ordinal(); }
-        boolean fixedCamera() { return overhead() || upperBack() || fit(); }
+        boolean sweep() { return this == LOOK_CHEST || this == LOOK_BACK; }
+        boolean fixedCamera() { return overhead() || upperBack() || fit() || sweep(); }
         float yaw() { return fit() ? 3 : profile() ? 76 : turned() || oblique() || hotbar() ? 43 : 0; }
         float pitch() { return fit() ? 76 : profile() ? 21 : oblique() ? 58 : turned() || hotbar() ? 86 : 89; }
         boolean inspectBirths() { return this == GLIDE || this == WADE || this == SWIM; }
@@ -154,6 +156,8 @@ public final class CapeFxSmoke {
     private static int frameLight;
     private static float framePartialTick;
     private static double frameTopDegrees, frameSeating;
+    private static CapeLookSweep lookSweep;
+    private static CapeLookSweep.Draw seatDraw;
     private static ItemStack rendered;
     private static Matrix4f playerPose, armorPose, upperBackProjection;
     private static int stableFrames;
@@ -308,7 +312,7 @@ public final class CapeFxSmoke {
                     }
                     if (game.player.getSwimAmount(1) > 0) return;
                     check(!CapaDeteriorerItem.auraFrame(game.player).posed(), "swim frame persisted after blend");
-                    note("PASS: recarga, luz, oclusión, equipo cenital, hotbar, paso lateral, alas, planeo y nado en Forge");
+                    note("PASS: recarga, luz, oclusión, equipo, recorrido de mirada, hotbar, paso lateral, alas, planeo y nado en Forge");
                     game.stop();
                 }
                 default -> { return; }
@@ -392,6 +396,7 @@ public final class CapeFxSmoke {
     private static void equipScene(Minecraft game, Scene next) {
         resetDeadline();
         scene = next;
+        lookSweep = next.sweep() ? new CapeLookSweep() : null;
         stableFrames = observedBirths = 0;
         captured = false;
         if (next == Scene.TOP_BARE) game.options.fov().set(34);
@@ -526,6 +531,7 @@ public final class CapeFxSmoke {
     private static void beforeArmor(GeoRenderEvent.Armor.Pre event) {
         if (scene == null || !(event.getRenderer() instanceof CapaArmorRenderer renderer)
                 || renderer.getCurrentEntity() != Minecraft.getInstance().player) return;
+        if (scene.sweep()) CapeLookSweep.Probe.arm(renderer);
         if (scene.previousFit()) {
             try {
                 SEATING.setFloat(renderer, 0);
@@ -556,7 +562,8 @@ public final class CapeFxSmoke {
             upperBackProjection = new Matrix4f(RenderSystem.getProjectionMatrix())
                     .mul(RenderSystem.getModelViewMatrix()).mul(armorPose).translate(0,1.5F,0).scale(-1,-1,1);
         }
-        if (scene.fit()) {
+        if (scene.sweep()) seatDraw = CapeLookSweep.Probe.finish(renderer);
+        if (scene.fit() || scene.sweep()) {
             try {
                 frameSeating = SEATING.getFloat(renderer);
             } catch (IllegalAccessException e) {
@@ -575,6 +582,7 @@ public final class CapeFxSmoke {
         if (event.phase == TickEvent.Phase.START) {
             framePasses = 0;
             frameTopDegrees = frameSeating = Double.NaN;
+            seatDraw = null;
             rendered = ItemStack.EMPTY;
             playerPose = armorPose = upperBackProjection = null;
             // Hold the camera/head yaw relative to the torso, like looking
@@ -582,8 +590,9 @@ public final class CapeFxSmoke {
             // the mantle renderer independently of the vanilla player.
             var player = Minecraft.getInstance().player;
             if (player != null && scene != null && (scene.fixedCamera() || scene.hotbar())) {
-                float yaw = scene.yaw();
-                float pitch = scene.pitch();
+                var look = scene.sweep() ? lookSweep.pose() : new CapeLookSweep.Pose(scene.pitch(), scene.yaw());
+                float yaw = look.yaw();
+                float pitch = look.pitch();
                 player.setYRot(yaw);
                 player.yRotO = yaw;
                 player.setXRot(pitch);
@@ -603,7 +612,7 @@ public final class CapeFxSmoke {
         ItemStack back = backOf(player).getStacks().getStackInSlot(0);
         boolean chestReady = switch (scene) {
             case TOP_BARE, TOP_BACK, TURN_BARE, TURN_BACK, OBLIQUE_BARE, OBLIQUE_BACK, SIDE_BARE, SIDE_BACK,
-                    FIT_BARE, FIT_BACK, FIT_SLIM_BARE, FIT_SLIM_BACK, HOTBAR_BARE, HOTBAR -> chest.isEmpty();
+                    FIT_BARE, FIT_BACK, FIT_SLIM_BARE, FIT_SLIM_BACK, LOOK_BACK, HOTBAR_BARE, HOTBAR -> chest.isEmpty();
             case WINGS, GLIDE -> chest.is(Items.ELYTRA);
             default -> chest.is(CapaTestMod.CAPA_DETERIORER.get());
         };
@@ -630,6 +639,10 @@ public final class CapeFxSmoke {
                     FIT_SLIM_BARE, FIT_SLIM_PREVIOUS, FIT_SLIM_CHEST, FIT_SLIM_BACK -> player.onGround()
                     && !player.isCrouching() && Math.abs(player.getXRot()-scene.pitch()) < .05 && Math.abs(bodyYaw) < .05
                     && velocity.horizontalDistanceSqr() < .0001;
+            case LOOK_CHEST, LOOK_BACK -> player.onGround() && !player.isCrouching()
+                    && Math.abs(player.getXRot() - lookSweep.pose().pitch()) < .05
+                    && Math.abs(player.getYHeadRot() - lookSweep.pose().yaw()) < .05
+                    && Math.abs(bodyYaw) < .05 && velocity.horizontalDistanceSqr() < .0001;
             case STRAFE_LEFT -> player.onGround() && velocity.x > .045 && lateral > .015;
             case STRAFE_RIGHT -> player.onGround() && velocity.x < -.045 && lateral < -.015;
             case WINGS -> player.onGround() && !player.isCrouching() && velocity.horizontalDistanceSqr() < .0001
@@ -675,6 +688,11 @@ public final class CapeFxSmoke {
                         + "%, luz bloque/cielo=" + block + "/" + sky;
             }
             if (scene != Scene.SWIM_EXIT && ++stableFrames < 18) return;
+            if (scene.sweep()) {
+                captured = lookSweep.capture(game, shots(game), scene.file, frameSeating, seatDraw);
+                if (captured) note("Recorrido de mirada " + scene.file + ": " + lookSweep.summary());
+                return;
+            }
             if (scene.inspectBirths() && observedBirths == 0) return;
             if (scene == Scene.WINGS) {
                 check(frameTopDegrees > 24 && frameTopDegrees < 34,
