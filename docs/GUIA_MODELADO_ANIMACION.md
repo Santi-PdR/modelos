@@ -192,6 +192,13 @@ animación y la documentación de GeckoLib._
   plano de la camiseta, las costuras y la holgura. En F5 se proyecta esa
   franja desde el modelo en vista oblicua y de perfil, con el respaldo
   habilitado en ambos slots y deshabilitado como control.
+- **Ajuste de la silueta equipada (v1.67.9):** `cape_seat_fit` es hijo de
+  `chestplate` y padre común del cuello, las placas, el paño y los anclajes.
+  Se contrae en Z con pivote detrás del torso cuando la cabeza inclinada y los
+  brazos dejan lugar. Los remates se estrechan hacia el centro. Es una
+  transformación sólo de render, compartida por el albedo y la emisión en
+  pecho y Curios; ni las claves ni las UV llevan ese ajuste. En Blockbench se
+  edita el rig neutro. Con élitros la contracción queda desactivada.
 - **Pulso del icono (v1.67.8):** 32 fotogramas a un tick por cuadro, mismo
   contorno y duración de 1,6 s. Se comprueba el recorrido de la cresta de
   luz en la hotbar vanilla; se conservan el dibujo y el reposo de v1.67.7.

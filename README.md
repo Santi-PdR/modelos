@@ -1,13 +1,25 @@
-# Mantle of the Blight Star — v1.67.8
+# Mantle of the Blight Star — v1.67.9
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
-[Descargar JAR v1.67.8](https://github.com/Santi-PdR/modelos/releases/download/v1.67.8/capatest-1.67.8.jar)
+[Descargar JAR v1.67.9](https://github.com/Santi-PdR/modelos/releases/download/v1.67.9/capatest-1.67.9.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench](docs/CAPA_v1.67.8.bbmodel)
+· [Proyecto Blockbench](docs/CAPA_v1.67.9.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+
+### v1.67.9 — el borde del manto vuelve al torso
+
+- El respaldo de v1.67.8 cubría la espalda, pero al mirar desde arriba
+  el cuello, las hombreras y el nacimiento de la tela seguían lejos.
+  Ahora el conjunto se acerca al plano de la espalda cuando la postura
+  lo permite. Los remates laterales entran con las placas, sin añadir
+  otro relleno ni fijar el paño a los brazos.
+- El ajuste sigue al cuerpo, no a la cámara. Cede gradualmente al girar
+  la cabeza, al mover los brazos o al inclinar el torso, y no se aplica
+  con élitros. El rig editable conserva cubos, texturas y los ocho clips;
+  el ajuste a la postura lo calcula Minecraft. El icono y su pulso no cambian.
 
 ### v1.67.8 — unión alta a la espalda y pulso del icono
 

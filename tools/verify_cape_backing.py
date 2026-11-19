@@ -50,7 +50,7 @@ def check(geo):
     f = B.profile()
     names = f['names']
     bones = {b['name']:b for b in geo['bones']}
-    assert all(n in bones and bones[n]['parent']=='chestplate' for n in names), 'missing upper back mounts'
+    assert all(n in bones and bones[n]['parent']==F.seat_profile()['frame'] for n in names), 'missing upper back mounts'
     local = patches(geo)
     panels = np.stack([local[n] for n in names])
     assert panels.shape == (2,3,8,3)

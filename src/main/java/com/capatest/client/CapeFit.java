@@ -8,7 +8,19 @@ package com.capatest.client;
  */
 public final class CapeFit {
     public static final String BONE = "cape_wearer_fit";
+    public static final String SEAT_FRAME = "cape_seat_fit";
     public static final String DRAPE_BONE = "cape_drape_fit";
+    public static final double SEAT_PLANE = 2.38;
+    private static final double SEAT_TAKE_IN = .46;
+    private static final double SEAT_RETURN_IN = .11;
+    private static final double SEAT_DOWN_START = 61;
+    private static final double SEAT_DOWN_FULL = 76;
+    private static final double SEAT_TURN_START = 13;
+    private static final double SEAT_TURN_END = 47;
+    private static final double SEAT_LEAN_START = .20;
+    private static final double SEAT_LEAN_END = .66;
+    private static final double SEAT_ARM_START = 3.1;
+    private static final double SEAT_ARM_END = 8.5;
     public static final String GUSSET_BONE = "v20_mount_gusset";
     public static final double CROUCH_RADIANS = 0.5;
     private static final double PITCH_STEP = 7.5;
@@ -155,6 +167,24 @@ public final class CapeFit {
                 (float) lerp(.065, 1, posture * smooth(0, .44, sleeve)),
                 (float) lerp(.62, 1, spread));
     }
+
+    /** Bring the visible trim and the start of the drape in together when the
+     * actual head and sleeves leave room. This is a body-space fit, not an F5
+     * camera correction. Do not contract into folded wings. */
+    static double seating(double bodyPitch, double bodyYaw, double headPitch, double headYaw,
+                          double armBack, boolean elytra) {
+        if (elytra || !Double.isFinite(bodyPitch) || !Double.isFinite(headPitch)
+                || !Double.isFinite(headYaw - bodyYaw) || !Double.isFinite(armBack)) return 0;
+        double turn = Math.abs(Math.toDegrees(Math.IEEEremainder(headYaw - bodyYaw, 2 * Math.PI)));
+        return smooth(SEAT_DOWN_START, SEAT_DOWN_FULL, Math.toDegrees(headPitch))
+                * (1 - smooth(SEAT_TURN_START, SEAT_TURN_END, turn))
+                * (1 - smooth(SEAT_LEAN_START, SEAT_LEAN_END, bodyPitch / CROUCH_RADIANS))
+                * (1 - smooth(SEAT_ARM_START, SEAT_ARM_END, armBack));
+    }
+
+    static double seatDepthScale(double seating) { return 1 - SEAT_TAKE_IN * seating; }
+
+    static double seatReturnWidth(double seating) { return 1 - SEAT_RETURN_IN * seating; }
 
     private static double smooth(double lo, double hi, double x) {
         double t = clamp((x - lo) / (hi - lo), 1);

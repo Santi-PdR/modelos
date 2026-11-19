@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
@@ -22,6 +23,7 @@ import software.bernie.geckolib.util.RenderUtils;
 public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private final CapaArmorModel capeModel;
     private float wearerDepth;
+    private float seating;
     private float shoulderReach = (float) CapeFit.SHOULDER_MIN;
     private CapeFit.YokeShape yoke = CapeFit.yokeShape(0, 0, 0, true);
     private CapeBacking.Shape backing = CapeBacking.TUCKED;
@@ -97,6 +99,12 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
             wings = CapeWingFit.topGoal(Math.toDegrees(player.elytraRotX), Math.toDegrees(player.elytraRotZ),
                     Math.toDegrees(model.body.xRot), wearerDepth);
         }
+        seating = (float) CapeFit.seating(model.body.xRot, model.body.yRot, model.head.xRot,
+                model.head.yRot, arm, hasWings);
+        if (getCurrentEntity() instanceof LivingEntity wearer) {
+            seating *= wearer.isFallFlying() || wearer.isPassenger() || wearer.isAutoSpinAttack()
+                    ? 0 : 1 - wearer.getSwimAmount(1);
+        }
         shoulderReach = (float) CapeFit.shoulderReach(model.body.xRot, model.body.yRot,
                 model.head.xRot, model.head.yRot, hasWings);
         yoke = CapeFit.yokeShape(model.body.xRot, model.head.xRot, arm, hasWings);
@@ -115,7 +123,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         boolean underYoke = CapeFit.UNDER_YOKE_BONE.equals(name);
         boolean backingLeft = CapeBacking.LEFT.equals(name);
         boolean backingRight = CapeBacking.RIGHT.equals(name);
-        boolean fitted = shoulder || underYoke || backingLeft || backingRight || wearerDepth > 0 && (CapeFit.BONE.equals(name)
+        boolean seatFrame = seating > 0 && CapeFit.SEAT_FRAME.equals(name);
+        boolean fitted = seatFrame || shoulder || underYoke || backingLeft || backingRight || wearerDepth > 0 && (CapeFit.BONE.equals(name)
                 || CapeFit.DRAPE_BONE.equals(name) || CapeFit.GUSSET_BONE.equals(name));
         if (fitted)
             poseStack.pushPose();
@@ -126,9 +135,11 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                 poseStack.translate(0, 0, wearerDepth / 16.0F);
             } else if (fitted) {
                 RenderUtils.translateToPivotPoint(poseStack, bone);
-                if (shoulder)
-                    poseStack.scale(1, (float) (CapeFit.SHOULDER_HEIGHT + (1 - CapeFit.SHOULDER_HEIGHT) * shoulderReach),
-                            shoulderReach);
+                if (seatFrame)
+                    poseStack.scale(1, 1, (float) CapeFit.seatDepthScale(seating));
+                else if (shoulder)
+                    poseStack.scale((float) CapeFit.seatReturnWidth(seating),
+                            (float) (CapeFit.SHOULDER_HEIGHT + (1 - CapeFit.SHOULDER_HEIGHT) * shoulderReach), shoulderReach);
                 else if (underYoke)
                     poseStack.scale(yoke.width(), yoke.height(), yoke.depth());
                 else if (backingLeft || backingRight)

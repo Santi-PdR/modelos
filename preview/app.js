@@ -183,17 +183,31 @@ function backingShape(f, bodyAngle, stance, look, turn, depth, elytra) {
   if (scale < stretch-1e-8) { l=Math.min(l,rise(1,scale)); r=Math.min(r,rise(-1,scale)); }
   return [l,r,scale];
 }
+function seating(q, stance, look, turn, arm, elytra) {
+  if (elytra || ![stance,look,turn,arm].every(Number.isFinite)) return 0;
+  const yaw = Math.abs(((turn+180)%360+360)%360-180);
+  return smooth(q.downStart,q.downFull,-look) * (1-smooth(q.turnStart,q.turnEnd,yaw))
+      * (1-smooth(q.leanStart,q.leanEnd,stance)) * (1-smooth(q.armStart,q.armEnd,arm));
+}
+
 function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0) {
   const depth=backset(profile,stance,look,turn);
   const anchor = profile.backing;
+  const seat = profile.seat;
+  const snug = seat && geo.bones.some(b => b.name===seat.frame) ? seating(seat,stance,look,turn,arm,elytra) : 0;
   const backing = anchor && backingShape(anchor,profile.bodyAngle,stance,look,turn,depth,elytra);
   return {...geo, bones:geo.bones.map(b => {
+    if (b.name===seat?.frame) return {...b,scale:[1,1,1-seat.depth*snug]};
     const half = anchor?.names.indexOf(b.name) ?? -1;
     if (half>=0) return {...b,scale:[1,backing[half],backing[2]]};
     if (b.name===profile.bone) return {...b,offset:[0,0,depth]};
     if (b.name===profile.drapeBone) return {...b,rotation:[-depth*profile.drapePerUnit,0,0]};
     if (b.name===profile.gussetBone) return {...b,scale:[1,1,1+depth/profile.gussetDepth]};
-    if (b.name==='v20_mount_shoulders') return {...b,scale:shoulderScales(stance,look,turn,elytra)};
+    if (b.name==='v20_mount_shoulders') {
+      const scale = shoulderScales(stance,look,turn,elytra);
+      scale[0] = 1-(seat?.width ?? 0)*snug;
+      return {...b,scale};
+    }
     if (b.name==='v20_mount_under_yoke') return {...b,scale:yokeScales(stance,look,arm,elytra)};
     if (b.name==='chestplate') return {...b,rotation:[stance*profile.bodyAngle,0,0],offset:[0,-3.2*stance,0]};
     return b;

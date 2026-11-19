@@ -547,7 +547,16 @@ def build_base() -> dict:
             assert b['parent'] == 'chestplate'
             b['parent'] = FIT_BONE
     bones.insert(72, bone(FIT_BONE, 'chestplate', FIT_PIVOT, (0,0,0), []))
-    bones.extend([bone(DRAPE_BONE, FIT_BONE, DRAPE_PIVOT, (0,0,0), []), *mount_bones(), collar_return()])
+    # One body-space fit frame for all cape pieces. In the editable rig it
+    # is neutral; the game shortens the entire mount without opening joints.
+    from cape_fit import seat_profile
+    q = seat_profile()
+    mounts = mount_bones()
+    for b in [*mounts, next(b for b in bones if b['name'] == FIT_BONE)]:
+        if b['parent'] == 'chestplate':
+            b['parent'] = q['frame']
+    bones.extend([bone(q['frame'], 'chestplate', (0,24,q['plane']), (0,0,0), []),
+                  bone(DRAPE_BONE, FIT_BONE, DRAPE_PIVOT, (0,0,0), []), *mounts, collar_return()])
     return data
 
 

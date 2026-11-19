@@ -83,9 +83,9 @@ def static_checks() -> None:
     n_edge = len(edge['cubes'])
     assert edge['parent'] == FIT_BONE and n_edge == 3
     extras = n_fragments + n_mount + n_edge
-    assert len(bones) == 235 and sum(len(b.get('cubes', [])) for b in bones) == 260+extras
+    assert len(bones) == 236 and sum(len(b.get('cubes', [])) for b in bones) == 260+extras
     rig = next(b for b in bones if b['name'] == FIT_BONE)
-    assert rig['parent'] == 'chestplate' and not rig['cubes']
+    assert rig['parent'] == 'cape_seat_fit' and not rig['cubes']
     forbidden = ("v17_mote_", "v17_ash_", "v17_yoke_",
                  "v16_mote_", "v16_ash_")
     assert not any(b["name"].startswith(forbidden) for b in bones), \

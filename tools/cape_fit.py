@@ -131,11 +131,32 @@ def shoulder_scales(stance, pitch, yaw, *, elytra=False):
     return [1.,.27+.73*length,length]
 
 
+@lru_cache(maxsize=1)
+def seat_profile():
+    code = SOURCE.read_text()
+    names = dict(frame=re.search(r'\bSEAT_FRAME = "([^"]+)";', code)[1])
+    pairs = dict(plane='PLANE', depth='TAKE_IN', width='RETURN_IN', downStart='DOWN_START', downFull='DOWN_FULL',
+                 turnStart='TURN_START', turnEnd='TURN_END', leanStart='LEAN_START', leanEnd='LEAN_END',
+                 armStart='ARM_START', armEnd='ARM_END')
+    return dict(names, **{key: float(re.search(r'\bSEAT_' + const + r' = ([\d.]+);', code)[1])
+                          for key,const in pairs.items()})
+
+
+def seating(stance, pitch, yaw, arm_back=0., *, elytra=False):
+    if elytra or not all(map(math.isfinite,(stance,pitch,yaw,arm_back))):
+        return 0.
+    q = seat_profile()
+    return (smooth(q['downStart'],q['downFull'],-pitch)
+            * (1-smooth(q['turnStart'],q['turnEnd'],abs(math.remainder(yaw,360))))
+            * (1-smooth(q['leanStart'],q['leanEnd'],stance))
+            * (1-smooth(q['armStart'],q['armEnd'],arm_back)))
+
+
 def viewer_profile():
-    return dict(profile(),backing=B.profile())
+    return dict(profile(),backing=B.profile(),seat=seat_profile())
 
 
-def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back=0.):
+def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back=0., close=True):
     """Bake render transforms for a frame, not animation keyframes."""
     changes = {'chestplate': dict(rotation=[stance*profile()['bodyAngle'], 0., 0.],
                                   offset=[0., -3.2*stance, 0.])}
@@ -151,6 +172,11 @@ def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back
             G.SHOULDERS_BONE: dict(scale=shoulder_scales(stance,pitch,yaw,elytra=elytra)),
             G.UNDER_YOKE_BONE: dict(scale=yoke_scales(stance,pitch,arm_back,elytra=elytra)),
         })
+        q = seat_profile()
+        if close and any(b['name'] == q['frame'] for b in geo['bones']):
+            snug = seating(stance,pitch,yaw,arm_back,elytra=elytra)
+            changes[q['frame']] = dict(scale=[1.,1.,1-q['depth']*snug])
+            changes[G.SHOULDERS_BONE]['scale'][0] = 1-q['width']*snug
         names = B.profile()['names']
         if any(b['name'] in names for b in geo['bones']):
             a,b,z = B.solve(head_in_body(stance,pitch,yaw,outer=True),d,elytra=elytra)

@@ -9767,7 +9767,7 @@
             0
           ],
           "cubes": [],
-          "parent": "chestplate"
+          "parent": "cape_seat_fit"
         },
         {
           "name": "v15_cloth_cape_top_0",
@@ -28651,6 +28651,21 @@
           "parent": "cape_top"
         },
         {
+          "name": "cape_seat_fit",
+          "pivot": [
+            0,
+            24,
+            2.38
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "cubes": [],
+          "parent": "chestplate"
+        },
+        {
           "name": "cape_drape_fit",
           "pivot": [
             0.0,
@@ -28904,7 +28919,7 @@
               "inflate": 0.01
             }
           ],
-          "parent": "chestplate"
+          "parent": "cape_seat_fit"
         },
         {
           "name": "v20_mount_gusset",
@@ -29165,7 +29180,7 @@
               ]
             }
           ],
-          "parent": "chestplate"
+          "parent": "cape_seat_fit"
         },
         {
           "name": "v20_mount_saddle",
@@ -29938,7 +29953,7 @@
               ]
             }
           ],
-          "parent": "chestplate"
+          "parent": "cape_seat_fit"
         },
         {
           "name": "v20_mount_backing_left",
@@ -30209,7 +30224,7 @@
               ]
             }
           ],
-          "parent": "chestplate"
+          "parent": "cape_seat_fit"
         },
         {
           "name": "v20_mount_backing_right",
@@ -30480,7 +30495,7 @@
               ]
             }
           ],
-          "parent": "chestplate"
+          "parent": "cape_seat_fit"
         },
         {
           "name": "v17_cowl_return",

@@ -258,19 +258,21 @@ jobs:
                   assert _ob_c == _nb_c, _ob['name']
           mount = {b['name']: b for b in armor_geo['bones'] if b['name'].startswith('v20_mount_')}
           assert {n:b['parent'] for n,b in mount.items()} == {
-              'v20_mount_seat': 'chestplate', 'v20_mount_gusset': 'chestplate',
+              'v20_mount_seat': 'cape_seat_fit', 'v20_mount_gusset': 'cape_seat_fit',
               'v20_mount_saddle': 'cape_wearer_fit', 'v20_mount_shoulders': 'cape_wearer_fit',
-              'v20_mount_under_yoke': 'chestplate', 'v20_mount_backing_left': 'chestplate',
-              'v20_mount_backing_right': 'chestplate'}
+              'v20_mount_under_yoke': 'cape_seat_fit', 'v20_mount_backing_left': 'cape_seat_fit',
+              'v20_mount_backing_right': 'cape_seat_fit'}
           mount_cubes = sum(len(b.get('cubes', [])) for b in mount.values())
           assert mount_cubes == 21
           cowl_return = next(b for b in armor_geo['bones'] if b['name'] == 'v17_cowl_return')
           return_cubes = len(cowl_return['cubes'])
           assert cowl_return['parent'] == 'cape_wearer_fit' and return_cubes == 3
-          assert len(armor_geo['bones']) == 235
+          assert len(armor_geo['bones']) == 236
           assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 260 + fragments + mount_cubes + return_cubes
           hinge = next(b for b in armor_geo['bones'] if b['name'] == 'cape_wearer_fit')
-          assert hinge['parent'] == 'chestplate' and not hinge['cubes']
+          assert hinge['parent'] == 'cape_seat_fit' and not hinge['cubes']
+          _seat = next(b for b in armor_geo['bones'] if b['name'] == 'cape_seat_fit')
+          assert _seat['parent'] == 'chestplate' and not _seat['cubes']
           new_bones = armor_geo['bones'][72:]
           new_names = {b['name'] for b in new_bones}
           assert {
@@ -504,7 +506,7 @@ jobs:
           assert bb['meta']['format_version'] == '5.0'
           # v1.17.3: el .bbmodel de Blockbench muestra SOLO la capa: sin
           # maniqui Steve/Alex y sin los 126 cubos de la armadura vieja.
-          assert len(bb['elements']) == 149+fragments+mount_cubes+return_cubes and len(bb['groups']) == 235
+          assert len(bb['elements']) == 149+fragments+mount_cubes+return_cubes and len(bb['groups']) == 236
           assert sum(e['visibility'] for e in bb['elements']) == 122+fragments+mount_cubes+return_cubes
           assert not any('Steve/Alex' in g['name'] for g in bb['groups'])
           assert bb['resolution'] == {'width': armor_size, 'height': armor_size}
@@ -987,6 +989,10 @@ jobs:
               while IFS= read -r line; do printf '::warning title=Diagnóstico de cliente::%s\n' "${line//%/%25}"; done
             exit 1
           fi
+
+      - name: Recorte comparativo F5 del ajuste de cuello y hombreras
+        if: always() && steps.fx-smoke.outcome != 'skipped'
+        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery ajuste
 
       - name: Recorte en ángulo oblicuo
         if: always() && steps.fx-smoke.outcome != 'skipped'

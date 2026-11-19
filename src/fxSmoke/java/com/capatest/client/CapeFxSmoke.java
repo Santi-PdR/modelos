@@ -63,6 +63,7 @@ import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -77,6 +78,19 @@ public final class CapeFxSmoke {
     private static final String FRAGMENT = "assets/capatest/shaders/core/cape_bloom.fsh";
     private static final String PACK_ID = "file/fx-probe";
     private static final int HOTBAR_SLOT = 4, HOTBAR_SAMPLES = 34;
+    // Negative control: opening only the new fitting frame leaves exactly
+    // the v1.67.8 rig. No bypass ships outside this smoke-test source set.
+    private static final Field SEATING = field("seating");
+    private static Field field(String name) {
+        try {
+            Field field = CapaArmorRenderer.class.getDeclaredField(name);
+            field.setAccessible(true);
+            return field;
+        } catch (ReflectiveOperationException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+
     private enum Scene {
         CHEST("pecho-dia", 6000), NIGHT("pecho-noche", 18000), LAMP("pecho-noche-con-luz", 18000),
         BOTH("ambos-noche-encantado", 18000),
@@ -84,6 +98,8 @@ public final class CapeFxSmoke {
         TURN_BARE("cenital-giro-sin-manto", 6000), TURN_CHEST("cenital-giro-pecho", 6000), TURN_BACK("cenital-giro-curios", 6000),
         OBLIQUE_BARE("oblicua-sin-manto", 6000), OBLIQUE_UNLINED("oblicua-sin-union", 6000), OBLIQUE_CHEST("oblicua-pecho", 6000), OBLIQUE_BACK("oblicua-curios", 6000),
         SIDE_BARE("perfil-sin-manto", 6000), SIDE_UNLINED("perfil-sin-union", 6000), SIDE_CHEST("perfil-pecho", 6000), SIDE_BACK("perfil-curios", 6000),
+        FIT_BARE("ajuste-sin-manto", 6000), FIT_PREVIOUS("ajuste-v1678", 6000),
+        FIT_CHEST("ajuste-pecho", 6000), FIT_BACK("ajuste-curios", 6000),
         HOTBAR_BARE("hotbar-vacia", 6000), HOTBAR("hotbar", 6000),
         STRAFE_LEFT("traslacion-izquierda", 18000), STRAFE_RIGHT("traslacion-derecha", 18000),
         WINGS("espalda-con-elitros", 18000),
@@ -100,18 +116,19 @@ public final class CapeFxSmoke {
 
         boolean hotbar() { return this == HOTBAR_BARE || this == HOTBAR; }
         boolean elytra() { return this == WINGS || this == GLIDE; }
-        boolean usesBack() { return this == TOP_BACK || this == TURN_BACK || this == OBLIQUE_BACK || this == SIDE_BACK || elytra(); }
+        boolean usesBack() { return this == TOP_BACK || this == TURN_BACK || this == OBLIQUE_BACK || this == SIDE_BACK || this == FIT_BACK || elytra(); }
         boolean hasBack() { return this == BOTH || usesBack(); }
-        boolean bare() { return this == TOP_BARE || this == TURN_BARE || this == OBLIQUE_BARE || this == SIDE_BARE; }
+        boolean bare() { return this == TOP_BARE || this == TURN_BARE || this == OBLIQUE_BARE || this == SIDE_BARE || this == FIT_BARE; }
         boolean overhead() { return this == TOP_BARE || this == TOP_CHEST || this == TOP_BACK || turned(); }
         boolean turned() { return this == TURN_BARE || this == TURN_CHEST || this == TURN_BACK; }
         boolean unlined() { return this == OBLIQUE_UNLINED || this == SIDE_UNLINED; }
         boolean oblique() { return this == OBLIQUE_BARE || this == OBLIQUE_UNLINED || this == OBLIQUE_CHEST || this == OBLIQUE_BACK; }
         boolean profile() { return this == SIDE_BARE || this == SIDE_UNLINED || this == SIDE_CHEST || this == SIDE_BACK; }
         boolean upperBack() { return oblique() || profile(); }
-        boolean fixedCamera() { return overhead() || oblique() || profile(); }
-        float yaw() { return profile() ? 76 : turned() || oblique() || hotbar() ? 43 : 0; }
-        float pitch() { return profile() ? 21 : oblique() ? 58 : turned() || hotbar() ? 86 : 89; }
+        boolean fit() { return this == FIT_BARE || this == FIT_PREVIOUS || this == FIT_CHEST || this == FIT_BACK; }
+        boolean fixedCamera() { return overhead() || upperBack() || fit(); }
+        float yaw() { return fit() ? 3 : profile() ? 76 : turned() || oblique() || hotbar() ? 43 : 0; }
+        float pitch() { return fit() ? 76 : profile() ? 21 : oblique() ? 58 : turned() || hotbar() ? 86 : 89; }
         boolean inspectBirths() { return this == GLIDE || this == WADE || this == SWIM; }
         boolean compareLight() { return this == CHEST || this == NIGHT || this == LAMP; }
         boolean strafe() { return this == STRAFE_LEFT || this == STRAFE_RIGHT; }
@@ -128,7 +145,7 @@ public final class CapeFxSmoke {
     private static int framePasses;
     private static int frameLight;
     private static float framePartialTick;
-    private static double frameTopDegrees;
+    private static double frameTopDegrees, frameSeating;
     private static ItemStack rendered;
     private static Matrix4f playerPose, armorPose, upperBackProjection;
     private static int stableFrames;
@@ -370,6 +387,7 @@ public final class CapeFxSmoke {
         stableFrames = observedBirths = 0;
         captured = false;
         if (next == Scene.TOP_BARE) game.options.fov().set(34);
+        if (next == Scene.FIT_BARE) game.options.fov().set(42);
         if (next.hotbar()) {
             game.options.guiScale().set(2);
             game.options.hideGui = false;
@@ -426,6 +444,13 @@ public final class CapeFxSmoke {
                     }
                 }
                 player.teleportTo(level, floor.getX() + .5, floor.getY() + 1, floor.getZ() + .5, 0, 89);
+            } else if (next == Scene.FIT_BARE) {
+                BlockPos floor = player.blockPosition().below();
+                for (int x = -3; x <= 3; x++) {
+                    for (int z = -3; z <= 3; z++) {
+                        level.setBlockAndUpdate(floor.offset(x, 0, z), Blocks.BLUE_CONCRETE.defaultBlockState());
+                    }
+                }
             } else if (next == Scene.STRAFE_LEFT) {
                 // An unobstructed strip beside the lamp/panel fixtures.
                 player.teleportTo(level, pane.getX() - 6, player.getY(), pane.getZ() - 6, 0, 0);
@@ -478,10 +503,17 @@ public final class CapeFxSmoke {
     }
 
     private static void beforeArmor(GeoRenderEvent.Armor.Pre event) {
-        if (scene != null && scene.unlined() && event.getRenderer() instanceof CapaArmorRenderer renderer
-                && renderer.getCurrentEntity() == Minecraft.getInstance().player) {
-            // Same pose, materials and item with only the two new bones hidden:
-            // the old geometry under the collar is the negative control.
+        if (scene == null || !(event.getRenderer() instanceof CapaArmorRenderer renderer)
+                || renderer.getCurrentEntity() != Minecraft.getInstance().player) return;
+        if (scene == Scene.FIT_PREVIOUS) {
+            try {
+                SEATING.setFloat(renderer, 0);
+            } catch (IllegalAccessException e) {
+                throw new AssertionError(e);
+            }
+        }
+        if (scene.unlined()) {
+            // Same pose, materials and item with only the two lining bones hidden.
             renderer.getGeoModel().getBone(CapeBacking.LEFT).orElseThrow().setHidden(true);
             renderer.getGeoModel().getBone(CapeBacking.RIGHT).orElseThrow().setHidden(true);
         }
@@ -497,11 +529,18 @@ public final class CapeFxSmoke {
             renderer.getGeoModel().getBone(CapeBacking.LEFT).orElseThrow().setHidden(false);
             renderer.getGeoModel().getBone(CapeBacking.RIGHT).orElseThrow().setHidden(false);
         }
-        if (scene.upperBack()) {
+        if (scene.upperBack() || scene.fit()) {
             // Measure the seam under the same world projection used for
             // the current armor pass (neither debug pixels nor the visor).
             upperBackProjection = new Matrix4f(RenderSystem.getProjectionMatrix())
                     .mul(RenderSystem.getModelViewMatrix()).mul(armorPose).translate(0,1.5F,0).scale(-1,-1,1);
+        }
+        if (scene.fit()) {
+            try {
+                frameSeating = SEATING.getFloat(renderer);
+            } catch (IllegalAccessException e) {
+                throw new AssertionError(e);
+            }
         }
         frameLight = event.getPackedLight();
         framePartialTick = event.getPartialTick();
@@ -514,7 +553,7 @@ public final class CapeFxSmoke {
     private static void frame(TickEvent.RenderTickEvent event) {
         if (event.phase == TickEvent.Phase.START) {
             framePasses = 0;
-            frameTopDegrees = Double.NaN;
+            frameTopDegrees = frameSeating = Double.NaN;
             rendered = ItemStack.EMPTY;
             playerPose = armorPose = upperBackProjection = null;
             // Hold the camera/head yaw relative to the torso, like looking
@@ -543,7 +582,7 @@ public final class CapeFxSmoke {
         ItemStack back = backOf(player).getStacks().getStackInSlot(0);
         boolean chestReady = switch (scene) {
             case TOP_BARE, TOP_BACK, TURN_BARE, TURN_BACK, OBLIQUE_BARE, OBLIQUE_BACK, SIDE_BARE, SIDE_BACK,
-                    HOTBAR_BARE, HOTBAR -> chest.isEmpty();
+                    FIT_BARE, FIT_BACK, HOTBAR_BARE, HOTBAR -> chest.isEmpty();
             case WINGS, GLIDE -> chest.is(Items.ELYTRA);
             default -> chest.is(CapaTestMod.CAPA_DETERIORER.get());
         };
@@ -565,7 +604,8 @@ public final class CapeFxSmoke {
         boolean posed = switch (scene) {
             case TOP_BARE, TOP_CHEST, TOP_BACK, TURN_BARE, TURN_CHEST, TURN_BACK,
                     OBLIQUE_BARE, OBLIQUE_UNLINED, OBLIQUE_CHEST, OBLIQUE_BACK,
-                    SIDE_BARE, SIDE_UNLINED, SIDE_CHEST, SIDE_BACK -> player.onGround()
+                    SIDE_BARE, SIDE_UNLINED, SIDE_CHEST, SIDE_BACK,
+                    FIT_BARE, FIT_PREVIOUS, FIT_CHEST, FIT_BACK -> player.onGround()
                     && !player.isCrouching() && Math.abs(player.getXRot()-scene.pitch()) < .05 && Math.abs(bodyYaw) < .05
                     && velocity.horizontalDistanceSqr() < .0001;
             case STRAFE_LEFT -> player.onGround() && velocity.x > .045 && lateral > .015;
@@ -638,10 +678,16 @@ public final class CapeFxSmoke {
                     check(rootError < .08, scene.file + ": emitter/render frame gap " + rootError);
                 }
             }
+            if (scene.fit() && !scene.bare()) {
+                check(scene == Scene.FIT_PREVIOUS ? frameSeating == 0 : frameSeating > .88,
+                        scene.file + ": incorrect fit control or live seating " + frameSeating);
+                exposure = "; ajuste de la montura activa = " + Math.round(frameSeating * 100) + "%";
+            }
             Path shots = shots(game);
             try (NativeImage image = Screenshot.takeScreenshot(game.getMainRenderTarget())) {
                 image.writeToFile(shots.resolve(scene.file + ".png"));
                 if (scene.upperBack() && !scene.bare()) projectUpperBack(shots, image);
+                if (scene.fit() && !scene.bare()) projectFit(shots, image);
             }
             if (scene.strafe()) exposure = "; entrada lateral = " + Math.round(100 * lateral) + "%";
             note(scene.file + ": " + framePasses + " manto en F5" + (scene.inspectBirths()
@@ -655,6 +701,26 @@ public final class CapeFxSmoke {
 
     private static Path shots(Minecraft game) throws IOException {
         return Files.createDirectories(game.gameDirectory.toPath().resolve("fx-shots"));
+    }
+
+    /** Registered model-space trim windows, measured in the F5 framebuffer. */
+    private static void projectFit(Path shots, NativeImage image) throws IOException {
+        check(upperBackProjection != null, "missing trim projection");
+        StringBuilder data = new StringBuilder();
+        for (float x : new float[]{-7.2F,0,5.8F}) {
+            // Pad, center of the neck seam, opposite pad. The baseline's
+            // visible upper surface is in these small windows (not the lining).
+            float y = x == 0 ? 23.85F : 23F;
+            float z = x == 0 ? 7.28F : 4.38F;
+            for (float depth : new float[]{z, (float) (CapeFit.SEAT_PLANE
+                    + (z-CapeFit.SEAT_PLANE)*CapeFit.seatDepthScale(1))}) {
+                Vector3f pixel = upperBackProjection.transformProject(new Vector3f(x/16,y/16,depth/16));
+                data.append((pixel.x()+1)*image.getWidth()/2).append('\t')
+                        .append((1-pixel.y())*image.getHeight()/2).append('\t');
+            }
+            data.append('\n');
+        }
+        Files.writeString(shots.resolve(scene.file + ".tsv"), data.toString());
     }
 
     private static void projectUpperBack(Path shots, NativeImage image) throws IOException {
