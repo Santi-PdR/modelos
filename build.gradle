@@ -121,3 +121,11 @@ tasks.named('jar', Jar).configure {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
+
+// Variante optativa y aislada para test-1: no cambia el mod completo.
+// Ejecutar primero python3 katana_stain/tools/preparar_test.py.
+if (project.hasProperty('katanaOnly')) {
+    version = '0.1.0-katana-test'
+    sourceSets.main.java.setSrcDirs(['build-katana-input/java'])
+    sourceSets.main.resources.setSrcDirs(['build-katana-input/resources'])
+}

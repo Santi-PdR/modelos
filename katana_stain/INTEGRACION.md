@@ -44,3 +44,13 @@ El icono plano se preparó a partir de la imagen proporcionada por el usuario:
 se eliminó el fondo ajedrezado y se adaptó a 64×64 con transparencia. El
 renderer lo usa solo en GUI; la geometría 3D sigue usándose en mano, suelo y
 marco. Falta confirmar visualmente encuadre, orientación y contraste en juego.
+
+## Prueba aislada para test-1
+
+La variante `-PkatanaOnly` usa una entrada y recursos aislados preparados
+por `python3 katana_stain/tools/preparar_test.py`; no incluye ni registra
+la capa ni su integración Curios. Conserva `capatest` como identificador,
+por lo que no debe instalarse junto con otro jar que use el mismo mod ID.
+Requiere Forge 47 para Minecraft 1.20.1 y GeckoLib Forge 4.8.1 o compatible.
+Es un prototipo; las posiciones del arma y el comportamiento necesitan
+comprobación visual y de juego.

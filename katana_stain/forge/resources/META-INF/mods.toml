@@ -1,0 +1,31 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="capatest"
+version="0.1.0-katana-test"
+displayName="Legados de Combate: prueba de katana"
+authors="EternalCraft"
+description='''Prueba aislada de la katana de Stain. No contiene la capa.'''
+
+[[dependencies.capatest]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.capatest]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.21)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.capatest]]
+modId="geckolib"
+mandatory=true
+versionRange="[4.8.1,)"
+ordering="NONE"
+side="BOTH"

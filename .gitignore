@@ -43,3 +43,6 @@ preview/*.raw
 # artefactos `artifacts/v1.27.1` del repo, con su SHA256SUMS.txt.
 # Aqui solo se deja la descarga que se ha verificado contra el asset.
 entregables/
+
+# Staging reproducible para el jar aislado de prueba de katana.
+build-katana-input/
