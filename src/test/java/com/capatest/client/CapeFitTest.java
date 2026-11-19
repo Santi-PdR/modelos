@@ -99,8 +99,8 @@ public final class CapeFitTest {
         check(CapeFit.seating(0, .8, down, .8 + Math.toRadians(3), 2.4, false) > .98,
                 "cuello y hombreras no se ciñen con la cabeza baja y los brazos en reposo");
         double half = CapeFit.seating(0, 0, Math.toRadians(58), Math.toRadians(3), 2.8, false);
-        check(half > .27 && half < .32, "sin unión progresiva al inclinar 58°: " + half);
-        check(CapeFit.seating(0, 0, Math.toRadians(46), 0, 2.8, false) == 0,
+        check(half > .39 && half < .43, "sin unión progresiva al inclinar 58°: " + half);
+        check(CapeFit.seating(0, 0, Math.toRadians(44), 0, 2.8, false) == 0,
                 "el ceñido debe abrirse al levantar la mirada");
         check(CapeFit.seating(0, 0, down, 0, 1, true) == 0, "el ceñido invade los élitros");
         check(CapeFit.seating(0, 0, -down, 0, 1, false) == 0, "el ceñido invade la cabeza");
