@@ -46,10 +46,10 @@ public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
             ceiling = CapeBloom.Mode.HALO;
         }
         CapeBloom.Mode mode = CapeBloom.availableMode();
-        if (mode.ordinal() > ceiling.ordinal())
-            mode = ceiling;
-        if (mode == CapeBloom.Mode.OFF)
+        if (mode == CapeBloom.Mode.OFF || ceiling == CapeBloom.Mode.OFF)
             return;
+        if (ceiling == CapeBloom.Mode.CORE)
+            mode = CapeBloom.Mode.CORE;
         try {
             // GeckoLib needn't balance its internal pushes on an exception.
             // Give this optional pass its own stack with the exact same top.
@@ -70,10 +70,10 @@ public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
                             CapaDeteriorerItem animatable,
                             BakedGeoModel bakedModel,
                             MultiBufferSource bufferSource,
-                            CapeBloom.Mode mode,
+                            CapeBloom.Mode pass,
                             float partialTick) {
         // Match the unshifted opaque depth; the glow only writes color.
-        RenderType emissive = CapeBloom.wornLight(mode);
+        RenderType emissive = CapeBloom.wornLight(pass);
 
         if (!(getRenderer() instanceof GeoArmorRenderer<?> armor))
             return;

@@ -996,7 +996,7 @@ jobs:
           log="$RUNNER_TEMP/forge-client.log"
           rc=0
           timeout --kill-after=12s 300s xvfb-run -a gradle -PcapeFxSmoke --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
-          grep -F 'FX smoke: ' "$log" | sed 's/.*FX smoke: //' | while IFS= read -r line; do
+          awk 'sub(/.*FX smoke: /, "")' "$log" | while IFS= read -r line; do
             printf '::notice title=FX en Forge::%s\n' "$line"
           done
           if [ "$rc" -ne 0 ] || ! grep -Fq 'FX smoke: PASS:' "$log" ||

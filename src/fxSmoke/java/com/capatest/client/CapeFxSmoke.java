@@ -139,6 +139,7 @@ public final class CapeFxSmoke {
                     game.options.hideGui = true;
                     game.options.renderDistance().set(4);
                     game.options.simulationDistance().set(5);
+                    game.options.framerateLimit().set(30);
                     game.options.setCameraType(CameraType.THIRD_PERSON_BACK);
                     GameRules rules = new GameRules();
                     rules.getRule(GameRules.RULE_DAYLIGHT).set(false, null);
@@ -270,7 +271,8 @@ public final class CapeFxSmoke {
         }
         if (scene < 0 || captured || pending != null) return;
         Minecraft game = Minecraft.getInstance();
-        if (game.player == null || game.screen != null || !game.level.isLoaded(pane)) return;
+        if (game.player == null || game.screen != null || !game.level.isLoaded(pane)
+                || game.level.getDayTime() != (scene == 0 ? 6000 : 18000)) return;
         ItemStack chest = game.player.getItemBySlot(EquipmentSlot.CHEST);
         ItemStack back = backOf(game.player).getStacks().getStackInSlot(0);
         if (back.isEmpty() != (scene == 0)
