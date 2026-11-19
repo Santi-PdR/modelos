@@ -159,7 +159,7 @@ jobs:
           assert _spark_interval == 8, ('intervalo de chispas', _spark_interval)
           assert _spark_max == 3, ('maximo de chispas', _spark_max)
           assert 'Math.min(aura.count(), MAX_SPARKS_PER_TICK)' in _item
-          assert 'player.yBodyRot' in _item and 'player.getY() + height' in _item
+          assert 'player.yBodyRot' in _item and 'frame.birth(spark)' in _item
           assert 'player.getItemBySlot(EquipmentSlot.CHEST) == stack' in _item
           assert 'data.getInt(AURA_TICK) == tick' in _item
           _reg = (root / 'src/main/java/com/capatest/client/CapaParticleRegistration.java').read_text()
@@ -613,7 +613,7 @@ jobs:
           else:
               assert 'cape_controller", 8' in _item_src, 'sin transicion suave'
               assert 'WORN_ANIMATIONS.get(stateFor(' in _item_src
-          assert 'sendParticles' in _item_src and '0, backX * trail' in _item_src
+          assert 'sendParticles' in _item_src and '0, push.x(), push.y(), push.z(), 1.0D' in _item_src
           # Sólo la tela se mueve. Las raíces, piezas soldadas y montura
           # siguen el cuerpo, no una pista residual de posición o escala.
           moving = {f'v17_ribbon_{k}_seg{j}' for k in range(12) for j in range(1,5)}
@@ -821,10 +821,13 @@ jobs:
         run: |
           CLASSES="$RUNNER_TEMP/cape-state-test"
           mkdir -p "$CLASSES"
-          javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/{CapeState,CapePlayback}.java \
+          javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/{CapeState,CapePlayback,CapeSparkFrame}.java \
             src/main/java/com/capatest/client/{CapeResponse,CapeFit,CapeStride,CapeTint,CapeEmber}.java \
-            src/test/java/com/capatest/item/CapeStateTest.java \
+            src/test/java/com/capatest/item/{CapeStateTest,CapeSparkFrameTest}.java \
             src/test/java/com/capatest/client/{CapeFitTest,CapeRuntimeTest,CapeEmberTest}.java
+          java -cp "$CLASSES" com.capatest.item.CapeSparkFrameTest
+          java -cp "$CLASSES" com.capatest.item.CapeSparkFrameTest --samples > "$CLASSES/spark-frames.tsv"
+          OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_cape_spark_fit.py "$CLASSES/spark-frames.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeEmberTest
           java -cp "$CLASSES" com.capatest.client.CapeEmberTest --samples > "$CLASSES/embers.tsv"
           java -cp "$CLASSES" com.capatest.item.CapeStateTest
@@ -904,6 +907,7 @@ jobs:
             grep -qx 'com/capatest/CapaTestMod.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaGlowLayer.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaSparkParticle.class' /tmp/jar-contents.txt
+            grep -qx 'com/capatest/item/CapeSparkFrame.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeSparkPath.class' /tmp/jar-contents.txt
             ! grep -q '^com/capatest/client/CapeFxSmoke' /tmp/jar-contents.txt
             grep -qx 'com/capatest/client/CapaItemRenderer.class' /tmp/jar-contents.txt

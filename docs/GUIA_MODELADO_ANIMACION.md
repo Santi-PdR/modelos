@@ -132,8 +132,14 @@ animación y la documentación de GeckoLib._
   shader inválido, núcleo corrupto y opción sin halo; recuperación y pila de
   poses ante un fallo inyectado; nacimiento y movimiento de brasas ante un
   panel; visibilidad de Curios y un único render en pecho, ambos slots con
-  el pecho encantado y espalda con élitros. Las capturas son de pie, no de
-  un vuelo completo.
+  el pecho encantado y espalda con élitros. Desde v1.67.2 también arranca un
+  planeo con Curios `back`, entra en el agua de pie, nada y vuelve a erguirse.
+  Mide la diferencia entre el marco de emisión y la transformación del
+  renderer, y comprueba que el cliente recibe brasas en esas posturas.
+- **Lectura del diagnóstico:** la lámina del README compara los puntos de
+  salida con los clips del JAR, no con todos los huesos animados en vivo.
+  El servidor no ve el paño de cada cliente. Las alas usan el mismo montaje
+  que antes; la prueba no certifica holgura para todas las alas o skins.
 - **Prueba manual pendiente para packs concretos:** repetir con shaders
   de terceros y gráficos Fabulosos; agacharse, planear y nadar junto a
   losas y paredes. Cambiar el ojo de `back` y probar un cosmético encima.

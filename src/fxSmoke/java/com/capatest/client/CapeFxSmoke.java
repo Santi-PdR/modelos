@@ -20,6 +20,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -36,14 +37,18 @@ import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
+import net.minecraftforge.client.event.RenderPlayerEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.event.GeoRenderEvent;
 import top.theillusivec4.curios.api.CuriosApi;
@@ -64,18 +69,55 @@ public final class CapeFxSmoke {
     private static final String ATLAS = "assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan";
     private static final String FRAGMENT = "assets/capatest/shaders/core/cape_bloom.fsh";
     private static final String PACK_ID = "file/fx-probe";
-    private static final String[] SCENES = {"pecho-dia", "ambos-noche-encantado", "espalda-con-elitros"};
+    private enum Scene {
+        CHEST("pecho-dia", 6000), BOTH("ambos-noche-encantado", 18000), WINGS("espalda-con-elitros", 18000),
+        GLIDE("planeo-real", 6000), WADE("de-pie-en-agua", 6000), SWIM("nado-horizontal", 6000),
+        SWIM_EXIT("fin-del-nado", 6000);
+
+        final String file;
+        final long dayTime;
+
+        Scene(String file, long dayTime) {
+            this.file = file;
+            this.dayTime = dayTime;
+        }
+
+        boolean elytra() { return this == WINGS || this == GLIDE; }
+        boolean hasBack() { return this == BOTH || elytra(); }
+        boolean inspectBirths() { return this == GLIDE || this == WADE || this == SWIM; }
+    }
+
     private static int step;
     private static long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(75);
     private static Path pack;
     private static CompletableFuture<?> pending;
     private static GlowProbe probe;
     private static BlockPos pane;
-    private static int scene = -1;
+    private static Scene scene;
     private static int framePasses;
     private static ItemStack rendered;
+    private static Matrix4f playerPose, armorPose;
     private static int stableFrames;
+    private static int observedBirths;
     private static boolean captured;
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void observeParticles(RegisterParticleProvidersEvent event) {
+        // Wrap the real provider only in the dev client to observe delivered births.
+        event.registerSpriteSet(CapaParticles.CAPA_SPARK.get(), sprites -> {
+            var provider = new CapaSparkParticle.Provider(sprites);
+            return (type, level, x, y, z, dx, dy, dz) -> {
+                var player = Minecraft.getInstance().player;
+                if (scene != null && scene.inspectBirths() && pending == null && stableFrames >= 2
+                        && player != null && player.distanceToSqr(x, y, z) < 9) {
+                    double height = y - player.getY();
+                    // The old short-hitbox rule would put these under .1 blocks.
+                    if (scene == Scene.WADE ? height < .28 : height > .45) observedBirths++;
+                }
+                return provider.createParticle(type, level, x, y, z, dx, dy, dz);
+            };
+        });
+    }
 
     @SubscribeEvent
     public static void setup(FMLClientSetupEvent event) {
@@ -83,6 +125,7 @@ public final class CapeFxSmoke {
             note("probe registrado (Curios=" + ModList.get().isLoaded("curios") + ")");
             resetDeadline();
             MinecraftForge.EVENT_BUS.addListener(CapeFxSmoke::tick);
+            MinecraftForge.EVENT_BUS.addListener(CapeFxSmoke::beforePlayer);
             MinecraftForge.EVENT_BUS.addListener(CapeFxSmoke::afterArmor);
             MinecraftForge.EVENT_BUS.addListener(CapeFxSmoke::frame);
         });
@@ -95,7 +138,10 @@ public final class CapeFxSmoke {
             if (System.nanoTime() - deadline > 0) {
                 throw new AssertionError("stalled step " + step + ", scene " + scene + ", screen " + game.screen
                         + ", dayTime " + (game.level == null ? "no level" : game.level.getDayTime())
-                        + ", pending " + (pending != null));
+                        + ", pending " + (pending != null) + ", births " + observedBirths
+                        + ", pose " + (game.player == null ? "no player" : game.player.getPose())
+                        + ", swim " + (game.player == null ? 0 : game.player.getSwimAmount(1))
+                        + ", stable frames " + stableFrames);
             }
             if (pending != null) {
                 if (!pending.isDone()) return;
@@ -189,15 +235,18 @@ public final class CapeFxSmoke {
                 case 8 -> {
                     if (!game.level.getBlockState(pane).is(Blocks.GLASS_PANE)) return;
                     testFlight(game);
-                    equipScene(game, 0);
+                    equipScene(game, Scene.CHEST);
                 }
                 case 9 -> {
+                    driveScene(game);
                     if (!captured) return;
-                    if (scene + 1 < SCENES.length) {
-                        equipScene(game, scene + 1);
+                    if (scene != Scene.SWIM_EXIT) {
+                        equipScene(game, Scene.values()[scene.ordinal() + 1]);
                         return;
                     }
-                    note("PASS: recarga, oclusión y equipo en cliente Forge");
+                    if (game.player.getSwimAmount(1) > 0) return;
+                    check(!CapaDeteriorerItem.auraFrame(game.player).posed(), "swim frame persisted after blend");
+                    note("PASS: recarga, oclusión, equipo, planeo y nado en cliente Forge");
                     game.stop();
                 }
                 default -> { return; }
@@ -247,7 +296,15 @@ public final class CapeFxSmoke {
         wearer.setPos(wall.getX() - .31, start.y, wall.getZ() + .5);
         check(!CapeSparkPath.clearBirth(level, wearer, new Vec3(wall.getX() + .2, start.y, wall.getZ() + .5)),
                 "ray entered full block");
-        note("nacimiento en aire y rechazo de panel fino o muro sólido");
+        // The same-height ray used to start ABOVE this wall for a tilted
+        // mantle with a high birth. The new ray must start inside the hitbox.
+        wearer.setPos(wall.getX() - .3, wall.getY() - 1.4, wall.getZ() + .5);
+        Vec3 high = new Vec3(wall.getX() + .8, wall.getY() + 1.1, wall.getZ() + .5);
+        check(wearer.getBoundingBox().maxY < wall.getY() + 1, "high-birth fixture is not over the hitbox");
+        check(!CapeSparkPath.clearBirth(level, wearer, high), "high birth skipped the top of the wall");
+        wearer.setPos(wearer.getX(), wearer.getY(), wearer.getZ() + 1);
+        check(CapeSparkPath.clearBirth(level, wearer, high.add(0, 0, 1)), "high birth in open air was rejected");
+        note("nacimiento libre y rechazo de panel o muro, también por encima de la hitbox");
         return panel;
     }
 
@@ -270,54 +327,138 @@ public final class CapeFxSmoke {
         deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(75);
     }
 
-    private static void equipScene(Minecraft game, int index) {
+    private static void equipScene(Minecraft game, Scene next) {
         resetDeadline();
-        scene = index;
-        stableFrames = 0;
+        scene = next;
+        stableFrames = observedBirths = 0;
         captured = false;
+        if (next == Scene.SWIM) {
+            game.options.keyUp.setDown(true);
+            game.options.keySprint.setDown(true);
+            return;
+        }
+        if (next == Scene.SWIM_EXIT) {
+            game.options.keyUp.setDown(false);
+            game.options.keySprint.setDown(false);
+            game.player.setSprinting(false);
+            return;
+        }
         var server = game.getSingleplayerServer();
         var uuid = game.player.getUUID();
         pending = server.submit(() -> {
             ServerPlayer player = server.getPlayerList().getPlayer(uuid);
-            player.serverLevel().setDayTime(index == 0 ? 6000 : 18000);
-            ItemStack chest = index == 2 ? new ItemStack(Items.ELYTRA) : mantle();
-            if (index == 1) chest.enchant(Enchantments.UNBREAKING, 1);
+            var level = player.serverLevel();
+            level.setDayTime(next.dayTime);
+            ItemStack chest = next.elytra() ? new ItemStack(Items.ELYTRA) : mantle();
+            if (next == Scene.BOTH) chest.enchant(Enchantments.UNBREAKING, 1);
             player.setItemSlot(EquipmentSlot.CHEST, chest);
-            backOf(player).getStacks().setStackInSlot(0, index == 0 ? ItemStack.EMPTY : mantle());
+            backOf(player).getStacks().setStackInSlot(0, next.hasBack() ? mantle() : ItemStack.EMPTY);
+            if (next == Scene.GLIDE) {
+                player.getAbilities().flying = false;
+                player.onUpdateAbilities();
+                player.teleportTo(level, player.getX(), pane.getY() + 132, player.getZ(), 21, 18);
+            } else if (next == Scene.WADE) {
+                BlockPos pool = pane.offset(-3, 5, 11);
+                for (int x = -5; x <= 5; x++) {
+                    for (int z = -1; z <= 26; z++) {
+                        for (int y = 0; y <= 3; y++) {
+                            boolean border = Math.abs(x) == 5 || z == -1 || z == 26;
+                            var block = y == 0 && z % 5 == 0 ? Blocks.SEA_LANTERN
+                                    : y == 0 || border ? Blocks.PRISMARINE : Blocks.WATER;
+                            level.setBlock(pool.offset(x, y, z), block.defaultBlockState(), 2);
+                        }
+                    }
+                }
+                player.stopFallFlying();
+                player.setDeltaMovement(Vec3.ZERO);
+                player.teleportTo(level, pool.getX() + .5, pool.getY() + 1.01, pool.getZ() + 6.5, 0, 0);
+            }
         });
     }
 
+    private static void driveScene(Minecraft game) {
+        var player = game.player;
+        if (scene == Scene.GLIDE && player != null && player.getY() > pane.getY() + 75
+                && player.getDeltaMovement().y < -.08 && player.tryToStartFallFlying()) {
+            player.connection.send(new ServerboundPlayerCommandPacket(player,
+                    ServerboundPlayerCommandPacket.Action.START_FALL_FLYING));
+        }
+    }
+
+    private static void beforePlayer(RenderPlayerEvent.Pre event) {
+        if (scene != null && event.getEntity() == Minecraft.getInstance().player) {
+            playerPose = new Matrix4f(event.getPoseStack().last().pose());
+        }
+    }
+
     private static void afterArmor(GeoRenderEvent.Armor.Post event) {
-        if (scene < 0 || !(event.getRenderer() instanceof CapaArmorRenderer renderer)
+        if (scene == null || !(event.getRenderer() instanceof CapaArmorRenderer renderer)
                 || renderer.getCurrentEntity() != Minecraft.getInstance().player) return;
         framePasses++;
         rendered = renderer.getCurrentStack();
+        armorPose = new Matrix4f(event.getPoseStack().last().pose());
     }
 
     private static void frame(TickEvent.RenderTickEvent event) {
         if (event.phase == TickEvent.Phase.START) {
             framePasses = 0;
             rendered = ItemStack.EMPTY;
+            playerPose = armorPose = null;
             return;
         }
-        if (scene < 0 || captured || pending != null) return;
+        if (scene == null || captured || pending != null) return;
         Minecraft game = Minecraft.getInstance();
-        if (game.player == null || game.screen != null || !game.level.isLoaded(pane)
-                || game.level.getDayTime() != (scene == 0 ? 6000 : 18000)) return;
-        ItemStack chest = game.player.getItemBySlot(EquipmentSlot.CHEST);
-        ItemStack back = backOf(game.player).getStacks().getStackInSlot(0);
-        if (back.isEmpty() != (scene == 0) || (scene == 1 && !chest.hasFoil())
-                || (scene == 2 ? !chest.is(Items.ELYTRA) : !chest.is(CapaTestMod.CAPA_DETERIORER.get()))) return;
+        var player = game.player;
+        if (player == null || game.screen != null || game.level.getDayTime() != scene.dayTime) return;
+        ItemStack chest = player.getItemBySlot(EquipmentSlot.CHEST);
+        ItemStack back = backOf(player).getStacks().getStackInSlot(0);
+        if (back.isEmpty() == scene.hasBack() || (scene == Scene.BOTH && !chest.hasFoil())
+                || (scene.elytra() ? !chest.is(Items.ELYTRA) : !chest.is(CapaTestMod.CAPA_DETERIORER.get()))) return;
+        float swim = player.getSwimAmount(1);
+        boolean posed = switch (scene) {
+            case GLIDE -> player.isFallFlying() && player.getFallFlyingTicks() >= 12
+                    && Math.abs(player.elytraRotZ) > .8F;
+            case WADE -> player.isInWater() && !player.isVisuallySwimming() && swim == 0;
+            case SWIM -> player.isInWater() && player.isVisuallySwimming() && swim == 1;
+            case SWIM_EXIT -> player.isInWater() && !player.isVisuallySwimming() && swim > .12F && swim < .9F;
+            default -> !player.isFallFlying() && !player.isInWater();
+        };
+        if (!posed) {
+            stableFrames = observedBirths = 0;
+            return;
+        }
         try {
-            check(framePasses == 1 && rendered == (scene == 2 ? back : chest),
-                    SCENES[scene] + ": incorrect worn draw count " + framePasses);
-            if (++stableFrames < 18) return;
+            check(framePasses == 1 && rendered == (scene.elytra() ? back : chest),
+                    scene.file + ": incorrect worn draw count " + framePasses);
+            if (scene != Scene.SWIM_EXIT && ++stableFrames < 18) return;
+            if (scene.inspectBirths() && observedBirths == 0) return;
+            double rootError = 0;
+            if (scene.inspectBirths() || scene == Scene.SWIM_EXIT) {
+                var frame = CapaDeteriorerItem.auraFrame(player);
+                check(frame.posed() == (scene != Scene.WADE), scene.file + ": wrong emitter frame");
+                if (scene == Scene.GLIDE || scene == Scene.SWIM) {
+                    check(playerPose != null && armorPose != null, "missing renderer transform");
+                    Matrix4f model = new Matrix4f(playerPose).invert().mul(armorPose)
+                            .translate(0, 1.5F, 0).scale(-1, -1, 1);
+                    // Compare tick-sampled points against the actual interpolated
+                    // camera-relative root passed to GeckoLib, with a small margin.
+                    for (float side : new float[]{-.50F, .42F}) {
+                        Vector3f renderedPoint = model.transformPosition(-side, .82F, 1.1F, new Vector3f());
+                        var birthFrame = frame.point(side, .82F, 1.1F);
+                        rootError = Math.max(rootError, new Vec3(renderedPoint.x, renderedPoint.y, renderedPoint.z)
+                                .distanceTo(new Vec3(birthFrame.x(), birthFrame.y(), birthFrame.z())));
+                    }
+                    check(rootError < .08, scene.file + ": emitter/render frame gap " + rootError);
+                }
+            }
             Path shots = game.gameDirectory.toPath().resolve("fx-shots");
             Files.createDirectories(shots);
             try (NativeImage image = Screenshot.takeScreenshot(game.getMainRenderTarget())) {
-                image.writeToFile(shots.resolve(SCENES[scene] + ".png"));
+                image.writeToFile(shots.resolve(scene.file + ".png"));
             }
-            note(SCENES[scene] + ": una sola capa en tercera persona trasera");
+            note(scene.file + ": una sola capa en F5" + (scene.inspectBirths()
+                    ? "; nacimientos recibidos=" + observedBirths + ", diferencia de marco=" + Math.round(rootError * 1000) + " mm de bloque"
+                    : ""));
             captured = true;
         } catch (Exception | AssertionError error) {
             fail(game, error);
@@ -352,9 +493,9 @@ public final class CapeFxSmoke {
     }
 
     private static void fail(Minecraft game, Throwable error) {
+        CapaTestMod.LOGGER.error("FX smoke: FAIL at step " + step + ", scene " + scene + ": " + error.getMessage(), error);
         step = -1;
-        scene = -1;
-        CapaTestMod.LOGGER.error("FX smoke: FAIL at client tick", error);
+        scene = null;
         game.stop();
     }
 

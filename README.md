@@ -1,12 +1,28 @@
-# Mantle of the Blight Star — v1.67.1
+# Mantle of the Blight Star — v1.67.2
 
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
 [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench](docs/CAPA_v1.67.0.bbmodel)
+· [Proyecto Blockbench](docs/CAPA_v1.67.2.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+
+### v1.67.2 — brasas que siguen el planeo y el nado
+
+![Puntos de nacimiento antes y después, en planeo y nado horizontal](docs/capa_v1672_brasas.png)
+
+- **Planeo y nado:** los nacimientos acompañan la inclinación y el giro
+  del cuerpo, no la altura de la hitbox. Se aproximan a los jirones de los
+  clips de aire y agua, también con el manto deteriorado. Estar de pie en
+  agua no activa la postura horizontal.
+- **Colisión:** si un jirón sobresale por encima o por debajo de la hitbox,
+  la prueba de bloques parte de dentro del portador. Las brasas ya emitidas
+  siguen subiendo con el mismo impulso. El límite sigue siendo **3 cada 8 ticks**
+  por portador, sin reintentos.
+- **Aspecto:** mismos ocho clips, malla, halo, atlas e icono. El ajuste se
+  calcula en el juego, no se hornea en Blockbench. La lámina mide distancias
+  sobre los clips (sin alas); no es una captura ni una animación de nado del visor.
 
 ### v1.67.1 — robustez de los efectos
 

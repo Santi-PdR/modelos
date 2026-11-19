@@ -165,6 +165,32 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
         return tick % SPARK_INTERVAL_TICKS == 0;
     }
 
+    public static CapeSparkFrame auraFrame(Player player) {
+        float yaw = player.yBodyRot;
+        if (!player.isAutoSpinAttack()) {
+            if (player.isFallFlying()) {
+                Vec3 look = player.getViewVector(1.0F);
+                Vec3 motion = player.getDeltaMovement();
+                // On the server a remote player's travel can be known from positions
+                // before a matching velocity is available. No direction if both are zero.
+                double dx = motion.x, dz = motion.z;
+                if (motion.horizontalDistanceSqr() < 1e-8D) {
+                    dx = player.getX() - player.xo;
+                    dz = player.getZ() - player.zo;
+                }
+                return CapeSparkFrame.glide(yaw, player.getXRot(), player.getFallFlyingTicks(),
+                        look.x, look.z, dx, dz);
+            }
+            float swim = player.getSwimAmount(1.0F);
+            if (swim > 0) {
+                boolean immersed = player.isInWater()
+                        || player.isInFluidType((type, height) -> player.canSwimInFluidType(type));
+                return CapeSparkFrame.swim(yaw, player.getXRot(), swim, immersed, player.isVisuallySwimming());
+            }
+        }
+        return CapeSparkFrame.upright(yaw, player.getBbHeight());
+    }
+
     /** FX del servidor, una sola emisión como máximo cada 8 ticks (hasta
      *  3 chispas). Los demás clientes ven el mismo impulso, sin geometría
      *  de partículas ni emisores en Blockbench. */
@@ -187,36 +213,26 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
         }
         CapeState.Aura aura = mode.aura();
         int count = Math.min(aura.count(), MAX_SPARKS_PER_TICK);
-        // Yaw del cuerpo, no de la cámara/cabeza. El +Z del .geo es la
-        // espalda; con yaw=0 (mira a +Z del mundo) nace hacia -Z.
-        double yaw = Math.toRadians(player.yBodyRot);
-        double backX = Math.sin(yaw), backZ = -Math.cos(yaw);
-        double sideX = Math.cos(yaw), sideZ = Math.sin(yaw);
+        CapeSparkFrame frame = auraFrame(player);
         RandomSource random = player.getRandom();
-        // Deterioro manda sobre el aura, pero una chispa de cuello no
-        // debe aparecer pegada a la cara si el portador va en vuelo/agua.
-        boolean collarAllowed = player.onGround() && !player.isFallFlying() && !player.isInWater();
-        double stature = Math.max(.36D, Math.min(1.0D, player.getBbHeight() / 1.80D));
+        // Cosmetic deterioration can change the pulse, but not the pose.
+        boolean collarAllowed = player.onGround() && !player.isInWater()
+                && !player.isFallFlying() && !frame.posed();
         for (int i = 0; i < count; i++) {
             CapeState.Spark spark = mode.spark(pulse, i, collarAllowed, random.nextDouble(),
                     random.nextDouble(), random.nextDouble());
-            double side = spark.side();
-            double height = spark.height() * stature;
-            double depth = spark.depth();
             double trail = spark.collar() ? 0.005D : aura.trail() * (0.75D + 0.35D * random.nextDouble());
-            double outward = Math.copySign(aura.sideways() * (0.75D + 0.35D * random.nextDouble()), side);
-            Vec3 birth = new Vec3(player.getX() + backX * depth + sideX * side,
-                    player.getY() + height, player.getZ() + backZ * depth + sideZ * side);
-            // Do not spawn inside or across a block. No retry: keeping the
-            // position of other sparks and the same per-wearer budget.
+            double outward = Math.copySign(aura.sideways() * (0.75D + 0.35D * random.nextDouble()), spark.side());
+            CapeSparkFrame.Offset offset = frame.birth(spark);
+            Vec3 birth = player.position().add(offset.x(), offset.y(), offset.z());
+            // No births inside or across a block. No retries or extra sparks.
             if (!CapeSparkPath.clearBirth(server, player, birth)) {
                 continue;
             }
-            // count=0 del protocolo de Minecraft: una partícula, impulso
-            // exacto = (dx,dy,dz)*speed; count=1 lo volvía ruido gaussiano.
+            CapeSparkFrame.Offset push = frame.impulse(outward, aura.lift(), trail);
+            // count=0: una partícula con el impulso exacto, sin ruido gaussiano.
             server.sendParticles(CapaParticles.CAPA_SPARK.get(), birth.x, birth.y, birth.z,
-                    0, backX * trail + sideX * outward, aura.lift(),
-                    backZ * trail + sideZ * outward, 1.0D);
+                    0, push.x(), push.y(), push.z(), 1.0D);
         }
     }
 }

@@ -9,7 +9,7 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.67.1: halo recuperable al recargar recursos y brasas que respetan bloques y visibilidad.
+v1.67.2: las brasas siguen la postura al planear y nadar, con oclusión de bloques.
 El halo rosa y violeta no requiere shaders de pantalla. Se conservan los ocho ciclos,
 la holgura del paño y el ajuste en pecho o Curios (opcional).
 '''
