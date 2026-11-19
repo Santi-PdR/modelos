@@ -92,8 +92,8 @@ def moderate_fit(geo):
     def depth(parts, prefix):
         return np.concatenate([v for k,v in parts.items() if k.startswith(prefix)])[...,2].mean()
     d = [depth(old,k) - depth(new,k) for k in ('v17_cowl_back_', 'v18_pad_0', 'v18_pad_1')]
-    assert .27 < F.seating(*aim) < .32 and d[0] >= .60 and min(d[1:]) >= .30, d
-    assert F.seating(0.,-46.,3.) == 0 and F.seating(*aim,arm_back=10.) == 0
+    assert .39 < F.seating(*aim) < .43 and d[0] >= .90 and min(d[1:]) >= .46, d
+    assert F.seating(0.,-42.,3.) == 0 and F.seating(*aim,arm_back=10.) == 0
     seam = min(lap(t,new[f'v18_pad_{i}']) for i,t in enumerate(new[G.SHOULDERS_BONE]))
     assert seam > .17, seam
     print(f'A 58°: cuello {d[0]:.2f}u, hombreras {d[1]:.2f}/{d[2]:.2f}u más cerca; '

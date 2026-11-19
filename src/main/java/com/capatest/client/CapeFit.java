@@ -14,9 +14,9 @@ public final class CapeFit {
     private static final double SEAT_TAKE_IN = .46;
     private static final double SEAT_RETURN_IN = .11;
     private static final double SEAT_HEM_DEGREES = 4.2;
-    // Start the same smooth stroke earlier: at 58° the old fit was still
-    // fully open and could leave a sliver of floor between sleeve and tab.
-    private static final double SEAT_DOWN_START = 48;
+    // Start taking in the trim before the high lining comes into view.
+    // At 58° the visible collar still needs to move, not just hide the gap.
+    private static final double SEAT_DOWN_START = 44;
     private static final double SEAT_DOWN_FULL = 76;
     private static final double SEAT_TURN_START = 13;
     private static final double SEAT_TURN_END = 47;

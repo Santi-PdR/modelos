@@ -882,7 +882,7 @@ jobs:
             grep -qx 'com/capatest/client/CapaSparkParticle.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeSparkFrame.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeSparkPath.class' /tmp/jar-contents.txt
-            if grep -Eq '^com/capatest/client/(CapeFxSmoke|CapeWalkProbe|CapeLookSweep)' /tmp/jar-contents.txt; then
+            if grep -Eq '^(com/capatest/client/(CapeFxSmoke|CapeWalkProbe|CapeLookSweep)|assets/capatest/geo/test/)' /tmp/jar-contents.txt; then
               echo '::error::El JAR de distribución incluye código de la prueba de cliente.'
               exit 1
             fi
@@ -973,8 +973,9 @@ jobs:
       - name: Probar FX y equipo en Forge (opcional)
         id: fx-smoke
         if: >-
-          (github.event_name == 'push' && contains(github.event.head_commit.message, '[probar-halo]')) ||
-          (github.event_name == 'workflow_dispatch' && inputs.probar_halo == true)
+          (github.event_name == 'push' && (contains(github.event.head_commit.message, '[probar-halo]') ||
+          contains(github.event.head_commit.message, '[publicar]'))) ||
+          (github.event_name == 'workflow_dispatch' && (inputs.probar_halo == true || inputs.publicar == true))
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
           ALSOFT_DRIVERS: 'null'
@@ -1029,6 +1030,18 @@ jobs:
               printf '::notice title=Anclaje y ranura en Forge::%s\n' "${line//%/%25}"
             fi
           done
+
+      - name: Comparar el canto de la camiseta en F5 cenital
+        if: always() && steps.fx-smoke.outcome == 'success'
+        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery union-cenital
+
+      - name: Comparar el canto de la camiseta en F5 oblicuo
+        if: always() && steps.fx-smoke.outcome == 'success'
+        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery union-oblicua
+
+      - name: Comparar el canto de la camiseta a media inclinación
+        if: always() && steps.fx-smoke.outcome == 'success'
+        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery union-ajuste-medio
 
       - name: Fotogramas de marcha en pecho
         if: always() && steps.fx-smoke.outcome == 'success'
@@ -1090,8 +1103,9 @@ jobs:
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.
       - name: Stage verified release (draft)
         if: >-
-          (github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar]')) ||
-          (github.event_name == 'workflow_dispatch' && inputs.publicar == true)
+          steps.fx-smoke.outcome == 'success' &&
+          ((github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar]')) ||
+          (github.event_name == 'workflow_dispatch' && inputs.publicar == true))
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

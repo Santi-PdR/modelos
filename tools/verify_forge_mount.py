@@ -176,7 +176,10 @@ def gallery(root, kind):
     # cannot be downloaded. Full-resolution shots stay in the artifact.
     if kind != 'hotbar':
         prefix = {'giro':'cenital-giro', 'perfil':'perfil', 'oblicua':'oblicua'}.get(kind,'cenital')
-        if kind == 'bare':
+        if kind.startswith('union-'):
+            view = kind.removeprefix('union-')
+            names = tuple(f'{view}-{slot}' for slot in ('sin-manto','v16710','pecho','curios'))
+        elif kind == 'bare':
             names = ('cenital-sin-manto','cenital-giro-sin-manto')
         elif kind in ('ajuste','ajuste-fino'):
             names = tuple(f'{kind}-{n}' for n in ('sin-manto','v1678','pecho','curios'))
@@ -201,8 +204,8 @@ def gallery(root, kind):
                 # Each GitHub job step retains up to ten notices. Reserve
                 # at most half of them for either slot, even in a busy shot.
                 close = kind in ('oblicua','perfil','ajuste','ajuste-fino')
-                cap = 2450 if kind.startswith(('ajuste','mirada','paso')) else 3820 if close else 6350
-                for width,colors in ((180,80),(160,64),(144,48),(128,40),(112,32),(96,28)):
+                cap = 2450 if kind.startswith(('ajuste','mirada','paso','union')) else 3820 if close else 6350
+                for width,colors in ((180,80),(160,64),(144,48),(128,40),(112,32),(96,28),(80,24),(64,16),(48,8)):
                     buf = io.BytesIO()
                     small = cut.resize((width,round(width*.8)),Image.Resampling.NEAREST)
                     small.convert('RGB').quantize(colors=colors).save(buf,format='PNG',optimize=True)
@@ -232,7 +235,7 @@ def gallery(root, kind):
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument('shots',type=Path)
-    cli.add_argument('--gallery',choices=['cenital','giro','bare','oblicua','perfil','perfil-base','hotbar','ajuste','ajuste-fino','ajuste-medio','mirada-pecho','mirada-curios','paso-pecho','paso-curios'])
+    cli.add_argument('--gallery',choices=['cenital','giro','bare','oblicua','perfil','perfil-base','hotbar','ajuste','ajuste-fino','ajuste-medio','mirada-pecho','mirada-curios','paso-pecho','paso-curios','union-cenital','union-oblicua','union-ajuste-medio'])
     args = cli.parse_args()
     if args.gallery:
         gallery(args.shots,args.gallery)

@@ -18,6 +18,7 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 def fxSmokeRun = providers.gradleProperty('capeFxSmoke').isPresent()
 if (fxSmokeRun) {
     sourceSets.main.java.srcDir 'src/fxSmoke/java'
+    sourceSets.main.resources.srcDir 'src/fxSmoke/resources'
 }
 
 minecraft {
@@ -120,7 +121,8 @@ tasks.withType(org.gradle.api.tasks.bundling.AbstractArchiveTask).configureEach 
 }
 
 tasks.named('jar', Jar).configure {
-    exclude 'com/capatest/client/CapeFxSmoke*.class'
+    exclude 'com/capatest/client/CapeFxSmoke*.class', 'com/capatest/client/CapeLookSweep*.class',
+            'com/capatest/client/CapeWalkProbe*.class', 'assets/capatest/geo/test/*'
     manifest {
         attributes([
                 "Specification-Title"   : mod_id,
