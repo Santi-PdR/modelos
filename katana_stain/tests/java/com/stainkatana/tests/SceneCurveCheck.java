@@ -12,6 +12,13 @@ public final class SceneCurveCheck {
             if (v < last || v < 0 || v > 1) throw new AssertionError("non-monotonic curve");
             last = v;
         }
-        System.out.println("OK: clamped monotonic Cinema Scope transition");
+        if (SceneCurve.impactEnvelope(-1) != 0 || SceneCurve.impactEnvelope(0) != 0
+                || SceneCurve.impactEnvelope(1) != 1 || SceneCurve.impactEnvelope(4) != 0
+                || SceneCurve.impactEnvelope(Double.NaN) != 0) throw new AssertionError("impact envelope");
+        for (int i = 0; i <= 400; i++) {
+            double v = SceneCurve.impactEnvelope(i / 100.0);
+            if (v < 0 || v > 1) throw new AssertionError("impact envelope range");
+        }
+        System.out.println("OK: clamped transition and bounded impact envelope");
     }
 }

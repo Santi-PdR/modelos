@@ -77,3 +77,11 @@ assert 'KatanaScene.start()' in anim and 'KatanaScene.stop()' in anim
 assert (root/'resources/META-INF/CINEMASCOPE_LICENSE.txt').is_file()
 assert 'bettercombat", "katana_slash' in ability
 print('OK: encuadre local cancelable y sonido de Better Combat con alternativa')
+visuals=(root/'java/com/stainkatana/katana/client/KatanaVisuals.java').read_text()
+network=(root/'java/com/stainkatana/katana/KatanaNetwork.java').read_text()
+assert 'style == 3' in visuals and '^ leftHanded' in visuals
+assert 'getId() == entityId' in visuals and 'KatanaScene.impact()' in visuals
+assert 'private static final String VERSION = "6"' in network
+assert 'buf.writeBoolean(msg.leftHanded)' in network and 'buf.readBoolean()' in network
+assert 'impactEnvelope' in scene and 'KatanaClientConfig.ZOOM_FRACTION.get()' in scene
+print('OK: segundo corte, zurdos, impulso local y protocolo visual v6')

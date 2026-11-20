@@ -17,16 +17,19 @@ public final class KatanaScene {
     private static final int TRANSITION_TICKS = 4;
     private static final int SAFETY_TIMEOUT = 36;
     private static boolean active;
-    private static int age;
+    private static int age, impactAge = 4;
     private static double progress, previous;
     private KatanaScene() { }
 
     public static void start() {
         if (!KatanaClientConfig.ULTIMATE_FRAME.get()) return;
-        active = true; age = 0;
+        active = true; age = 0; impactAge = 4;
     }
     public static void stop() { active = false; }
-    private static void reset() { active = false; age = 0; progress = previous = 0; }
+    public static void impact() {
+        if (active && KatanaClientConfig.ULTIMATE_FRAME.get()) impactAge = 0;
+    }
+    private static void reset() { active = false; age = 0; impactAge = 4; progress = previous = 0; }
 
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
@@ -34,6 +37,7 @@ public final class KatanaScene {
         if (mc.level == null || mc.player == null || !KatanaClientConfig.ULTIMATE_FRAME.get()) { reset(); return; }
         if (mc.isPaused()) return;
         previous = progress;
+        if (impactAge < 4) impactAge++;
         if (active && ++age >= SAFETY_TIMEOUT) active = false;
         progress = Math.max(0, Math.min(1, progress + (active ? 1.0 : -1.0) / TRANSITION_TICKS));
     }
@@ -49,7 +53,10 @@ public final class KatanaScene {
     @SubscribeEvent public static void fov(ViewportEvent.ComputeFov event) {
         if (!canRender() || !event.usedConfiguredFov()) return;
         double strength = strength(Minecraft.getInstance().getFrameTime());
-        event.setFOV(event.getFOV() * (1.0 - KatanaClientConfig.ZOOM_FRACTION.get() * strength));
+        // Brief additional zoom on each server-confirmed stroke; no screen shake or flash.
+        double impulse = SceneCurve.impactEnvelope(impactAge + Minecraft.getInstance().getFrameTime());
+        double zoom = KatanaClientConfig.ZOOM_FRACTION.get() * strength * (1.0 + 0.35 * impulse);
+        event.setFOV(event.getFOV() * (1.0 - zoom));
     }
     @SubscribeEvent public static void render(RenderGuiEvent.Post event) {
         if (!canRender()) return;

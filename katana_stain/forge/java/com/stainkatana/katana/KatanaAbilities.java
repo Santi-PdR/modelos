@@ -247,7 +247,7 @@ public final class KatanaAbilities {
         // El renderizador usa un plano orientado según el atacante, no un billboard.
         Vec3 point = player.position().add(forward.scale(1.55));
         Cast cast = CASTS.get(player.getUUID());
-        int style = !ultimate ? 0 : (cast != null && cast.followUpImpacted ? 0 : 1);
+        int style = !ultimate ? 0 : (cast != null && cast.followUpImpacted ? 3 : 1);
         KatanaNetwork.broadcastVisual(player, point.x, player.getY() + 1.05, point.z, style);
     }
 }

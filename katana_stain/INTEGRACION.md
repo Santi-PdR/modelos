@@ -210,3 +210,23 @@ sonido vanilla. No se redistribuye audio de Better Combat.
 Es una primera prueba de encuadre: no se ha verificado en el cliente ni con
 otros mods de cámara, FOV, HUD o shaders. Las pruebas de curva, compilación y
 servidor no certifican calidad visual ni sincronización real.
+
+## 0.11.0-test — dos cortes diferenciados
+
+Se revisaron los clips de Better Combat 1.9.0: el primero de la ulti es
+`two_handed_slash_vertical_right` y el segundo es
+`two_handed_slash_horizontal_left`; el ataque simple usa
+`two_handed_slash_horizontal_right`. El segundo arco horizontal se orienta al
+revés del primero y se invierte para jugadores zurdos, como las animaciones;
+el primer arco diagonal también invierte su inclinación. Se siguen utilizando
+los sprites de Better Combat Particle atribuidos previamente. Son ajustes de
+orientación estimados, no una trayectoria calculada desde la hoja.
+
+Cada corte de la ulti envía desde el servidor un evento visual que produce un
+suave pulso adicional de FOV únicamente en el jugador atacante, durante el
+encuadre y solo si está activado. No es un efecto de cámara para los objetivos
+ni altera el daño. Desactivar la escena o poner `zoomFraction = 0` elimina el
+pulso. Los paquetes de red son ahora versión 6: cliente y servidor deben usar
+la misma versión. La latencia, el agarre, las direcciones y la compatibilidad
+con mods de cámara siguen requiriendo prueba visual; no se garantiza que los
+planos del efecto coincidan exactamente con la hoja.

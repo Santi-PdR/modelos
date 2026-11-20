@@ -16,7 +16,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 
 /** Solo acepta un identificador de habilidad, nunca blancos ni daño enviados por el cliente. */
 public final class KatanaNetwork {
-    private static final String VERSION = "5";
+    private static final String VERSION = "6";
     public static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder
             .named(new ResourceLocation(StainKatanaMod.MOD_ID, "abilities"))
             .networkProtocolVersion(() -> VERSION).clientAcceptedVersions(VERSION::equals)
@@ -63,20 +63,20 @@ public final class KatanaNetwork {
     }
     public static void broadcastVisual(ServerPlayer player, double x, double y, double z, int style) {
         CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player),
-                new VisualMessage(x, y, z, player.getYRot(), style));
+                new VisualMessage(player.getId(), x, y, z, player.getYRot(), style, player.getMainArm() == net.minecraft.world.entity.HumanoidArm.LEFT));
     }
-    public record VisualMessage(double x, double y, double z, float yaw, int style) {
+    public record VisualMessage(int entityId, double x, double y, double z, float yaw, int style, boolean leftHanded) {
         public static void encode(VisualMessage msg, FriendlyByteBuf buf) {
-            buf.writeDouble(msg.x); buf.writeDouble(msg.y); buf.writeDouble(msg.z);
-            buf.writeFloat(msg.yaw); buf.writeVarInt(msg.style);
+            buf.writeVarInt(msg.entityId); buf.writeDouble(msg.x); buf.writeDouble(msg.y); buf.writeDouble(msg.z);
+            buf.writeFloat(msg.yaw); buf.writeVarInt(msg.style); buf.writeBoolean(msg.leftHanded);
         }
         public static VisualMessage decode(FriendlyByteBuf buf) {
-            return new VisualMessage(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readFloat(), buf.readVarInt());
+            return new VisualMessage(buf.readVarInt(), buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readFloat(), buf.readVarInt(), buf.readBoolean());
         }
         public static void handle(VisualMessage msg, Supplier<NetworkEvent.Context> supplier) {
             NetworkEvent.Context context = supplier.get();
             context.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                    () -> () -> com.stainkatana.katana.client.KatanaVisuals.spawn(msg.x, msg.y, msg.z, msg.yaw, msg.style)));
+                    () -> () -> com.stainkatana.katana.client.KatanaVisuals.spawn(msg.entityId, msg.x, msg.y, msg.z, msg.yaw, msg.style, msg.leftHanded)));
             context.setPacketHandled(true);
         }
     }
