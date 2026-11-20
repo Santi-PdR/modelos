@@ -273,6 +273,18 @@ animación y la documentación de GeckoLib._
   evita contar tela y placas detrás como si fueran cuello. Se comprueba
   tanto la proporción de área visible conservada como el número de
   píxeles reales de cuello que se acercan a la camiseta.
+- **Resultado v1.67.14 (sin publicar):** tras levantar el borde inferior
+  para que no se esconda detrás de la hombrera, pasó la
+  [ejecución 44765187375](https://github.com/Santi-PdR/modelos/actions/runs/44765187375)
+  sin cambiar los umbrales de visibilidad. En la
+  [lámina F5](capa_v16714_giro_forge.png), a ±60° el frente del cuello
+  queda en Z=4,25u, frente a 6,00u de v1.67.13; las raíces siguen en
+  4,14u. En pecho a +60° se conservan 771/797 píxeles del cuello y en
+  Curios 772/801; a −60° son 771/816 en ambos. Cerca de la camiseta hay
+  187–229 píxeles, frente a cero antes. El paso máximo del frente del
+  cuello fue 0,285u por grado durante 317 fotogramas en cada slot. También
+  pasaron las vistas diagonal y cenital, la marcha y los controles de
+  luz, élitros, planeo y nado. Esto no certifica todas las pieles o packs.
 - **Pulso del icono (v1.67.8):** 32 fotogramas a un tick por cuadro, mismo
   contorno y duración de 1,6 s. Se comprueba el recorrido de la cresta de
   luz en la hotbar vanilla; se conservan el dibujo y el reposo de v1.67.7.

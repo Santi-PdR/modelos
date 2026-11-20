@@ -11,9 +11,11 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
-### v1.67.14 — giro amplio (candidata sin publicar)
+### v1.67.14 — giro amplio (verificada en Forge, sin publicar)
 
-La rama ensaya conservar el apoyo del cuello más allá de ±48° y devolverle espacio antes del perfil. La montura, las placas y el faldón conservan su ajuste. El enlace de instalación y su SHA-256 siguen apuntando a la v1.67.13 publicada.
+El cuello mantiene el apoyo al superar ±48° y vuelve a abrirse gradualmente hacia el perfil. Se conserva el grosor del borde que se ve sobre el hombro: en F5 a ±60° queda visible el 94–97% del cuello de v1.67.13 y se distinguen 187–229 píxeles de cuello cerca de la camiseta, frente a cero en las tomas de control. No se modifica el ajuste de la montura, las hombreras ni el faldón.
+
+[Comparativa con fotogramas de la transición](docs/capa_v16714_giro_forge.png) · [Prueba completa en Forge 1.20.1](https://github.com/Santi-PdR/modelos/actions/runs/44765187375). El recorrido de 0° a +79°, −79° y vuelta pasó en pecho y Curios (317 fotogramas por slot). El enlace de instalación y su SHA-256 siguen apuntando a la v1.67.13 publicada.
 
 ### v1.67.13 — recuperar la unión visible al torso (en pruebas)
 
