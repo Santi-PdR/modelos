@@ -176,8 +176,8 @@ public final class CapeFxSmoke {
         WIDE_MIRROR_CURRENT_BACK("historia-giro-inverso-curios", 6000),
         WIDE_MIRROR_HIDDEN_BACK("historia-giro-inverso-curios-sin-cuello", 6000),
         TURN_SWEEP_CHEST("giro-vivo-pecho", 6000), TURN_SWEEP_BACK("giro-vivo-curios", 6000),
-        FIXED_STEVE_CHEST("yugo-steve-pecho", 6000), FIXED_STEVE_BACK("yugo-steve-curios", 6000),
-        FIXED_ALEX_CHEST("yugo-alex-pecho", 6000), FIXED_ALEX_BACK("yugo-alex-curios", 6000),
+        PLACE_STEVE_CHEST("posicion-steve-pecho", 6000), PLACE_STEVE_BACK("posicion-steve-curios", 6000),
+        PLACE_ALEX_CHEST("posicion-alex-pecho", 6000), PLACE_ALEX_BACK("posicion-alex-curios", 6000),
         LOOK_CHEST("mirada-pecho", 6000), LOOK_BACK("mirada-curios", 6000),
         WALK_CHEST("paso-pecho", 6000), WALK_BACK("paso-curios", 6000),
         HOTBAR_BARE("hotbar-vacia", 6000), HOTBAR("hotbar", 6000),
@@ -196,10 +196,10 @@ public final class CapeFxSmoke {
 
         boolean hotbar() { return this == HOTBAR_BARE || this == HOTBAR; }
         boolean elytra() { return this == WINGS || this == GLIDE; }
-        boolean usesBack() { return this == TOP_BACK || this == TURN_BACK || this == OBLIQUE_BACK || this == SIDE_BACK || this == FIT_BACK || this == FIT_SLIM_BACK || this == MID_BACK || this == PLATES_BACK || this == LOOK_BACK || this == WALK_BACK || this == TURN_SWEEP_BACK || fixedMount() && file.endsWith("-curios") || homeCompare() && file.contains("-curios") || elytra(); }
+        boolean usesBack() { return this == TOP_BACK || this == TURN_BACK || this == OBLIQUE_BACK || this == SIDE_BACK || this == FIT_BACK || this == FIT_SLIM_BACK || this == MID_BACK || this == PLATES_BACK || this == LOOK_BACK || this == WALK_BACK || this == TURN_SWEEP_BACK || placement() && file.endsWith("-curios") || homeCompare() && file.contains("-curios") || elytra(); }
         boolean hasBack() { return this == BOTH || usesBack(); }
         boolean bare() { return this == TOP_BARE || this == TURN_BARE || this == OBLIQUE_BARE || this == SIDE_BARE || this == FIT_BARE || this == FIT_SLIM_BARE || this == MID_BARE || this == PLATES_BARE || homeCompare() && file.endsWith("sin-manto"); }
-        boolean fixedMount() { return ordinal() >= FIXED_STEVE_CHEST.ordinal() && ordinal() <= FIXED_ALEX_BACK.ordinal(); }
+        boolean placement() { return ordinal() >= PLACE_STEVE_CHEST.ordinal() && ordinal() <= PLACE_ALEX_BACK.ordinal(); }
         boolean overhead() { return this == TOP_BARE || this == TOP_OLD_JOIN || this == TOP_CHEST || this == TOP_BACK || turned(); }
         boolean oldJoin() { return this == TOP_OLD_JOIN || this == OBLIQUE_OLD_JOIN || this == MID_OLD_JOIN; }
         boolean binding() { return oldJoin() || this == MID_CHEST || this == MID_BACK || this == TOP_CHEST
@@ -228,7 +228,7 @@ public final class CapeFxSmoke {
         boolean tracksPlates() { return (plates() || fit() && !midFit() && !previousFit()) && !bare() && !hidesPlates(); }
         boolean sweep() { return this == LOOK_CHEST || this == LOOK_BACK; }
         boolean walk() { return this == WALK_CHEST || this == WALK_BACK; }
-        boolean stillComparison() { return fixedMount() || overhead() || upperBack() || fit() || plates() || homeCompare(); }
+        boolean stillComparison() { return placement() || overhead() || upperBack() || fit() || plates() || homeCompare(); }
         boolean fixedCamera() { return stillComparison() || sweep() || turnSweep(); }
         float bodyYaw() { return homeCompare() || turnSweep() ? 31 : 0; }
         float yaw() {
@@ -265,9 +265,9 @@ public final class CapeFxSmoke {
     private static float framePartialTick;
     private static double frameTopDegrees, frameSeating, framePlateFit;
     private static CapeLookSweep lookSweep;
-    private static CapeFixedMountProbe.Route fixedRoute;
-    private static CapeFixedMountProbe.Draw fixedDraw;
-    private static boolean fixedRig;
+    private static CapePlacementProbe.Route placementRoute;
+    private static CapePlacementProbe.Draw placementDraw;
+    private static final boolean TEST_PLACEMENT = Boolean.getBoolean("capa.position");
     private static CapeTurnSweep turnSweep;
     private static CapeLookSweep.Draw seatDraw;
     private static CapeWalkProbe.Route walkRoute;
@@ -428,9 +428,9 @@ public final class CapeFxSmoke {
                     if (!captured) return;
                     if (scene != Scene.SWIM_EXIT) {
                         Scene next = Scene.values()[scene.ordinal() + 1];
-                        if (fixedRig && scene == Scene.BOTH) next = Scene.FIXED_STEVE_CHEST;
-                        else if (scene == Scene.FIXED_ALEX_BACK) next = Scene.WALK_CHEST;
-                        else if (next == Scene.FIXED_STEVE_CHEST || next.homeCompare() && !CapeHistoricFitProbe.ENABLED)
+                        if (TEST_PLACEMENT && scene == Scene.BOTH) next = Scene.PLACE_STEVE_CHEST;
+                        else if (scene == Scene.PLACE_ALEX_BACK) next = Scene.WALK_CHEST;
+                        else if (next == Scene.PLACE_STEVE_CHEST || next.homeCompare() && !CapeHistoricFitProbe.ENABLED)
                             next = Scene.LOOK_CHEST;
                         equipScene(game, next);
                         return;
@@ -521,8 +521,8 @@ public final class CapeFxSmoke {
     private static void equipScene(Minecraft game, Scene next) {
         resetDeadline();
         scene = next;
-        fixedRoute = next.fixedMount() ? new CapeFixedMountProbe.Route() : null;
-        if (next.fixedMount()) game.options.fov().set(42);
+        placementRoute = next.placement() ? new CapePlacementProbe.Route() : null;
+        if (next.placement()) game.options.fov().set(42);
         walkRoute = next.walk() ? new CapeWalkProbe.Route() : null;
         if (next == Scene.WALK_CHEST) game.options.framerateLimit().set(60);
         if (next == Scene.HOTBAR_BARE) game.options.framerateLimit().set(30);
@@ -532,14 +532,14 @@ public final class CapeFxSmoke {
         captured = false;
         if (next == Scene.TOP_BARE) game.options.fov().set(34);
         if (next == Scene.FIT_BARE || next == Scene.HISTORY_DIAG_BARE) game.options.fov().set(42);
-        if (next == Scene.FIT_BARE || next == Scene.FIT_SLIM_BARE || next == Scene.HOTBAR_BARE || next.fixedMount()) {
+        if (next == Scene.FIT_BARE || next == Scene.FIT_SLIM_BARE || next == Scene.HOTBAR_BARE || next.placement()) {
             // Select the actual vanilla player renderer by model, without
             // changing skin pixels, account, equipment, or the pose.
             var info = game.player.connection.getPlayerInfo(game.player.getUUID());
             check(info != null, "local player profile missing");
             try {
-                if (next == Scene.FIT_BARE || next == Scene.FIXED_STEVE_CHEST) savedModel = (String) SKIN_MODEL.get(info);
-                SKIN_MODEL.set(info, next == Scene.HOTBAR_BARE ? savedModel : next.slimFit() || next.file.startsWith("yugo-alex-") ? "slim" : "default");
+                if (next == Scene.FIT_BARE || next == Scene.PLACE_STEVE_CHEST) savedModel = (String) SKIN_MODEL.get(info);
+                SKIN_MODEL.set(info, next == Scene.HOTBAR_BARE ? savedModel : next.slimFit() || next.file.startsWith("posicion-alex-") ? "slim" : "default");
             } catch (IllegalAccessException e) {
                 throw new AssertionError(e);
             }
@@ -640,7 +640,7 @@ public final class CapeFxSmoke {
 
     private static void driveScene(Minecraft game) {
         var player = game.player;
-        if (scene.fixedMount()) fixedRoute.drive(game);
+        if (scene.placement()) placementRoute.drive(game);
         if (scene.walk() && (scene.usesBack() ? !backOf(player).getStacks().getStackInSlot(0).isEmpty()
                 : player.getItemBySlot(EquipmentSlot.CHEST).is(CapaTestMod.CAPA_DETERIORER.get()))) walkRoute.drive(game);
         if (scene.strafe()) {
@@ -703,9 +703,7 @@ public final class CapeFxSmoke {
             return;
         }
         if (!(event.getRenderer() instanceof CapaArmorRenderer renderer)) return;
-        if (scene == Scene.CHEST)
-            fixedRig = renderer.getGeoModel().getBone(CapaArmorRenderer.FIXED_YOKE).isPresent();
-        if (scene.fixedMount()) CapeFixedMountProbe.arm(renderer, fixedRoute.control());
+        if (scene.placement()) CapePlacementProbe.arm(renderer, placementRoute.control());
         if (scene.sweep()) CapeLookSweep.Probe.arm(renderer);
         if (scene.walk()) CapeWalkProbe.arm(renderer);
         if (scene.publishedFit()) undoTorsoFit(renderer);
@@ -807,7 +805,7 @@ public final class CapeFxSmoke {
         framePasses++;
         rendered = renderer.getCurrentStack();
         armorPose = new Matrix4f(event.getPoseStack().last().pose());
-        if (scene.fixedMount()) fixedDraw = CapeFixedMountProbe.finish(renderer);
+        if (scene.placement()) placementDraw = CapePlacementProbe.finish(renderer);
         if (scene.oldJoin()) {
             savedLining.forEach(Lining::restore);
             savedLining = List.of();
@@ -848,7 +846,7 @@ public final class CapeFxSmoke {
 
     private static void fixedCamera(ViewportEvent.ComputeCameraAngles event) {
         var player = Minecraft.getInstance().player;
-        if (player != null && fixedRoute != null) fixedRoute.camera(event, player);
+        if (player != null && placementRoute != null) placementRoute.camera(event, player);
     }
 
     private static void frame(TickEvent.RenderTickEvent event) {
@@ -859,15 +857,15 @@ public final class CapeFxSmoke {
             walkDraw = null;
             platesDraw = null;
             historyDraw = null;
-            fixedDraw = null;
+            placementDraw = null;
             rendered = ItemStack.EMPTY;
             playerPose = armorPose = upperBackProjection = null;
             // Hold the camera/head yaw relative to the torso, like looking
             // around in F5 while the feet have not turned yet. Don't rotate
             // the mantle renderer independently of the vanilla player.
             var player = Minecraft.getInstance().player;
-            if (player != null && fixedRoute != null) {
-                fixedRoute.aim(player);
+            if (player != null && placementRoute != null) {
+                placementRoute.aim(player);
             } else if (player != null && scene != null && (scene.fixedCamera() || scene.hotbar())) {
                 var look = scene.sweep() ? lookSweep.pose() : comparisonPose();
                 float bodyYaw = scene.bodyYaw();
@@ -892,7 +890,7 @@ public final class CapeFxSmoke {
         if (player == null || game.screen != null || game.level.getDayTime() != scene.dayTime) return;
         ItemStack chest = player.getItemBySlot(EquipmentSlot.CHEST);
         ItemStack back = backOf(player).getStacks().getStackInSlot(0);
-        boolean chestReady = scene.homeCompare() || scene.turnSweep() || scene.fixedMount() ? (scene.bare() || scene.usesBack() ? chest.isEmpty()
+        boolean chestReady = scene.homeCompare() || scene.turnSweep() || scene.placement() ? (scene.bare() || scene.usesBack() ? chest.isEmpty()
                 : chest.is(CapaTestMod.CAPA_DETERIORER.get())) : switch (scene) {
             case TOP_BARE, TOP_BACK, TURN_BARE, TURN_BACK, OBLIQUE_BARE, OBLIQUE_BACK, SIDE_BARE, SIDE_BACK,
                     FIT_BARE, FIT_BACK, FIT_SLIM_BARE, FIT_SLIM_BACK, MID_BARE, MID_BACK,
@@ -962,11 +960,11 @@ public final class CapeFxSmoke {
             }
             check(framePasses == expectedPasses && (expectedPasses == 0 || rendered == (scene.usesBack() ? back : chest)),
                     scene.file + ": incorrect worn draw count " + framePasses);
-            if (scene.fixedMount()) {
+            if (scene.placement()) {
                 if (++stableFrames < 18) return;
-                check(player.getModelName().equals(scene.file.startsWith("yugo-alex-") ? "slim" : "default"), "wrong sleeve fixture");
-                captured = fixedRoute.capture(game, shots(game), scene.file, fixedDraw);
-                if (captured) note("Yugo fijo " + scene.file + ": " + fixedRoute.summary());
+                check(player.getModelName().equals(scene.file.startsWith("posicion-alex-") ? "slim" : "default"), "wrong sleeve fixture");
+                captured = placementRoute.capture(game, shots(game), scene.file, placementDraw);
+                if (captured) note("Colocación original " + scene.file + ": " + placementRoute.summary());
                 return;
             }
             if (scene.walk()) {

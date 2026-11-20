@@ -285,22 +285,17 @@ animación y la documentación de GeckoLib._
   cuello fue 0,285u por grado durante 317 fotogramas en cada slot. También
   pasaron las vistas diagonal y cenital, la marcha y los controles de
   luz, élitros, planeo y nado. Esto no certifica todas las pieles o packs.
-- **Yugo fijo en v1.67.15:** `cape_fixed_yoke` es hijo directo de
-  `chestplate`. El reborde, los retornos y la vista fina sobre la camiseta
-  no leen la mirada. Las placas tienen base, lámina, filo y labio; cada una
-  sigue a su brazo vanilla y continúa en un forro que envuelve la manga.
-  El fuelle conserva su pie dentro de la camiseta y su punta solapa la
-  costura de `cape_top`: sólo el fuelle cambia de largo y ángulo al moverse
-  la bisagra. El extremo superior de los jirones queda plegado bajo ese
-  reborde. Los pivotes del paño libre y los fotogramas clave no cambiaron.
-  El atlas, la emisión, el faldón inferior y el icono se conservan.
-  `tools/verify_cape_attachment.py` mide los solapes en 3D con mangas
-  Steve/Alex. El barrido del reborde exterior cubre giros de pie y una
-  muestra agachada. Para la mirada vertical recta también se comprueban
-  placas, fuelle, costura y raíces durante reposo, salto y aterrizaje. La
-  vista fina queda al ras de la piel: no se abre cuando la oculta la cabeza.
-  Los cruces en poses extremas combinadas, o con cascos de otros mods, no
-  quedan cubiertos por esa prueba.
+- **Colocación v1.67.16:** el GEO equipado vuelve a ser byte por byte
+  el de v1.67.14, incluidos los pivotes, las placas y todos los pliegues.
+  `CapeMountPlacement` cambia sólo el render en el marco del torso;
+  reemplaza gran parte del retroceso recto al mirar hacia arriba por un
+  giro hacia abajo, con apoyo en la montura existente. El fuelle interior
+  conserva su pie en la camiseta y acompaña la unión original. Las placas
+  se trasladan completas en reposo, sin cortar ni escalar su relieve.
+  Se conserva el ajuste anterior con élitros, y el cambio se atenúa al
+  agacharse o nadar. Pecho y Curios comparten los mismos pases sólido y de
+  emisión. El visor reproduce estas transformaciones; Blockbench conserva
+  la geometría original sin aplicarlas a los clips.
 - **Pulso del icono (v1.67.8):** 32 fotogramas a un tick por cuadro, mismo
   contorno y duración de 1,6 s. Se comprueba el recorrido de la cresta de
   luz en la hotbar vanilla; se conservan el dibujo y el reposo de v1.67.7.

@@ -94,7 +94,7 @@ def matrix_parity(geo):
     # well as the JS evaluation rather than injecting only fresh constants.
     html = (P.ROOT/'docs/capa_v1170_visor.html').read_text()
     profile = re.search(r'^const INLINE_FIT = (.+);$',html,re.M)
-    assert profile and json.loads(profile[1]) == F.viewer_profile(), 'reconstruir el perfil del visor offline'
+    assert profile and json.loads(profile[1]) == F.viewer_profile(placed=True), 'reconstruir el perfil del visor offline'
     names = [G.FIT_BONE, G.DRAPE_BONE, G.SHOULDERS_BONE, G.SADDLE_BONE, 'cape_top',
              'v17_ribbon_1_seg0', 'v17_cowl_back_2', 'v17_cowl_tooth_5', 'v17_cowl_return',
              'v18_pad_0', 'v18_pad_1', 'rim_v18_pad_0', 'rim_v18_pad_1', *B.profile()['names']]

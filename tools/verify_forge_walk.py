@@ -81,10 +81,8 @@ def upper_edge(root):
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('shots', type=Path)
-    ap.add_argument('--fixed-yoke', action='store_true', help='el canto del yugo se comprueba en verify_forge_attachment')
     args = ap.parse_args()
     for slot in ('pecho', 'curios'):
         name = 'paso-' + slot
         report(read(args.shots / (name + '.tsv')), name)
-    if not args.fixed_yoke:
-        upper_edge(args.shots)
+    upper_edge(args.shots)

@@ -7,11 +7,15 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [JAR anterior v1.67.12](https://github.com/Santi-PdR/modelos/releases/download/v1.67.12/capatest-1.67.12.jar)
 · [JAR anterior v1.67.11](https://github.com/Santi-PdR/modelos/releases/download/v1.67.11/capatest-1.67.11.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench de la rama](docs/CAPA_v1.67.15.bbmodel)
+· [Proyecto Blockbench de la rama](docs/CAPA_v1.67.16.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
-### v1.67.15 — anclaje equipado (prueba verificada en Forge)
+### v1.67.16 — capa original, ajuste de posición
+
+Se restablece el modelo equipado de v1.67.14, con el mismo paño, cuello, relieve, atlas, brillo y animaciones. El montaje se acerca al torso cuando se mira hacia arriba y las hombreras existentes se asientan un poco más arriba en reposo. No cambia el instalador, el icono ni la descarga pública.
+
+### v1.67.15 — ensayo anterior de yugo fijo
 
 El cuello granate queda cosido a la espalda, con retornos laterales y forro por delante. Las hombreras recuperan la base, lámina, filo y labio delantero, y cada una sigue su manga sin retirarse al mirar hacia arriba. El fuelle enlaza la espalda con los doce jirones y absorbe su movimiento sin tirar del cuello. Se conservaron el faldón inferior, los ocho clips, el atlas, el icono y las brasas.
 

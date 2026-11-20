@@ -81,15 +81,9 @@ def static_checks() -> None:
     n_mount = sum(len(b['cubes']) for b in mount_bones())
     edge = next(b for b in bones if b['name'] == COLLAR_RETURN)
     n_edge = len(edge['cubes'])
-    from cape_attachment import FRAME
-    fixed_yoke = any(b['name'] == FRAME for b in bones)
-    if fixed_yoke:
-        assert edge['parent'] == FRAME and n_edge == 2
-        assert len(bones) == 238
-    else:
-        assert edge['parent'] == FIT_BONE and n_edge == 3
-        extras = n_fragments + n_mount + n_edge
-        assert len(bones) == 236 and sum(len(b.get('cubes', [])) for b in bones) == 260+extras
+    assert edge['parent'] == FIT_BONE and n_edge == 3
+    extras = n_fragments + n_mount + n_edge
+    assert len(bones) == 236 and sum(len(b.get('cubes', [])) for b in bones) == 260+extras
     rig = next(b for b in bones if b['name'] == FIT_BONE)
     assert rig['parent'] == 'cape_seat_fit' and not rig['cubes']
     forbidden = ("v17_mote_", "v17_ash_", "v17_yoke_",
@@ -135,10 +129,8 @@ def static_checks() -> None:
     # NO puede volver a incluir el maniquí ni los cubos de armadura vieja.
     assert (ROOT / 'docs' / f'CAPA_v{VER}.bbmodel').read_bytes() == BB.read_bytes()
     bb = json.loads(BB.read_text())
-    from bbmodel_export import CAPE_BONES
-    count = sum(len(b['cubes']) for b in bones if b['name'].startswith(CAPE_BONES))
-    assert len(bb['elements']) == count
-    assert sum(e['visibility'] for e in bb['elements']) == count-27
+    assert len(bb['elements']) == 149+extras
+    assert sum(e['visibility'] for e in bb['elements']) == 122+extras
     assert bb['resolution'] == {'width': 512, 'height': 512}
     assert all(max(f['uv']) <= 512 for e in bb['elements']
                for f in e['faces'].values())
@@ -243,7 +235,7 @@ def static_checks() -> None:
     # blanco de la versión anterior no es criterio para la placa de carbón.
     _pads = [b for b in bones if b["name"].startswith("v18_pad_")]
     assert len(_pads) == 2, len(_pads)
-    assert all(len(b["cubes"]) == 4 + (0 if fixed_yoke else len(relief()["fragments"].get(b["name"], []))) for b in _pads), \
+    assert all(len(b["cubes"]) == 4 + len(relief()["fragments"].get(b["name"], [])) for b in _pads), \
         'la hombrera vuelve a ser un cubo'
     _chains = [b for b in bones if b["name"].startswith("v18_chain_")]
     assert len(_chains) == 8, len(_chains)
@@ -283,20 +275,7 @@ def main() -> None:
     args=ap.parse_args()
     static_checks()
     now=P.load(P.ARMOR_GEO)
-    from cape_fit import fitted
-    if args.check and fitted(now):
-        # The earlier registration describes the old high cowl, not the new
-        # fit. Compare the unchanged drape against that asset in its original
-        # layout; validate the newly sewn upper in verify_cape_attachment.
-        import armor_model_pipeline as G
-        from cape_material import map_material
-        registered = G.build_base()['minecraft:geometry'][0]
-        map_material(registered)
-        fittings = (SHOULDERS_BONE, UNDER_YOKE_BONE, *backing_profile()['names'])
-        exterior = dict(registered, bones=[b for b in registered['bones'] if b['name'] not in fittings])
-        similarity(exterior,P.ARMOR_TEX,GLOW)
-        print(f'OK: registro del paño conservado; yugo v{VER} con ensayos de anclaje propios.')
-    elif args.check:
+    if args.check:
         # The art does not show the fasteners/lining under the collar.
         # Keep the registered exterior unchanged and also bound the full rig.
         fittings = (SHOULDERS_BONE, UNDER_YOKE_BONE, *backing_profile()['names'])

@@ -45,7 +45,7 @@ def adjust(geo, arm, leg, aim):
     by = {b['name']: b for b in geo['bones']}
     top, mid = ('cape_top', 'cape_mid')
     extra = dict(zip((top, mid), lifts(by[top]['rotation'][0], by[mid]['rotation'][0], arm, leg,
-                                      aim[0], F.wearer_depth(geo,*aim))))
+                                      aim[0], F.depth(*aim))))
     return dict(geo, bones=[dict(b, rotation=[b['rotation'][0] + extra[b['name']], *b['rotation'][1:]])
                             if extra.get(b['name'], 0) else b for b in geo['bones']])
 

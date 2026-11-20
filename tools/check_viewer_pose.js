@@ -36,6 +36,9 @@ const matrices = vm.runInContext(`${src}
       return indata.strideSamples.map(([top,mid,arm,leg,stance,depth]) =>
         strideLifts(indata.stride,top,mid,arm,leg,stance*indata.fit.bodyAngle,depth));
     }
+    if (indata.mountSamples) {
+      return indata.mountSamples.map(([s,p,y,e,d,w])=>mountPlacement(indata.fit,s,p,y,e,!!w,d));
+    }
     if (indata.torsoMatrices) {
       return indata.torsoMatrices.map(aim => {
         const model=matrices(wearerPose(indata.geo,indata.fit,...aim));

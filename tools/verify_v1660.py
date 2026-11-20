@@ -35,11 +35,6 @@ def preservation(*, changed=()):
     mount = (G.SEAT_BONE, G.GUSSET_BONE, *new_mount)
 
     frame = F.seat_profile()['frame']
-    geo = P.load(P.ARMOR_GEO)
-    fixed_yoke = F.fitted(geo)
-    if fixed_yoke:
-        from verify_cape_attachment import asset_contract
-        asset_contract(geo)
 
     def omit_mount_edits(model):
         new_groups = {g['uuid'] for g in model['groups'] if g['name'] in new_mount}
@@ -66,16 +61,12 @@ def preservation(*, changed=()):
         if name == 'fit.json':
             assert json.loads((BASE/name).read_text()) == F.profile()
         elif name.endswith('.bbmodel'):
-            if fixed_yoke:
-                continue  # exact old drape and new upper rig checked by asset_contract
             old = json.loads((BASE/name).read_text())
             current = json.loads(B.DOC.read_text())
             if wide:
                 old,current = map(omit_mount_edits, (old,current))
             assert current == dict(old, name=current['name']), 'cambiaron piezas del proyecto fuera del asiento/fuelle'
         elif wide and (P.ASSETS/name) == P.ARMOR_GEO:
-            if fixed_yoke:
-                continue
             old, current = (P.load(path) for path in (BASE/name, P.ARMOR_GEO))
             old,current = (dict(g, bones=[dict(b,parent='chestplate') if b.get('parent') == frame else b
                                           for b in g['bones'] if b['name'] not in (*mount,frame)])
@@ -89,9 +80,9 @@ def preservation(*, changed=()):
     html = (P.ROOT/'docs/capa_v1170_visor.html').read_text()
     assert json.loads(re.search(r'^const INLINE_STRIDE = (.+);$', html, re.M)[1]) == S.profile()
     skip = ' salvo los sprites de FX' if changed else ''
-    scope = ' (yugo, hombreras y fuelle verificados)' if fixed_yoke else ' (asiento, fuelle e icono actualizados)' if wide else ''
-    print(f'v1.65.0: resto del GEO, clips, atlas, partículas y lore intactos{skip}; '
-          f'rig de Blockbench comprobado{scope}.', flush=True)
+    scope = ' (asiento, fuelle e icono actualizados)' if wide else ''
+    print(f'v1.65.0: resto del GEO, clips, ajuste de cabeza, atlas, partículas y lore intactos{skip}; '
+          f'mismo rig de Blockbench{scope}.', flush=True)
 
 
 def js_samples(samples):
@@ -151,11 +142,8 @@ class WornModel:
         self.pivots = [np.asarray(self.by[n]['pivot'])*[-1,1,1] for n in HINGES]
         masks = [[n in self.parents(part) for part in self.names] for n in HINGES]
         self.masks = [np.array(m) for m in masks]
-        # The saddle is an articulated join, not a free panel. Its contact
-        # with the yoke and linings is measured by verify_cape_attachment.
-        self.cloth = self.masks[0] & np.array([n != G.SADDLE_BONE for n in self.names])
-        self.link = np.array([F.fitted(geo) and n == G.GUSSET_BONE for n in self.names])
-        self.rigid = ~self.masks[0] & ~self.link
+        self.cloth = self.masks[0]
+        self.rigid = ~self.cloth
 
         joints = defaultdict(list)
         for i,(n,c,_) in enumerate(parts):
@@ -219,7 +207,7 @@ def exercise(geo, clips):
         steps = [S.gait(i/40,amp) for i in range(40)]
         boxes = np.array([actors(aim,*gait,.25) for gait in steps])
         demand = [S.demand(aim[0],*step) for step in steps]
-        dep = F.wearer_depth(geo,*aim); summary=np.zeros((3,2),dtype=int); minima=np.full(3,np.inf)
+        dep = F.depth(*aim); summary=np.zeros((3,2),dtype=int); minima=np.full(3,np.inf)
         frames = [frame(name,i/25) for i in range(25)]
         frames += [frame(name,i/5,e) for i,e in product(range(5),envelope)]
         if name in ('moving','sprint','fall','air'):
@@ -246,9 +234,7 @@ def exercise(geo, clips):
             if j == 0:
                 ix=int(corr[:,0].argmax())
                 d = S.adjust(g,*demand[ix],aim)
-                # The separate gusset stretches to the final hinge. Its lap
-                # after lift is exercised directly by verify_cape_attachment.
-                assert np.allclose(v[ix,~rig.link],rig.vertices(d,aim)[0][~rig.link],atol=1e-9,rtol=0)
+                assert np.allclose(v[ix],rig.vertices(d,aim)[0],atol=1e-9,rtol=0)
         count += len(steps)*len(frames)
         missed += summary[1]
         print(f'{name:10s} {amp:.2f} {aim}: {len(steps)*len(frames)} cruces de fases, paño '

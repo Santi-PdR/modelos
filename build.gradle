@@ -48,6 +48,7 @@ minecraft {
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', project.layout.buildDirectory.file('createSrgToMcp/output.srg').get().asFile.absolutePath
             if (historicFit) property 'cape.history', 'true'
+            if (fxSmokeRun && providers.gradleProperty('capePosition').isPresent()) property 'capa.position', 'true'
             if (fxSmokeRun) {
                 workingDirectory project.layout.buildDirectory.dir('fx-smoke-run').get().asFile
             }
@@ -129,7 +130,7 @@ tasks.withType(org.gradle.api.tasks.bundling.AbstractArchiveTask).configureEach 
 
 tasks.named('jar', Jar).configure {
     exclude 'com/capatest/client/CapeFxSmoke*.class', 'com/capatest/client/CapeLookSweep*.class',
-            'com/capatest/client/CapeWalkProbe*.class', 'com/capatest/client/CapeFixedMountProbe*.class', 'com/capatest/client/CapePlateProbe*.class',
+            'com/capatest/client/CapeWalkProbe*.class', 'com/capatest/client/CapePlacementProbe*.class', 'com/capatest/client/CapePlateProbe*.class',
             'com/capatest/client/CapeHistoric*.class', 'assets/capatest/**/fixture_v1280*', 'assets/capatest/geo/test/*'
     manifest {
         attributes([
