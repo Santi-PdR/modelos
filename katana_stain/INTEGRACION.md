@@ -381,3 +381,12 @@ o probar interacciones con otros mods de animación.
 - Red de protocolo 9: servidor y cliente deben usar la misma versión de este
   mod. Los recursos de Better Combat y Cloth Config de las pruebas no se
   incluyen ni se redistribuyen dentro del JAR.
+
+## 0.16.0-test — prototipo en revisión
+
+- Icono: se usa la imagen proporcionada por el usuario, quitando únicamente el fondo blanco exterior y escalando para la interfaz.
+- Z acumula hasta dos cargas en el servidor; el siguiente ataque válido inicia el remate detrás del blanco, si hay espacio seguro y visible. El daño es alto pero no es una ejecución garantizada. Se consumen al iniciar, no cuando se pulsa Z.
+- C conserva el blanco mob a 15 bloques y la duración de 200 ticks. El servidor comprueba posiciones con suelo, colisión, visibilidad, borde del mundo y chunks cargados; coloca al jugador cerca del objetivo y cambia de posición entre golpes cuando es seguro. Si no hay acceso inicial, no inicia. El cliente usa una cámara orbital local con raycast; si no puede acceder a la cámara vuelve al encuadre normal.
+- Los movimientos propios de respaldo tienen 4 cortes básicos y 10 poses para C; con Better Combat, la C usa clips disponibles del mod instalado y sus ataques básicos usan el preset de cuatro pasos. El daño extra del cuarto golpe sin Better Combat depende de cuatro impactos con carga suficiente dentro de la ventana de combo; los swings al aire son visuales y no cuentan para daño.
+- Efectos de corte: se mantienen sprites de Better Combat Particle (Malfu), atribuidos en el mod. No se incorpora arte ni efectos de Darkest Hours. El análisis estático de su ulti Infinite Mirage identificó pasos servidor (bloqueo, movimientos, golpes) y cámara cliente por poses y órbitas; no es una prueba de juego ni una copia de dicha implementación.
+- Limitaciones: la cinematográfica usa cámara interpolada en torno al objetivo, no una recreación de la secuencia de Darkest Hours; sus poses nuevas son prototipos y no captura de movimiento. La prueba gráfica automatizada no sustituye una revisión humana de movimiento, agarre y comodidad. El remate con Better Combat se prueba en el fixture mediante un evento de ataque simulado, no por una sesión multijugador real. El protocolo de red es 10: cliente y servidor deben usar el mismo JAR.
