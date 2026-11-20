@@ -163,8 +163,8 @@ class WornModel:
         mats = np.array([mm.get(rim,mm[n]) for n,rim in zip(self.names,self.rims,strict=True)])
         return self.coords @ mats[:,:3,:3].transpose(0,2,1) + mats[:,None,:3,3]
 
-    def vertices(self, frame, aim):
-        mm = P.matrices(F.wearer_pose(frame,*aim))
+    def vertices(self, frame, aim, *, placed=False, elytra=False):
+        mm = P.matrices(F.wearer_pose(frame,*aim,placed=placed,elytra=elytra))
         verts = self.place(mm)
         pivots = [mm[n][:3,:3]@p+mm[n][:3,3] for n,p in zip(HINGES,self.pivots,strict=True)]
         axes = [mm[n][:3,0] for n in HINGES]

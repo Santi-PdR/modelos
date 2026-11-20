@@ -72,14 +72,16 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     private double legBack;
     private double bodyPitch;
     private double wearerDepth;
+    private double mountFall;
     private double wingGoal;
     private boolean disabled;
 
-    void setClearancePose(double arm, double leg, double pitch, double depth, double wingGoal) {
+    void setClearancePose(double arm, double leg, double pitch, double depth, double fall, double wingGoal) {
         this.armBack = arm;
         this.legBack = leg;
         this.bodyPitch = pitch;
         this.wearerDepth = depth;
+        this.mountFall = fall;
         this.wingGoal = wingGoal;
     }
 
@@ -256,7 +258,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         // GeckoLib's baked X is the negative of the authored GEO pitch.
         // Take the greater clearance, not the sum. The existing hinge below
         // the collar carries its seam; the seat, fit and atlas stay unchanged.
-        double top = -Math.toDegrees(clothTop.getRotX());
+        double top = -Math.toDegrees(clothTop.getRotX()) + mountFall;
         double mid = -Math.toDegrees(clothMid.getRotX());
         double topLift = Math.max(CapeStride.topLift(top, armGoal, legGoal), CapeWingFit.topLift(top, wingGoal));
         double midLift = CapeStride.midLift(top + topLift, mid, legGoal);

@@ -7,6 +7,8 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
+import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -27,14 +29,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Live wearer and framebuffer; only the orbiting test camera is synthetic. */
+/** Actual equipped mesh and vanilla sleeves, with independent camera and aim controls. */
 final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     private static final Method POSITION = positionMethod();
-    private Matrix4f projection;
-    private Matrix4f inverseChest;
-    private float rootZ, collarZ;
-    private final List<Vector3f> vertices = new ArrayList<>();
-    private final Map<GeoBone, Matrix4f> matrices = new LinkedHashMap<>();
+    private Matrix4f projection, inverseChest;
+    private final Map<String, List<Vector3f>> rigid = new LinkedHashMap<>();
+    private final Map<GeoBone, Matrix4f> solid = new LinkedHashMap<>();
     private final List<GeoBone> tracked = new ArrayList<>();
     private final StringBuilder faces = new StringBuilder();
     private boolean active;
@@ -51,13 +51,17 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         }
     }
 
-    private static boolean ribbonRoot(String name) {
-        return name.startsWith("v17_ribbon_") && name.endsWith("_seg0");
+    private static boolean plate(String name) {
+        return name.equals(CapePlateFit.SMALL) || name.equals(CapePlateFit.WIDE);
+    }
+
+    private static boolean anchor(String name) {
+        return name.equals(CapeFit.BONE) || name.equals(CapeFit.DRAPE_BONE);
     }
 
     private static boolean tracked(String name) {
-        return name.startsWith("v17_cowl_") || name.startsWith("v18_pad_") || ribbonRoot(name)
-                || name.equals("v20_mount_seat") || name.equals(CapeFit.GUSSET_BONE);
+        return anchor(name) || plate(name) || name.startsWith("v17_cowl_") || name.startsWith("v18_chain_")
+                || name.startsWith("v19_cuellito_") || name.startsWith("v20_mount_") || name.equals(CapeFit.GUSSET_BONE);
     }
 
     private static CapePlacementProbe of(CapaArmorRenderer renderer) {
@@ -69,23 +73,17 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 });
     }
 
-    static void arm(CapaArmorRenderer renderer, int control) {
+    static void arm(CapaArmorRenderer renderer, boolean hidePlates) {
         var p = of(renderer);
         p.active = true;
         p.inverseChest = null;
-        p.rootZ = p.collarZ = Float.POSITIVE_INFINITY;
         p.projection = new Matrix4f(RenderSystem.getProjectionMatrix()).mul(RenderSystem.getModelViewMatrix());
-        p.matrices.clear();
-        p.vertices.clear();
+        p.rigid.clear();
+        p.solid.clear();
         p.faces.setLength(0);
-        // GeckoLib calls this per-bone layer only in the diffuse pass. Keep the
-        // same live model-space matrices under observation through the glow.
         for (var registered : renderer.getGeoModel().getAnimationProcessor().getRegisteredBones()) {
-            if (!(registered instanceof GeoBone b)) continue;
-            String n = b.getName();
-            if (!tracked(n) || b.getCubes().isEmpty()) continue;
-            boolean hide = control == 1 && n.startsWith("v18_pad_");
-            b.setHidden(hide);
+            if (!(registered instanceof GeoBone b) || !tracked(b.getName())) continue;
+            if (plate(b.getName())) b.setHidden(hidePlates);
             b.setTrackingMatrices(true);
             p.tracked.add(b);
         }
@@ -100,9 +98,17 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             inverseChest = new Matrix4f(pose.last().pose()).invert();
             return;
         }
-        if (bone.isHidden() || !tracked(n) || bone.getCubes().isEmpty()) return;
+        if (!tracked(n) || !anchor(n) && (bone.isHidden() || bone.getCubes().isEmpty())) return;
         require(inverseChest != null, "missing live torso transform");
-        matrices.put(bone, new Matrix4f(bone.getModelSpaceMatrix()));
+        require(solid.put(bone, new Matrix4f(bone.getModelSpaceMatrix())) == null, "cape piece drawn twice: " + n);
+        List<Vector3f> points = new ArrayList<>();
+        rigid.put(n, points);
+        if (anchor(n)) {
+            // The basis of each empty attachment bone, before the real animated cloth.
+            var model = new Matrix4f(inverseChest).mul(pose.last().pose());
+            for (var point : new Vector3f[]{new Vector3f(), new Vector3f(1,0,0), new Vector3f(0,1,0), new Vector3f(0,0,1)})
+                points.add(model.transformPosition(point).mul(16));
+        }
         for (var cube : bone.getCubes()) {
             pose.pushPose();
             try {
@@ -113,16 +119,9 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 var clip = new Matrix4f(projection).mul(pose.last().pose());
                 for (var face : cube.quads()) {
                     if (face == null) continue;
-                    faces.append(n);
-                    for (var vert : face.vertices()) {
-                        var point = model.transformPosition(vert.position(), new Vector3f()).mul(16);
-                        if (n.equals("v20_mount_seat")) vertices.add(point);
-                        if (ribbonRoot(n)) rootZ = Math.min(rootZ, point.z);
-                        if (n.startsWith("v17_cowl_back_")) collarZ = Math.min(collarZ, point.z);
-                        var v = clip.transformProject(new Vector3f(vert.position()));
-                        faces.append('\t').append((1+v.x)/2).append('\t').append((1-v.y)/2);
-                    }
-                    faces.append('\n');
+                    var verts = face.vertices();
+                    for (var vert : verts) points.add(model.transformPosition(vert.position(), new Vector3f()).mul(16));
+                    if (plate(n)) quad(faces, n, clip, verts[0].position(), verts[1].position(), verts[2].position(), verts[3].position());
                 }
             } finally {
                 pose.popPose();
@@ -130,90 +129,99 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         }
     }
 
-    record Draw(List<Vector3f> vertices, String faces, float rootZ, float collarZ) {}
+    record Draw(Map<String,List<Vector3f>> rigid, String faces, float pitch, float yaw) {}
 
-    static Draw finish(CapaArmorRenderer renderer) {
+    static Draw finish(CapaArmorRenderer renderer, PoseStack armor, PlayerModel<?> player) {
         var p = of(renderer);
         p.active = false;
-        require(p.inverseChest != null && !p.vertices.isEmpty()
-                && Float.isFinite(p.rootZ) && Float.isFinite(p.collarZ), "missing original seat, collar or ribbon roots");
+        require(p.inverseChest != null && p.rigid.containsKey("v20_mount_seat") && p.rigid.containsKey(CapeFit.DRAPE_BONE),
+                "missing original seat or cloth attachment");
         for (var b : p.tracked) {
-            Matrix4f solid = p.matrices.get(b);
-            require(solid == null && b.isHidden() || solid != null && solid.equals(b.getModelSpaceMatrix(), .0001F),
+            Matrix4f solid = p.solid.get(b);
+            if (solid != null) require(solid.equals(b.getModelSpaceMatrix(), .0001F),
                     "solid and emissive matrices differ: " + b.getName());
             b.setTrackingMatrices(false);
-            b.setHidden(false);
-            b.setChildrenHidden(false);
+            if (plate(b.getName())) b.setHidden(false);
         }
         p.tracked.clear();
-        return new Draw(List.copyOf(p.vertices), p.faces.toString(), p.rootZ, p.collarZ);
+        if (player != null) {
+            var copy = new PoseStack();
+            copy.last().pose().set(armor.last().pose());
+            p.sleeve(copy, player.leftSleeve, "left_sleeve");
+            p.sleeve(copy, player.rightSleeve, "right_sleeve");
+        }
+        require(player != null, "missing live vanilla model");
+        return new Draw(Map.copyOf(p.rigid), p.faces.toString(), (float) Math.toDegrees(player.head.xRot),
+                (float) Math.toDegrees(player.head.yRot));
+    }
+
+    private void sleeve(PoseStack stack, ModelPart sleeve, String name) {
+        // Top and upper-front strip of the actual moving sleeve (including its
+        // .25 pixel vanilla layer), not boxes based on cape or screen bounds.
+        sleeve.visit(stack, (pose, path, id, cube) -> {
+            float x0 = (cube.minX-.25F)/16, x1 = (cube.maxX+.25F)/16;
+            float y0 = (cube.minY-.25F)/16, y1 = y0 + 3/16F;
+            float z0 = (cube.minZ-.25F)/16, z1 = (cube.maxZ+.25F)/16;
+            var clip = new Matrix4f(projection).mul(pose.pose());
+            quad(faces, name, clip, new Vector3f(x0,y0,z0), new Vector3f(x1,y0,z0),
+                    new Vector3f(x1,y1,z0), new Vector3f(x0,y1,z0));
+            quad(faces, name, clip, new Vector3f(x0,y0,z0), new Vector3f(x1,y0,z0),
+                    new Vector3f(x1,y0,z1), new Vector3f(x0,y0,z1));
+        });
+    }
+
+    private static void quad(StringBuilder out, String name, Matrix4f clip, Vector3f... points) {
+        out.append(name);
+        for (var point : points) {
+            var v = clip.transformProject(new Vector3f(point));
+            out.append('\t').append((1+v.x)/2).append('\t').append((1-v.y)/2);
+        }
+        out.append('\n');
     }
 
     private static void require(boolean pass, String reason) {
         if (!pass) throw new AssertionError(reason);
     }
 
-    /** Four slot/skin fixtures, each with separately controlled head and camera. */
+    /** Six camera orbits at neutral aim; a separate aim sweep at one viewpoint. */
     static final class Route {
         private static final String[] VIEWS = {"espalda", "frente", "izquierda", "derecha", "arriba", "abajo"};
-        private static final int SWEEP = 37;
-        private static final int TURN = 12;
+        private static final float[] CAMERA_YAW = {0,180,90,-90,22,-24,66};
+        private static final float[] CAMERA_PITCH = {8,9,8,8,79,-51,8};
+        private static final int SWEEP = 37, TURN = 12;
         private int shot, frame;
-        private List<Vector3f> rest;
+        private Map<String, List<Vector3f>> rest;
         private float jumpHeight, maxDiff;
         private double ground = Double.NaN;
-        private final StringBuilder trace = new StringBuilder("sample\tpitch\tyaw\tlift\tseat_drift\troot_z\tcollar_z\n");
+        private final StringBuilder trace = new StringBuilder("mode\tsample\tpitch\tyaw\tcamera_pitch\tcamera_yaw\tlift\tdrift\n");
 
-        int control() { return shot < VIEWS.length * 2 ? shot % 2 : 0; }
+        boolean control() { return view() < VIEWS.length && shot % 2 == 1; }
+        boolean standing() { return view() < VIEWS.length || frame < SWEEP + TURN; }
 
         void aim(LocalPlayer p) {
-            float turn = yaw(), pitch = pitch();
             p.setYBodyRot(0);
             p.yBodyRotO = 0;
-            p.setYRot(turn);
-            p.yRotO = turn;
-            p.setYHeadRot(turn);
-            p.yHeadRotO = turn;
-            p.setXRot(pitch);
-            p.xRotO = pitch;
+            p.setYRot(yaw());
+            p.yRotO = yaw();
+            p.setYHeadRot(yaw());
+            p.yHeadRotO = yaw();
+            p.setXRot(pitch());
+            p.xRotO = pitch();
         }
 
         private int view() { return Math.min(shot / 2, VIEWS.length); }
-
-        private float pitch() {
-            return switch (view()) {
-                case 4 -> 83;
-                case 2, 3 -> -72;
-                case 5 -> -83;
-                case 6 -> frame < SWEEP ? -89 + frame * (178F / (SWEEP - 1)) : -79;
-                default -> 0;
-            };
-        }
-
+        private float pitch() { return view() < VIEWS.length ? 0 : frame < SWEEP ? -89 + frame*(178F/(SWEEP-1)) : -64; }
         private float yaw() {
-            if (view() != 6) return 0;
-            if (frame < SWEEP) return 0;
-            return frame < SWEEP + TURN ? 73 * Mth.sin((float) ((frame - SWEEP) * Math.PI / 5)) : 0;
+            return view() < VIEWS.length || frame < SWEEP || frame >= SWEEP + TURN
+                    ? 0 : 74*Mth.sin((float) ((frame-SWEEP)*Math.PI/5));
         }
 
         void camera(ViewportEvent.ComputeCameraAngles event, LocalPlayer player) {
-            float yaw = switch (view()) {
-                case 1 -> 180;
-                case 2 -> 90;
-                case 3 -> -90;
-                case 4 -> 22;
-                case 5 -> -24;
-                default -> 0;
-            };
-            float pitch = switch (view()) {
-                case 4 -> 79;
-                case 5 -> -51;
-                case 6 -> frame >= SWEEP ? -10 : 8;
-                default -> 8;
-            };
+            int view = view();
+            float yaw = CAMERA_YAW[view], pitch = CAMERA_PITCH[view];
             double radY = Math.toRadians(yaw), radX = Math.toRadians(pitch);
-            double radius = view() == 5 ? 1.62 : 2.95;
-            double center = view() == 5 ? 1.34 : 1.00;
+            double radius = view == 5 ? 1.62 : 2.95;
+            double center = view == 5 ? 1.34 : 1.00;
             double t = event.getPartialTick();
             double x = Mth.lerp(t, player.xo, player.getX()) + radius * Math.sin(radY)*Math.cos(radX);
             double y = Mth.lerp(t, player.yo, player.getY()) + center + radius * Math.sin(radX);
@@ -228,35 +236,43 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         }
 
         void drive(Minecraft game) {
-            if (view() != 6 || frame < SWEEP + TURN || !Double.isNaN(ground) || !game.player.onGround()) return;
+            if (standing() || !Double.isNaN(ground) || !game.player.onGround()) return;
             ground = game.player.getY();
             game.options.keyJump.setDown(true);
         }
 
         boolean capture(Minecraft game, Path root, String fixture, Draw draw) throws IOException {
             require(draw != null, "missing live chest/Curios draw");
-            if (control() == 0) {
-                if (rest == null) rest = draw.vertices();
-                require(rest.size() == draw.vertices().size(), "the original anchor changed topology");
+            if (standing() && !game.player.onGround()) return false;
+            if (standing()) require(Math.abs(draw.pitch()-pitch()) < .02 && Math.abs(draw.yaw()-yaw()) < .02,
+                    "pose not applied to live head: " + draw.pitch() + "/" + draw.yaw());
+            if (!control()) {
+                if (rest == null) rest = draw.rigid();
+                require(rest.keySet().equals(draw.rigid().keySet()) && rest.keySet().containsAll(List.of(CapePlateFit.SMALL, CapePlateFit.WIDE)),
+                        "a rigid cape piece disappeared");
                 float diff = 0;
-                for (int i = 0; i < rest.size(); i++) diff = Math.max(diff, rest.get(i).distance(draw.vertices().get(i)));
-                if (pitch() <= 0) {
-                    maxDiff = Math.max(diff, maxDiff);
-                    require(diff < .006F, "the upward fit pulled the seat off the chest: " + fixture + "/" + frame + ": " + diff);
+                for (var entry : rest.entrySet()) {
+                    var current = draw.rigid().get(entry.getKey());
+                    var start = entry.getValue();
+                    require(start.size() == current.size(), "changed cube topology");
+                    for (int i=0; i<start.size(); i++) diff = Math.max(diff, start.get(i).distance(current.get(i)));
                 }
                 double lift = Double.isNaN(ground) ? 0 : game.player.getY() - ground;
-                trace.append(shot * 100 + frame).append('\t').append(pitch()).append('\t').append(yaw())
-                        .append('\t').append(lift).append('\t').append(diff).append('\t').append(draw.rootZ())
-                        .append('\t').append(draw.collarZ()).append('\n');
+                maxDiff = Math.max(diff, maxDiff);
+                require(diff < .006F, "cape refitted relative to torso: " + fixture + "/" + shot + "/" + frame + ": " + diff);
+                trace.append(view() < VIEWS.length ? "orbit" : standing() ? "aim" : "jump").append('\t')
+                        .append(shot*100 + frame).append('\t').append(draw.pitch()).append('\t').append(draw.yaw())
+                        .append('\t').append(CAMERA_PITCH[view()]).append('\t').append(CAMERA_YAW[view()])
+                        .append('\t').append(lift).append('\t').append(diff).append('\n');
             }
             if (view() < VIEWS.length) {
-                String name = fixture + "-" + VIEWS[view()] + (control() == 1 ? "-sin-placas" : "");
+                String name = fixture + "-" + VIEWS[view()] + (control() ? "-sin-placas" : "");
                 save(game, root, name);
-                if (control() == 0) Files.writeString(root.resolve(name + "-caras.tsv"), draw.faces());
+                if (!control()) Files.writeString(root.resolve(name + "-caras.tsv"), draw.faces());
                 shot++;
                 return false;
             }
-            if (frame < SWEEP + TURN) {
+            if (standing()) {
                 if (frame == 0) save(game, root, fixture + "-mirada-alta");
                 if (frame == SWEEP + 2) save(game, root, fixture + "-giro-alto");
                 frame++;
@@ -266,7 +282,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             float lift = (float) (game.player.getY() - ground);
             if (lift > .05F) game.options.keyJump.setDown(false);
             if (lift > .65F && jumpHeight <= .65F) save(game, root, fixture + "-salto");
-            jumpHeight = Math.max(jumpHeight, lift);
+            jumpHeight = Math.max(jumpHeight,lift);
             frame++;
             if (jumpHeight <= .65F || !game.player.onGround()) return false;
             Files.writeString(root.resolve(fixture + "-recorrido.tsv"), trace);
@@ -280,8 +296,8 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         }
 
         String summary() {
-            return "seis vistas; " + SWEEP + " poses de mirada; salto " + jumpHeight
-                    + " bloques; desplazamiento máximo del asiento mirando arriba " + maxDiff + "u";
+            return VIEWS.length + " vistas independientes; " + (SWEEP + TURN) + " poses de mirada; salto " + jumpHeight
+                    + " bloques; desplazamiento máximo en el torso " + maxDiff + "u";
         }
     }
 }

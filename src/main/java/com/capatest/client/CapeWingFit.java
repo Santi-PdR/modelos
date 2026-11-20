@@ -15,7 +15,7 @@ public final class CapeWingFit {
 
     private CapeWingFit() {}
 
-    /** Rendered wing pitch/roll, torso pitch in degrees and head backset in model units. */
+    /** Rendered wing pitch/roll, torso pitch in degrees and mount depth in model units. */
     public static double topGoal(double pitch, double roll, double lean, double depth) {
         if (!Double.isFinite(pitch) || !Double.isFinite(roll)
                 || !Double.isFinite(lean) || !Double.isFinite(depth)) return 0;

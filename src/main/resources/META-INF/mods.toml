@@ -9,7 +9,7 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.67.16: vuelve el modelo original de v1.67.14, con un ajuste de posición en pecho y Curios.
+v1.67.17: montaje fijo en el torso y hombreras originales visibles de frente, en pecho y Curios.
 El icono de referencia pulsa en la hotbar. Se conservan los ocho clips,
 la holgura con élitros, la inercia del paño, el halo nocturno y las brasas.
 '''

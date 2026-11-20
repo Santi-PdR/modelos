@@ -13,57 +13,63 @@ from verify_forge_mount import emit, read
 
 FIXTURES = tuple(f'posicion-{skin}-{slot}' for skin in ('steve','alex') for slot in ('pecho','curios'))
 VIEWS = (('espalda','ESPALDA'),('frente','FRENTE'),('arriba','DESDE ARRIBA'),
-         ('izquierda','PERFIL MIRANDO ARRIBA'),('abajo','DESDE ABAJO'),('salto','SALTO'))
+         ('izquierda','PERFIL'),('abajo','DESDE ABAJO'),('salto','SALTO'))
 
 
-def plate_masks(root, name, size):
-    masks = [Image.new('L',size) for _ in range(2)]
-    drawing = list(map(ImageDraw.Draw,masks))
+def masks_for(root, name, size, names):
+    masks = {part:Image.new('L',size) for part in names}
+    drawing = {part:ImageDraw.Draw(mask) for part,mask in masks.items()}
     for line in (root/f'{name}-caras.tsv').read_text().splitlines():
         bone,*xy = line.split()
-        if bone not in ('v18_pad_0','v18_pad_1'):
-            continue
-        quad = np.asarray(xy,float).reshape(4,2)*size
-        assert np.isfinite(quad).all(), name
-        drawing[int(bone[-1])].polygon(list(map(tuple,quad)),fill=255)
-    return np.asarray([np.asarray(m)>0 for m in masks])
+        if bone in drawing:
+            quad = np.asarray(xy,float).reshape(4,2)*size
+            assert np.isfinite(quad).all(), name
+            drawing[bone].polygon(list(map(tuple,quad)),fill=255)
+    return np.asarray([np.asarray(masks[name])>0 for name in names])
 
 
 def report(root):
     for fixture in FIXTURES:
-        rows = np.genfromtxt(root/f'{fixture}-recorrido.tsv', names=True, delimiter='\t')
-        assert len(rows)>=60 and np.isfinite(rows['root_z']).all(), fixture
-        assert rows['pitch'].min()<=-89 and rows['pitch'].max()>=89, fixture
-        assert rows['yaw'].min()<=-68 and rows['yaw'].max()>=68, fixture
-        assert rows['lift'].max()>.65 and abs(rows['lift'][-1])<.01, fixture
-        aimed_up = rows[rows['pitch']<=0]
-        drift = aimed_up['seat_drift'].max()
-        assert drift < .006, (fixture,drift,'seat followed the head or jump')
-        # Bone-local measurements before projection: the pinned seat alone
-        # isn't enough if the visible ribbons still slide far to the rear.
-        straight_up = aimed_up[(aimed_up['pitch']<-65)&(abs(aimed_up['yaw'])<.01)]
-        ribbon, collar = straight_up['root_z'].max(), straight_up['collar_z'].max()
-        assert ribbon < 7.0 and collar < 9.0, (fixture,ribbon,collar,'cloth lifted off the torso')
-        visible = []
-        for view in ('espalda','frente','arriba'):
-            name = f'{fixture}-{view}'
-            worn = read(root/f'{name}.png')
-            hidden = read(root/f'{name}-sin-placas.png')
-            masks = plate_masks(root,name,(worn.shape[1],worn.shape[0]))
-            diff = np.abs(worn-hidden).max(2)>=15
-            counts = np.count_nonzero(masks&diff,axis=(1,2))
-            assert min(counts)>=50, (name,counts,'original plate missing in F5')
-            visible.append(f'{view} {counts[0]}/{counts[1]}')
-        print(f'::notice title=Colocación original en Forge::{fixture}: {len(rows)} poses; asiento {drift:.6f}u; '
-              f'Z máxima mirando arriba, raíz {ribbon:.3f}u y cuello {collar:.3f}u; salto {rows["lift"].max():.2f} bloques; '
-              f'píxeles de ambas placas {"; ".join(visible)}.')
+        rows = np.genfromtxt(root/f'{fixture}-recorrido.tsv',names=True,delimiter='\t',dtype=None,encoding='utf-8')
+        orbit, aim, jump = (rows[rows['mode']==m] for m in ('orbit','aim','jump'))
+        assert len(orbit)==6 and np.ptp(orbit['camera_yaw'])>=180 and np.ptp(orbit['camera_pitch'])>=120, fixture
+        assert np.abs(orbit['pitch']).max()<.02 and np.abs(orbit['yaw']).max()<.02, fixture
+        assert len(aim)==49 and np.ptp(aim['camera_yaw'])==np.ptp(aim['camera_pitch'])==0, fixture
+        assert aim['pitch'].min()<=-88.98 and aim['pitch'].max()>=88.98, fixture
+        assert aim['yaw'].min()<=-68 and aim['yaw'].max()>=68, fixture
+        assert jump['lift'].max()>.65 and abs(jump['lift'][-1])<.01, fixture
+        drift = [v['drift'].max() for v in (orbit,aim,jump)]
+        assert np.isfinite(drift).all() and max(drift)<.006, (fixture,drift,'cambió la montura en coordenadas del torso')
+        name = f'{fixture}-frente'
+        worn, control = (read(root/f'{name}{suffix}.png') for suffix in ('','-sin-placas'))
+        names = ('v18_pad_0','v18_pad_1','left_sleeve','right_sleeve')
+        plates, sleeves = np.split(masks_for(root,name,(worn.shape[1],worn.shape[0]),names),2)
+        assert np.min(sleeves.sum(axis=(1,2)))>=180, (name,'las mangas no entraron en cuadro')
+        # Only count pixels that disappeared when the plates (including the
+        # emissive draw) were disabled. Then require genuine coverage of
+        # both independently projected vanilla sleeves, not a tip behind.
+        solid = plates & (np.abs(worn-control).max(2) >= 18)
+        match = (solid[:,None] & sleeves[None]).sum(axis=(2,3))
+        ix = match.argmax(axis=1)
+        assert ix[0] != ix[1], (name,match,'las placas no están sobre mangas distintas')
+        coverage = []
+        for i,j in enumerate(ix):
+            covered = solid[i] & sleeves[j]
+            shown = covered.sum()
+            columns = covered.any(axis=0).sum() / sleeves[j].any(axis=0).sum()
+            relative = shown / sleeves[j].sum()
+            assert shown >= 40 and relative >= .12 and columns >= .39, (name, i, shown, relative, columns, match.tolist())
+            coverage.append(f'{shown} px, {columns:.0%} del ancho')
+        print(f'::notice title=Montaje fijo en Forge::{fixture}: órbita {drift[0]:.6f}u ({len(orbit)} vistas); '
+              f'mirada {drift[1]:.6f}u ({len(aim)} poses); salto {drift[2]:.6f}u, {jump["lift"].max():.2f} bloques. '
+              f'Placas sobre las mangas de frente: {" / ".join(coverage)}.')
 
 
 def gallery(root):
     cw,ch = 218,220
     image = Image.new('RGB',(cw*len(VIEWS),44+(ch+21)*len(FIXTURES)),'#15101a')
     pen = ImageDraw.Draw(image)
-    pen.text((10,9),'MANTLE OF THE BLIGHT STAR  /  MODELO ORIGINAL EQUIPADO EN FORGE',fill='#ffe4f0')
+    pen.text((10,9),'MANTLE OF THE BLIGHT STAR  /  MONTAJE FIJO EN FORGE',fill='#ffe4f0')
     for col,(_,label) in enumerate(VIEWS):
         pen.text((col*cw+10,28),label,fill='#efc5da')
     for row,fixture in enumerate(FIXTURES):

@@ -556,7 +556,9 @@ jobs:
           assert 'v17_mote_' not in _armor_model and 'v17_ash_' not in _armor_model
           assert 'RIBBONS = 12' in _armor_model and 'LAST_SEGMENT = 4' in _armor_model
           assert 'rearPadBaseX' not in _armor_model
-          assert 'CapeMountPlacement.solve(model.body.xRot' in armor_renderer
+          assert 'CapeMountPlacement.worn(hasWings)' in armor_renderer
+          assert not re.search(r'\b(model\.head\.|getXRot\(|getYHeadRot\(|getCamera|backset\()', armor_renderer)
+          assert all(x not in armor_renderer for x in ('CapeTorsoFit', 'applyPlateRim', 'CapeBacking.solve', 'CapePlateFit.influence'))
           # v1.22.0: OCHO estados reales, no cuatro clonados.
           assert all(f'"{k}"' in _motion for k in
                      ('volar', 'caer', 'agachado', 'agua'))
@@ -980,28 +982,6 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Preparar la referencia histórica del ajuste
-        id: historic-fit
-        if: >-
-          (github.event_name == 'push' && (contains(github.event.head_commit.message, '[capa-historica]') ||
-          contains(github.event.head_commit.message, '[publicar]'))) ||
-          (github.event_name == 'workflow_dispatch' && inputs.publicar == true)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python3 tools/prepare_historical_fit.py
-          # El registro histórico no es una prueba Forge: el paso ejecutaba audit_model.py.
-          # Si está retenido, guardar sus resultados específicos, no todo el log del job.
-          if timeout 20s gh run view 43540233285 --job 132278825474 --log > "$RUNNER_TEMP/capa-v1280.log"; then
-            sed -n '/Autoevaluacion visual contra la referencia/s/^.*Z \(OK: .*\)$/\1/p' "$RUNNER_TEMP/capa-v1280.log" | head -n 6 | \
-              while IFS= read -r line; do printf '::notice title=Registro de referencia v1.28.0::%s\n' "$line"; done
-          fi
-
-      - name: Select Forge scenes
-        id: scenes
-        if: steps.historic-fit.outcome != 'success'
-        run: echo 'placement=true' >> "$GITHUB_OUTPUT"
-
       # Cliente real en mundo desechable. Se prueba aparte del JAR:
       # el código de diagnóstico y Curios nunca se empaquetan en él.
       - name: Probar FX y equipo en Forge (opcional)
@@ -1017,21 +997,12 @@ jobs:
         run: |
           log="$RUNNER_TEMP/forge-client.log"
           rc=0
-          args=()
-          if [ '${{ steps.historic-fit.outcome }}' = success ]; then args+=(-PcapeHistory); fi
-          if [ '${{ steps.scenes.outputs.placement }}' = true ]; then args+=(-PcapePosition); fi
           # Use a 24-bit X11 visual and the vanilla window for llvmpipe.
           mkdir -p build/fx-smoke-run/config
           printf 'earlyWindowControl = false\n' > build/fx-smoke-run/config/fml.toml
-          timeout --kill-after=12s 300s xvfb-run -a -s '-screen 0 1280x1024x24 +extension GLX -noreset' gradle -PcapeFxSmoke "${args[@]}" --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
+          timeout --kill-after=12s 300s xvfb-run -a -s '-screen 0 1280x1024x24 +extension GLX -noreset' gradle -PcapeFxSmoke --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
           awk 'sub(/.*FX smoke: /, "")' "$log" | tail -n 5 | while IFS= read -r line; do
             printf '::notice title=FX en Forge::%s\n' "$line"
-          done
-          awk 'sub(/.*FX smoke: Recorrido de mirada /, "")' "$log" | while IFS= read -r line; do
-            printf '::notice title=Recorrido de mirada en Forge::%s\n' "${line//%/%25}"
-          done
-          awk 'sub(/.*FX smoke: Giro continuo /, "")' "$log" | while IFS= read -r line; do
-            printf '::notice title=Giro continuo en Forge::%s\n' "$line"
           done
           if [ "$rc" -ne 0 ] || ! grep -Fq 'FX smoke: PASS:' "$log" ||
              grep -Fq -e 'FX smoke: FAIL' -e 'Blight Star Mantle: respuesta del paño desactivada' -e 'se usa el muestreador de GeckoLib' "$log" ||
@@ -1043,9 +1014,9 @@ jobs:
             exit 1
           fi
 
-      - name: Comprobar el asiento original y las dos placas en Forge
+      - name: Comprobar órbita, mirada y placas sobre las mangas en Forge
         id: verify-placement
-        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && steps.scenes.outputs.placement == 'true' }}
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
           set -o pipefail
           python3 tools/verify_forge_placement.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
@@ -1056,96 +1027,15 @@ jobs:
           done
 
       - name: Lámina con Steve y Alex, pecho y Curios
-        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && steps.scenes.outputs.placement == 'true' }}
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: python3 tools/verify_forge_placement.py build/fx-smoke-run/fx-shots --gallery-only
-
-      - name: Medir el cuello al girar 60 grados en F5
-        id: verify-wide-turn
-        if: steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success'
-        run: |
-          set -o pipefail
-          python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --giro-amplio 2>&1 | while IFS= read -r line; do
-            case "$line" in
-              AssertionError:*) printf '::error title=Giro amplio en Forge::%s\n' "${line//%/%25}" ;;
-              giro-*) printf '::notice title=Giro amplio en Forge::%s\n' "${line//%/%25}" ;;
-              *) printf '%s\n' "$line" ;;
-            esac
-          done
-
-      # Priorizar la nueva auditoría en el presupuesto de anotaciones, sin
-      # perder las imágenes completas de las comparaciones anteriores.
-      - name: Comparar el cuello anterior y actual en ambos giros
-        if: always() && steps.historic-fit.outcome == 'success'
-        run: |
-          for view in giro-amplio giro-inverso; do
-            python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery "$view"
-          done
-
-      - name: Fotogramas del giro hasta el perfil en pecho y Curios
-        if: ${{ !cancelled() && steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success' }}
-        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --recorrido
-
-      - name: Documentar v1.28.0 y el modelo actual en F5 tres cuartos
-        if: always() && steps.historic-fit.outcome == 'success'
-        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery diagonal
-
-      - name: Documentar v1.28.0 y el modelo actual en F5 giro opuesto
-        if: always() && steps.historic-fit.outcome == 'success'
-        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery espejo
-
-      - name: Documentar v1.28.0 y el modelo actual en F5 cenital
-        if: always() && steps.historic-fit.outcome == 'success'
-        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery cenital
-
-      - name: Medir el anclaje anterior a la rama en Forge
-        if: ${{ !cancelled() && steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success' }}
-        run: |
-          set -o pipefail
-          python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
-            case "$line" in
-              'AssertionError:'*) printf '::error title=Anclaje histórico en Forge::%s\n' "${line//%/%25}" ;;
-              *) printf '::notice title=Anclaje histórico en Forge::%s\n' "${line//%/%25}" ;;
-            esac
-          done
-
-      - name: Comparar v1.67.11 y las nuevas hombreras en F5 cenital
-        if: ${{ steps.scenes.outputs.placement != 'true' && always() && steps.fx-smoke.outcome != 'skipped' && steps.historic-fit.outcome != 'success' }}
-        run: python3 tools/verify_forge_plates.py build/fx-smoke-run/fx-shots --gallery
-
-      - name: Medir el borde de las placas contra las mangas en F5
-        if: ${{ steps.scenes.outputs.placement != 'true' && !cancelled() && steps.fx-smoke.outcome == 'success' }}
-        run: |
-          set -o pipefail
-          python3 tools/verify_forge_plates.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
-            case "$line" in
-              'A 89,5°,'*) printf '::notice title=Manga y placa en Forge::%s\n' "$line" ;;
-              'AssertionError:'*) printf '::error title=Diagnóstico de hombreras::%s\n' "$line" ;;
-              *) printf '%s\n' "$line" ;;
-            esac
-          done
-
-      - name: Verificar el desplazamiento visible del cuello y las dos hombreras en F5
-        if: ${{ steps.scenes.outputs.placement != 'true' && !cancelled() && steps.fx-smoke.outcome == 'success' }}
-        run: |
-          set -o pipefail
-          python3 tools/verify_forge_seat.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
-            case "$line" in
-              '::error '*) printf '%s\n' "$line" ;;
-              *Error:*) printf '::error title=Ajuste visible en Forge::%s\n' "${line//%/%25}" ;;
-              *) printf '::notice title=Ajuste visible en Forge::%s\n' "${line//%/%25}" ;;
-            esac
-          done
 
       - name: Medir ciclos y transiciones reales al caminar en F5
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         id: verify-walk
         run: |
           set -o pipefail
-          args=()
-          # Esta escena mide la marcha y lleva su propio control de colocación.
-          # Las fotos de la camiseta v1.67.10 se toman sólo con -PcapeHistory.
-          if [ '${{ steps.scenes.outputs.placement }}' = true ]; then args+=(--motion-only); fi
-          python3 tools/verify_forge_walk.py build/fx-smoke-run/fx-shots "${args[@]}" 2>&1 | while IFS= read -r line; do
+          python3 tools/verify_forge_walk.py build/fx-smoke-run/fx-shots --motion-only 2>&1 | while IFS= read -r line; do
             case "$line" in
               *AssertionError:*|*Error:*) printf '::error title=Marcha en Forge::%s\n' "${line//%/%25}" ;;
               *) printf '::notice title=Marcha en Forge::%s\n' "${line//%/%25}" ;;
@@ -1153,73 +1043,13 @@ jobs:
           done
 
       - name: Verificar el icono original en la hotbar de Forge
-        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && steps.scenes.outputs.placement == 'true' }}
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
           PYTHONPATH=tools python3 - <<'PYICON'
           from pathlib import Path
           from verify_forge_mount import hotbar
           hotbar(Path('build/fx-smoke-run/fx-shots'))
           PYICON
-
-      - name: Verificar la unión y el icono en el framebuffer de Forge
-        if: ${{ steps.scenes.outputs.placement != 'true' && !cancelled() && steps.fx-smoke.outcome == 'success' }}
-        run: |
-          set -o pipefail
-          python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
-            if [[ "$line" == '::error '* ]]; then
-              printf '%s\n' "$line"
-            else
-              printf '::notice title=Anclaje y ranura en Forge::%s\n' "${line//%/%25}"
-            fi
-          done
-
-      - name: Comparar el canto de la camiseta en F5 cenital
-        if: ${{ steps.scenes.outputs.placement != 'true' && always() && steps.fx-smoke.outcome == 'success' }}
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery union-cenital
-
-      - name: Comparar el canto de la camiseta en F5 oblicuo
-        if: ${{ steps.scenes.outputs.placement != 'true' && always() && steps.fx-smoke.outcome == 'success' }}
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery union-oblicua
-
-      - name: Comparar el canto de la camiseta a media inclinación
-        if: ${{ steps.scenes.outputs.placement != 'true' && always() && steps.fx-smoke.outcome == 'success' }}
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery union-ajuste-medio
-
-      - name: Fotogramas de marcha en pecho
-        if: always() && steps.fx-smoke.outcome == 'success'
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery paso-pecho
-
-      - name: Fotogramas de marcha en Curios
-        if: always() && steps.fx-smoke.outcome == 'success'
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery paso-curios
-
-      - name: Vista F5 de inclinación media, v1.67.9 frente a ajuste nuevo
-        if: ${{ steps.scenes.outputs.placement != 'true' && always() && steps.fx-smoke.outcome != 'skipped' }}
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery ajuste-medio
-
-      - name: Fotogramas del giro y la inclinación en pecho
-        if: ${{ steps.scenes.outputs.placement != 'true' && always() && steps.fx-smoke.outcome != 'skipped' }}
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery mirada-pecho
-
-      - name: Fotogramas del giro y la inclinación en Curios
-        if: ${{ steps.scenes.outputs.placement != 'true' && always() && steps.fx-smoke.outcome != 'skipped' }}
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery mirada-curios
-
-      - name: Recorte comparativo F5 del ajuste de cuello y hombreras
-        if: ${{ steps.scenes.outputs.placement != 'true' && always() && steps.fx-smoke.outcome != 'skipped' }}
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery ajuste
-
-      - name: Recorte F5 con mangas finas
-        if: ${{ steps.scenes.outputs.placement != 'true' && always() && steps.fx-smoke.outcome != 'skipped' }}
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery ajuste-fino
-
-      - name: Recorte en ángulo oblicuo
-        if: ${{ steps.scenes.outputs.placement != 'true' && always() && steps.fx-smoke.outcome != 'skipped' }}
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery oblicua
-
-      - name: Recorte lateral de la unión al torso
-        if: ${{ steps.scenes.outputs.placement != 'true' && always() && steps.fx-smoke.outcome != 'skipped' }}
-        run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery perfil
 
       - name: Recorte del ciclo de la hotbar
         if: always() && steps.fx-smoke.outcome != 'skipped'
@@ -1251,11 +1081,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FORGE_RESULT: ${{ steps.fx-smoke.outcome }}
-          TURN_RESULT: ${{ steps.verify-wide-turn.outcome }}
+          FIT_RESULT: ${{ steps.verify-placement.outcome }}
+          WALK_RESULT: ${{ steps.verify-walk.outcome }}
         run: |
           set -euo pipefail
-          if [ "$FORGE_RESULT" != success ] || [ "$TURN_RESULT" != success ]; then
-            echo '::error::El borrador requiere pasar el cliente Forge y la comparación del giro amplio.'
+          if [ "$FORGE_RESULT" != success ] || [ "$FIT_RESULT" != success ] || [ "$WALK_RESULT" != success ]; then
+            echo '::error::El borrador requiere pasar el cliente Forge, la colocación fija y la marcha.'
             exit 1
           fi
           # runClient usa fuentes de diagnóstico. El JAR preparado más arriba
@@ -1269,7 +1100,7 @@ jobs:
           COMPARISON="docs/capa_v${VER//./}_antes_despues.png"
           REGISTER="docs/capa_v${VER//./}_registro.png"
           HISTORY="docs/capa_v${VER//./}_anclaje_forge.png"
-          TURN_BOARD="docs/capa_v${VER//./}_giro_forge.png"
+          FIT_BOARD="docs/capa_v${VER//./}_colocacion_forge.jpg"
           RELEASE_DIR="docs/releases/$TAG"
           NOTES="$RELEASE_DIR/notas.md"
           if [ -d "$RELEASE_DIR" ]; then
@@ -1278,7 +1109,7 @@ jobs:
               echo "::error::El JAR de $TAG no coincide con el SHA-256 de la prueba original."
               exit 1
             fi
-            test -s "$NOTES" && test -s "$TURN_BOARD" && test -s "$RELEASE_DIR/instalar-test-1.txt" || exit 1
+            test -s "$NOTES" && test -s "$FIT_BOARD" || exit 1
           else
             NOTES="$RUNNER_TEMP/release-notes.md"
             cat > "$NOTES" <<'MD'
@@ -1328,9 +1159,9 @@ jobs:
             if [ -f "$HISTORY" ]; then
               printf '| `%s` | Comparativa F5 capturada en Forge |\n' "$(basename "$HISTORY")" >> "$NOTES"
             fi
-            if [ -f "$TURN_BOARD" ]; then
-              printf '| `%s` | Cuello durante el giro en pecho y Curios (F5) |\n' \
-                "$(basename "$TURN_BOARD")" >> "$NOTES"
+            if [ -f "$FIT_BOARD" ]; then
+              printf '| `%s` | Montaje y hombreras en pecho y Curios (F5) |\n' \
+                "$(basename "$FIT_BOARD")" >> "$NOTES"
             fi
             printf '\nLas pruebas del cliente y las capturas originales se informan en Actions.\n' >> "$NOTES"
             sed -i "s/__TAG__/$TAG/g; s/__VER__/$VER/g" "$NOTES"
@@ -1341,8 +1172,8 @@ jobs:
           if [ -f "$COMPARISON" ]; then ASSETS+=("$COMPARISON"); fi
           if [ -f "$REGISTER" ]; then ASSETS+=("$REGISTER"); fi
           if [ -f "$HISTORY" ]; then ASSETS+=("$HISTORY"); fi
-          if [ -f "$TURN_BOARD" ]; then ASSETS+=("$TURN_BOARD"); fi
-          if [ -d "$RELEASE_DIR" ]; then ASSETS+=("$RELEASE_DIR/instalar-test-1.txt"); fi
+          if [ -f "$FIT_BOARD" ]; then ASSETS+=("$FIT_BOARD"); fi
+          if [ -f "$RELEASE_DIR/instalar-test-1.txt" ]; then ASSETS+=("$RELEASE_DIR/instalar-test-1.txt"); fi
           for EVIDENCE in "docs/capa_v${VER//./}_"{hombros_forge.png,espalda_forge.png,inclinacion_forge.png,hotbar.gif}; do
             if [ -f "$EVIDENCE" ]; then ASSETS+=("$EVIDENCE"); fi
           done

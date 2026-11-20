@@ -214,7 +214,7 @@ animación y la documentación de GeckoLib._
   se calcula en el marco del torso para sólido y emisión, no en la cámara.
   `verify_torso_fit.py` compara Java, Python y el visor y comprueba la
   holgura con cabeza y mangas y el solape de las raíces.
-- **Cómo repetir la comparación histórica:** los marcadores `[probar-halo]`
+- **Cómo repetir la comparación histórica de v1.67.14–16:** desde `abcbb01`, los marcadores `[probar-halo]`
   y `[capa-historica]` activan en Actions `prepare_historical_fit.py` y el
   cliente de prueba. La referencia usa los activos del JAR v1.28.0
   verificado con su renderer histórico en el cliente actual; el control
@@ -296,6 +296,14 @@ animación y la documentación de GeckoLib._
   agacharse o nadar. Pecho y Curios comparten los mismos pases sólido y de
   emisión. El visor reproduce estas transformaciones; Blockbench conserva
   la geometría original sin aplicarlas a los clips.
+- **Montaje fijo v1.67.17:** `CapeMountPlacement.worn(elytra)` ya no
+  recibe ángulos de la cabeza. Pecho y Curios dibujan la misma montura en
+  el marco del torso, y las placas originales se recolocan completas. El
+  fit no se interpola con la cámara. El paño conserva su animación y su
+  holgura para pasos y alas. Para repetir el ensayo actual, `gradle
+  -PcapeFxSmoke runClient` captura órbita y mirada por separado; mide las
+  placas sobre las mangas vanilla de los dos modelos de jugador. Los
+  perfiles y comparaciones antiguas pertenecen al historial de cada JAR.
 - **Pulso del icono (v1.67.8):** 32 fotogramas a un tick por cuadro, mismo
   contorno y duración de 1,6 s. Se comprueba el recorrido de la cresta de
   luz en la hotbar vanilla; se conservan el dibujo y el reposo de v1.67.7.

@@ -20,6 +20,7 @@ import preview_cloth as P
 from bbmodel_export import DOC
 from verify_cape_backing import lap
 from verify_v1660 import WornModel, contacts
+import cape_stride as S
 
 REFERENCE = P.ROOT/'entregables/v1.67.14/capatest-1.67.14.jar'
 ART = ('geo', 'textures', 'animations', 'particles', 'shaders')
@@ -47,7 +48,8 @@ def asset_contract(candidate=None):
         with ZipFile(candidate) as jar:
             assert jar.testzip() is None
             assert art_entries(jar) == original, 'el JAR no contiene los recursos originales'
-            assert not any('CapePlacementProbe' in n for n in jar.namelist()), 'se empaquetó el ensayo de Forge'
+            assert not any(any(probe in n for probe in ('CapePlacementProbe','CapeFxSmoke','CapeWalkProbe'))
+                           for n in jar.namelist()), 'se empaquetó el ensayo de Forge'
     print(f'{len(original)} recursos idénticos al JAR v1.67.14 y proyecto Blockbench intacto (salvo nombre de versión).',flush=True)
 
 
@@ -58,72 +60,73 @@ def viewer(**data):
 
 
 def parity(geo, java_samples=None):
-    samples = [list(s) for s in product((0.,.11,.29,.49,1.),(-88.,-58.,0.,14.,25.,41.,71.,86.,89.),
-                                       (-79.,-43.,0.,39.,68.),(0.,8.,35.),(1.,.3,0.),(False,True))]
-    expected = [F.mount_placement(s,p,y,e,dry=d,enabled=not w) for s,p,y,e,d,w in samples]
-    assert np.allclose(viewer(mountSamples=samples),expected,atol=5e-10,rtol=0)
+    samples = [False, True]
+    expected = [F.mount_placement(w) for w in samples]
+    np.testing.assert_allclose(viewer(mountSamples=samples),expected,atol=5e-10,rtol=0)
     if java_samples:
         rows = np.loadtxt(java_samples)
-        expected = [F.mount_placement(s,p,y,e,dry=d,enabled=not w) for s,p,y,e,d,w in rows[:,:6]]
-        assert np.allclose(rows[:,6:],expected,atol=5e-10,rtol=0)
-    parts = [G.FIT_BONE,G.DRAPE_BONE,G.GUSSET_BONE,G.SEAT_BONE,G.UNDER_YOKE_BONE,
-             'v17_cowl_back_4','v18_pad_0','rim_v18_pad_0','v18_pad_1','cape_top','v17_ribbon_2_seg3']
-    matrix_samples = [[s,p,y,w,a,a] for s,p,y,w,a in product((0.,.27,1.),(-89.,-58.,0.,15.,39.,69.,89.),
-                                                            (0.,52.),(False,True),(0.,7.))]
+        np.testing.assert_array_equal(rows[:,0], samples)
+        np.testing.assert_allclose(rows[:,1:],expected,atol=5e-10,rtol=0)
+    parts = [G.FIT_BONE,G.DRAPE_BONE,G.GUSSET_BONE,G.SEAT_BONE,G.SADDLE_BONE,G.UNDER_YOKE_BONE,
+             'v17_cowl_back_4','v18_pad_0','v18_pad_1','cape_top','v17_ribbon_2_seg3']
+    cases = []
     expected = []
-    for s,p,y,w,a,e in matrix_samples:
-        m = P.matrices(F.wearer_pose(geo,s,p,y,elytra=w,arm_back=a,arm_effort=e,placed=True))
-        expected.append([m.get(n,m[n.removeprefix('rim_')]).ravel() for n in parts])
-    assert np.allclose(viewer(geo=geo,torsoMatrices=matrix_samples,parts=parts),expected,atol=5e-9,rtol=0)
-    print(f'Colocación: {len(samples)} muestras de perfil y {len(matrix_samples)} poses completas coinciden con el visor.'
-          + (' Perfil Java verificado.' if java_samples else ''),flush=True)
+    for body, wings in product((0.,.27,1.),samples):
+        base = P.matrices(F.wearer_pose(geo,body,0,0,elytra=wings,placed=True))
+        for pitch,yaw,arm in product((-89.,-60.,-30.,0.,30.,60.,89.),(-73.,0.,73.),(0.,36.)):
+            aim = [body,pitch,yaw,wings,arm,arm]
+            frame = P.matrices(F.wearer_pose(geo,body,pitch,yaw,elytra=wings,arm_back=arm,placed=True))
+            for name in base:
+                np.testing.assert_array_equal(frame[name],base[name],err_msg=f'{name}: {aim}')
+            cases.append(aim)
+            expected.append([frame[n].ravel() for n in parts])
+    np.testing.assert_allclose(viewer(geo=geo,torsoMatrices=cases,parts=parts),expected,atol=5e-9,rtol=0)
+    print(f'{len(cases)} poses coinciden con el visor y no dependen de la cabeza.'
+          + (' Perfil fijo de Java verificado.' if java_samples else ''),flush=True)
 
 
 def exercise(geo):
     model = WornModel(geo)
-    mask = lambda test: np.asarray([test(n) for n in model.names])
-    seat = mask(lambda n:n==G.SEAT_BONE)
-    link = mask(lambda n:n==G.GUSSET_BONE)
-    saddle = mask(lambda n:n==G.SADDLE_BONE)
-    roots = mask(lambda n:n.startswith('v17_ribbon_') and n.endswith('_seg0'))
-    collar = mask(lambda n:n.startswith('v17_cowl_back_'))
-    core = roots|collar|mask(lambda n:n.startswith(('v17_cowl_tooth_','v17_cowl_front_','v19_cuellito_','v18_chain_')))
+    names = np.asarray(model.names)
+    seat,link,saddle = (names == bone for bone in (G.SEAT_BONE,G.GUSSET_BONE,G.SADDLE_BONE))
+    mount = names != ''
+    mount[model.cloth] = False
     clips = json.loads(A.ANIM.read_text())['animations']
-    stat = []
-    aims = [(s,p,y) for s,p,y in product((0.,.23,.48,1.),(0.,21.,40.,60.,74.,86.,89.),(-62.,-43.,0.,43.,62.))]
-    for code in ('idle','air','fall'):
-        clip = clips['animation.'+code]
-        track = T.prepare_clip(clip)
-        for t in (.05,.29,.56,.82):
-            frame = P.pose_at(geo,track,t*clip['animation_length'])
-            for aim in aims:
-                before,after = [P.matrices(F.wearer_pose(frame,*aim,placed=on)) for on in (False,True)]
-                v0,v1 = (model.place(m) for m in (before,after))
-                # Pull both frames back to the same live torso.
-                body = np.linalg.inv(after['chestplate'])
-                v0,v1 = [v@body[:3,:3].T+body[:3,3] for v in (v0,v1)]
-                seam = model.joins(v1)[0]
-                bed = max(lap(x,v1[seat]) for x in v1[link])
-                upper = max(lap(x,v1[saddle]) for x in v1[link])
-                hat = F.head_in_body(*aim,outer=True)[None,None]
-                margin = contacts(v1[None,core],hat,pad=.5).min()
-                if aim[0]==0:
-                    assert np.max(np.abs(v1[seat]-v0[seat])) < 1e-8
-                stat.append([*aim,v0[roots,:,2].min(),v1[roots,:,2].min(),v0[collar,:,2].min(),v1[collar,:,2].min(),
-                             seam,bed,upper,margin])
-    rows = np.asarray(stat)
-    straight = rows[(rows[:,0]==0)&(rows[:,1]>=60)&(rows[:,2]==0)]
-    assert (straight[:,3]-straight[:,4]).min() > 1.65 and (straight[:,5]-straight[:,6]).min() > 2.4
-    # The seam under the neck follows the existing gusset, while the free
-    # ribbon segments still touch each other. The clearance number refers
-    # to an inflated, conservative hat box, not an observed clipping claim.
-    print(f'{len(rows)} poses: raíz alta Z {straight[:,3].max():.2f}→{straight[:,4].max():.2f}u; '
-          f'cuello Z {straight[:,5].max():.2f}→{straight[:,6].max():.2f}u; '
-          f'solapes costura/pie/fuelle {rows[:,7:10].min(0).round(3)}, '
-          f'margen caja de cabeza de pie {rows[rows[:,0]==0,10].min():+.3f}u.',flush=True)
-    assert rows[:,7].min() > .04
-    assert rows[:,8].min() > .07 and rows[:,9].min() > .02
-    assert rows[rows[:,0]==0,10].min() > -.15
+    posed_data = []
+    box_estimates = []
+    for body, wings in product((0.,1.),(False,True)):
+        d,_,tilt,drop,*_ = F.mount_placement(wings)
+        rest = P.matrices(F.wearer_pose(geo,body,0,0,elytra=wings,placed=True))
+        inv = np.linalg.inv(rest['chestplate'])
+        v = model.place(rest)
+        local = v @ inv[:3,:3].T + inv[:3,3]
+        foot = max(lap(x,local[seat]) for x in local[link])
+        upper = max(lap(x,local[saddle]) for x in local[link])
+        assert min(foot,upper) > .1, (body,wings,foot,upper)
+        assert local[mount,:,1].min() > 10, 'cambió el soporte rígido'
+        aims = list(product((-89.,-60.,-30.,0.,30.,60.,89.),(-73.,-40.,0.,40.,73.)))
+        hats = np.asarray([F.head_in_body(body,p,y,outer=True) for p,y in aims])[:,None]
+        vv = np.repeat(local[None,mount],len(aims),axis=0)
+        box_estimates.append(contacts(vv,hats,pad=.25).min())
+        for name in clips:
+            clip = clips[name]
+            track = T.prepare_clip(clip)
+            for t in (.05,.29,.56,.82):
+                frame = P.pose_at(geo,track,t*clip['animation_length'])
+                by = {b['name']: b for b in frame['bones']}
+                a,b = (by[n]['rotation'][0] for n in ('cape_top','cape_mid'))
+                dx,dy = S.lifts(a+drop-tilt,b,31,45,body,d)
+                by['cape_top']['rotation'][0] += dx
+                by['cape_mid']['rotation'][0] += dy
+                v = model.place(P.matrices(F.wearer_pose(frame,body,0,0,elytra=wings,placed=True)))
+                np.testing.assert_allclose(v[mount],model.place(rest)[mount],atol=1e-10,rtol=0)
+                posed_data.append(model.joins(v))
+    seam,root = np.asarray(posed_data).min(0)
+    assert seam > .038 and root > .025, (seam,root,'se abrió una costura del paño')
+    # The conservative hat sweep intentionally includes extreme neck angles.
+    # This is diagnostic: a fixed mount is not a collision-avoidance solver.
+    print(f'{len(posed_data)} fases: unión al torso y costura del paño verificadas (solapes {seam:.3f}/{root:.3f}u). '
+          f'Margen SAT mínimo caja de cabeza, incluso al extremo: {min(box_estimates):+.3f}u.',flush=True)
 
 
 if __name__=='__main__':

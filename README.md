@@ -7,11 +7,15 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [JAR anterior v1.67.12](https://github.com/Santi-PdR/modelos/releases/download/v1.67.12/capatest-1.67.12.jar)
 · [JAR anterior v1.67.11](https://github.com/Santi-PdR/modelos/releases/download/v1.67.11/capatest-1.67.11.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench de la rama](docs/CAPA_v1.67.16.bbmodel)
+· [Proyecto Blockbench de la rama](docs/CAPA_v1.67.17.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
-### v1.67.16 — capa original, ajuste de posición
+### v1.67.17 — montaje fijo y hombreras visibles de frente
+
+El manto original se monta en el torso sin ajustarse a la cámara ni a la dirección de la cabeza. Las dos placas completas se sitúan sobre las mangas. La tela conserva sus ocho clips y responde al movimiento del cuerpo; el GEO, las texturas, el brillo y el icono no cambian. Prueba separada: no cambia el instalador público.
+
+### v1.67.16 — ensayo anterior de colocación
 
 Se restaura el modelo de v1.67.14, con el mismo paño, cuello, relieve, atlas, brillo y animaciones. Al mirar arriba, el montaje queda más cerca del torso; las hombreras originales se asientan un poco más arriba en reposo. No cambia el instalador, el icono ni la descarga pública.
 

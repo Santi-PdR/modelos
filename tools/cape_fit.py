@@ -272,40 +272,64 @@ def torso_frame(b, transform, prefix="torso_"):
 @lru_cache(maxsize=1)
 def mount_profile():
     code = SOURCE.with_name('CapeMountPlacement.java').read_text()
-    values = {name:float(n) for name,n in re.findall(r'final double (\w+) = ([.\d]+);', code)}
-    values['plates'] = [list(map(float,re.search(r'\b' + name + r' = new Shift\(([^)]+)\)',code)[1].split(',')))
-                        for name in ('SMALL','WIDE')]
+    number = r'-?(?:\d+(?:\.\d+)?|\.\d+)'
+    values = {name:float(n) for name,n in re.findall(r'final double (\w+) = ('+number+r');', code)}
+    values['plates'] = [list(map(float,re.findall(number, re.search(
+        r'\b'+name+r' = new Plate\([^,]+,([^;]+)\);',code)[1]))) for name in ('SMALL','WIDE')]
+    backing = SOURCE.with_name('CapeBacking.java').read_text()
+    values['backing'] = [float(x) for x in re.findall(number, re.search(r'STATIONARY = new Shape\(([^)]+)\)',backing)[1])]
     return values
 
 
-def mount_placement(stance, pitch, yaw, effort=0., *, dry=1., enabled=True):
-    """Torso-relative fit (positive pitch looks up), mirrored from Java."""
-    d = depth(stance,pitch,yaw)
-    if not enabled or dry <= 0:
-        return d,d,pitch,0.,0.,0.,0.,1.,0.
+def mount_placement(elytra=False):
+    """The fixed torso transform. The only variant is physical wing equipment."""
+    if elytra:
+        return 0.,0.,0.,0.,0.,1.
     f = mount_profile()
-    yaw = abs(math.remainder(yaw,360))
-    plate = (dry * (1-smooth(.05,.45,stance)) * (1-smooth(3,21,yaw))
-             * (1-smooth(19,39,-pitch)) * (1-smooth(.2,2.45,d)) * (1-smooth(4,22,effort)))
-    k = dry*smooth(f['LEAVE_AT'],f['SEATED_AT'],pitch)*(1-smooth(.08,.50,stance))
-    if not k:
-        return d,d,pitch,0.,0.,0.,0.,1.,plate
-    relief = smooth(f['RELIEF_START'],f['RELIEF_END'],pitch)
-    quiet = pitch*(1-k)
-    settled = depth(stance,quiet,yaw)
-    room = f['REAR'] + relief*(f['EXTRA_REAR']+f['DIAGONAL']*smooth(19,43,yaw))
-    d = d*(1-k)+k*(settled+k*room)
-    tilt, dy = f['TILT']*k,-(f['DROP']+f['EXTRA_DROP']*relief)*k
-    drape = tilt+(f['DRAPE']+f['EXTRA_DRAPE']*relief)*k
-    ay = f['JOIN_Y']-f['PIN_Y']
-    az = (f['JOIN_Z']-f['PIN_Z'])*(1+d/profile()['gussetDepth'])
-    y,z = f['JOIN_Y']-f['PIVOT_Y'],f['PIN_Z']+az-d-f['PIVOT_Z']
-    a = math.radians(tilt)
-    c,s = math.cos(a),math.sin(a)
-    by = f['PIVOT_Y']-f['PIN_Y']+dy+c*y-s*z
-    bz = f['PIVOT_Z']-f['PIN_Z']+d+s*y+c*z
-    return (d,settled,quiet,dy,tilt,drape,math.degrees(math.atan2(bz,by)-math.atan2(az,ay)),
-            math.hypot(by,bz)/math.hypot(ay,az),plate)
+    z,dy,tilt = f['REAR'],-f['DROP'],f['TILT']
+    c,s = math.cos(math.radians(tilt)),math.sin(math.radians(tilt))
+    y0,z0 = f['JOIN_Y']-f['PIVOT_Y'],f['JOIN_Z']-f['PIVOT_Z']
+    ay,az = f['JOIN_Y']-f['PIN_Y'],f['JOIN_Z']-f['PIN_Z']
+    by = f['PIVOT_Y']-f['PIN_Y']+dy+c*y0-s*z0
+    bz = f['PIVOT_Z']-f['PIN_Z']+z+s*y0+c*z0
+    return (z,dy,tilt,tilt+f['FALL'],math.degrees(math.atan2(bz,by)-math.atan2(az,ay)),
+            math.hypot(by,bz)/math.hypot(ay,az))
+
+
+def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True):
+    f = mount_profile()
+    d,dy,tilt,drape,link,scale = mount_placement(elytra)
+    by = {b['name']:b for b in geo['bones']}
+    fixed = G.FIT_BONE in by and G.GUSSET_BONE in by
+    back = B.profile()['names']
+    l,r,z = f['backing'] if tilt else B.solve(None,0.,elytra=True)
+    changes = {
+        'chestplate':dict(rotation=[stance*profile()['bodyAngle'],0.,0.], offset=[0.,-3.2*stance,0.]),
+        back[0]:dict(scale=[1.,l,z]), back[1]:dict(scale=[1.,r,z]),
+        G.SHOULDERS_BONE:dict(scale=shoulder_scales(0,0,0,elytra=True)),
+        G.UNDER_YOKE_BONE:dict(scale=yoke_scales(0,0,0,elytra=True)),
+    }
+    if fixed:
+        changes[G.SADDLE_BONE] = dict(offset=[0.,0.,f['WING_SADDLE_DEPTH' if elytra else 'SADDLE_DEPTH']],scale=[f['SADDLE_WIDTH'],1.,1.])
+    if fixed and tilt:
+        changes[G.FIT_BONE] = dict(pivot=[0.,f['PIVOT_Y'],f['PIVOT_Z']],rotation=[-tilt,0.,0.],offset=[0.,dy,d])
+        changes[G.DRAPE_BONE] = dict(rotation=[drape,0.,0.])
+        changes[G.GUSSET_BONE] = dict(rotation=[-link,0.,0.],scale=[1.,scale,scale])
+    bones = []
+    for b in geo['bones']:
+        n = b['name']
+        piece = dict(b,**changes.get(n,{}))
+        if fixed and tilt and n != 'v17_cowl_return' and not n.startswith('v17_cowl_tooth_') and n.startswith(('v17_cowl_','v19_cuellito_','v18_chain_')):
+            trim = torso_frame(piece,(0.,f['TRIM_Y'],f['TRIM_Z'],0.,-f['TRIM_DROP'],0.,f['TRIM_WIDTH'],f['TRIM_HEIGHT'],1.),'fixed_')
+            bones.append(trim)
+            piece['parent'] = trim['name']
+        if fixed and plates and piece.get('parent') == G.FIT_BONE and n in ('v18_pad_0','v18_pad_1'):
+            x,y,z,dx,dy,dz,rx,ry,rz = f['plates'][int(n[-1])]
+            pad = dict(name='shoulder_'+n,parent='chestplate',pivot=[x,y,z],offset=[dx,dy,dz],rotation=[rx,ry,rz],cubes=[])
+            bones.append(pad)
+            piece['parent'] = pad['name']
+        bones.append(piece)
+    return dict(geo,bones=bones)
 
 
 def viewer_profile(*, placed=False):
@@ -318,29 +342,27 @@ def viewer_profile(*, placed=False):
 def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back=0., close=True,
                 plates=True, arm_effort=None, torso=True, placed=False):
     """Bake the worn frame, not keyframes. Historical checks use placed=False."""
+    if placed and not legacy:
+        return fixed_wearer_pose(geo,stance,elytra=elytra,plates=plates)
     changes = {'chestplate': dict(rotation=[stance*profile()['bodyAngle'], 0., 0.],
                                   offset=[0., -3.2*stance, 0.])}
     shape = (0.,None,None,None,None,None)
     outer = None
     effort = arm_back if arm_effort is None else arm_effort
-    d, settled, fit_pitch, dy, tilt, drape, link_pitch, link_scale, plate_shift = mount_placement(
-        stance,pitch,yaw,effort,enabled=placed and not elytra and not legacy)
+    d = depth(stance,pitch,yaw)
+    fit_pitch, settled = pitch,d
     mix = plate_influence(stance,fit_pitch,yaw,effort,elytra=elytra) if close and plates and not legacy else 0.
     if legacy:
         changes[G.FIT_BONE] = dict(rotation=[-fold(stance, pitch, yaw), 0., 0.])
     else:
         f = profile()
         changes.update({
-            G.FIT_BONE: dict(offset=[0.,dy,d]),
-            G.DRAPE_BONE: dict(rotation=[-settled*f['drapePerUnit']+drape,0.,0.]),
-            G.GUSSET_BONE: dict(scale=[1.,link_scale,link_scale*(1.+d/f['gussetDepth'])]),
+            G.FIT_BONE: dict(offset=[0.,0.,d]),
+            G.DRAPE_BONE: dict(rotation=[-d*f['drapePerUnit'],0.,0.]),
+            G.GUSSET_BONE: dict(scale=[1.,1.,1.+d/f['gussetDepth']]),
             G.SHOULDERS_BONE: dict(scale=shoulder_scales(stance,pitch,yaw,elytra=elytra)),
             G.UNDER_YOKE_BONE: dict(scale=yoke_scales(stance,pitch,arm_back,elytra=elytra)),
         })
-        if tilt:
-            frame = mount_profile()
-            changes[G.FIT_BONE].update(pivot=[0.,frame['PIVOT_Y'],frame['PIVOT_Z']], rotation=[-tilt,0.,0.])
-            changes[G.GUSSET_BONE]['rotation'] = [-link_pitch,0.,0.]
         q = seat_profile()
         if close and any(b['name'] == q['frame'] for b in geo['bones']):
             snug = seating(stance,fit_pitch,yaw,arm_back,elytra=elytra)
@@ -398,10 +420,4 @@ def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back
             root['parent'] = frame['name']
             bones.append(frame)
             root = frame
-        if plate_shift and plates and name in data['names']:
-            x,y,z = mount_profile()['plates'][data['names'].index(name)]
-            frame = dict(name='place_'+name, parent=root['parent'], pivot=[0.,0.,0.],
-                         offset=[-x*plate_shift,y*plate_shift,z*plate_shift], cubes=[])
-            root['parent'] = frame['name']
-            bones.append(frame)
     return dict(geo, bones=bones)

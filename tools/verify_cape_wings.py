@@ -89,7 +89,7 @@ def exercise(geo, clips):
         body_boxes = np.broadcast_to([head,body], (len(gaits),2,8,3))
         skin = np.concatenate([legs,body_boxes], axis=1)
         needs = [S.demand(aim[0],*g) for g in gaits]
-        d = F.depth(*aim)
+        d = F.mount_placement(elytra=True)[0]
         track = tracks[name]
         length = clips['animation.'+name]['animation_length']
         for i, overlay in enumerate([None, *response_variants()[::3]]):
@@ -100,7 +100,7 @@ def exercise(geo, clips):
                     frame = interpolate(before, frame, phase)
                 rotations = {b['name']: b['rotation'][0] for b in frame['bones']}
                 top, mid = (rotations[n] for n in ('cape_top','cape_mid'))
-                packed = rig.vertices(frame, aim)
+                packed = rig.vertices(frame, aim, placed=True, elytra=True)
                 a = np.array([S.lifts(top,mid,arm,knee,aim[0],d) for arm,knee in needs])
                 old = rig.lifted(packed, a)
                 old_skin = contacts(old[:,rig.cloth], skin)
