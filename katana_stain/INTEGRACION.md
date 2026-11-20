@@ -270,3 +270,33 @@ Pruebas automatizadas no demuestran que el agarre, la orientación de VFX,
 la animación en primera persona, los tiempos con latencia o la cámara se vean
 bien. Sigue siendo una escena de combate con cámara local, no una cinemática
 con cámara autónoma. Es necesaria una prueba en cliente y con otros mods.
+
+## 0.13.0-test — prueba visual en cliente
+
+Se añadió un escenario **solo para CI**, no incluido en el JAR, que arranca
+Forge 1.20.1 en Xvfb/Mesa con GeckoLib y PlayerAnimator, equipa el arma, coloca
+un husk inmóvil y activa las tres habilidades contra él. Se toman capturas
+reales de inventario, primera y tercera persona y momentos del combate en
+`vistas/client-test/`. El escenario carga temporalmente los tres JSON originales
+para las animaciones de Better Combat 1.9.0 desde su repositorio; **el mod
+Better Combat no está instalado en esa prueba**, por lo que esta prueba no
+verifica su integración ni la interacción entre los dos mods. Esas animaciones
+no se empaquetan ni redistribuyen en nuestro JAR. Por la baja tasa de cuadros
+virtual, algunas capturas cercanas pueden saltarse; no son un vídeo ni una
+prueba de sincronización exacta.
+
+En las imágenes se observó la punta de primera persona recortada y el plano del
+corte horizontal casi de canto. Se bajó la escala de primera persona de 0,74 a
+0,64 sin modificar la tercera persona, se inclinó el plano del corte y se
+agrandaron moderadamente los arcos conservando los sprites de Better Combat
+Particle. La escena y los arcos **siguen sin estar terminados ni validados por
+un jugador**: las fotos muestran que aparecen, pero no prueban que sean épicos,
+que coincidan con la hoja en todas las orientaciones o que el agarre, zurdos,
+sonidos, efectos de pantalla, rendimiento o compatibilidad funcionen bien.
+Una revisión completa requiere vídeo/observación en cliente con el Better Combat
+Forge 1.9.0 real y los demás mods de la instancia.
+
+El cliente de desarrollo necesitó remapear los refmaps de PlayerAnimator para
+arrancar con Mojmap; el ajuste está limitado al perfil `-PkatanaVisual`. No
+implica que los usuarios finales deban cambiar nada. El JAR de producción no
+incluye clases del escenario visual ni los JSON descargados para la prueba.
