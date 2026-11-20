@@ -58,10 +58,11 @@ def seams(root, slot, worn, bare, unplated):
     floor = blue_floor(worn)
     # The outer half of each sleeve, away from the return over the interior.
     # Exclude the last rasterized texel at each silhouette edge.
-    for side,lo,hi in ((1,.015,.09),(0,.91,.985)):
+    near,far = round(.015*width),round(.09*width)
+    for side,cols in ((1,range(left+near,left+far)),(0,range(right-far,right-near))):
         mask = visible_plate(root,slot,side,worn,bare,unplated)
         points = []
-        for x in range(left+round(lo*width),left+round(hi*width)):
+        for x in cols:
             rear = np.flatnonzero(shirt[:,x])
             if not rear.size:
                 continue
@@ -73,8 +74,8 @@ def seams(root, slot, worn, bare, unplated):
         assert len(points) >= max(6,.06*width), (
             slot,side,'la manga quedó fuera del recorte',(left,right),width,len(points))
         d,found,air = np.asarray(points).T
-        _,cols = np.where(mask)
-        overhang = max(0,left-cols.min() if side == 1 else cols.max()-right+1) if cols.size else np.inf
+        _,plate_cols = np.where(mask)
+        overhang = max(0,left-plate_cols.min() if side == 1 else plate_cols.max()-right+1) if plate_cols.size else np.inf
         output.append((len(points),found.mean(),(d <= 1).mean(),np.quantile(d,.85),float(air.mean()),overhang))
     return width, output
 

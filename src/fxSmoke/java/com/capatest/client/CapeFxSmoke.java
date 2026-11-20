@@ -83,6 +83,9 @@ public final class CapeFxSmoke {
     private static final String FRAGMENT = "assets/capatest/shaders/core/cape_bloom.fsh";
     private static final String PACK_ID = "file/fx-probe";
     private static final int HOTBAR_SLOT = 4, HOTBAR_SAMPLES = 34, HOTBAR_QUIET_TICKS = 52;
+    // A real vanilla idle pose near zero arm pitch (sin(94*.067) ≈ 0).
+    // Use the same phase for registered stills, not for any motion test.
+    private static final int STILL_AGE = 94;
     // Negative controls run on the actual F5 camera. The older seating
     // stroke and the six v1.67.10 lining cubes are used only in this client.
     private static final Field SEATING = field(CapaArmorRenderer.class, "seating");
@@ -166,7 +169,8 @@ public final class CapeFxSmoke {
         boolean plates() { return ordinal() >= PLATES_BARE.ordinal() && ordinal() <= PLATES_BACK.ordinal(); }
         boolean sweep() { return this == LOOK_CHEST || this == LOOK_BACK; }
         boolean walk() { return this == WALK_CHEST || this == WALK_BACK; }
-        boolean fixedCamera() { return overhead() || upperBack() || fit() || plates() || sweep(); }
+        boolean stillComparison() { return overhead() || upperBack() || fit() || plates(); }
+        boolean fixedCamera() { return stillComparison() || sweep(); }
         float yaw() { return fit() ? 3 : profile() ? 76 : turned() || oblique() || hotbar() ? 43 : 0; }
         float pitch() { return plates() ? 89.5F : midFit() ? 58 : fit() ? 76 : profile() ? 21 : oblique() ? 58 : turned() || hotbar() ? 86 : 89; }
         boolean inspectBirths() { return this == GLIDE || this == WADE || this == SWIM; }
@@ -193,6 +197,8 @@ public final class CapeFxSmoke {
     private static CapePlateProbe platesDraw;
     private static ItemStack rendered;
     private static Matrix4f playerPose, armorPose, upperBackProjection;
+    private static Entity stillPlayer;
+    private static int liveAge;
     private static int stableFrames;
     private static int observedBirths;
     private static boolean captured;
@@ -223,6 +229,7 @@ public final class CapeFxSmoke {
             resetDeadline();
             MinecraftForge.EVENT_BUS.addListener(CapeFxSmoke::tick);
             MinecraftForge.EVENT_BUS.addListener(CapeFxSmoke::beforePlayer);
+            MinecraftForge.EVENT_BUS.addListener(CapeFxSmoke::afterPlayer);
             MinecraftForge.EVENT_BUS.addListener(CapeFxSmoke::beforeArmor);
             MinecraftForge.EVENT_BUS.addListener(CapeFxSmoke::afterArmor);
             MinecraftForge.EVENT_BUS.addListener(CapeFxSmoke::frame);
@@ -567,6 +574,25 @@ public final class CapeFxSmoke {
     private static void beforePlayer(RenderPlayerEvent.Pre event) {
         if (scene != null && event.getEntity() == Minecraft.getInstance().player) {
             playerPose = new Matrix4f(event.getPoseStack().last().pose());
+            if (scene.stillComparison() && !captured && pending == null && stillPlayer == null) {
+                // The shirt must not bob independently between the bare,
+                // old and fitted images. Keep the vanilla setupAnim path;
+                // only give it the same age during these test draws.
+                stillPlayer = event.getEntity();
+                liveAge = stillPlayer.tickCount;
+                stillPlayer.tickCount = STILL_AGE;
+            }
+        }
+    }
+
+    private static void afterPlayer(RenderPlayerEvent.Post event) {
+        if (event.getEntity() == stillPlayer) restoreAge();
+    }
+
+    private static void restoreAge() {
+        if (stillPlayer != null) {
+            stillPlayer.tickCount = liveAge;
+            stillPlayer = null;
         }
     }
 
@@ -694,6 +720,8 @@ public final class CapeFxSmoke {
             }
             return;
         }
+        // Also restore the clock if another mod cancelled the player draw.
+        restoreAge();
         if (scene == null || captured || pending != null) return;
         Minecraft game = Minecraft.getInstance();
         var player = game.player;
