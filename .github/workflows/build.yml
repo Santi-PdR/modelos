@@ -1044,6 +1044,10 @@ jobs:
             python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery "$view"
           done
 
+      - name: Fotogramas del giro hasta el perfil en pecho y Curios
+        if: ${{ !cancelled() && steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success' }}
+        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --recorrido
+
       - name: Documentar v1.28.0 y el modelo actual en F5 tres cuartos
         if: always() && steps.historic-fit.outcome == 'success'
         run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery diagonal
@@ -1057,7 +1061,7 @@ jobs:
         run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery cenital
 
       - name: Medir el anclaje anterior a la rama en Forge
-        if: steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success'
+        if: ${{ !cancelled() && steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success' }}
         run: |
           set -o pipefail
           python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do

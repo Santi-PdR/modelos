@@ -736,7 +736,7 @@ public final class CapeFxSmoke {
             var c = shape.collar();
             check(Math.abs(scene.yaw()) == 60 && c != null && shape.seat() == 0, "invalid v1.67.13 collar control");
             var original = new CapeTorsoFit.Affine(c.x(), c.y(), c.z(), c.dx(), c.dy(), 0, c.sx(), c.sy(), 1);
-            TORSO_FIT.set(renderer, new CapeTorsoFit.Shape(shape.seat(), original, shape.facing(), shape.small(), shape.wide()));
+            TORSO_FIT.set(renderer, new CapeTorsoFit.Shape(shape.seat(), original, original, shape.facing(), shape.small(), shape.wide()));
         } catch (IllegalAccessException e) {
             throw new AssertionError(e);
         }

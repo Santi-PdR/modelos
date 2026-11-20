@@ -84,7 +84,8 @@ public final class CapeFitTest {
                                 var fit = torso(stance,look,yaw,arm,sleeve,dry,wings);
                                 System.out.printf(Locale.ROOT,"%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%d\t%.10f",
                                         stance,look,yaw,arm,sleeve,dry,wings?1:0,fit.seat());
-                                writeAffine(fit.collar()); writeAffine(fit.facing()); writeAffine(fit.small()); writeAffine(fit.wide());
+                                writeAffine(fit.collar()); writeAffine(fit.lip()); writeAffine(fit.facing());
+                                writeAffine(fit.small()); writeAffine(fit.wide());
                                 System.out.println();
                             }
             return;

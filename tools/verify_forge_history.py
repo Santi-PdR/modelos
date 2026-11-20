@@ -155,8 +155,9 @@ def study_wide_turn(root):
             p0, p1 = (bounds(stem.with_name(stem.name+s+'.tsv')) for s in versions[1:])
             for name in ('v18_pad_0', 'v18_pad_1', 'v17_cowl_return', 'v17_cowl_tooth_5'):
                 np.testing.assert_allclose(p0[name],p1[name],rtol=0,atol=.015,err_msg=f'{stem}: {name} se movió')
-            np.testing.assert_allclose(base[3:],now[3:],rtol=0,atol=.08,err_msg=f'{stem}: altura de cuello o raíces cambiaron')
+            np.testing.assert_allclose(base[4:],now[4:],rtol=0,atol=.08,err_msg=f'{stem}: las raíces se movieron')
             assert .8 < ref[2] < 1.4 and 5.95 < base[2] < 6.05 and 4.1 < now[2] < 4.45, (stem, ref, base, now)
+            assert .48 < now[3]-base[3] < .83, (stem,'el remate del cuello perdió altura o se levantó demasiado',base[3],now[3])
             a, b = (isolated_crown(stem,bare,near,s) for s in versions[1:])
             prev,n0,area0 = a
             current,n1,area1 = b
@@ -174,19 +175,36 @@ def study_wide_turn(root):
     assert not problems, problems
 
 
+def framing(image):
+    mask = shirt_mask(image) & ~blue_floor(image)
+    h,w = mask.shape
+    ys,xs = np.where(mask)
+    keep = (np.abs(xs-w/2) < .25*w) & (np.abs(ys-h/2) < .30*h)
+    xs,ys = xs[keep],ys[keep]
+    assert len(xs) > 500, 'no se ve la camiseta de referencia'
+    x0,x1 = np.quantile(xs,[.005,.995]); y0,y1 = np.quantile(ys,[.005,.995]); d = x1-x0
+    return (round(x0-.43*d),round(y0-.73*d),round(x1+.43*d),round(y1+.69*d))
+
+
+def thumbnail(file, crop, title):
+    with Image.open(file) as im:
+        sample = im.convert('RGB').crop(crop)
+    # Leave room in the 50-annotation budget for metrics and failures.
+    for rate in (1,.86,.73,.62,.53,.44,.36,.30):
+        buf = io.BytesIO()
+        sample.resize((round(rate*sample.width),round(rate*sample.height)),Image.Resampling.NEAREST).save(
+            buf,format='WEBP',quality=83,method=6)
+        if len(buf.getvalue()) <= 1275:
+            emit(title+' '+file.stem,buf.getvalue())
+            return
+    raise AssertionError(f'{file}: recorte demasiado grande')
+
+
 def gallery(root, view):
     base = root/f'historia-{view}-sin-manto.png'
     if not base.is_file():
         return
-    img = read(base)
-    mask = shirt_mask(img)
-    h, w = mask.shape
-    ys, xs = np.where(mask)
-    keep = (np.abs(xs-w/2) < .25*w) & (np.abs(ys-h/2) < .30*h)
-    xs, ys = xs[keep], ys[keep]
-    assert len(xs) > 500, (view, 'no se ve la camiseta de referencia')
-    x0,x1 = np.quantile(xs,[.005,.995]); y0,y1 = np.quantile(ys,[.005,.995]); d = x1-x0
-    crop = (round(x0-.43*d),round(y0-.73*d),round(x1+.43*d),round(y1+.69*d))
+    crop = framing(read(base))
     # Both historical slots and the bare control stay in the full artifact.
     # The ten wide-turn thumbnails must fit the same job annotation budget.
     suffixes = ('pecho-v1280','pecho-v16713','pecho','curios-v16713','curios') if view in WIDE_VIEWS else (
@@ -195,17 +213,15 @@ def gallery(root, view):
         file = root/f'historia-{view}-{suffix}.png'
         if not file.is_file():
             continue
-        with Image.open(file) as im:
-            sample = im.convert('RGB').crop(crop)
-        # Leave room in the 50-annotation budget for metrics and failures.
-        for rate in (1,.86,.73,.62,.53,.44,.36,.30):
-            buf = io.BytesIO()
-            sample.resize((round(rate*sample.width),round(rate*sample.height)),Image.Resampling.NEAREST).save(
-                buf,format='WEBP',quality=83,method=6)
-            if len(buf.getvalue()) <= 1275:
-                break
-        assert len(buf.getvalue()) <= 1275, file
-        emit('Anclaje histórico '+file.stem,buf.getvalue())
+        thumbnail(file,crop,'Anclaje histórico')
+
+
+def sweep_gallery(root):
+    for slot in SLOTS:
+        for turn in (48,60,68,79):
+            file = root/f'giro-vivo-{slot}-{turn:+03d}.png'
+            if file.is_file():
+                thumbnail(file,framing(read(file)),'Recorrido F5')
 
 
 if __name__ == '__main__':
@@ -213,10 +229,13 @@ if __name__ == '__main__':
     ap.add_argument('shots',type=Path)
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument('--gallery',choices=VIEWS+WIDE_VIEWS)
+    mode.add_argument('--recorrido',action='store_true',help='publicar recortes F5 de la secuencia de giro')
     mode.add_argument('--giro-amplio',action='store_true',help='comparar el cuello real en F5 con v1.67.13 y sus controles ocultos')
     args = ap.parse_args()
     if args.gallery:
         gallery(args.shots,args.gallery)
+    elif args.recorrido:
+        sweep_gallery(args.shots)
     elif args.giro_amplio:
         study_wide_turn(args.shots)
     else:

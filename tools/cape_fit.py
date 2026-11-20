@@ -200,7 +200,8 @@ def rim_frame(name, target, amount):
 def torso_profile():
     code = SOURCE.with_name('CapeTorsoFit.java').read_text()
     pivots = re.search(r'PIVOTS = (\{.*?\});',code,re.S)[1]
-    limits = ('KEEP_AFTER', 'SOFTNESS', 'OPEN_FROM', 'OPEN_END', 'DEPTH_START', 'DEPTH_END')
+    limits = ('KEEP_AFTER', 'SOFTNESS', 'OPEN_FROM', 'OPEN_END', 'DEPTH_START', 'DEPTH_END',
+              'LIP_Y', 'LIP_Z', 'LIP_HEIGHT', 'LIP_ADVANCE')
     turn = [float(re.search(r'\bTURN_' + k + r' = ([\d.]+);',code)[1]) for k in limits]
     seat = seat_profile()
     return dict(pivots=json.loads(pivots.replace('{','[').replace('}',']')), turn=turn,
@@ -210,7 +211,7 @@ def torso_profile():
 def torso_shape(stance, pitch, yaw, depth, seat, plate, arm, effort, dry=1., elytra=False):
     """CapeTorsoFit in +look-up degrees, with authored affines in mirrored X."""
     if elytra or dry <= 0 or not all(map(math.isfinite,(stance,pitch,yaw,depth,arm,effort,dry,seat,plate))):
-        return (0.,None,None,None,None)
+        return (0.,None,None,None,None,None)
     down, turn = -pitch, abs(math.remainder(yaw,360.))
     lean_room = 1-smooth(.05,.36,stance)
     steep_room = 1-.82*smooth(62,88,down)*smooth(24,36,turn)
@@ -237,7 +238,7 @@ def torso_shape(stance, pitch, yaw, depth, seat, plate, arm, effort, dry=1., ely
     crown = trim*(1+1.24*smooth(.76,.995,seat)+.46*smooth(78,87,down)*smooth(.79,.995,seat))
     stroke = .68*smooth(23,43,down)
     outer = stroke*dry*space*(1-smooth(2.85,6,arm))
-    start,soft,opening,end,d0,d1 = profile['turn']
+    start,soft,opening,end,d0,d1,lip_y,lip_z,lift,advance_lip = profile['turn']
     lost = max(0.,release-smooth(44,57,start))
     hold = (lost*lost/(lost+soft)*(1-smooth(opening,end,turn))*smooth(30,45,down)*(1-smooth(64,78,down))
             *(1-smooth(d0,d1,depth))*lean_room*steep_room*sleeve_room)
@@ -249,8 +250,15 @@ def torso_shape(stance, pitch, yaw, depth, seat, plate, arm, effort, dry=1., ely
     wide = fit(2,1,1-.60*rest,1-.59*rest,1-.14*advance*rest,
                rest*(.065+.37*sweep+.48*advance-.47*upright)+.07*settled,
                rest*(-.24*advance+.52*sweep+.22*upright)-.38*settled) if rest or settled else None
-    return (outer,collar(crown+hold*smooth(24,43,down),shift,scale),collar(trim*.16),
-            fit(1,compact,.94,.92,1-.17*advance,.18*advance,-.24*advance),wide)
+    fold = collar(crown+hold*smooth(24,43,down),shift,scale)
+    lip = fold
+    if fold is not None and hold > 0:
+        x,y,z,dx,dy,dz,sx,sy,sz = fold
+        thickness = 1-.12*crown*tuck
+        raise_by = lift*hold
+        lip = [x,y,z,dx,dy+raise_by*(y+dy-lip_y),dz-(thickness-sz)*(lip_z-z)-advance_lip*hold,
+               sx,sy*(1+raise_by),thickness]
+    return (outer,fold,lip,collar(trim*.16),fit(1,compact,.94,.92,1-.17*advance,.18*advance,-.24*advance),wide)
 
 
 def torso_frame(b, transform, prefix="torso_"):
@@ -268,7 +276,7 @@ def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back
     """Bake render transforms for a frame, not animation keyframes."""
     changes = {'chestplate': dict(rotation=[stance*profile()['bodyAngle'], 0., 0.],
                                   offset=[0., -3.2*stance, 0.])}
-    shape = (0.,None,None,None,None)
+    shape = (0.,None,None,None,None,None)
     outer = None
     effort = arm_back if arm_effort is None else arm_effort
     mix = plate_influence(stance,pitch,yaw,effort,elytra=elytra) if close and plates and not legacy else 0.
@@ -299,7 +307,7 @@ def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back
             a,b,z = B.solve(head_in_body(stance,pitch,yaw,outer=True),d,elytra=elytra)
             changes.update({name:dict(scale=[1.,s,z]) for name,s in zip(names,(a,b),strict=True)})
     bones = [dict(b, **changes.get(b['name'], {})) for b in geo['bones']]
-    _,collar,facing,small,wide = shape
+    _,collar,lip,facing,small,wide = shape
     data = plate_profile()
     for b in tuple(bones):
         name = b['name']
@@ -321,6 +329,8 @@ def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back
                 root = frame
             if plates:
                 transform = (small,wide)[i]
+        elif name.startswith('v17_cowl_back_'):
+            transform = lip
         elif name.startswith('v17_cowl_tooth_'):
             transform = facing
         elif name != 'v17_cowl_return' and name.startswith(('v17_cowl_','v19_cuellito_','v18_chain_')):

@@ -112,7 +112,7 @@ def matrix_parity(geo):
 
 def parity(path):
     rows = np.loadtxt(path)
-    assert rows.shape == (5*11*18*4*3,44), rows.shape
+    assert rows.shape == (5*11*18*4*3,53), rows.shape
     params = rows[:,:7].tolist()
     js = viewer(dict(torsoSamples=params))
     staged = []

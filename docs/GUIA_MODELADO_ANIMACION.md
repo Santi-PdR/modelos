@@ -226,20 +226,15 @@ animación y la documentación de GeckoLib._
   canto. Ni los controles ni los activos de referencia entran en el JAR.
 - **Giros amplios en v1.67.13:** `OPENBLAS_NUM_THREADS=1 python3
   tools/audit_torso_turn.py` comprueba 2.052 poses geométricas, con brazos
-  en reposo o en balanceo y cuatro inclinaciones del torso. El solape
-  mínimo de costuras y raíces es 0,071/0,278u (1u = 1/16 de bloque).
-  El cuello conserva 0,616u frente a la cabeza sólida y 0,061u frente a
-  las mangas simuladas. Al agacharse se detecta un posible roce de hasta
-  0,079u en la envolvente de la segunda capa de piel, no en la cabeza
+  en reposo o en balanceo y cuatro inclinaciones del torso. En v1.67.13
+  el solape mínimo de costuras y raíces fue 0,071/0,278u (1u = 1/16 de
+  bloque). El cuello conservó 0,616u frente a la cabeza sólida y 0,061u
+  frente a las mangas simuladas. Al agacharse se detectó un posible roce
+  de 0,079u en la envolvente de la segunda capa de piel, no en la cabeza
   sólida; su visibilidad depende de la textura de esa capa.
-- **Separar holgura y aspecto en F5:** a ±60° el cuello de v1.67.13
-  retrocede aunque las raíces sigan solapadas. Los mismos marcadores de
-  Actions añaden dos poses registradas (58°/+60° y 48°/−60°), en pecho y
-  Curios. `python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots
-  --giro-amplio` compara la publicación con la referencia y con una sonda
-  que sólo adelanta el cuello. Es una prueba en poses fijas: vive en
-  `src/fxSmoke`, no en el mod ni en el visor. En la
-  [ejecución 44751731511](https://github.com/Santi-PdR/modelos/actions/runs/44751731511),
+- **Guiar por separado geometría y F5:** a ±60° el cuello de v1.67.13
+  retrocede aunque las raíces sigan solapadas. En la primera
+  [sonda aislada](https://github.com/Santi-PdR/modelos/actions/runs/44751731511),
   el frente del cuello pasó de Z=6,00 a Z=4,63u frente a ~1,10u de la
   referencia. Los píxeles en la proyección del cuello cerca de la
   camiseta pasaron de 0% a 4% y 15% en las dos poses, igual en pecho y
@@ -252,10 +247,30 @@ animación y la documentación de GeckoLib._
   proximidad, pero los píxeles visibles en la proyección bajaron de
   993 a 512 (613 en la referencia). El cliente completó la
   [ejecución 44753904662](https://github.com/Santi-PdR/modelos/actions/runs/44753904662),
-  pero no pasó el control de área del ensayo. Se conservan la sonda
-  aislada y el JAR de v1.67.13. Antes de llevar ese cambio al juego hay
-  que separar compactación de oclusión y probar la transición durante
-  un giro, no sólo los dos extremos estáticos.
+  pero no pasó el control de área del ensayo. No se publicó ni cambió
+  el JAR de v1.67.13.
+- **Giro continuo en la candidata v1.67.14:** se prolonga sólo el ajuste
+  del cuello a partir de ±48°. La salida vuelve a abrirse entre 60° y
+  79°; cede antes en posturas profundas, cuando la manga se mueve o al
+  agacharse. Los dientes, la traviesa, las placas y el faldón no reciben
+  ese movimiento adicional. Los marcadores de Actions `[probar-halo]
+  [capa-historica]` ejecutan dos recorridos F5 de 0° a +79°, −79° y de
+  vuelta, con brazos en reposo pero sin congelar su animación. Se mide
+  la separación respecto del torso cada grado y se comprueba que el
+  pase de emisión use la misma matriz que el sólido.
+  En el [primer ensayo continuo](capa_v16714_giro_primer_ensayo.png),
+  el avance fue de 1,72u y el recorrido completó 317 fotogramas por slot,
+  pero sólo quedó visible un 51–55% del cuello anterior. Por eso el
+  remate conserva el grosor del borde alto y crece desde su costura
+  inferior mientras el pliegue bajo se recoge.
+- **Aislar la silueta en Forge:** `python3 tools/verify_forge_history.py
+  build/fx-smoke-run/fx-shots --giro-amplio` mide 58°/+60° y 48°/−60°
+  en pecho y Curios. Cada toma de v1.67.13 o de la candidata tiene
+  una pareja sin los cinco tramos del cuello trasero, con la misma
+  cámara y pose. La diferencia dentro de la proyección de esos tramos
+  evita contar tela y placas detrás como si fueran cuello. Se comprueba
+  tanto la proporción de área visible conservada como el número de
+  píxeles reales de cuello que se acercan a la camiseta.
 - **Pulso del icono (v1.67.8):** 32 fotogramas a un tick por cuadro, mismo
   contorno y duración de 1,6 s. Se comprueba el recorrido de la cresta de
   luz en la hotbar vanilla; se conservan el dibujo y el reposo de v1.67.7.

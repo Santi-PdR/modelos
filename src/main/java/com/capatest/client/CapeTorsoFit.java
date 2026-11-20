@@ -19,17 +19,22 @@ final class CapeTorsoFit {
     private static final double TURN_OPEN_END = 79;
     private static final double TURN_DEPTH_START = .04;
     private static final double TURN_DEPTH_END = .84;
-    static final Shape NONE = new Shape(0, null, null, null, null);
+    // Front edge and base of the exposed rear collar in model units.
+    private static final double TURN_LIP_Y = 21.7;
+    private static final double TURN_LIP_Z = 6.0;
+    private static final double TURN_LIP_HEIGHT = .40;
+    private static final double TURN_LIP_ADVANCE = .10;
+    static final Shape NONE = new Shape(0, null, null, null, null, null);
 
     record Affine(float x, float y, float z, float dx, float dy, float dz, float sx, float sy, float sz) {}
-    record Shape(float seat, Affine collar, Affine facing, Affine small, Affine wide) {
+    record Shape(float seat, Affine collar, Affine lip, Affine facing, Affine small, Affine wide) {
         Affine forBone(String name) {
             return switch (name) {
                 case CapePlateFit.SMALL -> small;
                 case CapePlateFit.WIDE -> wide;
                 // The fixed crosspiece is already fitted to the sleeves.
                 case "v17_cowl_return" -> null;
-                default -> name.startsWith("v17_cowl_tooth_") ? facing :
+                default -> name.startsWith("v17_cowl_back_") ? lip : name.startsWith("v17_cowl_tooth_") ? facing :
                         name.startsWith("v17_cowl_") || name.startsWith("v19_cuellito_")
                                 || name.startsWith("v18_chain_") ? collar : null;
             };
@@ -98,8 +103,8 @@ final class CapeTorsoFit {
         // plate instead of shortening its contact rim. Lift it just enough
         // to retain clearance through the sleeve's idle sway.
         double settled = dry * smooth(.78, .99, plateFit);
-        return new Shape((float) seat,
-                collar(tuck, crown + hold*smooth(24, 43, down), shift, scale),
+        Affine underFold = collar(tuck, crown + hold*smooth(24, 43, down), shift, scale);
+        return new Shape((float) seat, underFold, lip(underFold, tuck, crown, hold),
                 collar(tuck, trim * .16, 0, 1),
                 affine(1, compact, .94, .92, 1 - .17 * advance, 0, .18 * advance, -.24 * advance),
                 rest == 0 && settled == 0 ? null : affine(2, 1, 1 - .60 * rest, 1 - .59 * rest,
@@ -114,6 +119,19 @@ final class CapeTorsoFit {
         return new Affine((float)pivot[0], (float)pivot[1], (float)pivot[2], 0, (float)(-.58*amount),
                 (float)(shift - 1.62*reach*amount*scale), (float)(1 + amount*(.965-1)),
                 (float)(1 + amount*(.41-1)), (float)((1 - .12*reach*amount)*scale));
+    }
+
+    private static Affine lip(Affine fold, double tuck, double reach, double hold) {
+        if (fold == null || hold <= 0) return fold;
+        // The lower fold can compress into the seat, but do not flatten the
+        // exposed rear lip with it. Keep its front edge in place, retain the
+        // original thickness and grow upward from the lower stitched edge.
+        double thickness = 1 - .12*reach*tuck;
+        double raise = TURN_LIP_HEIGHT * hold;
+        return new Affine(fold.x(), fold.y(), fold.z(), fold.dx(),
+                (float)(fold.dy() + raise*(fold.y() + fold.dy() - TURN_LIP_Y)),
+                (float)(fold.dz() - (thickness - fold.sz())*(TURN_LIP_Z - fold.z()) - TURN_LIP_ADVANCE*hold),
+                fold.sx(), (float)(fold.sy()*(1 + raise)), (float)thickness);
     }
 
     private static Affine affine(int i, double k, double sx, double sy, double sz,

@@ -214,7 +214,7 @@ function plateRim(bone, profile, target, k) {
 
 function torsoShape(data, stance, look, yaw, depth, seat, plate, arm, effort, dry=1, elytra=false) {
   if (!data || elytra || dry<=0 || ![stance,look,yaw,depth,arm,effort,dry,seat,plate].every(Number.isFinite))
-    return [0,null,null,null,null];
+    return [0,null,null,null,null,null];
   const down=-look, turn=Math.abs(((yaw+180)%360+360)%360-180);
   const leanRoom=1-smooth(.05,.36,stance), steepRoom=1-.82*smooth(62,88,down)*smooth(24,36,turn);
   const sleeveRoom=1-smooth(2.85,6,effort), release=smooth(44,57,turn);
@@ -231,7 +231,7 @@ function torsoShape(data, stance, look, yaw, depth, seat, plate, arm, effort, dr
     1+tuck*(.965-1),1+tuck*(.41-1),(1-.12*r*tuck)*scale] : null;
   const crown=trim*(1+1.24*smooth(.76,.995,seat)+.46*smooth(78,87,down)*smooth(.79,.995,seat));
   const stroke=.68*smooth(23,43,down), outer=stroke*dry*space*(1-smooth(2.85,6,arm));
-  const [start,soft,opening,end,d0,d1]=data.turn;
+  const [start,soft,opening,end,d0,d1,lipY,lipZ,lift,advanceLip]=data.turn;
   const lost=Math.max(0,release-smooth(44,57,start));
   const hold=lost*lost/(lost+soft)*(1-smooth(opening,end,turn))*smooth(30,45,down)*(1-smooth(64,78,down))
     *(1-smooth(d0,d1,depth))*leanRoom*steepRoom*sleeveRoom;
@@ -242,8 +242,13 @@ function torsoShape(data, stance, look, yaw, depth, seat, plate, arm, effort, dr
   const wide=rest || settled ? fit(2,1,1-.60*rest,1-.59*rest,1-.14*advance*rest,
     rest*(.065+.37*sweep+.48*advance-.47*upright)+.07*settled,
     rest*(-.24*advance+.52*sweep+.22*upright)-.38*settled) : null;
-  return [outer,collar(crown+hold*smooth(24,43,down),shift,scale),collar(trim*.16),
-    fit(1,compact,.94,.92,1-.17*advance,.18*advance,-.24*advance),wide];
+  const fold=collar(crown+hold*smooth(24,43,down),shift,scale);
+  let lip=fold;
+  if (fold && hold>0) {
+    const [x,y,z,dx,dy,dz,sx,sy,sz]=fold, thickness=1-.12*crown*tuck, raise=lift*hold;
+    lip=[x,y,z,dx,dy+raise*(y+dy-lipY),dz-(thickness-sz)*(lipZ-z)-advanceLip*hold,sx,sy*(1+raise),thickness];
+  }
+  return [outer,fold,lip,collar(trim*.16),fit(1,compact,.94,.92,1-.17*advance,.18*advance,-.24*advance),wide];
 }
 
 function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm) {
@@ -254,7 +259,7 @@ function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effor
   const pressed = hasSeat ? seating(seat,stance,look,turn,arm,elytra) : 0;
   const backing = anchor && backingShape(anchor,profile.bodyAngle,stance,look,turn,depth,elytra);
   const plate = plateInfluence(profile.plates,stance,look,turn,effort,elytra);
-  const [extra,collar,facing,...pads] = torsoShape(hasSeat && profile.torso,stance,look,turn,depth,pressed,plate,arm,effort,1,elytra);
+  const [extra,collar,lip,facing,...pads] = torsoShape(hasSeat && profile.torso,stance,look,turn,depth,pressed,plate,arm,effort,1,elytra);
   const outer = Math.max(pressed,extra);
   const bones = geo.bones.map(b => {
     if (b.name===seat?.frame) return {...b,scale:[1,1,1-seat.depth*pressed]};
@@ -287,7 +292,8 @@ function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effor
   for (let i=0,length=bones.length;i<length;i++) {
     const piece=bones[i], name=piece.name;
     const plateIndex=profile.plates?.names.indexOf(name) ?? -1;
-    const transform=plateIndex>=0 ? pads[plateIndex] : name.startsWith('v17_cowl_tooth_') ? facing
+    const transform=plateIndex>=0 ? pads[plateIndex] : name.startsWith('v17_cowl_back_') ? lip
+      : name.startsWith('v17_cowl_tooth_') ? facing
       : name!=='v17_cowl_return' && ['v17_cowl_','v19_cuellito_','v18_chain_'].some(prefix=>name.startsWith(prefix)) ? collar : null;
     if (transform) {
       const [x,y,z,dx,dy,dz,sx,sy,sz]=transform;
