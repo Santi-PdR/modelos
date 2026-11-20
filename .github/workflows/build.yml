@@ -23,6 +23,7 @@ jobs:
     # Necesario para que gh release pueda crear/actualizar el asset .jar.
     permissions:
       contents: write
+      actions: read
     # La rama de artefactos (artifacts/vX.Y.Z) SOLO guarda el .jar. Si el
     # workflow corriera tambien sobre ella, cada push re-construiria el
     # mod entero para nada. Aqui se salta ese run.
@@ -969,6 +970,20 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Preparar el modelo equipado anterior a la rama (opcional)
+        id: historic-fit
+        if: github.event_name == 'push' && contains(github.event.head_commit.message, '[capa-historica]')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/prepare_historical_fit.py
+          # El registro histórico no es una prueba Forge: el paso ejecutaba audit_model.py.
+          # Si está retenido, guardar sus resultados específicos, no todo el log del job.
+          if timeout 20s gh run view 43540233285 --job 132278825474 --log > "$RUNNER_TEMP/capa-v1280.log"; then
+            sed -n '/Autoevaluacion visual contra la referencia/s/^.*Z \(OK: .*\)$/\1/p' "$RUNNER_TEMP/capa-v1280.log" | head -n 6 | \
+              while IFS= read -r line; do printf '::notice title=Registro de referencia v1.28.0::%s\n' "$line"; done
+          fi
+
       # Cliente real en mundo desechable. Se prueba aparte del JAR:
       # el código de diagnóstico y Curios nunca se empaquetan en él.
       - name: Probar FX y equipo en Forge (opcional)
@@ -983,7 +998,9 @@ jobs:
         run: |
           log="$RUNNER_TEMP/forge-client.log"
           rc=0
-          timeout --kill-after=12s 300s xvfb-run -a gradle -PcapeFxSmoke --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
+          args=()
+          if [ '${{ steps.historic-fit.outcome }}' = success ]; then args+=(-PcapeHistory); fi
+          timeout --kill-after=12s 300s xvfb-run -a gradle -PcapeFxSmoke "${args[@]}" --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
           awk 'sub(/.*FX smoke: /, "")' "$log" | tail -n 5 | while IFS= read -r line; do
             printf '::notice title=FX en Forge::%s\n' "$line"
           done
@@ -999,6 +1016,25 @@ jobs:
               while IFS= read -r line; do printf '::warning title=Diagnóstico de cliente::%s\n' "${line//%/%25}"; done
             exit 1
           fi
+
+      - name: Medir el anclaje anterior a la rama en Forge
+        if: steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success'
+        run: |
+          python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
+            printf '::notice title=Montura real anterior a la rama::%s\n' "$line"
+          done
+
+      - name: Documentar v1.28.0 y el modelo actual en F5 tres cuartos
+        if: always() && steps.historic-fit.outcome == 'success'
+        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery diagonal
+
+      - name: Documentar v1.28.0 y el modelo actual en F5 giro opuesto
+        if: always() && steps.historic-fit.outcome == 'success'
+        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery espejo
+
+      - name: Documentar v1.28.0 y el modelo actual en F5 cenital
+        if: always() && steps.historic-fit.outcome == 'success'
+        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery cenital
 
       - name: Comparar v1.67.11 y las nuevas hombreras en F5 cenital
         if: always() && steps.fx-smoke.outcome != 'skipped'

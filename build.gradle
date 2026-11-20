@@ -16,9 +16,15 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 // Opt-in integration probes. Neither the probe code nor Curios ships in the JAR.
 def fxSmokeRun = providers.gradleProperty('capeFxSmoke').isPresent()
+def historicFit = fxSmokeRun && providers.gradleProperty('capeHistory').isPresent()
 if (fxSmokeRun) {
     sourceSets.main.java.srcDir 'src/fxSmoke/java'
     sourceSets.main.resources.srcDir 'src/fxSmoke/resources'
+}
+if (historicFit) {
+    // Prepared by tools/prepare_historical_fit.py from the pinned release.
+    sourceSets.main.java.srcDir layout.buildDirectory.dir('generated/cape-history/java')
+    sourceSets.main.resources.srcDir layout.buildDirectory.dir('generated/cape-history/resources')
 }
 
 minecraft {
@@ -41,6 +47,7 @@ minecraft {
             // GeckoLib ships SRG mixin refs. Remap them only in the named dev client.
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', project.layout.buildDirectory.file('createSrgToMcp/output.srg').get().asFile.absolutePath
+            if (historicFit) property 'cape.history', 'true'
             if (fxSmokeRun) {
                 workingDirectory project.layout.buildDirectory.dir('fx-smoke-run').get().asFile
             }
@@ -122,7 +129,8 @@ tasks.withType(org.gradle.api.tasks.bundling.AbstractArchiveTask).configureEach 
 
 tasks.named('jar', Jar).configure {
     exclude 'com/capatest/client/CapeFxSmoke*.class', 'com/capatest/client/CapeLookSweep*.class',
-            'com/capatest/client/CapeWalkProbe*.class', 'com/capatest/client/CapePlateProbe*.class', 'assets/capatest/geo/test/*'
+            'com/capatest/client/CapeWalkProbe*.class', 'com/capatest/client/CapePlateProbe*.class',
+            'com/capatest/client/CapeHistoric*.class', 'assets/capatest/**/fixture_v1280*', 'assets/capatest/geo/test/*'
     manifest {
         attributes([
                 "Specification-Title"   : mod_id,

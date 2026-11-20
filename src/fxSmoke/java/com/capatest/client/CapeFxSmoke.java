@@ -63,6 +63,7 @@ import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.cache.object.GeoCube;
 import software.bernie.geckolib.event.GeoRenderEvent;
+import software.bernie.geckolib.renderer.GeoArmorRenderer;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
@@ -131,6 +132,15 @@ public final class CapeFxSmoke {
         PLATES_BARE("hombreras-sin-manto", 6000), PLATES_HIDDEN("hombreras-sin-placas", 6000),
         PLATES_PREVIOUS("hombreras-v16711", 6000),
         PLATES_CHEST("hombreras-pecho", 6000), PLATES_BACK("hombreras-curios", 6000),
+        HISTORY_DIAG_BARE("historia-diagonal-sin-manto", 6000),
+        HISTORY_DIAG_OLD_CHEST("historia-diagonal-pecho-v1280", 6000), HISTORY_DIAG_CHEST("historia-diagonal-pecho", 6000),
+        HISTORY_DIAG_OLD_BACK("historia-diagonal-curios-v1280", 6000), HISTORY_DIAG_BACK("historia-diagonal-curios", 6000),
+        HISTORY_MIRROR_BARE("historia-espejo-sin-manto", 6000),
+        HISTORY_MIRROR_OLD_CHEST("historia-espejo-pecho-v1280", 6000), HISTORY_MIRROR_CHEST("historia-espejo-pecho", 6000),
+        HISTORY_MIRROR_OLD_BACK("historia-espejo-curios-v1280", 6000), HISTORY_MIRROR_BACK("historia-espejo-curios", 6000),
+        HISTORY_TOP_BARE("historia-cenital-sin-manto", 6000),
+        HISTORY_TOP_OLD_CHEST("historia-cenital-pecho-v1280", 6000), HISTORY_TOP_CHEST("historia-cenital-pecho", 6000),
+        HISTORY_TOP_OLD_BACK("historia-cenital-curios-v1280", 6000), HISTORY_TOP_BACK("historia-cenital-curios", 6000),
         LOOK_CHEST("mirada-pecho", 6000), LOOK_BACK("mirada-curios", 6000),
         WALK_CHEST("paso-pecho", 6000), WALK_BACK("paso-curios", 6000),
         HOTBAR_BARE("hotbar-vacia", 6000), HOTBAR("hotbar", 6000),
@@ -149,9 +159,9 @@ public final class CapeFxSmoke {
 
         boolean hotbar() { return this == HOTBAR_BARE || this == HOTBAR; }
         boolean elytra() { return this == WINGS || this == GLIDE; }
-        boolean usesBack() { return this == TOP_BACK || this == TURN_BACK || this == OBLIQUE_BACK || this == SIDE_BACK || this == FIT_BACK || this == FIT_SLIM_BACK || this == MID_BACK || this == PLATES_BACK || this == LOOK_BACK || this == WALK_BACK || elytra(); }
+        boolean usesBack() { return this == TOP_BACK || this == TURN_BACK || this == OBLIQUE_BACK || this == SIDE_BACK || this == FIT_BACK || this == FIT_SLIM_BACK || this == MID_BACK || this == PLATES_BACK || this == LOOK_BACK || this == WALK_BACK || homeCompare() && file.contains("-curios") || elytra(); }
         boolean hasBack() { return this == BOTH || usesBack(); }
-        boolean bare() { return this == TOP_BARE || this == TURN_BARE || this == OBLIQUE_BARE || this == SIDE_BARE || this == FIT_BARE || this == FIT_SLIM_BARE || this == MID_BARE || this == PLATES_BARE; }
+        boolean bare() { return this == TOP_BARE || this == TURN_BARE || this == OBLIQUE_BARE || this == SIDE_BARE || this == FIT_BARE || this == FIT_SLIM_BARE || this == MID_BARE || this == PLATES_BARE || homeCompare() && file.endsWith("sin-manto"); }
         boolean overhead() { return this == TOP_BARE || this == TOP_OLD_JOIN || this == TOP_CHEST || this == TOP_BACK || turned(); }
         boolean oldJoin() { return this == TOP_OLD_JOIN || this == OBLIQUE_OLD_JOIN || this == MID_OLD_JOIN; }
         boolean binding() { return oldJoin() || this == MID_CHEST || this == MID_BACK || this == TOP_CHEST
@@ -167,12 +177,20 @@ public final class CapeFxSmoke {
         boolean slimFit() { return fit() && ordinal() >= FIT_SLIM_BARE.ordinal(); }
         boolean midFit() { return fit() && ordinal() >= MID_BARE.ordinal(); }
         boolean plates() { return ordinal() >= PLATES_BARE.ordinal() && ordinal() <= PLATES_BACK.ordinal(); }
+        boolean homeCompare() { return ordinal() >= HISTORY_DIAG_BARE.ordinal() && ordinal() <= HISTORY_TOP_BACK.ordinal(); }
+        boolean oldRig() { return homeCompare() && file.endsWith("-v1280"); }
         boolean sweep() { return this == LOOK_CHEST || this == LOOK_BACK; }
         boolean walk() { return this == WALK_CHEST || this == WALK_BACK; }
-        boolean stillComparison() { return overhead() || upperBack() || fit() || plates(); }
+        boolean stillComparison() { return overhead() || upperBack() || fit() || plates() || homeCompare(); }
         boolean fixedCamera() { return stillComparison() || sweep(); }
-        float yaw() { return fit() ? 3 : profile() ? 76 : turned() || oblique() || hotbar() ? 43 : 0; }
-        float pitch() { return plates() ? 89.5F : midFit() ? 58 : fit() ? 76 : profile() ? 21 : oblique() ? 58 : turned() || hotbar() ? 86 : 89; }
+        float yaw() {
+            if (homeCompare()) return file.startsWith("historia-diagonal") ? 43 : file.startsWith("historia-espejo") ? -48 : 0;
+            return fit() ? 3 : profile() ? 76 : turned() || oblique() || hotbar() ? 43 : 0;
+        }
+        float pitch() {
+            if (homeCompare()) return file.startsWith("historia-diagonal") ? 58 : file.startsWith("historia-espejo") ? 48 : 89.5F;
+            return plates() ? 89.5F : midFit() ? 58 : fit() ? 76 : profile() ? 21 : oblique() ? 58 : turned() || hotbar() ? 86 : 89;
+        }
         boolean inspectBirths() { return this == GLIDE || this == WADE || this == SWIM; }
         boolean compareLight() { return this == CHEST || this == NIGHT || this == LAMP; }
         boolean strafe() { return this == STRAFE_LEFT || this == STRAFE_RIGHT; }
@@ -195,6 +213,7 @@ public final class CapeFxSmoke {
     private static CapeWalkProbe.Route walkRoute;
     private static CapeWalkProbe.Draw walkDraw;
     private static CapePlateProbe platesDraw;
+    private static String historyDraw;
     private static ItemStack rendered;
     private static Matrix4f playerPose, armorPose, upperBackProjection;
     private static Entity stillPlayer;
@@ -347,7 +366,9 @@ public final class CapeFxSmoke {
                     driveScene(game);
                     if (!captured) return;
                     if (scene != Scene.SWIM_EXIT) {
-                        equipScene(game, Scene.values()[scene.ordinal() + 1]);
+                        Scene next = Scene.values()[scene.ordinal() + 1];
+                        if (next.homeCompare() && !CapeHistoricFitProbe.ENABLED) next = Scene.LOOK_CHEST;
+                        equipScene(game, next);
                         return;
                     }
                     if (game.player.getSwimAmount(1) > 0) return;
@@ -443,7 +464,7 @@ public final class CapeFxSmoke {
         stableFrames = observedBirths = 0;
         captured = false;
         if (next == Scene.TOP_BARE) game.options.fov().set(34);
-        if (next == Scene.FIT_BARE) game.options.fov().set(42);
+        if (next == Scene.FIT_BARE || next == Scene.HISTORY_DIAG_BARE) game.options.fov().set(42);
         if (next == Scene.FIT_BARE || next == Scene.FIT_SLIM_BARE || next == Scene.HOTBAR_BARE) {
             // Select the actual vanilla player renderer by model, without
             // changing skin pixels, account, equipment, or the pose.
@@ -597,8 +618,17 @@ public final class CapeFxSmoke {
     }
 
     private static void beforeArmor(GeoRenderEvent.Armor.Pre event) {
-        if (scene == null || !(event.getRenderer() instanceof CapaArmorRenderer renderer)
-                || renderer.getCurrentEntity() != Minecraft.getInstance().player) return;
+        if (scene == null || event.getEntity() != Minecraft.getInstance().player) return;
+        if (scene.homeCompare()) {
+            if (event.getRenderer() instanceof CapaArmorRenderer live) {
+                if (scene.oldRig()) CapeHistoricFitProbe.substitute(event, live);
+                else CapeHistoricFitProbe.arm(live);
+            } else if (CapeHistoricFitProbe.isLegacy(event.getRenderer())) {
+                armHistory(event.getRenderer());
+            }
+            return;
+        }
+        if (!(event.getRenderer() instanceof CapaArmorRenderer renderer)) return;
         if (scene.sweep()) CapeLookSweep.Probe.arm(renderer);
         if (scene.walk()) CapeWalkProbe.arm(renderer);
         if (scene == Scene.PLATES_HIDDEN) CapePlateProbe.hide(renderer, true);
@@ -627,6 +657,11 @@ public final class CapeFxSmoke {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private static void armHistory(GeoArmorRenderer<?> renderer) {
+        CapeHistoricFitProbe.arm((GeoArmorRenderer<CapaDeteriorerItem>) renderer);
+    }
+
     private static void mountOldLining(CapaArmorRenderer renderer) {
         var control = GeckoLibCache.getBakedModels().get(LINING_V16710);
         check(control != null && control.topLevelBones().size() == 2 && savedLining.isEmpty(),
@@ -653,8 +688,16 @@ public final class CapeFxSmoke {
     }
 
     private static void afterArmor(GeoRenderEvent.Armor.Post event) {
-        if (scene == null || !(event.getRenderer() instanceof CapaArmorRenderer renderer)
-                || renderer.getCurrentEntity() != Minecraft.getInstance().player) return;
+        if (scene == null || event.getEntity() != Minecraft.getInstance().player) return;
+        if (scene.homeCompare() && (event.getRenderer() instanceof CapaArmorRenderer
+                || CapeHistoricFitProbe.isLegacy(event.getRenderer()))) {
+            framePasses++;
+            rendered = event.getRenderer().getCurrentStack();
+            framePartialTick = event.getPartialTick();
+            historyDraw = CapeHistoricFitProbe.finish(event.getRenderer());
+            return;
+        }
+        if (!(event.getRenderer() instanceof CapaArmorRenderer renderer)) return;
         framePasses++;
         rendered = renderer.getCurrentStack();
         armorPose = new Matrix4f(event.getPoseStack().last().pose());
@@ -699,6 +742,7 @@ public final class CapeFxSmoke {
             seatDraw = null;
             walkDraw = null;
             platesDraw = null;
+            historyDraw = null;
             rendered = ItemStack.EMPTY;
             playerPose = armorPose = upperBackProjection = null;
             // Hold the camera/head yaw relative to the torso, like looking
@@ -728,7 +772,8 @@ public final class CapeFxSmoke {
         if (player == null || game.screen != null || game.level.getDayTime() != scene.dayTime) return;
         ItemStack chest = player.getItemBySlot(EquipmentSlot.CHEST);
         ItemStack back = backOf(player).getStacks().getStackInSlot(0);
-        boolean chestReady = switch (scene) {
+        boolean chestReady = scene.homeCompare() ? (scene.bare() || scene.usesBack() ? chest.isEmpty()
+                : chest.is(CapaTestMod.CAPA_DETERIORER.get())) : switch (scene) {
             case TOP_BARE, TOP_BACK, TURN_BARE, TURN_BACK, OBLIQUE_BARE, OBLIQUE_BACK, SIDE_BARE, SIDE_BACK,
                     FIT_BARE, FIT_BACK, FIT_SLIM_BARE, FIT_SLIM_BACK, MID_BARE, MID_BACK,
                     PLATES_BARE, PLATES_BACK, LOOK_BACK, WALK_BACK, HOTBAR_BARE, HOTBAR -> chest.isEmpty();
@@ -750,7 +795,10 @@ public final class CapeFxSmoke {
         double lateral = scene.strafe() ? CapeTravel.measure(new CapeTravel.Step(velocity.x, velocity.y, velocity.z),
                 new CapeTravel.Step(player.getX() - player.xo, player.getY() - player.yo, player.getZ() - player.zo),
                 false, bodyYaw).side() : 0;
-        boolean posed = switch (scene) {
+        boolean posed = scene.homeCompare() ? player.onGround() && !player.isCrouching()
+                && Math.abs(player.getXRot() - scene.pitch()) < .05 && Math.abs(bodyYaw) < .05
+                && Math.abs(player.getYHeadRot() - scene.yaw()) < .05 && velocity.horizontalDistanceSqr() < .0001
+                : switch (scene) {
             case TOP_BARE, TOP_OLD_JOIN, TOP_CHEST, TOP_BACK, TURN_BARE, TURN_CHEST, TURN_BACK,
                     OBLIQUE_BARE, OBLIQUE_UNLINED, OBLIQUE_OLD_JOIN, OBLIQUE_CHEST, OBLIQUE_BACK,
                     SIDE_BARE, SIDE_UNLINED, SIDE_CHEST, SIDE_BACK,
@@ -862,6 +910,10 @@ public final class CapeFxSmoke {
                 if (scene.upperBack() && !scene.bare()) projectUpperBack(shots, image);
                 if ((scene.fit() || scene.plates()) && !scene.bare()) projectFit(shots, image);
                 if (scene.binding()) projectBinding(shots, image);
+                if (scene.homeCompare() && !scene.bare()) {
+                    check(historyDraw != null, "missing torso-space measurements of " + scene.file);
+                    Files.writeString(shots.resolve(scene.file + ".tsv"), historyDraw);
+                }
                 if (scene.plates() && !scene.bare() && scene != Scene.PLATES_HIDDEN) {
                     check(platesDraw != null, "missing live plate pass");
                     platesDraw.write(shots.resolve(scene.file + "-caras.tsv"), image.getWidth(), image.getHeight());
