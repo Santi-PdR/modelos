@@ -1,0 +1,81 @@
+Mantle of the Blight Star v1.67.14 — test-1, sin ZIP
+
+Minecraft Java 1.20.1 / Forge 47.3.0 / GeckoLib 4.8.1.
+Curios 5.14.1 es opcional para equipar la capa en back.
+
+1. Cerrá Minecraft. Iniciá sesión en GitHub con una cuenta que tenga
+   acceso al borrador y descargá sólo capatest-1.67.14.jar desde Assets.
+   No descargues el ZIP de código fuente. Si no tenés acceso, la release
+   pública de prueba sigue siendo v1.67.13.
+2. Pegá el bloque desde "& {" hasta el "}" final en PowerShell de Windows.
+   Si el JAR no quedó en Descargas, ajustá $origen a la ruta del archivo.
+   No hace falta guardar ni ejecutar un archivo .ps1.
+
+& {
+    $ErrorActionPreference = 'Stop'
+    $mods = 'D:\Minecraft\SKLauncher\sklauncher-data-v4\instances\test-1\mods'
+    $jar = 'capatest-1.67.14.jar'
+    $sha = '9a00241265b7824666feb283f88f433553d5e80dc440e8a8ad87c12d4e2189db'
+    $origen = Join-Path (Join-Path $HOME 'Downloads') $jar
+
+    $source = Get-Item -LiteralPath $origen -Force
+    if ($source -isnot [IO.FileInfo] -or ($source.Attributes -band [IO.FileAttributes]::ReparsePoint) -or
+        (Get-FileHash -LiteralPath $source.FullName -Algorithm SHA256).Hash -ne $sha) {
+        throw 'El JAR de origen no es el de v1.67.14 verificado. No se cambio el contenido de mods.'
+    }
+    $folder = Get-Item -LiteralPath $mods -Force
+    if ($folder -isnot [IO.DirectoryInfo] -or ($folder.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        throw 'No se encontro una carpeta mods valida para test-1.'
+    }
+
+    $installed = @(Get-ChildItem -LiteralPath $mods -File -Force | Where-Object { $_.Name -like 'capatest-*.jar' })
+    if ($installed | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }) {
+        throw 'Hay un enlace capatest en mods. No se cambio ningun archivo.'
+    }
+    $target = Join-Path $mods $jar
+    if ($installed.Count -eq 1 -and $installed[0].Name -eq $jar -and
+        (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -eq $sha) {
+        Write-Host "$jar ya esta instalado y verificado."
+        return
+    }
+
+    $id = [guid]::NewGuid().ToString('N')
+    $tmp = Join-Path $mods ".capatest-$id.tmp"
+    $root = Join-Path $folder.Parent.FullName 'capatest-respaldos'
+    $backup = Join-Path $root ((Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + $id)
+    $moved = @()
+    try {
+        [IO.File]::Copy($source.FullName, $tmp)
+        if ((Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash -ne $sha) {
+            throw 'La copia no paso la verificacion. No se reemplazo ningun mod.'
+        }
+        if ($installed.Count -gt 0) {
+            $backupRoot = Get-Item -LiteralPath $root -Force -ErrorAction SilentlyContinue
+            if ($backupRoot -and ($backupRoot -isnot [IO.DirectoryInfo] -or
+                ($backupRoot.Attributes -band [IO.FileAttributes]::ReparsePoint))) {
+                throw "No se puede guardar el respaldo en $root."
+            }
+            [void][IO.Directory]::CreateDirectory($backup)
+        }
+        foreach ($old in $installed) {
+            [IO.File]::Move($old.FullName, (Join-Path $backup $old.Name))
+            $moved += $old
+        }
+        [IO.File]::Move($tmp, $target)
+    } catch {
+        $failure = $_
+        foreach ($old in $moved) {
+            try { [IO.File]::Move((Join-Path $backup $old.Name), $old.FullName) }
+            catch { Write-Warning "$($old.Name) quedo guardado en $backup." }
+        }
+        throw $failure
+    } finally {
+        Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+    }
+    Write-Host "$jar instalado y verificado en test-1."
+    if ($moved.Count -gt 0) { Write-Host "JAR anteriores guardados en $backup." }
+}
+
+Para volver atrás, con Minecraft cerrado quitá capatest-1.67.14.jar de
+mods y devolvé sólo el JAR anterior que quieras usar desde la carpeta de
+respaldo indicada por PowerShell. No dejes dos versiones en mods.

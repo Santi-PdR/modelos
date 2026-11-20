@@ -1292,11 +1292,16 @@ byte, no escribe nada.
 **Modelo de Blockbench:** [CAPA_v1.65.0.bbmodel](docs/CAPA_v1.65.0.bbmodel),
 byte a byte igual a la descarga que ofrece el visor offline.
 
-Regla de entrega: **el `.bbmodel` cambia de nombre con `mod_version`** y
-**siempre se incluye su enlace**. El workflow lee la versión de
+Regla de entrega: **el `.bbmodel` cambia de nombre con `mod_version`**. Se
+incluye entre los adjuntos y se enlaza para descarga directa al publicar.
+El workflow lee la versión de
 `gradle.properties` para alinear JAR, tag y assets, y prepara un borrador
 con `workflow_dispatch(publicar=true)` o un commit marcado `[publicar]`.
-El borrador se hace público sólo tras la verificación de CI.
+Ambas solicitudes activan el cliente Forge y la comparación del cuello en
+F5. El borrador de v1.67.14 además exige el SHA-256 del JAR de la prueba
+original, fijado en `docs/releases/v1.67.14/JAR.sha256`. `SHA256SUMS.txt`
+registra el proyecto editable, el visor, el JAR y los otros adjuntos.
+Hacerlo público es un paso separado, después de verificar la ejecución completa.
 
 ### Histórico — tests y efectos en runtime (v1220)
 

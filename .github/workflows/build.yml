@@ -973,9 +973,12 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Preparar el modelo equipado anterior a la rama (opcional)
+      - name: Preparar la referencia histórica del ajuste
         id: historic-fit
-        if: github.event_name == 'push' && contains(github.event.head_commit.message, '[capa-historica]')
+        if: >-
+          (github.event_name == 'push' && (contains(github.event.head_commit.message, '[capa-historica]') ||
+          contains(github.event.head_commit.message, '[publicar]'))) ||
+          (github.event_name == 'workflow_dispatch' && inputs.publicar == true)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -1024,6 +1027,7 @@ jobs:
           fi
 
       - name: Medir el cuello al girar 60 grados en F5
+        id: verify-wide-turn
         if: steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success'
         run: |
           set -o pipefail
@@ -1191,32 +1195,49 @@ jobs:
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.
       - name: Stage verified release (draft)
         if: >-
-          steps.fx-smoke.outcome == 'success' &&
-          ((github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar]')) ||
-          (github.event_name == 'workflow_dispatch' && inputs.publicar == true))
+          (github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar]')) ||
+          (github.event_name == 'workflow_dispatch' && inputs.publicar == true)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORGE_RESULT: ${{ steps.fx-smoke.outcome }}
+          TURN_RESULT: ${{ steps.verify-wide-turn.outcome }}
         run: |
           set -euo pipefail
+          if [ "$FORGE_RESULT" != success ] || [ "$TURN_RESULT" != success ]; then
+            echo '::error::El borrador requiere pasar el cliente Forge y la comparación del giro amplio.'
+            exit 1
+          fi
+          # runClient usa fuentes de diagnóstico. El JAR preparado más arriba
+          # debe seguir siendo el de distribución que pasó la inspección.
+          (cd build/libs && sha256sum -c SHA256SUMS.txt)
           VER="$(sed -n 's/^mod_version=//p' gradle.properties | tr -d '[:space:]')"
           test -n "$VER"
           TAG="v$VER"
           JAR="build/libs/capatest-$VER.jar"
-          test -f "$JAR"
-          NOTES="$RUNNER_TEMP/release-notes.md"
           BBF="docs/CAPA_v$VER.bbmodel"
-          BB_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/CAPA_v$VER.bbmodel"
           COMPARISON="docs/capa_v${VER//./}_antes_despues.png"
           REGISTER="docs/capa_v${VER//./}_registro.png"
-          cat > "$NOTES" <<'MD'
-          ## Mantle of the Blight Star __TAG__ — build más reciente
+          HISTORY="docs/capa_v${VER//./}_anclaje_forge.png"
+          TURN_BOARD="docs/capa_v${VER//./}_giro_forge.png"
+          RELEASE_DIR="docs/releases/$TAG"
+          NOTES="$RELEASE_DIR/notas.md"
+          if [ -d "$RELEASE_DIR" ]; then
+            # Una candidata con notas propias se ata al JAR de la prueba original.
+            if ! cmp -s "$RELEASE_DIR/JAR.sha256" build/libs/SHA256SUMS.txt; then
+              echo "::error::El JAR de $TAG no coincide con el SHA-256 de la prueba original."
+              exit 1
+            fi
+            test -s "$NOTES" && test -s "$TURN_BOARD" && test -s "$RELEASE_DIR/instalar-test-1.txt" || exit 1
+          else
+            NOTES="$RUNNER_TEMP/release-notes.md"
+            cat > "$NOTES" <<'MD'
+          ## Mantle of the Blight Star __TAG__ — versión de prueba
 
           JAR compilado en CI (JDK 17 + Gradle 8.8, Forge 1.20.1-47.3.0).
           Las versiones anteriores quedan como histórico y no se sobrescriben.
 
-          **Link directo del .bbmodel (VERSIONADO)**: __BBURL__
-          El archivo se llama `CAPA_v__VER__.bbmodel` y su `name`
-          interno en Blockbench incluye la versión.
+          **Proyecto Blockbench versionado**: `CAPA_v__VER__.bbmodel`, entre
+          los adjuntos. Su `name` interno en Blockbench incluye la versión.
 
           ### Qué incluye
 
@@ -1244,20 +1265,50 @@ jobs:
           | `capa_v1170_comparativa.png` | Referencia frente al modelo |
           | `capa_v1170_estados.png` | 8 poses con la misma cámara |
           | `capa_v1170_animaciones.gif` | 4 ciclos sincronizados por fase |
+          | `SHA256SUMS.txt` | Verificación de los archivos adjuntos |
           MD
-          if [ -f "$COMPARISON" ]; then
-            printf '| `%s` | Antes/después del modelo equipado con la misma cámara |\n' \
-              "$(basename "$COMPARISON")" >> "$NOTES"
+            if [ -f "$COMPARISON" ]; then
+              printf '| `%s` | Antes/después del modelo equipado con la misma cámara |\n' \
+                "$(basename "$COMPARISON")" >> "$NOTES"
+            fi
+            if [ -f "$REGISTER" ]; then
+              printf '| `%s` | Diferencias de la silueta respecto de la referencia |\n' "$(basename "$REGISTER")" >> "$NOTES"
+            fi
+            if [ -f "$HISTORY" ]; then
+              printf '| `%s` | Comparativa F5 capturada en Forge |\n' "$(basename "$HISTORY")" >> "$NOTES"
+            fi
+            if [ -f "$TURN_BOARD" ]; then
+              printf '| `%s` | Cuello durante el giro en pecho y Curios (F5) |\n' \
+                "$(basename "$TURN_BOARD")" >> "$NOTES"
+            fi
+            printf '\nLas pruebas del cliente y las capturas originales se informan en Actions.\n' >> "$NOTES"
+            sed -i "s/__TAG__/$TAG/g; s/__VER__/$VER/g" "$NOTES"
           fi
-          if [ -f "$REGISTER" ]; then
-            printf '| `%s` | Diferencias de la silueta respecto de la referencia |\n' "$(basename "$REGISTER")" >> "$NOTES"
-          fi
-          HISTORY="docs/capa_v${VER//./}_anclaje_forge.png"
-          if [ -f "$HISTORY" ]; then
-            printf '| `%s` | Comparativa F5 capturada en Forge |\n' "$(basename "$HISTORY")" >> "$NOTES"
-          fi
-          printf '\nLas pruebas del cliente y las capturas originales se informan en Actions.\n' >> "$NOTES"
-          sed -i "s/__TAG__/$TAG/g; s/__VER__/$VER/g; s|__BBURL__|$BB_URL|g" "$NOTES"
+          ASSETS=("$JAR" "$BBF" docs/capa_v1170_visor.html
+                  docs/capa_v1170_preview.png docs/capa_v1170_comparativa.png
+                  docs/capa_v1170_estados.png docs/capa_v1170_animaciones.gif docs/capa_v1170_icon_compare.png)
+          if [ -f "$COMPARISON" ]; then ASSETS+=("$COMPARISON"); fi
+          if [ -f "$REGISTER" ]; then ASSETS+=("$REGISTER"); fi
+          if [ -f "$HISTORY" ]; then ASSETS+=("$HISTORY"); fi
+          if [ -f "$TURN_BOARD" ]; then ASSETS+=("$TURN_BOARD"); fi
+          if [ -d "$RELEASE_DIR" ]; then ASSETS+=("$RELEASE_DIR/instalar-test-1.txt"); fi
+          for EVIDENCE in "docs/capa_v${VER//./}_"{hombros_forge.png,espalda_forge.png,inclinacion_forge.png,hotbar.gif}; do
+            if [ -f "$EVIDENCE" ]; then ASSETS+=("$EVIDENCE"); fi
+          done
+          for view in detalles luz ajuste; do
+            IMAGE="docs/capa_v${VER//./}_$view.png"
+            if [ -f "$IMAGE" ]; then ASSETS+=("$IMAGE"); fi
+          done
+
+          # Check all local assets before creating or updating a draft.
+          SUMS="$RUNNER_TEMP/SHA256SUMS.txt"
+          for ASSET in "${ASSETS[@]}"; do
+            test -s "$ASSET"
+            LOCAL_SHA="$(sha256sum "$ASSET" | cut -d' ' -f1)"
+            printf '%s  %s\n' "$LOCAL_SHA" "$(basename "$ASSET")"
+          done > "$SUMS"
+          ASSETS+=("$SUMS")
+
           if gh release view "$TAG" --json isDraft,targetCommitish > "$RUNNER_TEMP/release.json"; then
             # Reintentos del mismo SHA sí; nunca escribir sobre lo publicado.
             jq -e --arg commit "$GITHUB_SHA" \
@@ -1268,24 +1319,6 @@ jobs:
               --notes-file "$NOTES" \
               --target "$GITHUB_SHA"
           fi
-
-          SUMS="$RUNNER_TEMP/SHA256SUMS.txt"
-          for ASSET in "$JAR" "$BBF"; do
-            printf '%s  %s\n' "$(sha256sum "$ASSET" | cut -d' ' -f1)" "$(basename "$ASSET")"
-          done > "$SUMS"
-          ASSETS=("$JAR" "$BBF" "$SUMS" docs/capa_v1170_visor.html
-                  docs/capa_v1170_preview.png docs/capa_v1170_comparativa.png
-                  docs/capa_v1170_estados.png docs/capa_v1170_animaciones.gif docs/capa_v1170_icon_compare.png)
-          if [ -f "$COMPARISON" ]; then ASSETS+=("$COMPARISON"); fi
-          if [ -f "$REGISTER" ]; then ASSETS+=("$REGISTER"); fi
-          if [ -f "$HISTORY" ]; then ASSETS+=("$HISTORY"); fi
-          for EVIDENCE in "docs/capa_v${VER//./}_"{hombros_forge.png,espalda_forge.png,inclinacion_forge.png,hotbar.gif}; do
-            if [ -f "$EVIDENCE" ]; then ASSETS+=("$EVIDENCE"); fi
-          done
-          for view in detalles luz ajuste; do
-            IMAGE="docs/capa_v${VER//./}_$view.png"
-            if [ -f "$IMAGE" ]; then ASSETS+=("$IMAGE"); fi
-          done
           gh release upload "$TAG" "${ASSETS[@]}" --clobber
 
           # Un borrador aún no tiene tag disponible para consultas anónimas.
