@@ -3,7 +3,8 @@
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
-[Descargar JAR v1.67.12 (prueba)](https://github.com/Santi-PdR/modelos/releases/download/v1.67.12/capatest-1.67.12.jar)
+[Descargar JAR v1.67.13 (prueba)](https://github.com/Santi-PdR/modelos/releases/download/v1.67.13/capatest-1.67.13.jar)
+· [JAR anterior v1.67.12](https://github.com/Santi-PdR/modelos/releases/download/v1.67.12/capatest-1.67.12.jar)
 · [JAR anterior v1.67.11](https://github.com/Santi-PdR/modelos/releases/download/v1.67.11/capatest-1.67.11.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
 · [Proyecto Blockbench de la rama](docs/CAPA_v1.67.13.bbmodel)
@@ -16,15 +17,74 @@ La referencia de montaje es v1.28.0, que comparte el GEO equipado con v1.27.0. E
 
 **[Comparación F5 en Forge](docs/capa_v16713_anclaje_forge.png):** en la diagonal de 48° con −48° de giro, el extremo de la placa ancha pasó de 10,44 a 6,73 unidades desde el centro del torso (6,53 en la referencia histórica; 16 unidades por bloque). A 89,5°, ambas placas quedaron a un píxel o menos de sus mangas en todas las columnas medidas, sin suelo visible entre ellas, tanto en pecho como en Curios. A 76°, el borde visible de la placa ancha avanzó 1 px frente a v1.67.12 en los dos tipos de manga.
 
-**[ZIP de prueba v1.67.13](https://github.com/Santi-PdR/modelos/actions/runs/44655102247/artifacts/14592523823)** · [Ejecución verificada](https://github.com/Santi-PdR/modelos/actions/runs/44655102247). El ZIP incluye `capatest-1.67.13.jar` y `SHA256SUMS.txt`. El JAR publicado v1.67.12 sigue disponible sin cambios.
+**[Prerelease v1.67.13](https://github.com/Santi-PdR/modelos/releases/tag/v1.67.13)** · [Ejecución verificada en Forge](https://github.com/Santi-PdR/modelos/actions/runs/44655102247). El SHA-256 del JAR publicado coincide con el de esa prueba. v1.67.12 queda disponible por separado.
 
-Para **SKLauncher / `test-1` en Windows**, cerrá Minecraft y extraé el JAR. Guardá el [script de instalación](tools/instalar_capatest_1.67.13.ps1) al lado del JAR. En PowerShell podés verificar primero sin cambiar nada:
+#### Instalar en `test-1`
+
+Con Minecraft cerrado, pegá el bloque completo en **PowerShell de Windows**. No hace falta bajar un ZIP ni guardar un `.ps1`: el bloque descarga el JAR solo y lo verifica antes de tocar `mods`.
 
 ```powershell
-.\instalar_capatest_1.67.13.ps1 -Jar .\capatest-1.67.13.jar -WhatIf
+& {
+    $ErrorActionPreference = 'Stop'
+    $mods = 'D:\Minecraft\SKLauncher\sklauncher-data-v4\instances\test-1\mods'
+    $jar = 'capatest-1.67.13.jar'
+    $sha = '9d50d50d13da11048c964f5f7fbc4ec1686e8da88f60808fbda4a3ea5e07c249'
+    $url = "https://github.com/Santi-PdR/modelos/releases/download/v1.67.13/$jar"
+    $folder = Get-Item -LiteralPath $mods
+    if ($folder -isnot [IO.DirectoryInfo] -or ($folder.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        throw 'No se encontro una carpeta mods valida para test-1.'
+    }
+
+    $installed = @(Get-ChildItem -LiteralPath $mods -File -Force | Where-Object { $_.Name -like 'capatest-*.jar' })
+    if ($installed | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }) {
+        throw 'Hay un enlace capatest en mods. No se cambio ningun archivo.'
+    }
+    $target = Join-Path $mods $jar
+    if ($installed.Count -eq 1 -and $installed[0].Name -eq $jar -and
+        (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -eq $sha) {
+        Write-Host "$jar ya esta instalado y verificado."
+        return
+    }
+
+    $id = [guid]::NewGuid().ToString('N')
+    $tmp = Join-Path $mods ".capatest-$id.tmp"
+    $root = Join-Path $folder.Parent.FullName 'capatest-respaldos'
+    $backup = Join-Path $root ((Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + $id)
+    $moved = @()
+    try {
+        Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $tmp
+        if ((Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash -ne $sha) {
+            throw 'La descarga no paso la verificacion. No se cambio ningun mod.'
+        }
+        if ($installed.Count -gt 0) {
+            $backupRoot = Get-Item -LiteralPath $root -Force -ErrorAction SilentlyContinue
+            if ($backupRoot -and ($backupRoot -isnot [IO.DirectoryInfo] -or
+                ($backupRoot.Attributes -band [IO.FileAttributes]::ReparsePoint))) {
+                throw "No se puede guardar el respaldo en $root."
+            }
+            [void][IO.Directory]::CreateDirectory($backup)
+        }
+        foreach ($old in $installed) {
+            [IO.File]::Move($old.FullName, (Join-Path $backup $old.Name))
+            $moved += $old
+        }
+        [IO.File]::Move($tmp, $target)
+    } catch {
+        $failure = $_
+        foreach ($old in $moved) {
+            try { [IO.File]::Move((Join-Path $backup $old.Name), $old.FullName) }
+            catch { Write-Warning "$($old.Name) quedo guardado en $backup." }
+        }
+        throw $failure
+    } finally {
+        Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+    }
+    Write-Host "$jar instalado y verificado en test-1."
+    if ($moved.Count -gt 0) { Write-Host "JAR anteriores guardados en $backup." }
+}
 ```
 
-Quitá `-WhatIf` para aplicarlo. El script comprueba el SHA-256 del JAR probado en Forge y guarda sólo los `capatest-*.jar` anteriores en `test-1\capatest-respaldos`. No descarga ni modifica GeckoLib, Curios ni otros mods. Para volver atrás con Minecraft cerrado, sacá el JAR actual de `mods` y devolvé sólo la versión anterior que quieras usar desde el respaldo.
+Los JAR anteriores de la capa quedan en `test-1\capatest-respaldos`. Para volver atrás, con el juego cerrado quitá el JAR nuevo de `mods` y devolvé sólo la versión anterior que quieras usar. El bloque no modifica GeckoLib, Curios ni otros mods.
 
 ### v1.67.12 — las placas se asientan sobre las mangas
 
