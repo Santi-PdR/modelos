@@ -8,8 +8,12 @@ public final class KatanaVisuals {
     private KatanaVisuals() { }
     public static void spawn(int entityId, double x, double y, double z, float yaw, int style, boolean leftHanded) {
         var level = Minecraft.getInstance().level;
-        if (level == null || style < 0 || style > 4 || !Double.isFinite(x) || !Double.isFinite(y)
+        if (level == null || style < 0 || style > 5 || !Double.isFinite(x) || !Double.isFinite(y)
                 || !Double.isFinite(z) || !Float.isFinite(yaw)) return;
+        if (style == 5) {
+            DaggerVisuals.spawn(entityId, x, y, z);
+            return;
+        }
         if (style == 4) {
             if (Minecraft.getInstance().player != null && Minecraft.getInstance().player.getId() == entityId)
                 KatanaHud.bloodFlash();

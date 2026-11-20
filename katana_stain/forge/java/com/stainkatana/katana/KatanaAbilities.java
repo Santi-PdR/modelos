@@ -27,6 +27,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -37,6 +38,7 @@ import net.minecraft.world.phys.Vec3;
 public final class KatanaAbilities {
     private static final String COOLDOWNS = "StainKatanaAbilities";
     private static final Map<UUID, Cast> CASTS = new ConcurrentHashMap<>();
+    private static final Map<UUID, UUID> BOUND_TARGETS = new ConcurrentHashMap<>();
     private static final class Cast {
         final int ability;
         final ItemStack stack;
@@ -46,6 +48,11 @@ public final class KatanaAbilities {
         final AbilityTimeline timeline;
         boolean followUpImpacted;
         boolean durabilitySpent;
+        int cinematicStroke;
+        int cinematicAnimation;
+        UUID daggerTarget;
+        int daggerHits;
+        boolean daggersStarted;
         Cast(int ability, ItemStack stack, ResourceKey<Level> dimension, long start, UUID markedTarget) {
             this.ability = ability; this.stack = stack; this.dimension = dimension;
             this.start = start; this.markedTarget = markedTarget;
@@ -63,13 +70,15 @@ public final class KatanaAbilities {
         if (cast == null) return;
         if (!player.isAlive() || player.isSpectator() || player.hasEffect(KatanaEffects.PARALYSIS.get())
                 || player.getMainHandItem() != cast.stack || !player.level().dimension().equals(cast.dimension)) {
-            cast.timeline.cancel();
-            CASTS.remove(player.getUUID());
-            KatanaNetwork.broadcastAnimation(player, -1);
+            cancel(player, cast);
             return;
         }
         long elapsed = player.getServer().overworld().getGameTime() - cast.start;
         int events = cast.timeline.advance(elapsed);
+        if (cast.ability == 2) {
+            tickUltimate(player, cast, elapsed, events);
+            return;
+        }
         if ((events & AbilityTimeline.IMPACT) != 0) {
             if (cast.ability == 0) {
                 // A second normal hit during the wind-up must not switch the intended victim.
@@ -97,15 +106,20 @@ public final class KatanaAbilities {
         if ((events & AbilityTimeline.FADE) != 0) {
             KatanaNetwork.broadcastAnimation(player, -1);
         }
-        if ((events & AbilityTimeline.FINISH) != 0) CASTS.remove(player.getUUID());
+        if (cast.daggerTarget != null) {
+            tickDaggers(player, cast, elapsed);
+        } else if ((events & AbilityTimeline.FINISH) != 0) CASTS.remove(player.getUUID());
     }
 
     @SubscribeEvent
-    public static void serverStopped(ServerStoppedEvent event) { CASTS.clear(); }
+    public static void serverStopped(ServerStoppedEvent event) { CASTS.clear(); BOUND_TARGETS.clear(); }
 
     @SubscribeEvent
     public static void logout(PlayerEvent.PlayerLoggedOutEvent event) {
-        CASTS.remove(event.getEntity().getUUID());
+        if (event.getEntity() instanceof ServerPlayer player) {
+            Cast cast = CASTS.get(player.getUUID());
+            if (cast != null) cancel(player, cast);
+        }
     }
 
 
@@ -130,16 +144,95 @@ public final class KatanaAbilities {
         }
         LivingEntity marked = ability == 0 ? markedTarget(player, stack, level, true) : null;
         if (ability == 0 && marked == null) return;
-        if (ability == 2 && targets(player, level, true).isEmpty()) {
+        Mob ultimateTarget = ability == 2 ? ultimateTarget(player, level) : null;
+        if (ability == 2 && ultimateTarget == null) {
             player.displayClientMessage(Component.translatable("stainkatana.no_target"), true);
             return;
         }
         state.putLong(key, now + CombatTuning.cooldown(ability));
         player.getPersistentData().put(COOLDOWNS, state);
         syncCooldowns(player);
-        CASTS.put(player.getUUID(), new Cast(ability, stack, level.dimension(), now,
-                marked == null ? null : marked.getUUID()));
+        UUID targetId = ability == 2 ? ultimateTarget.getUUID() : marked == null ? null : marked.getUUID();
+        if (ability == 2) BOUND_TARGETS.put(targetId, player.getUUID());
+        CASTS.put(player.getUUID(), new Cast(ability, stack, level.dimension(), now, targetId));
         KatanaNetwork.broadcastAnimation(player, ability);
+    }
+
+    private static void tickDaggers(ServerPlayer player, Cast cast, long elapsed) {
+        Entity entity = player.serverLevel().getEntity(cast.daggerTarget);
+        if (!(entity instanceof LivingEntity target) || !legalTarget(player, target)
+                || player.distanceToSqr(target) > 576 || elapsed >= 70) {
+            cancel(player, cast); return;
+        }
+        if (!cast.daggersStarted && elapsed >= 20) {
+            cast.daggersStarted = true;
+            KatanaNetwork.broadcastAnimation(player, 6);
+            KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.6), target.getZ(), 5);
+        }
+        if (cast.daggerHits < 3 && elapsed >= 30L + cast.daggerHits * 12L) {
+            cast.daggerHits++;
+            if (target.hurt(player.damageSources().playerAttack(player), 12F))
+                player.serverLevel().sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.6), target.getZ(), 3, .25, .25, .25, 0);
+        }
+    }
+
+    private static Mob ultimateTarget(ServerPlayer player, ServerLevel level) {
+        Vec3 direction = facing(player);
+        return level.getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(15.0),
+                mob -> !BOUND_TARGETS.containsKey(mob.getUUID()) && legalTarget(player, mob)
+                        && player.distanceToSqr(mob) <= 225.0
+                        && mob.position().subtract(player.position()).multiply(1, 0, 1).normalize().dot(direction) > .35)
+                .stream().min(Comparator.comparingDouble(player::distanceToSqr)).orElse(null);
+    }
+
+    private static void cancel(ServerPlayer player, Cast cast) {
+        cast.timeline.cancel();
+        CASTS.remove(player.getUUID(), cast);
+        if (cast.ability == 2 && cast.markedTarget != null) {
+            BOUND_TARGETS.remove(cast.markedTarget, player.getUUID());
+            ServerLevel world = player.getServer().getLevel(cast.dimension);
+            Entity target = world == null ? null : world.getEntity(cast.markedTarget);
+            if (target instanceof Mob mob) mob.removeEffect(KatanaEffects.CINEMATIC_BIND.get());
+        }
+        KatanaNetwork.broadcastAnimation(player, -1);
+    }
+
+    private static void tickUltimate(ServerPlayer player, Cast cast, long elapsed, int events) {
+        Entity entity = player.serverLevel().getEntity(cast.markedTarget);
+        if (!(entity instanceof Mob mob) || !legalTarget(player, mob) || player.distanceToSqr(mob) > 324
+                || (events & AbilityTimeline.FINISH) != 0) {
+            cancel(player, cast); return;
+        }
+        // Short refreshable effect: if the server dies, it expires without permanently changing mob AI.
+        if (elapsed % 4 == 0 && !mob.addEffect(new MobEffectInstance(KatanaEffects.CINEMATIC_BIND.get(), 12, 0, false, false, false))) {
+            cancel(player, cast); return;
+        }
+        mob.getNavigation().stop();
+        Vec3 velocity = mob.getDeltaMovement();
+        mob.setDeltaMovement(0, Math.min(velocity.y, 0), 0);
+        mob.hurtMarked = true;
+        // Two alternating library clips, sent before each impact. No client selects the target or damage.
+        if (cast.cinematicAnimation < 9 && elapsed >= 24L + cast.cinematicAnimation * 20L) {
+            KatanaNetwork.broadcastAnimation(player, cast.cinematicAnimation % 2 == 0 ? 3 : 4);
+            cast.cinematicAnimation++;
+        }
+        if (cast.cinematicStroke < 10 && elapsed >= 10L + cast.cinematicStroke * 20L) {
+            int index = cast.cinematicStroke++;
+            float damage = CombatTuning.damage(player.getAttributeValue(Attributes.ATTACK_DAMAGE), true);
+            // Reserve the kill for the last cut, but never protect the mob from other damage sources.
+            if (index < 9) damage = Math.min(damage, Math.max(0, mob.getHealth() - 1));
+            if (damage > 0 && mob.hurt(player.damageSources().playerAttack(player), damage)) {
+                if (mob.isAlive()) StainKatanaItem.markTarget(cast.stack, mob, player.serverLevel());
+                if (!cast.durabilitySpent) {
+                    cast.durabilitySpent = true;
+                    cast.stack.hurtAndBreak(1, player, p -> p.broadcastBreakEvent(InteractionHand.MAIN_HAND));
+                }
+            }
+            KatanaNetwork.broadcastVisual(player, mob.getX(), mob.getY(.55), mob.getZ(), index % 2 == 0 ? 1 : 3);
+            player.serverLevel().sendParticles(KatanaParticles.SHARD.get(), mob.getX(), mob.getY(.55), mob.getZ(), 3, .3, .3, .3, 0);
+            player.serverLevel().playSound(null, mob.blockPosition(), katanaSwingSound(), SoundSource.PLAYERS, .65F, index % 2 == 0 ? .9F : 1.1F);
+        }
+        if ((events & AbilityTimeline.FADE) != 0) KatanaNetwork.broadcastAnimation(player, -1);
     }
 
     private static void syncCooldowns(ServerPlayer player) {
@@ -189,6 +282,16 @@ public final class KatanaAbilities {
             return false;
         }
         tag.remove(StainKatanaItem.MARK);
+        // Count only successful stuns, never key presses or failed attempts.
+        CompoundTag data = player.getPersistentData().getCompound(COOLDOWNS);
+        int charges = data.getInt("daggerCharges") + 1;
+        Cast current = CASTS.get(player.getUUID());
+        if (charges >= 2 && current != null) {
+            current.daggerTarget = target.getUUID();
+            charges = 0;
+        }
+        data.putInt("daggerCharges", charges);
+        player.getPersistentData().put(COOLDOWNS, data);
         // The buff is applied only on a successful, server-authoritative paralysis.
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 160, 1, false, false, true));
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 160, 1, false, false, true));

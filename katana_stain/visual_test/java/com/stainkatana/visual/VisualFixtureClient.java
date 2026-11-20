@@ -42,26 +42,15 @@ public final class VisualFixtureClient {
             case 114 -> capture = "06b_slash_impact.png";
             case 115 -> capture = "06c_slash_impact.png";
             case 116 -> capture = "06d_slash_impact.png";
-            case 150 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(2));
-            case 155 -> capture = "07_ultimate_windup.png";
-            case 158 -> capture = "08a_ultimate_first.png";
-            case 159 -> capture = "08b_ultimate_first.png";
-            case 160 -> capture = "08c_ultimate_first.png";
-            case 181 -> capture = "09a_ultimate_second.png";
-            case 182 -> capture = "09b_ultimate_second.png";
-            case 183 -> capture = "09c_ultimate_second.png";
-            case 202 -> mc.options.setCameraType(CameraType.FIRST_PERSON);
-            case 205 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(0));
-            case 214 -> capture = "10_paralysis.png";
-            case 215 -> capture = "11a_blood_feedback.png";
-            case 216 -> capture = "11b_blood_feedback.png";
-            case 217 -> capture = "11c_blood_feedback.png";
-            case 240 -> {
+            case 140 -> { mc.options.setCameraType(CameraType.FIRST_PERSON); KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(0)); }
+            case 151 -> capture = "10_paralysis.png";
+            case 153 -> capture = "11_blood_feedback.png";
+            case 180 -> {
                 mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
                 if (net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) mc.options.keyAttack.setDown(true);
                 else mc.player.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             }
-            case 243 -> {
+            case 183 -> {
                 if (!net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) {
                     if (!com.stainkatana.katana.client.KatanaAnimations.isPlaying(mc.player))
                         throw new IllegalStateException("Vanilla swing animation did not start");
@@ -69,9 +58,25 @@ public final class VisualFixtureClient {
                 }
                 capture = "12_normal_attack.png";
             }
-            case 246 -> capture = "13_normal_attack.png";
-            case 250 -> mc.options.keyAttack.setDown(false);
-            case 270 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
+            case 186 -> capture = "13_normal_attack.png";
+            case 190 -> mc.options.keyAttack.setDown(false);
+            case 220 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(2));
+            case 230 -> capture = "07_ultimate_start.png";
+            case 260 -> capture = "08_ultimate_2s.png";
+            case 300 -> capture = "09_ultimate_4s.png";
+            case 340 -> capture = "14_ultimate_6s.png";
+            case 380 -> capture = "15_ultimate_8s.png";
+            case 430 -> capture = "16_ultimate_end.png";
+            case 445 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(0));
+            case 479 -> {
+                if (!com.stainkatana.katana.client.DaggerVisuals.hasFlights())
+                    throw new IllegalStateException("Second successful Z did not launch dagger visuals");
+                System.out.println("STAIN_DAGGERS_VERIFIED");
+                capture = "17_dagger_1.png";
+            }
+            case 491 -> capture = "18_dagger_2.png";
+            case 503 -> capture = "19_dagger_3.png";
+            case 540 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }
     }

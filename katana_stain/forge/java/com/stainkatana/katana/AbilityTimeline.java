@@ -4,8 +4,8 @@ package com.stainkatana.katana;
 public final class AbilityTimeline {
     public static final int IMPACT = 1, FOLLOW_UP = 2, SECOND_IMPACT = 4, FADE = 8, FINISH = 16;
     private static final int[] IMPACT_TICK = {9, 7, 10};
-    private static final int[] FADE_TICK = {18, 13, 40};
-    private static final int[] FINISH_TICK = {21, 16, 46};
+    private static final int[] FADE_TICK = {18, 13, 196};
+    private static final int[] FINISH_TICK = {21, 16, 200};
     private final int ability;
     private int emitted;
     private boolean cancelled;

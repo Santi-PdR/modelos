@@ -13,6 +13,11 @@ import net.minecraftforge.registries.RegistryObject;
 public final class KatanaEffects {
     private static final DeferredRegister<MobEffect> EFFECTS = DeferredRegister.create(ForgeRegistries.MOB_EFFECTS, StainKatanaMod.MOD_ID);
     public static final RegistryObject<MobEffect> PARALYSIS = EFFECTS.register("blood_paralysis", BloodParalysis::new);
+    // Separate effect permits the cinematic to release its own immobilization safely.
+    public static final RegistryObject<MobEffect> CINEMATIC_BIND = EFFECTS.register("cinematic_bind", BloodParalysis::new);
+    public static boolean immobilized(net.minecraft.world.entity.LivingEntity entity) {
+        return entity.hasEffect(PARALYSIS.get()) || entity.hasEffect(CINEMATIC_BIND.get());
+    }
     private KatanaEffects() { }
     public static void register(IEventBus bus) { EFFECTS.register(bus); }
     private static final class BloodParalysis extends MobEffect {

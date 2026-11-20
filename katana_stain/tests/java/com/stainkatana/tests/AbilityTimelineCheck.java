@@ -18,17 +18,17 @@ public class AbilityTimelineCheck {
                 eq(t.advance(21), 0, "before follow up");
                 eq(t.advance(22), AbilityTimeline.FOLLOW_UP, "follow up");
                 eq(t.advance(32), AbilityTimeline.SECOND_IMPACT, "second impact");
-                eq(t.advance(40), AbilityTimeline.FADE, "ultimate fade");
-                eq(t.advance(46), AbilityTimeline.FINISH, "ultimate finish");
+                eq(t.advance(196), AbilityTimeline.FADE, "ultimate fade");
+                eq(t.advance(200), AbilityTimeline.FINISH, "ultimate finish");
             } else {
                 eq(t.advance(ability == 0 ? 18 : 13), AbilityTimeline.FADE, "fade");
                 eq(t.advance(ability == 0 ? 21 : 16), AbilityTimeline.FINISH, "finish");
             }
-            eq(t.advance(100), 0, "completed timeline emits nothing twice");
+            eq(t.advance(300), 0, "completed timeline emits nothing twice");
         }
         AbilityTimeline skipped = new AbilityTimeline(2);
-        eq(skipped.advance(100), 31, "skipped ticks emit all events once");
-        eq(skipped.advance(100), 0, "skipped tick cannot repeat");
+        eq(skipped.advance(300), 31, "skipped ticks emit all events once");
+        eq(skipped.advance(300), 0, "skipped tick cannot repeat");
         AbilityTimeline cancelled = new AbilityTimeline(2);
         cancelled.cancel();
         eq(cancelled.advance(100), 0, "cancelled cast");
