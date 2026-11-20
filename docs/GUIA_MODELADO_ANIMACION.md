@@ -237,10 +237,25 @@ animación y la documentación de GeckoLib._
   Actions añaden dos poses registradas (58°/+60° y 48°/−60°), en pecho y
   Curios. `python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots
   --giro-amplio` compara la publicación con la referencia y con una sonda
-  que recoge el cuello alrededor de su apoyo y acerca ligeramente las
-  raíces. Es una prueba en poses fijas: vive en `src/fxSmoke`, no en el
-  mod ni en el visor. La proyección ayuda a localizar el borde; el recorte
-  F5 muestra si el cambio se ve.
+  que sólo adelanta el cuello. Es una prueba en poses fijas: vive en
+  `src/fxSmoke`, no en el mod ni en el visor. En la
+  [ejecución 44751731511](https://github.com/Santi-PdR/modelos/actions/runs/44751731511),
+  el frente del cuello pasó de Z=6,00 a Z=4,63u frente a ~1,10u de la
+  referencia. Los píxeles en la proyección del cuello cerca de la
+  camiseta pasaron de 0% a 4% y 15% en las dos poses, igual en pecho y
+  Curios. Esto mide proximidad en pantalla, no contacto físico.
+- **Ensayo compacto, no publicado:** se probó comprimir el cuello
+  respecto del plano de apoyo y acercar las raíces sólo ~0,09u.
+  Un avance mayor de las raíces se descartó por cruces con la envolvente
+  de la cabeza. En la [comparativa F5](capa_v16713_giro_amplio_forge.png),
+  la toma de pecho a 58°/+60° del ensayo compacto dio 0% → 91% de
+  proximidad, pero los píxeles visibles en la proyección bajaron de
+  993 a 512 (613 en la referencia). El cliente completó la
+  [ejecución 44753904662](https://github.com/Santi-PdR/modelos/actions/runs/44753904662),
+  pero no pasó el control de área del ensayo. Se conservan la sonda
+  aislada y el JAR de v1.67.13. Antes de llevar ese cambio al juego hay
+  que separar compactación de oclusión y probar la transición durante
+  un giro, no sólo los dos extremos estáticos.
 - **Pulso del icono (v1.67.8):** 32 fotogramas a un tick por cuadro, mismo
   contorno y duración de 1,6 s. Se comprueba el recorrido de la cresta de
   luz en la hotbar vanilla; se conservan el dibujo y el reposo de v1.67.7.
