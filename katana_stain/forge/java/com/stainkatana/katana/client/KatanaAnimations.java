@@ -103,7 +103,7 @@ public final class KatanaAnimations {
         var data = PlayerAnimationAccess.getPlayerAssociatedData(player).get(LAYER);
         if (!(data instanceof AbilityLayer animation) || animation.isActive()) return;
         KeyframeAnimation clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID,
-                new String[]{"combo_1", "combo_2", "combo_3", "combo_heavy"}[Math.floorMod(step, 4)]));
+                new String[]{"combo_1", "combo_2", "combo_3", "sword_attack2"}[Math.floorMod(step, 4)]));
         if (clip == null) return;
         animation.mirror.setEnabled(player.getMainArm() == HumanoidArm.LEFT);
         KeyframeAnimationPlayer playing = new KeyframeAnimationPlayer(clip, 0)

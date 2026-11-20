@@ -48,6 +48,7 @@ public final class KatanaAbilities {
         final long start;
         final UUID markedTarget;
         final AbilityTimeline timeline;
+        Vec3 anchor;
         boolean followUpImpacted;
         boolean durabilitySpent;
         int cinematicStroke;
@@ -109,6 +110,22 @@ public final class KatanaAbilities {
         if ((events & AbilityTimeline.FINISH) != 0) CASTS.remove(player.getUUID());
     }
 
+    /** Enforce cinematic position after entity ticks, even when potion effects are refused. */
+    @SubscribeEvent public static void holdTargets(TickEvent.LevelTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || !(event.level instanceof ServerLevel world)) return;
+        for (Cast cast : CASTS.values()) {
+            if (cast.ability != 2 || cast.anchor == null || !cast.dimension.equals(world.dimension())) continue;
+            Entity target = world.getEntity(cast.markedTarget);
+            if (!(target instanceof LivingEntity living) || !living.isAlive()) continue;
+            if (target.position().distanceToSqr(cast.anchor) > 0.0001) target.teleportTo(cast.anchor.x, cast.anchor.y, cast.anchor.z);
+            target.setDeltaMovement(Vec3.ZERO);
+            target.hurtMarked = true;
+        }
+    }
+    public static boolean isCinematicallyBound(LivingEntity entity) {
+        return !entity.level().isClientSide && BOUND_TARGETS.containsKey(entity.getUUID());
+    }
+
     @SubscribeEvent
     public static void serverStopped(ServerStoppedEvent event) { CASTS.clear(); BOUND_TARGETS.clear(); BACKSTABS.clear(); }
 
@@ -135,6 +152,11 @@ public final class KatanaAbilities {
         if (state.contains("last") && now - state.getLong("last") < 4) return;
         state.putLong("last", now);
         player.getPersistentData().put(COOLDOWNS, state);
+        // A full blood meter changes Z itself into the rear strike. Ordinary attacks never consume it.
+        if (ability == 0 && state.getInt("daggerCharges") >= 2) {
+            startBackstab(player, state, now);
+            return;
+        }
         String key = "next" + ability;
         if (now < state.getLong(key)) {
             int seconds = (int)((state.getLong(key) - now + 19) / 20);
@@ -143,9 +165,9 @@ public final class KatanaAbilities {
         }
         LivingEntity marked = ability == 0 ? markedTarget(player, stack, level, true) : null;
         if (ability == 0 && marked == null) return;
-        Mob ultimateTarget = ability == 2 ? ultimateTarget(player, level) : null;
+        LivingEntity ultimateTarget = ability == 2 ? ultimateTarget(player, level) : null;
         Vec3 arrival = ultimateTarget == null ? null : safePosition(player, ultimateTarget, 0);
-        if (ability == 2 && (ultimateTarget == null || arrival == null)) {
+        if (ability == 2 && ultimateTarget == null) {
             player.displayClientMessage(Component.translatable("stainkatana.no_target"), true);
             return;
         }
@@ -155,9 +177,11 @@ public final class KatanaAbilities {
         UUID targetId = ability == 2 ? ultimateTarget.getUUID() : marked == null ? null : marked.getUUID();
         if (ability == 2) {
             BOUND_TARGETS.put(targetId, player.getUUID());
-            moveTo(player, ultimateTarget, arrival);
+            if (arrival != null) moveTo(player, ultimateTarget, arrival);
         }
-        CASTS.put(player.getUUID(), new Cast(ability, stack, level.dimension(), now, targetId));
+        Cast newCast = new Cast(ability, stack, level.dimension(), now, targetId);
+        if (ultimateTarget != null) newCast.anchor = ultimateTarget.position();
+        CASTS.put(player.getUUID(), newCast);
         KatanaNetwork.broadcastAnimation(player, ability);
     }
 
@@ -193,19 +217,27 @@ public final class KatanaAbilities {
         player.teleportTo(player.serverLevel(), destination.x, destination.y, destination.z, yaw, player.getXRot());
         player.setDeltaMovement(Vec3.ZERO);
     }
-    @SubscribeEvent public static void chargedAttack(net.minecraftforge.event.entity.player.AttackEntityEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || !(event.getTarget() instanceof LivingEntity target)) return;
-        if (BACKSTABS.containsKey(player.getUUID())) { event.setCanceled(true); return; }
-        if (!(player.getMainHandItem().getItem() instanceof StainKatanaItem) || CASTS.containsKey(player.getUUID())) return;
-        CompoundTag data = player.getPersistentData().getCompound(COOLDOWNS);
-        if (data.getInt("daggerCharges") < 2 || !legalTarget(player, target) || player.distanceToSqr(target) > 64) return;
+    private static void startBackstab(ServerPlayer player, CompoundTag data, long now) {
+        Entity remembered = data.hasUUID("lastBloodTarget") ? player.serverLevel().getEntity(data.getUUID("lastBloodTarget")) : null;
+        LivingEntity target = remembered instanceof LivingEntity living && legalTarget(player, living)
+                && player.distanceToSqr(living) <= 64 ? living : null;
+        if (target == null) {
+            target = targets(player, player.serverLevel(), false).stream().findFirst().orElse(null);
+        }
+        if (target == null) {
+            player.displayClientMessage(Component.translatable("stainkatana.no_target"), true);
+            return;
+        }
         Vec3 spot = safePosition(player, target, 0);
-        if (spot == null) return;
-        event.setCanceled(true);
+        if (spot == null) {
+            player.displayClientMessage(Component.translatable("stainkatana.target_unavailable"), true);
+            return;
+        }
         data.putInt("daggerCharges", 0);
+        data.putLong("next0", now + CombatTuning.cooldown(0));
         player.getPersistentData().put(COOLDOWNS, data);
         syncCooldowns(player);
-        BACKSTABS.put(player.getUUID(), new Backstab(target.getUUID(), player.getMainHandItem(), player.level().dimension(), player.getServer().overworld().getGameTime()));
+        BACKSTABS.put(player.getUUID(), new Backstab(target.getUUID(), player.getMainHandItem(), player.level().dimension(), now));
         moveTo(player, target, spot);
         KatanaNetwork.broadcastAnimation(player, 6);
     }
@@ -220,19 +252,56 @@ public final class KatanaAbilities {
             BACKSTABS.remove(player.getUUID()); KatanaNetwork.broadcastAnimation(player, -1); return;
         }
         if (age == 10) {
-            target.hurt(player.damageSources().playerAttack(player), 30F);
+            // Never execute an otherwise healthy ordinary target in one blow; preserve at least one health.
+            float damage = CombatTuning.backstabDamage(target.getHealth(), target.getMaxHealth());
+            if (damage > 0) target.hurt(player.damageSources().playerAttack(player), damage);
             KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.7), target.getZ(), 2);
             player.serverLevel().sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.7), target.getZ(), 8, .3, .3, .3, 0);
         }
     }
 
-    private static Mob ultimateTarget(ServerPlayer player, ServerLevel level) {
-        Vec3 direction = facing(player);
-        return level.getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(15.0),
-                mob -> !BOUND_TARGETS.containsKey(mob.getUUID()) && legalTarget(player, mob)
-                        && player.distanceToSqr(mob) <= 225.0
-                        && mob.position().subtract(player.position()).multiply(1, 0, 1).normalize().dot(direction) > .35)
-                .stream().min(Comparator.comparingDouble(player::distanceToSqr)).orElse(null);
+    /** Closest hitbox point, including Forge multipart parts (e.g. the Ender Dragon). */
+    private static Vec3 nearestPoint(Entity target, Vec3 point) {
+        Vec3 best = clampToBox(target.getBoundingBox(), point);
+        double distance = best.distanceToSqr(point);
+        if (target.isMultipartEntity() && target.getParts() != null) {
+            for (var part : target.getParts()) {
+                if (part == null || !part.isAlive()) continue;
+                Vec3 p = clampToBox(part.getBoundingBox(), point);
+                double d = p.distanceToSqr(point);
+                if (d < distance) { best = p; distance = d; }
+            }
+        }
+        return best;
+    }
+    private static Vec3 clampToBox(net.minecraft.world.phys.AABB box, Vec3 point) {
+        return new Vec3(net.minecraft.util.Mth.clamp(point.x, box.minX, box.maxX),
+                net.minecraft.util.Mth.clamp(point.y, box.minY, box.maxY),
+                net.minecraft.util.Mth.clamp(point.z, box.minZ, box.maxZ));
+    }
+    private static LivingEntity ultimateTarget(ServerPlayer player, ServerLevel level) {
+        Vec3 eye = player.getEyePosition();
+        Vec3 direction = player.getLookAngle();
+        return level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(15.0),
+                target -> {
+                    if (target instanceof Player || BOUND_TARGETS.containsKey(target.getUUID())
+                            || !target.isAlive() || target.isSpectator() || player.isAlliedTo(target)) return false;
+                    Vec3 closest = nearestPoint(target, eye);
+                    Vec3 delta = closest.subtract(eye);
+                    if (delta.lengthSqr() > 225 || delta.lengthSqr() < 1.0e-6 || delta.normalize().dot(direction) < .35) return false;
+                    return level.clip(new net.minecraft.world.level.ClipContext(eye, closest,
+                            net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                            net.minecraft.world.level.ClipContext.Fluid.NONE, player)).getType() == net.minecraft.world.phys.HitResult.Type.MISS;
+                }).stream().min(Comparator.comparingDouble(target -> nearestPoint(target, eye).distanceToSqr(eye))).orElse(null);
+    }
+    private static boolean hitUltimate(ServerPlayer player, LivingEntity target, float amount) {
+        if (target.isMultipartEntity() && target.getParts() != null) {
+            var part = java.util.Arrays.stream(target.getParts()).filter(p -> p != null && p.isAlive())
+                    .min(Comparator.comparingDouble(p -> nearestPoint(p, player.getEyePosition()).distanceToSqr(player.getEyePosition())))
+                    .orElse(null);
+            if (part != null) return part.hurt(player.damageSources().playerAttack(player), amount);
+        }
+        return target.hurt(player.damageSources().playerAttack(player), amount);
     }
 
     private static void cancel(ServerPlayer player, Cast cast) {
@@ -242,22 +311,21 @@ public final class KatanaAbilities {
             BOUND_TARGETS.remove(cast.markedTarget, player.getUUID());
             ServerLevel world = player.getServer().getLevel(cast.dimension);
             Entity target = world == null ? null : world.getEntity(cast.markedTarget);
-            if (target instanceof Mob mob) mob.removeEffect(KatanaEffects.CINEMATIC_BIND.get());
+            if (target instanceof LivingEntity living) living.removeEffect(KatanaEffects.CINEMATIC_BIND.get());
         }
         KatanaNetwork.broadcastAnimation(player, -1);
     }
 
     private static void tickUltimate(ServerPlayer player, Cast cast, long elapsed, int events) {
         Entity entity = player.serverLevel().getEntity(cast.markedTarget);
-        if (!(entity instanceof Mob mob) || !legalTarget(player, mob) || player.distanceToSqr(mob) > 324
+        if (!(entity instanceof LivingEntity mob) || !mob.isAlive() || mob.isSpectator() || player.isAlliedTo(mob)
+                || nearestPoint(mob, player.getEyePosition()).distanceToSqr(player.getEyePosition()) > 324
                 || (events & AbilityTimeline.FINISH) != 0) {
             cancel(player, cast); return;
         }
         // Short refreshable effect: if the server dies, it expires without permanently changing mob AI.
-        if (elapsed % 4 == 0 && !mob.addEffect(new MobEffectInstance(KatanaEffects.CINEMATIC_BIND.get(), 12, 0, false, false, false))) {
-            cancel(player, cast); return;
-        }
-        mob.getNavigation().stop();
+        if (elapsed % 4 == 0) mob.addEffect(new MobEffectInstance(KatanaEffects.CINEMATIC_BIND.get(), 12, 0, false, false, false));
+        if (mob instanceof Mob movingMob) movingMob.getNavigation().stop();
         Vec3 velocity = mob.getDeltaMovement();
         mob.setDeltaMovement(0, Math.min(velocity.y, 0), 0);
         mob.hurtMarked = true;
@@ -273,7 +341,7 @@ public final class KatanaAbilities {
             float damage = CombatTuning.damage(player.getAttributeValue(Attributes.ATTACK_DAMAGE), true);
             // Reserve the kill for the last cut, but never protect the mob from other damage sources.
             if (index < 9) damage = Math.min(damage, Math.max(0, mob.getHealth() - 1));
-            if (damage > 0 && mob.hurt(player.damageSources().playerAttack(player), damage)) {
+            if (damage > 0 && hitUltimate(player, mob, damage)) {
                 if (mob.isAlive()) StainKatanaItem.markTarget(cast.stack, mob, player.serverLevel());
                 if (!cast.durabilitySpent) {
                     cast.durabilitySpent = true;
@@ -338,6 +406,7 @@ public final class KatanaAbilities {
         CompoundTag data = player.getPersistentData().getCompound(COOLDOWNS);
         int charges = Math.min(2, data.getInt("daggerCharges") + 1);
         data.putInt("daggerCharges", charges);
+        data.putUUID("lastBloodTarget", target.getUUID());
         player.getPersistentData().put(COOLDOWNS, data);
         syncCooldowns(player);
         // The buff is applied only on a successful, server-authoritative paralysis.

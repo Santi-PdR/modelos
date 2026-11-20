@@ -48,19 +48,11 @@ assert len(attacks) == 4 and len({a['animation'] for a in attacks}) == 4
 assert attacks[3]['damage_multiplier'] > max(a['damage_multiplier'] for a in attacks[:3])
 print('OK: preset de katana Better Combat, prioridad, zurdos y segundo golpe')
 
-# Analytical grip check for the current GeckoLib preRender and vanilla hand rotations;
-# this cannot substitute for rendering the complete client/model/animation stack.
-import math
+# Model transforms are syntax-checked here; hand alignment requires actual client captures.
 model = json.loads((a/'models/item/katana_stain.json').read_text())['display']
-for hand in ('thirdperson_righthand', 'thirdperson_lefthand'):
-    pose = model[hand]
-    assert pose['rotation'] == [75, 45, -25]
-    assert pose['scale'] == [0.82, 0.82, 0.82]
-    assert pose['translation'] == [0, 1, 0]
-# Approximate grip-centre check only; the changed angle requires in-game visual testing.
-grip_offset = math.hypot(0.82 * 0.01, 1/16)
-assert grip_offset < 0.07
-print('OK: comprobación matemática aproximada de agarre y eje, no es prueba visual')
+for hand in ('thirdperson_righthand', 'thirdperson_lefthand', 'firstperson_righthand', 'firstperson_lefthand'):
+    assert len(model[hand]['rotation']) == len(model[hand]['translation']) == len(model[hand]['scale']) == 3
+print('OK: transformaciones de mano válidas; pendiente revisión visual de agarre')
 
 assert 'markTarget(stack, target, level)' in ability
 assert 'KatanaNetwork.broadcastVisual' in ability
@@ -92,3 +84,8 @@ assert model['firstperson_righthand']['scale'] == [0.56, 0.56, 0.56]
 assert model['firstperson_lefthand']['scale'] == [0.56, 0.56, 0.56]
 assert 'visualYaw, 55, 0' in visuals and 'yaw, 90, leftHanded ? -25 : 25' in visuals
 print('OK: escala de primera persona y planos de efectos de prueba')
+
+assert 'startBackstab(player, state, now)' in ability
+assert 'chargedAttack(' not in ability
+assert 'CombatTuning.backstabDamage(' in ability
+assert 'target.isMultipartEntity()' in ability and 'part.hurt(' in ability

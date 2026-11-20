@@ -37,13 +37,12 @@ public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
                              MultiBufferSource buffers, int light, int overlay) {
         if (context != ItemDisplayContext.GUI) {
             poseStack.pushPose();
-            // El modelo mide de y=-5.46 a y=23.25; el centro del mango
-            // está cerca de y=-2.0. Llevarlo al origen de la mano evita
-            // sujetar la katana por la guarda. Solo afecta las poses de mano.
-            if (context == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND || context == ItemDisplayContext.FIRST_PERSON_LEFT_HAND
-                    || context == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND || context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND) {
-                poseStack.translate(0, 2.0 / 16.0, 0);
-            }
+            // Separate hand-space adjustments: the two vanilla pipelines have different origins.
+            // These are provisional and must be checked against the rendered grip, not just the bone pivot.
+            if (context == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND || context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND)
+                poseStack.translate(0, 8.4 / 16.0, 0);
+            else if (context == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND || context == ItemDisplayContext.FIRST_PERSON_LEFT_HAND)
+                poseStack.translate(0, -1.2 / 16.0, 0);
             super.renderByItem(stack, context, poseStack, buffers, light, overlay);
             poseStack.popPose();
             return;

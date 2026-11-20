@@ -16,7 +16,8 @@ public final class KatanaEffects {
     // Separate effect permits the cinematic to release its own immobilization safely.
     public static final RegistryObject<MobEffect> CINEMATIC_BIND = EFFECTS.register("cinematic_bind", BloodParalysis::new);
     public static boolean immobilized(net.minecraft.world.entity.LivingEntity entity) {
-        return entity.hasEffect(PARALYSIS.get()) || entity.hasEffect(CINEMATIC_BIND.get());
+        return entity.hasEffect(PARALYSIS.get()) || entity.hasEffect(CINEMATIC_BIND.get())
+                || KatanaAbilities.isCinematicallyBound(entity);
     }
     private KatanaEffects() { }
     public static void register(IEventBus bus) { EFFECTS.register(bus); }

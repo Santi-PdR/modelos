@@ -21,6 +21,8 @@ public final class VisualFixtureClient {
     private static net.minecraft.world.item.ItemStack savedStack;
     private static float comboHealth;
     private static float firstComboDamage;
+    private static java.util.UUID dragonId;
+    private static net.minecraft.world.phys.Vec3 dragonAnchor;
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
@@ -81,10 +83,9 @@ public final class VisualFixtureClient {
                 var mobs = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, player.getBoundingBox().inflate(8));
                 if (mobs.isEmpty() || player.getPersistentData().getCompound("StainKatanaAbilities").getInt("daggerCharges") != 2)
                     throw new IllegalStateException("Two successful Zs did not charge the finisher");
-                var eventAttack = new net.minecraftforge.event.entity.player.AttackEntityEvent(player, mobs.get(0));
-                com.stainkatana.katana.KatanaAbilities.chargedAttack(eventAttack);
-                if (!eventAttack.isCanceled() || player.getPersistentData().getCompound("StainKatanaAbilities").getInt("daggerCharges") != 0)
-                    throw new IllegalStateException("Charged attack did not start or consume charges");
+                com.stainkatana.katana.KatanaAbilities.activate(player, 0);
+                if (player.getPersistentData().getCompound("StainKatanaAbilities").getInt("daggerCharges") != 0)
+                    throw new IllegalStateException("Pressing Z did not start the finisher or consume charges");
                 System.out.println("STAIN_FINISHER_VERIFIED");
             });
             case 491 -> capture = "18_finisher.png";
@@ -171,7 +172,49 @@ public final class VisualFixtureClient {
                     System.out.println("STAIN_VANILLA_COMBO_VERIFIED " + firstComboDamage + " " + damage);
                 }
             });
-            case 780 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
+            case 780 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                var world = player.serverLevel();
+                world.getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, player.getBoundingBox().inflate(30))
+                        .forEach(mob -> mob.teleportTo(player.getX() + 40, player.getY(), player.getZ()));
+                world.getGameRules().getRule(net.minecraft.world.level.GameRules.RULE_MOBGRIEFING).set(false, world.getServer());
+                var dragon = net.minecraft.world.entity.EntityType.ENDER_DRAGON.create(world);
+                if (dragon == null) throw new IllegalStateException("Could not create Ender Dragon");
+                dragon.moveTo(player.getX(), player.getY() + 3, player.getZ() + 12, 180, 0);
+                world.addFreshEntity(dragon);
+                dragonId = dragon.getUUID();
+                player.setYRot(0); player.setXRot(0);
+                player.getPersistentData().getCompound("StainKatanaAbilities").putLong("next2", 0);
+            });
+            case 790 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                var dragon = player.serverLevel().getEntity(dragonId);
+                if (!(dragon instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon boss)) throw new IllegalStateException("Dragon missing");
+                com.stainkatana.katana.KatanaAbilities.activate(player, 2);
+                if (!com.stainkatana.katana.KatanaAbilities.isCinematicallyBound(boss))
+                    throw new IllegalStateException("C failed to select Ender Dragon");
+                dragonAnchor = boss.position();
+                System.out.println("STAIN_DRAGON_SELECTED");
+            });
+            case 810 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                var dragon = player.serverLevel().getEntity(dragonId);
+                if (!(dragon instanceof net.minecraft.world.entity.LivingEntity living)
+                        || !com.stainkatana.katana.KatanaAbilities.isCinematicallyBound(living)
+                        || living.position().distanceToSqr(dragonAnchor) > .25)
+                    throw new IllegalStateException("Ender Dragon not held at cinematic anchor");
+                player.getInventory().setItem(player.getInventory().selected, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK));
+                System.out.println("STAIN_DRAGON_HELD");
+            });
+            case 815 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                var dragon = player.serverLevel().getEntity(dragonId);
+                if (dragon instanceof net.minecraft.world.entity.LivingEntity living
+                        && com.stainkatana.katana.KatanaAbilities.isCinematicallyBound(living))
+                    throw new IllegalStateException("Ender Dragon not released after cancellation");
+                System.out.println("STAIN_DRAGON_RELEASED");
+            });
+            case 830 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }
     }

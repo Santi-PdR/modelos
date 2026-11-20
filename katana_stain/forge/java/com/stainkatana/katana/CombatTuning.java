@@ -8,6 +8,11 @@ public final class CombatTuning {
     public static int cooldown(int ability) { return COOLDOWN[ability]; }
     public static int paralysisTicks(boolean playerTarget) { return playerTarget ? 40 : 80; }
     public static int ultimateStaggerTicks(boolean playerTarget) { return playerTarget ? 12 : 20; }
+    /** Cap raw strike to prevent one-shotting a full-health target or finishing a weakened one. */
+    public static float backstabDamage(float health, float maximumHealth) {
+        if (!Float.isFinite(health) || !Float.isFinite(maximumHealth)) return 0;
+        return Math.max(0F, Math.min(30F, Math.min(maximumHealth * .75F, health - 1F)));
+    }
     public static float damage(double attackDamage, boolean ultimate) {
         if (!Double.isFinite(attackDamage)) attackDamage = 0;
         return (float) Math.max(8, Math.min(ultimate ? 36 : 26,
