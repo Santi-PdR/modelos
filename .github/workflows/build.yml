@@ -1325,7 +1325,20 @@ jobs:
           for clip in two_handed_slash_horizontal_right two_handed_slash_vertical_right two_handed_slash_horizontal_left; do
             curl --fail --location --silent --show-error "https://raw.githubusercontent.com/ZsoltMolnarrr/BetterCombat/8814f0297bb85f4513646e73d604069487ce7322/common/src/main/resources/assets/bettercombat/attack_animations/${clip}.json" -o "/tmp/stain-bettercombat-test/${clip}.json"
           done
-          STAIN_BC_TEST_DIR=/tmp/stain-bettercombat-test gradle clean build verifyKatanaAnimations verifyKatanaTimeline verifyKatanaSceneCurve verifyKatanaCombatTuning -PkatanaOnly --no-daemon
+          set +e
+          STAIN_BC_TEST_DIR=/tmp/stain-bettercombat-test gradle clean build verifyKatanaAnimations verifyKatanaTimeline verifyKatanaSceneCurve verifyKatanaCombatTuning -PkatanaOnly --no-daemon 2>&1 | tee /tmp/stain-katana-build.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            python3 - <<'DIAG'
+          from pathlib import Path
+          lines = Path('/tmp/stain-katana-build.log').read_text(errors='replace').splitlines()
+          interesting = [l for l in lines if any(x in l for x in ('error:', 'AssertionError', 'Caused by:', 'What went wrong:', 'failed', 'Could not', 'Exception'))]
+          for l in interesting[-20:]:
+              print('::error title=Katana build::' + l.replace('%','%25')[:3500])
+          DIAG
+            exit "$status"
+          fi
           jar=build/libs/stainkatana-0.14.0-test.jar
           test -f "$jar"
           python3 - "$jar" <<'PY'
