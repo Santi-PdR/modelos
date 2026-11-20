@@ -36,7 +36,13 @@ jobs:
               lines += ['', '=== matching movesets, animation and camera paths (up to 1200) ===']
               matches=[n for n in names if re.search(r'moveset|move_set|combat|animation|animator|skill|cinema|cutscene|katana|dagger',n,re.I)]
               lines += matches[:1200]
-              lines += ['', '=== matching path count ===',str(len(matches)),'', '=== nested jars ===']
+              lines += ['', '=== matching path count ===',str(len(matches)), '', '=== all moveset class paths ===']
+              lines += [n for n in names if '/movesets/' in n and n.endswith('.class')]
+              lines += ['', '=== all animation resource paths ===']
+              lines += [n for n in names if n.startswith('assets/darkesthours/player_animation/') and n.endswith('.json')]
+              lines += ['', '=== all weapon attribute paths ===']
+              lines += [n for n in names if '/weapon_attributes/' in n and n.endswith('.json')]
+              lines += ['', '=== nested jars ===']
               lines += [n for n in names if n.endswith('.jar')][:100]
               out=Path('katana_stain/referencias/darkesthours_auditoria.txt')
               out.parent.mkdir(parents=True,exist_ok=True)
