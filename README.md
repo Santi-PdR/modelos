@@ -3,18 +3,18 @@
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
-[Descargar JAR v1.67.11 (prueba)](https://github.com/Santi-PdR/modelos/releases/download/v1.67.11/capatest-1.67.11.jar)
-· [JAR anterior v1.67.10](https://github.com/Santi-PdR/modelos/releases/download/v1.67.10/capatest-1.67.10.jar)
+[Descargar JAR v1.67.12 (prueba)](https://github.com/Santi-PdR/modelos/releases/download/v1.67.12/capatest-1.67.12.jar)
+· [JAR anterior v1.67.11](https://github.com/Santi-PdR/modelos/releases/download/v1.67.11/capatest-1.67.11.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
 · [Proyecto Blockbench de la rama](docs/CAPA_v1.67.12.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
-### v1.67.12 — ajuste de las hombreras (en validación)
+### v1.67.12 — las placas se asientan sobre las mangas
 
-El canto de las dos placas se acerca a las mangas cuando la postura lo permite. Conserva
-la sujeción interior y el movimiento de v1.67.11. El visor muestra el ajuste en la vista equipada;
-el proyecto Blockbench conserva las piezas y curvas de base.
+Al mirar hacia abajo, se recorta el vuelo lateral de la placa ancha y se inclina el canto de ambas placas sobre la manga sin arrastrar la tela. El ajuste cede cuando los brazos necesitan holgura. Se conservan la montura y el movimiento de v1.67.11. El visor muestra el ajuste en la vista equipada; el proyecto Blockbench conserva las piezas y curvas de base.
+
+**Prueba en Forge:** [comparación F5 a 89,5°](docs/capa_v16712_hombreras_forge.png). Con mangas finas en reposo, las dos placas quedaron a un píxel o menos en las nueve columnas medidas por lado, sin suelo visible entre ellas y la manga, tanto en pecho como en Curios. El saliente de la izquierda de la imagen bajó de 28 a 5 px. También pasaron los controles a 58° y 76°, la marcha y los efectos. [Ejecución verificada](https://github.com/Santi-PdR/modelos/actions/runs/44642740968).
 
 ### v1.67.11 — unión sobre el torso y marcha
 
