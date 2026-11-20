@@ -81,8 +81,11 @@ def upper_edge(root):
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('shots', type=Path)
+    ap.add_argument('--motion-only', action='store_true',
+                    help='omitir la comparativa de camiseta v1.67.10 si no se capturaron escenas históricas')
     args = ap.parse_args()
     for slot in ('pecho', 'curios'):
         name = 'paso-' + slot
         report(read(args.shots / (name + '.tsv')), name)
-    upper_edge(args.shots)
+    if not args.motion_only:
+        upper_edge(args.shots)

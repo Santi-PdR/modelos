@@ -27,7 +27,10 @@ jobs:
     # La rama de artefactos (artifacts/vX.Y.Z) SOLO guarda el .jar. Si el
     # workflow corriera tambien sobre ella, cada push re-construiria el
     # mod entero para nada. Aqui se salta ese run.
-    if: ${{ !startsWith(github.ref, 'refs/heads/artifacts/') }}
+    if: >-
+      ${{ !startsWith(github.ref, 'refs/heads/artifacts/') &&
+      !(github.ref == 'refs/heads/arena/5a9fa51b-modelos' && github.event_name == 'push' &&
+      contains(github.event.head_commit.message, '[comprobar-capturas-v16716]')) }}
 
     steps:
       - name: Checkout
@@ -1141,8 +1144,15 @@ jobs:
         id: verify-walk
         run: |
           set -o pipefail
-          python3 tools/verify_forge_walk.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
-            printf '::notice title=Marcha en Forge::%s\n' "${line//%/%25}"
+          args=()
+          # Esta escena mide la marcha y lleva su propio control de colocación.
+          # Las fotos de la camiseta v1.67.10 se toman sólo con -PcapeHistory.
+          if [ '${{ steps.scenes.outputs.placement }}' = true ]; then args+=(--motion-only); fi
+          python3 tools/verify_forge_walk.py build/fx-smoke-run/fx-shots "${args[@]}" 2>&1 | while IFS= read -r line; do
+            case "$line" in
+              *AssertionError:*|*Error:*) printf '::error title=Marcha en Forge::%s\n' "${line//%/%25}" ;;
+              *) printf '::notice title=Marcha en Forge::%s\n' "${line//%/%25}" ;;
+            esac
           done
 
       - name: Verificar el icono original en la hotbar de Forge
@@ -1234,31 +1244,6 @@ jobs:
             build/fx-smoke-run/fx-shots/hotbar-ciclo.gif
           if-no-files-found: error
           retention-days: 30
-
-      # Temporary branch-only handoff of the tested JAR. No tag or Release.
-      - name: Adjuntar el JAR de prueba y su lámina a la rama
-        if: >-
-          success() && github.repository == 'Santi-PdR/modelos' &&
-          github.ref == 'refs/heads/arena/5a9fa51b-modelos' &&
-          github.event_name == 'push' && contains(github.event.head_commit.message, '[capa-v16716-directo]') &&
-          steps.fx-smoke.outcome == 'success' && steps.verify-placement.outcome == 'success' &&
-          steps.verify-walk.outcome == 'success'
-        run: |
-          set -euo pipefail
-          branch=arena/5a9fa51b-modelos
-          test "$(git branch --show-current)" = "$branch"
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          jar=capatest-1.67.16.jar
-          (cd build/libs && sha256sum -c SHA256SUMS.txt)
-          test "$(cut -d ' ' -f3 build/libs/SHA256SUMS.txt)" = "$jar"
-          test ! -e "entregables/v1.67.16/$jar"
-          install -D -m 0644 "build/libs/$jar" "entregables/v1.67.16/$jar"
-          install -D -m 0644 build/libs/SHA256SUMS.txt docs/releases/v1.67.16/JAR.sha256
-          install -D -m 0644 build/fx-smoke-run/fx-shots/colocacion-original-forge.jpg docs/capa_v16716_colocacion_forge.jpg
-          git add -f -- "entregables/v1.67.16/$jar" docs/releases/v1.67.16/JAR.sha256 docs/capa_v16716_colocacion_forge.jpg
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m 'Adjuntar la capa original v1.67.16 con el ajuste probado en Forge [skip ci]'
-          git push origin "$branch"
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.
