@@ -1,0 +1,39 @@
+package com.stainkatana.visual;
+
+import com.stainkatana.StainKatanaMod;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.core.BlockPos;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+
+/** CI fixture only. Not compiled into the distributed mod. */
+@Mod.EventBusSubscriber(modid = StainKatanaMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+public final class VisualFixtureServer {
+    @SubscribeEvent public static void login(PlayerEvent.PlayerLoggedInEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        ServerLevel level = player.serverLevel();
+        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, 0, 0);
+        player.setGameMode(GameType.CREATIVE);
+        player.teleportTo(level, .5, y, .5, 0, 0);
+        player.getInventory().selected = 0;
+        player.getInventory().setItem(0, new ItemStack(StainKatanaMod.KATANA_STAIN.get()));
+        level.setDayTime(6000);
+        Zombie zombie = EntityType.ZOMBIE.create(level);
+        if (zombie == null) throw new IllegalStateException("Cannot create fixture zombie");
+        zombie.setNoAi(true);
+        zombie.setPersistenceRequired();
+        zombie.getAttribute(Attributes.MAX_HEALTH).setBaseValue(100.0);
+        zombie.setHealth(100.0F);
+        zombie.moveTo(.5, y, 3.0, 180, 0);
+        level.addFreshEntity(zombie);
+        System.out.println("STAIN_VISUAL_FIXTURE_READY y=" + y);
+    }
+}

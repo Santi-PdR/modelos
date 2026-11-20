@@ -31,6 +31,9 @@ minecraft {
         }
         client {
             property 'forge.enabledGameTestNamespaces', mod_id
+            if (project.hasProperty('katanaVisual')) {
+                args '--quickPlaySingleplayer', 'KatanaVisual'
+            }
         }
         server {
             property 'forge.enabledGameTestNamespaces', mod_id

@@ -1,0 +1,71 @@
+name: Katana real client visual fixture
+on:
+  push:
+    branches: ['arena/a09d390b-modelos']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  client:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[katana-visual]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.8'
+      - name: Prepare test-only client fixture
+        run: |
+          set -euo pipefail
+          python3 katana_stain/tools/preparar_test.py
+          cp -R katana_stain/visual_test/java/. build-katana-input/java/
+          sudo apt-get update -qq
+          sudo apt-get install -y xvfb libgl1-mesa-dri
+      - name: Generate a flat test world with Forge
+        run: |
+          set -euo pipefail
+          mkdir -p run
+          echo 'eula=true' > run/eula.txt
+          printf 'level-type=minecraft:flat\ngamemode=creative\nonline-mode=false\nserver-ip=127.0.0.1\nspawn-protection=0\n' > run/server.properties
+          printf 'stop\n' | timeout 300s gradle runServer -PkatanaOnly --no-daemon > /tmp/stain-visual-server.log 2>&1 || { tail -120 /tmp/stain-visual-server.log; exit 1; }
+          grep -F 'For help, type "help"' /tmp/stain-visual-server.log
+          mkdir -p run/saves
+          cp -R run/world run/saves/KatanaVisual
+      - name: Render a real Forge client under Xvfb
+        run: |
+          set -euo pipefail
+          export LIBGL_ALWAYS_SOFTWARE=1
+          timeout 420s xvfb-run -a -s '-screen 0 1280x720x24' gradle runClient -PkatanaOnly -PkatanaVisual --no-daemon > /tmp/stain-visual-client.log 2>&1 || { tail -160 /tmp/stain-visual-client.log; exit 1; }
+          grep -F 'STAIN_VISUAL_FIXTURE_READY' /tmp/stain-visual-client.log
+          grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-client.log
+          test "$(find run/stain-visual-test -name '*.png' | wc -l)" -eq 10
+      - name: Upload real client images and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: katana-client-visual
+          path: |
+            run/stain-visual-test/*.png
+            /tmp/stain-visual-client.log
+            /tmp/stain-visual-server.log
+          if-no-files-found: warn
+      - name: Save images in the current branch
+        if: success()
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p katana_stain/vistas/client-test
+          cp run/stain-visual-test/*.png katana_stain/vistas/client-test/
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add katana_stain/vistas/client-test/
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record Forge client visual fixture'
+            git push origin "HEAD:$BRANCH"
+          fi
