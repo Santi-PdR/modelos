@@ -60,9 +60,13 @@ jobs:
           for name in ('/tmp/stain-visual-server.log','/tmp/stain-visual-client.log'):
               path=Path(name)
               if path.exists():
-                  lines=path.read_text(errors='replace').splitlines()[-35:]
-                  text='\n'.join(lines).replace('%','%25').replace('\r','%0D').replace('\n','%0A')
-                  print('::error title='+path.name+'::'+text)
+                  lines=path.read_text(errors='replace').splitlines()
+                  interesting=[line for line in lines if any(x in line for x in ('Caused by:', 'Mixin apply failed', 'InvalidInjection', 'InjectionError', 'InvalidMixin', 'Exception:'))]
+                  for line in interesting[-15:]:
+                      text=line.replace('%','%25').replace('\r','%0D').replace('\n','%0A')[:3500]
+                      print('::error title='+path.name+'::'+text)
+                  tail='\n'.join(lines[-15:]).replace('%','%25').replace('\r','%0D').replace('\n','%0A')[:3500]
+                  print('::error title='+path.name+' tail::'+tail)
           PY2
       - name: Upload real client images and logs
         if: always()
