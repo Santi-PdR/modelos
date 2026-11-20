@@ -89,7 +89,7 @@ def exercise(geo, clips):
         body_boxes = np.broadcast_to([head,body], (len(gaits),2,8,3))
         skin = np.concatenate([legs,body_boxes], axis=1)
         needs = [S.demand(aim[0],*g) for g in gaits]
-        d = F.mount_placement(elytra=True)[0]
+        d = 0.  # authored drape hinge, no offset from the torso
         track = tracks[name]
         length = clips['animation.'+name]['animation_length']
         for i, overlay in enumerate([None, *response_variants()[::3]]):

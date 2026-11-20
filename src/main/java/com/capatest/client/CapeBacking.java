@@ -25,9 +25,9 @@ final class CapeBacking {
 
     record Shape(float left, float right, float depth) {}
     private record Panel(double width, double[] y, double[] z) {}
+    static final Shape SEATED = new Shape(.88F, .88F, 1);
     // The folded wings can occupy the whole gusset, not just its upper
     // section. Hide the backing *inside* the torso, never inside the wings.
-    static final Shape STATIONARY = new Shape(.22F, .22F, 1);
     static final Shape TUCKED = new Shape((float) TUCK_Y, (float) TUCK_Y, (float) WING_Z);
 
     static Shape shape(double bodyPitch, double bodyYaw, double headPitch, double headYaw,

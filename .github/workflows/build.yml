@@ -556,7 +556,7 @@ jobs:
           assert 'v17_mote_' not in _armor_model and 'v17_ash_' not in _armor_model
           assert 'RIBBONS = 12' in _armor_model and 'LAST_SEGMENT = 4' in _armor_model
           assert 'rearPadBaseX' not in _armor_model
-          assert 'CapeMountPlacement.worn(hasWings)' in armor_renderer
+          assert 'CapeMountPlacement.plate(elytra, false)' in armor_renderer
           assert not re.search(r'\b(model\.head\.|getXRot\(|getYHeadRot\(|getCamera|backset\()', armor_renderer)
           assert all(x not in armor_renderer for x in ('CapeTorsoFit', 'applyPlateRim', 'CapeBacking.solve', 'CapePlateFit.influence'))
           # v1.22.0: OCHO estados reales, no cuatro clonados.

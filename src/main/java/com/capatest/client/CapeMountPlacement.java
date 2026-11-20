@@ -1,70 +1,54 @@
 package com.capatest.client;
 
-/** Fixed offsets on the original rig, in authored model pixels (16 per block). */
+/** Fixed dress fit in authored model pixels (16 per block); no head or view input. */
 final class CapeMountPlacement {
-    // The authored drape hinge, not the head pivot. Both tilts act about
-    // that hinge; the original clip still rotates on top of the fixed seat.
-    static final double PIVOT_Y = 22.82;
-    static final double PIVOT_Z = 4.89;
-    private static final double PIN_Y = 16;
-    private static final double PIN_Z = 2.04;
-    private static final double JOIN_Y = 21.34;
-    private static final double JOIN_Z = 5.55;
-    private static final double REAR = 1.82;
-    private static final double DROP = 1.56;
-    private static final double TILT = 12;
-    private static final double FALL = 13;
+    // Leave the seat, gusset and drape hinge at their authored locations.
+    // The original upper backing laps against the jersey, and the two
+    // shoulder returns now reach from the cowl to the matching plate.
+    static final double SHOULDER_HEIGHT = .98;
+    static final double SHOULDER_REACH = 1.07;
+    static final double RETURN_DROP = .38;
 
-    // The plates no longer cover the outer ribbon roots. Seat the existing
-    // internal saddle under those roots; do not enlarge the exterior trim.
     static final String SADDLE_BONE = "v20_mount_saddle";
     static final double SADDLE_WIDTH = 1.08;
-    static final double SADDLE_DEPTH = .66;
-    static final double WING_SADDLE_DEPTH = .33;
+    static final double SADDLE_DEPTH = .33;
 
-    // Carry the neutral trim from the previous fitted pose, but do not
-    // run the former head-dependent trim, return, or plate strokes.
+    // A shallow fold in the exterior collar, without shifting the whole
+    // mount off the upper back. The cowl's teeth still meet the saddle.
     static final double TRIM_Y = 22.35;
     static final double TRIM_Z = 4.45;
-    static final double TRIM_DROP = .58;
+    static final double TRIM_DROP = .44;
     static final double TRIM_WIDTH = .965;
-    static final double TRIM_HEIGHT = .41;
+    static final double TRIM_HEIGHT = .49;
 
-    // Translate/rotate the complete authored plates in chest space, so the
-    // faces sit over the shoulders rather than behind the vanilla sleeves.
-    // These are GEO coordinates; CapaArmorRenderer mirrors X on draw.
-    // The slim sleeve is one pixel narrower. Move the compact plate
-    // inward on that model, not in response to a pose or view.
-    static final double SLIM_COMPACT_INSET = .65;
-    static final Plate SMALL = new Plate(CapePlateFit.SMALL, -5.84, 22.35, 4.46, -1.30, 1.15, -5.88, 14, 4, -14);
-    static final Plate WIDE = new Plate(CapePlateFit.WIDE, 7.24, 22.43, 4.16, -.54, .32, -4.30, 8, 86, 10);
-    record Plate(String bone, double x, double y, double z, double dx, double dy, double dz, float pitch, float yaw, float roll) {}
+    // Fit each whole authored plate to the length of the sleeve, with its
+    // back edge overlapping the return. X is mirrored on draw. Slim gets
+    // its own static inward offsets; nothing follows the swinging arms.
+    static final Plate SMALL = new Plate(CapePlateFit.SMALL, -5.84, 22.35, 4.46,
+            -.58, 1.40, -4.33, 10, 1, -3, 1.20, .95, 2.10, .34);
+    static final Plate WIDE = new Plate(CapePlateFit.WIDE, 7.24, 22.43, 4.16,
+            -.87, 1.18, -4.30, 10, 3, 3, .59, .78, 1.94, -.15);
 
-    record Pose(double depth, double dy, double pitch, double drape, double linkPitch, double linkScale) {}
-    private static final Pose BACK = fixed();
-    // Preserve the neutral fold with Elytra fitted. Only the existing
-    // lower-cloth wing guide responds to the actual wing angles.
-    private static final Pose WINGS = new Pose(0, 0, 0, 0, 0, 1);
+    // Retain the shorter, forward fit when the back slot shares the torso
+    // with physical Elytra, so the plate tails do not extend into the wings.
+    static final Plate WING_SMALL = new Plate(CapePlateFit.SMALL, -5.84, 22.35, 4.46,
+            -1.30, 1.15, -5.88, 14, 4, -14, 1, 1, 1, .65);
+    static final Plate WING_WIDE = new Plate(CapePlateFit.WIDE, 7.24, 22.43, 4.16,
+            -.54, .32, -4.30, 8, 86, 10, 1, 1, 1, 0);
+
+    record Plate(String bone, double x, double y, double z, double dx, double dy, double dz,
+                 double pitch, double yaw, double roll, double width, double height, double depth, double slimDx) {
+        double shiftX(boolean slim) { return dx + (slim ? slimDx : 0); }
+    }
 
     private CapeMountPlacement() {}
 
-    static Pose worn(boolean elytra) { return elytra ? WINGS : BACK; }
+    static Plate plate(boolean elytra, boolean wide) {
+        return elytra ? (wide ? WING_WIDE : WING_SMALL) : (wide ? WIDE : SMALL);
+    }
 
     static boolean trim(String name) {
         return name.startsWith("v17_cowl_") && !name.startsWith("v17_cowl_tooth_") && !name.equals("v17_cowl_return")
                 || name.startsWith("v19_cuellito_") || name.startsWith("v18_chain_");
-    }
-
-    private static Pose fixed() {
-        // Keep the foot of the existing interior gusset against the chest;
-        // carry its upper end to the same fixed point on the rigid saddle.
-        double y = JOIN_Y - PIVOT_Y, z = JOIN_Z - PIVOT_Z;
-        double rad = Math.toRadians(TILT), c = Math.cos(rad), s = Math.sin(rad);
-        double endY = PIVOT_Y - PIN_Y - DROP + c*y - s*z;
-        double endZ = PIVOT_Z - PIN_Z + REAR + s*y + c*z;
-        double baseY = JOIN_Y - PIN_Y, baseZ = JOIN_Z - PIN_Z;
-        double link = Math.toDegrees(Math.atan2(endZ, endY) - Math.atan2(baseZ, baseY));
-        double scale = Math.hypot(endY, endZ) / Math.hypot(baseY, baseZ);
-        return new Pose(REAR, -DROP, TILT, TILT + FALL, link, scale);
     }
 }

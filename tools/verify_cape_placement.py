@@ -15,6 +15,7 @@ import numpy as np
 import armor_model_pipeline as G
 import cape_animation_pipeline as A
 import cape_fit as F
+from cape_contact import seat_contacts
 import cape_tracks as T
 import preview_cloth as P
 from bbmodel_export import DOC
@@ -60,18 +61,20 @@ def viewer(**data):
 
 
 def parity(geo, java_samples=None):
-    samples = [False, True]
-    expected = [F.mount_placement(w) for w in samples]
-    np.testing.assert_allclose(viewer(mountSamples=samples),expected,atol=5e-10,rtol=0)
+    wing_modes = [False, True]
+    samples = list(product(wing_modes,(False,True),(0,1)))
+    expected = [F.worn_plate(i,w,slim) for w,slim,i in samples]
+    np.testing.assert_allclose(viewer(mountPlateSamples=samples),expected,atol=5e-10,rtol=0)
     if java_samples:
         rows = np.loadtxt(java_samples)
-        np.testing.assert_array_equal(rows[:,0], samples)
-        np.testing.assert_allclose(rows[:,1:],expected,atol=5e-10,rtol=0)
+        np.testing.assert_array_equal(rows[:,:3], samples)
+        np.testing.assert_allclose(rows[:,3:],expected,atol=5e-10,rtol=0)
     parts = [G.FIT_BONE,G.DRAPE_BONE,G.GUSSET_BONE,G.SEAT_BONE,G.SADDLE_BONE,G.UNDER_YOKE_BONE,
-             'v17_cowl_back_4','v18_pad_0','v18_pad_1','cape_top','v17_ribbon_2_seg3']
+             'v17_cowl_back_4',G.SHOULDERS_BONE,'v17_cowl_return',*F.B.profile()['names'],
+             'v18_pad_0','v18_pad_1','cape_top','v17_ribbon_2_seg3']
     cases = []
     expected = []
-    for body, wings, slim in product((0.,.27,1.),samples,(False,True)):
+    for body, wings, slim in product((0.,.27,1.),wing_modes,(False,True)):
         base = P.matrices(F.wearer_pose(geo,body,0,0,elytra=wings,placed=True,slim=slim))
         for pitch,yaw,arm in product((-89.,-60.,-30.,0.,30.,60.,89.),(-73.,0.,73.),(0.,36.)):
             aim = [body,pitch,yaw,wings,arm,arm,slim]
@@ -94,8 +97,8 @@ def exercise(geo):
     clips = json.loads(A.ANIM.read_text())['animations']
     posed_data = []
     box_estimates = []
+    seat_estimates = []
     for body, wings in product((0.,1.),(False,True)):
-        d,_,tilt,drop,*_ = F.mount_placement(wings)
         rest = P.matrices(F.wearer_pose(geo,body,0,0,elytra=wings,placed=True))
         inv = np.linalg.inv(rest['chestplate'])
         v = model.place(rest)
@@ -104,6 +107,16 @@ def exercise(geo):
         upper = max(lap(x,local[saddle]) for x in local[link])
         assert min(foot,upper) > .1, (body,wings,foot,upper)
         assert local[mount,:,1].min() > 10, 'cambió el soporte rígido'
+        if not wings and body == 0:
+            for slim in (False,True):
+                fitted = model.place(P.matrices(F.fixed_wearer_pose(geo,0.,slim=slim)))
+                parts = {n:fitted[names==n] for n in np.unique(names[mount])}
+                parts['jacket'] = (P.CORNERS*[8.5,12.5,4.5]+[-4.25,11.75,-2.25])[None]
+                sleeve = P.CORNERS*[3.5 if slim else 4.5,12.5,4.5]+[3.75,11.25 if slim else 11.75,-2.25]
+                parts['left_sleeve'],parts['right_sleeve'] = sleeve[None],(sleeve*[-1,1,1])[None]
+                neutral_hat = F.head_in_body(0.,0.,0.,outer=True)[None,None]
+                assert contacts(fitted[None,mount],neutral_hat).min() > 0, 'la montura corta la cabeza en reposo'
+                seat_estimates.append(seat_contacts(parts, 'Alex' if slim else 'Steve'))
         aims = list(product((-89.,-60.,-30.,0.,30.,60.,89.),(-73.,-40.,0.,40.,73.)))
         hats = np.asarray([F.head_in_body(body,p,y,outer=True) for p,y in aims])[:,None]
         vv = np.repeat(local[None,mount],len(aims),axis=0)
@@ -115,12 +128,14 @@ def exercise(geo):
                 frame = P.pose_at(geo,track,t*clip['animation_length'])
                 by = {b['name']: b for b in frame['bones']}
                 a,b = (by[n]['rotation'][0] for n in ('cape_top','cape_mid'))
-                dx,dy = S.lifts(a+drop-tilt,b,31,45,body,d)
+                dx,dy = S.lifts(a,b,31,45,body,0)
                 by['cape_top']['rotation'][0] += dx
                 by['cape_mid']['rotation'][0] += dy
                 v = model.place(P.matrices(F.wearer_pose(frame,body,0,0,elytra=wings,placed=True)))
                 np.testing.assert_allclose(v[mount],model.place(rest)[mount],atol=1e-10,rtol=0)
                 posed_data.append(model.joins(v))
+    print('Encastre espalda alta → forro → cuello → retornos → placas → mangas (u):',
+          np.min(seat_estimates,axis=0).round(3).tolist(),flush=True)
     seam,root = np.asarray(posed_data).min(0)
     assert seam > .038 and root > .025, (seam,root,'se abrió una costura del paño')
     # The conservative hat sweep intentionally includes extreme neck angles.

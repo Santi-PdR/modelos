@@ -5,6 +5,7 @@ import com.capatest.compat.CuriosCompat;
 import com.capatest.item.CapaDeteriorerItem;
 import com.capatest.item.CapeSparkPath;
 import com.capatest.particle.CapaParticles;
+import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -28,6 +29,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.Difficulty;
@@ -73,6 +75,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -87,7 +90,11 @@ public final class CapeFxSmoke {
     // Use the same phase for registered stills, not for any motion test.
     private static final int STILL_AGE = 94;
     private static final Field SKIN_MODEL = field(PlayerInfo.class, "skinModel");
+    private static final Field SKIN_TEXTURES = field(PlayerInfo.class, "textureLocations");
+    private static final ResourceLocation STEVE = new ResourceLocation("textures/entity/player/wide/steve.png");
+    private static final ResourceLocation ALEX = new ResourceLocation("textures/entity/player/slim/alex.png");
     private static String savedModel;
+    private static ResourceLocation savedTexture;
 
     private static Field field(Class<?> owner, String name) {
         try {
@@ -387,6 +394,35 @@ public final class CapeFxSmoke {
         deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(75);
     }
 
+    @SuppressWarnings("unchecked")
+    private static void selectSkin(Minecraft game, Scene next) {
+        // Both actual vanilla skins and sleeve meshes. No external skin
+        // download is needed, and the test never changes the runtime mod.
+        var info = game.player.connection.getPlayerInfo(game.player.getUUID());
+        check(info != null, "local player profile missing");
+        try {
+            var textures = (Map<MinecraftProfileTexture.Type, ResourceLocation>) SKIN_TEXTURES.get(info);
+            var type = MinecraftProfileTexture.Type.SKIN;
+            if (next == Scene.PLACE_STEVE_CHEST) {
+                savedModel = (String) SKIN_MODEL.get(info);
+                savedTexture = textures.get(type);
+            }
+            if (next == Scene.HOTBAR_BARE) {
+                SKIN_MODEL.set(info, savedModel);
+                if (savedTexture == null) textures.remove(type);
+                else textures.put(type, savedTexture);
+                return;
+            }
+            boolean slim = next.file.startsWith("posicion-alex-");
+            ResourceLocation skin = slim ? ALEX : STEVE;
+            check(game.getResourceManager().getResource(skin).isPresent(), "missing vanilla skin " + skin);
+            SKIN_MODEL.set(info, slim ? "slim" : "default");
+            textures.put(type, skin);
+        } catch (IllegalAccessException e) {
+            throw new AssertionError(e);
+        }
+    }
+
     private static void equipScene(Minecraft game, Scene next) {
         resetDeadline();
         scene = next;
@@ -398,16 +434,7 @@ public final class CapeFxSmoke {
         stableFrames = observedBirths = 0;
         captured = false;
         if (next == Scene.HOTBAR_BARE || next.placement()) {
-            // Select the actual vanilla player renderer by model, without
-            // changing skin pixels, account, equipment, or the pose.
-            var info = game.player.connection.getPlayerInfo(game.player.getUUID());
-            check(info != null, "local player profile missing");
-            try {
-                if (next == Scene.PLACE_STEVE_CHEST) savedModel = (String) SKIN_MODEL.get(info);
-                SKIN_MODEL.set(info, next == Scene.HOTBAR_BARE ? savedModel : next.file.startsWith("posicion-alex-") ? "slim" : "default");
-            } catch (IllegalAccessException e) {
-                throw new AssertionError(e);
-            }
+            selectSkin(game, next);
         }
         if (next.hotbar()) {
             game.options.guiScale().set(2);
@@ -537,7 +564,7 @@ public final class CapeFxSmoke {
     private static void beforeArmor(GeoRenderEvent.Armor.Pre event) {
         if (scene == null || event.getEntity() != Minecraft.getInstance().player) return;
         if (!(event.getRenderer() instanceof CapaArmorRenderer renderer)) return;
-        if (scene.placement()) CapePlacementProbe.arm(renderer, placementRoute.control());
+        if (scene.placement()) CapePlacementProbe.arm(renderer, placementRoute.control(), placementRoute.calibration());
         if (scene.walk()) CapeWalkProbe.arm(renderer);
     }
 
@@ -629,7 +656,9 @@ public final class CapeFxSmoke {
                     scene.file + ": incorrect worn draw count " + framePasses);
             if (scene.placement()) {
                 if (++stableFrames < 18) return;
-                check(player.getModelName().equals(scene.file.startsWith("posicion-alex-") ? "slim" : "default"), "wrong sleeve fixture");
+                boolean slim = scene.file.startsWith("posicion-alex-");
+                check(player.getModelName().equals(slim ? "slim" : "default")
+                        && player.getSkinTextureLocation().equals(slim ? ALEX : STEVE), "wrong skin/sleeve fixture");
                 captured = placementRoute.capture(game, shots(game), scene.file, placementDraw);
                 if (captured) note("Colocación original " + scene.file + ": " + placementRoute.summary());
                 return;

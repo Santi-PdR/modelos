@@ -7,15 +7,17 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [JAR anterior v1.67.12](https://github.com/Santi-PdR/modelos/releases/download/v1.67.12/capatest-1.67.12.jar)
 · [JAR anterior v1.67.11](https://github.com/Santi-PdR/modelos/releases/download/v1.67.11/capatest-1.67.11.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench de la rama](docs/CAPA_v1.67.17.bbmodel)
+· [Proyecto Blockbench de la rama](docs/CAPA_v1.67.18.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
-### v1.67.17 — montaje fijo y hombreras visibles de frente
+### v1.67.18 — encastre del cuello y las hombreras
 
-El manto original se monta en el torso sin ajustarse a la cámara ni a la dirección de la cabeza. Las dos placas completas se sitúan sobre las mangas. La tela conserva sus ocho clips y responde al movimiento del cuerpo; el GEO, las texturas, el brillo y el icono no cambian. Prueba separada: no cambia el instalador público.
+El cuello vuelve a la espalda alta y los retornos enlazan con las dos placas originales, asentadas sobre las mangas de Steve y Alex. La montura no depende de la órbita F5 ni de la mirada. Es un ajuste en el render equipado de pecho y Curios: el GEO, las texturas, los ocho clips, el brillo y el icono se conservan. La descarga de prueba se adjunta tras validar la colocación en Forge; no cambia el instalador publicado.
 
-**[Descargar JAR de prueba v1.67.17](https://github.com/Santi-PdR/modelos/raw/287c3c960c8c18f59ed6935a3cba843cb5ea0909/entregables/v1.67.17/capatest-1.67.17.jar)** · [Capturas de Forge](docs/capa_v16717_colocacion_forge.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.17/notas.md) · [PowerShell para `test-1`](docs/releases/v1.67.17/instalar-directo-test-1.txt).
+### v1.67.17 — comparación descartada
+
+La montura quedó fija, pero retrasó y bajó el cuello y separó las hombreras del manto. Se conserva la [lámina de esa prueba](docs/capa_v16717_colocacion_forge.jpg) y el [registro del JAR anterior](docs/releases/v1.67.17/notas.md) como histórico, no como arreglo.
 
 ### v1.67.16 — ensayo anterior de colocación
 

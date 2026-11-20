@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 import argparse
+from collections import defaultdict
 import io
 from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw
 
+from cape_contact import seat_contacts
 from verify_forge_mount import emit, read
 
 FIXTURES = tuple(f'posicion-{skin}-{slot}' for skin in ('steve','alex') for slot in ('pecho','curios'))
-VIEWS = (('espalda','ESPALDA'),('frente','FRENTE'),('arriba','DESDE ARRIBA'),
-         ('izquierda','PERFIL'),('abajo','DESDE ABAJO'),('salto','SALTO'))
+VIEWS = (('espalda','ESPALDA'),('frente','FRENTE'),('diagonal','TRES CUARTOS'),
+         ('izquierda','PERFIL'),('arriba','CENITAL'),('salto','SALTO'))
 
 
 def masks_for(root, name, size, names):
@@ -28,11 +30,19 @@ def masks_for(root, name, size, names):
     return np.asarray([np.asarray(masks[name])>0 for name in names])
 
 
+def read_contacts(root, fixture):
+    parts = defaultdict(list)
+    for row in (root/f'{fixture}-encastre.tsv').read_text().splitlines():
+        bone,*xyz = row.split()
+        parts[bone].append(np.asarray(xyz,float).reshape(8,3))
+    return seat_contacts(parts, fixture)
+
+
 def report(root):
     for fixture in FIXTURES:
         rows = np.genfromtxt(root/f'{fixture}-recorrido.tsv',names=True,delimiter='\t',dtype=None,encoding='utf-8')
         orbit, aim, jump = (rows[rows['mode']==m] for m in ('orbit','aim','jump'))
-        assert len(orbit)==6 and np.ptp(orbit['camera_yaw'])>=180 and np.ptp(orbit['camera_pitch'])>=120, fixture
+        assert len(orbit)==7 and np.ptp(orbit['camera_yaw'])>=180 and np.ptp(orbit['camera_pitch'])>=120, fixture
         assert np.abs(orbit['pitch']).max()<.02 and np.abs(orbit['yaw']).max()<.02, fixture
         assert len(aim)==49 and np.ptp(aim['camera_yaw'])==np.ptp(aim['camera_pitch'])==0, fixture
         assert aim['pitch'].min()<=-88.98 and aim['pitch'].max()>=88.98, fixture
@@ -40,6 +50,7 @@ def report(root):
         assert jump['lift'].max()>.65 and abs(jump['lift'][-1])<.01, fixture
         drift = [v['drift'].max() for v in (orbit,aim,jump)]
         assert np.isfinite(drift).all() and max(drift)<.006, (fixture,drift,'cambió la montura en coordenadas del torso')
+        contacts = read_contacts(root,fixture)
         name = f'{fixture}-frente'
         worn, control = (read(root/f'{name}{suffix}.png') for suffix in ('','-sin-placas'))
         names = ('v18_pad_0','v18_pad_1','left_sleeve','right_sleeve')
@@ -62,14 +73,15 @@ def report(root):
             coverage.append(f'{shown} px, {columns:.0%} del ancho')
         print(f'::notice title=Montaje fijo en Forge::{fixture}: órbita {drift[0]:.6f}u ({len(orbit)} vistas); '
               f'mirada {drift[1]:.6f}u ({len(aim)} poses); salto {drift[2]:.6f}u, {jump["lift"].max():.2f} bloques. '
-              f'Placas sobre las mangas de frente: {" / ".join(coverage)}.')
+              f'Placas sobre las mangas de frente: {" / ".join(coverage)}. '
+              f'Solapes mínimos espalda alta → forro → cuello → retornos → placas → mangas: {contacts.round(3).tolist()}u.')
 
 
 def gallery(root):
     cw,ch = 218,220
     image = Image.new('RGB',(cw*len(VIEWS),44+(ch+21)*len(FIXTURES)),'#15101a')
     pen = ImageDraw.Draw(image)
-    pen.text((10,9),'MANTLE OF THE BLIGHT STAR  /  MONTAJE FIJO EN FORGE',fill='#ffe4f0')
+    pen.text((10,9),'MANTLE OF THE BLIGHT STAR  /  ENCASTRE EN FORGE',fill='#ffe4f0')
     for col,(_,label) in enumerate(VIEWS):
         pen.text((col*cw+10,28),label,fill='#efc5da')
     for row,fixture in enumerate(FIXTURES):

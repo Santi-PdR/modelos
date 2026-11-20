@@ -22,10 +22,10 @@ import software.bernie.geckolib.util.RenderUtils;
 
 public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private final CapaArmorModel capeModel;
-    private CapeMountPlacement.Pose placement = CapeMountPlacement.worn(false);
-    private static final CapeFit.YokeShape LINING = CapeFit.yokeShape(0, 0, 0, true);
+    private static final CapeFit.YokeShape WING_LINING = CapeFit.yokeShape(0, 0, 0, true);
     private boolean mountInChest;
     private boolean slimSleeves;
+    private boolean elytra;
     private boolean armorPassSubmitted;
     private boolean sampleFit;
 
@@ -101,8 +101,7 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         super.applyBaseTransformations(model);
         if (!sampleFit) return;
         var player = getCurrentEntity() instanceof AbstractClientPlayer p ? p : null;
-        boolean hasWings = player != null && player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA);
-        placement = CapeMountPlacement.worn(hasWings);
+        elytra = player != null && player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA);
         slimSleeves = player != null && player.getModelName().equals("slim");
         mountInChest = bone(CapeFit.BONE) != null && bone(CapeFit.GUSSET_BONE) != null;
         double arm = backArm(model);
@@ -110,11 +109,9 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                 CapeStride.backDegrees(model.rightLeg.xRot, model.rightLeg.yRot));
         // Locomotion and wing clearance still work. No camera or head
         // angles enter the mount, plate positions, or drape clearance.
-        double depth = mountInChest ? placement.depth() : 0;
-        double wings = hasWings ? CapeWingFit.topGoal(Math.toDegrees(player.elytraRotX), Math.toDegrees(player.elytraRotZ),
-                Math.toDegrees(model.body.xRot), depth) : 0;
-        double fall = mountInChest ? placement.drape() - placement.pitch() : 0;
-        capeModel.setClearancePose(arm, leg, model.body.xRot, depth, fall, wings);
+        double wings = elytra ? CapeWingFit.topGoal(Math.toDegrees(player.elytraRotX), Math.toDegrees(player.elytraRotZ),
+                Math.toDegrees(model.body.xRot), 0) : 0;
+        capeModel.setClearancePose(arm, leg, model.body.xRot, wings);
     }
 
     @Override
@@ -126,48 +123,40 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         // The two plates are drawn once from chestplate, not from the
         // original rear placement. Do not reparent the shared baked model.
         if (mountInChest && placedPlate(bone)) return;
-        boolean mount = mountInChest && CapeFit.BONE.equals(name);
         boolean backing = CapeBacking.LEFT.equals(name) || CapeBacking.RIGHT.equals(name);
-        boolean trim = mountInChest && placement.pitch() != 0 && CapeMountPlacement.trim(name);
-        boolean gusset = mountInChest && placement.linkPitch() != 0 && CapeFit.GUSSET_BONE.equals(name);
-        boolean drape = mountInChest && placement.drape() != 0 && CapeFit.DRAPE_BONE.equals(name);
+        boolean seated = mountInChest && !elytra;
+        boolean trim = seated && CapeMountPlacement.trim(name);
+        boolean collarReturn = seated && name.equals("v17_cowl_return");
         boolean saddle = mountInChest && CapeMountPlacement.SADDLE_BONE.equals(name);
         boolean shoulder = CapeFit.SHOULDERS_BONE.equals(name);
-        boolean underYoke = CapeFit.UNDER_YOKE_BONE.equals(name);
-        boolean fitted = mount || backing || trim || gusset || drape || saddle || shoulder || underYoke;
+        boolean underYoke = elytra && CapeFit.UNDER_YOKE_BONE.equals(name);
+        boolean fitted = backing || trim || collarReturn || saddle || shoulder || underYoke;
         if (fitted) poseStack.pushPose();
         try {
-            if (mount) {
-                poseStack.translate(0, placement.dy()/16, placement.depth()/16);
-                double y = CapeMountPlacement.PIVOT_Y/16, z = CapeMountPlacement.PIVOT_Z/16;
-                poseStack.translate(0, y, z);
-                poseStack.mulPose(Axis.XP.rotationDegrees((float) placement.pitch()));
-                poseStack.translate(0, -y, -z);
-            } else if (trim) {
+            if (trim) {
                 double y = CapeMountPlacement.TRIM_Y/16, z = CapeMountPlacement.TRIM_Z/16;
                 poseStack.translate(0, y - CapeMountPlacement.TRIM_DROP/16, z);
                 poseStack.scale((float) CapeMountPlacement.TRIM_WIDTH, (float) CapeMountPlacement.TRIM_HEIGHT, 1);
                 poseStack.translate(0, -y, -z);
+            } else if (collarReturn) {
+                poseStack.translate(0, -CapeMountPlacement.RETURN_DROP/16, 0);
             } else if (fitted) {
                 RenderUtils.translateToPivotPoint(poseStack, bone);
                 if (saddle) {
-                    double depth = placement.pitch() == 0 ? CapeMountPlacement.WING_SADDLE_DEPTH : CapeMountPlacement.SADDLE_DEPTH;
-                    poseStack.translate(0, 0, depth/16);
+                    poseStack.translate(0, 0, CapeMountPlacement.SADDLE_DEPTH/16);
                     poseStack.scale((float) CapeMountPlacement.SADDLE_WIDTH, 1, 1);
-                } else if (shoulder)
-                    poseStack.scale(1, (float) (CapeFit.SHOULDER_HEIGHT + (1-CapeFit.SHOULDER_HEIGHT)*CapeFit.SHOULDER_MIN),
-                            (float) CapeFit.SHOULDER_MIN);
-                else if (underYoke)
-                    poseStack.scale(LINING.width(), LINING.height(), LINING.depth());
-                else if (backing) {
-                    var fold = placement.pitch() == 0 ? CapeBacking.TUCKED : CapeBacking.STATIONARY;
+                } else if (shoulder) {
+                    if (elytra) {
+                        poseStack.scale(1, (float) (CapeFit.SHOULDER_HEIGHT + (1-CapeFit.SHOULDER_HEIGHT)*CapeFit.SHOULDER_MIN),
+                                (float) CapeFit.SHOULDER_MIN);
+                    } else if (seated) {
+                        poseStack.scale(1, (float) CapeMountPlacement.SHOULDER_HEIGHT, (float) CapeMountPlacement.SHOULDER_REACH);
+                    }
+                } else if (underYoke) {
+                    poseStack.scale(WING_LINING.width(), WING_LINING.height(), WING_LINING.depth());
+                } else if (backing) {
+                    var fold = elytra ? CapeBacking.TUCKED : CapeBacking.SEATED;
                     poseStack.scale(1, fold.left(), fold.depth());
-                } else if (drape)
-                    poseStack.mulPose(Axis.XP.rotationDegrees((float) -placement.drape()));
-                else if (gusset) {
-                    poseStack.mulPose(Axis.XP.rotationDegrees((float) placement.linkPitch()));
-                    float scale = (float) placement.linkScale();
-                    poseStack.scale(1, scale, scale);
                 }
                 RenderUtils.translateAwayFromPivotPoint(poseStack, bone);
             }
@@ -186,9 +175,9 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         super.renderChildBones(poseStack, animatable, bone, renderType, buffers, buffer,
                 isReRender, partialTick, light, overlay, red, green, blue, alpha);
         if (!mountInChest || !bone.getName().equals("chestplate") || bone.isHidingChildren()) return;
-        drawShoulder(poseStack, animatable, CapeMountPlacement.SMALL, renderType, buffers, buffer,
+        drawShoulder(poseStack, animatable, CapeMountPlacement.plate(elytra, false), renderType, buffers, buffer,
                 isReRender, partialTick, light, overlay, red, green, blue, alpha);
-        drawShoulder(poseStack, animatable, CapeMountPlacement.WIDE, renderType, buffers, buffer,
+        drawShoulder(poseStack, animatable, CapeMountPlacement.plate(elytra, true), renderType, buffers, buffer,
                 isReRender, partialTick, light, overlay, red, green, blue, alpha);
     }
 
@@ -201,11 +190,11 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         poseStack.pushPose();
         try {
             double x = -fit.x()/16, y = fit.y()/16, z = fit.z()/16;
-            double inset = slimSleeves && fit == CapeMountPlacement.SMALL ? CapeMountPlacement.SLIM_COMPACT_INSET : 0;
-            poseStack.translate(x-(fit.dx()+inset)/16, y+fit.dy()/16, z+fit.dz()/16);
-            poseStack.mulPose(Axis.ZP.rotationDegrees(fit.roll()));
-            poseStack.mulPose(Axis.YP.rotationDegrees(-fit.yaw()));
-            poseStack.mulPose(Axis.XP.rotationDegrees(-fit.pitch()));
+            poseStack.translate(x-fit.shiftX(slimSleeves)/16, y+fit.dy()/16, z+fit.dz()/16);
+            poseStack.mulPose(Axis.ZP.rotationDegrees((float) fit.roll()));
+            poseStack.mulPose(Axis.YP.rotationDegrees((float) -fit.yaw()));
+            poseStack.mulPose(Axis.XP.rotationDegrees((float) -fit.pitch()));
+            poseStack.scale((float) fit.width(), (float) fit.height(), (float) fit.depth());
             poseStack.translate(-x, -y, -z);
             // Same complete plate geometry, cutout and emission. Nothing is
             // added to the GEO or attached to the camera/helmet/hand pose.

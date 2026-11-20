@@ -71,17 +71,13 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     private double armBack;
     private double legBack;
     private double bodyPitch;
-    private double wearerDepth;
-    private double mountFall;
     private double wingGoal;
     private boolean disabled;
 
-    void setClearancePose(double arm, double leg, double pitch, double depth, double fall, double wingGoal) {
+    void setClearancePose(double arm, double leg, double pitch, double wingGoal) {
         this.armBack = arm;
         this.legBack = leg;
         this.bodyPitch = pitch;
-        this.wearerDepth = depth;
-        this.mountFall = fall;
         this.wingGoal = wingGoal;
     }
 
@@ -251,14 +247,14 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             arm = CapeStride.walkEnvelope(arm, motion.stride(), motion.amplitude(), motion.ground(), 1);
             leg = CapeStride.walkEnvelope(leg, motion.stride(), motion.amplitude(), motion.ground(), 1.4);
         }
-        double armGoal = CapeStride.armGoal(arm, bodyPitch, wearerDepth);
-        double legGoal = CapeStride.legGoal(leg, bodyPitch, wearerDepth);
+        double armGoal = CapeStride.armGoal(arm, bodyPitch, 0);
+        double legGoal = CapeStride.legGoal(leg, bodyPitch, 0);
         if (clothTop == null || clothMid == null || (armGoal <= 0 && legGoal <= 0 && wingGoal <= 0))
             return;
         // GeckoLib's baked X is the negative of the authored GEO pitch.
         // Take the greater clearance, not the sum. The existing hinge below
         // the collar carries its seam; the seat, fit and atlas stay unchanged.
-        double top = -Math.toDegrees(clothTop.getRotX()) + mountFall;
+        double top = -Math.toDegrees(clothTop.getRotX());
         double mid = -Math.toDegrees(clothMid.getRotX());
         double topLift = Math.max(CapeStride.topLift(top, armGoal, legGoal), CapeWingFit.topLift(top, wingGoal));
         double midLift = CapeStride.midLift(top + topLift, mid, legGoal);

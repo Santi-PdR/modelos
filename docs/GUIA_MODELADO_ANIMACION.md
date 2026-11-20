@@ -296,14 +296,17 @@ animación y la documentación de GeckoLib._
   agacharse o nadar. Pecho y Curios comparten los mismos pases sólido y de
   emisión. El visor reproduce estas transformaciones; Blockbench conserva
   la geometría original sin aplicarlas a los clips.
-- **Montaje fijo v1.67.17:** `CapeMountPlacement.worn(elytra)` ya no
-  recibe ángulos de la cabeza. Pecho y Curios dibujan la misma montura en
-  el marco del torso, y las placas originales se recolocan completas. El
-  fit no se interpola con la cámara. El paño conserva su animación y su
-  holgura para pasos y alas. Para repetir el ensayo actual, `gradle
-  -PcapeFxSmoke runClient` captura órbita y mirada por separado; mide las
-  placas sobre las mangas vanilla de los dos modelos de jugador. Los
-  perfiles y comparaciones antiguas pertenecen al historial de cada JAR.
+- **Encastre v1.67.18:** el asiento, fuelle y bisagra vuelven a sus
+  posiciones del GEO. El forro original apoya en la espalda alta y los
+  retornos del cuello solapan las placas, que se ajustan completas a las
+  mangas anchas o finas en el marco de `chestplate`. No se modifican sus
+  cubos ni se usa la mirada para colocarlos. Con élitros se conserva la
+  variante corta del ajuste. `gradle -PcapeFxSmoke runClient` guarda tomas
+  registradas con las pieles vanilla, un recorrido F5 separado del de la
+  mirada y las coordenadas de contacto de la chaqueta, retornos y placas.
+  `tools/verify_forge_placement.py` exige el encastre en tres dimensiones
+  además de ver ambas placas de frente. El visor usa los mismos ajustes;
+  el proyecto de Blockbench conserva íntegro el rig original.
 - **Pulso del icono (v1.67.8):** 32 fotogramas a un tick por cuadro, mismo
   contorno y duración de 1,6 s. Se comprueba el recorrido de la cresta de
   luz en la hotbar vanilla; se conservan el dibujo y el reposo de v1.67.7.
