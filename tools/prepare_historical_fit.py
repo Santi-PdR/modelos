@@ -49,6 +49,10 @@ def main():
     names = {name: name.replace('Capa', 'CapeHistorical', 1) for name in RENDER_CLASSES}
     for name, new in names.items():
         text = source(f'src/main/java/{directory}/{name}.java').replace(RIG, REFERENCE)
+        if name == 'CapaArmorRenderer':
+            # For the fit comparison use the historical diffuse atlas. The
+            # old glow pass under the new controller can black out the cape.
+            text = text.replace('addRenderLayer(new CapaGlowLayer(this));', '// Diffuse-only historical reference.')
         for old, renamed in names.items():
             text = text.replace(old, renamed)
         (out/f'{new}.java').write_text(text, encoding='utf-8')

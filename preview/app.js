@@ -227,9 +227,9 @@ function torsoShape(data, stance, look, yaw, depth, seat, plate, arm, effort, dr
   const sweep=smooth(5,25,effort), advance=reach*smooth(12,42,down), upright=1-smooth(0,23,down);
   const fit=(i,k,sx,sy,sz,dy,dz)=>k>0 ? [...data.pivots[i],0,k*dy,k*dz,...[sx,sy,sz].map(v=>1+k*(v-1))] : null;
   const collar=r=>fit(0,tuck,.965,.41,1-.12*r,-.58,-1.62*r);
-  return [.68*smooth(23,43,down)*dry*space*(1-smooth(2.85,6,arm)), collar(trim),collar(trim*.32),
-    fit(1,rest,.94,.92,1-.17*advance,0,-.24*advance),
-    fit(2,rest,.40,.41,1-.14*advance,.065+.37*sweep-.47*upright,-.24*advance+.52*sweep+.22*upright)];
+  return [.68*smooth(23,43,down)*dry*space*(1-smooth(2.85,6,arm)), collar(trim),collar(trim*.16),
+    fit(1,rest*(1-smooth(.54,.76,seat))*(1-smooth(.10,.26,stance)),.94,.92,1-.17*advance,.18*advance,-.24*advance),
+    fit(2,rest,.40,.41,1-.14*advance,.065+.37*sweep+.48*advance-.47*upright,-.24*advance+.52*sweep+.22*upright)];
 }
 
 function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm) {

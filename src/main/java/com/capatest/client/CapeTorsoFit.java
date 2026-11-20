@@ -60,13 +60,16 @@ final class CapeTorsoFit {
         // open Z and raise the wide lower edge as a sleeve sweeps under it.
         double rest = dry * (1 - smooth(.72, 1, plateFit)) * (1 - smooth(.10, .50, stance))
                 * (1 - smooth(14, 33, -down)) * (1 - smooth(70, 86, turn));
+        // Retain the original lower lip over the first cloth ribbons when
+        // the earlier seat already has the compact plate against the wearer.
+        double compact = rest * (1 - smooth(.54, .76, previousSeat)) * (1 - smooth(.10, .26, stance));
         double sweep = smooth(5, 25, sleeve), advance = reach * smooth(12, 42, down);
         double upright = 1 - smooth(0, 23, down);
         return new Shape((float) (.68 * smooth(23, 43, down) * stroke),
-                collar(tuck, trim), collar(tuck, trim * .32),
-                affine(1, rest, .94, .92, 1 - .17 * advance, 0, 0,  -.24 * advance),
+                collar(tuck, trim), collar(tuck, trim * .16),
+                affine(1, compact, .94, .92, 1 - .17 * advance, 0, .18 * advance, -.24 * advance),
                 affine(2, rest, .40, .41, 1 - .14 * advance, 0,
-                        .065 + .37*sweep - .47*upright, -.24*advance + .52*sweep + .22*upright));
+                        .065 + .37*sweep + .48*advance - .47*upright, -.24*advance + .52*sweep + .22*upright));
     }
 
     private static Affine collar(double amount, double reach) {

@@ -8,7 +8,9 @@ import sys
 
 import numpy as np
 
+import armor_model_pipeline as G
 import cape_animation_pipeline as A
+import cape_backing as B
 import cape_fit as F
 import cape_stride as S
 import cape_tracks as T
@@ -71,19 +73,39 @@ def safe(geo):
             raise AssertionError((aim,arms,legs,issues))
         minima = tuple(map(min,zip(minima,rig.joins(verts[1]),strict=True)))
         count += 1
-    assert count >= 950 and minima[0] > .025 and minima[1] > .025, (count,minima)
+    assert count >= 2900 and minima[0] > .038 and minima[1] > .025, (count,minima)
     for aim in ((0.,-58.,43.),(.33,-76.,3.),(0.,-89.5,0.)):
         assert F.wearer_pose(geo,*aim,elytra=True) == F.wearer_pose(geo,*aim,elytra=True,torso=False)
     print(f'{count} poses nuevas: sin cruces nuevos de cabeza y mangas dentro de 0.025u; '
           f'costuras/raíces ≥{minima[0]:.3f}/{minima[1]:.3f}u; perfil de alas intacto.')
 
 
+def viewer(data):
+    run = subprocess.run(['node','tools/check_viewer_pose.js'],cwd=P.ROOT,check=True,text=True,
+                         capture_output=True,input=json.dumps(dict(fit=F.viewer_profile(),**data)))
+    return np.asarray(json.loads(run.stdout))
+
+
+def matrix_parity(geo):
+    names = [G.FIT_BONE, G.DRAPE_BONE, G.SHOULDERS_BONE, G.SADDLE_BONE, 'cape_top',
+             'v17_ribbon_1_seg0', 'v17_cowl_back_2', 'v17_cowl_tooth_5', 'v17_cowl_return',
+             'v18_pad_0', 'v18_pad_1', 'rim_v18_pad_0', 'rim_v18_pad_1', *B.profile()['names']]
+    aims = list(product((0.,.12,.42),((-89.5,0),(-76,3),(-58,43),(-48,-48),(-35,316),(8,0)),
+                        (False,True),(0.,4.1,17.)))
+    samples = [(s,p,y,w,a,a+1.15) for s,(p,y),w,a in aims]
+    expected = []
+    for s,p,y,w,a,e in samples:
+        mats = P.matrices(F.wearer_pose(geo,s,p,y,elytra=w,arm_back=a,arm_effort=e))
+        expected.append([mats.get(n,mats[n.removeprefix('rim_')]).ravel() for n in names])
+    np.testing.assert_allclose(viewer(dict(geo=geo,torsoMatrices=samples,parts=names)),expected,rtol=0,atol=2e-9)
+    print(f'{len(samples)} matrices de la montura, placas, luz y raíces coinciden con el visor.')
+
+
 def parity(path):
     rows = np.loadtxt(path)
     assert rows.shape == (5*11*10*4*3,44), rows.shape
     params = rows[:,:7].tolist()
-    js = subprocess.run(['node','tools/check_viewer_pose.js'],cwd=P.ROOT,check=True,text=True,capture_output=True,
-                        input=json.dumps(dict(fit=F.viewer_profile(),torsoSamples=params)))
+    js = viewer(dict(torsoSamples=params))
     staged = []
     for s,p,y,arm,effort,dry,w in params:
         w = bool(w)
@@ -93,7 +115,7 @@ def parity(path):
         staged.append([seat,*[v for a in affines for v in (a if a is not None else [0,0,0,0,0,0,1,1,1])]])
     rounded = np.asarray(staged,dtype=np.float32).astype(float)
     assert np.allclose(rounded,rows[:,7:],rtol=0,atol=1.5e-7), abs(rounded-rows[:,7:]).max()
-    assert np.allclose(staged,json.loads(js.stdout),rtol=0,atol=2.6e-7)
+    assert np.allclose(staged,js,rtol=0,atol=2.6e-7)
     print(f'Montura histórica: {len(rows)} muestras Java / Python / visor coinciden.')
 
 
@@ -103,4 +125,5 @@ if __name__ == '__main__':
     else:
         geo = P.load(P.ARMOR_GEO)
         placement(geo)
+        matrix_parity(geo)
         safe(geo)

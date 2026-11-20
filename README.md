@@ -6,9 +6,13 @@ Se equipa en el pecho o en `back` con Curios opcional.
 [Descargar JAR v1.67.12 (prueba)](https://github.com/Santi-PdR/modelos/releases/download/v1.67.12/capatest-1.67.12.jar)
 · [JAR anterior v1.67.11](https://github.com/Santi-PdR/modelos/releases/download/v1.67.11/capatest-1.67.11.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench de la rama](docs/CAPA_v1.67.12.bbmodel)
+· [Proyecto Blockbench de la rama](docs/CAPA_v1.67.13.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+
+### v1.67.13 — recuperar la unión visible al torso (en pruebas)
+
+La referencia de montaje es v1.28.0, que comparte el GEO equipado con v1.27.0. El cuello baja, las placas recuperan el ancho del hombro y las primeras tiras se acercan a la espalda al mirar en diagonal. Son ajustes del render equipado en pecho y Curios: no se cambian el GEO editable, el atlas, los ocho clips ni el icono.
 
 ### v1.67.12 — las placas se asientan sobre las mangas
 

@@ -45,9 +45,10 @@ public final class CapeFitTest {
 
     private static CapeTorsoFit.Shape torso(double stance, double look, double yaw, double arm,
                                            double sleeve, double dry, boolean wings) {
-        double lean = stance * CapeFit.CROUCH_RADIANS, pitch = -Math.toRadians(look), turn = Math.toRadians(yaw);
-        double sz = CapeFit.seating(lean, 0, pitch, turn, arm, wings) * dry;
-        return CapeTorsoFit.shape(lean, pitch, turn, depth(stance,look,yaw), sz,
+        double lean = stance * CapeFit.CROUCH_RADIANS, pitch = -Math.toRadians(look);
+        double body = Math.toRadians(177), head = Math.IEEEremainder(body + Math.toRadians(yaw), 2*Math.PI);
+        double sz = CapeFit.seating(lean, body, pitch, head, arm, wings) * dry;
+        return CapeTorsoFit.shape(lean, pitch, head-body, CapeFit.backset(lean,body,pitch,head), sz,
                 plate(stance,look,yaw,sleeve,wings) * dry, arm, sleeve, dry, wings);
     }
 

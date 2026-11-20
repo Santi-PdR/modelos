@@ -36,6 +36,12 @@ const matrices = vm.runInContext(`${src}
       return indata.strideSamples.map(([top,mid,arm,leg,stance,depth]) =>
         strideLifts(indata.stride,top,mid,arm,leg,stance*indata.fit.bodyAngle,depth));
     }
+    if (indata.torsoMatrices) {
+      return indata.torsoMatrices.map(aim => {
+        const model=matrices(wearerPose(indata.geo,indata.fit,...aim));
+        return indata.parts.map(n=>model[n] || model[n.replace(/^rim_/,'')]);
+      });
+    }
     if (indata.torsoSamples) {
       const f=indata.fit;
       return indata.torsoSamples.map(([s,p,y,a,e,d,w]) => {

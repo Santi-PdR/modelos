@@ -191,6 +191,7 @@ public final class CapeFxSmoke {
         boolean walk() { return this == WALK_CHEST || this == WALK_BACK; }
         boolean stillComparison() { return overhead() || upperBack() || fit() || plates() || homeCompare(); }
         boolean fixedCamera() { return stillComparison() || sweep(); }
+        float bodyYaw() { return homeCompare() ? 31 : 0; }
         float yaw() {
             if (homeCompare()) return file.startsWith("historia-diagonal") ? 43 : file.startsWith("historia-espejo") ? -48 : 0;
             return fit() ? 3 : profile() ? 76 : turned() || oblique() || hotbar() ? 43 : 0;
@@ -771,7 +772,7 @@ public final class CapeFxSmoke {
             var player = Minecraft.getInstance().player;
             if (player != null && scene != null && (scene.fixedCamera() || scene.hotbar())) {
                 var look = scene.sweep() ? lookSweep.pose() : new CapeLookSweep.Pose(scene.pitch(), scene.yaw());
-                float bodyYaw = scene.homeCompare() ? 31 : 0;
+                float bodyYaw = scene.bodyYaw();
                 float yaw = bodyYaw + look.yaw();
                 float pitch = look.pitch();
                 player.setYRot(yaw);
@@ -817,8 +818,9 @@ public final class CapeFxSmoke {
                 new CapeTravel.Step(player.getX() - player.xo, player.getY() - player.yo, player.getZ() - player.zo),
                 false, bodyYaw).side() : 0;
         boolean posed = scene.homeCompare() ? player.onGround() && !player.isCrouching()
-                && Math.abs(player.getXRot() - scene.pitch()) < .05 && Math.abs(bodyYaw) < .05
-                && Math.abs(player.getYHeadRot() - scene.yaw()) < .05 && velocity.horizontalDistanceSqr() < .0001
+                && Math.abs(player.getXRot() - scene.pitch()) < .05 && Math.abs(bodyYaw - scene.bodyYaw()) < .05
+                && Math.abs(Mth.wrapDegrees(player.getYHeadRot() - scene.bodyYaw()) - scene.yaw()) < .05
+                && velocity.horizontalDistanceSqr() < .0001
                 : switch (scene) {
             case TOP_BARE, TOP_OLD_JOIN, TOP_CHEST, TOP_BACK, TURN_BARE, TURN_CHEST, TURN_BACK,
                     OBLIQUE_BARE, OBLIQUE_UNLINED, OBLIQUE_OLD_JOIN, OBLIQUE_CHEST, OBLIQUE_BACK,

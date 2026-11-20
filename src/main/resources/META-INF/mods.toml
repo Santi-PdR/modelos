@@ -9,7 +9,7 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.67.12: ajuste de las hombreras visibles sobre las mangas; paño y destellos intactos.
+v1.67.13: cuello, hombreras y raíces más cerca del torso; paño, icono y destellos intactos.
 El icono de referencia pulsa en la hotbar. Se conservan los ocho clips,
 la holgura con élitros, la inercia del paño, el halo nocturno y las brasas.
 '''

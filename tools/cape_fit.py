@@ -224,8 +224,8 @@ def torso_shape(stance, pitch, yaw, depth, seat, plate, arm, effort, dry=1., ely
 
     def collar(r): return fit(0,tuck,.965,.41,1-.12*r,-.58,-1.62*r)
     return (.68*smooth(23,43,down)*dry*space*(1-smooth(2.85,6,arm)),
-            collar(trim),collar(trim*.32),fit(1,rest,.94,.92,1-.17*advance,0.,-.24*advance),
-            fit(2,rest,.40,.41,1-.14*advance,.065+.37*sweep-.47*upright,-.24*advance+.52*sweep+.22*upright))
+            collar(trim),collar(trim*.16),fit(1,rest*(1-smooth(.54,.76,seat))*(1-smooth(.10,.26,stance)),.94,.92,1-.17*advance,.18*advance,-.24*advance),
+            fit(2,rest,.40,.41,1-.14*advance,.065+.37*sweep+.48*advance-.47*upright,-.24*advance+.52*sweep+.22*upright))
 
 
 def torso_frame(b, transform, prefix="torso_"):

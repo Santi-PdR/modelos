@@ -56,8 +56,12 @@ final class CapeHistoricFitProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             // these standing views the old Curios sneak helpers were no-ops.
             renderer.prepForRender(live.getCurrentEntity(), stack, live.getCurrentSlot(), (HumanoidModel<?>) base.get(live));
             event.setCanceled(true);
-            renderer.defaultRender(event.getPoseStack(), live.getAnimatable(), event.getBufferSource(),
-                    null, null, 0, event.getPartialTick(), event.getPackedLight());
+            var item = live.getAnimatable();
+            // Equal depth/lighting policy for the diffuse comparison; the
+            // historical mesh, texture and wearer-relative pose stay intact.
+            var type = RenderType.entityCutoutNoCull(renderer.getTextureLocation(item), true);
+            renderer.defaultRender(event.getPoseStack(), item, event.getBufferSource(), type, null,
+                    0, event.getPartialTick(), event.getPackedLight());
         } catch (ReflectiveOperationException error) {
             throw new AssertionError("missing compiled pre-branch Forge fixture", error);
         }

@@ -115,13 +115,14 @@ def gallery(root, view):
             continue
         with Image.open(file) as im:
             sample = im.convert('RGB').crop(crop)
+        # Leave room in the 50-annotation budget for metrics and failures.
         for rate in (1,.86,.73,.62,.53,.44,.36,.30):
             buf = io.BytesIO()
-            sample.resize((round(rate*sample.width),round(rate*sample.height)),Image.Resampling.NEAREST).quantize(32).save(
-                buf,format='PNG',optimize=True)
-            if len(buf.getvalue()) <= 2450:
+            sample.resize((round(rate*sample.width),round(rate*sample.height)),Image.Resampling.NEAREST).save(
+                buf,format='WEBP',quality=83,method=6)
+            if len(buf.getvalue()) <= 1275:
                 break
-        assert len(buf.getvalue()) <= 2450, file
+        assert len(buf.getvalue()) <= 1275, file
         emit('Anclaje histórico '+file.stem,buf.getvalue())
 
 

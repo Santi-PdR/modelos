@@ -762,6 +762,7 @@ jobs:
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_mount.py
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_backing.py
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_seat.py
+            OPENBLAS_NUM_THREADS=1 python3 tools/verify_torso_fit.py
             PYTHONPATH=tools python3 -c 'import cape_icon; cape_icon.verify()'
           else
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py
@@ -1030,18 +1031,6 @@ jobs:
             esac
           done
 
-      - name: Documentar v1.28.0 y el modelo actual en F5 tres cuartos
-        if: always() && steps.historic-fit.outcome == 'success'
-        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery diagonal
-
-      - name: Documentar v1.28.0 y el modelo actual en F5 giro opuesto
-        if: always() && steps.historic-fit.outcome == 'success'
-        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery espejo
-
-      - name: Documentar v1.28.0 y el modelo actual en F5 cenital
-        if: always() && steps.historic-fit.outcome == 'success'
-        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery cenital
-
       - name: Comparar v1.67.11 y las nuevas hombreras en F5 cenital
         if: always() && steps.fx-smoke.outcome != 'skipped'
         run: python3 tools/verify_forge_plates.py build/fx-smoke-run/fx-shots --gallery
@@ -1089,6 +1078,18 @@ jobs:
               printf '::notice title=Anclaje y ranura en Forge::%s\n' "${line//%/%25}"
             fi
           done
+
+      - name: Documentar v1.28.0 y el modelo actual en F5 tres cuartos
+        if: always() && steps.historic-fit.outcome == 'success'
+        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery diagonal
+
+      - name: Documentar v1.28.0 y el modelo actual en F5 giro opuesto
+        if: always() && steps.historic-fit.outcome == 'success'
+        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery espejo
+
+      - name: Documentar v1.28.0 y el modelo actual en F5 cenital
+        if: always() && steps.historic-fit.outcome == 'success'
+        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery cenital
 
       - name: Comparar el canto de la camiseta en F5 cenital
         if: always() && steps.fx-smoke.outcome == 'success'
