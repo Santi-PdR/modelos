@@ -24,6 +24,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -56,6 +57,8 @@ public final class KatanaAbilities {
     @SubscribeEvent
     public static void tick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer player)) return;
+        if (player.getMainHandItem().getItem() instanceof StainKatanaItem && player.tickCount % 20 == 0)
+            syncCooldowns(player);
         Cast cast = CASTS.get(player.getUUID());
         if (cast == null) return;
         if (!player.isAlive() || player.isSpectator() || player.hasEffect(KatanaEffects.PARALYSIS.get())
@@ -133,9 +136,19 @@ public final class KatanaAbilities {
         }
         state.putLong(key, now + CombatTuning.cooldown(ability));
         player.getPersistentData().put(COOLDOWNS, state);
+        syncCooldowns(player);
         CASTS.put(player.getUUID(), new Cast(ability, stack, level.dimension(), now,
                 marked == null ? null : marked.getUUID()));
         KatanaNetwork.broadcastAnimation(player, ability);
+    }
+
+    private static void syncCooldowns(ServerPlayer player) {
+        long now = player.getServer().overworld().getGameTime();
+        CompoundTag state = player.getPersistentData().getCompound(COOLDOWNS);
+        int[] remaining = new int[3];
+        for (int i = 0; i < 3; i++)
+            remaining[i] = (int)Math.min(CombatTuning.cooldown(i), Math.max(0L, state.getLong("next" + i) - now));
+        KatanaNetwork.sendCooldowns(player, remaining[0], remaining[1], remaining[2]);
     }
 
     private static boolean legalTarget(ServerPlayer player, LivingEntity target) {
@@ -176,6 +189,10 @@ public final class KatanaAbilities {
             return false;
         }
         tag.remove(StainKatanaItem.MARK);
+        // The buff is applied only on a successful, server-authoritative paralysis.
+        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 160, 1, false, false, true));
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 160, 1, false, false, true));
+        KatanaNetwork.broadcastVisual(player, player.getX(), player.getY(0.7), player.getZ(), 4);
         KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(0.55), target.getZ(), 2);
         level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(0.55), target.getZ(), 1, 0, 0, 0, 0);
         level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, .7F, .65F);
@@ -190,8 +207,7 @@ public final class KatanaAbilities {
         int hits = 0;
         for (LivingEntity target : targets) {
             if (hits >= maxTargets) break;
-            // El arma tiene 7 de daño base; los atributos del jugador cuentan,
-            // con límites para que la habilidad no multiplique sin control otros mods.
+            // Deliberadamente poderoso, pero con límites frente a atributos de otros mods.
             double base = player.getAttributeValue(Attributes.ATTACK_DAMAGE);
             float damage = CombatTuning.damage(base, ultimate);
             if (!target.hurt(player.damageSources().playerAttack(player), damage)) continue;

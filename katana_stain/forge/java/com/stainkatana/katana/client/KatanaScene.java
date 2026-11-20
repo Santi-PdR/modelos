@@ -15,7 +15,7 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = StainKatanaMod.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class KatanaScene {
     private static final int TRANSITION_TICKS = 4;
-    private static final int SAFETY_TIMEOUT = 36;
+    private static final int SAFETY_TIMEOUT = 56;
     private static boolean active;
     private static int age, impactAge = 4;
     private static int impactDirection;

@@ -1,7 +1,7 @@
 {
   "itemGroup.stainkatana.legados": "Legados de Combate",
   "item.stainkatana.katana_stain": "Hoja de Stain",
-  "item.stainkatana.katana_stain.lore": "El filo mellado del Asesino de Héroes.",
+  "item.stainkatana.katana_stain.lore": "El acero recuerda a quienes cayeron.",
   "key.categories.stainkatana": "Katana de Stain",
   "key.stainkatana.stun": "Parálisis de sangre",
   "key.stainkatana.slash": "Corte rápido",
@@ -15,8 +15,5 @@
   "stainkatana.ultimate_used": "Sentencia del Asesino",
   "effect.stainkatana.blood_paralysis": "Parálisis de sangre",
   "stainkatana.resisted": "La víctima resistió la parálisis.",
-  "item.stainkatana.katana_stain.mark": "Los golpes dejan una marca durante 10 s.",
-  "item.stainkatana.katana_stain.paralysis": "Parálisis: consume la marca · 12 s de espera.",
-  "item.stainkatana.katana_stain.slash": "Corte rápido: hasta 3 enemigos · 5 s.",
-  "item.stainkatana.katana_stain.ultimate": "Sentencia: 2 cortes, hasta 5 enemigos · 45 s."
+  "item.stainkatana.katana_stain.flavour": "«Solo un héroe de verdad puede detenerme.»"
 }

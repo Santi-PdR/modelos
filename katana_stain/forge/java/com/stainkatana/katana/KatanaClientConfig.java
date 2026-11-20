@@ -9,6 +9,7 @@ public final class KatanaClientConfig {
     public static final ForgeConfigSpec.DoubleValue BAR_FRACTION;
     public static final ForgeConfigSpec.DoubleValue ZOOM_FRACTION;
     public static final ForgeConfigSpec.DoubleValue CAMERA_ROLL;
+    public static final ForgeConfigSpec.BooleanValue SHOW_HUD, BLOOD_FLASH;
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
         builder.push("ultimate_scene");
@@ -20,6 +21,10 @@ public final class KatanaClientConfig {
                 .defineInRange("zoomFraction", 0.04, 0.0, 0.10);
         CAMERA_ROLL = builder.comment("Maximum view-only tilt in degrees on ultimate strokes. Set to zero for motion sensitivity.")
                 .defineInRange("impactRollDegrees", 0.65, 0.0, 2.0);
+        builder.pop();
+        builder.push("interface");
+        SHOW_HUD = builder.comment("Show small cooldown panel while holding the katana.").define("showHud", true);
+        BLOOD_FLASH = builder.comment("Show subtle red tint after successful blood paralysis.").define("bloodFlash", true);
         builder.pop();
         SPEC = builder.build();
     }

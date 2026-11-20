@@ -31,7 +31,7 @@ print('OK: tres clips externos no cíclicos, mensaje de animación y licencia')
 
 ability = (root/'java/com/stainkatana/katana/KatanaAbilities.java').read_text()
 timeline = (root/'java/com/stainkatana/katana/AbilityTimeline.java').read_text()
-assert 'IMPACT_TICK = {9, 7, 7}' in timeline and 'FINISH_TICK = {21, 16, 29}' in timeline
+assert 'IMPACT_TICK = {9, 7, 10}' in timeline and 'FINISH_TICK = {21, 16, 46}' in timeline
 assert 'PlayerLoggedOutEvent' in ability and 'ServerStoppedEvent' in ability
 assert 'player.getMainHandItem() != cast.stack' in ability
 anim = (root/'java/com/stainkatana/katana/client/KatanaAnimations.java').read_text()
@@ -51,11 +51,10 @@ import math
 model = json.loads((a/'models/item/katana_stain.json').read_text())['display']
 for hand in ('thirdperson_righthand', 'thirdperson_lefthand'):
     pose = model[hand]
-    assert pose['rotation'] == [90, 0, 0]
+    assert pose['rotation'] == [75, 0, -25]
     assert pose['scale'] == [0.82, 0.82, 0.82]
     assert pose['translation'] == [0, 1, 0]
-# Vanilla's -90 degree hand rotation cancels the model's +90 degree pitch.
-# Approx. grip centre y=-2/16, custom correction +2/16, GeckoLib's residual +.01.
+# Approximate grip-centre check only; the changed angle requires in-game visual testing.
 grip_offset = math.hypot(0.82 * 0.01, 1/16)
 assert grip_offset < 0.07
 print('OK: comprobación matemática aproximada de agarre y eje, no es prueba visual')
@@ -72,7 +71,7 @@ assert 'AbilityTimeline' in ability and 'cast.timeline.cancel()' in ability
 print('OK: gesto de Emotecraft atribuido y cancelación de línea de tiempo')
 
 scene=(root/'java/com/stainkatana/katana/client/KatanaScene.java').read_text()
-assert 'SAFETY_TIMEOUT = 36' in scene and 'mc.isPaused()' in scene
+assert 'SAFETY_TIMEOUT = 56' in scene and 'mc.isPaused()' in scene
 assert 'KatanaScene.start()' in anim and 'KatanaScene.stop()' in anim
 assert (root/'resources/META-INF/CINEMASCOPE_LICENSE.txt').is_file()
 assert 'bettercombat", "katana_slash' in ability
@@ -81,10 +80,10 @@ visuals=(root/'java/com/stainkatana/katana/client/KatanaVisuals.java').read_text
 network=(root/'java/com/stainkatana/katana/KatanaNetwork.java').read_text()
 assert 'style == 3' in visuals and '^ leftHanded' in visuals
 assert 'getId() == entityId' in visuals and 'KatanaScene.impact(style == 3, leftHanded)' in visuals
-assert 'private static final String VERSION = "7"' in network
+assert 'private static final String VERSION = "8"' in network
 assert 'buf.writeBoolean(msg.leftHanded)' in network and 'buf.readBoolean()' in network
 assert 'impactEnvelope' in scene and 'KatanaClientConfig.ZOOM_FRACTION.get()' in scene
-print('OK: segundo corte, zurdos, impulso local y protocolo visual v7')
+print('OK: segundo corte, zurdos, impulso local y protocolo visual v8')
 
 assert model['firstperson_righthand']['scale'] == [0.64, 0.64, 0.64]
 assert model['firstperson_lefthand']['scale'] == [0.64, 0.64, 0.64]

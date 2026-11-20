@@ -18,6 +18,7 @@ public final class KatanaKeys {
     private static final KeyMapping SLASH = new KeyMapping("key.stainkatana.slash", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_X, CATEGORY);
     private static final KeyMapping ULTIMATE = new KeyMapping("key.stainkatana.ultimate", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_C, CATEGORY);
     private KatanaKeys() { }
+    public static KeyMapping get(int ability) { return switch (ability) { case 0 -> STUN; case 1 -> SLASH; default -> ULTIMATE; }; }
 
     @Mod.EventBusSubscriber(modid = StainKatanaMod.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
     public static class Registration {

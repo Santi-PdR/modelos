@@ -43,9 +43,5 @@ public class StainKatanaMod {
         KatanaEffects.register(bus);
         ITEMS.register(bus);
         TABS.register(bus);
-        bus.addListener(this::addCreative);
-    }
-    private void addCreative(BuildCreativeModeTabContentsEvent event) {
-        if (event.getTabKey() == CreativeModeTabs.COMBAT) event.accept(KATANA_STAIN);
     }
 }

@@ -137,7 +137,7 @@ tasks.withType(JavaCompile).configureEach {
 // Variante optativa y aislada para test-1: no cambia el mod completo.
 // Ejecutar primero python3 katana_stain/tools/preparar_test.py.
 if (project.hasProperty('katanaOnly')) {
-    version = '0.13.0-test'
+    version = '0.14.0-test'
     base.archivesName = 'stainkatana'
     sourceSets.main.java.setSrcDirs(['build-katana-input/java'])
     sourceSets.main.resources.setSrcDirs(['build-katana-input/resources'])

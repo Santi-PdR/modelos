@@ -28,7 +28,7 @@ public class StainKatanaItem extends SwordItem implements GeoItem {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public StainKatanaItem() {
-        super(Tiers.DIAMOND, 3, -2.25F, new Properties().stacksTo(1));
+        super(Tiers.NETHERITE, 6, -2.0F, new Properties().stacksTo(1));
     }
 
     @Override
@@ -64,10 +64,7 @@ public class StainKatanaItem extends SwordItem implements GeoItem {
 
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> lines, TooltipFlag flag) {
-        lines.add(Component.translatable("item.stainkatana.katana_stain.lore").withStyle(ChatFormatting.DARK_RED));
-        lines.add(Component.translatable("item.stainkatana.katana_stain.mark").withStyle(ChatFormatting.GRAY));
-        lines.add(Component.translatable("item.stainkatana.katana_stain.paralysis").withStyle(ChatFormatting.GRAY));
-        lines.add(Component.translatable("item.stainkatana.katana_stain.slash").withStyle(ChatFormatting.GRAY));
-        lines.add(Component.translatable("item.stainkatana.katana_stain.ultimate").withStyle(ChatFormatting.GRAY));
+        lines.add(Component.translatable("item.stainkatana.katana_stain.lore").withStyle(ChatFormatting.DARK_RED, ChatFormatting.ITALIC));
+        lines.add(Component.translatable("item.stainkatana.katana_stain.flavour").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
     }
 }

@@ -23,6 +23,10 @@ public final class VisualFixtureClient {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null || mc.player.getMainHandItem().isEmpty()) return;
         tick++;
+        if (tick == 1) {
+            var id = new net.minecraft.resources.ResourceLocation("bettercombat", "attack_animations/two_handed_slash_vertical_right.json");
+            System.out.println("STAIN_FIXTURE_CLIP=" + (mc.getResourceManager().getResource(id).isPresent() ? "bettercombat" : "fallback"));
+        }
         switch (tick) {
             case 35 -> mc.setScreen(new InventoryScreen(mc.player));
             case 40 -> capture = "01_inventory.png";
@@ -42,11 +46,12 @@ public final class VisualFixtureClient {
             case 158 -> capture = "08a_ultimate_first.png";
             case 159 -> capture = "08b_ultimate_first.png";
             case 160 -> capture = "08c_ultimate_first.png";
-            case 169 -> capture = "09a_ultimate_second.png";
-            case 170 -> capture = "09b_ultimate_second.png";
-            case 171 -> capture = "09c_ultimate_second.png";
+            case 181 -> capture = "09a_ultimate_second.png";
+            case 182 -> capture = "09b_ultimate_second.png";
+            case 183 -> capture = "09c_ultimate_second.png";
             case 205 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(0));
-            case 213 -> capture = "10_paralysis.png";
+            case 214 -> capture = "10_paralysis.png";
+            case 216 -> capture = "11_blood_feedback.png";
             case 245 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }

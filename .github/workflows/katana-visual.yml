@@ -58,15 +58,28 @@ jobs:
           timeout 420s xvfb-run -a -s '-screen 0 1280x720x24' gradle runClient -PkatanaOnly -PkatanaVisual --no-daemon > /tmp/stain-visual-client.log 2>&1 || { tail -160 /tmp/stain-visual-client.log; exit 1; }
           grep -F 'STAIN_VISUAL_FIXTURE_READY' /tmp/stain-visual-client.log
           grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-client.log
+          grep -F 'STAIN_FIXTURE_CLIP=bettercombat' /tmp/stain-visual-client.log
           count=$(find run/stain-visual-test -name '*.png' | wc -l)
           echo "Captured $count frames; software rendering can skip closely-spaced frames."
           test "$count" -ge 10
+      - name: Render again without Better Combat resources
+        run: |
+          set -euo pipefail
+          mv run/stain-visual-test run/stain-visual-bettercombat-clips
+          rm -rf build-katana-input/resources/assets/bettercombat run/saves/KatanaVisual
+          cp -R run/world run/saves/KatanaVisual
+          export LIBGL_ALWAYS_SOFTWARE=1
+          timeout 420s xvfb-run -a -s '-screen 0 1280x720x24' gradle runClient -PkatanaOnly -PkatanaVisual --no-daemon > /tmp/stain-visual-fallback.log 2>&1 || { tail -160 /tmp/stain-visual-fallback.log; exit 1; }
+          grep -F 'STAIN_FIXTURE_CLIP=fallback' /tmp/stain-visual-fallback.log
+          grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-fallback.log
+          test "$(find run/stain-visual-test -name '*.png' | wc -l)" -ge 10
+          mv run/stain-visual-test run/stain-visual-vanilla
       - name: Report diagnostic tail
         if: failure()
         run: |
           python3 - <<'PY2'
           from pathlib import Path
-          for name in ('/tmp/stain-visual-server.log','/tmp/stain-visual-client.log'):
+          for name in ('/tmp/stain-visual-server.log','/tmp/stain-visual-client.log','/tmp/stain-visual-fallback.log'):
               path=Path(name)
               if path.exists():
                   lines=path.read_text(errors='replace').splitlines()
@@ -84,7 +97,9 @@ jobs:
         with:
           name: katana-client-visual
           path: |
-            run/stain-visual-test/*.png
+            run/stain-visual-bettercombat-clips/*.png
+            run/stain-visual-vanilla/*.png
+            /tmp/stain-visual-fallback.log
             /tmp/stain-visual-client.log
             /tmp/stain-visual-server.log
           if-no-files-found: warn
@@ -96,10 +111,13 @@ jobs:
           set -euo pipefail
           mkdir -p katana_stain/vistas/client-test
           rm -f katana_stain/vistas/client-test/*.png
-          cp run/stain-visual-test/*.png katana_stain/vistas/client-test/
+          cp run/stain-visual-bettercombat-clips/*.png katana_stain/vistas/client-test/
+          mkdir -p katana_stain/vistas/client-vanilla
+          rm -f katana_stain/vistas/client-vanilla/*.png
+          cp run/stain-visual-vanilla/*.png katana_stain/vistas/client-vanilla/
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add katana_stain/vistas/client-test/
+          git add katana_stain/vistas/client-test/ katana_stain/vistas/client-vanilla/
           if ! git diff --cached --quiet; then
             git commit -m 'Record Forge client visual fixture'
             git push origin "HEAD:$BRANCH"

@@ -16,7 +16,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 
 /** Solo acepta un identificador de habilidad, nunca blancos ni daño enviados por el cliente. */
 public final class KatanaNetwork {
-    private static final String VERSION = "7";
+    private static final String VERSION = "8";
     public static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder
             .named(new ResourceLocation(StainKatanaMod.MOD_ID, "abilities"))
             .networkProtocolVersion(() -> VERSION).clientAcceptedVersions(VERSION::equals)
@@ -29,6 +29,8 @@ public final class KatanaNetwork {
                 AnimationMessage::decode, AnimationMessage::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(2, VisualMessage.class, VisualMessage::encode,
                 VisualMessage::decode, VisualMessage::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(3, CooldownMessage.class, CooldownMessage::encode,
+                CooldownMessage::decode, CooldownMessage::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
     public record AbilityMessage(int ability) {
         public static void encode(AbilityMessage msg, FriendlyByteBuf buf) { buf.writeVarInt(msg.ability); }
@@ -59,6 +61,23 @@ public final class KatanaNetwork {
             context.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
                     () -> () -> com.stainkatana.katana.client.KatanaAnimations.play(msg.entityId, msg.ability)));
             context.setPacketHandled(true);
+        }
+    }
+    public static void sendCooldowns(ServerPlayer player, int z, int x, int c) {
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new CooldownMessage(z, x, c));
+    }
+    public record CooldownMessage(int z, int x, int c) {
+        public static void encode(CooldownMessage msg, FriendlyByteBuf buf) {
+            buf.writeVarInt(msg.z); buf.writeVarInt(msg.x); buf.writeVarInt(msg.c);
+        }
+        public static CooldownMessage decode(FriendlyByteBuf buf) {
+            return new CooldownMessage(buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
+        }
+        public static void handle(CooldownMessage msg, Supplier<NetworkEvent.Context> supplier) {
+            NetworkEvent.Context ctx = supplier.get();
+            ctx.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
+                    () -> () -> com.stainkatana.katana.client.KatanaHud.update(msg.z, msg.x, msg.c)));
+            ctx.setPacketHandled(true);
         }
     }
     public static void broadcastVisual(ServerPlayer player, double x, double y, double z, int style) {

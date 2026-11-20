@@ -10,16 +10,16 @@ public class AbilityTimelineCheck {
     public static void main(String[] args) {
         for (int ability = 0; ability < 3; ability++) {
             AbilityTimeline t = new AbilityTimeline(ability);
-            int first = ability == 0 ? 9 : 7;
+            int first = ability == 0 ? 9 : ability == 2 ? 10 : 7;
             eq(t.advance(first - 1), 0, "before impact");
             eq(t.advance(first), AbilityTimeline.IMPACT, "first impact");
             eq(t.advance(first), 0, "duplicate tick");
             if (ability == 2) {
-                eq(t.advance(10), 0, "before follow up");
-                eq(t.advance(11), AbilityTimeline.FOLLOW_UP, "follow up");
-                eq(t.advance(18), AbilityTimeline.SECOND_IMPACT, "second impact");
-                eq(t.advance(24), AbilityTimeline.FADE, "ultimate fade");
-                eq(t.advance(29), AbilityTimeline.FINISH, "ultimate finish");
+                eq(t.advance(21), 0, "before follow up");
+                eq(t.advance(22), AbilityTimeline.FOLLOW_UP, "follow up");
+                eq(t.advance(32), AbilityTimeline.SECOND_IMPACT, "second impact");
+                eq(t.advance(40), AbilityTimeline.FADE, "ultimate fade");
+                eq(t.advance(46), AbilityTimeline.FINISH, "ultimate finish");
             } else {
                 eq(t.advance(ability == 0 ? 18 : 13), AbilityTimeline.FADE, "fade");
                 eq(t.advance(ability == 0 ? 21 : 16), AbilityTimeline.FINISH, "finish");
