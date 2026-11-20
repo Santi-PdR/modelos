@@ -85,7 +85,7 @@ assert 'buf.writeBoolean(msg.leftHanded)' in network and 'buf.readBoolean()' in 
 assert 'impactEnvelope' in scene and 'KatanaClientConfig.ZOOM_FRACTION.get()' in scene
 print('OK: segundo corte, zurdos, impulso local y protocolo visual v8')
 
-assert model['firstperson_righthand']['scale'] == [0.64, 0.64, 0.64]
-assert model['firstperson_lefthand']['scale'] == [0.64, 0.64, 0.64]
+assert model['firstperson_righthand']['scale'] == [0.56, 0.56, 0.56]
+assert model['firstperson_lefthand']['scale'] == [0.56, 0.56, 0.56]
 assert 'visualYaw, 55, 0' in visuals and 'yaw, 90, leftHanded ? -25 : 25' in visuals
 print('OK: escala de primera persona y planos de efectos de prueba')

@@ -20,6 +20,16 @@ public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
 
     public KatanaRenderer() {
         super(new DefaultedItemGeoModel<>(new ResourceLocation(StainKatanaMod.MOD_ID, "katana_stain")));
+        addRenderLayer(new software.bernie.geckolib.renderer.layer.GeoRenderLayer<StainKatanaItem>(this) {
+            private final ResourceLocation glow = new ResourceLocation(StainKatanaMod.MOD_ID, "textures/item/katana_stain_glow.png");
+            @Override public void render(PoseStack pose, StainKatanaItem item,
+                    software.bernie.geckolib.cache.object.BakedGeoModel model, RenderType type,
+                    MultiBufferSource buffers, VertexConsumer buffer, float partial, int light, int overlay) {
+                RenderType emissive = RenderType.entityTranslucentEmissive(glow);
+                getRenderer().reRender(model, pose, buffers, item, emissive, buffers.getBuffer(emissive),
+                        partial, LightTexture.FULL_BRIGHT, overlay, 1, 1, 1, 1);
+            }
+        });
     }
 
     @Override

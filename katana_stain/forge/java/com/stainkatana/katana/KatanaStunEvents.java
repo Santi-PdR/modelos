@@ -13,6 +13,13 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = StainKatanaMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class KatanaStunEvents {
     private KatanaStunEvents() { }
+    @SubscribeEvent public static void aura(LivingEvent.LivingTickEvent event) {
+        LivingEntity entity = event.getEntity();
+        if (!(entity.level() instanceof net.minecraft.server.level.ServerLevel level)
+                || !entity.hasEffect(KatanaEffects.PARALYSIS.get()) || entity.tickCount % 6 != 0) return;
+        level.sendParticles(KatanaParticles.SHARD.get(), entity.getX(), entity.getY(0.65), entity.getZ(),
+                3, entity.getBbWidth() * .4, entity.getBbHeight() * .3, entity.getBbWidth() * .4, 0);
+    }
     @SubscribeEvent public static void jump(LivingEvent.LivingJumpEvent event) {
         LivingEntity entity = event.getEntity();
         if (!entity.level().isClientSide && entity.hasEffect(KatanaEffects.PARALYSIS.get())) {

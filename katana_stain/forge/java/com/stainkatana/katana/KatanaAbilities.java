@@ -130,7 +130,7 @@ public final class KatanaAbilities {
         }
         LivingEntity marked = ability == 0 ? markedTarget(player, stack, level, true) : null;
         if (ability == 0 && marked == null) return;
-        if (ability != 0 && targets(player, level, ability == 2).isEmpty()) {
+        if (ability == 2 && targets(player, level, true).isEmpty()) {
             player.displayClientMessage(Component.translatable("stainkatana.no_target"), true);
             return;
         }
@@ -172,7 +172,7 @@ public final class KatanaAbilities {
         }
         Entity entity = level.getEntity(mark.getUUID("Target"));
         if (!(entity instanceof LivingEntity target) || !legalTarget(player, target)
-                || player.distanceToSqr(target) > 64.0D) {
+                || player.distanceToSqr(target) > 576.0D) {
             if (notify) player.displayClientMessage(Component.translatable("stainkatana.target_unavailable"), true);
             return null;
         }
@@ -224,7 +224,8 @@ public final class KatanaAbilities {
         arc(level, player, facing, ultimate);
         level.playSound(null, player.blockPosition(), katanaSwingSound(), SoundSource.PLAYERS, .8F, ultimate ? .85F : 1.0F);
         if (hits == 0) {
-            player.displayClientMessage(Component.translatable("stainkatana.no_target"), true); return false;
+            if (ultimate) player.displayClientMessage(Component.translatable("stainkatana.no_target"), true);
+            return false;
         }
         // La ulti puede golpear dos veces, pero desgasta el arma una sola vez.
         Cast current = CASTS.get(player.getUUID());
@@ -249,7 +250,7 @@ public final class KatanaAbilities {
     }
 
     private static List<LivingEntity> targets(ServerPlayer player, ServerLevel level, boolean ultimate) {
-        double range = ultimate ? 5.0 : 3.5;
+        double range = ultimate ? 5.0 : 7.0;
         Vec3 direction = facing(player);
         List<LivingEntity> result = level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(range),
                 target -> legalTarget(player, target) && player.distanceToSqr(target) <= range * range
