@@ -292,8 +292,8 @@ animación y la documentación de GeckoLib._
   El fuelle conserva su pie dentro de la camiseta y su punta solapa la
   costura de `cape_top`: sólo el fuelle cambia de largo y ángulo al moverse
   la bisagra. El extremo superior de los jirones queda plegado bajo ese
-  reborde. No se movieron pivotes ni fotogramas clave, ni se repintaron el
-  atlas, la emisión, el faldón inferior o el icono.
+  reborde. Los pivotes del paño libre y los fotogramas clave no cambiaron.
+  El atlas, la emisión, el faldón inferior y el icono se conservan.
   `tools/verify_cape_attachment.py` mide los solapes en 3D con mangas
   Steve/Alex. El barrido del reborde exterior cubre giros de pie y una
   muestra agachada. Para la mirada vertical recta también se comprueban

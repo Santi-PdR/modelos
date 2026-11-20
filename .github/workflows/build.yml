@@ -1257,30 +1257,6 @@ jobs:
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.
-      # One-time copy to the working branch; no Release, tag or installer.
-      - name: Adjuntar el JAR probado y su lámina a la rama de trabajo
-        if: >-
-          github.repository == 'Santi-PdR/modelos' &&
-          github.ref == 'refs/heads/arena/5a9fa51b-modelos' &&
-          github.event_name == 'push' && contains(github.event.head_commit.message, '[capa-v16715-directo]') &&
-          steps.verify-fixed-mount.outcome == 'success' && steps.fx-smoke.outcome == 'success'
-        run: |
-          set -euo pipefail
-          branch=arena/5a9fa51b-modelos
-          test "$(git branch --show-current)" = "$branch"
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          jar=capatest-1.67.15.jar
-          (cd build/libs && sha256sum -c SHA256SUMS.txt)
-          test "$(cut -d ' ' -f3 build/libs/SHA256SUMS.txt)" = "$jar"
-          test ! -e "entregables/v1.67.15/$jar"
-          install -D -m 0644 "build/libs/$jar" "entregables/v1.67.15/$jar"
-          install -D -m 0644 build/libs/SHA256SUMS.txt docs/releases/v1.67.15/JAR.sha256
-          install -D -m 0644 build/fx-smoke-run/fx-shots/yugo-fijo-forge.jpg docs/capa_v16715_anclaje_forge.jpg
-          git add -f -- "entregables/v1.67.15/$jar" docs/releases/v1.67.15/JAR.sha256 docs/capa_v16715_anclaje_forge.jpg
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m 'Adjuntar v1.67.15 verificada y su lámina F5 [skip ci]'
-          git push origin "$branch"
-
       - name: Stage verified release (draft)
         if: >-
           (github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar]')) ||
