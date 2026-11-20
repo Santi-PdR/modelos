@@ -133,18 +133,25 @@ final class CapeHistoricFitProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         return out.append((1 + p.x) / 2).append('\t').append((1 - p.y) / 2);
     }
 
-    record Draw(String bounds, String faces, String camera) {}
+    static void hideCrown(CapaArmorRenderer renderer, boolean hidden) {
+        for (int i = 0; i < 5; i++)
+            renderer.getGeoModel().getBone("v17_cowl_back_" + i).orElseThrow().setHidden(hidden);
+    }
 
-    static Draw finish(GeoArmorRenderer<?> renderer) {
+    record Draw(String bounds, String faces, String camera, double crownFront) {}
+
+    static Draw finish(GeoArmorRenderer<?> renderer, boolean visibleCrown) {
         var probe = renderer.getRenderLayers().stream().filter(CapeHistoricFitProbe.class::isInstance)
                 .map(CapeHistoricFitProbe.class::cast).findFirst().orElseThrow();
         probe.active = false;
         if (probe.camera == null || !probe.bounds.containsKey("v18_pad_0") || !probe.bounds.containsKey("v18_pad_1")
-                || !probe.bounds.containsKey("v17_cowl_back_0") || !probe.bounds.containsKey("v17_ribbon_5_seg0"))
-            throw new AssertionError("missing solid draw of the worn collar, plates or roots: " + probe.bounds.keySet());
+                || probe.bounds.containsKey("v17_cowl_back_0") != visibleCrown || !probe.bounds.containsKey("v17_ribbon_5_seg0"))
+            throw new AssertionError("unexpected solid draw of the worn collar, plates or roots: " + probe.bounds.keySet());
         var out = new StringBuilder("part\tmin_x\tmin_y\tmin_z\tmax_x\tmax_y\tmax_z\n");
         probe.bounds.forEach((name, range) -> out.append(name).append('\t').append(range.tsv()).append('\n'));
-        return new Draw(out.toString(),probe.faces.toString(),probe.camera);
+        double front = probe.bounds.entrySet().stream().filter(e -> e.getKey().startsWith("v17_cowl_back_"))
+                .mapToDouble(e -> e.getValue().lo.z).min().orElse(Double.NaN);
+        return new Draw(out.toString(),probe.faces.toString(),probe.camera,front);
     }
 
     private static final class Bounds {

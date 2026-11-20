@@ -216,9 +216,10 @@ function torsoShape(data, stance, look, yaw, depth, seat, plate, arm, effort, dr
   if (!data || elytra || dry<=0 || ![stance,look,yaw,depth,arm,effort,dry,seat,plate].every(Number.isFinite))
     return [0,null,null,null,null];
   const down=-look, turn=Math.abs(((yaw+180)%360+360)%360-180);
-  const space=(1-smooth(.02,.40,depth))*(1-smooth(.05,.36,stance))
-    *(1-smooth(44,57,turn))*(1-.82*smooth(62,88,down)*smooth(24,36,turn));
-  const reach=space*(1-smooth(2.85,6,effort));
+  const leanRoom=1-smooth(.05,.36,stance), steepRoom=1-.82*smooth(62,88,down)*smooth(24,36,turn);
+  const sleeveRoom=1-smooth(2.85,6,effort), release=smooth(44,57,turn);
+  const space=(1-smooth(.02,.40,depth))*leanRoom*(1-release)*steepRoom;
+  const reach=space*sleeveRoom;
   const tuck=dry*(1-.48*smooth(.62,.995,seat))*(1-smooth(.09,.32,stance))
     *(1-smooth(.10,.82,depth))*(1-smooth(10,25,effort));
   const trim=reach*smooth(24,43,down);
@@ -226,14 +227,22 @@ function torsoShape(data, stance, look, yaw, depth, seat, plate, arm, effort, dr
     *(1-smooth(14,33,look))*(1-smooth(70,86,turn));
   const sweep=smooth(5,25,effort), advance=reach*smooth(12,42,down), upright=1-smooth(0,23,down);
   const fit=(i,k,sx,sy,sz,dy,dz)=>k>0 ? [...data.pivots[i],0,k*dy,k*dz,...[sx,sy,sz].map(v=>1+k*(v-1))] : null;
-  const collar=r=>fit(0,tuck,.965,.41,1-.12*r,-.58,-1.62*r);
+  const collar=(r,shift=0,scale=1)=>tuck>0 ? [...data.pivots[0],0,-.58*tuck,shift-1.62*r*tuck*scale,
+    1+tuck*(.965-1),1+tuck*(.41-1),(1-.12*r*tuck)*scale] : null;
   const crown=trim*(1+1.24*smooth(.76,.995,seat)+.46*smooth(78,87,down)*smooth(.79,.995,seat));
+  const stroke=.68*smooth(23,43,down), outer=stroke*dry*space*(1-smooth(2.85,6,arm));
+  const [start,soft,opening,end,d0,d1]=data.turn;
+  const lost=Math.max(0,release-smooth(44,57,start));
+  const hold=lost*lost/(lost+soft)*(1-smooth(opening,end,turn))*smooth(30,45,down)*(1-smooth(64,78,down))
+    *(1-smooth(d0,d1,depth))*leanRoom*steepRoom*sleeveRoom;
+  const scale=(1-data.seatDepth*Math.max(seat,outer+stroke*dry*hold))/(1-data.seatDepth*Math.max(seat,outer));
+  const shift=(1-scale)*(data.seatPlane-depth-data.pivots[0][2]);
   const settled=dry*smooth(.78,.99,plate);
   const compact=rest*(1-smooth(.54,.76,seat))*(1-smooth(.10,.26,stance));
   const wide=rest || settled ? fit(2,1,1-.60*rest,1-.59*rest,1-.14*advance*rest,
     rest*(.065+.37*sweep+.48*advance-.47*upright)+.07*settled,
     rest*(-.24*advance+.52*sweep+.22*upright)-.38*settled) : null;
-  return [.68*smooth(23,43,down)*dry*space*(1-smooth(2.85,6,arm)),collar(crown),collar(trim*.16),
+  return [outer,collar(crown+hold*smooth(24,43,down),shift,scale),collar(trim*.16),
     fit(1,compact,.94,.92,1-.17*advance,.18*advance,-.24*advance),wide];
 }
 

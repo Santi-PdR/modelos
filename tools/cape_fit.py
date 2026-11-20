@@ -200,7 +200,11 @@ def rim_frame(name, target, amount):
 def torso_profile():
     code = SOURCE.with_name('CapeTorsoFit.java').read_text()
     pivots = re.search(r'PIVOTS = (\{.*?\});',code,re.S)[1]
-    return dict(pivots=json.loads(pivots.replace('{','[').replace('}',']')))
+    limits = ('KEEP_AFTER', 'SOFTNESS', 'OPEN_FROM', 'OPEN_END', 'DEPTH_START', 'DEPTH_END')
+    turn = [float(re.search(r'\bTURN_' + k + r' = ([\d.]+);',code)[1]) for k in limits]
+    seat = seat_profile()
+    return dict(pivots=json.loads(pivots.replace('{','[').replace('}',']')), turn=turn,
+                seatPlane=seat['plane'], seatDepth=seat['depth'])
 
 
 def torso_shape(stance, pitch, yaw, depth, seat, plate, arm, effort, dry=1., elytra=False):
@@ -208,29 +212,45 @@ def torso_shape(stance, pitch, yaw, depth, seat, plate, arm, effort, dry=1., ely
     if elytra or dry <= 0 or not all(map(math.isfinite,(stance,pitch,yaw,depth,arm,effort,dry,seat,plate))):
         return (0.,None,None,None,None)
     down, turn = -pitch, abs(math.remainder(yaw,360.))
-    space = ((1-smooth(.02,.40,depth))*(1-smooth(.05,.36,stance))
-             *(1-smooth(44,57,turn))*(1-.82*smooth(62,88,down)*smooth(24,36,turn)))
-    reach = space*(1-smooth(2.85,6,effort))
+    lean_room = 1-smooth(.05,.36,stance)
+    steep_room = 1-.82*smooth(62,88,down)*smooth(24,36,turn)
+    sleeve_room = 1-smooth(2.85,6,effort)
+    release = smooth(44,57,turn)
+    space = (1-smooth(.02,.40,depth))*lean_room*(1-release)*steep_room
+    reach = space*sleeve_room
     tuck = (dry*(1-.48*smooth(.62,.995,seat))*(1-smooth(.09,.32,stance))
             *(1-smooth(.10,.82,depth))*(1-smooth(10,25,effort)))
     trim = reach*smooth(24,43,down)
     rest = dry*(1-smooth(.72,1,plate))*(1-smooth(.10,.50,stance))*(1-smooth(14,33,pitch))*(1-smooth(70,86,turn))
     sweep, advance = smooth(5,25,effort),reach*smooth(12,42,down)
     upright = 1-smooth(0,23,down)
-    pivots = torso_profile()['pivots']
+    profile = torso_profile()
+    pivots = profile['pivots']
 
     def fit(i,k,sx,sy,sz,dy,dz):
         return [*pivots[i], 0.,k*dy,k*dz,*(1+k*(v-1) for v in (sx,sy,sz))] if k > 0 else None
 
-    def collar(r): return fit(0,tuck,.965,.41,1-.12*r,-.58,-1.62*r)
+    def collar(reach, shift=0., scale=1.):
+        return [*pivots[0],0.,-.58*tuck,shift-1.62*reach*tuck*scale,
+                1+tuck*(.965-1),1+tuck*(.41-1),(1-.12*reach*tuck)*scale] if tuck > 0 else None
+
     crown = trim*(1+1.24*smooth(.76,.995,seat)+.46*smooth(78,87,down)*smooth(.79,.995,seat))
+    stroke = .68*smooth(23,43,down)
+    outer = stroke*dry*space*(1-smooth(2.85,6,arm))
+    start,soft,opening,end,d0,d1 = profile['turn']
+    lost = max(0.,release-smooth(44,57,start))
+    hold = (lost*lost/(lost+soft)*(1-smooth(opening,end,turn))*smooth(30,45,down)*(1-smooth(64,78,down))
+            *(1-smooth(d0,d1,depth))*lean_room*steep_room*sleeve_room)
+    scale = ((1-profile['seatDepth']*max(seat,outer+stroke*dry*hold))
+             / (1-profile['seatDepth']*max(seat,outer)))
+    shift = (1-scale)*(profile['seatPlane']-depth-pivots[0][2])
     settled = dry*smooth(.78,.99,plate)
     compact = rest*(1-smooth(.54,.76,seat))*(1-smooth(.10,.26,stance))
     wide = fit(2,1,1-.60*rest,1-.59*rest,1-.14*advance*rest,
                rest*(.065+.37*sweep+.48*advance-.47*upright)+.07*settled,
                rest*(-.24*advance+.52*sweep+.22*upright)-.38*settled) if rest or settled else None
-    return (.68*smooth(23,43,down)*dry*space*(1-smooth(2.85,6,arm)),
-            collar(crown),collar(trim*.16),fit(1,compact,.94,.92,1-.17*advance,.18*advance,-.24*advance),wide)
+    return (outer,collar(crown+hold*smooth(24,43,down),shift,scale),collar(trim*.16),
+            fit(1,compact,.94,.92,1-.17*advance,.18*advance,-.24*advance),wide)
 
 
 def torso_frame(b, transform, prefix="torso_"):

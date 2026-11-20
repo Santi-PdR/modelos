@@ -75,7 +75,7 @@ public final class CapeFitTest {
         if (args.length == 1 && args[0].equals("--torso")) {
             for (double stance : new double[]{0,.09,.26,.51,1})
                 for (double look : new double[]{-89.5,-78.1,-61,-58,-48,-36,-17,0,8,31,75})
-                    for (double yaw : new double[]{-376,-63,-48,-43,0,16,43,48,76,371})
+                    for (double yaw : new double[]{-376,-79,-68,-60,-57,-52,-48,-43,0,16,43,48,52,57,60,68,79,371})
                         for (double arm : new double[]{0,3.3,8,37})
                             for (int mode = 0; mode < 3; mode++) {
                                 boolean wings = mode == 1;

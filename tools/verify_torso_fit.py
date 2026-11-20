@@ -98,8 +98,9 @@ def matrix_parity(geo):
     names = [G.FIT_BONE, G.DRAPE_BONE, G.SHOULDERS_BONE, G.SADDLE_BONE, 'cape_top',
              'v17_ribbon_1_seg0', 'v17_cowl_back_2', 'v17_cowl_tooth_5', 'v17_cowl_return',
              'v18_pad_0', 'v18_pad_1', 'rim_v18_pad_0', 'rim_v18_pad_1', *B.profile()['names']]
-    aims = list(product((0.,.12,.42),((-89.5,0),(-76,3),(-58,43),(-48,-48),(-35,316),(8,0)),
-                        (False,True),(0.,4.1,17.)))
+    looks = ((-89.5,0),(-76,3),(-58,43),(-48,-48),(-35,316),(8,0),
+             (-58,52),(-48,-60),(-58,68),(-48,-79))
+    aims = list(product((0.,.12,.42),looks,(False,True),(0.,4.1,17.)))
     samples = [(s,p,y,w,a,a+1.15) for s,(p,y),w,a in aims]
     expected = []
     for s,p,y,w,a,e in samples:
@@ -111,7 +112,7 @@ def matrix_parity(geo):
 
 def parity(path):
     rows = np.loadtxt(path)
-    assert rows.shape == (5*11*10*4*3,44), rows.shape
+    assert rows.shape == (5*11*18*4*3,44), rows.shape
     params = rows[:,:7].tolist()
     js = viewer(dict(torsoSamples=params))
     staged = []

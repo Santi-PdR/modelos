@@ -887,7 +887,7 @@ jobs:
             grep -qx 'com/capatest/client/CapaSparkParticle.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeSparkFrame.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeSparkPath.class' /tmp/jar-contents.txt
-            if grep -Eq '^(com/capatest/client/(CapeFxSmoke|CapeWalkProbe|CapeLookSweep|CapePlateProbe)|assets/capatest/geo/test/)' /tmp/jar-contents.txt; then
+            if grep -Eq '^(com/capatest/client/(CapeFxSmoke|CapeWalkProbe|CapeLookSweep|CapeTurnSweep|CapeHistoricFitProbe|CapeHistoricalArmorRenderer|CapePlateProbe)|assets/capatest/geo/test/)' /tmp/jar-contents.txt; then
               echo '::error::El JAR de distribución incluye código de la prueba de cliente.'
               exit 1
             fi
@@ -1010,6 +1010,9 @@ jobs:
           awk 'sub(/.*FX smoke: Recorrido de mirada /, "")' "$log" | while IFS= read -r line; do
             printf '::notice title=Recorrido de mirada en Forge::%s\n' "${line//%/%25}"
           done
+          awk 'sub(/.*FX smoke: Giro continuo /, "")' "$log" | while IFS= read -r line; do
+            printf '::notice title=Giro continuo en Forge::%s\n' "$line"
+          done
           if [ "$rc" -ne 0 ] || ! grep -Fq 'FX smoke: PASS:' "$log" ||
              grep -Fq -e 'FX smoke: FAIL' -e 'Blight Star Mantle: respuesta del paño desactivada' -e 'se usa el muestreador de GeckoLib' "$log" ||
              [ "$(grep -Fc 'Blight Star Mantle: falló el pase' "$log")" -ne 2 ]; then
@@ -1034,7 +1037,7 @@ jobs:
 
       # Priorizar la nueva auditoría en el presupuesto de anotaciones, sin
       # perder las imágenes completas de las comparaciones anteriores.
-      - name: Comparar el cuello con y sin la sonda en ambos giros
+      - name: Comparar el cuello anterior y actual en ambos giros
         if: always() && steps.historic-fit.outcome == 'success'
         run: |
           for view in giro-amplio giro-inverso; do

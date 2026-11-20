@@ -86,11 +86,13 @@ final class CapeLookSweep {
 
     static final class Probe extends GeoRenderLayer<CapaDeteriorerItem> {
         private Matrix4f opaque;
-        private boolean armed;
+        private GeoBone tracked;
 
         private Probe(CapaArmorRenderer renderer) { super(renderer); }
 
-        static void arm(CapaArmorRenderer renderer) {
+        static void arm(CapaArmorRenderer renderer) { arm(renderer, CapeFit.SEAT_FRAME); }
+
+        static void arm(CapaArmorRenderer renderer, String name) {
             Probe probe = renderer.getRenderLayers().stream().filter(Probe.class::isInstance)
                     .map(Probe.class::cast).findFirst().orElseGet(() -> {
                         Probe p = new Probe(renderer);
@@ -98,8 +100,8 @@ final class CapeLookSweep {
                         return p;
                     });
             probe.opaque = null;
-            probe.armed = true;
-            seat(renderer).setTrackingMatrices(true);
+            probe.tracked = renderer.getGeoModel().getBone(name).orElseThrow();
+            probe.tracked.setTrackingMatrices(true);
         }
 
         // GeckoLib only calls per-bone layers during the original draw.
@@ -110,24 +112,19 @@ final class CapeLookSweep {
                                   MultiBufferSource buffers,
                                   VertexConsumer consumer,
                                   float partialTick, int light, int overlay) {
-            if (armed && bone.getName().equals(CapeFit.SEAT_FRAME))
+            if (bone == tracked)
                 opaque = new Matrix4f(bone.getModelSpaceMatrix());
         }
 
         static Draw finish(CapaArmorRenderer renderer) {
             Probe probe = renderer.getRenderLayers().stream().filter(Probe.class::isInstance)
                     .map(Probe.class::cast).findFirst().orElseThrow();
-            GeoBone seat = seat(renderer);
             // Post runs after the depth-tested glow layer has reused the rig.
-            Matrix4f last = seat.getModelSpaceMatrix();
-            seat.setTrackingMatrices(false);
-            probe.armed = false;
+            Matrix4f last = probe.tracked.getModelSpaceMatrix();
+            probe.tracked.setTrackingMatrices(false);
+            probe.tracked = null;
             return probe.opaque == null ? new Draw(Float.NaN, false) : new Draw(
                     probe.opaque.getScale(new Vector3f()).z, probe.opaque.equals(last, .00008F));
-        }
-
-        private static GeoBone seat(CapaArmorRenderer renderer) {
-            return renderer.getGeoModel().getBone(CapeFit.SEAT_FRAME).orElseThrow();
         }
     }
 }

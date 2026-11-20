@@ -21,7 +21,7 @@ SLOTS = ('pecho', 'curios')
 
 
 def variants(view):
-    return ('-v1280', '', '-cuello') if view in WIDE_VIEWS else ('-v1280', '-v16712', '')
+    return ('-v1280', '-v16713', '') if view in WIDE_VIEWS else ('-v1280', '-v16712', '')
 
 
 def bounds(path):
@@ -42,17 +42,17 @@ def geometry(root, view, slot, suffix=''):
                      roots[:,0,2].mean(), roots[:,1,1].max()])
 
 
-def visible_attachment(root, view, slot, suffix=''):
-    stem = root/f'historia-{view}-{slot}{suffix}'
-    worn = read(stem.with_suffix('.png'))
-    bare = read(root/f'historia-{view}-sin-manto.png')
-    assert worn.shape == bare.shape
+def shirt_region(bare):
     skin = shirt_mask(bare) & ~blue_floor(bare) & (bare[...,1] > 92)
     _y, x = np.where(skin)
-    assert len(x) > 500, (view, slot, 'sin camiseta visible')
+    assert len(x) > 500, 'sin camiseta visible'
     width = np.ptp(np.quantile(x,[.005,.995]))
     near = np.asarray(Image.fromarray((skin*255).astype('uint8')).filter(ImageFilter.MaxFilter(1+2*round(.10*width)))) > 0
-    h,w = skin.shape
+    return near
+
+
+def part_masks(stem, size):
+    h,w = size
     sections = [Image.new('L',(w,h)) for _ in range(3)]
     draw = list(map(ImageDraw.Draw,sections))
     with stem.with_name(stem.name+'-caras').with_suffix('.tsv').open() as lines:
@@ -63,20 +63,41 @@ def visible_attachment(root, view, slot, suffix=''):
             quad = np.array(list(map(float,p))).reshape(4,2)*[w,h]
             assert np.isfinite(quad).all(), (name, quad)
             draw[index].polygon([tuple(v) for v in quad],fill=255)
+    return [np.asarray(mask) > 0 for mask in sections]
+
+
+def fabric_pixels(bare, worn):
     # Projection alone isn't a visible join. Keep only actual cloth pixels
     # in the F5 framebuffer that differ from the unequipped control.
-    fabric = ((np.abs(worn-bare).max(2) >= 18) & ~blue_floor(worn) & ~shirt_mask(worn)
+    return ((np.abs(worn-bare).max(2) >= 18) & ~blue_floor(worn) & ~shirt_mask(worn)
               & (worn[...,1] < 97))
+
+def visible_attachment(root, view, slot, suffix=''):
+    stem = root/f'historia-{view}-{slot}{suffix}'
+    worn = read(stem.with_suffix('.png'))
+    bare = read(root/f'historia-{view}-sin-manto.png')
+    assert worn.shape == bare.shape
+    near = shirt_region(bare)
+    fabric = fabric_pixels(bare,worn)
     metrics = []
-    for mask in sections:
-        visible = (np.asarray(mask)>0) & fabric
+    for mask in part_masks(stem,near.shape):
+        visible = mask & fabric
         count = visible.sum()
-        # At large turns the near sleeve may hide the opposite plate.
-        # Report its visibility, rather than treating an occlusion as a hole.
-        if view not in WIDE_VIEWS or mask is sections[2]:
-            assert count >= 12, (view,slot,'pieza no visible en F5',count)
-        metrics.append((int(count),float(near[visible].mean()) if count else 0.))
+        assert count >= 12, (view,slot,'pieza no visible en F5',count)
+        metrics.append((int(count),float(near[visible].mean())))
     return metrics
+
+
+def isolated_crown(stem, bare, near, suffix):
+    # One withheld part, same light and registered pose. Other opaque pieces
+    # inside the crown's projected quads cannot count as crown pixels.
+    worn = read(stem.with_name(stem.name+suffix+'.png'))
+    hidden = read(stem.with_name(stem.name+suffix+'-sin-cuello.png'))
+    assert worn.shape == hidden.shape == bare.shape, stem
+    mask = part_masks(stem.with_name(stem.name+suffix),near.shape)[2]
+    assert mask.sum() >= 75, (stem,'proyección de cuello demasiado pequeña')
+    real = mask & fabric_pixels(bare,worn) & (np.abs(worn-hidden).max(2) >= 15)
+    return int(real.sum()), int((real & near).sum()), int(mask.sum())
 
 
 def verify(root):
@@ -114,31 +135,43 @@ def verify(root):
 
 
 def study_wide_turn(root):
-    """Registered A/B for the still collar. Report the look; don't assume a fix."""
+    """The published .13 and the live fit, each with its own hidden-crown control."""
+    problems = []
     for view in WIDE_VIEWS:
         by_slot = []
+        bare = read(root/f'historia-{view}-sin-manto.png')
+        near = shirt_region(bare)
         for slot in SLOTS:
             stem = root/f'historia-{view}-{slot}'
-            with Image.open(stem.with_suffix('.png')) as image:
-                size = image.size
+            size = np.array(bare.shape[:2][::-1])
             versions = variants(view)
-            poses = [np.loadtxt(stem.with_name(stem.name+s+'-camara.tsv'))*size for s in versions]
+            pose_suffixes = (*versions, '-v16713-sin-cuello', '-sin-cuello')
+            poses = [np.loadtxt(stem.with_name(stem.name+s+'-camara.tsv'))*size for s in pose_suffixes]
             assert all(m.shape == (8,2) and np.isfinite(m).all() for m in poses), stem
             drift = max(abs(m-poses[1]).max() for m in poses)
             assert drift < .65, (view,slot,'cámara F5 no registrada',drift)
-            by_slot.append(poses[1])
-            ref, base, trial = (geometry(root,view,slot,s) for s in versions)
+            by_slot.append(poses[2])
+            ref, base, now = (geometry(root,view,slot,s) for s in versions)
             p0, p1 = (bounds(stem.with_name(stem.name+s+'.tsv')) for s in versions[1:])
             for name in ('v18_pad_0', 'v18_pad_1', 'v17_cowl_return', 'v17_cowl_tooth_5'):
-                np.testing.assert_allclose(p0[name],p1[name],rtol=0,atol=.015,err_msg=f'{stem}: {name} se movió en la sonda')
-            np.testing.assert_allclose(base[3:],trial[3:],rtol=0,atol=.08,err_msg=f'{stem}: altura de cuello o raíces cambiaron')
-            assert .8 < ref[2] < 1.4 and 1.25 < base[2]-trial[2] < 1.50, (stem, ref, base, trial)
-            counts = [visible_attachment(root,view,slot,s)[2] for s in versions]
-            cloth = ' → '.join(f'{f:.0%} ({n}px)' for n,f in counts)
-            print(f'{view}/{slot} · registro {drift:.2f}px · referencia → actual → sonda: '
-                  f'Z delantero del cuello {ref[2]:.2f} → {base[2]:.2f} → {trial[2]:.2f}u; '
-                  f'raíces {base[4]:.2f}u; píxeles en la proyección del cuello cerca de camiseta {cloth}',flush=True)
+                np.testing.assert_allclose(p0[name],p1[name],rtol=0,atol=.015,err_msg=f'{stem}: {name} se movió')
+            np.testing.assert_allclose(base[3:],now[3:],rtol=0,atol=.08,err_msg=f'{stem}: altura de cuello o raíces cambiaron')
+            assert .8 < ref[2] < 1.4 and 5.95 < base[2] < 6.05 and 4.1 < now[2] < 4.45, (stem, ref, base, now)
+            a, b = (isolated_crown(stem,bare,near,s) for s in versions[1:])
+            prev,n0,area0 = a
+            current,n1,area1 = b
+            assert prev >= 100 and current > 0, (view,slot,'el control oculto no aisló el cuello',a,b)
+            retention = current/prev
+            frac0,frac1 = n0/prev,n1/current
+            oc0,oc1 = prev/area0,current/area1
+            print(f'{view}/{slot} · registro {drift:.2f}px · Z histórico → v1.67.13 → actual '
+                  f'{ref[2]:.2f} → {base[2]:.2f} → {now[2]:.2f}u; raíces {now[4]:.2f}u; '
+                  f'cuello aislado {prev} → {current}px, cerca de camiseta {n0} → {n1}px ({frac0:.0%} → {frac1:.0%}); '
+                  f'visible/proyectado {oc0:.0%} → {oc1:.0%}',flush=True)
+            if (retention < .65 or frac1-frac0 < .15 or n1-n0 < .10*prev or oc1 < .82*oc0):
+                problems.append((view,slot,a,b,'apoyo insuficiente, oclusión o pérdida de silueta'))
         assert abs(by_slot[0]-by_slot[1]).max() < .65, (view,'pecho y Curios no registrados')
+    assert not problems, problems
 
 
 def gallery(root, view):
@@ -156,7 +189,7 @@ def gallery(root, view):
     crop = (round(x0-.43*d),round(y0-.73*d),round(x1+.43*d),round(y1+.69*d))
     # Both historical slots and the bare control stay in the full artifact.
     # The ten wide-turn thumbnails must fit the same job annotation budget.
-    suffixes = ('pecho-v1280','pecho','pecho-cuello','curios','curios-cuello') if view in WIDE_VIEWS else (
+    suffixes = ('pecho-v1280','pecho-v16713','pecho','curios-v16713','curios') if view in WIDE_VIEWS else (
         'sin-manto', *(f'{slot}{s}' for slot in SLOTS for s in variants(view)))
     for suffix in suffixes:
         file = root/f'historia-{view}-{suffix}.png'
@@ -180,7 +213,7 @@ if __name__ == '__main__':
     ap.add_argument('shots',type=Path)
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument('--gallery',choices=VIEWS+WIDE_VIEWS)
-    mode.add_argument('--giro-amplio',action='store_true',help='auditar la sonda de cuello sin asumir un cambio de ajuste')
+    mode.add_argument('--giro-amplio',action='store_true',help='comparar el cuello real en F5 con v1.67.13 y sus controles ocultos')
     args = ap.parse_args()
     if args.gallery:
         gallery(args.shots,args.gallery)

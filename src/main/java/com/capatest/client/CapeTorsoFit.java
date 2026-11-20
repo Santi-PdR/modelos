@@ -13,6 +13,12 @@ final class CapeTorsoFit {
             {4.57, 22.95, 3.55},
             {-4.26, 22.45, 3.75}
     };
+    private static final double TURN_KEEP_AFTER = 48;
+    private static final double TURN_SOFTNESS = .115;
+    private static final double TURN_OPEN_FROM = 60;
+    private static final double TURN_OPEN_END = 79;
+    private static final double TURN_DEPTH_START = .04;
+    private static final double TURN_DEPTH_END = .84;
     static final Shape NONE = new Shape(0, null, null, null, null);
 
     record Affine(float x, float y, float z, float dx, float dy, float dz, float sx, float sy, float sz) {}
@@ -49,10 +55,13 @@ final class CapeTorsoFit {
                 || !Double.isFinite(previousSeat) || !Double.isFinite(plateFit)) return NONE;
         double stance = bodyPitch / CapeFit.CROUCH_RADIANS;
         double down = Math.toDegrees(headPitch), turn = Math.abs(Math.toDegrees(Math.IEEEremainder(relativeYaw, 2*Math.PI)));
-        double space = (1 - smooth(.02, .40, depth)) * (1 - smooth(.05, .36, stance))
-                * (1 - smooth(44, 57, turn)) * (1 - .82 * smooth(62, 88, down) * smooth(24, 36, turn));
+        double leanRoom = 1 - smooth(.05, .36, stance);
+        double steepRoom = 1 - .82 * smooth(62, 88, down) * smooth(24, 36, turn);
+        double sleeveRoom = 1 - smooth(2.85, 6, sleeve);
+        double release = smooth(44, 57, turn);
+        double space = (1 - smooth(.02, .40, depth)) * leanRoom * (1 - release) * steepRoom;
         double stroke = dry * space * (1 - smooth(2.85, 6, armBack));
-        double reach = space * (1 - smooth(2.85, 6, sleeve));
+        double reach = space * sleeveRoom;
         double tuck = dry * (1 - .48 * smooth(.62, .995, previousSeat)) * (1 - smooth(.09, .32, stance))
                 * (1 - smooth(.10, .82, depth)) * (1 - smooth(10, 25, sleeve));
         double trim = reach * smooth(24, 43, down);
@@ -69,12 +78,29 @@ final class CapeTorsoFit {
         // seating the crown without pulling the teeth away from the roots.
         double crown = trim * (1 + 1.24 * smooth(.76, .995, previousSeat)
                 + .46 * smooth(78, 87, down) * smooth(.79, .995, previousSeat));
+        double seatStroke = .68 * smooth(23, 43, down);
+        double seat = seatStroke * stroke;
+        // Preserve part of the earlier collar fit, not a separate stroke
+        // added as the first one releases. The loss curve x -> x*s/(x+s)
+        // meets the diagonal's slope at 48° and then levels out. It opens
+        // again at a profile turn, with less support when space is needed.
+        double lost = Math.max(0, release - smooth(44, 57, TURN_KEEP_AFTER));
+        double hold = lost*lost / (lost + TURN_SOFTNESS)
+                * (1 - smooth(TURN_OPEN_FROM, TURN_OPEN_END, turn))
+                * smooth(30, 45, down) * (1 - smooth(64, 78, down))
+                * (1 - smooth(TURN_DEPTH_START, TURN_DEPTH_END, depth)) * leanRoom * steepRoom * sleeveRoom;
+        double scale = CapeFit.seatDepthScale(Math.max(previousSeat, seat + seatStroke*dry*hold))
+                / CapeFit.seatDepthScale(Math.max(previousSeat, seat));
+        // This extra seat is only an affine on the collar. The actual
+        // plate, teeth, stitching and drape keep their established fit.
+        double shift = (1-scale) * (CapeFit.SEAT_PLANE - depth - PIVOTS[0][2]);
         // Once the sleeve fit is nearly engaged, advance the whole broad
         // plate instead of shortening its contact rim. Lift it just enough
         // to retain clearance through the sleeve's idle sway.
         double settled = dry * smooth(.78, .99, plateFit);
-        return new Shape((float) (.68 * smooth(23, 43, down) * stroke),
-                collar(tuck, crown), collar(tuck, trim * .16),
+        return new Shape((float) seat,
+                collar(tuck, crown + hold*smooth(24, 43, down), shift, scale),
+                collar(tuck, trim * .16, 0, 1),
                 affine(1, compact, .94, .92, 1 - .17 * advance, 0, .18 * advance, -.24 * advance),
                 rest == 0 && settled == 0 ? null : affine(2, 1, 1 - .60 * rest, 1 - .59 * rest,
                         1 - .14 * advance * rest, 0,
@@ -82,8 +108,12 @@ final class CapeTorsoFit {
                         rest * (-.24*advance + .52*sweep + .22*upright) - .38 * settled));
     }
 
-    private static Affine collar(double amount, double reach) {
-        return affine(0, amount, .965, .41, 1 - .12 * reach, 0, -.58, -1.62 * reach);
+    private static Affine collar(double amount, double reach, double shift, double scale) {
+        if (amount <= 0) return null;
+        double[] pivot = PIVOTS[0];
+        return new Affine((float)pivot[0], (float)pivot[1], (float)pivot[2], 0, (float)(-.58*amount),
+                (float)(shift - 1.62*reach*amount*scale), (float)(1 + amount*(.965-1)),
+                (float)(1 + amount*(.41-1)), (float)((1 - .12*reach*amount)*scale));
     }
 
     private static Affine affine(int i, double k, double sx, double sy, double sz,
