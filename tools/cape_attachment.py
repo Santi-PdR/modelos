@@ -112,7 +112,7 @@ def sew(geo, swatches):
         # steel is sewn to it, and its lower end tucks under the yoke in
         # the neutral pose. Both follow the sleeve even when the elbow swings.
         by[lining].update(parent=arm, cubes=[
-            box((x-.93, 18.32, 1.57), (1.86, 5.16, .96), 'red', down='edge'),
+            rails((side*6.23,23.58,1.77), (side*5.47,18.71,2.45), 1.33,.67, down='edge'),
         ])
     # Snap authoring results for stable diffs and for Blockbench's precision.
     names = {FRAME, *PADS, *LININGS, G.GUSSET_BONE, G.SADDLE_BONE}

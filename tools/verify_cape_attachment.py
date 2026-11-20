@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from itertools import product
+from math import hypot
 import json
+import re
 import subprocess
 
 import numpy as np
@@ -40,6 +42,10 @@ def asset_contract(geo):
     assert not any(set(c['bones']) & fixed for c in clips['animations'].values())
     editor = json.loads(B.DOC.read_text())
     assert B.build(geo, atlas, clips) == editor, 'editable rig does not match equipped rig'
+    viewer = (P.ROOT/'docs/capa_v1170_visor.html').read_text()
+    for key, asset in (('GEO', json.loads(P.ARMOR_GEO.read_text())), ('ANIMATIONS', clips)):
+        inline = re.search(r'^const INLINE_' + key + r' = (.+);$', viewer, re.M)
+        assert inline and json.loads(inline[1]) == asset, f'visor offline desactualizado: {key}'
     return by, fixed, clips['animations']
 
 
@@ -119,6 +125,10 @@ def head_contract(geo, by):
     """Clearance of the rigid body yoke, independent of the arm and drape pose."""
     p = patches(geo)
     yoke = np.concatenate([p[n] for n,b in by.items() if b.get('parent') == FRAME and len(p[n])])
+    # Even between sampled angles, a standing head never reaches below
+    # its pivot minus the radius of its lower edge in the pitch plane.
+    floor = F.HEAD_PIVOT[1] - hypot(.5, 4.5)
+    assert floor - yoke[...,1].max() > .025, 'fixed torso yoke enters the standing head sweep'
     # The full standing head sweep and the ordinary crouched poses; the
     # moving arms and skirt are measured separately, not put in this hull.
     aims = [(0.,p,y) for p,y in product(range(-90,91,3),range(-84,85,3))]

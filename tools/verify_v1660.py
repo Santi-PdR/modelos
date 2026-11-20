@@ -151,6 +151,8 @@ class WornModel:
         self.pivots = [np.asarray(self.by[n]['pivot'])*[-1,1,1] for n in HINGES]
         masks = [[n in self.parents(part) for part in self.names] for n in HINGES]
         self.masks = [np.array(m) for m in masks]
+        # The saddle is an articulated join, not a free panel. Its contact
+        # with the yoke and linings is measured by verify_cape_attachment.
         self.cloth = self.masks[0] & np.array([n != G.SADDLE_BONE for n in self.names])
         self.rigid = ~self.masks[0]
 
@@ -216,7 +218,7 @@ def exercise(geo, clips):
         steps = [S.gait(i/40,amp) for i in range(40)]
         boxes = np.array([actors(aim,*gait,.25) for gait in steps])
         demand = [S.demand(aim[0],*step) for step in steps]
-        dep = F.depth(*aim); summary=np.zeros((3,2),dtype=int); minima=np.full(3,np.inf)
+        dep = F.wearer_depth(geo,*aim); summary=np.zeros((3,2),dtype=int); minima=np.full(3,np.inf)
         frames = [frame(name,i/25) for i in range(25)]
         frames += [frame(name,i/5,e) for i,e in product(range(5),envelope)]
         if name in ('moving','sprint','fall','air'):

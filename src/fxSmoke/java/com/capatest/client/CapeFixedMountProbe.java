@@ -30,7 +30,8 @@ import java.util.Map;
 /** Live wearer and framebuffer; only the orbiting test camera is synthetic. */
 final class CapeFixedMountProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     private static final Method POSITION = positionMethod();
-    private Matrix4f toBody, projection;
+    private Matrix4f projection;
+    private final Map<String, Matrix4f> inverseParts = new LinkedHashMap<>();
     private final List<Vector3f> vertices = new ArrayList<>();
     private final Map<GeoBone, Matrix4f> matrices = new LinkedHashMap<>();
     private final List<GeoBone> tracked = new ArrayList<>();
@@ -67,7 +68,7 @@ final class CapeFixedMountProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     static void arm(CapaArmorRenderer renderer, int control) {
         var p = of(renderer);
         p.active = true;
-        p.toBody = null;
+        p.inverseParts.clear();
         p.projection = new Matrix4f(RenderSystem.getProjectionMatrix()).mul(RenderSystem.getModelViewMatrix());
         p.matrices.clear();
         p.vertices.clear();
@@ -85,16 +86,33 @@ final class CapeFixedMountProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         }
     }
 
+    private static boolean wearerPart(String n) {
+        return n.equals("chestplate") || n.equals("rightArm") || n.equals("leftArm");
+    }
+
+    private Matrix4f intoWearerPart(GeoBone bone) {
+        for (var part = bone.getParent(); part != null; part = part.getParent()) {
+            if (!wearerPart(part.getName())) continue;
+            var inverse = inverseParts.get(part.getName());
+            require(inverse != null, "missing part pose for " + bone.getName());
+            return inverse;
+        }
+        throw new AssertionError("unbound mount piece " + bone.getName());
+    }
+
     @Override
     public void renderForBone(PoseStack pose, CapaDeteriorerItem item, GeoBone bone, RenderType type,
                               MultiBufferSource buffers, VertexConsumer out, float partial, int light, int overlay) {
         if (!active) return;
         String n = bone.getName();
-        if (n.equals("chestplate")) {
-            toBody = new Matrix4f(pose.last().pose()).invert();
+        if (wearerPart(n)) {
+            inverseParts.put(n, new Matrix4f(pose.last().pose()).invert());
             return;
         }
-        if (toBody == null || bone.isHidden() || !fixed(n) || bone.getCubes().isEmpty()) return;
+        if (bone.isHidden() || !fixed(n) || bone.getCubes().isEmpty()) return;
+        // Vanilla sleeves bob during the render and swing during a jump.
+        // Read each pad in that live part, never in the torso it hinges on.
+        Matrix4f toPart = intoWearerPart(bone);
         matrices.put(bone, new Matrix4f(bone.getModelSpaceMatrix()));
         for (var cube : bone.getCubes()) {
             pose.pushPose();
@@ -102,7 +120,7 @@ final class CapeFixedMountProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 RenderUtils.translateToPivotPoint(pose, cube);
                 RenderUtils.rotateMatrixAroundCube(pose, cube);
                 RenderUtils.translateAwayFromPivotPoint(pose, cube);
-                var model = new Matrix4f(toBody).mul(pose.last().pose());
+                var model = new Matrix4f(toPart).mul(pose.last().pose());
                 var clip = new Matrix4f(projection).mul(pose.last().pose());
                 for (var face : cube.quads()) {
                     if (face == null) continue;
@@ -125,7 +143,7 @@ final class CapeFixedMountProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     static Draw finish(CapaArmorRenderer renderer) {
         var p = of(renderer);
         p.active = false;
-        require(p.toBody != null && !p.vertices.isEmpty(), "missing fixed yoke geometry");
+        require(p.inverseParts.size() == 3 && !p.vertices.isEmpty(), "missing torso or sleeve geometry");
         for (var b : p.tracked) {
             Matrix4f solid = p.matrices.get(b);
             require(solid == null && b.isHidden() || solid != null && solid.equals(b.getModelSpaceMatrix(), .0001F),
@@ -225,7 +243,7 @@ final class CapeFixedMountProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 float diff = 0;
                 for (int i = 0; i < rest.size(); i++) diff = Math.max(diff, rest.get(i).distance(draw.vertices().get(i)));
                 maxDiff = Math.max(diff, maxDiff);
-                require(diff < .006F, "mount moved relative to the torso: " + fixture + "/" + shot + "/" + frame + ": " + diff);
+                require(diff < .006F, "mount moved relative to its wearer part: " + fixture + "/" + shot + "/" + frame + ": " + diff);
                 double lift = Double.isNaN(ground) ? 0 : game.player.getY() - ground;
                 trace.append(shot * 100 + frame).append('\t').append(pitch()).append('\t').append(yaw())
                         .append('\t').append(lift).append('\t').append(diff).append('\n');
@@ -242,6 +260,8 @@ final class CapeFixedMountProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 return false;
             }
             if (frame < SWEEP) {
+                if (frame == 0) save(game, root, fixture + "-mirada-alta");
+                if (frame == 6) save(game, root, fixture + "-giro-alto");
                 frame++;
                 return false;
             }

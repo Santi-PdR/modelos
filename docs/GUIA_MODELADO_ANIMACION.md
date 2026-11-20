@@ -285,6 +285,16 @@ animación y la documentación de GeckoLib._
   cuello fue 0,285u por grado durante 317 fotogramas en cada slot. También
   pasaron las vistas diagonal y cenital, la marcha y los controles de
   luz, élitros, planeo y nado. Esto no certifica todas las pieles o packs.
+- **Yugo fijo en v1.67.15:** `cape_fixed_yoke` es hijo directo de
+  `chestplate`. El reborde y los retornos del cuello no leen la mirada.
+  Las placas tienen base, lam, filo y labio, y heredan cada brazo vanilla.
+  El forro de la manga se solapa con el retorno en reposo; el fuelle nace
+  en la camiseta y solapa la costura que acompaña a `cape_top`. El paño
+  libre conserva sus clips, sus UV y la respuesta a la marcha y a las alas.
+  `tools/verify_cape_attachment.py` mide los solapes en tres dimensiones,
+  incluidas las mangas Steve/Alex. La holgura del yugo exterior se comprueba
+  con un casco vanilla de pie y en una muestra agachada; no es un certificado
+  de todas las posturas extremas del paño flexible ni de cascos de otros mods.
 - **Pulso del icono (v1.67.8):** 32 fotogramas a un tick por cuadro, mismo
   contorno y duración de 1,6 s. Se comprueba el recorrido de la cresta de
   luz en la hotbar vanilla; se conservan el dibujo y el reposo de v1.67.7.
