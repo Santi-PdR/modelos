@@ -19,7 +19,7 @@ public final class KatanaScene {
     private static boolean active;
     private static net.minecraft.client.CameraType previousCamera;
     private static net.minecraft.world.phys.Vec3 focus, cameraPosition;
-    private static boolean cameraUnavailable;
+    private static boolean cameraUnavailable, cameraApplied;
     private static java.lang.reflect.Method positionMethod, rotationMethod;
     private static int age, impactAge = 4;
     private static int impactDirection;
@@ -42,6 +42,7 @@ public final class KatanaScene {
         previousCamera = null;
         active = false; impactAge = 4; focus = null; cameraPosition = null;
     }
+    public static boolean cameraApplied() { return cameraApplied; }
     public static void impact(boolean second, boolean leftHanded, double x, double y, double z) {
         if (active && KatanaClientConfig.ULTIMATE_FRAME.get()) {
             impactAge = 0;
@@ -117,6 +118,7 @@ public final class KatanaScene {
             positionMethod.invoke(event.getCamera(), cameraPosition.x, cameraPosition.y, cameraPosition.z);
             rotationMethod.invoke(event.getCamera(), yaw, pitch);
             event.setYaw(yaw); event.setPitch(pitch);
+            cameraApplied = true;
         } catch (ReflectiveOperationException | RuntimeException failure) {
             cameraUnavailable = true;
             com.mojang.logging.LogUtils.getLogger().warn("Katana cinematic camera unavailable; keeping normal framing", failure);

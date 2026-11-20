@@ -19,6 +19,8 @@ public final class VisualFixtureClient {
     private static int tick;
     private static String capture;
     private static net.minecraft.world.item.ItemStack savedStack;
+    private static float comboHealth;
+    private static float firstComboDamage;
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
@@ -63,7 +65,12 @@ public final class VisualFixtureClient {
             case 190 -> mc.options.keyAttack.setDown(false);
             case 220 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(2));
             case 230 -> capture = "07_ultimate_start.png";
-            case 260 -> capture = "08_ultimate_2s.png";
+            case 260 -> {
+                if (!com.stainkatana.katana.client.KatanaScene.cameraApplied())
+                    throw new IllegalStateException("Cinematic orbit never applied");
+                System.out.println("STAIN_CAMERA_VERIFIED");
+                capture = "08_ultimate_2s.png";
+            }
             case 300 -> capture = "09_ultimate_4s.png";
             case 340 -> capture = "14_ultimate_6s.png";
             case 380 -> capture = "15_ultimate_8s.png";
@@ -137,7 +144,34 @@ public final class VisualFixtureClient {
                     throw new IllegalStateException("Z did not paralyze target at 20 blocks");
                 System.out.println("STAIN_LONG_RANGE_Z_VERIFIED");
             });
-            case 670 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
+            case 670 -> mc.getSingleplayerServer().execute(() -> {
+                if (net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) return;
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                var mobs = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, player.getBoundingBox().inflate(24));
+                if (mobs.isEmpty()) throw new IllegalStateException("No mob for combo");
+                var mob = mobs.get(0);
+                mob.teleportTo(player.getX(), player.getY(), player.getZ() + 2);
+                mob.setHealth(mob.getMaxHealth());
+                player.getPersistentData().getCompound("StainKatanaAbilities").putInt("daggerCharges", 0);
+                comboHealth = mob.getHealth();
+            });
+            case 690, 710, 730, 750 -> mc.getSingleplayerServer().execute(() -> {
+                if (net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) return;
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                var mobs = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, player.getBoundingBox().inflate(5));
+                if (mobs.isEmpty()) throw new IllegalStateException("Combo target missing");
+                var mob = mobs.get(0);
+                float before = mob.getHealth();
+                player.attack(mob);
+                float damage = before - mob.getHealth();
+                if (damage <= 0) throw new IllegalStateException("Combo attack caused no damage");
+                if (firstComboDamage == 0) firstComboDamage = damage;
+                if (tick >= 750) {
+                    if (damage < firstComboDamage * 1.4F) throw new IllegalStateException("Fourth hit was not heavier: " + damage + " vs " + firstComboDamage);
+                    System.out.println("STAIN_VANILLA_COMBO_VERIFIED " + firstComboDamage + " " + damage);
+                }
+            });
+            case 780 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }
     }
