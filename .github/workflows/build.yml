@@ -1020,7 +1020,23 @@ jobs:
             exit 1
           fi
 
-      # Priorizar estas capturas en el presupuesto de anotaciones del job.
+      - name: Medir el cuello al girar 60 grados en F5
+        if: steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success'
+        run: |
+          set -o pipefail
+          python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --giro-amplio | while IFS= read -r line; do
+            printf '::notice title=Giro amplio en Forge::%s\n' "${line//%/%25}"
+          done
+
+      # Priorizar la nueva auditoría en el presupuesto de anotaciones, sin
+      # perder las imágenes completas de las comparaciones anteriores.
+      - name: Comparar el cuello con y sin la sonda en ambos giros
+        if: always() && steps.historic-fit.outcome == 'success'
+        run: |
+          for view in giro-amplio giro-inverso; do
+            python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery "$view"
+          done
+
       - name: Documentar v1.28.0 y el modelo actual en F5 tres cuartos
         if: always() && steps.historic-fit.outcome == 'success'
         run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery diagonal

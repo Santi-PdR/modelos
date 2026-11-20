@@ -16,7 +16,12 @@ from verify_forge_mount import emit, read
 from verify_forge_seat import blue_floor, shirt_mask
 
 VIEWS = ('diagonal', 'espejo', 'cenital')
+WIDE_VIEWS = ('giro-amplio', 'giro-inverso')
 SLOTS = ('pecho', 'curios')
+
+
+def variants(view):
+    return ('-v1280', '', '-cuello') if view in WIDE_VIEWS else ('-v1280', '-v16712', '')
 
 
 def bounds(path):
@@ -66,8 +71,11 @@ def visible_attachment(root, view, slot, suffix=''):
     for mask in sections:
         visible = (np.asarray(mask)>0) & fabric
         count = visible.sum()
-        assert count >= 12, (view,slot,'pieza no visible en F5',count)
-        metrics.append((int(count),float(near[visible].mean())))
+        # At large turns the near sleeve may hide the opposite plate.
+        # Report its visibility, rather than treating an occlusion as a hole.
+        if view not in WIDE_VIEWS or mask is sections[2]:
+            assert count >= 12, (view,slot,'pieza no visible en F5',count)
+        metrics.append((int(count),float(near[visible].mean()) if count else 0.))
     return metrics
 
 
@@ -105,6 +113,34 @@ def verify(root):
     assert not errors, errors
 
 
+def study_wide_turn(root):
+    """Registered A/B for the still collar. Report the look; don't assume a fix."""
+    for view in WIDE_VIEWS:
+        by_slot = []
+        for slot in SLOTS:
+            stem = root/f'historia-{view}-{slot}'
+            with Image.open(stem.with_suffix('.png')) as image:
+                size = image.size
+            versions = variants(view)
+            poses = [np.loadtxt(stem.with_name(stem.name+s+'-camara.tsv'))*size for s in versions]
+            assert all(m.shape == (8,2) and np.isfinite(m).all() for m in poses), stem
+            drift = max(abs(m-poses[1]).max() for m in poses)
+            assert drift < .65, (view,slot,'cámara F5 no registrada',drift)
+            by_slot.append(poses[1])
+            ref, base, trial = (geometry(root,view,slot,s) for s in versions)
+            p0, p1 = (bounds(stem.with_name(stem.name+s+'.tsv')) for s in versions[1:])
+            for name in ('v18_pad_0', 'v18_pad_1', 'v17_cowl_return', 'v17_cowl_tooth_5'):
+                np.testing.assert_allclose(p0[name],p1[name],rtol=0,atol=.015,err_msg=f'{stem}: {name} se movió en la sonda')
+            np.testing.assert_allclose(base[3:],trial[3:],rtol=0,atol=.08,err_msg=f'{stem}: altura de cuello o raíces cambiaron')
+            assert .8 < ref[2] < 1.4 and 1.25 < base[2]-trial[2] < 1.50, (stem, ref, base, trial)
+            counts = [visible_attachment(root,view,slot,s)[2] for s in versions]
+            cloth = ' → '.join(f'{f:.0%} ({n}px)' for n,f in counts)
+            print(f'{view}/{slot} · registro {drift:.2f}px · referencia → actual → sonda: '
+                  f'Z delantero del cuello {ref[2]:.2f} → {base[2]:.2f} → {trial[2]:.2f}u; '
+                  f'raíces {base[4]:.2f}u; píxeles en la proyección del cuello cerca de camiseta {cloth}',flush=True)
+        assert abs(by_slot[0]-by_slot[1]).max() < .65, (view,'pecho y Curios no registrados')
+
+
 def gallery(root, view):
     base = root/f'historia-{view}-sin-manto.png'
     if not base.is_file():
@@ -118,7 +154,7 @@ def gallery(root, view):
     assert len(xs) > 500, (view, 'no se ve la camiseta de referencia')
     x0,x1 = np.quantile(xs,[.005,.995]); y0,y1 = np.quantile(ys,[.005,.995]); d = x1-x0
     crop = (round(x0-.43*d),round(y0-.73*d),round(x1+.43*d),round(y1+.69*d))
-    for suffix in ('sin-manto',*(f'{slot}{s}' for slot in SLOTS for s in ('-v1280','-v16712',''))):
+    for suffix in ('sin-manto',*(f'{slot}{s}' for slot in SLOTS for s in variants(view))):
         file = root/f'historia-{view}-{suffix}.png'
         if not file.is_file():
             continue
@@ -138,9 +174,13 @@ def gallery(root, view):
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('shots',type=Path)
-    ap.add_argument('--gallery',choices=VIEWS)
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument('--gallery',choices=VIEWS+WIDE_VIEWS)
+    mode.add_argument('--giro-amplio',action='store_true',help='auditar la sonda de cuello sin asumir un cambio de ajuste')
     args = ap.parse_args()
     if args.gallery:
         gallery(args.shots,args.gallery)
+    elif args.giro_amplio:
+        study_wide_turn(args.shots)
     else:
         verify(args.shots)

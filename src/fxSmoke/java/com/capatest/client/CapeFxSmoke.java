@@ -152,6 +152,16 @@ public final class CapeFxSmoke {
         HISTORY_TOP_CHEST("historia-cenital-pecho", 6000),
         HISTORY_TOP_OLD_BACK("historia-cenital-curios-v1280", 6000), HISTORY_TOP_V16712_BACK("historia-cenital-curios-v16712", 6000),
         HISTORY_TOP_BACK("historia-cenital-curios", 6000),
+        WIDE_BARE("historia-giro-amplio-sin-manto", 6000),
+        WIDE_OLD_CHEST("historia-giro-amplio-pecho-v1280", 6000), WIDE_CHEST("historia-giro-amplio-pecho", 6000),
+        WIDE_TRIAL_CHEST("historia-giro-amplio-pecho-cuello", 6000),
+        WIDE_OLD_BACK("historia-giro-amplio-curios-v1280", 6000), WIDE_BACK("historia-giro-amplio-curios", 6000),
+        WIDE_TRIAL_BACK("historia-giro-amplio-curios-cuello", 6000),
+        WIDE_MIRROR_BARE("historia-giro-inverso-sin-manto", 6000),
+        WIDE_MIRROR_OLD_CHEST("historia-giro-inverso-pecho-v1280", 6000), WIDE_MIRROR_CHEST("historia-giro-inverso-pecho", 6000),
+        WIDE_MIRROR_TRIAL_CHEST("historia-giro-inverso-pecho-cuello", 6000),
+        WIDE_MIRROR_OLD_BACK("historia-giro-inverso-curios-v1280", 6000), WIDE_MIRROR_BACK("historia-giro-inverso-curios", 6000),
+        WIDE_MIRROR_TRIAL_BACK("historia-giro-inverso-curios-cuello", 6000),
         LOOK_CHEST("mirada-pecho", 6000), LOOK_BACK("mirada-curios", 6000),
         WALK_CHEST("paso-pecho", 6000), WALK_BACK("paso-curios", 6000),
         HOTBAR_BARE("hotbar-vacia", 6000), HOTBAR("hotbar", 6000),
@@ -188,8 +198,9 @@ public final class CapeFxSmoke {
         boolean slimFit() { return fit() && ordinal() >= FIT_SLIM_BARE.ordinal(); }
         boolean midFit() { return fit() && ordinal() >= MID_BARE.ordinal(); }
         boolean plates() { return ordinal() >= PLATES_BARE.ordinal() && ordinal() <= PLATES_BACK.ordinal(); }
-        boolean homeCompare() { return ordinal() >= HISTORY_DIAG_BARE.ordinal() && ordinal() <= HISTORY_TOP_BACK.ordinal(); }
+        boolean homeCompare() { return ordinal() >= HISTORY_DIAG_BARE.ordinal() && ordinal() <= WIDE_MIRROR_TRIAL_BACK.ordinal(); }
         boolean oldRig() { return homeCompare() && file.endsWith("-v1280"); }
+        boolean collarTrial() { return homeCompare() && file.endsWith("-cuello"); }
         boolean publishedFit() {
             return this == FIT_V16712 || this == FIT_V16712_HIDDEN || this == FIT_SLIM_V16712
                     || this == FIT_SLIM_V16712_HIDDEN || homeCompare() && file.endsWith("-v16712");
@@ -202,11 +213,19 @@ public final class CapeFxSmoke {
         boolean fixedCamera() { return stillComparison() || sweep(); }
         float bodyYaw() { return homeCompare() ? 31 : 0; }
         float yaw() {
-            if (homeCompare()) return file.startsWith("historia-diagonal") ? 43 : file.startsWith("historia-espejo") ? -48 : 0;
+            if (homeCompare()) {
+                if (file.startsWith("historia-giro-amplio")) return 60;
+                if (file.startsWith("historia-giro-inverso")) return -60;
+                return file.startsWith("historia-diagonal") ? 43 : file.startsWith("historia-espejo") ? -48 : 0;
+            }
             return fit() ? 3 : profile() ? 76 : turned() || oblique() || hotbar() ? 43 : 0;
         }
         float pitch() {
-            if (homeCompare()) return file.startsWith("historia-diagonal") ? 58 : file.startsWith("historia-espejo") ? 48 : 89.5F;
+            if (homeCompare()) {
+                if (file.startsWith("historia-giro-amplio")) return 58;
+                if (file.startsWith("historia-giro-inverso")) return 48;
+                return file.startsWith("historia-diagonal") ? 58 : file.startsWith("historia-espejo") ? 48 : 89.5F;
+            }
             return plates() ? 89.5F : midFit() ? 58 : fit() ? 76 : profile() ? 21 : oblique() ? 58 : turned() || hotbar() ? 86 : 89;
         }
         boolean inspectBirths() { return this == GLIDE || this == WADE || this == SWIM; }
@@ -642,6 +661,7 @@ public final class CapeFxSmoke {
                 if (scene.oldRig()) CapeHistoricFitProbe.substitute(event, live);
                 else {
                     if (scene.publishedFit()) undoTorsoFit(live);
+                    if (scene.collarTrial()) seatTrialCollar(live);
                     CapeHistoricFitProbe.arm(live);
                 }
             } else if (CapeHistoricFitProbe.isLegacy(event.getRenderer())) {
@@ -683,6 +703,24 @@ public final class CapeFxSmoke {
     private static void undoTorsoFit(CapaArmorRenderer renderer) {
         try {
             TORSO_FIT.set(renderer, CapeTorsoFit.NONE);
+        } catch (IllegalAccessException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private static void seatTrialCollar(CapaArmorRenderer renderer) {
+        // At +/-60° the deep seat is off. For the paired stills only,
+        // keep a little of the rear collar's forward stroke. Do not move
+        // the teeth, plates or roots: this isolates whether the crown is
+        // what reads as floating. The experiment never enters the mod JAR.
+        try {
+            var shape = (CapeTorsoFit.Shape) TORSO_FIT.get(renderer);
+            var c = shape.collar();
+            check(c != null && shape.seat() == 0, "wide-angle collar probe is not at rest");
+            float amount = (1 - c.sy()) / .59F;
+            var trial = new CapeTorsoFit.Affine(c.x(), c.y(), c.z(), c.dx(), c.dy(),
+                    c.dz() - 1.62F * .76F * amount, c.sx(), c.sy(), c.sz() - .12F * .76F * amount);
+            TORSO_FIT.set(renderer, new CapeTorsoFit.Shape(shape.seat(), trial, shape.facing(), shape.small(), shape.wide()));
         } catch (IllegalAccessException e) {
             throw new AssertionError(e);
         }
