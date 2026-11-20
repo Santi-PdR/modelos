@@ -35,7 +35,6 @@ import net.minecraft.world.phys.Vec3;
 @Mod.EventBusSubscriber(modid = StainKatanaMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class KatanaAbilities {
     private static final String COOLDOWNS = "StainKatanaAbilities";
-    private static final int[] COOLDOWN = {240, 100, 900};
     private static final Map<UUID, Cast> CASTS = new ConcurrentHashMap<>();
     private static final class Cast {
         final int ability;
@@ -108,7 +107,7 @@ public final class KatanaAbilities {
 
 
     public static void activate(ServerPlayer player, int ability) {
-        if (ability < 0 || ability >= COOLDOWN.length || !player.isAlive() || player.isSpectator()
+        if (ability < 0 || ability >= 3 || !player.isAlive() || player.isSpectator()
                 || player.hasEffect(KatanaEffects.PARALYSIS.get())) return;
         if (CASTS.containsKey(player.getUUID())) return;
         ItemStack stack = player.getMainHandItem();
@@ -132,7 +131,7 @@ public final class KatanaAbilities {
             player.displayClientMessage(Component.translatable("stainkatana.no_target"), true);
             return;
         }
-        state.putLong(key, now + COOLDOWN[ability]);
+        state.putLong(key, now + CombatTuning.cooldown(ability));
         player.getPersistentData().put(COOLDOWNS, state);
         CASTS.put(player.getUUID(), new Cast(ability, stack, level.dimension(), now,
                 marked == null ? null : marked.getUUID()));
@@ -171,7 +170,7 @@ public final class KatanaAbilities {
         LivingEntity target = markedTarget(player, stack, level, true);
         if (target == null) return false;
         CompoundTag tag = stack.getTag();
-        int duration = target instanceof Player ? 40 : 60;
+        int duration = CombatTuning.paralysisTicks(target instanceof Player);
         if (!target.addEffect(new MobEffectInstance(KatanaEffects.PARALYSIS.get(), duration, 0, false, false, false))) {
             player.displayClientMessage(Component.translatable("stainkatana.resisted"), true);
             return false;
@@ -194,13 +193,13 @@ public final class KatanaAbilities {
             // El arma tiene 7 de daño base; los atributos del jugador cuentan,
             // con límites para que la habilidad no multiplique sin control otros mods.
             double base = player.getAttributeValue(Attributes.ATTACK_DAMAGE);
-            float damage = (float)Math.max(4, Math.min(ultimate ? 9 : 12, base * (ultimate ? 0.8 : 1.15)));
+            float damage = CombatTuning.damage(base, ultimate);
             if (!target.hurt(player.damageSources().playerAttack(player), damage)) continue;
             hits++;
             // Marca una única víctima por corte: la primera válida y más próxima.
             if (hits == 1 && target.isAlive()) StainKatanaItem.markTarget(stack, target, level);
             if (ultimate) {
-                target.addEffect(new MobEffectInstance(KatanaEffects.PARALYSIS.get(), 15, 0, false, false, false));
+                target.addEffect(new MobEffectInstance(KatanaEffects.PARALYSIS.get(), CombatTuning.ultimateStaggerTicks(target instanceof Player), 0, false, false, false));
                 KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.55), target.getZ(), 2);
             }
             level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.55), target.getZ(), 1, 0, 0, 0, 0);

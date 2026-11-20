@@ -230,3 +230,43 @@ pulso. Los paquetes de red son ahora versión 6: cliente y servidor deben usar
 la misma versión. La latencia, el agarre, las direcciones y la compatibilidad
 con mods de cámara siguen requiriendo prueba visual; no se garantiza que los
 planos del efecto coincidan exactamente con la hoja.
+
+## 0.12.0-test — revisión de hoja, acción y comodidad
+
+- La hoja editable conserva su curvatura, sus mellas reales y la guarda compacta.
+  Se aclararon únicamente las dos islas UV del plano principal del acero y se
+  redujo un poco el grosor de tres cubos en la punta. La geometría y textura de
+  la katana aislada se exportan ahora directamente a `stainkatana`, sin tocar
+  los recursos de `capatest`. `verificar_modelo.py` vuelve a abrir el archivo,
+  comprueba la textura embebida y compara los 82 cubos visibles con GeckoLib.
+  `vistas/modelo_comparacion.png` muestra tres vistas de software junto a la
+  referencia aportada; no reproduce la iluminación ni la mano de Minecraft.
+- Anatomía estudiada: sori, shinogi, kissaki y habaki; la referencia de Stain
+  tiene prioridad sobre reconstruir una katana histórica exacta. Guía consultada:
+  https://www.hanbonforge.com/blog/Japanese-Sword-Terminology
+- El gesto de Z es el mismo `Inspect` CC0 de Overseer pero pasa de 4x a 3x; su
+  contacto se mueve de tick 8 a 9, la salida al 18 y recuperación al 21. Es un
+  gesto de inspección, no una animación literal de lamer sangre. X y C conservan
+  los clips Better Combat cargados de la instalación y sus impactos al tick 7
+  de cada golpe. No se redistribuyen los clips ni su audio.
+- La ulti agrega un ligero giro visual de cámara alternado en cada golpe,
+  superpuesto al FOV y las bandas de Cinema Scope. No cambia el apuntado ni
+  fuerza tercera persona. `impactRollDegrees` permite 0–2 grados; por defecto
+  0,65; `enabled = false` desactiva el encuadre completo. Se estudió Slashh
+  (https://github.com/shuttheirprayer/slashh, revisión
+  `6a5900eaded205968c6fbebc3b3fe632c8e5fb9a`): señales de impactos, límites y
+  controles de comodidad; no se copian sus recursos ni su código. Las
+  partículas siguen siendo los recursos MIT de Better Combat Particle.
+- En PvP, parálisis de sangre baja de 40 a 30 ticks, y la breve detención de
+  cada corte de la ulti de 15 a 10 ticks; contra mobs pasa de 60 a 50 ticks en
+  Z y permanece 15 en C. El daño sigue siendo servidor y limitado: con 7 de
+  daño de atributo, X inflige 8,05 y C 5,6 por corte antes de armadura; caps
+  de 12 y 9 respectivamente. Los enfriamientos son 12, 5 y 45 segundos.
+  La marca dura 10 segundos. La red usa protocolo 7, por lo que cliente y
+  servidor necesitan 0.12.0-test. Son valores iniciales, no balance validado
+  mediante partidas. La descripción ahora explica las funciones sin teclas.
+
+Pruebas automatizadas no demuestran que el agarre, la orientación de VFX,
+la animación en primera persona, los tiempos con latencia o la cámara se vean
+bien. Sigue siendo una escena de combate con cámara local, no una cinemática
+con cámara autónoma. Es necesaria una prueba en cliente y con otros mods.

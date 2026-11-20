@@ -79,7 +79,7 @@ public final class KatanaAnimations {
                         .setShowRightArm(true).setShowLeftArm(true));
         // Keep playback speed inside the clip, so the outer fade remains in real ticks.
         ModifierLayer<IAnimation> timedClip = new ModifierLayer<>(playing);
-        timedClip.addModifierBefore(new SpeedModifier(ability == 0 ? 4F : 2F));
+        timedClip.addModifierBefore(new SpeedModifier(ability == 0 ? 3F : 2F));
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
     }
 

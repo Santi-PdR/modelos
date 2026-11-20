@@ -11,7 +11,7 @@ public final class KatanaVisuals {
         if (level == null || style < 0 || style > 3 || !Double.isFinite(x) || !Double.isFinite(y)
                 || !Double.isFinite(z) || !Float.isFinite(yaw)) return;
         if ((style == 1 || style == 3) && Minecraft.getInstance().player != null
-                && Minecraft.getInstance().player.getId() == entityId) KatanaScene.impact();
+                && Minecraft.getInstance().player.getId() == entityId) KatanaScene.impact(style == 3, leftHanded);
         if (style == 0 || style == 3) {
             // The follow-up is the opposite Better Combat stroke. Turn the textured
             // plane 180 degrees for that stroke, and invert again for left-handers.

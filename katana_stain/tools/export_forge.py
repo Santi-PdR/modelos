@@ -2,7 +2,7 @@
 """Export the editable katana to GeckoLib 4's Bedrock geometry; no cape assets touched."""
 import base64,json
 from pathlib import Path
-R=Path(__file__).resolve().parents[2]; model=json.loads((R/'katana_stain/Katana_de_Stain.bbmodel').read_text()); root=R/'src/main/resources/assets/capatest'
+R=Path(__file__).resolve().parents[2]; model=json.loads((R/'katana_stain/Katana_de_Stain.bbmodel').read_text()); root=R/'katana_stain/forge/resources/assets/stainkatana'
 groups={g['uuid']:g for g in model['groups']}; els={e['uuid']:e for e in model['elements']}; bones=[]
 def mirror(v): return [-v[0],v[1],v[2]]
 def cube(e):

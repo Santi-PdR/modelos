@@ -1,7 +1,7 @@
 {
   "itemGroup.stainkatana.legados": "Combat Legacies",
   "item.stainkatana.katana_stain": "Stain’s Blade",
-  "item.stainkatana.katana_stain.lore": "A notched blade. Its edge leaves a blood mark.",
+  "item.stainkatana.katana_stain.lore": "The notched blade of the Hero Killer.",
   "key.categories.stainkatana": "Stain Katana",
   "key.stainkatana.stun": "Blood paralysis",
   "key.stainkatana.slash": "Quick slash",
@@ -14,5 +14,9 @@
   "stainkatana.slash_used": "Quick slash",
   "stainkatana.ultimate_used": "Hero Killer Judgment",
   "effect.stainkatana.blood_paralysis": "Blood Paralysis",
-  "stainkatana.resisted": "The target resisted paralysis."
+  "stainkatana.resisted": "The target resisted paralysis.",
+  "item.stainkatana.katana_stain.mark": "Hits leave a mark for 10 seconds.",
+  "item.stainkatana.katana_stain.paralysis": "Paralysis: consumes the mark · 12 s cooldown.",
+  "item.stainkatana.katana_stain.slash": "Quick slash: up to 3 enemies · 5 s.",
+  "item.stainkatana.katana_stain.ultimate": "Judgment: 2 cuts, up to 5 enemies · 45 s."
 }

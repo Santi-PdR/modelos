@@ -8,6 +8,7 @@ public final class KatanaClientConfig {
     public static final ForgeConfigSpec.BooleanValue ULTIMATE_FRAME;
     public static final ForgeConfigSpec.DoubleValue BAR_FRACTION;
     public static final ForgeConfigSpec.DoubleValue ZOOM_FRACTION;
+    public static final ForgeConfigSpec.DoubleValue CAMERA_ROLL;
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
         builder.push("ultimate_scene");
@@ -17,6 +18,8 @@ public final class KatanaClientConfig {
                 .defineInRange("barFraction", 0.055, 0.0, 0.12);
         ZOOM_FRACTION = builder.comment("Maximum FOV reduction; zero disables zoom.")
                 .defineInRange("zoomFraction", 0.04, 0.0, 0.10);
+        CAMERA_ROLL = builder.comment("Maximum view-only tilt in degrees on ultimate strokes. Set to zero for motion sensitivity.")
+                .defineInRange("impactRollDegrees", 0.65, 0.0, 2.0);
         builder.pop();
         SPEC = builder.build();
     }

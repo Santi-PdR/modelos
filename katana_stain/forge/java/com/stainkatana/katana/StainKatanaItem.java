@@ -25,7 +25,6 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 /** Primer prototipo jugable. La marca y su aplicación son autoritativas en servidor. */
 public class StainKatanaItem extends SwordItem implements GeoItem {
     static final String MARK = "StainBloodMark";
-    private static final int MARK_TICKS = 200;
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public StainKatanaItem() {
@@ -59,12 +58,16 @@ public class StainKatanaItem extends SwordItem implements GeoItem {
         CompoundTag mark = new CompoundTag();
         mark.putUUID("Target", target.getUUID());
         mark.putString("Dimension", level.dimension().location().toString());
-        mark.putLong("Expires", level.getGameTime() + MARK_TICKS);
+        mark.putLong("Expires", level.getGameTime() + CombatTuning.MARK_TICKS);
         stack.getOrCreateTag().put(MARK, mark);
     }
 
     @Override
     public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> lines, TooltipFlag flag) {
         lines.add(Component.translatable("item.stainkatana.katana_stain.lore").withStyle(ChatFormatting.DARK_RED));
+        lines.add(Component.translatable("item.stainkatana.katana_stain.mark").withStyle(ChatFormatting.GRAY));
+        lines.add(Component.translatable("item.stainkatana.katana_stain.paralysis").withStyle(ChatFormatting.GRAY));
+        lines.add(Component.translatable("item.stainkatana.katana_stain.slash").withStyle(ChatFormatting.GRAY));
+        lines.add(Component.translatable("item.stainkatana.katana_stain.ultimate").withStyle(ChatFormatting.GRAY));
     }
 }

@@ -18,6 +18,7 @@ public final class KatanaScene {
     private static final int SAFETY_TIMEOUT = 36;
     private static boolean active;
     private static int age, impactAge = 4;
+    private static int impactDirection;
     private static double progress, previous;
     private KatanaScene() { }
 
@@ -25,9 +26,12 @@ public final class KatanaScene {
         if (!KatanaClientConfig.ULTIMATE_FRAME.get()) return;
         active = true; age = 0; impactAge = 4;
     }
-    public static void stop() { active = false; }
-    public static void impact() {
-        if (active && KatanaClientConfig.ULTIMATE_FRAME.get()) impactAge = 0;
+    public static void stop() { active = false; impactAge = 4; }
+    public static void impact(boolean second, boolean leftHanded) {
+        if (active && KatanaClientConfig.ULTIMATE_FRAME.get()) {
+            impactAge = 0;
+            impactDirection = (second ^ leftHanded) ? -1 : 1;
+        }
     }
     private static void reset() { active = false; age = 0; impactAge = 4; progress = previous = 0; }
 
@@ -57,6 +61,14 @@ public final class KatanaScene {
         double impulse = SceneCurve.impactEnvelope(impactAge + Minecraft.getInstance().getFrameTime());
         double zoom = KatanaClientConfig.ZOOM_FRACTION.get() * strength * (1.0 + 0.35 * impulse);
         event.setFOV(event.getFOV() * (1.0 - zoom));
+    }
+    @SubscribeEvent public static void camera(ViewportEvent.ComputeCameraAngles event) {
+        if (!canRender()) return;
+        float partial = (float) event.getPartialTick();
+        double pulse = SceneCurve.impactEnvelope(impactAge + partial);
+        double tilt = KatanaClientConfig.CAMERA_ROLL.get() * strength(partial) * pulse * impactDirection;
+        // Visual roll only: it does not alter the player's aim, movement or perspective.
+        event.setRoll(event.getRoll() + (float) tilt);
     }
     @SubscribeEvent public static void render(RenderGuiEvent.Post event) {
         if (!canRender()) return;

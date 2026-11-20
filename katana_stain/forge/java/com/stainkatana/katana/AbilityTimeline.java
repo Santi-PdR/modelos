@@ -3,9 +3,9 @@ package com.stainkatana.katana;
 /** Pure, server-tick timeline. Each event can be emitted at most once. */
 public final class AbilityTimeline {
     public static final int IMPACT = 1, FOLLOW_UP = 2, SECOND_IMPACT = 4, FADE = 8, FINISH = 16;
-    private static final int[] IMPACT_TICK = {8, 7, 7};
-    private static final int[] FADE_TICK = {13, 13, 24};
-    private static final int[] FINISH_TICK = {16, 16, 29};
+    private static final int[] IMPACT_TICK = {9, 7, 7};
+    private static final int[] FADE_TICK = {18, 13, 24};
+    private static final int[] FINISH_TICK = {21, 16, 29};
     private final int ability;
     private int emitted;
     private boolean cancelled;

@@ -31,7 +31,7 @@ print('OK: tres clips externos no cíclicos, mensaje de animación y licencia')
 
 ability = (root/'java/com/stainkatana/katana/KatanaAbilities.java').read_text()
 timeline = (root/'java/com/stainkatana/katana/AbilityTimeline.java').read_text()
-assert 'IMPACT_TICK = {8, 7, 7}' in timeline and 'FINISH_TICK = {16, 16, 29}' in timeline
+assert 'IMPACT_TICK = {9, 7, 7}' in timeline and 'FINISH_TICK = {21, 16, 29}' in timeline
 assert 'PlayerLoggedOutEvent' in ability and 'ServerStoppedEvent' in ability
 assert 'player.getMainHandItem() != cast.stack' in ability
 anim = (root/'java/com/stainkatana/katana/client/KatanaAnimations.java').read_text()
@@ -80,8 +80,8 @@ print('OK: encuadre local cancelable y sonido de Better Combat con alternativa')
 visuals=(root/'java/com/stainkatana/katana/client/KatanaVisuals.java').read_text()
 network=(root/'java/com/stainkatana/katana/KatanaNetwork.java').read_text()
 assert 'style == 3' in visuals and '^ leftHanded' in visuals
-assert 'getId() == entityId' in visuals and 'KatanaScene.impact()' in visuals
-assert 'private static final String VERSION = "6"' in network
+assert 'getId() == entityId' in visuals and 'KatanaScene.impact(style == 3, leftHanded)' in visuals
+assert 'private static final String VERSION = "7"' in network
 assert 'buf.writeBoolean(msg.leftHanded)' in network and 'buf.readBoolean()' in network
 assert 'impactEnvelope' in scene and 'KatanaClientConfig.ZOOM_FRACTION.get()' in scene
-print('OK: segundo corte, zurdos, impulso local y protocolo visual v6')
+print('OK: segundo corte, zurdos, impulso local y protocolo visual v7')

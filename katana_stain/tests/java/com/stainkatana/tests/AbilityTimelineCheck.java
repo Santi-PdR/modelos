@@ -10,7 +10,7 @@ public class AbilityTimelineCheck {
     public static void main(String[] args) {
         for (int ability = 0; ability < 3; ability++) {
             AbilityTimeline t = new AbilityTimeline(ability);
-            int first = ability == 0 ? 8 : 7;
+            int first = ability == 0 ? 9 : 7;
             eq(t.advance(first - 1), 0, "before impact");
             eq(t.advance(first), AbilityTimeline.IMPACT, "first impact");
             eq(t.advance(first), 0, "duplicate tick");
@@ -21,8 +21,8 @@ public class AbilityTimelineCheck {
                 eq(t.advance(24), AbilityTimeline.FADE, "ultimate fade");
                 eq(t.advance(29), AbilityTimeline.FINISH, "ultimate finish");
             } else {
-                eq(t.advance(13), AbilityTimeline.FADE, "fade");
-                eq(t.advance(16), AbilityTimeline.FINISH, "finish");
+                eq(t.advance(ability == 0 ? 18 : 13), AbilityTimeline.FADE, "fade");
+                eq(t.advance(ability == 0 ? 21 : 16), AbilityTimeline.FINISH, "finish");
             }
             eq(t.advance(100), 0, "completed timeline emits nothing twice");
         }
