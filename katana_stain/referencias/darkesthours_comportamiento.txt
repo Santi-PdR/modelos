@@ -1,0 +1,197 @@
+Behavior study: Darkest Hours v1.0.0; static bytecode analysis, not a runtime trace.
+Names and call counts are observations; methods may be obfuscated. No artwork copied.
+
+=== com.eternalcraft.darkesthours.movesets.headtaker.HeadtakerServerEvents ===
+public com.eternalcraft.darkesthours.movesets.headtaker.HeadtakerServerEvents();
+  method calls: java/lang/Object."<init>" x1
+public static void onRightClickItem(net.minecraftforge.event.entity.player.PlayerInteractEvent$RightClickItem);
+  method calls: tryStartGroundDash x1
+public static void onRightClickBlock(net.minecraftforge.event.entity.player.PlayerInteractEvent$RightClickBlock);
+  method calls: tryStartGroundDash x1
+private static void tryStartGroundDash(net.minecraftforge.event.entity.player.PlayerInteractEvent);
+  method calls: net/minecraftforge/event/entity/player/PlayerInteractEvent.getEntity x2, net/minecraft/world/entity/player/Player.m_9236_ x1, net/minecraft/server/level/ServerPlayer.m_6144_ x1, net/minecraft/server/level/ServerPlayer.m_19880_ x1, net/minecraft/server/level/ServerPlayer.m_21023_ x1, net/minecraft/server/level/ServerPlayer.m_20148_ x1, com/eternalcraft/darkesthours/movesets/headtaker/HeadtakerState.get x1, net/minecraft/server/level/ServerPlayer.m_20154_ x1, net/minecraft/world/phys/Vec3.m_82541_ x1, net/minecraftforge/event/entity/player/PlayerInteractEvent.setCanceled x1
+private static void tickGroundDash(net.minecraft.server.level.ServerPlayer, com.eternalcraft.darkesthours.movesets.headtaker.HeadtakerState$Data);
+  method calls: net/minecraft/server/level/ServerPlayer.m_20256_ x4, syncMotion x4, stop x3, net/minecraft/server/level/ServerPlayer.m_20185_ x2, net/minecraft/server/level/ServerPlayer.m_20186_ x2, net/minecraft/server/level/ServerPlayer.m_20189_ x2, net/minecraft/world/effect/MobEffectInstance."<init>" x1, net/minecraft/server/level/ServerPlayer.m_7292_ x1, net/minecraft/server/level/ServerPlayer.m_20154_ x1, net/minecraft/world/phys/Vec3.m_82541_ x1, net/minecraft/world/phys/Vec3.m_82490_ x1, net/minecraft/server/level/ServerPlayer.m_183634_ x1, net/minecraft/server/level/ServerPlayer.m_9236_ x1, net/minecraft/server/level/ServerPlayer.m_20191_ x1, net/minecraft/world/phys/AABB.m_82400_ x1, net/minecraft/world/level/Level.m_6249_ x1, spawnAt x1, spawnInstantTnt x1
+public static void onPressRelease(net.minecraft.server.level.ServerPlayer, boolean);
+  method calls: net/minecraft/server/level/ServerPlayer.m_6144_ x1, net/minecraft/server/level/ServerPlayer.m_19880_ x1, net/minecraft/server/level/ServerPlayer.m_21023_ x1, net/minecraft/server/level/ServerPlayer.m_20148_ x1, com/eternalcraft/darkesthours/movesets/headtaker/HeadtakerState.get x1, net/minecraft/server/level/ServerPlayer.m_20182_ x1, net/minecraft/world/phys/Vec3.m_82520_ x1, net/minecraft/server/level/ServerPlayer.m_20334_ x1, syncMotion x1, com/eternalcraft/darkesthours/movesets/headtaker/HeadtakerNetwork.sendAiming x1
+private static void tickAirborneWait(net.minecraft.server.level.ServerPlayer, com.eternalcraft.darkesthours.movesets.headtaker.HeadtakerState$Data);
+  method calls: net/minecraft/server/level/ServerPlayer.m_20256_ x1, net/minecraft/server/level/ServerPlayer.m_6021_ x1, net/minecraft/server/level/ServerPlayer.m_183634_ x1
+public static void onLaunch(net.minecraft.server.level.ServerPlayer, net.minecraft.core.BlockPos);
+  method calls: net/minecraft/world/phys/Vec3."<init>" x2, net/minecraft/server/level/ServerPlayer.m_20148_ x1, com/eternalcraft/darkesthours/movesets/headtaker/HeadtakerState.get x1, net/minecraft/core/BlockPos.m_123341_ x1, net/minecraft/core/BlockPos.m_123342_ x1, net/minecraft/core/BlockPos.m_123343_ x1, net/minecraft/server/level/ServerPlayer.m_20182_ x1, net/minecraft/world/phys/Vec3.m_82546_ x1, net/minecraft/world/phys/Vec3.m_82556_ x1, net/minecraft/world/phys/Vec3.m_82541_ x1, com/eternalcraft/darkesthours/movesets/headtaker/HeadtakerNetwork.sendAiming x1
+private static void tickFallDash(net.minecraft.server.level.ServerPlayer, com.eternalcraft.darkesthours.movesets.headtaker.HeadtakerState$Data);
+  method calls: net/minecraft/server/level/ServerPlayer.m_20256_ x2, net/minecraft/server/level/ServerPlayer.m_183634_ x2, syncMotion x2, net/minecraft/server/level/ServerPlayer.m_9236_ x2, net/minecraft/server/level/ServerPlayer.m_20182_ x1, net/minecraft/world/phys/Vec3.m_82557_ x1, net/minecraft/server/level/ServerPlayer.m_6021_ x1, spawnAt x1, spawnInstantTnt x1, finishAirborne x1, net/minecraft/world/phys/Vec3.m_82490_ x1
+private static void finishAirborne(net.minecraft.server.level.ServerPlayer, com.eternalcraft.darkesthours.movesets.headtaker.HeadtakerState$Data);
+  method calls: stop x1
+public static void onPlayerTick(net.minecraftforge.event.TickEvent$PlayerTickEvent);
+  method calls: net/minecraft/server/level/ServerPlayer.m_9236_ x1, net/minecraft/server/level/ServerPlayer.m_20148_ x1, com/eternalcraft/darkesthours/movesets/headtaker/HeadtakerState.get x1, com/eternalcraft/darkesthours/movesets/headtaker/HeadtakerState$Mode.ordinal x1, tickGroundDash x1, tickAirborneWait x1, tickFallDash x1
+public static void onExplosionDetonate(net.minecraftforge.event.level.ExplosionEvent$Detonate);
+  method calls: net/minecraftforge/event/level/ExplosionEvent$Detonate.getLevel x1, net/minecraftforge/event/level/ExplosionEvent$Detonate.getAffectedEntities x1, net/minecraft/server/level/ServerPlayer.m_19880_ x1, net/minecraft/world/effect/MobEffectInstance."<init>" x1, net/minecraft/server/level/ServerPlayer.m_7292_ x1
+private static void stop(net.minecraft.server.level.ServerPlayer, com.eternalcraft.darkesthours.movesets.headtaker.HeadtakerState$Data);
+  method calls: com/eternalcraft/darkesthours/movesets/headtaker/HeadtakerNetwork.sendAiming x1
+private static void syncMotion(net.minecraft.server.level.ServerPlayer);
+  method calls: net/minecraft/network/protocol/game/ClientboundSetEntityMotionPacket."<init>" x1, net/minecraft/server/network/ServerGamePacketListenerImpl.m_9829_ x1
+private static void spawnAt(net.minecraft.world.level.Level, net.minecraft.resources.ResourceLocation, double, double, double);
+  method calls: java/io/PrintStream.println x1, net/minecraft/world/entity/EntityType.m_20615_ x1, net/minecraft/world/entity/Entity.m_6034_ x1, net/minecraft/world/level/Level.m_7967_ x1
+private static void spawnInstantTnt(net.minecraft.world.level.Level, double, double, double);
+  method calls: net/minecraft/world/entity/item/PrimedTnt."<init>" x1, net/minecraft/world/entity/item/PrimedTnt.m_32085_ x1, net/minecraft/world/level/Level.m_7967_ x1
+private static boolean lambda$tickGroundDash$0(net.minecraft.world.entity.Entity);
+  method calls: net/minecraft/resources/ResourceLocation."<init>" x3, net/minecraft/world/entity/Entity.m_6084_ x1
+
+=== com.eternalcraft.darkesthours.movesets.headtaker.HeadtakerState ===
+public com.eternalcraft.darkesthours.movesets.headtaker.HeadtakerState();
+  method calls: java/lang/Object."<init>" x1
+public static com.eternalcraft.darkesthours.movesets.headtaker.HeadtakerState$Data get(java.util.UUID);
+  method calls: 
+public static void clear(java.util.UUID);
+  method calls: 
+private static com.eternalcraft.darkesthours.movesets.headtaker.HeadtakerState$Data lambda$get$0(java.util.UUID);
+  method calls: com/eternalcraft/darkesthours/movesets/headtaker/HeadtakerState$Data."<init>" x1, java/util/HashMap."<init>" x1
+
+=== com.eternalcraft.darkesthours.movesets.headtaker.client.HeadtakerClientEvents ===
+public com.eternalcraft.darkesthours.movesets.headtaker.client.HeadtakerClientEvents();
+  method calls: java/lang/Object."<init>" x1
+public static void setAiming(boolean);
+  method calls: 
+public static void onClientTick(net.minecraftforge.event.TickEvent$ClientTickEvent);
+  method calls: com/eternalcraft/darkesthours/movesets/headtaker/HeadtakerNetwork$PressReleasePacket."<init>" x2, net/minecraftforge/network/simple/SimpleChannel.sendToServer x2, net/minecraft/client/Minecraft.m_91087_ x1, net/minecraft/client/KeyMapping.m_90857_ x1, net/minecraft/client/player/LocalPlayer.m_6144_ x1
+public static void onInteractionKey(net.minecraftforge.client.event.InputEvent$InteractionKeyMappingTriggered);
+  method calls: net/minecraftforge/client/event/InputEvent$InteractionKeyMappingTriggered.isAttack x1, net/minecraftforge/client/event/InputEvent$InteractionKeyMappingTriggered.setCanceled x1, net/minecraftforge/client/event/InputEvent$InteractionKeyMappingTriggered.setSwingHand x1, net/minecraft/client/Minecraft.m_91087_ x1, doLongRangeAim x1
+private static void doLongRangeAim(net.minecraft.client.player.LocalPlayer);
+  method calls: net/minecraft/client/player/LocalPlayer.m_20299_ x1, net/minecraft/client/player/LocalPlayer.m_20252_ x1, net/minecraft/world/phys/Vec3.m_82490_ x1, net/minecraft/world/phys/Vec3.m_82549_ x1, net/minecraft/world/level/ClipContext."<init>" x1, net/minecraft/client/player/LocalPlayer.m_9236_ x1, net/minecraft/world/level/Level.m_45547_ x1, net/minecraft/world/phys/HitResult.m_6662_ x1, net/minecraft/world/phys/BlockHitResult.m_82425_ x1, com/eternalcraft/darkesthours/movesets/headtaker/HeadtakerNetwork$LaunchPacket."<init>" x1, net/minecraftforge/network/simple/SimpleChannel.sendToServer x1
+
+=== com.eternalcraft.darkesthours.skills.battle.BattleCombo ===
+private com.eternalcraft.darkesthours.skills.battle.BattleCombo();
+  method calls: java/lang/Object."<init>" x1
+public static com.eternalcraft.darkesthours.skills.battle.BattleSkill skill(com.eternalcraft.darkesthours.skills.battle.BattleStyle);
+  method calls: com/eternalcraft/darkesthours/skills/battle/BattleStyle.skill x1
+public static int recovery(com.eternalcraft.darkesthours.skills.battle.BattleStyle, int, int);
+  method calls: com/eternalcraft/darkesthours/skills/battle/BattleStyle.ordinal x1, java/lang/Math.floorMod x1
+public static int variant(com.eternalcraft.darkesthours.skills.battle.BattleStyle, int, boolean, boolean);
+  method calls: com/eternalcraft/darkesthours/skills/battle/BattleStyle.ordinal x1
+public static boolean aerial(int);
+  method calls: 
+public static boolean sprint(int);
+  method calls: 
+
+=== com.eternalcraft.darkesthours.skills.mirage.client.CameraPose ===
+public com.eternalcraft.darkesthours.skills.mirage.client.CameraPose(net.minecraft.world.phys.Vec3, net.minecraft.world.phys.Vec3, float, float);
+  method calls: java/lang/Record."<init>" x1
+public static float span(float, float, float);
+  method calls: java/lang/Math.max x1, net/minecraft/util/Mth.m_14036_ x1
+public static float smooth(float);
+  method calls: net/minecraft/util/Mth.m_14036_ x1
+public static float easeOut(float);
+  method calls: net/minecraft/util/Mth.m_14036_ x1
+public static net.minecraft.world.phys.Vec3 orbit(net.minecraft.world.phys.Vec3, net.minecraft.world.phys.Vec3, double);
+  method calls: net/minecraft/world/phys/Vec3.m_82546_ x1, java/lang/Math.toRadians x1, java/lang/Math.cos x1, java/lang/Math.sin x1, net/minecraft/world/phys/Vec3.m_82520_ x1
+public net.minecraft.world.phys.Vec3 position();
+  method calls: 
+public static float easeIn(float);
+  method calls: net/minecraft/util/Mth.m_14036_ x1
+public com.eternalcraft.darkesthours.skills.mirage.client.CameraPose lerp(com.eternalcraft.darkesthours.skills.mirage.client.CameraPose, float);
+  method calls: net/minecraft/world/phys/Vec3.m_165921_ x2, net/minecraft/util/Mth.m_14179_ x2, "<init>" x1
+public float yaw();
+  method calls: net/minecraft/world/phys/Vec3.m_82546_ x1, java/lang/Math.atan2 x1, java/lang/Math.toDegrees x1
+public float pitch();
+  method calls: net/minecraft/world/phys/Vec3.m_82546_ x1, java/lang/Math.sqrt x1, java/lang/Math.atan2 x1, java/lang/Math.toDegrees x1
+public static net.minecraft.world.phys.Vec3 above(net.minecraft.world.phys.Vec3, double);
+  method calls: net/minecraft/world/phys/Vec3.m_82520_ x2, net/minecraft/world/phys/BlockHitResult.m_82450_ x2, net/minecraft/client/Minecraft.m_91087_ x1, net/minecraft/world/level/ClipContext."<init>" x1, net/minecraft/client/multiplayer/ClientLevel.m_45547_ x1, net/minecraft/world/phys/BlockHitResult.m_6662_ x1, net/minecraft/world/phys/Vec3."<init>" x1
+public final java.lang.String toString();
+  method calls: 
+public final int hashCode();
+  method calls: 
+public final boolean equals(java.lang.Object);
+  method calls: 
+public net.minecraft.world.phys.Vec3 pos();
+  method calls: 
+public net.minecraft.world.phys.Vec3 look();
+  method calls: 
+public float fov();
+  method calls: 
+public float roll();
+  method calls: 
+
+=== com.eternalcraft.darkesthours.item.windstorm.client.WindstormCinematics ===
+private com.eternalcraft.darkesthours.item.windstorm.client.WindstormCinematics();
+  method calls: java/lang/Object."<init>" x1
+public static void onEvent(com.eternalcraft.darkesthours.item.windstorm.WindstormNet$CinematicFxMsg);
+  method calls: com/eternalcraft/darkesthours/item/windstorm/WindstormNet$CinematicFxMsg.x x2, com/eternalcraft/darkesthours/item/windstorm/WindstormNet$CinematicFxMsg.y x2, com/eternalcraft/darkesthours/item/windstorm/WindstormNet$CinematicFxMsg.z x2, com/eternalcraft/darkesthours/item/windstorm/WindstormNet$CinematicFxMsg.intensity x2, com/eternalcraft/darkesthours/item/windstorm/WindstormNet$CinematicFxMsg.durationTicks x2, net/minecraft/client/Minecraft.m_91087_ x1, net/minecraft/client/player/LocalPlayer.m_20275_ x1, java/lang/Math.sqrt x1, distanceFactor x1, com/eternalcraft/darkesthours/item/windstorm/WindstormNet$CinematicFxMsg.eventType x1, addTrauma x1, setFovPunch x1
+public static float distanceFactor(double);
+  method calls: net/minecraft/util/Mth.m_14008_ x1
+public static void addTrauma(float, int);
+  method calls: net/minecraft/util/Mth.m_14036_ x1, java/lang/Math.max x1
+public static void setFovPunch(float, int);
+  method calls: 
+public static void onClientTick();
+  method calls: net/minecraft/util/Mth.m_14179_ x2, java/lang/Math.max x1, java/lang/Math.abs x1
+public static float getFovMultiplier(float);
+  method calls: net/minecraft/util/Mth.m_14179_ x1
+public static void applyScreenShake(net.minecraftforge.client.event.ViewportEvent$ComputeCameraAngles);
+  method calls: java/lang/Math.sin x3, java/lang/Math.cos x2, net/minecraftforge/client/event/ViewportEvent$ComputeCameraAngles.getPartialTick x1, net/minecraftforge/client/event/ViewportEvent$ComputeCameraAngles.getPitch x1, net/minecraftforge/client/event/ViewportEvent$ComputeCameraAngles.setPitch x1, net/minecraftforge/client/event/ViewportEvent$ComputeCameraAngles.getYaw x1, net/minecraftforge/client/event/ViewportEvent$ComputeCameraAngles.setYaw x1, net/minecraftforge/client/event/ViewportEvent$ComputeCameraAngles.getRoll x1, net/minecraftforge/client/event/ViewportEvent$ComputeCameraAngles.setRoll x1
+public static void reset();
+  method calls: 
+
+=== player-animation metadata ===
+assets/darkesthours/player_animation/air_choke.json: begin=0 end=24 stop=24 moves=25
+assets/darkesthours/player_animation/air_lift.json: begin=0 end=24 stop=24 moves=25
+assets/darkesthours/player_animation/air_pull.json: begin=0 end=24 stop=24 moves=25
+assets/darkesthours/player_animation/clothes_impact.json: begin=0 end=16 stop=16 moves=17
+assets/darkesthours/player_animation/clothes_raise.json: begin=0 end=12 stop=12 moves=13
+assets/darkesthours/player_animation/clothes_slam.json: begin=0 end=8 stop=8 moves=9
+assets/darkesthours/player_animation/drag.json: begin=0 end=16 stop=16 moves=17
+assets/darkesthours/player_animation/drag_grab.json: begin=0 end=12 stop=12 moves=13
+assets/darkesthours/player_animation/drag_impact.json: begin=0 end=16 stop=16 moves=17
+assets/darkesthours/player_animation/drag_lift.json: begin=0 end=24 stop=24 moves=25
+assets/darkesthours/player_animation/drag_smash.json: begin=0 end=8 stop=8 moves=9
+assets/darkesthours/player_animation/fall.json: begin=0 end=24 stop=24 moves=25
+assets/darkesthours/player_animation/freeze_shiver.json: begin=0 end=40 stop=40 moves=41
+assets/darkesthours/player_animation/grab_crush.json: begin=0 end=8 stop=8 moves=9
+assets/darkesthours/player_animation/grab_drag.json: begin=0 end=8 stop=8 moves=9
+assets/darkesthours/player_animation/grab_hold.json: begin=0 end=24 stop=24 moves=25
+assets/darkesthours/player_animation/grab_launch.json: begin=0 end=50 stop=50 moves=51
+assets/darkesthours/player_animation/grab_lift.json: begin=0 end=12 stop=12 moves=13
+assets/darkesthours/player_animation/grab_reach.json: begin=0 end=16 stop=16 moves=17
+assets/darkesthours/player_animation/grab_seized.json: begin=0 end=10 stop=10 moves=11
+assets/darkesthours/player_animation/grab_slam.json: begin=0 end=14 stop=14 moves=15
+assets/darkesthours/player_animation/hit_heavy_back.json: begin=0 end=28 stop=28 moves=29
+assets/darkesthours/player_animation/hit_heavy_front.json: begin=0 end=28 stop=28 moves=29
+assets/darkesthours/player_animation/hit_heavy_left.json: begin=0 end=28 stop=28 moves=29
+assets/darkesthours/player_animation/hit_heavy_right.json: begin=0 end=28 stop=28 moves=29
+assets/darkesthours/player_animation/hit_light_back.json: begin=0 end=14 stop=14 moves=15
+assets/darkesthours/player_animation/hit_light_front.json: begin=0 end=14 stop=14 moves=15
+assets/darkesthours/player_animation/hit_light_left.json: begin=0 end=14 stop=14 moves=15
+assets/darkesthours/player_animation/hit_light_right.json: begin=0 end=14 stop=14 moves=15
+assets/darkesthours/player_animation/kamehameha.json: kamehameha_charge: 8s, 5 bones, kamehameha_fire: 6.6s, 5 bones
+assets/darkesthours/player_animation/launch_air.json: begin=0 end=46 stop=46 moves=47
+assets/darkesthours/player_animation/locked_juggle.json: begin=0 end=12 stop=12 moves=13
+assets/darkesthours/player_animation/mega_jump.json: begin=0 end=24 stop=24 moves=25
+assets/darkesthours/player_animation/pulled_grapple.json: begin=0 end=12 stop=12 moves=13
+assets/darkesthours/player_animation/seeker_choke.json: begin=0 end=10 stop=10 moves=3
+assets/darkesthours/player_animation/seeker_limp.json: begin=0 end=24 stop=24 moves=3
+assets/darkesthours/player_animation/seeker_prone.json: begin=0 end=20 stop=20 moves=3
+assets/darkesthours/player_animation/seeker_spin.json: begin=0 end=16 stop=16 moves=3
+assets/darkesthours/player_animation/shockwave_knockdown.json: begin=0 end=46 stop=46 moves=47
+assets/darkesthours/player_animation/skills/genos/cyborgincinerate.json: cyborgincinerate: 4s, 6 bones
+assets/darkesthours/player_animation/skills/genos/cyborgkick.json: cyborgkick: 1.8333s, 6 bones
+assets/darkesthours/player_animation/skills/genos/cyborglaser.json: cyborglaser: 5.0833s, 6 bones
+assets/darkesthours/player_animation/skills/genos/cyborgshot.json: cyborgshot: 1.5s, 3 bones
+assets/darkesthours/player_animation/skills/genos/cyborgthunderkick.json: cyborgthunderkick: 4.75s, 6 bones
+assets/darkesthours/player_animation/sky_choke.json: begin=0 end=24 stop=24 moves=25
+assets/darkesthours/player_animation/slam_impact.json: begin=0 end=16 stop=16 moves=17
+assets/darkesthours/player_animation/slam_lift.json: begin=0 end=24 stop=24 moves=25
+assets/darkesthours/player_animation/slam_reel.json: begin=0 end=24 stop=24 moves=25
+assets/darkesthours/player_animation/slam_smash.json: begin=0 end=8 stop=8 moves=9
+assets/darkesthours/player_animation/slam_top.json: begin=0 end=24 stop=24 moves=25
+assets/darkesthours/player_animation/slash_cut_left.json: begin=0 end=26 stop=26 moves=27
+assets/darkesthours/player_animation/slash_cut_right.json: begin=0 end=26 stop=26 moves=27
+assets/darkesthours/player_animation/sorcerer/carian_great_sword1.json: carian_great_sword1: 0.5s, 2 bones
+assets/darkesthours/player_animation/sorcerer/carian_great_sword2.json: carian_great_sword2: 0.5s, 2 bones
+assets/darkesthours/player_animation/sorcerer/carian_puncture.json: carian_puncture: 0.75s, 6 bones
+assets/darkesthours/player_animation/sorcerer/carian_slicer_1.json: carian_slicer_1: 0.5s, 5 bones
+assets/darkesthours/player_animation/sorcerer/carian_slicer_2.json: carian_slicer_2: 0.5s, 5 bones
+assets/darkesthours/player_animation/spin.json: begin=0 end=16 stop=16 moves=17
+assets/darkesthours/player_animation/throw.json: begin=0 end=16 stop=16 moves=17
+assets/darkesthours/player_animation/vortex_brace.json: begin=0 end=18 stop=18 moves=19
+assets/darkesthours/player_animation/wall_run.json: begin=0 end=16 stop=16 moves=17
+assets/darkesthours/player_animation/wall_smash.json: begin=0 end=14 stop=14 moves=15
+assets/darkesthours/player_animation/wall_swing.json: begin=0 end=12 stop=12 moves=13
