@@ -71,11 +71,11 @@ def parity(geo, java_samples=None):
              'v17_cowl_back_4','v18_pad_0','v18_pad_1','cape_top','v17_ribbon_2_seg3']
     cases = []
     expected = []
-    for body, wings in product((0.,.27,1.),samples):
-        base = P.matrices(F.wearer_pose(geo,body,0,0,elytra=wings,placed=True))
+    for body, wings, slim in product((0.,.27,1.),samples,(False,True)):
+        base = P.matrices(F.wearer_pose(geo,body,0,0,elytra=wings,placed=True,slim=slim))
         for pitch,yaw,arm in product((-89.,-60.,-30.,0.,30.,60.,89.),(-73.,0.,73.),(0.,36.)):
-            aim = [body,pitch,yaw,wings,arm,arm]
-            frame = P.matrices(F.wearer_pose(geo,body,pitch,yaw,elytra=wings,arm_back=arm,placed=True))
+            aim = [body,pitch,yaw,wings,arm,arm,slim]
+            frame = P.matrices(F.wearer_pose(geo,body,pitch,yaw,elytra=wings,arm_back=arm,placed=True,slim=slim))
             for name in base:
                 np.testing.assert_array_equal(frame[name],base[name],err_msg=f'{name}: {aim}')
             cases.append(aim)

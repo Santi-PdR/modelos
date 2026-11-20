@@ -296,7 +296,7 @@ def mount_placement(elytra=False):
             math.hypot(by,bz)/math.hypot(ay,az))
 
 
-def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True):
+def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False):
     f = mount_profile()
     d,dy,tilt,drape,link,scale = mount_placement(elytra)
     by = {b['name']:b for b in geo['bones']}
@@ -325,6 +325,8 @@ def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True):
             piece['parent'] = trim['name']
         if fixed and plates and piece.get('parent') == G.FIT_BONE and n in ('v18_pad_0','v18_pad_1'):
             x,y,z,dx,dy,dz,rx,ry,rz = f['plates'][int(n[-1])]
+            if slim and n == 'v18_pad_0':
+                dx += f['SLIM_COMPACT_INSET']
             pad = dict(name='shoulder_'+n,parent='chestplate',pivot=[x,y,z],offset=[dx,dy,dz],rotation=[rx,ry,rz],cubes=[])
             bones.append(pad)
             piece['parent'] = pad['name']
@@ -340,10 +342,10 @@ def viewer_profile(*, placed=False):
 
 
 def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back=0., close=True,
-                plates=True, arm_effort=None, torso=True, placed=False):
+                plates=True, arm_effort=None, torso=True, placed=False, slim=False):
     """Bake the worn frame, not keyframes. Historical checks use placed=False."""
     if placed and not legacy:
-        return fixed_wearer_pose(geo,stance,elytra=elytra,plates=plates)
+        return fixed_wearer_pose(geo,stance,elytra=elytra,plates=plates,slim=slim)
     changes = {'chestplate': dict(rotation=[stance*profile()['bodyAngle'], 0., 0.],
                                   offset=[0., -3.2*stance, 0.])}
     shape = (0.,None,None,None,None,None)

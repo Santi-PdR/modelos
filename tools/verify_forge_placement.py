@@ -85,7 +85,7 @@ def gallery(root):
             im = im.crop(((w-d)//2,0,(w+d)//2,h))
             image.paste(im.resize((cw-4,ch),Image.Resampling.LANCZOS),(col*cw+2,y+17))
     image.save(root/'colocacion-original-forge.jpg',quality=91,optimize=True)
-    for width in (980,840,700,560,420):
+    for width in (980,840,700,560,420,350,300,240):
         data = io.BytesIO()
         image.resize((width,round(width*image.height/image.width)),Image.Resampling.LANCZOS).save(
             data,'JPEG',quality=68,optimize=True)

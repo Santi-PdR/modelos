@@ -33,6 +33,9 @@ final class CapeMountPlacement {
     // Translate/rotate the complete authored plates in chest space, so the
     // faces sit over the shoulders rather than behind the vanilla sleeves.
     // These are GEO coordinates; CapaArmorRenderer mirrors X on draw.
+    // The slim sleeve is one pixel narrower. Move the compact plate
+    // inward on that model, not in response to a pose or view.
+    static final double SLIM_COMPACT_INSET = .65;
     static final Plate SMALL = new Plate(CapePlateFit.SMALL, -5.84, 22.35, 4.46, -1.30, 1.15, -5.88, 14, 4, -14);
     static final Plate WIDE = new Plate(CapePlateFit.WIDE, 7.24, 22.43, 4.16, -.54, .32, -4.30, 8, 86, 10);
     record Plate(String bone, double x, double y, double z, double dx, double dy, double dz, float pitch, float yaw, float roll) {}

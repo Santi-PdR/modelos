@@ -25,6 +25,7 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private CapeMountPlacement.Pose placement = CapeMountPlacement.worn(false);
     private static final CapeFit.YokeShape LINING = CapeFit.yokeShape(0, 0, 0, true);
     private boolean mountInChest;
+    private boolean slimSleeves;
     private boolean armorPassSubmitted;
     private boolean sampleFit;
 
@@ -102,6 +103,7 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         var player = getCurrentEntity() instanceof AbstractClientPlayer p ? p : null;
         boolean hasWings = player != null && player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA);
         placement = CapeMountPlacement.worn(hasWings);
+        slimSleeves = player != null && player.getModelName().equals("slim");
         mountInChest = bone(CapeFit.BONE) != null && bone(CapeFit.GUSSET_BONE) != null;
         double arm = backArm(model);
         double leg = Math.max(CapeStride.backDegrees(model.leftLeg.xRot, model.leftLeg.yRot),
@@ -199,7 +201,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         poseStack.pushPose();
         try {
             double x = -fit.x()/16, y = fit.y()/16, z = fit.z()/16;
-            poseStack.translate(x-fit.dx()/16, y+fit.dy()/16, z+fit.dz()/16);
+            double inset = slimSleeves && fit == CapeMountPlacement.SMALL ? CapeMountPlacement.SLIM_COMPACT_INSET : 0;
+            poseStack.translate(x-(fit.dx()+inset)/16, y+fit.dy()/16, z+fit.dz()/16);
             poseStack.mulPose(Axis.ZP.rotationDegrees(fit.roll()));
             poseStack.mulPose(Axis.YP.rotationDegrees(-fit.yaw()));
             poseStack.mulPose(Axis.XP.rotationDegrees(-fit.pitch()));

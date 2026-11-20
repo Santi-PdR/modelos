@@ -265,7 +265,7 @@ function mountPlacement(f, elytra) {
     Math.hypot(by,bz)/Math.hypot(ay,az)];
 }
 
-function fixedWearerPose(geo, profile, stance, elytra) {
+function fixedWearerPose(geo, profile, stance, elytra, slim) {
   const f=profile.mount;
   const [depth,dy,tilt,drape,link,linkScale]=mountPlacement(f,elytra);
   const fixed=geo.bones.some(b=>b.name===profile.bone) && geo.bones.some(b=>b.name===profile.gussetBone);
@@ -294,7 +294,8 @@ function fixedWearerPose(geo, profile, stance, elytra) {
     const plate=profile.plates.names.indexOf(name);
     if (fixed && plate>=0 && piece.parent===profile.bone) {
       const [x,y,z,dx,dy,dz,pitch,yaw,roll]=f.plates[plate];
-      const frame={name:'shoulder_'+name,parent:'chestplate',pivot:[x,y,z],offset:[dx,dy,dz],rotation:[pitch,yaw,roll],cubes:[]};
+      const inset=slim && plate===0 ? f.SLIM_COMPACT_INSET : 0;
+      const frame={name:'shoulder_'+name,parent:'chestplate',pivot:[x,y,z],offset:[dx+inset,dy,dz],rotation:[pitch,yaw,roll],cubes:[]};
       bones.push(frame);
       piece={...piece,parent:frame.name};
     }
@@ -303,8 +304,8 @@ function fixedWearerPose(geo, profile, stance, elytra) {
   return {...geo,bones};
 }
 
-function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm) {
-  if (profile.mount) return fixedWearerPose(geo,profile,stance,elytra);
+function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm, slim=false) {
+  if (profile.mount) return fixedWearerPose(geo,profile,stance,elytra,slim);
   const depth=backset(profile,stance,look,turn);
   const anchor = profile.backing;
   const seat = profile.seat;
