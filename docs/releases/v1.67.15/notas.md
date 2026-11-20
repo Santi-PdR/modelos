@@ -1,6 +1,6 @@
 # v1.67.15 · Prueba del anclaje equipado
 
-[Descargar el JAR verificado](https://github.com/Santi-PdR/modelos/raw/8b794488ab4a4e32a685307bb0751bafc7261329/entregables/v1.67.15/capatest-1.67.15.jar) · [SHA-256](JAR.sha256) · [Capturas reales en F5](../../capa_v16715_anclaje_forge.jpg) · [Proyecto Blockbench](../../CAPA_v1.67.15.bbmodel) · [Visor sin conexión](../../capa_v1170_visor.html)
+[Descargar el JAR verificado](https://github.com/Santi-PdR/modelos/raw/8b794488ab4a4e32a685307bb0751bafc7261329/entregables/v1.67.15/capatest-1.67.15.jar) · [SHA-256](JAR.sha256) · [Capturas reales en F5](../../capa_v16715_anclaje_forge.jpg) · [Proyecto Blockbench](https://github.com/Santi-PdR/modelos/blob/e9691b1ac525d5af4d8eabe00a85521d465f5ddf/docs/CAPA_v1.67.15.bbmodel) · [Visor de este ensayo](https://github.com/Santi-PdR/modelos/blob/e9691b1ac525d5af4d8eabe00a85521d465f5ddf/docs/capa_v1170_visor.html)
 
 La parte alta de la capa queda cosida a la camiseta. El forro delantero y lateral conecta la montura con las hombreras de cuatro piezas; mirar arriba no empuja el anclaje hacia atrás. El pliegue superior y el fuelle acompañan al paño sin arrastrar el cuello. Se conservaron los ocho clips, los pivotes del paño, las piezas bajas, las texturas de albedo, emisión y halo, el icono y las brasas.
 

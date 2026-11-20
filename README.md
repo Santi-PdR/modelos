@@ -13,9 +13,11 @@ Se equipa en el pecho o en `back` con Curios opcional.
 
 ### v1.67.16 — capa original, ajuste de posición
 
-Se restablece el modelo equipado de v1.67.14, con el mismo paño, cuello, relieve, atlas, brillo y animaciones. El montaje se acerca al torso cuando se mira hacia arriba y las hombreras existentes se asientan un poco más arriba en reposo. No cambia el instalador, el icono ni la descarga pública.
+Se restaura el modelo de v1.67.14, con el mismo paño, cuello, relieve, atlas, brillo y animaciones. Al mirar arriba, el montaje queda más cerca del torso; las hombreras originales se asientan un poco más arriba en reposo. No cambia el instalador, el icono ni la descarga pública.
 
-### v1.67.15 — ensayo anterior de yugo fijo
+**[Descargar JAR de prueba v1.67.16](https://github.com/Santi-PdR/modelos/raw/082c38eacc81906e9698d89196a7e797735663d0/entregables/v1.67.16/capatest-1.67.16.jar)** · [Capturas F5 en pecho y Curios](docs/capa_v16716_colocacion_forge.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.16/notas.md) · [PowerShell para `test-1`](docs/releases/v1.67.16/instalar-directo-test-1.txt).
+
+### v1.67.15 — ensayo descartado de yugo fijo
 
 El cuello granate queda cosido a la espalda, con retornos laterales y forro por delante. Las hombreras recuperan la base, lámina, filo y labio delantero, y cada una sigue su manga sin retirarse al mirar hacia arriba. El fuelle enlaza la espalda con los doce jirones y absorbe su movimiento sin tirar del cuello. Se conservaron el faldón inferior, los ocho clips, el atlas, el icono y las brasas.
 
