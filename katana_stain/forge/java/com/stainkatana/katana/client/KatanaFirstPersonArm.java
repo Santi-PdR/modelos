@@ -48,7 +48,22 @@ public final class KatanaFirstPersonArm {
             if (right) playerRenderer.renderRightHand(pose, event.getMultiBufferSource(), event.getPackedLight(), mc.player);
             else playerRenderer.renderLeftHand(pose, event.getMultiBufferSource(), event.getPackedLight(), mc.player);
         }
+        // Use the same player-model wrist transform as the third-person held-item layer.
+        // This ties the sword to the skin arm instead of overlaying two unrelated render paths.
+        if (renderer instanceof PlayerRenderer playerRenderer) {
+            pose.pushPose();
+            playerRenderer.getModel().translateToHand(arm, pose);
+            pose.mulPose(Axis.XP.rotationDegrees(-90));
+            pose.mulPose(Axis.YP.rotationDegrees(180));
+            pose.translate(sign / 16.0, .125, -.625);
+            var context = right ? net.minecraft.world.item.ItemDisplayContext.THIRD_PERSON_RIGHT_HAND
+                    : net.minecraft.world.item.ItemDisplayContext.THIRD_PERSON_LEFT_HAND;
+            mc.getItemRenderer().renderStatic(event.getItemStack(), context, event.getPackedLight(),
+                    net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, pose,
+                    event.getMultiBufferSource(), mc.level, mc.player.getId());
+            pose.popPose();
+            event.setCanceled(true);
+        }
         pose.popPose();
-        // Do not cancel: let Forge/Better Combat render the item normally.
     }
 }

@@ -38,9 +38,9 @@ public final class VisualFixtureClient {
             case 40 -> capture = "01_inventory.png";
             case 48 -> mc.setScreen(null);
             case 58 -> { mc.options.setCameraType(CameraType.FIRST_PERSON); capture = "02_first_person.png"; }
-            case 70 -> { mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); capture = "03_third_back.png"; }
+            case 70 -> { mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); mc.options.fov().set(35); capture = "03_third_back.png"; }
             case 82 -> { mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); capture = "04_third_front.png"; }
-            case 95 -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case 95 -> { mc.options.fov().set(70); mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); }
             case 105 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(1));
             case 111 -> capture = "05_slash_windup.png";
             case 113 -> capture = "06a_slash_impact.png";
