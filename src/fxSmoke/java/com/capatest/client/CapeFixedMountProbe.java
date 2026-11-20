@@ -74,7 +74,8 @@ final class CapeFixedMountProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         p.faces.setLength(0);
         // GeckoLib calls this per-bone layer only in the diffuse pass. Keep the
         // same live model-space matrices under observation through the glow.
-        for (var b : renderer.getGeoModel().getAnimationProcessor().getRegisteredBones()) {
+        for (var registered : renderer.getGeoModel().getAnimationProcessor().getRegisteredBones()) {
+            if (!(registered instanceof GeoBone b)) continue;
             String n = b.getName();
             if (!fixed(n) || b.getCubes().isEmpty()) continue;
             boolean hide = control == 1 ? n.startsWith("v18_pad_") : control == 2 && !n.startsWith("v18_pad_");

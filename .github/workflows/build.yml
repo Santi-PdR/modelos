@@ -799,6 +799,14 @@ jobs:
 
       - name: Test worn-state and cosmetic profiles
         run: |
+          trap 'echo "::error title=Perfiles de capa::Falló $BASH_COMMAND"' ERR
+          exec 3>&2
+          exec 2> >(while IFS= read -r line; do
+            case "$line" in
+              *AssertionError:*|*Error:*|*error:*) printf '::error title=Perfiles de capa::%s\n' "${line//%/%25}" >&3 ;;
+              *) printf '%s\n' "$line" >&3 ;;
+            esac
+          done)
           CLASSES="$RUNNER_TEMP/cape-state-test"
           mkdir -p "$CLASSES"
           javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/{CapeState,CapePlayback,CapeSparkFrame}.java \
@@ -1049,7 +1057,14 @@ jobs:
 
       - name: Comprobar el yugo fijo y el relieve de ambas hombreras
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && steps.rig.outputs.fixed == 'true' }}
-        run: python3 tools/verify_forge_attachment.py build/fx-smoke-run/fx-shots
+        run: |
+          set -o pipefail
+          python3 tools/verify_forge_attachment.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
+            case "$line" in
+              *AssertionError:*|*Error:*) printf '::error title=Montaje en Forge::%s\n' "${line//%/%25}" ;;
+              *) printf '%s\n' "$line" ;;
+            esac
+          done
 
       - name: Medir el cuello al girar 60 grados en F5
         id: verify-wide-turn
