@@ -70,3 +70,10 @@ assert inspect['author'] == 'Overseer' and inspect['name'] == 'Inspect'
 assert (root/'resources/META-INF/EMOTECRAFT_EMOTES_CC0.txt').is_file()
 assert 'AbilityTimeline' in ability and 'cast.timeline.cancel()' in ability
 print('OK: gesto de Emotecraft atribuido y cancelación de línea de tiempo')
+
+scene=(root/'java/com/stainkatana/katana/client/KatanaScene.java').read_text()
+assert 'SAFETY_TIMEOUT = 36' in scene and 'mc.isPaused()' in scene
+assert 'KatanaScene.start()' in anim and 'KatanaScene.stop()' in anim
+assert (root/'resources/META-INF/CINEMASCOPE_LICENSE.txt').is_file()
+assert 'bettercombat", "katana_slash' in ability
+print('OK: encuadre local cancelable y sonido de Better Combat con alternativa')

@@ -131,11 +131,16 @@ tasks.withType(JavaCompile).configureEach {
 // Variante optativa y aislada para test-1: no cambia el mod completo.
 // Ejecutar primero python3 katana_stain/tools/preparar_test.py.
 if (project.hasProperty('katanaOnly')) {
-    version = '0.9.0-test'
+    version = '0.10.0-test'
     base.archivesName = 'stainkatana'
     sourceSets.main.java.setSrcDirs(['build-katana-input/java'])
     sourceSets.main.resources.setSrcDirs(['build-katana-input/resources'])
     sourceSets.test.java.setSrcDirs(['katana_stain/tests/java'])
+    tasks.register('verifyKatanaSceneCurve', JavaExec) {
+        dependsOn testClasses
+        classpath = sourceSets.test.runtimeClasspath
+        mainClass = 'com.stainkatana.tests.SceneCurveCheck'
+    }
     tasks.register('verifyKatanaTimeline', JavaExec) {
         dependsOn testClasses
         classpath = sourceSets.test.runtimeClasspath

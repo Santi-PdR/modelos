@@ -54,6 +54,10 @@ public final class KatanaAnimations {
     public static void play(int entityId, int ability) {
         if (ability < -1 || ability >= CLIPS.length || Minecraft.getInstance().level == null) return;
         if (!(Minecraft.getInstance().level.getEntity(entityId) instanceof AbstractClientPlayer player)) return;
+        if (player == Minecraft.getInstance().player) {
+            if (ability == 2) KatanaScene.start();
+            else if (ability == -1) KatanaScene.stop();
+        }
         var data = PlayerAnimationAccess.getPlayerAssociatedData(player).get(LAYER);
         if (!(data instanceof AbilityLayer animation)) return;
         if (ability == -1) {

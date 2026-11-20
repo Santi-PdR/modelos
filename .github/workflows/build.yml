@@ -1324,8 +1324,8 @@ jobs:
           for clip in two_handed_slash_horizontal_right two_handed_slash_vertical_right two_handed_slash_horizontal_left; do
             curl --fail --location --silent --show-error "https://raw.githubusercontent.com/ZsoltMolnarrr/BetterCombat/8814f0297bb85f4513646e73d604069487ce7322/common/src/main/resources/assets/bettercombat/attack_animations/${clip}.json" -o "/tmp/stain-bettercombat-test/${clip}.json"
           done
-          STAIN_BC_TEST_DIR=/tmp/stain-bettercombat-test gradle clean build verifyKatanaAnimations verifyKatanaTimeline -PkatanaOnly --no-daemon
-          jar=build/libs/stainkatana-0.9.0-test.jar
+          STAIN_BC_TEST_DIR=/tmp/stain-bettercombat-test gradle clean build verifyKatanaAnimations verifyKatanaTimeline verifyKatanaSceneCurve -PkatanaOnly --no-daemon
+          jar=build/libs/stainkatana-0.10.0-test.jar
           test -f "$jar"
           python3 - "$jar" <<'PY'
           import json,sys,zipfile
@@ -1341,6 +1341,9 @@ jobs:
                         'com/stainkatana/katana/KatanaStunEvents.class',
                         'com/stainkatana/katana/client/KatanaParticle.class',
                         'com/stainkatana/katana/client/KatanaVisuals.class',
+                        'com/stainkatana/katana/client/KatanaScene.class',
+                        'com/stainkatana/katana/KatanaClientConfig.class',
+                        'META-INF/CINEMASCOPE_LICENSE.txt',
                         'com/stainkatana/katana/client/KatanaAnimations.class',
                         'assets/stainkatana/player_animation/sword_attack.json',
                         'assets/stainkatana/player_animation/sword_attack2.json',
@@ -1367,7 +1370,7 @@ jobs:
                   assert all('capa_deteriorer' not in k for k in keys)
               meta=z.read('META-INF/mods.toml').decode()
               assert 'modId="stainkatana"' in meta and 'modId="geckolib"' in meta and 'modId="playeranimator"' in meta
-              assert '0.9.0-test' in meta
+              assert '0.10.0-test' in meta
           print('OK: katana e icono presentes; sin clases ni recursos de la capa')
           PY
       - name: Inicio de servidor dedicado de prueba
@@ -1397,11 +1400,11 @@ jobs:
           set -euo pipefail
           out=katana_stain/descargas
           mkdir -p "$out"
-          cp build/libs/stainkatana-0.9.0-test.jar "$out/stainkatana-0.9.0-test.jar"
-          (cd "$out" && sha256sum stainkatana-0.9.0-test.jar > SHA256SUMS.txt)
+          cp build/libs/stainkatana-0.10.0-test.jar "$out/stainkatana-0.10.0-test.jar"
+          (cd "$out" && sha256sum stainkatana-0.10.0-test.jar > SHA256SUMS.txt)
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -f "$out/stainkatana-0.9.0-test.jar" "$out/SHA256SUMS.txt"
+          git add -f "$out/stainkatana-0.10.0-test.jar" "$out/SHA256SUMS.txt"
           if ! git diff --cached --quiet; then
             git commit -m 'Store isolated katana test jar'
             git push origin "HEAD:$BRANCH"

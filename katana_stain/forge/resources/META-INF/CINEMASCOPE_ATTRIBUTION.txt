@@ -1,0 +1,6 @@
+Cinematic bars and cubic easing adapted from Cinema Scope by heconis,
+Forge 1.20.1 port by ChopstickGuy, revision a06b46583b90f8fc0afc0c42cd4ebf21b9ff41be.
+https://github.com/ChopstickGuy/CinemaScope-1.20.1
+MIT license: see CINEMASCOPE_LICENSE.txt.
+The katana uses a short server-triggered overlay and does not use the source
+mod's HUD-hiding, automatic smooth-camera, keybinding, or hand-hiding features.

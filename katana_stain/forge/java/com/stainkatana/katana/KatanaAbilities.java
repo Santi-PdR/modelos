@@ -18,6 +18,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -204,7 +207,7 @@ public final class KatanaAbilities {
         }
         // El corte existe aunque la víctima se aparte durante la preparación.
         arc(level, player, facing, ultimate);
-        level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, .8F, ultimate ? .7F : 1.1F);
+        level.playSound(null, player.blockPosition(), katanaSwingSound(), SoundSource.PLAYERS, .8F, ultimate ? .85F : 1.0F);
         if (hits == 0) {
             player.displayClientMessage(Component.translatable("stainkatana.no_target"), true); return false;
         }
@@ -216,6 +219,13 @@ public final class KatanaAbilities {
         }
         player.displayClientMessage(Component.translatable(ultimate ? "stainkatana.ultimate_used" : "stainkatana.slash_used"), true);
         return true;
+    }
+
+    private static SoundEvent katanaSwingSound() {
+        // Borrow the installed Better Combat sound; never ship its audio in our JAR.
+        ResourceLocation id = new ResourceLocation("bettercombat", "katana_slash");
+        return ForgeRegistries.SOUND_EVENTS.containsKey(id)
+                ? ForgeRegistries.SOUND_EVENTS.getValue(id) : SoundEvents.PLAYER_ATTACK_SWEEP;
     }
 
     private static Vec3 facing(ServerPlayer player) {

@@ -189,3 +189,24 @@ arma rota durante el primer impacto cancela el resto. Los cortes muestran sus
 trazos al impactar incluso si el objetivo escapó durante la preparación; no
 hay daño ni desgaste si no golpean. Las pruebas no cubren el aspecto visual,
 el combate de Better Combat instalado ni una partida real de cliente.
+
+## 0.10.0-test — encuadre de la ulti
+
+La ulti confirmada inicia para su propio jugador una secuencia breve de bandas
+y reducción suave del FOV, adaptada del mod Cinema Scope de heconis / port de
+ChopstickGuy (MIT, licencia en `META-INF/CINEMASCOPE_LICENSE.txt`). No es una
+cinemática de cámara libre: no cambia la perspectiva, no inmoviliza al jugador,
+no oculta el HUD ni altera la velocidad del mundo. El servidor sigue resolviendo
+los impactos. Se cancela al interrumpirse la habilidad, al salir del mundo o por
+límite de seguridad, y se pausa con el juego. Solo el atacante ve las bandas;
+los demás siguen viendo animación y partículas sincronizadas.
+
+Se puede desactivar o ajustar en `config/stainkatana-client.toml`, sección
+`ultimate_scene`: `enabled`, `barFraction`, `zoomFraction`. Valores 0 eliminan
+barras/zoom respectivamente. El sonido de los cortes usa el evento registrado
+por Better Combat `bettercombat:katana_slash` si existe; sin ese mod se usa un
+sonido vanilla. No se redistribuye audio de Better Combat.
+
+Es una primera prueba de encuadre: no se ha verificado en el cliente ni con
+otros mods de cámara, FOV, HUD o shaders. Las pruebas de curva, compilación y
+servidor no certifican calidad visual ni sincronización real.

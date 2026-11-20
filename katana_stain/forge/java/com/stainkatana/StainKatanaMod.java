@@ -1,6 +1,7 @@
 package com.stainkatana;
 
 import com.stainkatana.katana.StainKatanaItem;
+import com.stainkatana.katana.KatanaClientConfig;
 import com.stainkatana.katana.KatanaNetwork;
 import com.stainkatana.katana.KatanaParticles;
 import com.stainkatana.katana.KatanaEffects;
@@ -13,6 +14,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -32,6 +35,7 @@ public class StainKatanaMod {
             .displayItems((parameters, output) -> output.accept(KATANA_STAIN.get())).build());
 
     public StainKatanaMod() {
+        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, KatanaClientConfig.SPEC);
         GeckoLib.initialize();
         KatanaNetwork.init();
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
