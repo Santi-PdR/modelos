@@ -22,10 +22,10 @@ final class CapeTorsoFit {
     // Front edge and base of the exposed rear collar in model units.
     private static final double TURN_LIP_Y = 21.7;
     private static final double TURN_LIP_Z = 6.0;
-    private static final double TURN_LIP_HEIGHT = .70;
-    private static final double TURN_LIP_ADVANCE = .22;
-    private static final double TURN_LIP_RISE = .48;
-    private static final double TURN_LIP_SHIFT = .92;
+    private static final double TURN_LIP_HEIGHT = .63;
+    private static final double TURN_LIP_ADVANCE = .04;
+    private static final double TURN_LIP_RISE = .86;
+    private static final double TURN_LIP_SHIFT = 1.18;
     static final Shape NONE = new Shape(0, null, null, null, null, null);
 
     record Affine(float x, float y, float z, float dx, float dy, float dz, float sx, float sy, float sz) {}

@@ -157,7 +157,7 @@ def study_wide_turn(root):
                 np.testing.assert_allclose(p0[name],p1[name],rtol=0,atol=.015,err_msg=f'{stem}: {name} se movió')
             np.testing.assert_allclose(base[4:],now[4:],rtol=0,atol=.08,err_msg=f'{stem}: las raíces se movieron')
             assert .8 < ref[2] < 1.4 and 5.95 < base[2] < 6.05 and 4.1 < now[2] < 4.45, (stem, ref, base, now)
-            assert 1.35 < now[3]-base[3] < 1.70, (stem,'el remate del cuello perdió altura o se levantó demasiado',base[3],now[3])
+            assert 1.5 < now[3]-base[3] < 1.82, (stem,'el remate del cuello perdió altura o se levantó demasiado',base[3],now[3])
             a, b = (isolated_crown(stem,bare,near,s) for s in versions[1:])
             prev,n0,area0 = a
             current,n1,area1 = b
