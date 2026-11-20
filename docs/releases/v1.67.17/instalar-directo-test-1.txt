@@ -1,0 +1,59 @@
+Mantle of the Blight Star v1.67.17 — descarga directa para test-1
+
+Cerrá Minecraft y pegá el bloque completo en PowerShell de Windows.
+Descarga el JAR verificado desde un commit, sin gh, sesión ni ZIP.
+Es una prueba separada. El instalador y las descargas públicas no cambian.
+
+& {
+    $ErrorActionPreference = 'Stop'
+    $mods = 'D:\Minecraft\SKLauncher\sklauncher-data-v4\instances\test-1\mods'
+    $jar = 'capatest-1.67.17.jar'
+    $url = 'https://github.com/Santi-PdR/modelos/raw/287c3c960c8c18f59ed6935a3cba843cb5ea0909/entregables/v1.67.17/capatest-1.67.17.jar'
+    $hash = 'cbd8054782fd6fc766252f4bc52ff4d45c8dc708ce81deb19f16faa7bf5a6fd1'
+
+    $folder = Get-Item -LiteralPath $mods -Force
+    if ($folder -isnot [IO.DirectoryInfo] -or ($folder.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        throw "Carpeta de mods no valida: $mods"
+    }
+    $id = [guid]::NewGuid().ToString('N')
+    $tmp = Join-Path $mods ".capatest-$id.tmp"
+    $root = Join-Path $folder.Parent.FullName 'capatest-respaldos'
+    $backup = Join-Path $root $id
+    $moved = @()
+
+    try {
+        Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $tmp
+        if ((Get-Item -LiteralPath $tmp).Length -ne 744306 -or
+            (Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash -ne $hash) {
+            throw 'El tamano o SHA-256 no coincide. No se reemplazo ningun JAR.'
+        }
+
+        $old = @(Get-ChildItem -LiteralPath $mods -File -Force | Where-Object Name -like 'capatest-*.jar')
+        if ($old | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }) {
+            throw 'Hay un enlace capatest en mods. No se reemplazo ningun JAR.'
+        }
+        if ($old.Count -gt 0) {
+            $b = Get-Item -LiteralPath $root -Force -ErrorAction SilentlyContinue
+            if ($b -and ($b -isnot [IO.DirectoryInfo] -or ($b.Attributes -band [IO.FileAttributes]::ReparsePoint))) {
+                throw "Carpeta de respaldo no valida: $root"
+            }
+            [void][IO.Directory]::CreateDirectory($backup)
+        }
+        foreach ($file in $old) {
+            [IO.File]::Move($file.FullName, (Join-Path $backup $file.Name))
+            $moved += $file
+        }
+        [IO.File]::Move($tmp, (Join-Path $mods $jar))
+    } catch {
+        $failure = $_
+        foreach ($file in $moved) {
+            try { [IO.File]::Move((Join-Path $backup $file.Name), $file.FullName) }
+            catch { Write-Warning "$($file.Name) quedo guardado en $backup." }
+        }
+        throw $failure
+    } finally {
+        Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+    }
+    Write-Host "$jar instalado y verificado en test-1."
+    if ($moved.Count -gt 0) { Write-Host "Version anterior respaldada en $backup" }
+}

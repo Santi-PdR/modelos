@@ -15,6 +15,8 @@ Se equipa en el pecho o en `back` con Curios opcional.
 
 El manto original se monta en el torso sin ajustarse a la cámara ni a la dirección de la cabeza. Las dos placas completas se sitúan sobre las mangas. La tela conserva sus ocho clips y responde al movimiento del cuerpo; el GEO, las texturas, el brillo y el icono no cambian. Prueba separada: no cambia el instalador público.
 
+**[Descargar JAR de prueba v1.67.17](https://github.com/Santi-PdR/modelos/raw/287c3c960c8c18f59ed6935a3cba843cb5ea0909/entregables/v1.67.17/capatest-1.67.17.jar)** · [Capturas de Forge](docs/capa_v16717_colocacion_forge.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.17/notas.md) · [PowerShell para `test-1`](docs/releases/v1.67.17/instalar-directo-test-1.txt).
+
 ### v1.67.16 — ensayo anterior de colocación
 
 Se restaura el modelo de v1.67.14, con el mismo paño, cuello, relieve, atlas, brillo y animaciones. Al mirar arriba, el montaje queda más cerca del torso; las hombreras originales se asientan un poco más arriba en reposo. No cambia el instalador, el icono ni la descarga pública.
