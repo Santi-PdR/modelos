@@ -19,6 +19,14 @@ public final class SceneCurveCheck {
             double v = SceneCurve.impactEnvelope(i / 100.0);
             if (v < 0 || v > 1) throw new AssertionError("impact envelope range");
         }
+        double[] shots = {40, 95, 170, 230, 300, 365};
+        if (SceneCurve.shot(-1, shots) != 40 || SceneCurve.shot(200, shots) != 365 || SceneCurve.shot(400, shots) != 365)
+            throw new AssertionError("shot endpoints");
+        for (int i = 1; i < 2000; i++) {
+            double a = SceneCurve.shot(i / 10.0, shots);
+            double b = SceneCurve.shot((i + 1) / 10.0, shots);
+            if (b < a || b - a > 1) throw new AssertionError("unstable shot interpolation");
+        }
         System.out.println("OK: clamped transition and bounded impact envelope");
     }
 }

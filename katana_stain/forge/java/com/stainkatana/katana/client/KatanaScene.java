@@ -23,6 +23,10 @@ public final class KatanaScene {
     private static java.lang.reflect.Method positionMethod, rotationMethod;
     private static int age, impactAge = 4;
     private static int impactDirection;
+    private static float initialYaw;
+    private static final double[] ORBIT = {40, 95, 170, 230, 300, 365};
+    private static final double[] DISTANCE = {5.0, 3.4, 4.2, 3.2, 5.0, 3.6};
+    private static final double[] HEIGHT = {2.0, .9, 2.1, .8, 2.8, 1.3};
     private static double progress, previous;
     private KatanaScene() { }
 
@@ -33,6 +37,7 @@ public final class KatanaScene {
             previousCamera = mc.options.getCameraType();
             mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
         }
+        initialYaw = mc.player == null ? 0 : mc.player.getYRot();
         active = true; age = 0; impactAge = 4; focus = null; cameraPosition = null;
     }
     public static void stop() {
@@ -91,8 +96,11 @@ public final class KatanaScene {
         var player = mc.player;
         var caster = player.getPosition(partial).add(0, 1.1, 0);
         var center = caster.lerp(focus, .55);
-        double angle = Math.toRadians(player.getYRot() + 60 + 18 * Math.sin((age + partial) * .04));
-        var desired = center.add(Math.sin(angle) * 4.2, 1.3 + .3 * Math.sin(age * .035), -Math.cos(angle) * 4.2);
+        double time = age + partial;
+        double angle = Math.toRadians(initialYaw + SceneCurve.shot(time, ORBIT));
+        double distance = SceneCurve.shot(time, DISTANCE);
+        double height = SceneCurve.shot(time, HEIGHT);
+        var desired = center.add(Math.sin(angle) * distance, height, -Math.cos(angle) * distance);
         var trace = mc.level.clip(new net.minecraft.world.level.ClipContext(center, desired,
                 net.minecraft.world.level.ClipContext.Block.COLLIDER,
                 net.minecraft.world.level.ClipContext.Fluid.NONE, player));

@@ -187,12 +187,17 @@ public final class KatanaAbilities {
 
     /** Find solid, collision-free and visible footing near the target, without loading chunks. */
     private static Vec3 safePosition(ServerPlayer player, LivingEntity target, int phase) {
+        return safePosition(player, target, phase, false);
+    }
+    private static Vec3 safePosition(ServerPlayer player, LivingEntity target, int phase, boolean behindOnly) {
         if (player.isPassenger()) return null;
         ServerLevel level = player.serverLevel();
         double base = Math.toRadians(target.getYRot()) + phase * Math.PI / 3.0;
-        for (int attempt = 0; attempt < 8; attempt++) {
-            double angle = base + attempt * Math.PI / 4.0;
-            Vec3 destination = new Vec3(target.getX() + Math.sin(angle) * 1.65, target.getY(), target.getZ() - Math.cos(angle) * 1.65);
+        for (int attempt = 0; attempt < (behindOnly ? 3 : 8); attempt++) {
+            double offset = behindOnly ? (attempt == 1 ? Math.PI / 6 : attempt == 2 ? -Math.PI / 6 : 0) : attempt * Math.PI / 4.0;
+            double angle = base + offset;
+            double radius = Math.max(1.65, target.getBbWidth() * .5 + .9);
+            Vec3 destination = new Vec3(target.getX() + Math.sin(angle) * radius, target.getY(), target.getZ() - Math.cos(angle) * radius);
             var feet = net.minecraft.core.BlockPos.containing(destination);
             var below = feet.below();
             if (!level.hasChunkAt(feet) || !level.getWorldBorder().isWithinBounds(feet)
@@ -228,7 +233,7 @@ public final class KatanaAbilities {
             player.displayClientMessage(Component.translatable("stainkatana.no_target"), true);
             return;
         }
-        Vec3 spot = safePosition(player, target, 0);
+        Vec3 spot = safePosition(player, target, 0, true);
         if (spot == null) {
             player.displayClientMessage(Component.translatable("stainkatana.target_unavailable"), true);
             return;
