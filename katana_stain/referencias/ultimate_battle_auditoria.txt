@@ -1,0 +1,225 @@
+Ultimate Battle 1.1.1 / Minecraft 1.20.1, CurseForge file 9385647.
+SHA256: 3e1d14fc1f4dbfd9d365d6b8c49b7eb5f5f80ff4a94084d8bf676ed8806fb563
+Static reference analysis only; no source, textures or effects copied.
+
+=== fabric.mod.json metadata ===
+id: ultimate_battle
+name: Star Battle
+version: 1.1.1+mc1.20.1
+license: All-Rights-Reserved
+environment: *
+depends: {'fabricloader': '>=0.14.21', 'minecraft': '~1.20.1', 'java': '>=17', 'fabric-api': '>=0.92.0'}
+
+=== Relevant class names ===
+dev/jevelyn/ultimatebattle/client/anim/Anim$Ease.class
+dev/jevelyn/ultimatebattle/client/anim/Anim$Key.class
+dev/jevelyn/ultimatebattle/client/anim/Anim.class
+dev/jevelyn/ultimatebattle/client/anim/Anims.class
+dev/jevelyn/ultimatebattle/client/anim/BasicAnims.class
+dev/jevelyn/ultimatebattle/client/anim/BodyPose.class
+dev/jevelyn/ultimatebattle/client/anim/ReaperAnims.class
+dev/jevelyn/ultimatebattle/client/anim/Skeleton.class
+dev/jevelyn/ultimatebattle/client/anim/Stances.class
+dev/jevelyn/ultimatebattle/client/anim/SwimPose.class
+dev/jevelyn/ultimatebattle/client/anim/Tilt.class
+dev/jevelyn/ultimatebattle/client/anim/TitanAnims.class
+dev/jevelyn/ultimatebattle/client/anim/ValkyrieAnims.class
+dev/jevelyn/ultimatebattle/client/beast/BeastAnim$Clip.class
+dev/jevelyn/ultimatebattle/client/beast/BeastAnim.class
+dev/jevelyn/ultimatebattle/client/cine/CameraPose.class
+dev/jevelyn/ultimatebattle/client/fx/BasicFx$Blade.class
+dev/jevelyn/ultimatebattle/client/fx/BladeFx$CrescentWave.class
+dev/jevelyn/ultimatebattle/client/fx/BladeFx$IaiFlash.class
+dev/jevelyn/ultimatebattle/client/fx/BladeFx$ThousandCuts.class
+dev/jevelyn/ultimatebattle/client/fx/BladeFx.class
+dev/jevelyn/ultimatebattle/client/mixin/CameraMixin.class
+dev/jevelyn/ultimatebattle/client/mixin/WalkAnimationAccess.class
+dev/jevelyn/ultimatebattle/client/sword/Blade.class
+dev/jevelyn/ultimatebattle/client/valkyrie/ValkyrieCamera.class
+dev/jevelyn/ultimatebattle/server/BasicMoves$BladeBasic.class
+dev/jevelyn/ultimatebattle/server/BladeMoves$CrescentWave.class
+dev/jevelyn/ultimatebattle/server/BladeMoves$IaiFlash.class
+dev/jevelyn/ultimatebattle/server/BladeMoves$ThousandCuts.class
+dev/jevelyn/ultimatebattle/server/BladeMoves.class
+
+=== Relevant animation/model metadata paths ===
+assets/ultimate_battle/models/item/battle_katana.json
+assets/ultimate_battle/models/item/valkyr_blade.json
+
+=== Method signatures and call counts ===
+=== dev.jevelyn.ultimatebattle.client.cine.CameraPose ===
+public dev.jevelyn.ultimatebattle.client.cine.CameraPose(net.minecraft.class_243, net.minecraft.class_243, float, float);
+  calls: java/lang/Record."<init>" x1
+public float yaw();
+  calls: net/minecraft/class_243.method_1020 x1, java/lang/Math.atan2 x1, java/lang/Math.toDegrees x1
+public float pitch();
+  calls: net/minecraft/class_243.method_1020 x1, java/lang/Math.sqrt x1, java/lang/Math.atan2 x1, java/lang/Math.toDegrees x1
+public dev.jevelyn.ultimatebattle.client.cine.CameraPose lerp(dev.jevelyn.ultimatebattle.client.cine.CameraPose, float);
+  calls: net/minecraft/class_243.method_35590 x2, net/minecraft/class_3532.method_16439 x2, "<init>" x1
+public static float smooth(float);
+  calls: net/minecraft/class_3532.method_15363 x1
+public static float easeOut(float);
+  calls: net/minecraft/class_3532.method_15363 x1
+public static float easeIn(float);
+  calls: net/minecraft/class_3532.method_15363 x1
+public static float span(float, float, float);
+  calls: java/lang/Math.max x1, net/minecraft/class_3532.method_15363 x1
+public static net.minecraft.class_243 orbit(net.minecraft.class_243, net.minecraft.class_243, double);
+  calls: java/lang/Math.cos x2, java/lang/Math.sin x2, java/lang/Math.toRadians x1, net/minecraft/class_243."<init>" x1
+public final java.lang.String toString();
+public final int hashCode();
+public final boolean equals(java.lang.Object);
+public net.minecraft.class_243 position();
+public net.minecraft.class_243 look();
+public float fov();
+public float roll();
+  calls: 
+=== dev.jevelyn.ultimatebattle.client.fx.BasicFx$Blade ===
+public dev.jevelyn.ultimatebattle.client.fx.BasicFx$Blade(dev.jevelyn.ultimatebattle.net.FxPayload);
+  calls: hit x2, dev/jevelyn/ultimatebattle/client/fx/BasicFx.lunges x1, dev/jevelyn/ultimatebattle/client/fx/BasicFx$Basic."<init>" x1, dev/jevelyn/ultimatebattle/client/anim/BasicAnims.blade x1
+private static int hit(dev.jevelyn.ultimatebattle.net.FxPayload);
+  calls: dev/jevelyn/ultimatebattle/client/fx/BasicFx.variant x1, dev/jevelyn/ultimatebattle/net/FxPayload.origin x1, dev/jevelyn/ultimatebattle/net/FxPayload.extra x1, dev/jevelyn/ultimatebattle/server/BasicMoves$BladeBasic.diveTicks x1, dev/jevelyn/ultimatebattle/client/fx/BasicFx.step x1
+protected void onTick(net.minecraft.class_310, net.minecraft.class_638, int);
+  calls: net/minecraft/class_243.method_1021 x13, net/minecraft/class_243.method_1019 x9, dev/jevelyn/ultimatebattle/client/fx/BasicFx.span x5, trail x4, arc x4, dev/jevelyn/ultimatebattle/client/fx/BasicFx$Shape.sliver x3, dev/jevelyn/ultimatebattle/client/fx/BasicFx$Shape.point x3, casterFeet x2, net/minecraft/class_243.method_1031 x2, dev/jevelyn/ultimatebattle/client/fx/BasicFx.easeOut x2, java/lang/Math.cos x2, java/lang/Math.sin x2, net/minecraft/class_243.method_1020 x2, contact x1, dev/jevelyn/ultimatebattle/client/fx/Frame.partial x1
+private void hangingCut(dev.jevelyn.ultimatebattle.client.fx.BasicFx$Shape, float, net.minecraft.class_243);
+  calls: net/minecraft/class_243.method_1021 x8, net/minecraft/class_243.method_1019 x6, dev/jevelyn/ultimatebattle/client/fx/BasicFx$Shape.point x5, net/minecraft/class_243.method_35590 x3, dev/jevelyn/ultimatebattle/client/fx/BasicFx.span x2, net/minecraft/class_243.method_1020 x2, net/minecraft/class_243.method_1029 x1, dev/jevelyn/ultimatebattle/client/fx/BasicFx.easeOut x1, dev/jevelyn/ultimatebattle/client/fx/BasicFx$Shape.pen x1, java/lang/Math.sin x1, net/minecraft/class_3532.method_15385 x1, dev/jevelyn/ultimatebattle/client/fx/BasicFx$Shape.sliver x1
+public void screen(dev.jevelyn.ultimatebattle.client.fx.Frame, dev.jevelyn.ultimatebattle.client.fx.ScreenFx);
+  calls: dev/jevelyn/ultimatebattle/client/fx/BasicFx$Basic.screen x1
+public void passes(dev.jevelyn.ultimatebattle.client.fx.Frame, java.util.List);
+  calls: dev/jevelyn/ultimatebattle/client/fx/BasicFx$Basic.passes x1
+public dev.jevelyn.ultimatebattle.client.anim.BodyPose pose(float);
+  calls: dev/jevelyn/ultimatebattle/client/fx/BasicFx$Basic.pose x1
+public boolean finished();
+  calls: dev/jevelyn/ultimatebattle/client/fx/BasicFx$Basic.finished x1
+public boolean pins();
+  calls: dev/jevelyn/ultimatebattle/client/fx/BasicFx$Basic.pins x1
+=== dev.jevelyn.ultimatebattle.client.fx.BladeFx$CrescentWave ===
+public dev.jevelyn.ultimatebattle.client.fx.BladeFx$CrescentWave(dev.jevelyn.ultimatebattle.net.FxPayload);
+  calls: dev/jevelyn/ultimatebattle/client/fx/Fx."<init>" x1, dev/jevelyn/ultimatebattle/client/anim/Anims.crescentWave x1, net/minecraft/class_243.method_1027 x1, net/minecraft/class_243.method_1029 x1, dev/jevelyn/ultimatebattle/server/BladeMoves$CrescentWave.start x1
+protected void onTick(net.minecraft.class_310, net.minecraft.class_638, int);
+  calls: gauss x2, dev/jevelyn/ultimatebattle/server/BladeMoves$CrescentWave.center x1, net/minecraft/class_243.method_1021 x1, net/minecraft/class_243.method_1019 x1, net/minecraft/class_243.method_1031 x1, particle x1
+public boolean pins();
+public void passes(dev.jevelyn.ultimatebattle.client.fx.Frame, java.util.List<dev.jevelyn.ultimatebattle.client.fx.Pass>);
+  calls: ticks x1, dev/jevelyn/ultimatebattle/client/fx/Pass."<init>" x1
+public void screen(dev.jevelyn.ultimatebattle.client.fx.Frame, dev.jevelyn.ultimatebattle.client.fx.ScreenFx);
+  calls: net/minecraft/class_243.method_1021 x2, net/minecraft/class_243.method_1019 x2, java/lang/Math.max x2, ticks x1, snapImpact x1, pulse x1, seenByCaster x1, uv x1, dev/jevelyn/ultimatebattle/client/fx/ScreenFx.speedLines x1
+public net.minecraft.class_1799 heldItem(float);
+  calls: sword x1
+private void lambda$passes$0(float, dev.jevelyn.ultimatebattle.client.fx.Uniforms);
+  calls: 
+=== dev.jevelyn.ultimatebattle.client.fx.BladeFx$IaiFlash ===
+public dev.jevelyn.ultimatebattle.client.fx.BladeFx$IaiFlash(dev.jevelyn.ultimatebattle.net.FxPayload);
+  calls: net/minecraft/class_243.method_1031 x2, dev/jevelyn/ultimatebattle/client/fx/Fx."<init>" x1, dev/jevelyn/ultimatebattle/client/anim/Anims.iaiFlash x1
+protected void onTick(net.minecraft.class_310, net.minecraft.class_638, int);
+  calls: gauss x3, target x1, net/minecraft/class_1297.method_19538 x1, net/minecraft/class_1297.method_17682 x1, net/minecraft/class_243.method_1031 x1, net/minecraft/class_243.method_35590 x1, particle x1, dev/jevelyn/ultimatebattle/client/fx/FxManager.shake x1
+public boolean pins();
+public void passes(dev.jevelyn.ultimatebattle.client.fx.Frame, java.util.List<dev.jevelyn.ultimatebattle.client.fx.Pass>);
+  calls: ticks x1, dev/jevelyn/ultimatebattle/client/fx/Pass."<init>" x1
+public void screen(dev.jevelyn.ultimatebattle.client.fx.Frame, dev.jevelyn.ultimatebattle.client.fx.ScreenFx);
+  calls: uv x2, ticks x1, seenByCaster x1, window x1, dev/jevelyn/ultimatebattle/client/fx/ScreenFx.speedLines x1, dev/jevelyn/ultimatebattle/client/fx/ScreenFx.zoom x1, epicImpact x1, pulse x1, java/lang/Math.max x1, dev/jevelyn/ultimatebattle/client/fx/ScreenFx.flash x1
+public net.minecraft.class_1799 heldItem(float);
+  calls: sword x1
+private void lambda$passes$0(float, net.minecraft.class_243, dev.jevelyn.ultimatebattle.client.fx.Frame, dev.jevelyn.ultimatebattle.client.fx.Uniforms);
+  calls: rel x1
+=== dev.jevelyn.ultimatebattle.client.fx.BladeFx$ThousandCuts ===
+public dev.jevelyn.ultimatebattle.client.fx.BladeFx$ThousandCuts(dev.jevelyn.ultimatebattle.net.FxPayload);
+  calls: net/minecraft/class_243.method_1031 x2, dev/jevelyn/ultimatebattle/client/fx/Fx."<init>" x1, dev/jevelyn/ultimatebattle/client/anim/Anims.thousandCuts x1, target x1, net/minecraft/class_1297.method_17682 x1
+private net.minecraft.class_243 targetChest();
+  calls: net/minecraft/class_243.method_1031 x1
+private net.minecraft.class_243 blinkPos(int);
+  calls: dev/jevelyn/ultimatebattle/server/BladeMoves$ThousandCuts.blinkPos x1
+protected void onTick(net.minecraft.class_310, net.minecraft.class_638, int);
+  calls: gauss x6, dev/jevelyn/ultimatebattle/client/fx/FxManager.shake x3, particle x2, targetChest x1, blinkPos x1, net/minecraft/class_243.method_1031 x1, net/minecraft/class_243.method_35590 x1
+public void passes(dev.jevelyn.ultimatebattle.client.fx.Frame, java.util.List<dev.jevelyn.ultimatebattle.client.fx.Pass>);
+  calls: net/minecraft/class_243.method_1021 x2, net/minecraft/class_243.method_1019 x2, ticks x1, dev/jevelyn/ultimatebattle/client/fx/Frame.partial x1, casterFeet x1, net/minecraft/class_243.method_1031 x1, dev/jevelyn/ultimatebattle/client/fx/Pass."<init>" x1
+public void screen(dev.jevelyn.ultimatebattle.client.fx.Frame, dev.jevelyn.ultimatebattle.client.fx.ScreenFx);
+  calls: snapImpact x3, window x2, pulse x2, dev/jevelyn/ultimatebattle/client/fx/ScreenFx.flash x2, ticks x1, targetChest x1, dev/jevelyn/ultimatebattle/client/fx/ScreenFx.stoppedWorld x1, dev/jevelyn/ultimatebattle/client/fx/ScreenFx.vignette x1, epicImpact x1
+public net.minecraft.class_1799 heldItem(float);
+  calls: sword x1
+public int cutsceneLength();
+public dev.jevelyn.ultimatebattle.client.cine.CameraPose camera(float);
+  calls: net/minecraft/class_243.method_1021 x11, net/minecraft/class_243.method_1019 x10, net/minecraft/class_243.method_1031 x8, dev/jevelyn/ultimatebattle/client/cine/CameraPose.span x6, dev/jevelyn/ultimatebattle/client/cine/CameraPose."<init>" x5, net/minecraft/class_3532.method_16439 x3, dev/jevelyn/ultimatebattle/client/cine/CameraPose.smooth x3, dev/jevelyn/ultimatebattle/client/cine/Terrain.above x3, net/minecraft/class_243.method_35590 x3, dev/jevelyn/ultimatebattle/client/cine/CameraPose.orbit x2, targetChest x1, java/lang/Math.floor x1, casterFeet x1, net/minecraft/class_3532.method_16436 x1, dev/jevelyn/ultimatebattle/client/cine/CameraPose.easeOut x1
+private void lambda$passes$0(float, dev.jevelyn.ultimatebattle.client.fx.Frame, net.minecraft.class_243, dev.jevelyn.ultimatebattle.client.fx.Uniforms);
+  calls: rel x2, targetChest x1
+=== dev.jevelyn.ultimatebattle.client.fx.BladeFx ===
+private dev.jevelyn.ultimatebattle.client.fx.BladeFx();
+  calls: java/lang/Object."<init>" x1
+=== dev.jevelyn.ultimatebattle.client.mixin.CameraMixin ===
+protected abstract void method_19322(net.minecraft.class_243);
+protected abstract void method_19325(float, float);
+private void ultimateBattle$beastPivot(net.minecraft.class_1922, net.minecraft.class_1297, boolean, boolean, float, org.spongepowered.asm.mixin.injection.callback.CallbackInfo);
+  calls: net/minecraft/class_1297.method_5628 x1, dev/jevelyn/ultimatebattle/client/BattleClient.beast x1, net/minecraft/class_243.method_1031 x1, method_19322 x1
+private double ultimateBattle$beastDistance(double);
+  calls: net/minecraft/class_1297.method_5628 x1, dev/jevelyn/ultimatebattle/client/BattleClient.beast x1
+private void ultimateBattle$cinematic(net.minecraft.class_1922, net.minecraft.class_1297, boolean, boolean, float, org.spongepowered.asm.mixin.injection.callback.CallbackInfo);
+  calls: method_19322 x3, dev/jevelyn/ultimatebattle/client/cine/CameraPose.position x2, net/minecraft/class_1297.method_5628 x1, dev/jevelyn/ultimatebattle/client/BattleClient.beast x1, java/lang/Math.toRadians x1, java/lang/Math.sin x1, java/lang/Math.cos x1, net/minecraft/class_243.method_1031 x1, net/minecraft/class_310.method_1551 x1, dev/jevelyn/ultimatebattle/client/valkyrie/ValkyrieCamera.adjust x1, dev/jevelyn/ultimatebattle/client/cine/Director.apply x1, net/minecraft/class_1297.method_5836 x1, net/minecraft/class_243.method_1025 x1, dev/jevelyn/ultimatebattle/client/cine/CameraPose.yaw x1, dev/jevelyn/ultimatebattle/client/cine/CameraPose.pitch x1
+=== dev.jevelyn.ultimatebattle.client.sword.Blade ===
+public dev.jevelyn.ultimatebattle.client.sword.Blade(net.minecraft.class_243, net.minecraft.class_243, net.minecraft.class_243, float, boolean);
+  calls: "<init>" x1
+public dev.jevelyn.ultimatebattle.client.sword.Blade(net.minecraft.class_243, net.minecraft.class_243, net.minecraft.class_243, float, boolean, net.minecraft.class_1799);
+  calls: java/lang/Record."<init>" x1
+public static dev.jevelyn.ultimatebattle.client.sword.Blade tip(net.minecraft.class_243, net.minecraft.class_243, net.minecraft.class_243, float, boolean);
+  calls: net/minecraft/class_243.method_1021 x1, net/minecraft/class_243.method_1020 x1, "<init>" x1
+public net.minecraft.class_243 point();
+  calls: net/minecraft/class_243.method_1021 x1, net/minecraft/class_243.method_1019 x1
+public final java.lang.String toString();
+public final int hashCode();
+public final boolean equals(java.lang.Object);
+public net.minecraft.class_243 center();
+public net.minecraft.class_243 dir();
+public net.minecraft.class_243 face();
+public float scale();
+public boolean glint();
+public net.minecraft.class_1799 item();
+  calls: 
+=== dev.jevelyn.ultimatebattle.client.valkyrie.ValkyrieCamera ===
+private dev.jevelyn.ultimatebattle.client.valkyrie.ValkyrieCamera();
+  calls: java/lang/Object."<init>" x1
+public static boolean flying();
+  calls: net/minecraft/class_310.method_1551 x1, net/minecraft/class_746.method_5805 x1, net/minecraft/class_746.method_7325 x1, dev/jevelyn/ultimatebattle/client/BattleClient.localInBattle x1, net/minecraft/class_746.method_5628 x1, dev/jevelyn/ultimatebattle/client/BattleClient.style x1, dev/jevelyn/ultimatebattle/client/BattleClient.localBeast x1, net/minecraft/class_746.method_5765 x1, net/minecraft/class_746.method_6113 x1, net/minecraft/class_746.method_5799 x1, net/minecraft/class_746.method_6128 x1, dev/jevelyn/ultimatebattle/client/cine/Director.active x1, dev/jevelyn/ultimatebattle/client/fx/FxManager.localSkillRunning x1
+public static float roll();
+public static float fovScale();
+public static net.minecraft.class_243 adjust(net.minecraft.class_243, float, float);
+  calls: java/lang/Math.exp x6, net/minecraft/class_3532.method_15363 x3, java/lang/Math.abs x2, net/minecraft/class_243.method_1031 x2, net/minecraft/class_3532.method_16439 x2, java/lang/System.nanoTime x1, net/minecraft/class_310.method_1551 x1, net/minecraft/class_310.method_1493 x1, flying x1, net/minecraft/class_746.method_23317 x1, net/minecraft/class_746.method_23321 x1, java/lang/Math.sqrt x1, net/minecraft/class_746.method_5628 x1, dev/jevelyn/ultimatebattle/client/fx/FxManager.hover x1, net/minecraft/class_746.method_18276 x1
+=== dev.jevelyn.ultimatebattle.server.BasicMoves$BladeBasic ===
+public dev.jevelyn.ultimatebattle.server.BasicMoves$BladeBasic(net.minecraft.class_3222, net.minecraft.class_1309, long, int, int);
+  calls: dev/jevelyn/ultimatebattle/server/BasicMoves$Basic."<init>" x1, floorUnder x1, diveTicks x1, planLunge x1
+public static int diveTicks(double);
+  calls: java/lang/Math.ceil x1, net/minecraft/class_3532.method_15340 x1
+public net.minecraft.class_243 extra();
+protected void tick(int);
+  calls: net/minecraft/class_243.method_1031 x6, net/minecraft/class_243.method_1021 x5, sound x3, net/minecraft/class_243.method_1019 x2, around x2, net/minecraft/class_243.method_35590 x1, steer x1, float_ x1, lunging x1, net/minecraft/class_3222.method_19538 x1, java/util/ArrayList."<init>" x1, along x1, net/minecraft/class_1309.method_19538 x1, net/minecraft/class_243.method_1020 x1, net/minecraft/class_243."<init>" x1
+public net.minecraft.class_243 aux();
+  calls: dev/jevelyn/ultimatebattle/server/BasicMoves$Basic.aux x1
+public net.minecraft.class_243 aim();
+  calls: dev/jevelyn/ultimatebattle/server/BasicMoves$Basic.aim x1
+=== dev.jevelyn.ultimatebattle.server.BladeMoves$CrescentWave ===
+public dev.jevelyn.ultimatebattle.server.BladeMoves$CrescentWave(net.minecraft.class_3222, long);
+  calls: java/lang/Math.cos x2, dev/jevelyn/ultimatebattle/server/Move."<init>" x1, java/util/HashSet."<init>" x1, net/minecraft/class_3222.method_36455 x1, net/minecraft/class_3532.method_15363 x1, java/lang/Math.toRadians x1, java/lang/Math.sin x1, net/minecraft/class_243."<init>" x1, net/minecraft/class_243.method_1029 x1, start x1
+public static net.minecraft.class_243 start(net.minecraft.class_243, net.minecraft.class_243);
+  calls: net/minecraft/class_243.method_1031 x1, net/minecraft/class_243.method_1021 x1, net/minecraft/class_243.method_1019 x1
+public static net.minecraft.class_243 center(net.minecraft.class_243, net.minecraft.class_243, float);
+  calls: net/minecraft/class_3532.method_15363 x1, net/minecraft/class_243.method_1021 x1, net/minecraft/class_243.method_1019 x1
+public net.minecraft.class_243 aim();
+  calls: center x1
+public net.minecraft.class_243 extra();
+protected void tick(int);
+  calls: sound x4, chest x3, net/minecraft/class_243.method_1020 x2, net/minecraft/class_243.method_1021 x2, java/lang/Math.abs x2, hold x1, swing x1, center x1, around x1, net/minecraft/class_243.method_1026 x1, java/lang/Math.hypot x1, net/minecraft/class_243.method_1031 x1, hit x1, particles x1
+=== dev.jevelyn.ultimatebattle.server.BladeMoves$IaiFlash ===
+public dev.jevelyn.ultimatebattle.server.BladeMoves$IaiFlash(net.minecraft.class_3222, net.minecraft.class_1309, long);
+  calls: net/minecraft/class_1309.method_19538 x2, net/minecraft/class_243."<init>" x2, net/minecraft/class_243.method_1021 x2, net/minecraft/class_243.method_1019 x2, dev/jevelyn/ultimatebattle/server/Move."<init>" x1, java/util/ArrayList."<init>" x1, net/minecraft/class_243.method_1020 x1, net/minecraft/class_243.method_1027 x1, net/minecraft/class_243.method_1029 x1, net/minecraft/class_1309.method_17681 x1, net/minecraft/class_1309.method_23318 x1, java/lang/Math.max x1, face x1, freeAlong x1
+public net.minecraft.class_243 aim();
+protected void tick(int);
+  calls: sound x4, net/minecraft/class_243.method_1031 x3, particles x3, hold x1, along x1, pin x1, blink x1, net/minecraft/class_243.method_35590 x1, unpinAll x1, swing x1, net/minecraft/class_243.method_1021 x1, hit x1, chest x1
+=== dev.jevelyn.ultimatebattle.server.BladeMoves$ThousandCuts ===
+public dev.jevelyn.ultimatebattle.server.BladeMoves$ThousandCuts(net.minecraft.class_3222, net.minecraft.class_1309, long);
+  calls: dev/jevelyn/ultimatebattle/server/Move."<init>" x1, net/minecraft/class_1309.method_19538 x1, net/minecraft/class_243.method_1020 x1, net/minecraft/class_243."<init>" x1, net/minecraft/class_243.method_1027 x1, net/minecraft/class_243.method_1029 x1, face x1, net/minecraft/class_1309.method_17681 x1, net/minecraft/class_243.method_1021 x1, net/minecraft/class_243.method_1019 x1, freeAlong x1
+public static net.minecraft.class_243 blinkPos(net.minecraft.class_243, net.minecraft.class_243, int);
+  calls: java/lang/Math.cos x2, java/lang/Math.sin x2, java/lang/Math.toRadians x1, net/minecraft/class_243.method_1021 x1, net/minecraft/class_243.method_1031 x1
+public net.minecraft.class_243 aim();
+public net.minecraft.class_243 extra();
+protected void tick(int);
+  calls: sound x13, particles x6, blink x3, swing x3, net/minecraft/class_243.method_1031 x2, away x2, hit x2, net/minecraft/class_1309.method_17682 x1, pin x1, hold x1, net/minecraft/class_243.method_35590 x1, blinkPos x1, freeAlong x1, net/minecraft/class_243.method_1020 x1, yawOf x1
+=== dev.jevelyn.ultimatebattle.server.BladeMoves ===
+private dev.jevelyn.ultimatebattle.server.BladeMoves();
+  calls: java/lang/Object."<init>" x1
