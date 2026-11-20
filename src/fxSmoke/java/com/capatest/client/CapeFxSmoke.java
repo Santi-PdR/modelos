@@ -709,18 +709,20 @@ public final class CapeFxSmoke {
     }
 
     private static void seatTrialCollar(CapaArmorRenderer renderer) {
-        // At +/-60° the deep seat is off. For the paired stills only,
-        // keep a little of the rear collar's forward stroke. Do not move
-        // the teeth, plates or roots: this isolates whether the crown is
-        // what reads as floating. The experiment never enters the mod JAR.
+        // At +/-60° with the wearer standing still, the deep seat is off.
+        // Compress the collar about the fixed seat plane instead of sliding
+        // its front tips into the wearer. The small additional seat brings
+        // the cloth roots in without moving the buried crosspiece. This is
+        // a fixed-pose experiment; it does not enter the mod JAR.
         try {
             var shape = (CapeTorsoFit.Shape) TORSO_FIT.get(renderer);
             var c = shape.collar();
             check(c != null && shape.seat() == 0, "wide-angle collar probe is not at rest");
-            float amount = (1 - c.sy()) / .59F;
+            float shorten = .54F * (1 - c.sy()) / .59F;
+            float dz = (1 - shorten) * c.dz() + shorten * ((float) CapeFit.SEAT_PLANE - c.z());
             var trial = new CapeTorsoFit.Affine(c.x(), c.y(), c.z(), c.dx(), c.dy(),
-                    c.dz() - 1.62F * .76F * amount, c.sx(), c.sy(), c.sz() - .12F * .76F * amount);
-            TORSO_FIT.set(renderer, new CapeTorsoFit.Shape(shape.seat(), trial, shape.facing(), shape.small(), shape.wide()));
+                    dz, c.sx(), c.sy(), c.sz() * (1 - shorten));
+            TORSO_FIT.set(renderer, new CapeTorsoFit.Shape(.12F, trial, shape.facing(), shape.small(), shape.wide()));
         } catch (IllegalAccessException e) {
             throw new AssertionError(e);
         }

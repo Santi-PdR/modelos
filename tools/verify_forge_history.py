@@ -129,15 +129,19 @@ def study_wide_turn(root):
             by_slot.append(poses[1])
             ref, base, trial = (geometry(root,view,slot,s) for s in versions)
             p0, p1 = (bounds(stem.with_name(stem.name+s+'.tsv')) for s in versions[1:])
-            for name in ('v18_pad_0', 'v18_pad_1', 'v17_cowl_return', 'v17_cowl_tooth_5'):
-                np.testing.assert_allclose(p0[name],p1[name],rtol=0,atol=.015,err_msg=f'{stem}: {name} se movió en la sonda')
-            np.testing.assert_allclose(base[3:],trial[3:],rtol=0,atol=.08,err_msg=f'{stem}: altura de cuello o raíces cambiaron')
-            assert .8 < ref[2] < 1.4 and 1.25 < base[2]-trial[2] < 1.50, (stem, ref, base, trial)
+            np.testing.assert_allclose(p0['v17_cowl_return'],p1['v17_cowl_return'],rtol=0,atol=.015,
+                                       err_msg=f'{stem}: la vuelta fija se movió')
+            np.testing.assert_allclose(base[[0,1,3]],trial[[0,1,3]],rtol=0,atol=.02,
+                                       err_msg=f'{stem}: ancho de placas o altura del cuello cambiaron')
+            assert .8 < ref[2] < 1.4 and 1.90 < base[2]-trial[2] < 2.20, (stem, ref, base, trial)
+            assert .07 < base[4]-trial[4] < .13, (stem, 'movimiento de raíces fuera de rango', base, trial)
             counts = [visible_attachment(root,view,slot,s)[2] for s in versions]
+            assert counts[2][0] > .65*counts[1][0], (stem, 'la sonda ocultó el cuello', counts)
             cloth = ' → '.join(f'{f:.0%} ({n}px)' for n,f in counts)
             print(f'{view}/{slot} · registro {drift:.2f}px · referencia → actual → sonda: '
                   f'Z delantero del cuello {ref[2]:.2f} → {base[2]:.2f} → {trial[2]:.2f}u; '
-                  f'raíces {base[4]:.2f}u; píxeles en la proyección del cuello cerca de camiseta {cloth}',flush=True)
+                  f'raíces {base[4]:.2f} → {trial[4]:.2f}u; '
+                  f'píxeles en la proyección del cuello cerca de camiseta {cloth}',flush=True)
         assert abs(by_slot[0]-by_slot[1]).max() < .65, (view,'pecho y Curios no registrados')
 
 
@@ -154,7 +158,11 @@ def gallery(root, view):
     assert len(xs) > 500, (view, 'no se ve la camiseta de referencia')
     x0,x1 = np.quantile(xs,[.005,.995]); y0,y1 = np.quantile(ys,[.005,.995]); d = x1-x0
     crop = (round(x0-.43*d),round(y0-.73*d),round(x1+.43*d),round(y1+.69*d))
-    for suffix in ('sin-manto',*(f'{slot}{s}' for slot in SLOTS for s in variants(view))):
+    # Both historical slots and the bare control stay in the full artifact.
+    # The ten wide-turn thumbnails must fit the same job annotation budget.
+    suffixes = ('pecho-v1280','pecho','pecho-cuello','curios','curios-cuello') if view in WIDE_VIEWS else (
+        'sin-manto', *(f'{slot}{s}' for slot in SLOTS for s in variants(view)))
+    for suffix in suffixes:
         file = root/f'historia-{view}-{suffix}.png'
         if not file.is_file():
             continue

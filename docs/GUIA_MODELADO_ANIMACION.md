@@ -224,6 +224,23 @@ animación y la documentación de GeckoLib._
   ancha con una captura sin placas para cada ajuste: una franja de color
   también recoge cuello y tela, y no permite identificar por sí sola el
   canto. Ni los controles ni los activos de referencia entran en el JAR.
+- **Giros amplios en v1.67.13:** `OPENBLAS_NUM_THREADS=1 python3
+  tools/audit_torso_turn.py` comprueba 2.052 poses geométricas, con brazos
+  en reposo o en balanceo y cuatro inclinaciones del torso. El solape
+  mínimo de costuras y raíces es 0,071/0,278u (1u = 1/16 de bloque).
+  El cuello conserva 0,616u frente a la cabeza sólida y 0,061u frente a
+  las mangas simuladas. Al agacharse se detecta un posible roce de hasta
+  0,079u en la envolvente de la segunda capa de piel, no en la cabeza
+  sólida; su visibilidad depende de la textura de esa capa.
+- **Separar holgura y aspecto en F5:** a ±60° el cuello de v1.67.13
+  retrocede aunque las raíces sigan solapadas. Los mismos marcadores de
+  Actions añaden dos poses registradas (58°/+60° y 48°/−60°), en pecho y
+  Curios. `python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots
+  --giro-amplio` compara la publicación con la referencia y con una sonda
+  que recoge el cuello alrededor de su apoyo y acerca ligeramente las
+  raíces. Es una prueba en poses fijas: vive en `src/fxSmoke`, no en el
+  mod ni en el visor. La proyección ayuda a localizar el borde; el recorte
+  F5 muestra si el cambio se ve.
 - **Pulso del icono (v1.67.8):** 32 fotogramas a un tick por cuadro, mismo
   contorno y duración de 1,6 s. Se comprueba el recorrido de la cresta de
   luz en la hotbar vanilla; se conservan el dibujo y el reposo de v1.67.7.
