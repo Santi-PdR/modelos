@@ -83,6 +83,11 @@ public final class KatanaAnimations {
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
     }
 
+    public static boolean isPlaying(AbstractClientPlayer player) {
+        var data = PlayerAnimationAccess.getPlayerAssociatedData(player).get(LAYER);
+        return data instanceof AbilityLayer layer && layer.isActive();
+    }
+
     /** Local, visual-only vanilla swing: the original attack remains authoritative. */
     public static void swing(AbstractClientPlayer player, boolean alternate) {
         var data = PlayerAnimationAccess.getPlayerAssociatedData(player).get(LAYER);

@@ -9,7 +9,7 @@ public final class KatanaClientConfig {
     public static final ForgeConfigSpec.DoubleValue BAR_FRACTION;
     public static final ForgeConfigSpec.DoubleValue ZOOM_FRACTION;
     public static final ForgeConfigSpec.DoubleValue CAMERA_ROLL;
-    public static final ForgeConfigSpec.BooleanValue SHOW_HUD, BLOOD_FLASH;
+    public static final ForgeConfigSpec.BooleanValue SHOW_HUD, BLOOD_FLASH, VANILLA_SWINGS;
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
         builder.push("ultimate_scene");
@@ -24,6 +24,7 @@ public final class KatanaClientConfig {
         builder.pop();
         builder.push("interface");
         SHOW_HUD = builder.comment("Show small cooldown panel while holding the katana.").define("showHud", true);
+        VANILLA_SWINGS = builder.comment("Animate ordinary katana swings without Better Combat; disable if another animation mod conflicts.").define("vanillaSwings", true);
         BLOOD_FLASH = builder.comment("Show subtle red tint after successful blood paralysis.").define("bloodFlash", true);
         builder.pop();
         SPEC = builder.build();

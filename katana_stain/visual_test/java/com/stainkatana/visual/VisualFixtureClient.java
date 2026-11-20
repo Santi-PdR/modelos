@@ -56,8 +56,19 @@ public final class VisualFixtureClient {
             case 215 -> capture = "11a_blood_feedback.png";
             case 216 -> capture = "11b_blood_feedback.png";
             case 217 -> capture = "11c_blood_feedback.png";
-            case 240 -> { mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); mc.options.keyAttack.setDown(true); }
-            case 243 -> capture = "12_normal_attack.png";
+            case 240 -> {
+                mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+                if (net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) mc.options.keyAttack.setDown(true);
+                else mc.player.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            }
+            case 243 -> {
+                if (!net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) {
+                    if (!com.stainkatana.katana.client.KatanaAnimations.isPlaying(mc.player))
+                        throw new IllegalStateException("Vanilla swing animation did not start");
+                    System.out.println("STAIN_VANILLA_SWING_PLAYING");
+                }
+                capture = "12_normal_attack.png";
+            }
             case 246 -> capture = "13_normal_attack.png";
             case 250 -> mc.options.keyAttack.setDown(false);
             case 270 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }

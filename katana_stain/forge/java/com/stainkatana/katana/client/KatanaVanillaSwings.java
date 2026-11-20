@@ -2,6 +2,7 @@ package com.stainkatana.katana.client;
 
 import com.stainkatana.StainKatanaMod;
 import com.stainkatana.katana.StainKatanaItem;
+import com.stainkatana.katana.KatanaClientConfig;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -28,7 +29,7 @@ public final class KatanaVanillaSwings {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != lastLevel) { lastLevel = mc.level; lastSwing.clear(); alternates.clear(); }
-        if (mc.level == null || mc.isPaused() || ModList.get().isLoaded("bettercombat")) return;
+        if (mc.level == null || mc.isPaused() || !KatanaClientConfig.VANILLA_SWINGS.get() || ModList.get().isLoaded("bettercombat")) return;
         Set<UUID> present = new HashSet<>();
         for (AbstractClientPlayer player : mc.level.players()) {
             UUID id = player.getUUID(); present.add(id);
