@@ -103,6 +103,6 @@ if __name__ == '__main__':
     ap.add_argument('shots', type=Path)
     ap.add_argument('--gallery-only', action='store_true')
     args = ap.parse_args()
+    gallery(args.shots, args.shots / 'yugo-fijo-forge.jpg')
     if not args.gallery_only:
         report(args.shots)
-    gallery(args.shots, args.shots / 'yugo-fijo-forge.jpg')

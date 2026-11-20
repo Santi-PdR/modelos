@@ -1029,13 +1029,19 @@ jobs:
           (github.event_name == 'workflow_dispatch' && (inputs.probar_halo == true || inputs.publicar == true))
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
+          GALLIUM_DRIVER: llvmpipe
           ALSOFT_DRIVERS: 'null'
         run: |
           log="$RUNNER_TEMP/forge-client.log"
           rc=0
           args=()
           if [ '${{ steps.historic-fit.outcome }}' = success ]; then args+=(-PcapeHistory); fi
-          timeout --kill-after=12s 300s xvfb-run -a gradle -PcapeFxSmoke "${args[@]}" --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
+          # Use the vanilla game window with a 24-bit X11 visual. Forge's
+          # loading splash negotiates newer GL profiles before the client and
+          # can fail on llvmpipe; it isn't part of the cape/GLSL test.
+          mkdir -p build/fx-smoke-run/config
+          printf 'earlyWindowControl = false\n' > build/fx-smoke-run/config/fml.toml
+          timeout --kill-after=12s 300s xvfb-run -a -s '-screen 0 1280x1024x24 +extension GLX -noreset' gradle -PcapeFxSmoke "${args[@]}" --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
           awk 'sub(/.*FX smoke: /, "")' "$log" | tail -n 5 | while IFS= read -r line; do
             printf '::notice title=FX en Forge::%s\n' "$line"
           done
@@ -1049,8 +1055,8 @@ jobs:
              grep -Fq -e 'FX smoke: FAIL' -e 'Blight Star Mantle: respuesta del paño desactivada' -e 'se usa el muestreador de GeckoLib' "$log" ||
              [ "$(grep -Fc 'Blight Star Mantle: falló el pase' "$log")" -ne 2 ]; then
             echo "::error title=FX en Forge::No se completó la prueba (salida $rc)."
-            grep -Ei 'exception|assertionerror|\[.*ERROR\]|(failed|could not|error):? |^> Task .*FAILED|Blight Star Mantle:' "$log" | \
-              grep -Eiv 'token|password|session|https?://|intentional FX smoke' | tail -n 8 | cut -c1-340 | \
+            grep -Ei 'exception|assertionerror|\[.*ERROR\]|(failed|could not|error):? |^> Task .*FAILED|Blight Star Mantle:|GLX|GLFW' "$log" | \
+              grep -Eiv 'token|password|session|https?://|intentional FX smoke' | awk '!seen[$0]++' | tail -n 18 | cut -c1-340 | \
               while IFS= read -r line; do printf '::warning title=Diagnóstico de cliente::%s\n' "${line//%/%25}"; done
             exit 1
           fi
