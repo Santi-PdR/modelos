@@ -32,8 +32,16 @@ jobs:
           mkdir -p run
           echo 'eula=true' > run/eula.txt
           printf 'level-type=minecraft:flat\ngamemode=creative\nonline-mode=false\nserver-ip=127.0.0.1\nspawn-protection=0\n' > run/server.properties
-          printf 'stop\n' | timeout 300s gradle runServer -PkatanaOnly --no-daemon > /tmp/stain-visual-server.log 2>&1 || { tail -120 /tmp/stain-visual-server.log; exit 1; }
-          grep -F 'For help, type "help"' /tmp/stain-visual-server.log
+          set +e
+          printf 'stop\n' | timeout 180s gradle runServer -PkatanaOnly --no-daemon > /tmp/stain-visual-server.log 2>&1
+          status=$?
+          set -e
+          if ! grep -F 'For help, type "help"' /tmp/stain-visual-server.log || [ ! -f run/world/level.dat ]; then
+            tail -120 /tmp/stain-visual-server.log
+            echo "::error::Server did not complete startup; status=$status"
+            exit 1
+          fi
+          if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then exit "$status"; fi
           mkdir -p run/saves
           cp -R run/world run/saves/KatanaVisual
       - name: Render a real Forge client under Xvfb
@@ -44,6 +52,18 @@ jobs:
           grep -F 'STAIN_VISUAL_FIXTURE_READY' /tmp/stain-visual-client.log
           grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-client.log
           test "$(find run/stain-visual-test -name '*.png' | wc -l)" -eq 10
+      - name: Report diagnostic tail
+        if: failure()
+        run: |
+          python3 - <<'PY2'
+          from pathlib import Path
+          for name in ('/tmp/stain-visual-server.log','/tmp/stain-visual-client.log'):
+              path=Path(name)
+              if path.exists():
+                  lines=path.read_text(errors='replace').splitlines()[-35:]
+                  text='\n'.join(lines).replace('%','%25').replace('\r','%0D').replace('\n','%0A')
+                  print('::error title='+path.name+'::'+text)
+          PY2
       - name: Upload real client images and logs
         if: always()
         uses: actions/upload-artifact@v4
