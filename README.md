@@ -14,6 +14,10 @@ Se equipa en el pecho o en `back` con Curios opcional.
 
 La referencia de montaje es v1.28.0, que comparte el GEO equipado con v1.27.0. El cuello baja, las placas recuperan el ancho del hombro y las primeras tiras se acercan a la espalda al mirar en diagonal. Son ajustes del render equipado en pecho y Curios: no se cambian el GEO editable, el atlas, los ocho clips ni el icono.
 
+**[Comparación F5 en Forge](docs/capa_v16713_anclaje_forge.png):** en la diagonal de 48° con −48° de giro, el extremo de la placa ancha pasó de 10,44 a 6,73 unidades desde el centro del torso (6,53 en la referencia histórica; 16 unidades por bloque). A 89,5°, ambas placas quedaron a un píxel o menos de sus mangas en todas las columnas medidas, sin suelo visible entre ellas, tanto en pecho como en Curios. A 76°, el borde visible de la placa ancha avanzó 1 px frente a v1.67.12 en los dos tipos de manga.
+
+**[ZIP de prueba v1.67.13](https://github.com/Santi-PdR/modelos/actions/runs/44655102247/artifacts/14592523823)** · [Ejecución verificada](https://github.com/Santi-PdR/modelos/actions/runs/44655102247). El ZIP incluye `capatest-1.67.13.jar` y `SHA256SUMS.txt`. El JAR publicado v1.67.12 sigue disponible sin cambios.
+
 ### v1.67.12 — las placas se asientan sobre las mangas
 
 Al mirar hacia abajo, se recorta el vuelo lateral de la placa ancha y se inclina el canto de ambas placas sobre la manga sin arrastrar la tela. El ajuste cede cuando los brazos necesitan holgura. Se conservan la montura y el movimiento de v1.67.11. El visor muestra el ajuste en la vista equipada; el proyecto Blockbench conserva las piezas y curvas de base.

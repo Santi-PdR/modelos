@@ -206,6 +206,24 @@ animación y la documentación de GeckoLib._
   `speed` interpolados para mezclar los clips de reposo, marcha y carrera;
   no hace falta reiniciar a la primera clave. El proyecto editable y el
   visor siguen mostrando los clips originales con sus duraciones.
+- **Referencia de anclaje (v1.67.13):** v1.28.0 es anterior a la rama y
+  comparte la geometría equipada con v1.27.0. `CapeTorsoFit` recoge la
+  placa ancha en diagonal y baja el cuello sobre su punto de apoyo. Cerca
+  de la cenital, adelanta la placa sin acortar su canto sobre la manga.
+  No se modifica el GEO ni se reemplazan los ocho clips. La transformación
+  se calcula en el marco del torso para sólido y emisión, no en la cámara.
+  `verify_torso_fit.py` compara Java, Python y el visor y comprueba la
+  holgura con cabeza y mangas y el solape de las raíces.
+- **Cómo repetir la comparación histórica:** los marcadores `[probar-halo]`
+  y `[capa-historica]` activan en Actions `prepare_historical_fit.py` y el
+  cliente de prueba. La referencia usa los activos del JAR v1.28.0
+  verificado con su renderer histórico en el cliente actual; el control
+  v1.67.12 usa el mismo manto con el ajuste nuevo desactivado. En cada
+  vista F5 se registran ocho puntos del torso y se guardan los PNG junto
+  con las caras dibujadas. A 76°, `verify_forge_seat.py` aísla la placa
+  ancha con una captura sin placas para cada ajuste: una franja de color
+  también recoge cuello y tela, y no permite identificar por sí sola el
+  canto. Ni los controles ni los activos de referencia entran en el JAR.
 - **Pulso del icono (v1.67.8):** 32 fotogramas a un tick por cuadro, mismo
   contorno y duración de 1,6 s. Se comprueba el recorrido de la cresta de
   luz en la hotbar vanilla; se conservan el dibujo y el reposo de v1.67.7.
