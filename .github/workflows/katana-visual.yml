@@ -61,6 +61,9 @@ jobs:
           grep -F 'STAIN_FIXTURE_CLIP=bettercombat' /tmp/stain-visual-client.log
           grep -F 'STAIN_ULTIMATE_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_DAGGERS_VERIFIED' /tmp/stain-visual-client.log
+          grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-client.log
+          grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-client.log
+          grep -F 'STAIN_CANCELLATION_VERIFIED' /tmp/stain-visual-client.log
           count=$(find run/stain-visual-test -name '*.png' | wc -l)
           echo "Captured $count frames; software rendering can skip closely-spaced frames."
           test "$count" -ge 10
@@ -76,6 +79,9 @@ jobs:
           grep -F 'STAIN_VANILLA_SWING_PLAYING' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_ULTIMATE_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_DAGGERS_VERIFIED' /tmp/stain-visual-fallback.log
+          grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-fallback.log
+          grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-fallback.log
+          grep -F 'STAIN_CANCELLATION_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-fallback.log
           test "$(find run/stain-visual-test -name '*.png' | wc -l)" -ge 10
           mv run/stain-visual-test run/stain-visual-vanilla
@@ -89,6 +95,9 @@ jobs:
           grep -F 'STAIN_FIXTURE_BETTERCOMBAT=true' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_ULTIMATE_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_DAGGERS_VERIFIED' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_CANCELLATION_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-full-bc.log
           test "$(find run/stain-visual-test -name '*.png' | wc -l)" -ge 10
           mv run/stain-visual-test run/stain-visual-full-bc

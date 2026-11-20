@@ -18,6 +18,7 @@ import java.io.File;
 public final class VisualFixtureClient {
     private static int tick;
     private static String capture;
+    private static net.minecraft.world.item.ItemStack savedStack;
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
@@ -76,7 +77,45 @@ public final class VisualFixtureClient {
             }
             case 491 -> capture = "18_dagger_2.png";
             case 503 -> capture = "19_dagger_3.png";
-            case 540 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
+            case 550 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                player.setYRot(180);
+                long now = player.getServer().overworld().getGameTime();
+                com.stainkatana.katana.KatanaAbilities.activate(player, 1);
+                if (player.getPersistentData().getCompound("StainKatanaAbilities").getLong("next1") <= now)
+                    throw new IllegalStateException("X did not activate facing empty space");
+                player.setYRot(0);
+                System.out.println("STAIN_EMPTY_X_VERIFIED");
+            });
+            case 590 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                var mobs = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, player.getBoundingBox().inflate(20));
+                if (mobs.isEmpty()) throw new IllegalStateException("No fixture mob");
+                mobs.get(0).teleportTo(player.getX(), player.getY(), player.getZ() + 14);
+                player.setYRot(0);
+                long now = player.getServer().overworld().getGameTime();
+                com.stainkatana.katana.KatanaAbilities.activate(player, 2);
+                if (player.getPersistentData().getCompound("StainKatanaAbilities").getLong("next2") <= now)
+                    throw new IllegalStateException("C failed at 14 blocks");
+                System.out.println("STAIN_LONG_RANGE_C_VERIFIED");
+            });
+            case 600 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                var mobs = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, player.getBoundingBox().inflate(20));
+                if (mobs.isEmpty() || !mobs.get(0).hasEffect(com.stainkatana.katana.KatanaEffects.CINEMATIC_BIND.get()))
+                    throw new IllegalStateException("Long range C did not bind mob");
+                savedStack = player.getMainHandItem();
+                player.getInventory().setItem(player.getInventory().selected, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK));
+            });
+            case 605 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                var mobs = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, player.getBoundingBox().inflate(20));
+                if (mobs.isEmpty() || mobs.get(0).hasEffect(com.stainkatana.katana.KatanaEffects.CINEMATIC_BIND.get()))
+                    throw new IllegalStateException("C cancellation did not release mob");
+                player.getInventory().setItem(player.getInventory().selected, savedStack);
+                System.out.println("STAIN_CANCELLATION_VERIFIED");
+            });
+            case 640 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }
     }

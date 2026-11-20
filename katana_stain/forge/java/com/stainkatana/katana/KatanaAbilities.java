@@ -325,6 +325,13 @@ public final class KatanaAbilities {
         }
         // El corte existe aunque la víctima se aparte durante la preparación.
         arc(level, player, facing, ultimate);
+        if (!ultimate) {
+            // The extended cut travels in front of the player, even on an empty swing.
+            for (double distance : new double[]{3.4, 5.3}) {
+                Vec3 point = player.position().add(facing.scale(distance));
+                KatanaNetwork.broadcastVisual(player, point.x, player.getY() + 1.05, point.z, 0);
+            }
+        }
         level.playSound(null, player.blockPosition(), katanaSwingSound(), SoundSource.PLAYERS, .8F, ultimate ? .85F : 1.0F);
         if (hits == 0) {
             if (ultimate) player.displayClientMessage(Component.translatable("stainkatana.no_target"), true);

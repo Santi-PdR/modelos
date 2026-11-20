@@ -62,7 +62,7 @@ public final class DaggerVisuals {
             pose.pushPose();
             pose.translate(point.x - camera.x, point.y - camera.y, point.z - camera.z);
             pose.mulPose(new Quaternionf().rotateY(yaw).rotateX(pitch).rotateX((float)Math.PI / 2));
-            pose.scale(.55F, .55F, .55F);
+            pose.scale(.95F, .95F, .95F);
             mc.getItemRenderer().renderStatic(new ItemStack(StainKatanaMod.DAGGER.get()), ItemDisplayContext.FIXED,
                     LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, pose, buffer, world, 0);
             pose.popPose();
