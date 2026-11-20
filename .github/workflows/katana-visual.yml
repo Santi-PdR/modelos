@@ -33,7 +33,7 @@ jobs:
           echo 'eula=true' > run/eula.txt
           printf 'level-type=minecraft:flat\ngamemode=creative\nonline-mode=false\nserver-ip=127.0.0.1\nspawn-protection=0\n' > run/server.properties
           set +e
-          printf 'stop\n' | timeout 180s gradle runServer -PkatanaOnly --no-daemon > /tmp/stain-visual-server.log 2>&1
+          printf 'stop\n' | timeout 100s gradle runServer -PkatanaOnly --no-daemon > /tmp/stain-visual-server.log 2>&1
           status=$?
           set -e
           if ! grep -F 'For help, type "help"' /tmp/stain-visual-server.log || [ ! -f run/world/level.dat ]; then
