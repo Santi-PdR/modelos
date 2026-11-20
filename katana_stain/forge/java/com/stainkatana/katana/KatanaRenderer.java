@@ -50,8 +50,9 @@ public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
         }
         // El renderer de ítems ya desplazó el origen -0.5; este cuadrado 0..1
         // ocupa exactamente el espacio de un ítem GUI. UV (0,0) es arriba.
-        VertexConsumer vertices = ItemRenderer.getFoilBufferDirect(buffers,
-                RenderType.entityTranslucentEmissive(ICON), true, stack.hasFoil());
+        // Text shader is unlit and alpha blended; entity shaders apply directional
+        // GUI lighting even at FULL_BRIGHT and darkened the supplied icon.
+        VertexConsumer vertices = buffers.getBuffer(RenderType.text(ICON));
         PoseStack.Pose pose = poseStack.last();
         vertex(vertices, pose, 0, 0, 0, 1, overlay);
         vertex(vertices, pose, 1, 0, 1, 1, overlay);
@@ -62,7 +63,7 @@ public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
     private static void vertex(VertexConsumer vertices, PoseStack.Pose pose,
                                float x, float y, float u, float v, int overlay) {
         vertices.vertex(pose.pose(), x, y, 0.5F)
-                .color(255, 255, 255, 255).uv(u, v).overlayCoords(overlay)
-                .uv2(LightTexture.FULL_BRIGHT).normal(pose.normal(), 0, 0, 1).endVertex();
+                .color(255, 255, 255, 255).uv(u, v)
+                .uv2(LightTexture.FULL_BRIGHT).endVertex();
     }
 }

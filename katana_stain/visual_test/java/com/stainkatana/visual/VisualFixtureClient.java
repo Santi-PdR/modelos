@@ -115,7 +115,24 @@ public final class VisualFixtureClient {
                 player.getInventory().setItem(player.getInventory().selected, savedStack);
                 System.out.println("STAIN_CANCELLATION_VERIFIED");
             });
-            case 640 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
+            case 620 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                var mobs = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, player.getBoundingBox().inflate(20));
+                if (mobs.isEmpty()) throw new IllegalStateException("No fixture mob for Z");
+                var mob = mobs.get(0);
+                // Exercise the normal hit-marking method, then separate the mob.
+                player.getMainHandItem().hurtEnemy(mob, player);
+                mob.teleportTo(player.getX(), player.getY(), player.getZ() + 20);
+                com.stainkatana.katana.KatanaAbilities.activate(player, 0);
+            });
+            case 640 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                var mobs = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, player.getBoundingBox().inflate(24));
+                if (mobs.isEmpty() || !mobs.get(0).hasEffect(com.stainkatana.katana.KatanaEffects.PARALYSIS.get()))
+                    throw new IllegalStateException("Z did not paralyze target at 20 blocks");
+                System.out.println("STAIN_LONG_RANGE_Z_VERIFIED");
+            });
+            case 670 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }
     }
