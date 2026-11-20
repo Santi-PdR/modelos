@@ -116,7 +116,7 @@ def sample_card(face, i, owners, width, height):
     return rgb.reshape(height,width,3), glow.reshape(height,width,4)
 
 
-def map_material(geo, *, paint=False):
+def map_material(geo, *, paint=False, fitted=False):
     """Allocate the same UVs for GEO, Blockbench, viewer and both game passes."""
     geo['description']['texture_width'] = SIZE
     geo['description']['texture_height'] = SIZE
@@ -166,6 +166,9 @@ def map_material(geo, *, paint=False):
                 lining = side == 'north' or (name in (GUSSET_BONE, SHOULDERS_BONE, UNDER_YOKE_BONE) and side == 'up')
                 role = 'iron' if iron else ('red' if lining or name.startswith('v20_mount_backing_') else 'edge')
                 c['uv'][side] = S.spec(slots[role])
+    if fitted:
+        from cape_attachment import sew
+        sew(geo, {k: v for k, v in slots.items() if isinstance(k, str)})
     if not paint:
         return layout
     base = np.full((SIZE,SIZE,4),(22,13,26,255),np.uint8)

@@ -47,7 +47,7 @@ def verify(geo, samples):
     tracks = {n: T.prepare_clip(clips['animation.'+n]) for n in ('idle', 'sprint', 'fall')}
     fixed = rig.rigid | np.array([n.endswith('_seg0') for n in rig.names])
     aim = (0., 12., 32.)
-    depth = F.depth(*aim)
+    depth = F.wearer_depth(geo,*aim)
     # Cross the transition with different limb phases even when the actual
     # player's gait would be fading. This samples the existing stride guide,
     # not a claim about all possible armor, skins or in-game poses.

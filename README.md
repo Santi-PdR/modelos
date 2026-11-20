@@ -7,9 +7,13 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [JAR anterior v1.67.12](https://github.com/Santi-PdR/modelos/releases/download/v1.67.12/capatest-1.67.12.jar)
 · [JAR anterior v1.67.11](https://github.com/Santi-PdR/modelos/releases/download/v1.67.11/capatest-1.67.11.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench de la rama](docs/CAPA_v1.67.14.bbmodel)
+· [Proyecto Blockbench de la rama](docs/CAPA_v1.67.15.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+
+### v1.67.15 — yugo fijo (en pruebas)
+
+El cuello granate va cosido al torso, con retornos que envuelven la camiseta. Las dos hombreras recuperan la placa escalonada de cuatro piezas del diseño anterior: base, lam, filo y labio delantero. Cada una sigue su manga, sin recortarse ni retirarse por la mirada. El fuelle flexible mantiene unidas las doce raíces con el cuello fijo. Se conservan los ocho clips del faldón, el atlas, el icono y las brasas.
 
 ### v1.67.14 — giro amplio (verificada en Forge, sin publicar)
 

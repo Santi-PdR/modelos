@@ -129,7 +129,7 @@ tasks.withType(org.gradle.api.tasks.bundling.AbstractArchiveTask).configureEach 
 
 tasks.named('jar', Jar).configure {
     exclude 'com/capatest/client/CapeFxSmoke*.class', 'com/capatest/client/CapeLookSweep*.class',
-            'com/capatest/client/CapeWalkProbe*.class', 'com/capatest/client/CapePlateProbe*.class',
+            'com/capatest/client/CapeWalkProbe*.class', 'com/capatest/client/CapeFixedMountProbe*.class', 'com/capatest/client/CapePlateProbe*.class',
             'com/capatest/client/CapeHistoric*.class', 'assets/capatest/**/fixture_v1280*', 'assets/capatest/geo/test/*'
     manifest {
         attributes([

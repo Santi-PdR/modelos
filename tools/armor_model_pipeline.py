@@ -564,7 +564,7 @@ def build() -> dict:
     from cape_material import map_material
 
     data = build_base()
-    map_material(data['minecraft:geometry'][0])
+    map_material(data['minecraft:geometry'][0], fitted=True)
     return data
 
 

@@ -257,19 +257,28 @@ jobs:
                   assert _nb_c == [], _ob['name']
               else:
                   assert _ob_c == _nb_c, _ob['name']
+          fixed_yoke = 'cape_fixed_yoke' in {b['name'] for b in armor_geo['bones']}
           mount = {b['name']: b for b in armor_geo['bones'] if b['name'].startswith('v20_mount_')}
-          assert {n:b['parent'] for n,b in mount.items()} == {
-              'v20_mount_seat': 'cape_seat_fit', 'v20_mount_gusset': 'cape_seat_fit',
-              'v20_mount_saddle': 'cape_wearer_fit', 'v20_mount_shoulders': 'cape_wearer_fit',
-              'v20_mount_under_yoke': 'cape_seat_fit', 'v20_mount_backing_left': 'cape_seat_fit',
-              'v20_mount_backing_right': 'cape_seat_fit'}
-          mount_cubes = sum(len(b.get('cubes', [])) for b in mount.values())
-          assert mount_cubes == 21
-          cowl_return = next(b for b in armor_geo['bones'] if b['name'] == 'v17_cowl_return')
-          return_cubes = len(cowl_return['cubes'])
-          assert cowl_return['parent'] == 'cape_wearer_fit' and return_cubes == 3
-          assert len(armor_geo['bones']) == 236
-          assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 260 + fragments + mount_cubes + return_cubes
+          if fixed_yoke:
+              frame = next(b for b in armor_geo['bones'] if b['name'] == 'cape_fixed_yoke')
+              assert frame['parent'] == 'chestplate' and not frame['cubes']
+              assert len(armor_geo['bones']) == 237
+              assert mount['v20_mount_seat']['parent'] == frame['name']
+              assert mount['v20_mount_saddle']['parent'] == 'cape_top'
+              assert mount['v20_mount_gusset']['parent'] == 'cape_seat_fit'
+          else:
+              assert {n:b['parent'] for n,b in mount.items()} == {
+                  'v20_mount_seat': 'cape_seat_fit', 'v20_mount_gusset': 'cape_seat_fit',
+                  'v20_mount_saddle': 'cape_wearer_fit', 'v20_mount_shoulders': 'cape_wearer_fit',
+                  'v20_mount_under_yoke': 'cape_seat_fit', 'v20_mount_backing_left': 'cape_seat_fit',
+                  'v20_mount_backing_right': 'cape_seat_fit'}
+              mount_cubes = sum(len(b.get('cubes', [])) for b in mount.values())
+              assert mount_cubes == 21
+              cowl_return = next(b for b in armor_geo['bones'] if b['name'] == 'v17_cowl_return')
+              return_cubes = len(cowl_return['cubes'])
+              assert cowl_return['parent'] == 'cape_wearer_fit' and return_cubes == 3
+              assert len(armor_geo['bones']) == 236
+              assert sum(len(b.get('cubes', [])) for b in armor_geo['bones']) == 260 + fragments + mount_cubes + return_cubes
           hinge = next(b for b in armor_geo['bones'] if b['name'] == 'cape_wearer_fit')
           assert hinge['parent'] == 'cape_seat_fit' and not hinge['cubes']
           _seat = next(b for b in armor_geo['bones'] if b['name'] == 'cape_seat_fit')
@@ -439,7 +448,7 @@ jobs:
           # filo y labio) y la cadena son ocho anillos.
           _pads = [b for b in new_bones if b['name'].startswith('v18_pad_')]
           assert len(_pads) == 2, len(_pads)
-          assert all(len(b['cubes']) == 4 + len(sculpt['fragments'].get(b['name'], [])) for b in _pads), \
+          assert all(len(b['cubes']) == 4 + (0 if fixed_yoke else len(sculpt['fragments'].get(b['name'], []))) for b in _pads), \
               'la hombrera vuelve a ser un cubo'
           _chains = [b for b in new_bones if b['name'].startswith('v18_chain_')]
           assert len(_chains) == 8, len(_chains)
@@ -507,8 +516,10 @@ jobs:
           assert bb['meta']['format_version'] == '5.0'
           # v1.17.3: el .bbmodel de Blockbench muestra SOLO la capa: sin
           # maniqui Steve/Alex y sin los 126 cubos de la armadura vieja.
-          assert len(bb['elements']) == 149+fragments+mount_cubes+return_cubes and len(bb['groups']) == 236
-          assert sum(e['visibility'] for e in bb['elements']) == 122+fragments+mount_cubes+return_cubes
+          cape_cubes = [c for b in new_bones if b['name'].startswith(('v15_', 'v16_', 'v17_', 'v18_', 'v19_', 'v20_mount_'))
+                        for c in b['cubes']]
+          assert len(bb['elements']) == len(cape_cubes) and len(bb['groups']) == len(armor_geo['bones'])
+          assert sum(e['visibility'] for e in bb['elements']) == len(cape_cubes)-27
           assert not any('Steve/Alex' in g['name'] for g in bb['groups'])
           assert bb['resolution'] == {'width': armor_size, 'height': armor_size}
           assert all(max(f['uv']) <= armor_size for e in bb['elements'] for f in e['faces'].values())
@@ -733,6 +744,13 @@ jobs:
       # v1220: la autoevaluacion MEDIDA se ejecuta AQUI, en GitHub Actions,
       # no solo en el sandbox. Instala numpy/Pillow y falla el build si la
       # capa se aleja de la referencia del usuario.
+      - name: Select attachment rig
+        id: rig
+        run: |
+          if grep -q '"name": "cape_fixed_yoke"' src/main/resources/assets/capatest/geo/item/armor/*.geo.json; then
+            echo 'fixed=true' >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Autoevaluacion visual contra la referencia
         run: |
           python3 -m pip install --quiet numpy Pillow
@@ -757,6 +775,9 @@ jobs:
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1630.py
           elif grep -qx 'mod_version=1.64.0' gradle.properties; then
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1640.py
+          elif [[ '${{ steps.rig.outputs.fixed }}' == true ]]; then
+            OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_attachment.py
+            PYTHONPATH=tools python3 -c 'import cape_icon; cape_icon.verify()'
           elif grep -q '^mod_version=1\.67\.' gradle.properties; then
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_v1650.py --fit-only
             OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_mount.py
@@ -887,7 +908,7 @@ jobs:
             grep -qx 'com/capatest/client/CapaSparkParticle.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeSparkFrame.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeSparkPath.class' /tmp/jar-contents.txt
-            if grep -Eq '^(com/capatest/client/(CapeFxSmoke|CapeWalkProbe|CapeLookSweep|CapeTurnSweep|CapeHistoricFitProbe|CapeHistoricalArmorRenderer|CapePlateProbe)|assets/capatest/geo/test/)' /tmp/jar-contents.txt; then
+            if grep -Eq '^(com/capatest/client/(CapeFxSmoke|CapeWalkProbe|CapeFixedMountProbe|CapeLookSweep|CapeTurnSweep|CapeHistoricFitProbe|CapeHistoricalArmorRenderer|CapePlateProbe)|assets/capatest/geo/test/)' /tmp/jar-contents.txt; then
               echo '::error::El JAR de distribución incluye código de la prueba de cliente.'
               exit 1
             fi
@@ -1026,9 +1047,13 @@ jobs:
             exit 1
           fi
 
+      - name: Comprobar el yugo fijo y el relieve de ambas hombreras
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && steps.rig.outputs.fixed == 'true' }}
+        run: python3 tools/verify_forge_attachment.py build/fx-smoke-run/fx-shots
+
       - name: Medir el cuello al girar 60 grados en F5
         id: verify-wide-turn
-        if: steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success'
+        if: ${{ steps.rig.outputs.fixed != 'true' && steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success' }}
         run: |
           set -o pipefail
           python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --giro-amplio 2>&1 | while IFS= read -r line; do
@@ -1042,30 +1067,30 @@ jobs:
       # Priorizar la nueva auditoría en el presupuesto de anotaciones, sin
       # perder las imágenes completas de las comparaciones anteriores.
       - name: Comparar el cuello anterior y actual en ambos giros
-        if: always() && steps.historic-fit.outcome == 'success'
+        if: ${{ steps.rig.outputs.fixed != 'true' && always() && steps.historic-fit.outcome == 'success' }}
         run: |
           for view in giro-amplio giro-inverso; do
             python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery "$view"
           done
 
       - name: Fotogramas del giro hasta el perfil en pecho y Curios
-        if: ${{ !cancelled() && steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success' }}
+        if: ${{ steps.rig.outputs.fixed != 'true' && !cancelled() && steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success' }}
         run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --recorrido
 
       - name: Documentar v1.28.0 y el modelo actual en F5 tres cuartos
-        if: always() && steps.historic-fit.outcome == 'success'
+        if: ${{ steps.rig.outputs.fixed != 'true' && always() && steps.historic-fit.outcome == 'success' }}
         run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery diagonal
 
       - name: Documentar v1.28.0 y el modelo actual en F5 giro opuesto
-        if: always() && steps.historic-fit.outcome == 'success'
+        if: ${{ steps.rig.outputs.fixed != 'true' && always() && steps.historic-fit.outcome == 'success' }}
         run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery espejo
 
       - name: Documentar v1.28.0 y el modelo actual en F5 cenital
-        if: always() && steps.historic-fit.outcome == 'success'
+        if: ${{ steps.rig.outputs.fixed != 'true' && always() && steps.historic-fit.outcome == 'success' }}
         run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery cenital
 
       - name: Medir el anclaje anterior a la rama en Forge
-        if: ${{ !cancelled() && steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success' }}
+        if: ${{ steps.rig.outputs.fixed != 'true' && !cancelled() && steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success' }}
         run: |
           set -o pipefail
           python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
@@ -1076,11 +1101,11 @@ jobs:
           done
 
       - name: Comparar v1.67.11 y las nuevas hombreras en F5 cenital
-        if: always() && steps.fx-smoke.outcome != 'skipped' && steps.historic-fit.outcome != 'success'
+        if: ${{ steps.rig.outputs.fixed != 'true' && always() && steps.fx-smoke.outcome != 'skipped' && steps.historic-fit.outcome != 'success' }}
         run: python3 tools/verify_forge_plates.py build/fx-smoke-run/fx-shots --gallery
 
       - name: Medir el borde de las placas contra las mangas en F5
-        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
+        if: ${{ steps.rig.outputs.fixed != 'true' && !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
           set -o pipefail
           python3 tools/verify_forge_plates.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
@@ -1092,7 +1117,7 @@ jobs:
           done
 
       - name: Verificar el desplazamiento visible del cuello y las dos hombreras en F5
-        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
+        if: ${{ steps.rig.outputs.fixed != 'true' && !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
           set -o pipefail
           python3 tools/verify_forge_seat.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
@@ -1104,15 +1129,26 @@ jobs:
           done
 
       - name: Medir ciclos y transiciones reales al caminar en F5
-        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
+        if: ${{ steps.rig.outputs.fixed != 'true' && !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
           set -o pipefail
-          python3 tools/verify_forge_walk.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
+          args=()
+          if [ '${{ steps.rig.outputs.fixed }}' = true ]; then args+=(--fixed-yoke); fi
+          python3 tools/verify_forge_walk.py build/fx-smoke-run/fx-shots "${args[@]}" | while IFS= read -r line; do
             printf '::notice title=Marcha en Forge::%s\n' "${line//%/%25}"
           done
 
+      - name: Verificar el icono en el framebuffer del nuevo rig
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && steps.rig.outputs.fixed == 'true' }}
+        run: |
+          PYTHONPATH=tools python3 - <<'PY'
+          from pathlib import Path
+          from verify_forge_mount import hotbar
+          hotbar(Path('build/fx-smoke-run/fx-shots'))
+          PY
+
       - name: Verificar la unión y el icono en el framebuffer de Forge
-        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
+        if: ${{ steps.rig.outputs.fixed != 'true' && !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
           set -o pipefail
           python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
@@ -1124,60 +1160,61 @@ jobs:
           done
 
       - name: Comparar el canto de la camiseta en F5 cenital
-        if: always() && steps.fx-smoke.outcome == 'success'
+        if: ${{ steps.rig.outputs.fixed != 'true' && always() && steps.fx-smoke.outcome == 'success' }}
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery union-cenital
 
       - name: Comparar el canto de la camiseta en F5 oblicuo
-        if: always() && steps.fx-smoke.outcome == 'success'
+        if: ${{ steps.rig.outputs.fixed != 'true' && always() && steps.fx-smoke.outcome == 'success' }}
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery union-oblicua
 
       - name: Comparar el canto de la camiseta a media inclinación
-        if: always() && steps.fx-smoke.outcome == 'success'
+        if: ${{ steps.rig.outputs.fixed != 'true' && always() && steps.fx-smoke.outcome == 'success' }}
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery union-ajuste-medio
 
       - name: Fotogramas de marcha en pecho
-        if: always() && steps.fx-smoke.outcome == 'success'
+        if: ${{ always() && steps.fx-smoke.outcome == 'success' }}
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery paso-pecho
 
       - name: Fotogramas de marcha en Curios
-        if: always() && steps.fx-smoke.outcome == 'success'
+        if: ${{ always() && steps.fx-smoke.outcome == 'success' }}
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery paso-curios
 
       - name: Vista F5 de inclinación media, v1.67.9 frente a ajuste nuevo
-        if: always() && steps.fx-smoke.outcome != 'skipped'
+        if: ${{ steps.rig.outputs.fixed != 'true' && always() && steps.fx-smoke.outcome != 'skipped' }}
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery ajuste-medio
 
       - name: Fotogramas del giro y la inclinación en pecho
-        if: always() && steps.fx-smoke.outcome != 'skipped'
+        if: ${{ steps.rig.outputs.fixed != 'true' && always() && steps.fx-smoke.outcome != 'skipped' }}
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery mirada-pecho
 
       - name: Fotogramas del giro y la inclinación en Curios
-        if: always() && steps.fx-smoke.outcome != 'skipped'
+        if: ${{ steps.rig.outputs.fixed != 'true' && always() && steps.fx-smoke.outcome != 'skipped' }}
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery mirada-curios
 
       - name: Recorte comparativo F5 del ajuste de cuello y hombreras
-        if: always() && steps.fx-smoke.outcome != 'skipped'
+        if: ${{ steps.rig.outputs.fixed != 'true' && always() && steps.fx-smoke.outcome != 'skipped' }}
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery ajuste
 
       - name: Recorte F5 con mangas finas
-        if: always() && steps.fx-smoke.outcome != 'skipped'
+        if: ${{ steps.rig.outputs.fixed != 'true' && always() && steps.fx-smoke.outcome != 'skipped' }}
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery ajuste-fino
 
       - name: Recorte en ángulo oblicuo
-        if: always() && steps.fx-smoke.outcome != 'skipped'
+        if: ${{ steps.rig.outputs.fixed != 'true' && always() && steps.fx-smoke.outcome != 'skipped' }}
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery oblicua
 
       - name: Recorte lateral de la unión al torso
-        if: always() && steps.fx-smoke.outcome != 'skipped'
+        if: ${{ steps.rig.outputs.fixed != 'true' && always() && steps.fx-smoke.outcome != 'skipped' }}
         run: python3 tools/verify_forge_mount.py build/fx-smoke-run/fx-shots --gallery perfil
 
       - name: Recorte del ciclo de la hotbar
-        if: always() && steps.fx-smoke.outcome != 'skipped'
+        if: ${{ always() && steps.fx-smoke.outcome != 'skipped' }}
         run: |
           shots=build/fx-smoke-run/fx-shots
           if [ -f "$shots/hotbar-31.png" ]; then
             python3 tools/verify_forge_mount.py "$shots" --gallery hotbar
           fi
+
 
       - name: Subir capturas de la prueba en mundo
         if: always() && steps.fx-smoke.outcome != 'skipped'
@@ -1186,6 +1223,7 @@ jobs:
           name: capatest-fx-en-mundo
           path: |
             build/fx-smoke-run/fx-shots/*.png
+            build/fx-smoke-run/fx-shots/*.jpg
             build/fx-smoke-run/fx-shots/*.tsv
             build/fx-smoke-run/fx-shots/hotbar-ciclo.gif
           if-no-files-found: error

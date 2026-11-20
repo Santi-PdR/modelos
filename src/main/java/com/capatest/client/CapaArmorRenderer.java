@@ -23,7 +23,9 @@ import software.bernie.geckolib.renderer.GeoArmorRenderer;
 import software.bernie.geckolib.util.RenderUtils;
 
 public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
+    static final String FIXED_YOKE = "cape_fixed_yoke";
     private final CapaArmorModel capeModel;
+    private boolean fixedYoke;
     private float wearerDepth;
     private float seating;
     private float plateFit;
@@ -107,8 +109,13 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     protected void applyBaseTransformations(HumanoidModel<?> model) {
         super.applyBaseTransformations(model);
         if (!sampleFit) return;
+        fixedYoke = bone(FIXED_YOKE) != null;
+        // The new yoke is a separate child of the torso. Use a neutral look
+        // for the drape's posture allowance so the skirt cannot pull at that
+        // seam just because the camera moved. Old resource packs retain the
+        // former fit and the authored stride/wing response is unchanged.
         wearerDepth = (float) CapeFit.backset(model.body.xRot, model.body.yRot,
-                model.head.xRot, model.head.yRot);
+                fixedYoke ? 0 : model.head.xRot, fixedYoke ? model.body.yRot : model.head.yRot);
         double arm = backArm(model);
         double leg = Math.max(CapeStride.backDegrees(model.leftLeg.xRot, model.leftLeg.yRot),
                 CapeStride.backDegrees(model.rightLeg.xRot, model.rightLeg.yRot));
@@ -122,6 +129,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
             wings = CapeWingFit.topGoal(Math.toDegrees(player.elytraRotX), Math.toDegrees(player.elytraRotZ),
                     Math.toDegrees(model.body.xRot), wearerDepth);
         }
+        capeModel.setClearancePose(arm, leg, model.body.xRot, wearerDepth, wings);
+        if (fixedYoke) return;
         shoulderReach = (float) CapeFit.shoulderReach(model.body.xRot, model.body.yRot,
                 model.head.xRot, model.head.yRot, hasWings);
         // Fit against the stride envelope, not the instantaneous crossing
@@ -148,7 +157,6 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         }
         yoke = CapeFit.yokeShape(model.body.xRot, model.head.xRot, mountArm, hasWings);
         backing = CapeBacking.shape(model.body.xRot, model.body.yRot, model.head.xRot, model.head.yRot, wearerDepth, hasWings);
-        capeModel.setClearancePose(arm, leg, model.body.xRot, wearerDepth, wings);
     }
 
     @Override
@@ -157,6 +165,22 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                                   boolean isReRender, float partialTick, int light, int overlay,
                                   float red, float green, float blue, float alpha) {
         String name = bone.getName();
+        if (fixedYoke) {
+            // Only the lining and free cloth receive fitting transforms.
+            // In both passes the fixed yoke and the sleeve plates inherit
+            // the vanilla part transform without reading any look angle.
+            boolean fit = wearerDepth > 0 && (CapeFit.BONE.equals(name)
+                    || CapeFit.DRAPE_BONE.equals(name) || CapeFit.GUSSET_BONE.equals(name));
+            if (fit) poseStack.pushPose();
+            try {
+                if (fit) applyDrapeFit(poseStack, bone, name, 0);
+                super.renderRecursively(poseStack, animatable, bone, renderType, buffers, buffer,
+                        isReRender, partialTick, light, overlay, red, green, blue, alpha);
+            } finally {
+                if (fit) poseStack.popPose();
+            }
+            return;
+        }
         float outerSeat = Math.max(seating, torsoFit.seat());
         boolean outer = outerSeat > seating && CapeTorsoFit.followsSeat(name);
         CapeTorsoFit.Affine rest = torsoFit.forBone(name);
@@ -199,8 +223,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                 poseStack.scale(rest.sx(), rest.sy(), rest.sz());
                 poseStack.translate(-rest.x()/16F, -rest.y()/16F, -rest.z()/16F);
             }
-            if (setback) {
-                poseStack.translate(0, 0, wearerDepth / 16.0F);
+            if (setback || atPivot && (drape || CapeFit.GUSSET_BONE.equals(name))) {
+                applyDrapeFit(poseStack, bone, name, outerSeat);
             } else if (atPivot) {
                 RenderUtils.translateToPivotPoint(poseStack, bone);
                 if (seatFrame)
@@ -212,10 +236,6 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                     poseStack.scale(yoke.width(), yoke.height(), yoke.depth());
                 else if (backingLeft || backingRight)
                     poseStack.scale(1, backingLeft ? backing.left() : backing.right(), backing.depth());
-                else if (drape)
-                    poseStack.mulPose(Axis.XP.rotationDegrees((float) CapeFit.seatedDrapeDegrees(wearerDepth, outerSeat)));
-                else
-                    poseStack.scale(1, 1, (float) CapeFit.gussetScale(wearerDepth));
                 RenderUtils.translateAwayFromPivotPoint(poseStack, bone);
             }
             super.renderRecursively(poseStack, animatable, bone, renderType, buffers, buffer,
@@ -226,10 +246,23 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         }
     }
 
+    private void applyDrapeFit(PoseStack poses, GeoBone bone, String name, float snug) {
+        if (CapeFit.BONE.equals(name)) {
+            poses.translate(0, 0, wearerDepth / 16F);
+            return;
+        }
+        RenderUtils.translateToPivotPoint(poses, bone);
+        if (CapeFit.DRAPE_BONE.equals(name))
+            poses.mulPose(Axis.XP.rotationDegrees((float) CapeFit.seatedDrapeDegrees(wearerDepth, snug)));
+        else
+            poses.scale(1, 1, (float) CapeFit.gussetScale(wearerDepth));
+        RenderUtils.translateAwayFromPivotPoint(poses, bone);
+    }
+
     @Override
     public void renderCubesOfBone(PoseStack poseStack, GeoBone bone, VertexConsumer buffer,
                                   int light, int overlay, float red, float green, float blue, float alpha) {
-        if (plateFit <= 0 || CapePlateFit.forBone(bone.getName()) == null) {
+        if (fixedYoke || plateFit <= 0 || CapePlateFit.forBone(bone.getName()) == null) {
             super.renderCubesOfBone(poseStack, bone, buffer, light, overlay, red, green, blue, alpha);
             return;
         }
@@ -247,7 +280,7 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
 
     // Used in both passes before GeckoLib applies the cube's own authored pivot.
     void applyPlateRim(PoseStack poseStack, GeoBone bone, GeoCube cube) {
-        var plate = plateFit > 0 ? CapePlateFit.forBone(bone.getName()) : null;
+        var plate = !fixedYoke && plateFit > 0 ? CapePlateFit.forBone(bone.getName()) : null;
         if (plate == null || bone.getCubes().size() <= CapePlateFit.RIM_CUBE
                 || cube != bone.getCubes().get(CapePlateFit.RIM_CUBE)) return;
         var rim = plate.rim();

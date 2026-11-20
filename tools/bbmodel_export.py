@@ -43,7 +43,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from armor_model_pipeline import collar_return, legacy_element, mount_bones, relief
+from armor_model_pipeline import legacy_element
 import cape_motion as M
 import cape_animation_pipeline as animation
 
@@ -248,6 +248,8 @@ def build_animations(anim_bones: list[tuple[str, str]], runtime: dict) -> list[d
     return out
 
 
+CAPE_BONES = ("v15_", "v16_", "v17_", "v18_", "v19_", "v20_mount_")
+
 def build(geo: dict | None = None, atlas: Image.Image | None = None,
           runtime: dict | None = None) -> dict:
     """Admite geometría y atlas en memoria para comparar antes de exportar."""
@@ -266,7 +268,7 @@ def build(geo: dict | None = None, atlas: Image.Image | None = None,
     bones = geo["bones"]
     bounds = atlas.size
     assert bounds == tuple(geo['description'][f'texture_{axis}'] for axis in ('width','height')), bounds
-    CAPE_BONES = ("v15_", "v16_", "v17_", "v18_", "v19_", "v20_mount_")
+
 
     elements, groups, node_by_name = [], [], {}
     anim_bones: list[tuple[str, str]] = []
@@ -350,8 +352,9 @@ def main() -> None:
     _raw = base64.b64decode(model["textures"][0]["source"].split(",", 1)[1])
     _im = Image.open(io.BytesIO(_raw))
     assert _im.size == tuple(model["resolution"][axis] for axis in ("width", "height")) == atlas_texture().size
-    n_visible = (122 + sum(map(len, relief()['fragments'].values()))
-                 + sum(len(b['cubes']) for b in mount_bones()) + len(collar_return()['cubes']))
+    geo = json.loads(GEO.read_text())["minecraft:geometry"][0]
+    n_visible = sum(c.get('visibility', True) for b in geo['bones'] if b['name'].startswith(CAPE_BONES)
+                    for c in b.get('cubes', []))
     assert len(model['elements']) == n_visible + 27, len(model['elements'])
     assert sum(e['visibility'] for e in model['elements']) == n_visible
     assert not any(e["name"].startswith(("v17_mote_", "v17_ash_",

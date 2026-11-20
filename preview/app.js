@@ -254,8 +254,27 @@ function torsoShape(data, stance, look, yaw, depth, seat, plate, arm, effort, dr
   return [outer,fold,lip,collar(trim*.16),fit(1,compact,.94,.92,1-.17*advance,.18*advance,-.24*advance),wide];
 }
 
-function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm) {
-  const depth=backset(profile,stance,look,turn);
+function hasFixedYoke(geo) {
+  return geo.bones.some(b => b.name==='cape_fixed_yoke');
+}
+
+function wearerDepth(geo, profile, stance, look, turn) {
+  return hasFixedYoke(geo) ? backset(profile,stance,0,0) : backset(profile,stance,look,turn);
+}
+
+function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm, swings=[0,0]) {
+  const depth=wearerDepth(geo,profile,stance,look,turn);
+  if (hasFixedYoke(geo)) {
+    const bones=geo.bones.map(b => {
+      if (b.name===profile.bone) return {...b,offset:[0,0,depth]};
+      if (b.name===profile.drapeBone) return {...b,rotation:[-depth*profile.drapePerUnit,0,0]};
+      if (b.name===profile.gussetBone) return {...b,scale:[1,1,1+depth/profile.gussetDepth]};
+      if (b.name==='chestplate') return {...b,rotation:[stance*profile.bodyAngle,0,0],offset:[0,-3.2*stance,0]};
+      const i=['leftArm','rightArm'].indexOf(b.name);
+      return i<0 ? b : {...b,rotation:[swings[i]+.4*(180/Math.PI)*stance,0,0],offset:[0,-3.2*stance,0]};
+    });
+    return {...geo,bones};
+  }
   const anchor = profile.backing;
   const seat = profile.seat;
   const hasSeat = seat && geo.bones.some(b => b.name===seat.frame);
@@ -812,7 +831,7 @@ function draw(now) {
   const stance=referenceView ? 0 : Number(stanceControl.checked);
   const look=referenceView ? 0 : +lookControl.value;
   const turn=referenceView ? 0 : +turnControl.value;
-  const depth=backset(FIT,stance,look,turn);
+  const depth=wearerDepth(GEO,FIT,stance,look,turn);
   // A synthetic stride has its own clock. Pausing freezes both it and the clip.
   const amplitude=+strideAmount.value;
   const gait=!referenceView && stridePlayer.checked ? strideGait(elapsed*(.8+.95*amplitude),amplitude) : null;
@@ -826,7 +845,7 @@ function draw(now) {
   const armEffort=Math.max(backArm,...(gait?.arms || [0,0]).map(a=>Math.abs(a+stance*FIT.bodyAngle)));
   const fit=(pose, goal)=>{
     if (clearanceGait || goal>0) pose=clearancePose(pose,clearanceGait,stance,depth,goal);
-    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn,!!wingPose,backArm,armEffort),hidden);
+    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn,!!wingPose,backArm,armEffort,gait?.arms),hidden);
   };
   const drift=demo ? swayPose(base,SWAY,t) : null;
   const current=drift && swayFit.checked ? drift : base;
@@ -839,7 +858,7 @@ function draw(now) {
   if (showPlayer) faces.push(...playerFaces(stance,look,turn,gait));
   if (wingPose) faces.push(...wingFaces(WINGS,wingPose));
   fitValue.textContent=referenceView ? 'Pose base · ajuste desactivado' :
-    `Mirada ${look}° · giro ${turn}° · holgura ${depth.toFixed(2)} u`;
+    `Mirada ${look}° · giro ${turn}° · ${hasFixedYoke(GEO) ? "yugo fijo · faldón" : "holgura"} ${depth.toFixed(2)} u`;
   const fx=showFx&&!referenceView;
   const ambient=referenceView ? 1 : +ambientControl.value;
   const bloom=haloControl.checked&&!referenceView;

@@ -16,6 +16,7 @@ import numpy as np
 
 import armor_model_pipeline as G
 import cape_backing as B
+from cape_attachment import ARMS, FRAME as FIXED_YOKE
 import preview_cloth as P
 
 SOURCE = P.ROOT / 'src/main/java/com/capatest/client/CapeFit.java'
@@ -273,11 +274,30 @@ def viewer_profile():
     return dict(profile(),backing=B.profile(),seat=seat_profile(),plates=plate_profile(),torso=torso_profile())
 
 
+def fitted(geo):
+    return any(b['name'] == FIXED_YOKE for b in geo['bones'])
+
+
+def wearer_depth(geo, stance, pitch, yaw):
+    return depth(stance, 0., 0.) if fitted(geo) else depth(stance, pitch, yaw)
+
+
 def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back=0., close=True,
-                plates=True, arm_effort=None, torso=True):
+                plates=True, arm_effort=None, torso=True, arm_swing=(0.,0.)):
     """Bake render transforms for a frame, not animation keyframes."""
     changes = {'chestplate': dict(rotation=[stance*profile()['bodyAngle'], 0., 0.],
                                   offset=[0., -3.2*stance, 0.])}
+    if fitted(geo):
+        d, f = depth(stance, 0., 0.), profile()
+        changes.update({
+            G.FIT_BONE: dict(offset=[0.,0.,d]),
+            G.DRAPE_BONE: dict(rotation=[-d*f['drapePerUnit'],0.,0.]),
+            G.GUSSET_BONE: dict(scale=[1.,1.,1.+d/f['gussetDepth']]),
+        })
+        for name, swing in zip(reversed(ARMS), arm_swing, strict=True):
+            changes[name] = dict(rotation=[swing+math.degrees(.4)*stance, 0., 0.],
+                                 offset=[0.,-3.2*stance,0.])
+        return dict(geo, bones=[dict(b, **changes.get(b['name'], {})) for b in geo['bones']])
     shape = (0.,None,None,None,None,None)
     outer = None
     effort = arm_back if arm_effort is None else arm_effort

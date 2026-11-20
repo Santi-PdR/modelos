@@ -142,8 +142,8 @@ class WornModel:
         self.pivots = [np.asarray(self.by[n]['pivot'])*[-1,1,1] for n in HINGES]
         masks = [[n in self.parents(part) for part in self.names] for n in HINGES]
         self.masks = [np.array(m) for m in masks]
-        self.cloth = self.masks[0]
-        self.rigid = ~self.cloth
+        self.cloth = self.masks[0] & np.array([n != G.SADDLE_BONE for n in self.names])
+        self.rigid = ~self.masks[0]
 
         joints = defaultdict(list)
         for i,(n,c,_) in enumerate(parts):

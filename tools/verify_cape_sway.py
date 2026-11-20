@@ -80,7 +80,7 @@ def verify_fit(geo, clips, times, angles, p):
         track = T.prepare_clip(clip)
         gaits = [S.gait(j/16, amplitude) for j in range(16)]
         boxes = np.array([actors(aim,*gait,.25) for gait in gaits])
-        depth = F.depth(*aim)
+        depth = F.wearer_depth(geo,*aim)
         demand = [S.demand(aim[0],*gait) for gait in gaits]
         for i in range(0, 41, 2):
             time = times[i] % clip['animation_length']

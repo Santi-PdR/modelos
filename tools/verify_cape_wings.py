@@ -48,7 +48,7 @@ def posed(geo, aim, pose):
     pitch, _, roll, _ = pose
     by = {b['name']: b for b in geo['bones']}
     top = by['cape_top']['rotation'][0]
-    lift = W.lift(top, W.goal(pitch, roll, aim[0]*F.profile()['bodyAngle'], F.depth(*aim)))
+    lift = W.lift(top, W.goal(pitch, roll, aim[0]*F.profile()['bodyAngle'], F.wearer_depth(geo,*aim)))
     return dict(geo, bones=[dict(b, rotation=[top+lift, *b['rotation'][1:]])
                            if b is by['cape_top'] else b for b in geo['bones']])
 
@@ -89,7 +89,7 @@ def exercise(geo, clips):
         body_boxes = np.broadcast_to([head,body], (len(gaits),2,8,3))
         skin = np.concatenate([legs,body_boxes], axis=1)
         needs = [S.demand(aim[0],*g) for g in gaits]
-        d = F.depth(*aim)
+        d = F.wearer_depth(geo,*aim)
         track = tracks[name]
         length = clips['animation.'+name]['animation_length']
         for i, overlay in enumerate([None, *response_variants()[::3]]):
