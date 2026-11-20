@@ -11,6 +11,11 @@ import java.io.InputStream;
 import org.slf4j.Logger;
 import dev.kosmx.playerAnim.api.layered.KeyframeAnimationPlayer;
 import dev.kosmx.playerAnim.api.layered.ModifierLayer;
+import dev.kosmx.playerAnim.api.layered.modifier.AbstractFadeModifier;
+import dev.kosmx.playerAnim.api.layered.modifier.MirrorModifier;
+import dev.kosmx.playerAnim.api.layered.modifier.SpeedModifier;
+import dev.kosmx.playerAnim.core.util.Ease;
+import net.minecraft.world.entity.HumanoidArm;
 import dev.kosmx.playerAnim.minecraftApi.PlayerAnimationAccess;
 import dev.kosmx.playerAnim.minecraftApi.PlayerAnimationFactory;
 import dev.kosmx.playerAnim.minecraftApi.PlayerAnimationRegistry;
@@ -29,24 +34,32 @@ public final class KatanaAnimations {
     private static final Logger LOGGER = LogUtils.getLogger();
     // Official Better Combat katana moves; loaded from the user's installed mod/resource pack,
     // not redistributed by this mod. Z retains its separately credited gesture.
-    private static final String[] BETTER_COMBAT = {null, "two_handed_slash_horizontal_right", "two_handed_slash_vertical_right"};
-    private static final String[] CLIPS = {"eating_right", "sword_attack", "sword_attack2"};
+    private static final String[] BETTER_COMBAT = {null, "two_handed_slash_horizontal_right", "two_handed_slash_vertical_right", "two_handed_slash_horizontal_left"};
+    private static final String[] CLIPS = {"eating_right", "sword_attack", "sword_attack2", "sword_attack"};
     private KatanaAnimations() { }
+
+    private static final class AbilityLayer extends ModifierLayer<IAnimation> {
+        private final MirrorModifier mirror = new MirrorModifier(false);
+        private final SpeedModifier speed = new SpeedModifier(1);
+        AbilityLayer() {
+            addModifierBefore(mirror);
+            addModifierBefore(speed);
+        }
+    }
 
     @SubscribeEvent
     public static void setup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> PlayerAnimationFactory.ANIMATION_DATA_FACTORY.registerFactory(
-                LAYER, 1000, player -> new ModifierLayer<>()));
+                LAYER, 2500, player -> new AbilityLayer()));
     }
 
     public static void play(int entityId, int ability) {
         if (ability < -1 || ability >= CLIPS.length || Minecraft.getInstance().level == null) return;
         if (!(Minecraft.getInstance().level.getEntity(entityId) instanceof AbstractClientPlayer player)) return;
         var data = PlayerAnimationAccess.getPlayerAssociatedData(player).get(LAYER);
-        if (!(data instanceof ModifierLayer<?> layer)) return;
-        @SuppressWarnings("unchecked") ModifierLayer<IAnimation> animation = (ModifierLayer<IAnimation>) layer;
+        if (!(data instanceof AbilityLayer animation)) return;
         if (ability == -1) {
-            animation.setAnimation(null);
+            animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(3, Ease.INOUTSINE), null);
             return;
         }
         KeyframeAnimation clip = loadBetterCombat(ability);
@@ -56,12 +69,14 @@ public final class KatanaAnimations {
             LOGGER.warn("Missing katana animation for ability {}", ability);
             return;
         }
-        // Better Combat clips contain pre-roll before beginTick; its combat renderer starts there.
-        KeyframeAnimationPlayer playing = new KeyframeAnimationPlayer(clip, external ? clip.beginTick : 0)
+        // Better Combat 1.9.0 starts at tick zero; beginTick is its wind-up, not a seek offset.
+        animation.mirror.setEnabled(player.getMainArm() == HumanoidArm.LEFT);
+        animation.speed.speed = ability == 0 ? 1F : 2F;
+        KeyframeAnimationPlayer playing = new KeyframeAnimationPlayer(clip, 0)
                 .setFirstPersonMode(FirstPersonMode.THIRD_PERSON_MODEL)
                 .setFirstPersonConfiguration(new FirstPersonConfiguration()
                         .setShowRightArm(true).setShowLeftArm(true));
-        animation.setAnimation(playing);
+        animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), playing, true);
     }
 
     private static KeyframeAnimation loadBetterCombat(int ability) {

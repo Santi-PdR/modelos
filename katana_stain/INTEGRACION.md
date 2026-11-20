@@ -138,3 +138,20 @@ poses y compatibilidad con otros mods requieren comprobación en cliente.
   contacto de cada clip, ni su aspecto con este modelo y otros mods han sido
   probados visualmente. El retraso de red también puede desfasar las vistas.
   Esto es una base técnica de prueba, no una validación de calidad profesional.
+
+## 0.7.0-test — Better Combat 1.9.0+1.20.1
+
+Verificada la fuente de la versión exacta, commit `8814f0297bb85f4513646e73d604069487ce7322`:
+Better Combat inicia sus animaciones en el tick 0, no en `beginTick` como se
+había indicado en 0.6.0. Se corrige ese error, se acelera la reproducción,
+se añaden transiciones, prioridad sobre la capa de golpes de Better Combat y
+espejado para jugadores zurdos. La ulti combina dos cortes de Better Combat;
+sus impactos, separados, hacen cada uno aproximadamente la mitad del daño
+anterior y se vuelven a validar en servidor. El cooldown empieza al iniciar.
+Para golpes normales se añade un archivo de compatibilidad que hereda el
+preset `bettercombat:katana`: con Better Combat son golpes y pose a dos manos.
+Sin Better Combat, los clips incorporados siguen siendo el respaldo.
+
+Estas son mejoras técnicas basadas en fuentes reales, no una verificación
+visual: todavía deben probarse agarre, primera/tercera persona, tiempos,
+compatibilidad de las dos capas, escudos y las tres habilidades en el cliente.

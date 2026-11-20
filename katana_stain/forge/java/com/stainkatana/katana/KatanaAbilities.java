@@ -35,7 +35,8 @@ public final class KatanaAbilities {
     private static final int[] COOLDOWN = {240, 100, 900};
     // Timings in server ticks: wind-up, then recovery. Damage is revalidated at impact.
     private static final int[] IMPACT_TICK = {2, 7, 7};
-    private static final int[] RECOVERY_TICK = {6, 19, 20};
+    private static final int[] RECOVERY_TICK = {6, 16, 29};
+    private static final int[] FADE_OUT_TICK = {4, 13, 24};
     private static final Map<UUID, Cast> CASTS = new ConcurrentHashMap<>();
     private static final class Cast {
         final int ability;
@@ -44,6 +45,10 @@ public final class KatanaAbilities {
         final long start;
         final UUID markedTarget;
         boolean impacted;
+        boolean followUpStarted;
+        boolean followUpImpacted;
+        boolean fading;
+        boolean durabilitySpent;
         Cast(int ability, ItemStack stack, ResourceKey<Level> dimension, long start, UUID markedTarget) {
             this.ability = ability; this.stack = stack; this.dimension = dimension;
             this.start = start; this.markedTarget = markedTarget;
@@ -74,6 +79,18 @@ public final class KatanaAbilities {
             } else {
                 slash(player, cast.stack, player.serverLevel(), cast.ability == 2);
             }
+        }
+        if (cast.ability == 2 && !cast.followUpStarted && elapsed >= 11) {
+            cast.followUpStarted = true;
+            KatanaNetwork.broadcastAnimation(player, 3);
+        }
+        if (cast.ability == 2 && !cast.followUpImpacted && elapsed >= 18) {
+            cast.followUpImpacted = true;
+            slash(player, cast.stack, player.serverLevel(), true);
+        }
+        if (!cast.fading && elapsed >= FADE_OUT_TICK[cast.ability]) {
+            cast.fading = true;
+            KatanaNetwork.broadcastAnimation(player, -1);
         }
         if (elapsed >= RECOVERY_TICK[cast.ability]) CASTS.remove(player.getUUID());
     }
@@ -174,7 +191,7 @@ public final class KatanaAbilities {
             // El arma tiene 7 de daño base; los atributos del jugador cuentan,
             // con límites para que la habilidad no multiplique sin control otros mods.
             double base = player.getAttributeValue(Attributes.ATTACK_DAMAGE);
-            float damage = (float)Math.max(4, Math.min(ultimate ? 18 : 12, base * (ultimate ? 1.6 : 1.15)));
+            float damage = (float)Math.max(4, Math.min(ultimate ? 9 : 12, base * (ultimate ? 0.8 : 1.15)));
             if (!target.hurt(player.damageSources().playerAttack(player), damage)) continue;
             hits++;
             if (ultimate) {
@@ -189,7 +206,12 @@ public final class KatanaAbilities {
         }
         arc(level, player, facing, ultimate);
         level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, .8F, ultimate ? .7F : 1.1F);
-        stack.hurtAndBreak(1, player, p -> p.broadcastBreakEvent(InteractionHand.MAIN_HAND));
+        // La ulti puede golpear dos veces, pero desgasta el arma una sola vez.
+        Cast current = CASTS.get(player.getUUID());
+        if (current == null || !current.durabilitySpent) {
+            if (current != null) current.durabilitySpent = true;
+            stack.hurtAndBreak(1, player, p -> p.broadcastBreakEvent(InteractionHand.MAIN_HAND));
+        }
         player.displayClientMessage(Component.translatable(ultimate ? "stainkatana.ultimate_used" : "stainkatana.slash_used"), true);
         return true;
     }

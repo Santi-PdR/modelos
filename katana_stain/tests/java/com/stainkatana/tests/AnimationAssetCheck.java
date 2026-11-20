@@ -39,17 +39,17 @@ public class AnimationAssetCheck {
         }
         String external = System.getenv("STAIN_BC_TEST_DIR");
         if (external == null) throw new AssertionError("STAIN_BC_TEST_DIR must contain upstream Better Combat samples");
-        for (String name : new String[]{"two_handed_slash_horizontal_right", "two_handed_slash_vertical_right"}) {
+        for (String name : new String[]{"two_handed_slash_horizontal_right", "two_handed_slash_vertical_right", "two_handed_slash_horizontal_left"}) {
             try (InputStream in = Files.newInputStream(Path.of(external, name + ".json"))) {
                 var clips = AnimationSerializing.deserializeAnimation(in);
                 if (clips.size() != 1) throw new AssertionError(name + ": expected one clip");
                 var clip = clips.get(0);
                 if (clip.isInfinite || clip.beginTick < 0 || clip.endTick <= clip.beginTick || clip.stopTick <= clip.endTick)
                     throw new AssertionError(name + ": unexpected timeline");
-                var player = new KeyframeAnimationPlayer(clip, clip.beginTick);
+                var player = new KeyframeAnimationPlayer(clip, 0);
                 Vec3f first = player.get3DTransform("rightArm", TransformType.ROTATION, 0, Vec3f.ZERO);
                 boolean moved = false;
-                for (int i = clip.beginTick; i <= clip.stopTick; i++) {
+                for (int i = 0; i <= clip.stopTick; i++) {
                     player.tick(); player.setupAnim(0);
                     Vec3f v = player.get3DTransform("rightArm", TransformType.ROTATION, 0, Vec3f.ZERO);
                     if (Math.abs(v.getX() - first.getX()) + Math.abs(v.getY() - first.getY()) + Math.abs(v.getZ() - first.getZ()) > 0.001) moved = true;

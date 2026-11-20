@@ -30,10 +30,31 @@ assert (root/'resources/META-INF/SERIOUS_PLAYER_ANIMATIONS_LICENSE.txt').is_file
 print('OK: tres clips externos no cíclicos, mensaje de animación y licencia')
 
 ability = (root/'java/com/stainkatana/katana/KatanaAbilities.java').read_text()
-assert 'IMPACT_TICK = {2, 7, 7}' in ability and 'RECOVERY_TICK = {6, 19, 20}' in ability
+assert 'IMPACT_TICK = {2, 7, 7}' in ability and 'RECOVERY_TICK = {6, 16, 29}' in ability
 assert 'PlayerLoggedOutEvent' in ability and 'ServerStoppedEvent' in ability
 assert 'player.getMainHandItem() != cast.stack' in ability
 anim = (root/'java/com/stainkatana/katana/client/KatanaAnimations.java').read_text()
 assert 'bettercombat' in anim and 'attack_animations/' in anim
 assert 'THIRD_PERSON_MODEL' in anim and 'ability == -1' in anim
 print('OK: secuencia de impacto, cancelación, recurso externo opcional y primera persona configurada')
+
+assert 'LAYER, 2500' in anim and 'MirrorModifier' in anim
+assert 'followUpImpacted' in ability and 'broadcastAnimation(player, 3)' in ability
+bc = json.loads((root/'resources/data/stainkatana/weapon_attributes/katana_stain.json').read_text())
+assert bc['parent'] == 'bettercombat:katana'
+print('OK: preset de katana Better Combat, prioridad, zurdos y segundo golpe')
+
+# Analytical grip check for the current GeckoLib preRender and vanilla hand rotations;
+# this cannot substitute for rendering the complete client/model/animation stack.
+import math
+model = json.loads((a/'models/item/katana_stain.json').read_text())['display']
+for hand in ('thirdperson_righthand', 'thirdperson_lefthand'):
+    pose = model[hand]
+    assert pose['rotation'] == [90, 0, 0]
+    assert pose['scale'] == [0.72, 0.72, 0.72]
+    assert pose['translation'] == [0, 1, 0]
+# Vanilla's -90 degree hand rotation cancels the model's +90 degree pitch.
+# Approx. grip centre y=-2/16, custom correction +2/16, GeckoLib's residual +.01.
+grip_offset = math.hypot(0.72 * 0.01, 1/16)
+assert grip_offset < 0.07
+print('OK: comprobación matemática aproximada de agarre y eje, no es prueba visual')

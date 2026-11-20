@@ -16,7 +16,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 
 /** Solo acepta un identificador de habilidad, nunca blancos ni daño enviados por el cliente. */
 public final class KatanaNetwork {
-    private static final String VERSION = "3";
+    private static final String VERSION = "4";
     public static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder
             .named(new ResourceLocation(StainKatanaMod.MOD_ID, "abilities"))
             .networkProtocolVersion(() -> VERSION).clientAcceptedVersions(VERSION::equals)
