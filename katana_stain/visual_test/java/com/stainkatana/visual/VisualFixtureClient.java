@@ -33,11 +33,18 @@ public final class VisualFixtureClient {
             case 95 -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
             case 105 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(1));
             case 111 -> capture = "05_slash_windup.png";
-            case 114 -> capture = "06_slash_impact.png";
+            case 113 -> capture = "06a_slash_impact.png";
+            case 114 -> capture = "06b_slash_impact.png";
+            case 115 -> capture = "06c_slash_impact.png";
+            case 116 -> capture = "06d_slash_impact.png";
             case 150 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(2));
             case 155 -> capture = "07_ultimate_windup.png";
-            case 159 -> capture = "08_ultimate_first.png";
-            case 170 -> capture = "09_ultimate_second.png";
+            case 158 -> capture = "08a_ultimate_first.png";
+            case 159 -> capture = "08b_ultimate_first.png";
+            case 160 -> capture = "08c_ultimate_first.png";
+            case 169 -> capture = "09a_ultimate_second.png";
+            case 170 -> capture = "09b_ultimate_second.png";
+            case 171 -> capture = "09c_ultimate_second.png";
             case 205 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(0));
             case 213 -> capture = "10_paralysis.png";
             case 245 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }

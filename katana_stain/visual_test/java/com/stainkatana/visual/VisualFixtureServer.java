@@ -8,6 +8,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.core.BlockPos;
 import net.minecraftforge.event.entity.player.PlayerEvent;
@@ -26,13 +27,14 @@ public final class VisualFixtureServer {
         player.getInventory().selected = 0;
         player.getInventory().setItem(0, new ItemStack(StainKatanaMod.KATANA_STAIN.get()));
         level.setDayTime(6000);
-        Zombie zombie = EntityType.ZOMBIE.create(level);
+        level.getGameRules().getRule(GameRules.RULE_DOMOBSPAWNING).set(false, level.getServer());
+        Zombie zombie = EntityType.HUSK.create(level);
         if (zombie == null) throw new IllegalStateException("Cannot create fixture zombie");
         zombie.setNoAi(true);
         zombie.setPersistenceRequired();
         zombie.getAttribute(Attributes.MAX_HEALTH).setBaseValue(100.0);
         zombie.setHealth(100.0F);
-        zombie.moveTo(.5, y, 3.0, 180, 0);
+        zombie.moveTo(2.0, y, 3.0, 180, 0);
         level.addFreshEntity(zombie);
         System.out.println("STAIN_VISUAL_FIXTURE_READY y=" + y);
     }

@@ -16,7 +16,9 @@ public final class KatanaVisuals {
             // The follow-up is the opposite Better Combat stroke. Turn the textured
             // plane 180 degrees for that stroke, and invert again for left-handers.
             float visualYaw = yaw + ((style == 3) ^ leftHanded ? 180F : 0F);
-            level.addParticle(KatanaParticles.SLASH.get(), x, y, z, visualYaw, 0, 0);
+            // Tilt the world-oriented plane toward the viewer: at zero pitch it
+            // becomes nearly invisible when viewed from behind at eye level.
+            level.addParticle(KatanaParticles.SLASH.get(), x, y, z, visualYaw, 35, 0);
         } else if (style == 1) {
             // First stroke of the ultimate, angled across the body.
             level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw, 62, leftHanded ? -18 : 18);

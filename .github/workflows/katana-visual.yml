@@ -24,6 +24,12 @@ jobs:
           set -euo pipefail
           python3 katana_stain/tools/preparar_test.py
           cp -R katana_stain/visual_test/java/. build-katana-input/java/
+          # Load actual Better Combat clips as test resources without shipping them.
+          clips=build-katana-input/resources/assets/bettercombat/attack_animations
+          mkdir -p "$clips"
+          for clip in two_handed_slash_horizontal_right two_handed_slash_vertical_right two_handed_slash_horizontal_left; do
+            curl --fail --location --silent --show-error "https://raw.githubusercontent.com/ZsoltMolnarrr/BetterCombat/8814f0297bb85f4513646e73d604069487ce7322/common/src/main/resources/assets/bettercombat/attack_animations/${clip}.json" -o "$clips/$clip.json"
+          done
           sudo apt-get update -qq
           sudo apt-get install -y xvfb libgl1-mesa-dri
       - name: Generate a flat test world with Forge
@@ -31,6 +37,7 @@ jobs:
           set -euo pipefail
           mkdir -p run
           echo 'eula=true' > run/eula.txt
+          echo 'tutorialStep:none' > run/options.txt
           printf 'level-type=minecraft:flat\ngamemode=creative\nonline-mode=false\nserver-ip=127.0.0.1\nspawn-protection=0\n' > run/server.properties
           set +e
           printf 'stop\n' | timeout 100s gradle runServer -PkatanaOnly --no-daemon > /tmp/stain-visual-server.log 2>&1
@@ -51,7 +58,7 @@ jobs:
           timeout 420s xvfb-run -a -s '-screen 0 1280x720x24' gradle runClient -PkatanaOnly -PkatanaVisual --no-daemon > /tmp/stain-visual-client.log 2>&1 || { tail -160 /tmp/stain-visual-client.log; exit 1; }
           grep -F 'STAIN_VISUAL_FIXTURE_READY' /tmp/stain-visual-client.log
           grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-client.log
-          test "$(find run/stain-visual-test -name '*.png' | wc -l)" -eq 10
+          test "$(find run/stain-visual-test -name '*.png' | wc -l)" -eq 17
       - name: Report diagnostic tail
         if: failure()
         run: |
@@ -85,6 +92,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p katana_stain/vistas/client-test
+          rm -f katana_stain/vistas/client-test/*.png
           cp run/stain-visual-test/*.png katana_stain/vistas/client-test/
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
