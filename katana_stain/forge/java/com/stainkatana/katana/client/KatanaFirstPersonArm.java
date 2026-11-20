@@ -32,7 +32,7 @@ public final class KatanaFirstPersonArm {
         float root = Mth.sqrt(swing);
         PoseStack pose = event.getPoseStack();
         pose.pushPose();
-        pose.translate(sign * (-.3F * Mth.sin(root * Mth.PI) + .64F),
+        pose.translate(sign * (-.3F * Mth.sin(root * Mth.PI) + .98F),
                 .4F * Mth.sin(root * Mth.TWO_PI) - .6F - event.getEquipProgress() * .6F,
                 -.4F * Mth.sin(swing * Mth.PI) - .72F);
         pose.mulPose(Axis.YP.rotationDegrees(sign * 45));

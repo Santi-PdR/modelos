@@ -82,7 +82,7 @@ print('OK: encuadre local cancelable y sonido de Better Combat con alternativa')
 visuals=(root/'java/com/stainkatana/katana/client/KatanaVisuals.java').read_text()
 network=(root/'java/com/stainkatana/katana/KatanaNetwork.java').read_text()
 assert 'style == 3' in visuals and '^ leftHanded' in visuals
-assert 'getId() == entityId' in visuals and 'KatanaScene.impact(style == 3, leftHanded)' in visuals
+assert 'getId() == entityId' in visuals and 'KatanaScene.impact(style == 3, leftHanded, x, y, z)' in visuals
 assert 'private static final String VERSION = "10"' in network
 assert 'buf.writeBoolean(msg.leftHanded)' in network and 'buf.readBoolean()' in network
 assert 'impactEnvelope' in scene and 'KatanaClientConfig.ZOOM_FRACTION.get()' in scene

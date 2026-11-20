@@ -11,13 +11,16 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-/** Short client-only framing for the confirmed ultimate, not a camera cutscene. */
+/** Client-only framing: target tracking and orbit never change server aim or damage. */
 @Mod.EventBusSubscriber(modid = StainKatanaMod.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class KatanaScene {
     private static final int TRANSITION_TICKS = 4;
     private static final int SAFETY_TIMEOUT = 212;
     private static boolean active;
     private static net.minecraft.client.CameraType previousCamera;
+    private static net.minecraft.world.phys.Vec3 focus, cameraPosition;
+    private static boolean cameraUnavailable;
+    private static java.lang.reflect.Method positionMethod, rotationMethod;
     private static int age, impactAge = 4;
     private static int impactDirection;
     private static double progress, previous;
@@ -30,18 +33,19 @@ public final class KatanaScene {
             previousCamera = mc.options.getCameraType();
             mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
         }
-        active = true; age = 0; impactAge = 4;
+        active = true; age = 0; impactAge = 4; focus = null; cameraPosition = null;
     }
     public static void stop() {
         Minecraft mc = Minecraft.getInstance();
         if (previousCamera != null && mc.options.getCameraType() == net.minecraft.client.CameraType.THIRD_PERSON_BACK)
             mc.options.setCameraType(previousCamera);
         previousCamera = null;
-        active = false; impactAge = 4;
+        active = false; impactAge = 4; focus = null; cameraPosition = null;
     }
-    public static void impact(boolean second, boolean leftHanded) {
+    public static void impact(boolean second, boolean leftHanded, double x, double y, double z) {
         if (active && KatanaClientConfig.ULTIMATE_FRAME.get()) {
             impactAge = 0;
+            focus = new net.minecraft.world.phys.Vec3(x, y, z);
             impactDirection = (second ^ leftHanded) ? -1 : 1;
         }
     }
@@ -79,8 +83,44 @@ public final class KatanaScene {
         float partial = (float) event.getPartialTick();
         double pulse = SceneCurve.impactEnvelope(impactAge + partial);
         double tilt = KatanaClientConfig.CAMERA_ROLL.get() * strength(partial) * pulse * impactDirection;
-        // Visual roll only: it does not alter the player's aim, movement or perspective.
         event.setRoll(event.getRoll() + (float) tilt);
+        if (!active || focus == null || cameraUnavailable) return;
+        Minecraft mc = Minecraft.getInstance();
+        // Original orbit around the midpoint, with a wall raycast to avoid filming through terrain.
+        var player = mc.player;
+        var caster = player.getPosition(partial).add(0, 1.1, 0);
+        var center = caster.lerp(focus, .55);
+        double angle = Math.toRadians(player.getYRot() + 60 + 18 * Math.sin((age + partial) * .04));
+        var desired = center.add(Math.sin(angle) * 4.2, 1.3 + .3 * Math.sin(age * .035), -Math.cos(angle) * 4.2);
+        var trace = mc.level.clip(new net.minecraft.world.level.ClipContext(center, desired,
+                net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                net.minecraft.world.level.ClipContext.Fluid.NONE, player));
+        if (trace.getType() != net.minecraft.world.phys.HitResult.Type.MISS)
+            desired = trace.getLocation().lerp(center, .12);
+        if (cameraPosition == null) cameraPosition = event.getCamera().getPosition();
+        cameraPosition = cameraPosition.lerp(desired, .14 * strength(partial));
+        var interpolatedTrace = mc.level.clip(new net.minecraft.world.level.ClipContext(center, cameraPosition,
+                net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                net.minecraft.world.level.ClipContext.Fluid.NONE, player));
+        if (interpolatedTrace.getType() != net.minecraft.world.phys.HitResult.Type.MISS)
+            cameraPosition = interpolatedTrace.getLocation().lerp(center, .12);
+        var delta = center.subtract(cameraPosition);
+        float yaw = (float)Math.toDegrees(Math.atan2(-delta.x, delta.z));
+        float pitch = (float)-Math.toDegrees(Math.atan2(delta.y, Math.sqrt(delta.x * delta.x + delta.z * delta.z)));
+        try {
+            if (positionMethod == null) {
+                positionMethod = net.minecraftforge.fml.util.ObfuscationReflectionHelper.findMethod(net.minecraft.client.Camera.class,
+                        "m_90584_", double.class, double.class, double.class);
+                rotationMethod = net.minecraftforge.fml.util.ObfuscationReflectionHelper.findMethod(net.minecraft.client.Camera.class,
+                        "m_90572_", float.class, float.class);
+            }
+            positionMethod.invoke(event.getCamera(), cameraPosition.x, cameraPosition.y, cameraPosition.z);
+            rotationMethod.invoke(event.getCamera(), yaw, pitch);
+            event.setYaw(yaw); event.setPitch(pitch);
+        } catch (ReflectiveOperationException | RuntimeException failure) {
+            cameraUnavailable = true;
+            com.mojang.logging.LogUtils.getLogger().warn("Katana cinematic camera unavailable; keeping normal framing", failure);
+        }
     }
     @SubscribeEvent public static void render(RenderGuiEvent.Post event) {
         if (!canRender()) return;
