@@ -1176,6 +1176,12 @@ jobs:
           TAG="v$VER"
           JAR="build/libs/capatest-$VER.jar"
           test -f "$JAR"
+          INSTALLER="tools/instalar_capatest_$VER.ps1"
+          if [ -f "$INSTALLER" ]; then
+            # The versioned installer pins the digest from the verified run.
+            # Refuse to stage this release if the new build isn't identical.
+            pwsh -NoProfile -NonInteractive -File tools/test_instalador_capatest.ps1 -Installer "$PWD/$INSTALLER" -Jar "$PWD/$JAR"
+          fi
           NOTES="$RUNNER_TEMP/release-notes.md"
           BBF="docs/CAPA_v$VER.bbmodel"
           BB_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/CAPA_v$VER.bbmodel"
@@ -1225,14 +1231,21 @@ jobs:
           if [ -f "$REGISTER" ]; then
             printf '| `%s` | Diferencias de la silueta respecto de la referencia |\n' "$(basename "$REGISTER")" >> "$NOTES"
           fi
-          printf '\nLos previews de esta tabla son renders software; las pruebas en Forge se informan por separado en Actions.\n' >> "$NOTES"
+          HISTORY="docs/capa_v${VER//./}_anclaje_forge.png"
+          if [ -f "$HISTORY" ]; then
+            printf '| `%s` | Comparativa F5 capturada en Forge |\n' "$(basename "$HISTORY")" >> "$NOTES"
+          fi
+          if [ -f "$INSTALLER" ]; then
+            printf '| `%s` | Instalación local en test-1 con SHA-256 y respaldo |\n' "$(basename "$INSTALLER")" >> "$NOTES"
+          fi
+          printf '\nLas pruebas del cliente y las capturas originales se informan en Actions.\n' >> "$NOTES"
           sed -i "s/__TAG__/$TAG/g; s/__VER__/$VER/g; s|__BBURL__|$BB_URL|g" "$NOTES"
           if gh release view "$TAG" --json isDraft,targetCommitish > "$RUNNER_TEMP/release.json"; then
             # Reintentos del mismo SHA sí; nunca escribir sobre lo publicado.
             jq -e --arg commit "$GITHUB_SHA" \
               '.isDraft and .targetCommitish == $commit' "$RUNNER_TEMP/release.json"
           else
-            gh release create "$TAG" --draft \
+            gh release create "$TAG" --draft --prerelease --latest=false \
               --title "Mantle of the Blight Star $TAG" \
               --notes-file "$NOTES" \
               --target "$GITHUB_SHA"
@@ -1247,6 +1260,8 @@ jobs:
                   docs/capa_v1170_estados.png docs/capa_v1170_animaciones.gif docs/capa_v1170_icon_compare.png)
           if [ -f "$COMPARISON" ]; then ASSETS+=("$COMPARISON"); fi
           if [ -f "$REGISTER" ]; then ASSETS+=("$REGISTER"); fi
+          if [ -f "$HISTORY" ]; then ASSETS+=("$HISTORY"); fi
+          if [ -f "$INSTALLER" ]; then ASSETS+=("$INSTALLER"); fi
           for EVIDENCE in "docs/capa_v${VER//./}_"{hombros_forge.png,espalda_forge.png,inclinacion_forge.png,hotbar.gif}; do
             if [ -f "$EVIDENCE" ]; then ASSETS+=("$EVIDENCE"); fi
           done

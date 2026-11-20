@@ -18,6 +18,14 @@ La referencia de montaje es v1.28.0, que comparte el GEO equipado con v1.27.0. E
 
 **[ZIP de prueba v1.67.13](https://github.com/Santi-PdR/modelos/actions/runs/44655102247/artifacts/14592523823)** · [Ejecución verificada](https://github.com/Santi-PdR/modelos/actions/runs/44655102247). El ZIP incluye `capatest-1.67.13.jar` y `SHA256SUMS.txt`. El JAR publicado v1.67.12 sigue disponible sin cambios.
 
+Para **SKLauncher / `test-1` en Windows**, cerrá Minecraft y extraé el JAR. Guardá el [script de instalación](tools/instalar_capatest_1.67.13.ps1) al lado del JAR. En PowerShell podés verificar primero sin cambiar nada:
+
+```powershell
+.\instalar_capatest_1.67.13.ps1 -Jar .\capatest-1.67.13.jar -WhatIf
+```
+
+Quitá `-WhatIf` para aplicarlo. El script comprueba el SHA-256 del JAR probado en Forge y guarda sólo los `capatest-*.jar` anteriores en `test-1\capatest-respaldos`. No descarga ni modifica GeckoLib, Curios ni otros mods. Para volver atrás con Minecraft cerrado, sacá el JAR actual de `mods` y devolvé sólo la versión anterior que quieras usar desde el respaldo.
+
 ### v1.67.12 — las placas se asientan sobre las mangas
 
 Al mirar hacia abajo, se recorta el vuelo lateral de la placa ancha y se inclina el canto de ambas placas sobre la manga sin arrastrar la tela. El ajuste cede cuando los brazos necesitan holgura. Se conservan la montura y el movimiento de v1.67.11. El visor muestra el ajuste en la vista equipada; el proyecto Blockbench conserva las piezas y curvas de base.
