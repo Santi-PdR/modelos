@@ -28,3 +28,12 @@ assert 'PLAY_TO_CLIENT' in java and 'TRACKING_ENTITY_AND_SELF' in java
 assert 'playeranimator' in (root/'resources/META-INF/mods.toml').read_text()
 assert (root/'resources/META-INF/SERIOUS_PLAYER_ANIMATIONS_LICENSE.txt').is_file()
 print('OK: tres clips externos no cíclicos, mensaje de animación y licencia')
+
+ability = (root/'java/com/stainkatana/katana/KatanaAbilities.java').read_text()
+assert 'IMPACT_TICK = {2, 7, 7}' in ability and 'RECOVERY_TICK = {6, 19, 20}' in ability
+assert 'PlayerLoggedOutEvent' in ability and 'ServerStoppedEvent' in ability
+assert 'player.getMainHandItem() != cast.stack' in ability
+anim = (root/'java/com/stainkatana/katana/client/KatanaAnimations.java').read_text()
+assert 'bettercombat' in anim and 'attack_animations/' in anim
+assert 'THIRD_PERSON_MODEL' in anim and 'ability == -1' in anim
+print('OK: secuencia de impacto, cancelación, recurso externo opcional y primera persona configurada')

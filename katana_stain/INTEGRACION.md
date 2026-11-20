@@ -116,3 +116,25 @@ Son movimientos reutilizados, no animaciones específicas de Stain; el gesto
 para Z es una aproximación. Daño y efectos siguen siendo instantáneos en el
 servidor, no sincronizados a un fotograma concreto. La vista en primera persona,
 poses y compatibilidad con otros mods requieren comprobación en cliente.
+
+## Versión independiente 0.6.0-test — secuencia y fuente de animaciones
+
+- Al iniciar una habilidad con objetivo válido se envía su animación; el
+  servidor revalida y ejecuta el impacto después (Z: 2 ticks; X/C: 7 ticks),
+  y bloquea nuevas habilidades durante la recuperación. El enfriamiento se
+  consume al iniciar, aunque el objetivo escape o la acción se interrumpa.
+  Si se cambia de arma, dimensión, muere el jugador o sufre parálisis, se
+  cancela la acción pendiente. La marca de Z no puede cambiar de víctima a
+  mitad de preparación. Salida del jugador y parada del servidor limpian estado.
+- Si está instalado **Better Combat para Forge 1.20.1**, se leen directamente
+  de sus recursos las animaciones de katana `two_handed_slash_horizontal_right`
+  y `two_handed_slash_vertical_right` de Daedelus para X y C, respectivamente.
+  No se redistribuyen ni modifican sus archivos. Si no están disponibles se
+  usan los clips de Serious Player Animations ya incluidos; Z usa su gesto
+  modificado de comer. Better Combat no es obligatorio y agrega sus propias
+  mecánicas al juego: instalarlo es una elección del usuario.
+- Se habilitó el modo de brazos de tercera persona de PlayerAnimator durante
+  la vista en primera persona. Ni esta integración, ni los tiempos exactos de
+  contacto de cada clip, ni su aspecto con este modelo y otros mods han sido
+  probados visualmente. El retraso de red también puede desfasar las vistas.
+  Esto es una base técnica de prueba, no una validación de calidad profesional.

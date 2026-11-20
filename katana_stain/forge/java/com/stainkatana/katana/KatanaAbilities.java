@@ -2,6 +2,17 @@ package com.stainkatana.katana;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import com.stainkatana.StainKatanaMod;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -18,14 +29,68 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
 /** Combate resuelto en servidor: blancos, PvP, daño y cooldown no vienen del cliente. */
+@Mod.EventBusSubscriber(modid = StainKatanaMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class KatanaAbilities {
     private static final String COOLDOWNS = "StainKatanaAbilities";
     private static final int[] COOLDOWN = {240, 100, 900};
+    // Timings in server ticks: wind-up, then recovery. Damage is revalidated at impact.
+    private static final int[] IMPACT_TICK = {2, 7, 7};
+    private static final int[] RECOVERY_TICK = {6, 19, 20};
+    private static final Map<UUID, Cast> CASTS = new ConcurrentHashMap<>();
+    private static final class Cast {
+        final int ability;
+        final ItemStack stack;
+        final ResourceKey<Level> dimension;
+        final long start;
+        final UUID markedTarget;
+        boolean impacted;
+        Cast(int ability, ItemStack stack, ResourceKey<Level> dimension, long start, UUID markedTarget) {
+            this.ability = ability; this.stack = stack; this.dimension = dimension;
+            this.start = start; this.markedTarget = markedTarget;
+        }
+    }
     private KatanaAbilities() { }
+
+    @SubscribeEvent
+    public static void tick(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer player)) return;
+        Cast cast = CASTS.get(player.getUUID());
+        if (cast == null) return;
+        if (!player.isAlive() || player.isSpectator() || player.hasEffect(KatanaEffects.PARALYSIS.get())
+                || player.getMainHandItem() != cast.stack || player.level().dimension() != cast.dimension) {
+            CASTS.remove(player.getUUID());
+            KatanaNetwork.broadcastAnimation(player, -1);
+            return;
+        }
+        long elapsed = player.getServer().overworld().getGameTime() - cast.start;
+        if (!cast.impacted && elapsed >= IMPACT_TICK[cast.ability]) {
+            cast.impacted = true;
+            if (cast.ability == 0) {
+                // A second normal hit during the wind-up must not switch the intended victim.
+                CompoundTag tag = cast.stack.getTag();
+                CompoundTag mark = tag == null ? new CompoundTag() : tag.getCompound(StainKatanaItem.MARK);
+                if (mark.hasUUID("Target") && mark.getUUID("Target").equals(cast.markedTarget))
+                    stun(player, cast.stack, player.serverLevel());
+            } else {
+                slash(player, cast.stack, player.serverLevel(), cast.ability == 2);
+            }
+        }
+        if (elapsed >= RECOVERY_TICK[cast.ability]) CASTS.remove(player.getUUID());
+    }
+
+    @SubscribeEvent
+    public static void serverStopped(ServerStoppedEvent event) { CASTS.clear(); }
+
+    @SubscribeEvent
+    public static void logout(PlayerEvent.PlayerLoggedOutEvent event) {
+        CASTS.remove(event.getEntity().getUUID());
+    }
+
 
     public static void activate(ServerPlayer player, int ability) {
         if (ability < 0 || ability >= COOLDOWN.length || !player.isAlive() || player.isSpectator()
                 || player.hasEffect(KatanaEffects.PARALYSIS.get())) return;
+        if (CASTS.containsKey(player.getUUID())) return;
         ItemStack stack = player.getMainHandItem();
         if (!(stack.getItem() instanceof StainKatanaItem)) return;
         ServerLevel level = player.serverLevel();
@@ -41,17 +106,17 @@ public final class KatanaAbilities {
             player.displayClientMessage(Component.translatable("stainkatana.cooldown", seconds), true);
             return;
         }
-        boolean success = switch (ability) {
-            case 0 -> stun(player, stack, level);
-            case 1 -> slash(player, stack, level, false);
-            case 2 -> slash(player, stack, level, true);
-            default -> false;
-        };
-        if (success) {
-            state.putLong(key, now + COOLDOWN[ability]);
-            player.getPersistentData().put(COOLDOWNS, state);
-            KatanaNetwork.broadcastAnimation(player, ability);
+        LivingEntity marked = ability == 0 ? markedTarget(player, stack, level, true) : null;
+        if (ability == 0 && marked == null) return;
+        if (ability != 0 && targets(player, level, ability == 2).isEmpty()) {
+            player.displayClientMessage(Component.translatable("stainkatana.no_target"), true);
+            return;
         }
+        state.putLong(key, now + COOLDOWN[ability]);
+        player.getPersistentData().put(COOLDOWNS, state);
+        CASTS.put(player.getUUID(), new Cast(ability, stack, level.dimension(), now,
+                marked == null ? null : marked.getUUID()));
+        KatanaNetwork.broadcastAnimation(player, ability);
     }
 
     private static boolean legalTarget(ServerPlayer player, LivingEntity target) {
@@ -60,22 +125,32 @@ public final class KatanaAbilities {
         return player.hasLineOfSight(target);
     }
 
-    private static boolean stun(ServerPlayer player, ItemStack stack, ServerLevel level) {
+    private static LivingEntity markedTarget(ServerPlayer player, ItemStack stack, ServerLevel level, boolean notify) {
         CompoundTag tag = stack.getTag();
         if (tag == null || !tag.contains(StainKatanaItem.MARK, 10)) {
-            player.displayClientMessage(Component.translatable("stainkatana.no_mark"), true); return false;
+            if (notify) player.displayClientMessage(Component.translatable("stainkatana.no_mark"), true);
+            return null;
         }
         CompoundTag mark = tag.getCompound(StainKatanaItem.MARK);
         if (!mark.hasUUID("Target") || !mark.getString("Dimension").equals(level.dimension().location().toString())
                 || level.getGameTime() > mark.getLong("Expires")) {
             tag.remove(StainKatanaItem.MARK);
-            player.displayClientMessage(Component.translatable("stainkatana.no_mark"), true); return false;
+            if (notify) player.displayClientMessage(Component.translatable("stainkatana.no_mark"), true);
+            return null;
         }
         Entity entity = level.getEntity(mark.getUUID("Target"));
         if (!(entity instanceof LivingEntity target) || !legalTarget(player, target)
                 || player.distanceToSqr(target) > 64.0D) {
-            player.displayClientMessage(Component.translatable("stainkatana.target_unavailable"), true); return false;
+            if (notify) player.displayClientMessage(Component.translatable("stainkatana.target_unavailable"), true);
+            return null;
         }
+        return target;
+    }
+
+    private static boolean stun(ServerPlayer player, ItemStack stack, ServerLevel level) {
+        LivingEntity target = markedTarget(player, stack, level, true);
+        if (target == null) return false;
+        CompoundTag tag = stack.getTag();
         int duration = target instanceof Player ? 40 : 60;
         if (!target.addEffect(new MobEffectInstance(KatanaEffects.PARALYSIS.get(), duration, 0, false, false, false))) {
             player.displayClientMessage(Component.translatable("stainkatana.resisted"), true);
@@ -90,15 +165,9 @@ public final class KatanaAbilities {
     }
 
     private static boolean slash(ServerPlayer player, ItemStack stack, ServerLevel level, boolean ultimate) {
-        double range = ultimate ? 5.0 : 3.5;
         int maxTargets = ultimate ? 5 : 3;
-        Vec3 facing = player.getLookAngle().multiply(1, 0, 1).normalize();
-        if (facing.lengthSqr() < .01) facing = new Vec3(0, 0, 1);
-        final Vec3 direction = facing;
-        List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(range),
-                target -> legalTarget(player, target) && player.distanceToSqr(target) <= range * range
-                        && target.position().subtract(player.position()).multiply(1,0,1).normalize().dot(direction) > (ultimate ? .05 : .45));
-        targets.sort(Comparator.comparingDouble(player::distanceToSqr));
+        Vec3 facing = facing(player);
+        List<LivingEntity> targets = targets(player, level, ultimate);
         int hits = 0;
         for (LivingEntity target : targets) {
             if (hits >= maxTargets) break;
@@ -118,11 +187,26 @@ public final class KatanaAbilities {
         if (hits == 0) {
             player.displayClientMessage(Component.translatable("stainkatana.no_target"), true); return false;
         }
-        arc(level, player, direction, ultimate);
+        arc(level, player, facing, ultimate);
         level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, .8F, ultimate ? .7F : 1.1F);
         stack.hurtAndBreak(1, player, p -> p.broadcastBreakEvent(InteractionHand.MAIN_HAND));
         player.displayClientMessage(Component.translatable(ultimate ? "stainkatana.ultimate_used" : "stainkatana.slash_used"), true);
         return true;
+    }
+
+    private static Vec3 facing(ServerPlayer player) {
+        Vec3 facing = player.getLookAngle().multiply(1, 0, 1).normalize();
+        return facing.lengthSqr() < .01 ? new Vec3(0, 0, 1) : facing;
+    }
+
+    private static List<LivingEntity> targets(ServerPlayer player, ServerLevel level, boolean ultimate) {
+        double range = ultimate ? 5.0 : 3.5;
+        Vec3 direction = facing(player);
+        List<LivingEntity> result = level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(range),
+                target -> legalTarget(player, target) && player.distanceToSqr(target) <= range * range
+                        && target.position().subtract(player.position()).multiply(1, 0, 1).normalize().dot(direction) > (ultimate ? .05 : .45));
+        result.sort(Comparator.comparingDouble(player::distanceToSqr));
+        return result;
     }
 
     private static void arc(ServerLevel level, ServerPlayer player, Vec3 forward, boolean ultimate) {
