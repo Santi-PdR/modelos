@@ -83,6 +83,22 @@ public final class KatanaAnimations {
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
     }
 
+    /** Local, visual-only vanilla swing: the original attack remains authoritative. */
+    public static void swing(AbstractClientPlayer player, boolean alternate) {
+        var data = PlayerAnimationAccess.getPlayerAssociatedData(player).get(LAYER);
+        if (!(data instanceof AbilityLayer animation) || animation.isActive()) return;
+        KeyframeAnimation clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID,
+                alternate ? "sword_attack2" : "sword_attack"));
+        if (clip == null) return;
+        animation.mirror.setEnabled(player.getMainArm() == HumanoidArm.LEFT);
+        KeyframeAnimationPlayer playing = new KeyframeAnimationPlayer(clip, 0)
+                .setFirstPersonMode(FirstPersonMode.THIRD_PERSON_MODEL)
+                .setFirstPersonConfiguration(new FirstPersonConfiguration().setShowRightArm(true).setShowLeftArm(true));
+        ModifierLayer<IAnimation> timed = new ModifierLayer<>(playing);
+        timed.addModifierBefore(new SpeedModifier(2.0F));
+        animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timed, true);
+    }
+
     private static KeyframeAnimation loadBetterCombat(int ability) {
         String name = BETTER_COMBAT[ability];
         if (name == null) return null;

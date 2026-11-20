@@ -74,12 +74,23 @@ jobs:
           grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-fallback.log
           test "$(find run/stain-visual-test -name '*.png' | wc -l)" -ge 10
           mv run/stain-visual-test run/stain-visual-vanilla
+      - name: Render with complete Better Combat Forge 1.9.0
+        run: |
+          set -euo pipefail
+          rm -rf run/saves/KatanaVisual
+          cp -R run/world run/saves/KatanaVisual
+          export LIBGL_ALWAYS_SOFTWARE=1
+          timeout 420s xvfb-run -a -s '-screen 0 1280x720x24' gradle runClient -PkatanaOnly -PkatanaVisual -PkatanaBetterCombat --no-daemon > /tmp/stain-visual-full-bc.log 2>&1 || { tail -160 /tmp/stain-visual-full-bc.log; exit 1; }
+          grep -F 'STAIN_FIXTURE_BETTERCOMBAT=true' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-full-bc.log
+          test "$(find run/stain-visual-test -name '*.png' | wc -l)" -ge 10
+          mv run/stain-visual-test run/stain-visual-full-bc
       - name: Report diagnostic tail
         if: failure()
         run: |
           python3 - <<'PY2'
           from pathlib import Path
-          for name in ('/tmp/stain-visual-server.log','/tmp/stain-visual-client.log','/tmp/stain-visual-fallback.log'):
+          for name in ('/tmp/stain-visual-server.log','/tmp/stain-visual-client.log','/tmp/stain-visual-fallback.log','/tmp/stain-visual-full-bc.log'):
               path=Path(name)
               if path.exists():
                   lines=path.read_text(errors='replace').splitlines()
@@ -99,6 +110,8 @@ jobs:
           path: |
             run/stain-visual-bettercombat-clips/*.png
             run/stain-visual-vanilla/*.png
+            run/stain-visual-full-bc/*.png
+            /tmp/stain-visual-full-bc.log
             /tmp/stain-visual-fallback.log
             /tmp/stain-visual-client.log
             /tmp/stain-visual-server.log
@@ -115,9 +128,12 @@ jobs:
           mkdir -p katana_stain/vistas/client-vanilla
           rm -f katana_stain/vistas/client-vanilla/*.png
           cp run/stain-visual-vanilla/*.png katana_stain/vistas/client-vanilla/
+          mkdir -p katana_stain/vistas/client-full-bc
+          rm -f katana_stain/vistas/client-full-bc/*.png
+          cp run/stain-visual-full-bc/*.png katana_stain/vistas/client-full-bc/
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add katana_stain/vistas/client-test/ katana_stain/vistas/client-vanilla/
+          git add katana_stain/vistas/client-test/ katana_stain/vistas/client-vanilla/ katana_stain/vistas/client-full-bc/
           if ! git diff --cached --quiet; then
             git commit -m 'Record Forge client visual fixture'
             git push origin "HEAD:$BRANCH"

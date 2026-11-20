@@ -48,6 +48,10 @@ minecraft {
 repositories {
     if (project.hasProperty('katanaOnly')) {
         maven { name = 'KosmX'; url = 'https://maven.kosmx.dev/' }
+        if (project.hasProperty('katanaBetterCombat')) {
+            maven { name = 'CurseMaven'; url = 'https://cursemaven.com'; content { includeGroup 'curse.maven' } }
+            maven { name = 'Shedaniel'; url = 'https://maven.shedaniel.me/' }
+        }
     }
     // Curios API: dependencia BLANDA (sólo compile-time), el jar no se incluye.
     maven {
@@ -75,6 +79,11 @@ dependencies {
     implementation fg.deobf("maven.modrinth:8BmcQJ2H:${geckolib_modrinth_version}")
     if (project.hasProperty('katanaOnly')) {
         implementation fg.deobf("dev.kosmx.player-anim:player-animation-lib-forge:1.0.2-rc1+1.20")
+        if (project.hasProperty('katanaBetterCombat')) {
+            // Test runtime only. Neither dependency is bundled into our distributable.
+            runtimeOnly fg.deobf("curse.maven:better-combat-by-daedelus-639842:7287334")
+            runtimeOnly fg.deobf("me.shedaniel.cloth:cloth-config-forge:11.1.106")
+        }
     }
     // Curios 5.14.1 para Forge 1.20.1. compileOnly => el mod funciona sin Curios;
     // las clases de compat se cargan por reflexión sólo si el mod está presente.
@@ -137,7 +146,7 @@ tasks.withType(JavaCompile).configureEach {
 // Variante optativa y aislada para test-1: no cambia el mod completo.
 // Ejecutar primero python3 katana_stain/tools/preparar_test.py.
 if (project.hasProperty('katanaOnly')) {
-    version = '0.14.0-test'
+    version = '0.15.0-test'
     base.archivesName = 'stainkatana'
     sourceSets.main.java.setSrcDirs(['build-katana-input/java'])
     sourceSets.main.resources.setSrcDirs(['build-katana-input/resources'])

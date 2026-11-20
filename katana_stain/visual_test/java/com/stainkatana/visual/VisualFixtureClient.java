@@ -25,6 +25,7 @@ public final class VisualFixtureClient {
         tick++;
         if (tick == 1) {
             var id = new net.minecraft.resources.ResourceLocation("bettercombat", "attack_animations/two_handed_slash_vertical_right.json");
+            System.out.println("STAIN_FIXTURE_BETTERCOMBAT=" + net.minecraftforge.fml.ModList.get().isLoaded("bettercombat"));
             System.out.println("STAIN_FIXTURE_CLIP=" + (mc.getResourceManager().getResource(id).isPresent() ? "bettercombat" : "fallback"));
         }
         switch (tick) {
@@ -55,7 +56,11 @@ public final class VisualFixtureClient {
             case 215 -> capture = "11a_blood_feedback.png";
             case 216 -> capture = "11b_blood_feedback.png";
             case 217 -> capture = "11c_blood_feedback.png";
-            case 245 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
+            case 240 -> { mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); mc.options.keyAttack.setDown(true); }
+            case 243 -> capture = "12_normal_attack.png";
+            case 246 -> capture = "13_normal_attack.png";
+            case 250 -> mc.options.keyAttack.setDown(false);
+            case 270 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }
     }

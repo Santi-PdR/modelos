@@ -1,5 +1,8 @@
 # Katana del Asesino de Héroes — prototipo Forge 1.20.1
 
+> Las primeras secciones describen prototipos históricos integrados en capatest.
+> La versión actual es independiente (`stainkatana`); ver las secciones finales.
+
 Se integra en el mod existente (Forge 47.3.0, GeckoLib 4.8.1), manteniendo
 el identificador `capatest` para no romper mundos ni recursos de la capa.
 El nombre visible propuesto del mod es **Legados de Combate**; hay una
@@ -328,3 +331,15 @@ incluye clases del escenario visual ni los JSON descargados para la prueba.
   El gesto de Z aún es un clip de inspección adaptado, no un lamido literal;
   los VFX usan los sprites MIT de Better Combat Particle, no efectos vanilla.
   La secuencia es encuadre local con dos cortes, no una cinemática autónoma.
+
+
+## 0.15.0-test — animación de ataques normales
+
+Sin Better Combat, observamos el swing vanilla ya sincronizado y reproducimos
+clips alternos MIT de Serious Player Animations; no modificamos alcance ni daño.
+No se interrumpe una habilidad activa para poner el swing. Con Better Combat
+instalado el observador se desactiva para no pisar sus animaciones normales.
+La prueba visual también intenta cargar Better Combat Forge 1.9.0 y Cloth Config
+como dependencias exclusivamente de CI, sin incluirlas en el JAR. Un arranque
+y capturas automáticas no reemplazan una partida, una revisión de ambos brazos
+o probar interacciones con otros mods de animación.
