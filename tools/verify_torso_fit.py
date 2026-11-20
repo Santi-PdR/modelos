@@ -3,6 +3,7 @@
 from itertools import product
 import json
 import math
+import re
 import subprocess
 import sys
 
@@ -33,11 +34,11 @@ def placement(geo):
             assert np.mean([old[n][...,2].min()-new[n][...,2].min() for n in roots]) > .39, aim
             assert before[...,2].min()-after[...,2].min() > 1.75, aim
         else:
-            # Keep the leading rim against the sleeve as the rear contracts.
+            # Advance the entire leading contact rim without collapsing it.
             old_rim,new_rim = (m['rim_v18_pad_1'][...,2] for m in (old,new))
-            assert abs(old_rim.min()-new_rim.min()) < .045 and old_rim.max()-new_rim.max() > .15, aim
+            assert np.allclose(old_rim-new_rim,.197,rtol=0,atol=.011), aim
             assert np.array_equal(old['v18_pad_0'],new['v18_pad_0']), aim
-            assert before[...,2].min()-after[...,2].min() > .95, aim
+            assert before[...,2].min()-after[...,2].min() > 1.18, aim
         assert before[...,1].max()-after[...,1].max() >= 1.75, aim
         print(f'{aim[1]:g}°/{aim[2]:+g}°: ancho parcial {outer(old):.2f} → {outer(new):.2f}u; '
               f'delante del cuello {before[...,2].min():.2f} → {after[...,2].min():.2f}u.')
@@ -89,6 +90,11 @@ def viewer(data):
 
 
 def matrix_parity(geo):
+    # The standalone HTML ships its own fit profile; validate that copy as
+    # well as the JS evaluation rather than injecting only fresh constants.
+    html = (P.ROOT/'docs/capa_v1170_visor.html').read_text()
+    profile = re.search(r'^const INLINE_FIT = (.+);$',html,re.M)
+    assert profile and json.loads(profile[1]) == F.viewer_profile(), 'reconstruir el perfil del visor offline'
     names = [G.FIT_BONE, G.DRAPE_BONE, G.SHOULDERS_BONE, G.SADDLE_BONE, 'cape_top',
              'v17_ribbon_1_seg0', 'v17_cowl_back_2', 'v17_cowl_tooth_5', 'v17_cowl_return',
              'v18_pad_0', 'v18_pad_1', 'rim_v18_pad_0', 'rim_v18_pad_1', *B.profile()['names']]

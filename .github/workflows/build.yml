@@ -1060,14 +1060,6 @@ jobs:
             esac
           done
 
-      - name: Medir ciclos y transiciones reales al caminar en F5
-        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
-        run: |
-          set -o pipefail
-          python3 tools/verify_forge_walk.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
-            printf '::notice title=Marcha en Forge::%s\n' "${line//%/%25}"
-          done
-
       - name: Verificar el desplazamiento visible del cuello y las dos hombreras en F5
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
@@ -1078,6 +1070,14 @@ jobs:
               *Error:*) printf '::error title=Ajuste visible en Forge::%s\n' "${line//%/%25}" ;;
               *) printf '::notice title=Ajuste visible en Forge::%s\n' "${line//%/%25}" ;;
             esac
+          done
+
+      - name: Medir ciclos y transiciones reales al caminar en F5
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
+        run: |
+          set -o pipefail
+          python3 tools/verify_forge_walk.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
+            printf '::notice title=Marcha en Forge::%s\n' "${line//%/%25}"
           done
 
       - name: Verificar la unión y el icono en el framebuffer de Forge

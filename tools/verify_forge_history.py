@@ -87,7 +87,7 @@ def verify(root):
             assert .8 < old[2] < 1.4 and 24 < old[3] < 26.1, (view, slot, old)
             assert 1.2 < old[4] < 2.9, (view, slot, old)
             if view == 'cenital':
-                correct = prior[2]-now[2] > .95 and now[1] < 7.80 and now[2] < 3.41 and now[3] < 26.65 and now[4] < 3.55
+                correct = prior[2]-now[2] > 1.18 and now[1] < 7.80 and now[2] < 3.15 and now[3] < 26.65 and now[4] < 3.55
             else:
                 correct = (prior[1]-now[1] > 2.40 and prior[4]-now[4] > .34 and 6.0 < now[1] < 7.20
                            and now[2] < 4.31 and now[3] < 25.1 and now[4] < 3.82)
