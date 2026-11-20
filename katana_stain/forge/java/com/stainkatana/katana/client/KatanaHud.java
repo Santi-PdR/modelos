@@ -45,8 +45,8 @@ public final class KatanaHud {
         if (mc.player == null || mc.level == null || mc.screen != null || mc.options.hideGui) return;
         GuiGraphics g = event.getGuiGraphics();
         if (flashTicks > 0 && KatanaClientConfig.BLOOD_FLASH.get()) {
-            int alpha = Math.min(36, flashTicks * 3);
-            g.fill(0, 0, g.guiWidth(), g.guiHeight(), (alpha << 24) | 0x006b0010);
+            int alpha = Math.min(64, flashTicks * 6);
+            g.fill(0, 0, g.guiWidth(), g.guiHeight(), (alpha << 24) | 0x00950018);
         }
         if (!KatanaClientConfig.SHOW_HUD.get() || !(mc.player.getMainHandItem().getItem() instanceof StainKatanaItem)) return;
         int w = 70, x = Math.max(3, g.guiWidth() - w - 7), y = Math.max(8, g.guiHeight() / 2 - 24);

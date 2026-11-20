@@ -300,3 +300,31 @@ El cliente de desarrollo necesitó remapear los refmaps de PlayerAnimator para
 arrancar con Mojmap; el ajuste está limitado al perfil `-PkatanaVisual`. No
 implica que los usuarios finales deban cambiar nada. El JAR de producción no
 incluye clases del escenario visual ni los JSON descargados para la prueba.
+
+
+## 0.14.0-test — cambios para la prueba solicitada
+
+- Stain Blade aparece solo en la pestaña del mod; el tooltip no enumera teclas
+  ni habilidades. GeckoLib y PlayerAnimator siguen siendo dependencias; Better
+  Combat es opcional. Si no están disponibles sus clips se usan los de reserva.
+- HUD a la derecha al sostener la katana: teclas reasignables y tiempo restante.
+  El servidor decide la aceptación y manda los tiempos al activar y cada segundo;
+  un `--` indica que todavía no llegó la sincronización. La ventana cinematográfica,
+  el HUD y el tinte rojo pueden desactivarse en la configuración del cliente.
+- Z requiere marcar con un golpe, consume la marca al paralizar y concede fuerza II
+  y velocidad II durante ocho segundos; el rojo aparece solo si se aplica la
+  parálisis. X y C golpean objetivos delante del jugador. C dura 46 ticks y tiene
+  dos impactos; efectos y daño siguen validados por el servidor. Enfriamientos:
+  Z 6 s, X 3 s y C 18 s. Daño X = 2,2 × atributo (límite 26); cada corte C =
+  2,8 × atributo (límite 36), antes de armadura y otras reglas del juego. PvP
+  tiene duraciones de inmovilización menores. Son valores intencionalmente fuertes.
+- Se ajustó la iluminación del icono suministrado y la orientación de tercera
+  persona; las capturas CI son vistas puntuales, no demuestran que el agarre sea
+  correcto con todas las perspectivas, skins y otras modificaciones.
+- `vistas/client-test/` usa los JSON de clips de Better Combat, sin instalar el
+  mod completo; `vistas/client-vanilla/` prueba el arranque y clips de reserva
+  sin dichos JSON. Ninguna ejecución demuestra compatibilidad real con Better
+  Combat instalado, ni calidad cinemática o sincronización en una partida real.
+  El gesto de Z aún es un clip de inspección adaptado, no un lamido literal;
+  los VFX usan los sprites MIT de Better Combat Particle, no efectos vanilla.
+  La secuencia es encuadre local con dos cortes, no una cinemática autónoma.
