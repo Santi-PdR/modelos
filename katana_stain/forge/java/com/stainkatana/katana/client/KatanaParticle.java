@@ -31,10 +31,10 @@ public final class KatanaParticle extends TextureSheetParticle {
         this.yawAngle = (float) yaw; this.pitchAngle = (float) pitch; this.rollAngle = (float) angle;
         this.hasPhysics = false;
         this.lifetime = style == 0 ? 8 : style == 1 ? 7 : 10;
-        this.quadSize = style == 0 ? 1.10F : style == 1 ? 0.32F : 1.20F;
+        this.quadSize = style == 0 ? 1.35F : style == 1 ? 0.32F : 1.45F;
         this.xd = this.yd = this.zd = 0;
         if (style == 0) this.setColor(1.0F, .65F, .65F);
-        else this.setColor(.68F, .08F, .12F);
+        else this.setColor(.82F, .13F, .16F);
         this.alpha = style == 0 ? .85F : .80F;
         this.setSpriteFromAge(sprites);
     }

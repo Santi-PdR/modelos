@@ -18,10 +18,10 @@ public final class KatanaVisuals {
             float visualYaw = yaw + ((style == 3) ^ leftHanded ? 180F : 0F);
             // Tilt the world-oriented plane toward the viewer: at zero pitch it
             // becomes nearly invisible when viewed from behind at eye level.
-            level.addParticle(KatanaParticles.SLASH.get(), x, y, z, visualYaw, 35, 0);
+            level.addParticle(KatanaParticles.SLASH.get(), x, y, z, visualYaw, 55, 0);
         } else if (style == 1) {
             // First stroke of the ultimate, angled across the body.
-            level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw, 62, leftHanded ? -18 : 18);
+            level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw, 90, leftHanded ? -25 : 25);
         } else {
             // Paralysis feedback around the marked target.
             level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw, 90, 0);
