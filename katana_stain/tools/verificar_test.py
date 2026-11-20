@@ -51,7 +51,7 @@ import math
 model = json.loads((a/'models/item/katana_stain.json').read_text())['display']
 for hand in ('thirdperson_righthand', 'thirdperson_lefthand'):
     pose = model[hand]
-    assert pose['rotation'] == [75, 0, -25]
+    assert pose['rotation'] == [75, 45, -25]
     assert pose['scale'] == [0.82, 0.82, 0.82]
     assert pose['translation'] == [0, 1, 0]
 # Approximate grip-centre check only; the changed angle requires in-game visual testing.

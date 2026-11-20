@@ -49,9 +49,12 @@ public final class VisualFixtureClient {
             case 181 -> capture = "09a_ultimate_second.png";
             case 182 -> capture = "09b_ultimate_second.png";
             case 183 -> capture = "09c_ultimate_second.png";
+            case 202 -> mc.options.setCameraType(CameraType.FIRST_PERSON);
             case 205 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(0));
             case 214 -> capture = "10_paralysis.png";
-            case 216 -> capture = "11_blood_feedback.png";
+            case 215 -> capture = "11a_blood_feedback.png";
+            case 216 -> capture = "11b_blood_feedback.png";
+            case 217 -> capture = "11c_blood_feedback.png";
             case 245 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }
