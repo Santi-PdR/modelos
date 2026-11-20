@@ -343,3 +343,41 @@ La prueba visual también intenta cargar Better Combat Forge 1.9.0 y Cloth Confi
 como dependencias exclusivamente de CI, sin incluirlas en el JAR. Un arranque
 y capturas automáticas no reemplazan una partida, una revisión de ambos brazos
 o probar interacciones con otros mods de animación.
+
+## 0.15.0-test — prototipo de escenas dirigidas
+
+- X se puede activar sin objetivo; busca blancos válidos hasta 7 bloques, en un
+  cono frontal y con visión directa. Los trazos avanzan a lo largo del alcance.
+- Z consume una marca de sangre de hasta 10 s de antigüedad a hasta 24 bloques,
+  siempre que el blanco siga cargado, visible y sea legal. Se muestran motas
+  personalizadas alrededor del inmovilizado. Cada segunda Z exitosa desencadena
+  automáticamente tres dagas visuales 3D y tres intentos de daño del servidor;
+  no son entidades ni proyectiles físicos. Si el blanco deja de ser válido, la
+  secuencia termina. El contador se conserva en los datos del jugador.
+- C escoge el mob legal más cercano dentro del cono y 15 bloques: nunca elige
+  jugadores ni ítems. Su secuencia dura 200 ticks (10 s a 20 TPS) y aplica hasta
+  diez cortes. Solo el último puede rematar al mob; otros daños sí pueden
+  matarlo antes. Se cancela si cambia la katana, muere o se desconecta el
+  portador, el blanco desaparece/se aleja o se bloquea la línea de visión.
+  El efecto de sujeción dura como máximo 12 ticks y se renueva, sin cambiar
+  permanentemente la IA; se retira al cancelar. No inmoviliza a los jugadores.
+- El HUD fue redibujado; el icono es una interpretación pixel-art de la imagen
+  suministrada, adaptada para ser más legible a 16px. El modelo usa una capa
+  roja emisiva; no es bloom ni ilumina el entorno. El arma no se modificó en
+  geometría, solo su transformación de primera persona.
+- El cliente visual de CI inicia tres escenarios: clips externos aislados,
+  fallback sin Better Combat y Better Combat Forge 1.9.0 completo con Cloth
+  Config. Comprueba diez segundos de sujeción, daño, dagas tras la segunda Z,
+  X al aire, C a 14 bloques, cancelación y Z a 20 bloques. Las pruebas ocurren
+  en un único mundo local con un husk; no prueban todos los mobs, latencia,
+  multijugador, PvP o los otros mods de la instancia.
+- Las escenas usan encuadre local y clips de PlayerAnimator/Better Combat,
+  no una cámara autónoma con coreografía o cambio real de perspectiva. En las
+  capturas, el brazo en reposo de primera persona no aparece y la posesión en
+  Better Combat aún debe juzgarse con el jugador y sus mods; no se garantiza
+  que se haya resuelto el agarre reportado. Las dagas son un primer modelo y
+  efecto, no un recurso profesional evaluado por un artista. Falta mejorar y
+  evaluar la calidad de la escena en movimiento y sus ángulos.
+- Red de protocolo 9: servidor y cliente deben usar la misma versión de este
+  mod. Los recursos de Better Combat y Cloth Config de las pruebas no se
+  incluyen ni se redistribuyen dentro del JAR.
