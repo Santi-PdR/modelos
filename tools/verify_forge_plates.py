@@ -13,11 +13,16 @@ from verify_forge_seat import blue_floor, shirt_mask
 PREFIX = 'hombreras'
 
 
-def visible_plate(root, slot, side, worn, bare, unplated):
-    faces = np.loadtxt(root/f'{PREFIX}-{slot}-caras.tsv')
-    assert faces.ndim == 2 and faces.shape[1] == 9 and np.isfinite(faces).all(), (slot, faces.shape)
+def plate_quads(root, stem, side):
+    faces = np.loadtxt(root/f'{stem}-caras.tsv')
+    assert faces.ndim == 2 and faces.shape[1] == 9 and np.isfinite(faces).all(), (stem, faces.shape)
     quads = faces[faces[:,0] == side,1:].reshape(-1,4,2)
-    assert len(quads) >= 12, (slot, side, 'faltan caras de la hombrera')
+    assert len(quads) >= 12, (stem, side, 'faltan caras de la hombrera')
+    return quads
+
+
+def visible_plate(quads, worn, bare, unplated):
+    assert worn.shape == bare.shape == unplated.shape
     mask = Image.new('L',(worn.shape[1],worn.shape[0]))
     draw = ImageDraw.Draw(mask)
     for quad in quads:
@@ -60,7 +65,7 @@ def seams(root, slot, worn, bare, unplated):
     # Exclude the last rasterized texel at each silhouette edge.
     near,far = round(.015*width),round(.09*width)
     for side,cols in ((1,range(left+near,left+far)),(0,range(right-far,right-near))):
-        mask = visible_plate(root,slot,side,worn,bare,unplated)
+        mask = visible_plate(plate_quads(root,f'{PREFIX}-{slot}',side),worn,bare,unplated)
         points = []
         for x in cols:
             rear = np.flatnonzero(shirt[:,x])

@@ -144,6 +144,40 @@ def check_moderate(root, read):
     return failures
 
 
+def broad_plate_control(root, prefix, bare, anchor, read):
+    from verify_forge_plates import plate_quads, visible_plate
+
+    # At 76° the old lateral color band also sees roots and collar. Compare
+    # the broad plate itself against the published v1.67.12 fit, with both
+    # its solid geometry and a same-pose, plates-hidden framebuffer control.
+    old = f'{prefix}-v16712'
+    hidden, old_hidden = (read(root/f'{stem}-sin-placas.png') for stem in (prefix,old))
+    for stem in (old, f'{old}-sin-placas', f'{prefix}-sin-placas'):
+        samples = np.loadtxt(root/f'{stem}.tsv')
+        assert samples.shape == anchor.shape and np.max(abs(samples-anchor)) < .55, (stem,'cámara desplazada')
+    base = plate_quads(root,old,1)
+    base_y = np.where(visible_plate(base,read(root/f'{old}.png'),bare,old_hidden))[0]
+    assert base_y.size >= 45, (prefix,'la placa de v1.67.12 no es visible')
+    failures, report = [], []
+    for slot in SLOTS:
+        stem = f'{prefix}-{slot}'
+        actual = plate_quads(root,stem,1)
+        assert actual.shape == base.shape, (stem,'cambiaron las caras de la placa')
+        shift = (base-actual)[...,1].ravel()
+        advance = float(np.quantile(shift,.10))
+        visible_y = np.where(visible_plate(actual,read(root/f'{stem}.png'),bare,hidden))[0]
+        if visible_y.size < max(45,.60*base_y.size):
+            failures.append((stem,'se perdió el borde visible de la placa',len(base_y),len(visible_y)))
+            continue
+        old_front,old_rear = np.quantile(base_y,[.13,.75])
+        front,rear = np.quantile(visible_y,[.13,.75])
+        if advance < .80 or front > old_front+.75 or rear > old_rear+1:
+            failures.append((stem,'retroceso de la placa frente a v1.67.12',
+                             np.round([advance,old_front-front,old_rear-rear],2).tolist()))
+        report.append(f'{slot}: {advance:.1f}px de avance en las caras, {old_rear-rear:+.1f}px en el borde visible')
+    return failures, '; '.join(report)
+
+
 def check(root: Path):
     from verify_forge_mount import read
 
@@ -159,6 +193,9 @@ def check(root: Path):
         assert anchor.shape == (3,4) and np.isfinite(anchor).all(), 'faltan las referencias de la cámara F5'
         control,_ = score(bare,previous,previous,width)
         assert not passes(control), 'la montura de v1.67.8 debe reprobar el ceñido'
+        problems, plate_report = broad_plate_control(root,prefix,bare,anchor,read)
+        failures.extend(problems)
+        print(f'F5 76°, {label}, placa ancha contra v1.67.12: {plate_report}.',flush=True)
         for slot in SLOTS:
             name = f'{prefix}-{slot}'
             actual = np.loadtxt(root/f'{name}.tsv')
@@ -167,11 +204,11 @@ def check(root: Path):
             assert delta < .55, (name,'la cámara se movió en píxeles',delta)
             report,gaps = score(bare,previous,read(root/f'{name}.png'),width)
             print(f'F5 76°, {label}, {slot}: hacia el torso {report[1][1]*width:.1f}px en cuello '
-                  f'y {report[0][1]*width:.1f}/{report[2][1]*width:.1f}px en hombreras '
-                  f'(cuartil trasero); suelo entre mangas y unión: '
+                  f'y {report[2][1]*width:.1f}px en placa pequeña '
+                  f'(cuartil trasero respecto a v1.67.8); suelo entre mangas y unión: '
                   + ' / '.join(f'{old:.1%} → {new:.1%}' for old,new in gaps) + '.',flush=True)
-            if not passes(report):
-                failures.append((name,'no se acercó el borde exterior completo',np.round(report,3).tolist()))
+            if not passes(report[1:]):
+                failures.append((name,'no se acercó el cuello o la placa pequeña',np.round(report[1:],3).tolist()))
             if any(new > .025 for _,new in gaps):
                 failures.append((name,'suelo visible junto al remate',gaps))
     assert not failures, failures

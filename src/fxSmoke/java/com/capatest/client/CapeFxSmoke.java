@@ -124,8 +124,12 @@ public final class CapeFxSmoke {
         OBLIQUE_OLD_JOIN("oblicua-v16710", 6000), OBLIQUE_CHEST("oblicua-pecho", 6000), OBLIQUE_BACK("oblicua-curios", 6000),
         SIDE_BARE("perfil-sin-manto", 6000), SIDE_UNLINED("perfil-sin-union", 6000), SIDE_CHEST("perfil-pecho", 6000), SIDE_BACK("perfil-curios", 6000),
         FIT_BARE("ajuste-sin-manto", 6000), FIT_PREVIOUS("ajuste-v1678", 6000),
+        FIT_V16712("ajuste-v16712", 6000), FIT_V16712_HIDDEN("ajuste-v16712-sin-placas", 6000),
+        FIT_HIDDEN("ajuste-sin-placas", 6000),
         FIT_CHEST("ajuste-pecho", 6000), FIT_BACK("ajuste-curios", 6000),
         FIT_SLIM_BARE("ajuste-fino-sin-manto", 6000), FIT_SLIM_PREVIOUS("ajuste-fino-v1678", 6000),
+        FIT_SLIM_V16712("ajuste-fino-v16712", 6000), FIT_SLIM_V16712_HIDDEN("ajuste-fino-v16712-sin-placas", 6000),
+        FIT_SLIM_HIDDEN("ajuste-fino-sin-placas", 6000),
         FIT_SLIM_CHEST("ajuste-fino-pecho", 6000), FIT_SLIM_BACK("ajuste-fino-curios", 6000),
         MID_BARE("ajuste-medio-sin-manto", 6000), MID_PREVIOUS("ajuste-medio-v1679", 6000),
         MID_OLD_JOIN("ajuste-medio-v16710", 6000),
@@ -186,7 +190,12 @@ public final class CapeFxSmoke {
         boolean plates() { return ordinal() >= PLATES_BARE.ordinal() && ordinal() <= PLATES_BACK.ordinal(); }
         boolean homeCompare() { return ordinal() >= HISTORY_DIAG_BARE.ordinal() && ordinal() <= HISTORY_TOP_BACK.ordinal(); }
         boolean oldRig() { return homeCompare() && file.endsWith("-v1280"); }
-        boolean publishedFit() { return homeCompare() && file.endsWith("-v16712"); }
+        boolean publishedFit() {
+            return this == FIT_V16712 || this == FIT_V16712_HIDDEN || this == FIT_SLIM_V16712
+                    || this == FIT_SLIM_V16712_HIDDEN || homeCompare() && file.endsWith("-v16712");
+        }
+        boolean hidesPlates() { return file.endsWith("-sin-placas"); }
+        boolean tracksPlates() { return (plates() || fit() && !midFit() && !previousFit()) && !bare() && !hidesPlates(); }
         boolean sweep() { return this == LOOK_CHEST || this == LOOK_BACK; }
         boolean walk() { return this == WALK_CHEST || this == WALK_BACK; }
         boolean stillComparison() { return overhead() || upperBack() || fit() || plates() || homeCompare(); }
@@ -643,8 +652,9 @@ public final class CapeFxSmoke {
         if (!(event.getRenderer() instanceof CapaArmorRenderer renderer)) return;
         if (scene.sweep()) CapeLookSweep.Probe.arm(renderer);
         if (scene.walk()) CapeWalkProbe.arm(renderer);
-        if (scene == Scene.PLATES_HIDDEN) CapePlateProbe.hide(renderer, true);
-        else if (scene.plates()) CapePlateProbe.arm(renderer);
+        if (scene.publishedFit()) undoTorsoFit(renderer);
+        if (scene.hidesPlates()) CapePlateProbe.hide(renderer, true);
+        else if (scene.tracksPlates()) CapePlateProbe.arm(renderer);
         if (scene.previousFit() || scene.oldJoin() || scene == Scene.PLATES_PREVIOUS) {
             undoTorsoFit(renderer);
             try {
@@ -736,8 +746,8 @@ public final class CapeFxSmoke {
             upperBackProjection = new Matrix4f(RenderSystem.getProjectionMatrix())
                     .mul(RenderSystem.getModelViewMatrix()).mul(armorPose).translate(0,1.5F,0).scale(-1,-1,1);
         }
-        if (scene == Scene.PLATES_HIDDEN) CapePlateProbe.hide(renderer, false);
-        else if (scene.plates()) platesDraw = CapePlateProbe.finish(renderer);
+        if (scene.hidesPlates()) CapePlateProbe.hide(renderer, false);
+        else if (scene.tracksPlates()) platesDraw = CapePlateProbe.finish(renderer);
         if (scene.sweep()) seatDraw = CapeLookSweep.Probe.finish(renderer);
         if (scene.walk()) walkDraw = CapeWalkProbe.finish(renderer, event.getPartialTick());
         if (scene.fit() || scene.sweep() || scene.plates()) {
@@ -825,8 +835,9 @@ public final class CapeFxSmoke {
             case TOP_BARE, TOP_OLD_JOIN, TOP_CHEST, TOP_BACK, TURN_BARE, TURN_CHEST, TURN_BACK,
                     OBLIQUE_BARE, OBLIQUE_UNLINED, OBLIQUE_OLD_JOIN, OBLIQUE_CHEST, OBLIQUE_BACK,
                     SIDE_BARE, SIDE_UNLINED, SIDE_CHEST, SIDE_BACK,
-                    FIT_BARE, FIT_PREVIOUS, FIT_CHEST, FIT_BACK,
+                    FIT_BARE, FIT_PREVIOUS, FIT_CHEST, FIT_BACK, FIT_V16712, FIT_V16712_HIDDEN, FIT_HIDDEN,
                     FIT_SLIM_BARE, FIT_SLIM_PREVIOUS, FIT_SLIM_CHEST, FIT_SLIM_BACK,
+                    FIT_SLIM_V16712, FIT_SLIM_V16712_HIDDEN, FIT_SLIM_HIDDEN,
                     MID_BARE, MID_PREVIOUS, MID_OLD_JOIN, MID_CHEST, MID_BACK,
                     PLATES_BARE, PLATES_HIDDEN, PLATES_PREVIOUS, PLATES_CHEST, PLATES_BACK -> player.onGround()
                     && !player.isCrouching() && Math.abs(player.getXRot()-scene.pitch()) < .05 && Math.abs(bodyYaw) < .05
@@ -939,7 +950,7 @@ public final class CapeFxSmoke {
                     Files.writeString(shots.resolve(scene.file + "-caras.tsv"), historyDraw.faces());
                     Files.writeString(shots.resolve(scene.file + "-camara.tsv"), historyDraw.camera());
                 }
-                if (scene.plates() && !scene.bare() && scene != Scene.PLATES_HIDDEN) {
+                if (scene.tracksPlates()) {
                     check(platesDraw != null, "missing live plate pass");
                     platesDraw.write(shots.resolve(scene.file + "-caras.tsv"), image.getWidth(), image.getHeight());
                 }
