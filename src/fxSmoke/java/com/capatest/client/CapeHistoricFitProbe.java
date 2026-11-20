@@ -1,6 +1,7 @@
 package com.capatest.client;
 
 import com.capatest.item.CapaDeteriorerItem;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.model.HumanoidModel;
@@ -25,6 +26,9 @@ final class CapeHistoricFitProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     private final GeoArmorRenderer<CapaDeteriorerItem> renderer;
     private final Map<String, Bounds> bounds = new TreeMap<>();
     private Matrix4f toBody;
+    private String camera;
+    private final StringBuilder faces = new StringBuilder();
+    private Matrix4f view;
     private boolean active;
 
     private CapeHistoricFitProbe(GeoArmorRenderer<CapaDeteriorerItem> renderer) {
@@ -67,6 +71,9 @@ final class CapeHistoricFitProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                     return value;
                 });
         probe.bounds.clear();
+        probe.faces.setLength(0);
+        probe.camera = null;
+        probe.view = new Matrix4f(RenderSystem.getProjectionMatrix()).mul(RenderSystem.getModelViewMatrix());
         probe.toBody = null;
         probe.active = true;
     }
@@ -78,6 +85,13 @@ final class CapeHistoricFitProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         String name = bone.getName();
         if (name.equals("chestplate")) {
             toBody = new Matrix4f(pose.last().pose()).invert();
+            var clip = new Matrix4f(view).mul(pose.last().pose());
+            var points = new StringBuilder();
+            for (float x : new float[]{-.25F,.25F})
+                for (float y : new float[]{.75F,1.50F})
+                    for (float z : new float[]{-.125F,.125F})
+                        appendPoint(points,clip.transformProject(new Vector3f(x,y,z))).append('\n');
+            camera = points.toString();
             return;
         }
         if (bone.isHidden() || toBody == null || !(name.startsWith("v18_pad_") || name.startsWith("v17_cowl_")
@@ -92,12 +106,17 @@ final class CapeHistoricFitProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 RenderUtils.rotateMatrixAroundCube(pose, cube);
                 RenderUtils.translateAwayFromPivotPoint(pose, cube);
                 var matrix = new Matrix4f(toBody).mul(pose.last().pose());
+                var clip = new Matrix4f(view).mul(pose.last().pose());
                 for (var quad : cube.quads()) {
                     if (quad == null) continue;
+                    faces.append(name);
                     for (var vertex : quad.vertices()) {
                         var point = matrix.transformPosition(vertex.position(), new Vector3f()).mul(16);
                         range.include(point);
+                        var pos = clip.transformProject(new Vector3f(vertex.position()));
+                        appendPoint(faces.append('\t'),pos);
                     }
+                    faces.append('\n');
                 }
             } finally {
                 pose.popPose();
@@ -106,16 +125,22 @@ final class CapeHistoricFitProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         if (range.count > 0) bounds.put(name, range);
     }
 
-    static String finish(GeoArmorRenderer<?> renderer) {
+    private static StringBuilder appendPoint(StringBuilder out, Vector3f p) {
+        return out.append((1 + p.x) / 2).append('\t').append((1 - p.y) / 2);
+    }
+
+    record Draw(String bounds, String faces, String camera) {}
+
+    static Draw finish(GeoArmorRenderer<?> renderer) {
         var probe = renderer.getRenderLayers().stream().filter(CapeHistoricFitProbe.class::isInstance)
                 .map(CapeHistoricFitProbe.class::cast).findFirst().orElseThrow();
         probe.active = false;
-        if (!probe.bounds.containsKey("v18_pad_0") || !probe.bounds.containsKey("v18_pad_1")
+        if (probe.camera == null || !probe.bounds.containsKey("v18_pad_0") || !probe.bounds.containsKey("v18_pad_1")
                 || !probe.bounds.containsKey("v17_cowl_back_0") || !probe.bounds.containsKey("v17_ribbon_5_seg0"))
             throw new AssertionError("missing solid draw of the worn collar, plates or roots: " + probe.bounds.keySet());
         var out = new StringBuilder("part\tmin_x\tmin_y\tmin_z\tmax_x\tmax_y\tmax_z\n");
         probe.bounds.forEach((name, range) -> out.append(name).append('\t').append(range.tsv()).append('\n'));
-        return out.toString();
+        return new Draw(out.toString(),probe.faces.toString(),probe.camera);
     }
 
     private static final class Bounds {

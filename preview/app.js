@@ -212,23 +212,46 @@ function plateRim(bone, profile, target, k) {
     scale:[1+reach*(sx-1),1+rise*(sy-1),1+reach*(sz-1)],cubes:[bone.cubes[profile.rimCube]]};
 }
 
+function torsoShape(data, stance, look, yaw, depth, seat, plate, arm, effort, dry=1, elytra=false) {
+  if (!data || elytra || dry<=0 || ![stance,look,yaw,depth,arm,effort,dry,seat,plate].every(Number.isFinite))
+    return [0,null,null,null,null];
+  const down=-look, turn=Math.abs(((yaw+180)%360+360)%360-180);
+  const space=(1-smooth(.02,.40,depth))*(1-smooth(.05,.36,stance))
+    *(1-smooth(44,57,turn))*(1-.82*smooth(62,88,down)*smooth(24,36,turn));
+  const reach=space*(1-smooth(2.85,6,effort));
+  const tuck=dry*(1-.48*smooth(.62,.995,seat))*(1-smooth(.09,.32,stance))
+    *(1-smooth(.10,.82,depth))*(1-smooth(10,25,effort));
+  const trim=reach*smooth(24,43,down);
+  const rest=dry*(1-smooth(.72,1,plate))*(1-smooth(.10,.50,stance))
+    *(1-smooth(14,33,look))*(1-smooth(70,86,turn));
+  const sweep=smooth(5,25,effort), advance=reach*smooth(12,42,down), upright=1-smooth(0,23,down);
+  const fit=(i,k,sx,sy,sz,dy,dz)=>k>0 ? [...data.pivots[i],0,k*dy,k*dz,...[sx,sy,sz].map(v=>1+k*(v-1))] : null;
+  const collar=r=>fit(0,tuck,.965,.41,1-.12*r,-.58,-1.62*r);
+  return [.68*smooth(23,43,down)*dry*space*(1-smooth(2.85,6,arm)), collar(trim),collar(trim*.32),
+    fit(1,rest,.94,.92,1-.17*advance,0,-.24*advance),
+    fit(2,rest,.40,.41,1-.14*advance,.065+.37*sweep-.47*upright,-.24*advance+.52*sweep+.22*upright)];
+}
+
 function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm) {
   const depth=backset(profile,stance,look,turn);
   const anchor = profile.backing;
   const seat = profile.seat;
-  const snug = seat && geo.bones.some(b => b.name===seat.frame) ? seating(seat,stance,look,turn,arm,elytra) : 0;
+  const hasSeat = seat && geo.bones.some(b => b.name===seat.frame);
+  const pressed = hasSeat ? seating(seat,stance,look,turn,arm,elytra) : 0;
   const backing = anchor && backingShape(anchor,profile.bodyAngle,stance,look,turn,depth,elytra);
   const plate = plateInfluence(profile.plates,stance,look,turn,effort,elytra);
+  const [extra,collar,facing,...pads] = torsoShape(hasSeat && profile.torso,stance,look,turn,depth,pressed,plate,arm,effort,1,elytra);
+  const outer = Math.max(pressed,extra);
   const bones = geo.bones.map(b => {
-    if (b.name===seat?.frame) return {...b,scale:[1,1,1-seat.depth*snug]};
+    if (b.name===seat?.frame) return {...b,scale:[1,1,1-seat.depth*pressed]};
     const half = anchor?.names.indexOf(b.name) ?? -1;
     if (half>=0) return {...b,scale:[1,backing[half],backing[2]]};
     if (b.name===profile.bone) return {...b,offset:[0,0,depth]};
-    if (b.name===profile.drapeBone) return {...b,rotation:[-depth*profile.drapePerUnit+(seat?.hem ?? 0)*snug,0,0]};
+    if (b.name===profile.drapeBone) return {...b,rotation:[-depth*profile.drapePerUnit+(seat?.hem ?? 0)*outer,0,0]};
     if (b.name===profile.gussetBone) return {...b,scale:[1,1,1+depth/profile.gussetDepth]};
     if (b.name==='v20_mount_shoulders') {
       const scale = shoulderScales(stance,look,turn,elytra);
-      scale[0] = 1-(seat?.width ?? 0)*snug;
+      scale[0] = 1-(seat?.width ?? 0)*pressed;
       return {...b,scale};
     }
     if (b.name==='v20_mount_under_yoke') return {...b,scale:yokeScales(stance,look,arm,elytra)};
@@ -245,6 +268,28 @@ function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effor
     if (piece.cubes?.length>profile.plates.rimCube) {
       bones.push(plateRim(piece,profile.plates,profile.plates.rims[i],plate));
       piece.cubes=piece.cubes.filter((_,j)=>j!==profile.plates.rimCube);
+    }
+  }
+  for (let i=0,length=bones.length;i<length;i++) {
+    const piece=bones[i], name=piece.name;
+    const plateIndex=profile.plates?.names.indexOf(name) ?? -1;
+    const transform=plateIndex>=0 ? pads[plateIndex] : name.startsWith('v17_cowl_tooth_') ? facing
+      : name!=='v17_cowl_return' && ['v17_cowl_','v19_cuellito_','v18_chain_'].some(prefix=>name.startsWith(prefix)) ? collar : null;
+    if (transform) {
+      const [x,y,z,dx,dy,dz,sx,sy,sz]=transform;
+      const frame={name:'torso_'+name,parent:piece.parent,pivot:[-x,y,z],offset:[-dx,dy,dz],scale:[sx,sy,sz],cubes:[]};
+      bones[i]={...piece,parent:frame.name};
+      bones.push(frame);
+    }
+    if (outer>pressed && (transform || plateIndex>=0 || name===profile.drapeBone ||
+        (name!=='v17_cowl_return' && ['v17_cowl_','v19_cuellito_','v18_chain_'].some(prefix=>name.startsWith(prefix))))) {
+      const child=(plate>0 && plateIndex>=0 ? bones.find(b=>b.name==='fit_'+name) : null) ||
+        (transform ? bones.at(-1) : bones[i]);
+      const frame={name:'seat_'+child.name,parent:child.parent,pivot:[0,0,seat.plane-depth],
+        scale:[1,1,(1-seat.depth*outer)/(1-seat.depth*pressed)],cubes:[]};
+      // Do not mutate a bone shared with the browser's input geometry.
+      bones[bones.indexOf(child)]={...child,parent:frame.name};
+      bones.push(frame);
     }
   }
   return {...geo,bones};

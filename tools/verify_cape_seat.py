@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the visible fit against the uncompressed v1.67.8 rig.
+"""Keep the published v1.67.12 fit checked against the uncompressed v1.67.8 rig.
 
 Uses inflated 1.20.1 player hulls in model pixels. The separate Forge test
 checks visibility and offset in F5, not just these geometric distances.
@@ -51,7 +51,7 @@ def visible_shift(geo):
     # Pose chosen to approximate the reported F5 view (not a camera input to
     # the fit). Measure the real outer collar/plates/cloth roots, not the tabs.
     aim = (0.,-76.,3.)
-    old,new = (patches(F.wearer_pose(geo,*aim,close=close)) for close in (False,True))
+    old,new = (patches(F.wearer_pose(geo,*aim,close=close,torso=False)) for close in (False,True))
     trim = ('v17_cowl_back_', 'v18_pad_0', 'v18_pad_1', 'v18_chain_')
     advance = [mean_depth(old,k)-mean_depth(new,k) for k in trim]
     root = [old[k][...,2].mean()-new[k][...,2].mean() for k in new
@@ -94,7 +94,7 @@ def moderate_fit(geo):
     # This frame stayed completely open in 1.67.9. Keep the actual cowl
     # and pads nearer without adding a cube or closing the free hem.
     aim = (0.,-58.,3.)
-    old,new = (patches(F.wearer_pose(geo,*aim,close=close)) for close in (False,True))
+    old,new = (patches(F.wearer_pose(geo,*aim,close=close,torso=False)) for close in (False,True))
     d = [mean_depth(old,k) - mean_depth(new,k) for k in ('v17_cowl_back_', 'v18_pad_0', 'v18_pad_1')]
     assert .39 < F.seating(*aim) < .43 and d[0] >= .90 and min(d[1:]) >= .46, d
     assert F.seating(0.,-42.,3.) == 0 and F.seating(*aim,arm_back=10.) == 0
@@ -111,7 +111,7 @@ def clearance(geo, clips):
     plates = np.array([name in plate_names for name in rig.names])
 
     def placed(frame,aim,arm,effort,close,fit_plates=True):
-        mats = P.matrices(F.wearer_pose(frame,*aim,arm_back=arm,arm_effort=effort,close=close,plates=fit_plates))
+        mats = P.matrices(F.wearer_pose(frame,*aim,arm_back=arm,arm_effort=effort,close=close,plates=fit_plates,torso=False))
         return rig.place(mats)
     samples = {n:[P.pose_at(geo,T.prepare_clip(c),c['animation_length']*t) for t in (0,.33,.67)]
                for n,c in clips.items()}

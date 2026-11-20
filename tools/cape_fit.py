@@ -196,15 +196,57 @@ def rim_frame(name, target, amount):
                 scale=[1+reach*(sx-1),1+rise*(sy-1),1+reach*(sz-1)],cubes=[])
 
 
+@lru_cache(maxsize=1)
+def torso_profile():
+    code = SOURCE.with_name('CapeTorsoFit.java').read_text()
+    pivots = re.search(r'PIVOTS = (\{.*?\});',code,re.S)[1]
+    return dict(pivots=json.loads(pivots.replace('{','[').replace('}',']')))
+
+
+def torso_shape(stance, pitch, yaw, depth, seat, plate, arm, effort, dry=1., elytra=False):
+    """CapeTorsoFit in +look-up degrees, with authored affines in mirrored X."""
+    if elytra or dry <= 0 or not all(map(math.isfinite,(stance,pitch,yaw,depth,arm,effort,dry,seat,plate))):
+        return (0.,None,None,None,None)
+    down, turn = -pitch, abs(math.remainder(yaw,360.))
+    space = ((1-smooth(.02,.40,depth))*(1-smooth(.05,.36,stance))
+             *(1-smooth(44,57,turn))*(1-.82*smooth(62,88,down)*smooth(24,36,turn)))
+    reach = space*(1-smooth(2.85,6,effort))
+    tuck = (dry*(1-.48*smooth(.62,.995,seat))*(1-smooth(.09,.32,stance))
+            *(1-smooth(.10,.82,depth))*(1-smooth(10,25,effort)))
+    trim = reach*smooth(24,43,down)
+    rest = dry*(1-smooth(.72,1,plate))*(1-smooth(.10,.50,stance))*(1-smooth(14,33,pitch))*(1-smooth(70,86,turn))
+    sweep, advance = smooth(5,25,effort),reach*smooth(12,42,down)
+    upright = 1-smooth(0,23,down)
+    pivots = torso_profile()['pivots']
+
+    def fit(i,k,sx,sy,sz,dy,dz):
+        return [*pivots[i], 0.,k*dy,k*dz,*(1+k*(v-1) for v in (sx,sy,sz))] if k > 0 else None
+
+    def collar(r): return fit(0,tuck,.965,.41,1-.12*r,-.58,-1.62*r)
+    return (.68*smooth(23,43,down)*dry*space*(1-smooth(2.85,6,arm)),
+            collar(trim),collar(trim*.32),fit(1,rest,.94,.92,1-.17*advance,0.,-.24*advance),
+            fit(2,rest,.40,.41,1-.14*advance,.065+.37*sweep-.47*upright,-.24*advance+.52*sweep+.22*upright))
+
+
+def torso_frame(b, transform, prefix="torso_"):
+    x,y,z,dx,dy,dz,sx,sy,sz = transform
+    return dict(name=prefix+b['name'],parent=b.get('parent'),pivot=[-x,y,z],
+                offset=[-dx,dy,dz],scale=[sx,sy,sz],cubes=[])
+
+
 def viewer_profile():
-    return dict(profile(),backing=B.profile(),seat=seat_profile(),plates=plate_profile())
+    return dict(profile(),backing=B.profile(),seat=seat_profile(),plates=plate_profile(),torso=torso_profile())
 
 
 def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back=0., close=True,
-                plates=True, arm_effort=None):
+                plates=True, arm_effort=None, torso=True):
     """Bake render transforms for a frame, not animation keyframes."""
     changes = {'chestplate': dict(rotation=[stance*profile()['bodyAngle'], 0., 0.],
                                   offset=[0., -3.2*stance, 0.])}
+    shape = (0.,None,None,None,None)
+    outer = None
+    effort = arm_back if arm_effort is None else arm_effort
+    mix = plate_influence(stance,pitch,yaw,effort,elytra=elytra) if close and plates and not legacy else 0.
     if legacy:
         changes[G.FIT_BONE] = dict(rotation=[-fold(stance, pitch, yaw), 0., 0.])
     else:
@@ -220,30 +262,55 @@ def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back
         q = seat_profile()
         if close and any(b['name'] == q['frame'] for b in geo['bones']):
             snug = seating(stance,pitch,yaw,arm_back,elytra=elytra)
+            if torso:
+                shape = torso_shape(stance,pitch,yaw,d,snug,mix,arm_back,effort,elytra=elytra)
+                if shape[0] > snug:
+                    outer = [0.,0.,q['plane']-d,0.,0.,0.,1.,1.,(1-q['depth']*shape[0])/(1-q['depth']*snug)]
             changes[q['frame']] = dict(scale=[1.,1.,1-q['depth']*snug])
             changes[G.SHOULDERS_BONE]['scale'][0] = 1-q['width']*snug
-            changes[G.DRAPE_BONE]['rotation'][0] += q['hem']*snug
+            changes[G.DRAPE_BONE]['rotation'][0] += q['hem']*max(snug,shape[0])
         names = B.profile()['names']
         if any(b['name'] in names for b in geo['bones']):
             a,b,z = B.solve(head_in_body(stance,pitch,yaw,outer=True),d,elytra=elytra)
             changes.update({name:dict(scale=[1.,s,z]) for name,s in zip(names,(a,b),strict=True)})
     bones = [dict(b, **changes.get(b['name'], {})) for b in geo['bones']]
-    if close and plates and not legacy:
-        mix = plate_influence(stance,pitch,yaw,arm_back if arm_effort is None else arm_effort,elytra=elytra)
-        data = plate_profile()
-        if mix:
-            for b in tuple(bones):
-                if b['name'] in data['names']:
-                    i = data['names'].index(b['name'])
-                    frame = plate_frame(b['name'],b.get('parent'),data['targets'][i],mix)
-                    b['parent'] = frame['name']
-                    bones.append(frame)
-                    # Mirror applyPlateRim; move just the existing crest cube,
-                    # retaining its own pivot, face UVs and alpha.
-                    j = data['rimCube']
-                    if len(b.get('cubes',[])) > j:
-                        rim = rim_frame(b['name'],data['rims'][i],mix)
-                        rim['cubes'] = [b['cubes'][j]]
-                        b['cubes'] = b['cubes'][:j]+b['cubes'][j+1:]
-                        bones.append(rim)
+    _,collar,facing,small,wide = shape
+    data = plate_profile()
+    for b in tuple(bones):
+        name = b['name']
+        root = b
+        transform = None
+        if name in data['names']:
+            i = data['names'].index(name)
+            if mix:
+                frame = plate_frame(name,b.get('parent'),data['targets'][i],mix)
+                b['parent'] = frame['name']
+                bones.append(frame)
+                # Preserve the crest cube's pivot, face UVs and alpha.
+                j = data['rimCube']
+                if len(b.get('cubes',[])) > j:
+                    rim = rim_frame(name,data['rims'][i],mix)
+                    rim['cubes'] = [b['cubes'][j]]
+                    b['cubes'] = b['cubes'][:j]+b['cubes'][j+1:]
+                    bones.append(rim)
+                root = frame
+            if plates:
+                transform = (small,wide)[i]
+        elif name.startswith('v17_cowl_tooth_'):
+            transform = facing
+        elif name != 'v17_cowl_return' and name.startswith(('v17_cowl_','v19_cuellito_','v18_chain_')):
+            transform = collar
+        if transform is not None:
+            frame = torso_frame(b,transform)
+            b['parent'] = frame['name']
+            bones.append(frame)
+            if not (name in data['names'] and mix):
+                root = frame
+        if outer is not None and (transform is not None or name in data['names'] or name == G.DRAPE_BONE
+                or (name != 'v17_cowl_return' and name.startswith(('v17_cowl_','v19_cuellito_','v18_chain_')))):
+            # Same order as CapaArmorRenderer: outer squeeze, plate fit,
+            # compact rest shape and finally the authored/GEO cube.
+            frame = torso_frame(root,outer,'seat_')
+            root['parent'] = frame['name']
+            bones.append(frame)
     return dict(geo, bones=bones)

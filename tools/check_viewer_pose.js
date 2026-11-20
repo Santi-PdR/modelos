@@ -36,6 +36,14 @@ const matrices = vm.runInContext(`${src}
       return indata.strideSamples.map(([top,mid,arm,leg,stance,depth]) =>
         strideLifts(indata.stride,top,mid,arm,leg,stance*indata.fit.bodyAngle,depth));
     }
+    if (indata.torsoSamples) {
+      const f=indata.fit;
+      return indata.torsoSamples.map(([s,p,y,a,e,d,w]) => {
+        const shape=torsoShape(f.torso,s,p,y,backset(f,s,p,y),seating(f.seat,s,p,y,a,!!w)*d,
+          plateInfluence(f.plates,s,p,y,e,!!w)*d,a,e,d,!!w);
+        return [shape[0], ...shape.slice(1).flatMap(v=>v || [0,0,0,0,0,0,1,1,1])];
+      });
+    }
     if (indata.plateSamples) {
       const f=indata.fit, names=f.plates.names;
       const rig={bones:[...names.map(name=>({name,cubes:[{},{}]})),{name:'cape_top'}]};
@@ -47,7 +55,7 @@ const matrices = vm.runInContext(`${src}
       });
     }
     if (indata.seatSamples) {
-      const f=indata.fit;
+      const f={...indata.fit,torso:null};
       const rig={bones:[{name:f.seat.frame},{name:'v20_mount_shoulders'},{name:f.drapeBone}]};
       return indata.seatSamples.map(([s,p,y,w,arm])=>{
         const [frame,returns,drape]=wearerPose(rig,f,s,p,y,!!w,arm).bones;

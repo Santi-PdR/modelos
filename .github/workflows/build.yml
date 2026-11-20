@@ -780,7 +780,7 @@ jobs:
           CLASSES="$RUNNER_TEMP/cape-state-test"
           mkdir -p "$CLASSES"
           javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/{CapeState,CapePlayback,CapeSparkFrame}.java \
-            src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeBacking,CapePlateFit,CapeStride,CapeTint,CapeEmber,CapeNocturne,CapeWingFit,CapeWornMotion}.java \
+            src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeBacking,CapePlateFit,CapeTorsoFit,CapeStride,CapeTint,CapeEmber,CapeNocturne,CapeWingFit,CapeWornMotion}.java \
             src/test/java/com/capatest/item/{CapeStateTest,CapeSparkFrameTest}.java \
             src/test/java/com/capatest/client/{CapeFitTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeSettleTest,CapeSwayTest,CapeWingFitTest,CapeWornMotionTest}.java
           java -cp "$CLASSES" com.capatest.client.CapeWornMotionTest
@@ -811,6 +811,8 @@ jobs:
           java -cp "$CLASSES" com.capatest.client.CapeFitTest --backing > "$CLASSES/backing.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeFitTest --seating > "$CLASSES/seating.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeFitTest --plates > "$CLASSES/plates.tsv"
+          java -cp "$CLASSES" com.capatest.client.CapeFitTest --torso > "$CLASSES/torso.tsv"
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_torso_fit.py "$CLASSES/torso.tsv"
           OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/check_cape_fit.py "$CLASSES/fit.tsv" "$CLASSES/shoulders.tsv" "$CLASSES/backing.tsv" "$CLASSES/seating.tsv" "$CLASSES/plates.tsv"
           java -cp "$CLASSES" com.capatest.item.CapeStateTest --spark-samples > "$CLASSES/sparks.tsv"
           PYTHONPATH=tools python3 -c 'import cape_aura as a,json; print(json.dumps(a.profile()))' | \
@@ -1020,8 +1022,12 @@ jobs:
       - name: Medir el anclaje anterior a la rama en Forge
         if: steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success'
         run: |
-          python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
-            printf '::notice title=Montura real anterior a la rama::%s\n' "$line"
+          set -o pipefail
+          python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
+            case "$line" in
+              'AssertionError:'*) printf '::error title=Anclaje histórico en Forge::%s\n' "${line//%/%25}" ;;
+              *) printf '::notice title=Anclaje histórico en Forge::%s\n' "${line//%/%25}" ;;
+            esac
           done
 
       - name: Documentar v1.28.0 y el modelo actual en F5 tres cuartos
@@ -1064,12 +1070,12 @@ jobs:
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
           set -o pipefail
-          python3 tools/verify_forge_seat.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
-            if [[ "$line" == '::error '* ]]; then
-              printf '%s\n' "$line"
-            else
-              printf '::notice title=Ajuste visible en Forge::%s\n' "${line//%/%25}"
-            fi
+          python3 tools/verify_forge_seat.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
+            case "$line" in
+              '::error '*) printf '%s\n' "$line" ;;
+              *Error:*) printf '::error title=Ajuste visible en Forge::%s\n' "${line//%/%25}" ;;
+              *) printf '::notice title=Ajuste visible en Forge::%s\n' "${line//%/%25}" ;;
+            esac
           done
 
       - name: Verificar la unión y el icono en el framebuffer de Forge

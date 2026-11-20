@@ -27,6 +27,7 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private float wearerDepth;
     private float seating;
     private float plateFit;
+    private CapeTorsoFit.Shape torsoFit = CapeTorsoFit.NONE;
     private float shoulderReach = (float) CapeFit.SHOULDER_MIN;
     private CapeFit.YokeShape yoke = CapeFit.yokeShape(0, 0, 0, true);
     private CapeBacking.Shape backing = CapeBacking.TUCKED;
@@ -127,6 +128,7 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         // of the arms. This keeps the top mount from pumping twice a step.
         double mountArm = arm;
         seating = plateFit = 0;
+        torsoFit = CapeTorsoFit.NONE;
         if (getCurrentEntity() instanceof LivingEntity living && !living.isFallFlying()
                 && !living.isPassenger() && !living.isAutoSpinAttack()) {
             double speed = Math.min(1, living.walkAnimation.speed(wearerPartial));
@@ -138,8 +140,11 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
             // as well as back. Keep both rotations and the stride envelope.
             double sleeve = Math.max(Math.hypot(model.leftArm.xRot, model.leftArm.yRot),
                     Math.hypot(model.rightArm.xRot, model.rightArm.yRot));
+            double effort = Math.max(mountArm, Math.toDegrees(sleeve));
             plateFit = CapePlateFit.influence(model.body.xRot, model.head.yRot - model.body.yRot,
-                    model.head.xRot, Math.max(mountArm, Math.toDegrees(sleeve)), hasWings) * dry;
+                    model.head.xRot, effort, hasWings) * dry;
+            torsoFit = CapeTorsoFit.shape(model.body.xRot, model.head.xRot, model.head.yRot - model.body.yRot,
+                    wearerDepth, seating, plateFit, mountArm, effort, dry, hasWings);
         }
         yoke = CapeFit.yokeShape(model.body.xRot, model.head.xRot, mountArm, hasWings);
         backing = CapeBacking.shape(model.body.xRot, model.body.yRot, model.head.xRot, model.head.yRot, wearerDepth, hasWings);
@@ -152,6 +157,9 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                                   boolean isReRender, float partialTick, int light, int overlay,
                                   float red, float green, float blue, float alpha) {
         String name = bone.getName();
+        float outerSeat = Math.max(seating, torsoFit.seat());
+        boolean outer = outerSeat > seating && CapeTorsoFit.followsSeat(name);
+        CapeTorsoFit.Affine rest = torsoFit.forBone(name);
         CapePlateFit.Plate plate = plateFit > 0 ? CapePlateFit.forBone(name) : null;
         boolean shoulder = CapeFit.SHOULDERS_BONE.equals(name);
         boolean underYoke = CapeFit.UNDER_YOKE_BONE.equals(name);
@@ -159,14 +167,24 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         boolean backingRight = CapeBacking.RIGHT.equals(name);
         boolean seatFrame = seating > 0 && CapeFit.SEAT_FRAME.equals(name);
         boolean drape = CapeFit.DRAPE_BONE.equals(name);
-        boolean fitted = plate != null || seatFrame || shoulder || underYoke || backingLeft || backingRight
-                || drape && (wearerDepth > 0 || seating > 0)
-                || wearerDepth > 0 && (CapeFit.BONE.equals(name) || CapeFit.GUSSET_BONE.equals(name));
+        boolean setback = wearerDepth > 0 && CapeFit.BONE.equals(name);
+        boolean atPivot = seatFrame || shoulder || underYoke || backingLeft || backingRight
+                || drape && (wearerDepth > 0 || outerSeat > 0)
+                || wearerDepth > 0 && CapeFit.GUSSET_BONE.equals(name);
+        boolean fitted = outer || plate != null || rest != null || setback || atPivot;
         if (fitted)
             poseStack.pushPose();
         try {
             // Apply the same deformation in the cutout and emission passes.
             // It is relative to the live chestplate, never to camera/world.
+            if (outer) {
+                // Already inside cape_wearer_fit: cancel its Z translation
+                // to use the same rear plane as the parent seat frame.
+                float z = ((float) CapeFit.SEAT_PLANE - wearerDepth) / 16F;
+                poseStack.translate(0, 0, z);
+                poseStack.scale(1, 1, (float) (CapeFit.seatDepthScale(outerSeat) / CapeFit.seatDepthScale(seating)));
+                poseStack.translate(0, 0, -z);
+            }
             if (plate != null) {
                 float k = plateFit;
                 poseStack.translate(plate.x()/16F, (plate.y() + k*plate.lift())/16F,
@@ -175,9 +193,15 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                 poseStack.mulPose(Axis.XP.rotationDegrees(plate.pitch()*k));
                 poseStack.scale(1 + k*(plate.width()-1), 1 + k*(plate.height()-1), 1 + k*(plate.depth()-1));
                 poseStack.translate(-plate.x()/16F, -plate.y()/16F, -plate.z()/16F);
-            } else if (fitted && CapeFit.BONE.equals(name)) {
+            }
+            if (rest != null) {
+                poseStack.translate((rest.x()+rest.dx())/16F, (rest.y()+rest.dy())/16F, (rest.z()+rest.dz())/16F);
+                poseStack.scale(rest.sx(), rest.sy(), rest.sz());
+                poseStack.translate(-rest.x()/16F, -rest.y()/16F, -rest.z()/16F);
+            }
+            if (setback) {
                 poseStack.translate(0, 0, wearerDepth / 16.0F);
-            } else if (fitted) {
+            } else if (atPivot) {
                 RenderUtils.translateToPivotPoint(poseStack, bone);
                 if (seatFrame)
                     poseStack.scale(1, 1, (float) CapeFit.seatDepthScale(seating));
@@ -189,7 +213,7 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                 else if (backingLeft || backingRight)
                     poseStack.scale(1, backingLeft ? backing.left() : backing.right(), backing.depth());
                 else if (drape)
-                    poseStack.mulPose(Axis.XP.rotationDegrees((float) CapeFit.seatedDrapeDegrees(wearerDepth, seating)));
+                    poseStack.mulPose(Axis.XP.rotationDegrees((float) CapeFit.seatedDrapeDegrees(wearerDepth, outerSeat)));
                 else
                     poseStack.scale(1, 1, (float) CapeFit.gussetScale(wearerDepth));
                 RenderUtils.translateAwayFromPivotPoint(poseStack, bone);

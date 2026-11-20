@@ -43,7 +43,51 @@ public final class CapeFitTest {
                 "el ajuste no debe alcanzar el paño");
     }
 
+    private static CapeTorsoFit.Shape torso(double stance, double look, double yaw, double arm,
+                                           double sleeve, double dry, boolean wings) {
+        double lean = stance * CapeFit.CROUCH_RADIANS, pitch = -Math.toRadians(look), turn = Math.toRadians(yaw);
+        double sz = CapeFit.seating(lean, 0, pitch, turn, arm, wings) * dry;
+        return CapeTorsoFit.shape(lean, pitch, turn, depth(stance,look,yaw), sz,
+                plate(stance,look,yaw,sleeve,wings) * dry, arm, sleeve, dry, wings);
+    }
+
+    private static void torsoChecks() {
+        var diagonal = torso(0,-58,43,1,1,1,false);
+        check(diagonal.seat() > .64F && diagonal.collar().dz() < -1.5F && diagonal.wide().sx() < .45F,
+                "la unión exterior sigue en la pose abierta a tres cuartos");
+        check(torso(0,-48,-48,1,1,1,false).seat() > .49F, "el ceñido falla al girar al otro lado");
+        var moving = torso(0,-45,43,25,27,1,false);
+        check(moving.seat() == 0 && moving.wide().sx() < .45F && moving.wide().dz() > .45F,
+                "la placa se sale del hombro al andar o no deja pasar la manga");
+        check(torso(0,-58,43,0,0,0,false) == CapeTorsoFit.NONE
+                && torso(0,-58,43,0,0,1,true) == CapeTorsoFit.NONE, "el ajuste se mete en las alas o en el nado");
+    }
+
+    private static void writeAffine(CapeTorsoFit.Affine a) {
+        if (a == null) a = new CapeTorsoFit.Affine(0,0,0,0,0,0,1,1,1);
+        System.out.printf(Locale.ROOT,"\t%.9f\t%.9f\t%.9f\t%.9f\t%.9f\t%.9f\t%.9f\t%.9f\t%.9f",
+                a.x(),a.y(),a.z(),a.dx(),a.dy(),a.dz(),a.sx(),a.sy(),a.sz());
+    }
+
     public static void main(String[] args) {
+        torsoChecks();
+        if (args.length == 1 && args[0].equals("--torso")) {
+            for (double stance : new double[]{0,.09,.26,.51,1})
+                for (double look : new double[]{-89.5,-78.1,-61,-58,-48,-36,-17,0,8,31,75})
+                    for (double yaw : new double[]{-376,-63,-48,-43,0,16,43,48,76,371})
+                        for (double arm : new double[]{0,3.3,8,37})
+                            for (int mode = 0; mode < 3; mode++) {
+                                boolean wings = mode == 1;
+                                double dry = mode == 2 ? .25 : 1;
+                                double sleeve = arm + (arm > 0 ? 2.7 : 0);
+                                var fit = torso(stance,look,yaw,arm,sleeve,dry,wings);
+                                System.out.printf(Locale.ROOT,"%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%.4f\t%d\t%.10f",
+                                        stance,look,yaw,arm,sleeve,dry,wings?1:0,fit.seat());
+                                writeAffine(fit.collar()); writeAffine(fit.facing()); writeAffine(fit.small()); writeAffine(fit.wide());
+                                System.out.println();
+                            }
+            return;
+        }
         if (args.length == 1 && args[0].equals("--plates")) {
             for (double stance : new double[]{0,.18,.39,.58,1})
                 for (double look : new double[]{-89.5,-78,-71.2,-62,-58,-48,-41,0})

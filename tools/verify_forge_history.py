@@ -10,10 +10,10 @@ import io
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFilter
 
 from verify_forge_mount import emit, read
-from verify_forge_seat import shirt_mask
+from verify_forge_seat import blue_floor, shirt_mask
 
 VIEWS = ('diagonal', 'espejo', 'cenital')
 SLOTS = ('pecho', 'curios')
@@ -27,26 +27,73 @@ def bounds(path):
     return values
 
 
-def geometry(root, view, slot, history):
-    suffix = '-v1280' if history else ''
+def geometry(root, view, slot, suffix=''):
     parts = bounds(root/f'historia-{view}-{slot}{suffix}.tsv')
     pads = [parts[f'v18_pad_{i}'] for i in range(2)]
     cowl = np.array([b for n,b in parts.items() if n.startswith('v17_cowl_back_')])
     roots = np.array([b for n,b in parts.items() if n.startswith('v17_ribbon_') and n.endswith('_seg0')])
-    assert len(cowl) >= 5 and len(roots) == 12, (view, slot, history, len(cowl), len(roots))
+    assert len(cowl) >= 5 and len(roots) == 12, (view, slot, suffix, len(cowl), len(roots))
     return np.array([pads[0][1,0], -pads[1][0,0], cowl[:,0,2].min(), cowl[:,1,1].max(),
                      roots[:,0,2].mean(), roots[:,1,1].max()])
+
+
+def visible_attachment(root, view, slot, suffix=''):
+    stem = root/f'historia-{view}-{slot}{suffix}'
+    worn = read(stem.with_suffix('.png'))
+    bare = read(root/f'historia-{view}-sin-manto.png')
+    assert worn.shape == bare.shape
+    skin = shirt_mask(bare) & ~blue_floor(bare) & (bare[...,1] > 92)
+    _y, x = np.where(skin)
+    assert len(x) > 500, (view, slot, 'sin camiseta visible')
+    width = np.ptp(np.quantile(x,[.005,.995]))
+    near = np.asarray(Image.fromarray((skin*255).astype('uint8')).filter(ImageFilter.MaxFilter(1+2*round(.10*width)))) > 0
+    h,w = skin.shape
+    sections = [Image.new('L',(w,h)) for _ in range(3)]
+    draw = list(map(ImageDraw.Draw,sections))
+    with stem.with_name(stem.name+'-caras').with_suffix('.tsv').open() as lines:
+        for line in lines:
+            name, *p = line.split()
+            index = 0 if name == 'v18_pad_0' else 1 if name == 'v18_pad_1' else 2 if name.startswith('v17_cowl_back_') else -1
+            if index < 0: continue
+            quad = np.array(list(map(float,p))).reshape(4,2)*[w,h]
+            assert np.isfinite(quad).all(), (name, quad)
+            draw[index].polygon([tuple(v) for v in quad],fill=255)
+    # Projection alone isn't a visible join. Keep only actual cloth pixels
+    # in the F5 framebuffer that differ from the unequipped control.
+    fabric = ((np.abs(worn-bare).max(2) >= 18) & ~blue_floor(worn) & ~shirt_mask(worn)
+              & (worn[...,1] < 97))
+    metrics = []
+    for mask in sections:
+        visible = (np.asarray(mask)>0) & fabric
+        count = visible.sum()
+        assert count >= 12, (view,slot,'pieza no visible en F5',count)
+        metrics.append((int(count),float(near[visible].mean())))
+    return metrics
 
 
 def verify(root):
     for view in VIEWS:
         for slot in SLOTS:
-            old, now = (geometry(root,view,slot,hist) for hist in (True,False))
+            stem = root/f'historia-{view}-{slot}'
+            with Image.open(stem.with_suffix('.png')) as image:
+                size = image.size
+            samples = [np.loadtxt(stem.with_name(stem.name+s+'-camara.tsv'))*size for s in ('-v1280','-v16712','')]
+            assert all(m.shape == (8,2) and np.isfinite(m).all() for m in samples)
+            assert max(abs(m-samples[0]).max() for m in samples[1:]) < .65, (view,slot,'cámara F5 no registrada')
+            old, prior, now = (geometry(root,view,slot,s) for s in ('-v1280','-v16712',''))
             assert 6.2 < old[0] < 6.9 and 6.2 < old[1] < 6.9, (view, slot, old)
             assert .8 < old[2] < 1.4 and 24 < old[3] < 26.1, (view, slot, old)
             assert 1.2 < old[4] < 2.9, (view, slot, old)
-            values = ', '.join(f'{a:.2f}→{b:.2f}' for a,b in zip(old,now,strict=True))
-            print(f'{view}/{slot} · v1.28.0→actual (u): extremos X D/I, Z/Y cuello, Z/Y raíces: {values}')
+            if view == 'cenital':
+                assert prior[2]-now[2] > .25 and now[1] < 7.80 and now[2] < 4.04 and now[3] < 26.65 and now[4] < 3.55, (view,slot,now)
+            else:
+                assert prior[1]-now[1] > 2.40 and prior[4]-now[4] > .34 and 6.0 < now[1] < 7.20 and now[2] < 4.31 and now[3] < 25.1 and now[4] < 3.82, (view,slot,now)
+            values = ', '.join(f'{a:.2f}→{b:.2f}→{c:.2f}' for a,b,c in zip(old,prior,now,strict=True))
+            print(f'{view}/{slot} · v1.28.0→v1.67.12→prueba (u): extremos X D/I, Z/Y cuello, Z/Y raíces: {values}',flush=True)
+            before, metrics = [visible_attachment(root,view,slot,s) for s in ('-v16712','')]
+            print(f'{view}/{slot} · placas y cuello proyectados sobre píxeles de manto en F5: ' + ', '.join(
+                f'{p} píxeles, {a[1]:.0%}→{x:.0%} a 0,10 anchos de la camiseta' for a,(p,x) in zip(before,metrics,strict=True)),flush=True)
+            assert all(x >= .10 for _,x in metrics), (view,slot,metrics)
 
 
 def gallery(root, view):
@@ -62,7 +109,7 @@ def gallery(root, view):
     assert len(xs) > 500, (view, 'no se ve la camiseta de referencia')
     x0,x1 = np.quantile(xs,[.005,.995]); y0,y1 = np.quantile(ys,[.005,.995]); d = x1-x0
     crop = (round(x0-.43*d),round(y0-.73*d),round(x1+.43*d),round(y1+.69*d))
-    for suffix in ('sin-manto','pecho-v1280','pecho','curios-v1280','curios'):
+    for suffix in ('sin-manto',*(f'{slot}{s}' for slot in SLOTS for s in ('-v1280','-v16712',''))):
         file = root/f'historia-{view}-{suffix}.png'
         if not file.is_file():
             continue
