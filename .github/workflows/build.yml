@@ -1319,7 +1319,12 @@ jobs:
       - name: Compilar y comprobar el jar
         run: |
           set -euo pipefail
-          gradle clean build verifyKatanaAnimations -PkatanaOnly --no-daemon
+          # Validate the parser against the upstream Better Combat resources without redistributing them.
+          mkdir -p /tmp/stain-bettercombat-test
+          for clip in two_handed_slash_horizontal_right two_handed_slash_vertical_right; do
+            curl --fail --location --silent --show-error "https://raw.githubusercontent.com/ZsoltMolnarrr/BetterCombat/8814f0297bb85f4513646e73d604069487ce7322/common/src/main/resources/assets/bettercombat/attack_animations/${clip}.json" -o "/tmp/stain-bettercombat-test/${clip}.json"
+          done
+          STAIN_BC_TEST_DIR=/tmp/stain-bettercombat-test gradle clean build verifyKatanaAnimations -PkatanaOnly --no-daemon
           jar=build/libs/stainkatana-0.6.0-test.jar
           test -f "$jar"
           python3 - "$jar" <<'PY'
