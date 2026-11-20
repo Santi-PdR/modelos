@@ -27,7 +27,7 @@ jobs:
     # La rama de artefactos (artifacts/vX.Y.Z) SOLO guarda el .jar. Si el
     # workflow corriera tambien sobre ella, cada push re-construiria el
     # mod entero para nada. Aqui se salta ese run.
-    if: ${{ !startsWith(github.ref, 'refs/heads/artifacts/') }}
+    if: ${{ !startsWith(github.ref, 'refs/heads/artifacts/') && !(github.event_name == 'push' && contains(github.event.head_commit.message, '[capa-v16717-directo]')) }}
 
     steps:
       - name: Checkout
