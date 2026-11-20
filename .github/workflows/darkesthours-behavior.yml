@@ -1,0 +1,31 @@
+name: Study reference combat architecture
+on:
+  push:
+    branches: ['arena/a09d390b-modelos']
+permissions:
+  contents: write
+jobs:
+  study:
+    if: ${{ contains(github.event.head_commit.message, '[study-darkesthours]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Inspect bytecode and animation metadata without copying assets
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 'https://github.com/Santi-PdR/modelos/releases/download/darkesthours-v1.0.0/darkesthours-1.0.0.jar' -o /tmp/darkesthours.jar
+          python3 katana_stain/tools/estudiar_referencia.py /tmp/darkesthours.jar
+      - name: Commit only the analytical summary
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add katana_stain/referencias/darkesthours_comportamiento.txt
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record reference combat behavior analysis'
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi

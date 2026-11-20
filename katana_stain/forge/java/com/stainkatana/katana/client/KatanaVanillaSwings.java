@@ -22,13 +22,14 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = StainKatanaMod.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class KatanaVanillaSwings {
     private static final Map<UUID, Integer> lastSwing = new HashMap<>();
-    private static final Map<UUID, Boolean> alternates = new HashMap<>();
+    private static final Map<UUID, Integer> alternates = new HashMap<>();
+    private static final Map<UUID, Integer> lastAttackTick = new HashMap<>();
     private static ClientLevel lastLevel;
     private KatanaVanillaSwings() { }
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level != lastLevel) { lastLevel = mc.level; lastSwing.clear(); alternates.clear(); }
+        if (mc.level != lastLevel) { lastLevel = mc.level; lastSwing.clear(); alternates.clear(); lastAttackTick.clear(); }
         if (mc.level == null || mc.isPaused() || !KatanaClientConfig.VANILLA_SWINGS.get() || ModList.get().isLoaded("bettercombat")) return;
         Set<UUID> present = new HashSet<>();
         for (AbstractClientPlayer player : mc.level.players()) {
@@ -37,13 +38,16 @@ public final class KatanaVanillaSwings {
                     && player.getMainHandItem().getItem() instanceof StainKatanaItem ? player.swingTime : -1;
             int previous = lastSwing.getOrDefault(id, -1);
             if (current >= 0 && (previous < 0 || current < previous)) {
-                boolean alternate = alternates.getOrDefault(id, false);
-                alternates.put(id, !alternate);
-                KatanaAnimations.swing(player, alternate);
+                int step = player.tickCount - lastAttackTick.getOrDefault(id, player.tickCount - 61) > 60
+                        ? 0 : alternates.getOrDefault(id, 0);
+                lastAttackTick.put(id, player.tickCount);
+                alternates.put(id, (step + 1) % 4);
+                KatanaAnimations.swing(player, step);
             }
             lastSwing.put(id, current);
         }
         lastSwing.keySet().retainAll(present);
         alternates.keySet().retainAll(present);
+        lastAttackTick.keySet().retainAll(present);
     }
 }

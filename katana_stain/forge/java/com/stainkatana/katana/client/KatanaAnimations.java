@@ -43,9 +43,8 @@ public final class KatanaAnimations {
         "two_handed_slam", "two_handed_spin", "one_handed_slash_switch_blade_left", "two_handed_slam_heavy"
     };
     private static final String[] CLIPS = {
-        "inspect", "sword_attack", "sword_attack2", "sword_attack", "sword_attack2", "sword_attack", "sword_attack2",
-        "sword_attack", "sword_attack2", "sword_attack", "sword_attack2", "sword_attack",
-        "sword_attack2", "sword_attack", "sword_attack2", "sword_attack"
+        "inspect", "sword_attack", "scene_01", "sword_attack", "sword_attack2", "sword_attack", "combo_heavy",
+        "scene_02", "scene_03", "scene_04", "scene_05", "scene_06", "scene_07", "scene_08", "scene_09", "scene_10"
     };
     private KatanaAnimations() { }
 
@@ -100,11 +99,11 @@ public final class KatanaAnimations {
     }
 
     /** Local, visual-only vanilla swing: the original attack remains authoritative. */
-    public static void swing(AbstractClientPlayer player, boolean alternate) {
+    public static void swing(AbstractClientPlayer player, int step) {
         var data = PlayerAnimationAccess.getPlayerAssociatedData(player).get(LAYER);
         if (!(data instanceof AbilityLayer animation) || animation.isActive()) return;
         KeyframeAnimation clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID,
-                alternate ? "sword_attack2" : "sword_attack"));
+                new String[]{"combo_1", "combo_2", "combo_3", "combo_heavy"}[Math.floorMod(step, 4)]));
         if (clip == null) return;
         animation.mirror.setEnabled(player.getMainArm() == HumanoidArm.LEFT);
         KeyframeAnimationPlayer playing = new KeyframeAnimationPlayer(clip, 0)
