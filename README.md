@@ -13,7 +13,9 @@ Se equipa en el pecho o en `back` con Curios opcional.
 
 ### v1.67.18 — encastre del cuello y las hombreras
 
-El cuello vuelve a la espalda alta y los retornos enlazan con las dos placas originales, asentadas sobre las mangas de Steve y Alex. La montura no depende de la órbita F5 ni de la mirada. Es un ajuste en el render equipado de pecho y Curios: el GEO, las texturas, los ocho clips, el brillo y el icono se conservan. La descarga de prueba se adjunta tras validar la colocación en Forge; no cambia el instalador publicado.
+El cuello vuelve a la espalda alta y los retornos enlazan con las dos placas originales, asentadas sobre las mangas de Steve y Alex. La montura no depende de la órbita F5 ni de la mirada. Es un ajuste en el render equipado de pecho y Curios: el GEO, las texturas, los ocho clips, el brillo y el icono se conservan. No cambia el instalador publicado.
+
+**[Descargar JAR de prueba v1.67.18](https://github.com/Santi-PdR/modelos/raw/945bc2d7d7f65765f766a7b59f9746fecc9b07fa/entregables/v1.67.18/capatest-1.67.18.jar)** · [Capturas reales de Forge](docs/capa_v16718_colocacion_forge.jpg) · [PowerShell para `test-1`](docs/releases/v1.67.18/instalar-directo-test-1.txt) · [Pruebas y SHA-256](docs/releases/v1.67.18/notas.md).
 
 ### v1.67.17 — comparación descartada
 
