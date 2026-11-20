@@ -68,13 +68,14 @@ jobs:
               path=Path(name)
               if path.exists():
                   lines=path.read_text(errors='replace').splitlines()
-                  interesting=[line for line in lines if any(x in line for x in ('Caused by:', 'Mixin apply failed', 'InvalidInjection', 'InjectionError', 'InvalidMixin', 'Exception:'))]
+                  interesting=[line for line in lines if any(x in line for x in ('STAIN_VISUAL_', 'Caused by:', 'Mixin apply failed', 'InvalidInjection', 'InjectionError', 'InvalidMixin', 'Exception:'))]
                   for line in interesting[-15:]:
                       text=line.replace('%','%25').replace('\r','%0D').replace('\n','%0A')[:3500]
                       print('::error title='+path.name+'::'+text)
                   tail='\n'.join(lines[-15:]).replace('%','%25').replace('\r','%0D').replace('\n','%0A')[:3500]
                   print('::error title='+path.name+' tail::'+tail)
           PY2
+          echo "::error title=Visual screenshots::$(find run/stain-visual-test -name '*.png' -printf '%f ' 2>/dev/null || true)"
       - name: Upload real client images and logs
         if: always()
         uses: actions/upload-artifact@v4
