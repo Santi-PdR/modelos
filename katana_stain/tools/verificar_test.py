@@ -43,6 +43,9 @@ assert 'LAYER, 2500' in anim and 'MirrorModifier' in anim
 assert 'followUpImpacted' in ability and 'broadcastAnimation(player, 3)' in ability
 bc = json.loads((root/'resources/data/stainkatana/weapon_attributes/katana_stain.json').read_text())
 assert bc['parent'] == 'bettercombat:katana'
+attacks = bc['attributes']['attacks']
+assert len(attacks) == 4 and len({a['animation'] for a in attacks}) == 4
+assert attacks[3]['damage_multiplier'] > max(a['damage_multiplier'] for a in attacks[:3])
 print('OK: preset de katana Better Combat, prioridad, zurdos y segundo golpe')
 
 # Analytical grip check for the current GeckoLib preRender and vanilla hand rotations;
@@ -80,10 +83,10 @@ visuals=(root/'java/com/stainkatana/katana/client/KatanaVisuals.java').read_text
 network=(root/'java/com/stainkatana/katana/KatanaNetwork.java').read_text()
 assert 'style == 3' in visuals and '^ leftHanded' in visuals
 assert 'getId() == entityId' in visuals and 'KatanaScene.impact(style == 3, leftHanded)' in visuals
-assert 'private static final String VERSION = "9"' in network
+assert 'private static final String VERSION = "10"' in network
 assert 'buf.writeBoolean(msg.leftHanded)' in network and 'buf.readBoolean()' in network
 assert 'impactEnvelope' in scene and 'KatanaClientConfig.ZOOM_FRACTION.get()' in scene
-print('OK: segundo corte, zurdos, impulso local y protocolo visual v9')
+print('OK: segundo corte, zurdos, impulso local y protocolo visual v10')
 
 assert model['firstperson_righthand']['scale'] == [0.56, 0.56, 0.56]
 assert model['firstperson_lefthand']['scale'] == [0.56, 0.56, 0.56]

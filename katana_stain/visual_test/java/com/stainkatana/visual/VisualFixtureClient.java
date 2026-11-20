@@ -69,14 +69,19 @@ public final class VisualFixtureClient {
             case 380 -> capture = "15_ultimate_8s.png";
             case 430 -> capture = "16_ultimate_end.png";
             case 445 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(0));
-            case 479 -> {
-                if (!com.stainkatana.katana.client.DaggerVisuals.hasFlights())
-                    throw new IllegalStateException("Second successful Z did not launch dagger visuals");
-                System.out.println("STAIN_DAGGERS_VERIFIED");
-                capture = "17_dagger_1.png";
-            }
-            case 491 -> capture = "18_dagger_2.png";
-            case 503 -> capture = "19_dagger_3.png";
+            case 479 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                var mobs = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, player.getBoundingBox().inflate(8));
+                if (mobs.isEmpty() || player.getPersistentData().getCompound("StainKatanaAbilities").getInt("daggerCharges") != 2)
+                    throw new IllegalStateException("Two successful Zs did not charge the finisher");
+                var eventAttack = new net.minecraftforge.event.entity.player.AttackEntityEvent(player, mobs.get(0));
+                com.stainkatana.katana.KatanaAbilities.chargedAttack(eventAttack);
+                if (!eventAttack.isCanceled() || player.getPersistentData().getCompound("StainKatanaAbilities").getInt("daggerCharges") != 0)
+                    throw new IllegalStateException("Charged attack did not start or consume charges");
+                System.out.println("STAIN_FINISHER_VERIFIED");
+            });
+            case 491 -> capture = "18_finisher.png";
+            case 503 -> capture = "19_finisher_end.png";
             case 550 -> mc.getSingleplayerServer().execute(() -> {
                 var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                 player.setYRot(180);

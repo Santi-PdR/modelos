@@ -34,8 +34,19 @@ public final class KatanaAnimations {
     private static final Logger LOGGER = LogUtils.getLogger();
     // Official Better Combat katana moves; loaded from the user's installed mod/resource pack,
     // not redistributed by this mod. Z uses a credited Emotecraft item-inspection gesture.
-    private static final String[] BETTER_COMBAT = {null, "two_handed_slash_horizontal_right", "two_handed_slash_vertical_right", "two_handed_slash_horizontal_left", "two_handed_slash_vertical_right", "two_handed_slash_horizontal_left", "two_handed_slash_horizontal_right"};
-    private static final String[] CLIPS = {"inspect", "sword_attack", "sword_attack2", "sword_attack", "sword_attack2", "sword_attack", "sword_attack"};
+    private static final String[] BETTER_COMBAT = {
+        null, "two_handed_slash_horizontal_right", "two_handed_slash_vertical_right",
+        "two_handed_slash_horizontal_left", "two_handed_slash_vertical_right",
+        "two_handed_slash_horizontal_left", "one_handed_slash_switch_blade_right",
+        "two_handed_slash_horizontal_right", "two_handed_slash_horizontal_left",
+        "two_handed_slash_vertical_left", "two_handed_stab_right", "two_handed_stab_left",
+        "two_handed_slam", "two_handed_spin", "one_handed_slash_switch_blade_left", "two_handed_slam_heavy"
+    };
+    private static final String[] CLIPS = {
+        "inspect", "sword_attack", "sword_attack2", "sword_attack", "sword_attack2", "sword_attack", "sword_attack2",
+        "sword_attack", "sword_attack2", "sword_attack", "sword_attack2", "sword_attack",
+        "sword_attack2", "sword_attack", "sword_attack2", "sword_attack"
+    };
     private KatanaAnimations() { }
 
     private static final class AbilityLayer extends ModifierLayer<IAnimation> {

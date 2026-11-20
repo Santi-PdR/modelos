@@ -20,12 +20,13 @@ public final class KatanaHud {
     private static final int[] remaining = new int[3];
     private static ClientLevel level;
     private static boolean synced;
-    private static int flashTicks;
+    private static int flashTicks, charges;
     private KatanaHud() { }
-    public static void update(int z, int x, int c) {
+    public static void update(int z, int x, int c, int bloodCharges) {
         level = Minecraft.getInstance().level;
         int[] values = {z, x, c};
         for (int i = 0; i < 3; i++) remaining[i] = Math.max(0, Math.min(CombatTuning.cooldown(i), values[i]));
+        charges = Math.min(2, Math.max(0, bloodCharges));
         synced = level != null;
     }
     public static void bloodFlash() { if (KatanaClientConfig.BLOOD_FLASH.get()) flashTicks = 12; }
@@ -33,7 +34,7 @@ public final class KatanaHud {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != level || mc.player == null) {
-            level = mc.level; synced = false; flashTicks = 0;
+            level = mc.level; synced = false; flashTicks = 0; charges = 0;
             for (int i = 0; i < 3; i++) remaining[i] = 0;
         }
         if (mc.level == null || mc.isPaused()) return;
@@ -65,6 +66,13 @@ public final class KatanaHud {
             String key = KatanaKeys.get(i).getTranslatedKeyMessage().getString();
             key = mc.font.plainSubstrByWidth(key, 14);
             g.drawCenteredString(mc.font, key, x + 12, row + 5, 0xFFF2D6D6);
+            if (i == 0) {
+                for (int blood = 0; blood < 2; blood++) {
+                    int sx = x + 25 + blood * 6;
+                    g.fill(sx, row + 4, sx + 4, row + 9,
+                            synced && charges > blood ? 0xFFE53A50 : 0xFF52202A);
+                }
+            }
             String time = synced ? (remaining[i] > 0 ? Integer.toString((remaining[i] + 19) / 20) + "s" : "OK") : "--";
             g.drawString(mc.font, time, x + w - 6 - mc.font.width(time), row + 2, ready ? 0xFFF3CBC2 : 0xFFE39A9E, false);
             int barX = x + 25, barWidth = w - 32;

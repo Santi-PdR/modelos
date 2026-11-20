@@ -60,7 +60,7 @@ jobs:
           grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-client.log
           grep -F 'STAIN_FIXTURE_CLIP=bettercombat' /tmp/stain-visual-client.log
           grep -F 'STAIN_ULTIMATE_VERIFIED' /tmp/stain-visual-client.log
-          grep -F 'STAIN_DAGGERS_VERIFIED' /tmp/stain-visual-client.log
+          grep -F 'STAIN_FINISHER_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_CANCELLATION_VERIFIED' /tmp/stain-visual-client.log
@@ -79,7 +79,7 @@ jobs:
           grep -F 'STAIN_FIXTURE_CLIP=fallback' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_VANILLA_SWING_PLAYING' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_ULTIMATE_VERIFIED' /tmp/stain-visual-fallback.log
-          grep -F 'STAIN_DAGGERS_VERIFIED' /tmp/stain-visual-fallback.log
+          grep -F 'STAIN_FINISHER_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_CANCELLATION_VERIFIED' /tmp/stain-visual-fallback.log
@@ -96,7 +96,7 @@ jobs:
           timeout 420s xvfb-run -a -s '-screen 0 1280x720x24' gradle runClient -PkatanaOnly -PkatanaVisual -PkatanaBetterCombat --no-daemon > /tmp/stain-visual-full-bc.log 2>&1 || { tail -160 /tmp/stain-visual-full-bc.log; exit 1; }
           grep -F 'STAIN_FIXTURE_BETTERCOMBAT=true' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_ULTIMATE_VERIFIED' /tmp/stain-visual-full-bc.log
-          grep -F 'STAIN_DAGGERS_VERIFIED' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_FINISHER_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_CANCELLATION_VERIFIED' /tmp/stain-visual-full-bc.log

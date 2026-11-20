@@ -17,6 +17,7 @@ public final class KatanaScene {
     private static final int TRANSITION_TICKS = 4;
     private static final int SAFETY_TIMEOUT = 212;
     private static boolean active;
+    private static net.minecraft.client.CameraType previousCamera;
     private static int age, impactAge = 4;
     private static int impactDirection;
     private static double progress, previous;
@@ -24,16 +25,27 @@ public final class KatanaScene {
 
     public static void start() {
         if (!KatanaClientConfig.ULTIMATE_FRAME.get()) return;
+        Minecraft mc = Minecraft.getInstance();
+        if (!active && mc.player != null) {
+            previousCamera = mc.options.getCameraType();
+            mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+        }
         active = true; age = 0; impactAge = 4;
     }
-    public static void stop() { active = false; impactAge = 4; }
+    public static void stop() {
+        Minecraft mc = Minecraft.getInstance();
+        if (previousCamera != null && mc.options.getCameraType() == net.minecraft.client.CameraType.THIRD_PERSON_BACK)
+            mc.options.setCameraType(previousCamera);
+        previousCamera = null;
+        active = false; impactAge = 4;
+    }
     public static void impact(boolean second, boolean leftHanded) {
         if (active && KatanaClientConfig.ULTIMATE_FRAME.get()) {
             impactAge = 0;
             impactDirection = (second ^ leftHanded) ? -1 : 1;
         }
     }
-    private static void reset() { active = false; age = 0; impactAge = 4; progress = previous = 0; }
+    private static void reset() { stop(); age = 0; impactAge = 4; progress = previous = 0; }
 
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
@@ -42,7 +54,7 @@ public final class KatanaScene {
         if (mc.isPaused()) return;
         previous = progress;
         if (impactAge < 4) impactAge++;
-        if (active && ++age >= SAFETY_TIMEOUT) active = false;
+        if (active && ++age >= SAFETY_TIMEOUT) stop();
         progress = Math.max(0, Math.min(1, progress + (active ? 1.0 : -1.0) / TRANSITION_TICKS));
     }
     private static double strength(float partialTick) {
