@@ -286,15 +286,21 @@ animación y la documentación de GeckoLib._
   pasaron las vistas diagonal y cenital, la marcha y los controles de
   luz, élitros, planeo y nado. Esto no certifica todas las pieles o packs.
 - **Yugo fijo en v1.67.15:** `cape_fixed_yoke` es hijo directo de
-  `chestplate`. El reborde y los retornos del cuello no leen la mirada.
-  Las placas tienen base, lam, filo y labio, y heredan cada brazo vanilla.
-  El forro de la manga se solapa con el retorno en reposo; el fuelle nace
-  en la camiseta y solapa la costura que acompaña a `cape_top`. El paño
-  libre conserva sus clips, sus UV y la respuesta a la marcha y a las alas.
-  `tools/verify_cape_attachment.py` mide los solapes en tres dimensiones,
-  incluidas las mangas Steve/Alex. La holgura del yugo exterior se comprueba
-  con un casco vanilla de pie y en una muestra agachada; no es un certificado
-  de todas las posturas extremas del paño flexible ni de cascos de otros mods.
+  `chestplate`. El reborde, los retornos y la vista fina sobre la camiseta
+  no leen la mirada. Las placas tienen base, lámina, filo y labio; cada una
+  sigue a su brazo vanilla y continúa en un forro que envuelve la manga.
+  El fuelle conserva su pie dentro de la camiseta y su punta solapa la
+  costura de `cape_top`: sólo el fuelle cambia de largo y ángulo al moverse
+  la bisagra. El extremo superior de los jirones queda plegado bajo ese
+  reborde. No se movieron pivotes ni fotogramas clave, ni se repintaron el
+  atlas, la emisión, el faldón inferior o el icono.
+  `tools/verify_cape_attachment.py` mide los solapes en 3D con mangas
+  Steve/Alex. El barrido del reborde exterior cubre giros de pie y una
+  muestra agachada. Para la mirada vertical recta también se comprueban
+  placas, fuelle, costura y raíces durante reposo, salto y aterrizaje. La
+  vista fina queda al ras de la piel: no se abre cuando la oculta la cabeza.
+  Los cruces en poses extremas combinadas, o con cascos de otros mods, no
+  quedan cubiertos por esa prueba.
 - **Pulso del icono (v1.67.8):** 32 fotogramas a un tick por cuadro, mismo
   contorno y duración de 1,6 s. Se comprueba el recorrido de la cresta de
   luz en la hotbar vanilla; se conservan el dibujo y el reposo de v1.67.7.

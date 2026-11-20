@@ -262,7 +262,7 @@ jobs:
           if fixed_yoke:
               frame = next(b for b in armor_geo['bones'] if b['name'] == 'cape_fixed_yoke')
               assert frame['parent'] == 'chestplate' and not frame['cubes']
-              assert len(armor_geo['bones']) == 237
+              assert len(armor_geo['bones']) == 238
               assert mount['v20_mount_seat']['parent'] == frame['name']
               assert mount['v20_mount_saddle']['parent'] == 'cape_top'
               assert mount['v20_mount_gusset']['parent'] == 'cape_seat_fit'
@@ -741,9 +741,6 @@ jobs:
                 'independiente, chispa EXCLUSIVA sin particulas vanilla, montura y nuevo icono con archivos históricos protegidos')
           PY
 
-      # v1220: la autoevaluacion MEDIDA se ejecuta AQUI, en GitHub Actions,
-      # no solo en el sandbox. Instala numpy/Pillow y falla el build si la
-      # capa se aleja de la referencia del usuario.
       - name: Select attachment rig
         id: rig
         run: |
@@ -751,6 +748,8 @@ jobs:
             echo 'fixed=true' >> "$GITHUB_OUTPUT"
           fi
 
+      # La autoevaluación corre también en CI. Cada montaje tiene sus
+      # propios controles sin dejar de comprobar el paño y sus efectos.
       - name: Autoevaluacion visual contra la referencia
         run: |
           python3 -m pip install --quiet numpy Pillow
@@ -1005,9 +1004,10 @@ jobs:
       - name: Preparar la referencia histórica del ajuste
         id: historic-fit
         if: >-
-          (github.event_name == 'push' && (contains(github.event.head_commit.message, '[capa-historica]') ||
+          steps.rig.outputs.fixed != 'true' &&
+          ((github.event_name == 'push' && (contains(github.event.head_commit.message, '[capa-historica]') ||
           contains(github.event.head_commit.message, '[publicar]'))) ||
-          (github.event_name == 'workflow_dispatch' && inputs.publicar == true)
+          (github.event_name == 'workflow_dispatch' && inputs.publicar == true))
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -1062,6 +1062,7 @@ jobs:
           fi
 
       - name: Comprobar el yugo fijo y el relieve de ambas hombreras
+        id: verify-fixed-mount
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && steps.rig.outputs.fixed == 'true' }}
         run: |
           set -o pipefail
@@ -1071,6 +1072,10 @@ jobs:
               *) printf '%s\n' "$line" ;;
             esac
           done
+
+      - name: Lámina del yugo en ambos cuerpos y ranuras
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && steps.rig.outputs.fixed == 'true' }}
+        run: python3 tools/verify_forge_attachment.py build/fx-smoke-run/fx-shots --gallery-only
 
       - name: Medir el cuello al girar 60 grados en F5
         id: verify-wide-turn
@@ -1150,7 +1155,7 @@ jobs:
           done
 
       - name: Medir ciclos y transiciones reales al caminar en F5
-        if: ${{ steps.rig.outputs.fixed != 'true' && !cancelled() && steps.fx-smoke.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
           set -o pipefail
           args=()
@@ -1252,6 +1257,30 @@ jobs:
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.
+      # One-time copy to the working branch; no Release, tag or installer.
+      - name: Adjuntar el JAR probado y su lámina a la rama de trabajo
+        if: >-
+          github.repository == 'Santi-PdR/modelos' &&
+          github.ref == 'refs/heads/arena/5a9fa51b-modelos' &&
+          github.event_name == 'push' && contains(github.event.head_commit.message, '[capa-v16715-directo]') &&
+          steps.verify-fixed-mount.outcome == 'success' && steps.fx-smoke.outcome == 'success'
+        run: |
+          set -euo pipefail
+          branch=arena/5a9fa51b-modelos
+          test "$(git branch --show-current)" = "$branch"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          jar=capatest-1.67.15.jar
+          (cd build/libs && sha256sum -c SHA256SUMS.txt)
+          test "$(cut -d ' ' -f3 build/libs/SHA256SUMS.txt)" = "$jar"
+          test ! -e "entregables/v1.67.15/$jar"
+          install -D -m 0644 "build/libs/$jar" "entregables/v1.67.15/$jar"
+          install -D -m 0644 build/libs/SHA256SUMS.txt docs/releases/v1.67.15/JAR.sha256
+          install -D -m 0644 build/fx-smoke-run/fx-shots/yugo-fijo-forge.jpg docs/capa_v16715_anclaje_forge.jpg
+          git add -f -- "entregables/v1.67.15/$jar" docs/releases/v1.67.15/JAR.sha256 docs/capa_v16715_anclaje_forge.jpg
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'Adjuntar v1.67.15 verificada y su lámina F5 [skip ci]'
+          git push origin "$branch"
+
       - name: Stage verified release (draft)
         if: >-
           (github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar]')) ||
@@ -1259,11 +1288,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FORGE_RESULT: ${{ steps.fx-smoke.outcome }}
-          TURN_RESULT: ${{ steps.verify-wide-turn.outcome }}
+          MOUNT_RESULT: ${{ steps.rig.outputs.fixed == 'true' && steps.verify-fixed-mount.outcome || steps.verify-wide-turn.outcome }}
         run: |
           set -euo pipefail
-          if [ "$FORGE_RESULT" != success ] || [ "$TURN_RESULT" != success ]; then
-            echo '::error::El borrador requiere pasar el cliente Forge y la comparación del giro amplio.'
+          if [ "$FORGE_RESULT" != success ] || [ "$MOUNT_RESULT" != success ]; then
+            echo '::error::El borrador requiere pasar el cliente Forge y la prueba de anclaje del rig.'
             exit 1
           fi
           # runClient usa fuentes de diagnóstico. El JAR preparado más arriba

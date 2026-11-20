@@ -265,10 +265,18 @@ function wearerDepth(geo, profile, stance, look, turn) {
 function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm, swings=[0,0]) {
   const depth=wearerDepth(geo,profile,stance,look,turn);
   if (hasFixedYoke(geo)) {
+    const drape=geo.bones.find(b=>b.name===profile.drapeBone), top=geo.bones.find(b=>b.name==='cape_top');
+    const angle=-depth*profile.drapePerUnit;
+    const link=drape && top && profile.linkTip && apply(matrices({bones:[
+      {...drape,parent:null,rotation:[angle,0,0],offset:[0,0,depth]},top]}).cape_top,profile.linkTip);
     const bones=geo.bones.map(b => {
       if (b.name===profile.bone) return {...b,offset:[0,0,depth]};
-      if (b.name===profile.drapeBone) return {...b,rotation:[-depth*profile.drapePerUnit,0,0]};
-      if (b.name===profile.gussetBone) return {...b,scale:[1,1,1+depth/profile.gussetDepth]};
+      if (b.name===profile.drapeBone) return {...b,rotation:[angle,0,0]};
+      if (link && b.name===profile.gussetBone) {
+        const dy=link[1]-b.pivot[1], dz=link[2]-b.pivot[2];
+        return {...b,rotation:[Math.atan2(dy,dz)*180/Math.PI,0,0],
+          scale:[1,1,Math.hypot(dy,dz)/(profile.linkTip[2]-b.pivot[2])]};
+      }
       if (b.name==='chestplate') return {...b,rotation:[stance*profile.bodyAngle,0,0],offset:[0,-3.2*stance,0]};
       const i=['leftArm','rightArm'].indexOf(b.name);
       return i<0 ? b : {...b,rotation:[swings[i]+.4*(180/Math.PI)*stance,0,0],offset:[0,-3.2*stance,0]};

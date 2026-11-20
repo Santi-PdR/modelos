@@ -52,7 +52,7 @@ final class CapeFixedMountProbe extends GeoRenderLayer<CapaDeteriorerItem> {
 
     private static boolean fixed(String n) {
         return n.startsWith("v17_cowl_") || n.startsWith("v18_pad_") || n.startsWith("v18_chain_")
-                || n.startsWith("v19_cuellito_") || n.equals("v20_mount_seat")
+                || n.startsWith("v19_cuellito_") || n.equals("v20_mount_seat") || n.equals("v20_mount_facing")
                 || n.equals(CapeBacking.LEFT) || n.equals(CapeBacking.RIGHT) || n.equals(CapeFit.SHOULDERS_BONE) || n.equals(CapeFit.UNDER_YOKE_BONE);
     }
 

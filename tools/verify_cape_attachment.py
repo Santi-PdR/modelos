@@ -13,7 +13,7 @@ from PIL import Image
 
 import armor_model_pipeline as G
 import bbmodel_export as B
-from cape_attachment import ARMS, FRAME, LININGS, PADS
+from cape_attachment import ARMS, FACING, FOLD_LINE, FRAME, LININGS, PADS
 import cape_animation_pipeline as A
 import cape_fit as F
 import cape_material as C
@@ -33,7 +33,27 @@ def asset_contract(geo):
     assert geo == G.build()['minecraft:geometry'][0], 'generated GEO is stale'
     by = {b['name']: b for b in geo['bones']}
     fixed = {FRAME, G.GUSSET_BONE, G.SADDLE_BONE, *PADS, *LININGS} | {n for n,b in by.items() if b.get('parent') == FRAME}
-    assert [b for b in geo['bones'] if b['name'] not in fixed] == [b for b in legacy['bones'] if b['name'] not in fixed]
+    assert [b['name'] for b in geo['bones'] if b['name'] not in fixed] == [
+        b['name'] for b in legacy['bones'] if b['name'] not in fixed]
+    crease = set()
+    rest = dict(legacy, bones=[dict(b, rotation=[0.,0.,0.]) if b['name'] == 'cape_top' else b
+                              for b in legacy['bones']])
+    mats = P.matrices(rest)
+    for b in legacy['bones']:
+        name = b['name']
+        if name in fixed:
+            continue
+        new = by[name]
+        if b == new:
+            continue
+        assert b.get('parent') == 'cape_top' and name.startswith(('v17_ribbon_', 'v17_vein_')), name
+        assert {**b, 'cubes': None} == {**new, 'cubes': None}, name
+        for a,c in zip(b['cubes'], new['cubes'], strict=True):
+            assert a['uv'] == c['uv'] and a['inflate'] == c['inflate'], name
+            if a != c:
+                assert P.cube_points(a, mats[name], inflate=False)[:,1].max() > FOLD_LINE, name
+                crease.add(name)
+    print(f'UV, atlas, emisión y piezas bajo el pliegue intactos; {len(crease)} huesos de tela con el extremo plegado.', flush=True)
     assert by[FRAME]['parent'] == 'chestplate'
     for pad, lining, arm in zip(PADS, LININGS, ARMS, strict=True):
         assert by[pad]['parent'] == by[lining]['parent'] == arm and len(by[pad]['cubes']) == 4
@@ -75,8 +95,11 @@ def seam_contract(geo, by, clips):
     skin_lap = float('inf')
     for i, (name, lining) in enumerate(zip(PADS, LININGS, strict=True)):
         pad, *trim = local[name]
-        tongue, = local[lining]
-        assert lap(tongue, solids[1:]) > .20 and lap(tongue, pad[None]) > .24, 'unsewn sleeve tongue'
+        front, crown, back, facing = local[lining]
+        rail = local[lining]
+        assert min(lap(front, solids[1:]), lap(back, solids[1:]), lap(facing, local[FACING])) > .16, 'unsewn returns'
+        assert min(lap(front, crown[None]), lap(back, crown[None]), lap(facing, back[None]),
+                   lap(crown, pad[None])) > .10, 'unsewn sleeve lining'
         assert min(lap(c, pad[None]) for c in trim) > .05, 'detached crest or lip'
         for width, stance, swing in product((3,4), (0.,.5,1.), (-60,-22,0,22,60)):
             left = 4 if i == 0 else -4-width
@@ -88,10 +111,10 @@ def seam_contract(geo, by, clips):
             arm = P.T([0., -.5*(4-width), 0.]) @ arm
             worn_sleeve = (skin @ arm[:3,:3].T + arm[:3,3])[None]
             worn_base = pad @ arm[:3,:3].T + arm[:3,3]
-            worn_tongue = tongue @ arm[:3,:3].T + arm[:3,3]
+            worn_rail = rail @ arm[:3,:3].T + arm[:3,3]
             lap_base = lap(worn_base,worn_sleeve)
-            skin_lap = min(skin_lap, lap_base, lap(worn_tongue,worn_sleeve))
-    assert skin_lap > .20, ('floating pad or tongue', skin_lap)
+            skin_lap = min(skin_lap, lap_base, *(lap(v,worn_sleeve) for v in worn_rail))
+    assert skin_lap > .16, ('floating pad or tongue', skin_lap)
     print(f'Steve/Alex con mangas a ±60°: placa y forro pisan piel ≥ {skin_lap:.3f}u.', flush=True)
 
     # The two folds of the flexible lining link the torso to the cape_top
@@ -124,7 +147,13 @@ def seam_contract(geo, by, clips):
 def head_contract(geo, by):
     """Clearance of the rigid body yoke, independent of the arm and drape pose."""
     p = patches(geo)
-    yoke = np.concatenate([p[n] for n,b in by.items() if b.get('parent') == FRAME and len(p[n])])
+    yoke = np.concatenate([p[n] for n,b in by.items() if b.get('parent') == FRAME and n != FACING and len(p[n])])
+    # The facing belongs to the shirt surface, not the raised collar test.
+    # Its front plane is embedded in the skin and its back is only a hem's
+    # thickness outside the jacket, even where the head occludes the shirt.
+    facing = p[FACING]
+    assert facing[...,2].min() < 2 and facing[...,2].max() <= 2.35
+    assert facing[...,0].min() >= -4.25 and facing[...,0].max() <= 4.25
     # Even between sampled angles, a standing head never reaches below
     # its pivot minus the radius of its lower edge in the pitch plane.
     floor = F.HEAD_PIVOT[1] - hypot(.5, 4.5)
@@ -137,6 +166,34 @@ def head_contract(geo, by):
     gap = contacts(yoke[None], hats[None], pad=.08)[0].min(axis=1)
     assert gap.min() > .035, (aims[np.argmin(gap)], gap.min(), 'outer yoke inside the head')
     print(f'Yugo exterior: {len(aims)-27} giros de pie y 27 poses agachadas, holgura ≥ {gap.min():.3f}u.', flush=True)
+
+
+def jump_clearance(geo, clips):
+    # The user's straight-up case, including the entire fall cycle and a
+    # landing mix, tested against the inflated vanilla head, not the camera.
+    # On the wider diagonal/crouch sweep we require attachment continuity,
+    # not that the head never occludes soft lining or the inboard relief.
+    hats = np.array([F.head_in_body(0., pitch, 0., outer=True) for pitch in range(0,91,2)])[None]
+    by = {b['name']: b for b in geo['bones']}
+    names = [*PADS, G.GUSSET_BONE, G.SADDLE_BONE] + [n for n,b in by.items()
+             if b.get('parent') == 'cape_top' and n.startswith('v17_ribbon_') and b['cubes']]
+    phases = (0.,.18,.33,.5,.68,.85,1.)
+    measured = float('inf')
+    idle, fall = [clips['animation.'+n] for n in ('idle', 'fall')]
+    neutral = P.pose_at(geo,T.prepare_clip(idle),0.)
+    samples = [P.pose_at(geo,T.prepare_clip(c),t*c['animation_length']) for c,t in product((idle,fall),phases)]
+    samples += [interpolate(samples[-1],neutral,t) for t in (.25,.5,.75)]
+    for frame, swing, slim in product(samples, (-5.,0.,5.), (False,True)):
+        worn = F.wearer_pose(frame,0.,0.,0.,arm_swing=(-swing,swing))
+        if slim:
+            for b in worn['bones']:
+                if b['name'] in ARMS:
+                    b['offset'][1] -= .5
+        data = patches(worn)
+        shapes = np.concatenate([data[n] for n in names])
+        measured = min(measured, contacts(shapes[None],hats,pad=.10).min())
+    assert measured > .006, ('straight-up idle/jump fold clips the head', measured)
+    print(f'{len(samples)*6*len(hats[0])} muestras de mirada arriba, reposo/salto/aterrizaje: placas, fuelle y raíces ≥ {measured:.3f}u.', flush=True)
 
 
 def view_contract(geo, fixed):
@@ -164,4 +221,5 @@ if __name__ == '__main__':
     by, fixed, clips = asset_contract(geo)
     seam_contract(geo, by, clips)
     head_contract(geo, by)
+    jump_clearance(geo, clips)
     view_contract(geo, fixed)

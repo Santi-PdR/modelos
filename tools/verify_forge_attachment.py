@@ -58,8 +58,8 @@ def report(root):
 
 
 def gallery(root, path):
-    cell_w, cell_h = 208, 164
-    views = (*VIEWS, 'salto')
+    cell_w, cell_h = 220, 177
+    views = ('espalda', 'frente', 'arriba', 'abajo', 'mirada-alta', 'giro-alto', 'salto')
     image = Image.new('RGB', (cell_w * len(views), 39 + (cell_h+20)*len(FIXTURES)), '#15101a')
     draw = ImageDraw.Draw(image)
     draw.text((12, 10), 'MANTLE OF THE BLIGHT STAR   /   YUGO FIJO EN FORGE', fill='#f6dded')
@@ -71,7 +71,7 @@ def gallery(root, path):
             x = j*cell_w
             name = f'{fixture}-{view}'
             native = Image.open(root / f'{name}.png').convert('RGB')
-            bounds_name = name if view != 'salto' else f'{fixture}-espalda'
+            bounds_name = name if view in VIEWS else f'{fixture}-espalda'
             mask = regions(root, bounds_name, native.size).any(0)
             py, px = np.where(mask)
             w, h = native.size
@@ -89,13 +89,14 @@ def gallery(root, path):
         draw.text((11, y+2), fixture.removeprefix('yugo-').replace('-', '  /  ').upper(), fill='#ffe2ef')
     image.save(path, quality=88, optimize=True)
     # Compact proof also available if Actions storage isn't reachable.
-    preview = image.resize((1092, 582), Image.Resampling.LANCZOS)
-    for quality in (81, 75, 66, 59):
+    # GitHub keeps only ten notices per step; never emit a truncated image.
+    for width in (980, 840, 700, 560, 420):
         data = io.BytesIO()
-        preview.save(data, 'JPEG', quality=quality, optimize=True)
-        if len(data.getvalue()) < 55_000:
+        image.resize((width, round(width*image.height/image.width)), Image.Resampling.LANCZOS).save(
+            data, 'JPEG', quality=68, optimize=True)
+        if len(data.getvalue()) <= 12_600:
+            emit('Yugo fijo galeria jpg', data.getvalue())
             break
-    emit('Yugo fijo galeria jpg', data.getvalue())
 
 
 if __name__ == '__main__':
@@ -103,6 +104,7 @@ if __name__ == '__main__':
     ap.add_argument('shots', type=Path)
     ap.add_argument('--gallery-only', action='store_true')
     args = ap.parse_args()
-    gallery(args.shots, args.shots / 'yugo-fijo-forge.jpg')
-    if not args.gallery_only:
+    if args.gallery_only:
+        gallery(args.shots, args.shots / 'yugo-fijo-forge.jpg')
+    else:
         report(args.shots)

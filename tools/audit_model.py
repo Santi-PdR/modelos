@@ -85,7 +85,7 @@ def static_checks() -> None:
     fixed_yoke = any(b['name'] == FRAME for b in bones)
     if fixed_yoke:
         assert edge['parent'] == FRAME and n_edge == 2
-        assert len(bones) == 237
+        assert len(bones) == 238
     else:
         assert edge['parent'] == FIT_BONE and n_edge == 3
         extras = n_fragments + n_mount + n_edge

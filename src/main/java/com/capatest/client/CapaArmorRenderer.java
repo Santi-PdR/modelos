@@ -16,6 +16,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.cache.object.GeoCube;
@@ -169,11 +170,12 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
             // Only the lining and free cloth receive fitting transforms.
             // In both passes the fixed yoke and the sleeve plates inherit
             // the vanilla part transform without reading any look angle.
-            boolean fit = wearerDepth > 0 && (CapeFit.BONE.equals(name)
-                    || CapeFit.DRAPE_BONE.equals(name) || CapeFit.GUSSET_BONE.equals(name));
+            boolean gusset = CapeFit.GUSSET_BONE.equals(name);
+            boolean fit = gusset || wearerDepth > 0 && (CapeFit.BONE.equals(name) || CapeFit.DRAPE_BONE.equals(name));
             if (fit) poseStack.pushPose();
             try {
-                if (fit) applyDrapeFit(poseStack, bone, name, 0);
+                if (gusset) followClothHinge(poseStack, bone);
+                else if (fit) applyDrapeFit(poseStack, bone, name, 0);
                 super.renderRecursively(poseStack, animatable, bone, renderType, buffers, buffer,
                         isReRender, partialTick, light, overlay, red, green, blue, alpha);
             } finally {
@@ -245,6 +247,25 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                 poseStack.popPose();
         }
     }
+
+    // Link the fixed inner hem to the folded saddle, not to the head. Use the
+    // same last animation/stride/wing pose as the cloth draw, in both passes.
+    private void followClothHinge(PoseStack poses, GeoBone hem) {
+        GeoBone hinge = bone("cape_top"), drape = bone(CapeFit.DRAPE_BONE);
+        if (hinge == null || drape == null) return;
+        PoseStack cloth = new PoseStack();
+        cloth.translate(0, 0, wearerDepth / 16F);
+        applyDrapeFit(cloth, drape, CapeFit.DRAPE_BONE, 0);
+        RenderUtils.prepMatrixForBone(cloth, hinge);
+        Vector3f tip = cloth.last().pose().transformPosition(new Vector3f(0, LINK_Y / 16F, LINK_Z / 16F));
+        float dy = tip.y * 16 - hem.getPivotY(), dz = tip.z * 16 - hem.getPivotZ();
+        RenderUtils.translateToPivotPoint(poses, hem);
+        poses.mulPose(Axis.XP.rotation((float) -Math.atan2(dy, dz)));
+        poses.scale(1, 1, (float) Math.hypot(dy, dz) / (LINK_Z - hem.getPivotZ()));
+        RenderUtils.translateAwayFromPivotPoint(poses, hem);
+    }
+
+    private static final float LINK_Y = 16.95F, LINK_Z = 4.89F;
 
     private void applyDrapeFit(PoseStack poses, GeoBone bone, String name, float snug) {
         if (CapeFit.BONE.equals(name)) {

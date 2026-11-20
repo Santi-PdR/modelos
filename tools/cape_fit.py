@@ -270,8 +270,29 @@ def torso_frame(b, transform, prefix="torso_"):
                 offset=[-dx,dy,dz],scale=[sx,sy,sz],cubes=[])
 
 
+@lru_cache(maxsize=1)
+def link_tip():
+    renderer = SOURCE.with_name('CapaArmorRenderer.java').read_text()
+    y, z = re.search(r'LINK_Y = ([\d.]+)F, LINK_Z = ([\d.]+)F;', renderer).groups()
+    return [0., float(y), float(z)]
+
+
 def viewer_profile():
-    return dict(profile(),backing=B.profile(),seat=seat_profile(),plates=plate_profile(),torso=torso_profile())
+    return dict(profile(),backing=B.profile(),seat=seat_profile(),plates=plate_profile(),torso=torso_profile(),
+                linkTip=link_tip())
+
+
+def gusset_link(geo, depth, drape_angle):
+    by = {b['name']: b for b in geo['bones']}
+    if 'cape_top' not in by or G.GUSSET_BONE not in by:
+        return {}
+    drape = dict(by[G.DRAPE_BONE], parent=None, rotation=[drape_angle,0.,0.], offset=[0.,0.,depth])
+    mat = P.matrices(dict(bones=[drape, by['cape_top']]))['cape_top']
+    tip = link_tip()
+    _, y, z = by[G.GUSSET_BONE]['pivot']
+    _, dy, dz = mat[:3,:3] @ tip + mat[:3,3] - [0.,y,z]
+    return dict(rotation=[math.degrees(math.atan2(dy,dz)),0.,0.],
+                scale=[1.,1.,math.hypot(dy,dz)/(tip[2]-z)])
 
 
 def fitted(geo):
@@ -289,10 +310,11 @@ def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back
                                   offset=[0., -3.2*stance, 0.])}
     if fitted(geo):
         d, f = depth(stance, 0., 0.), profile()
+        angle = -d*f['drapePerUnit']
         changes.update({
             G.FIT_BONE: dict(offset=[0.,0.,d]),
-            G.DRAPE_BONE: dict(rotation=[-d*f['drapePerUnit'],0.,0.]),
-            G.GUSSET_BONE: dict(scale=[1.,1.,1.+d/f['gussetDepth']]),
+            G.DRAPE_BONE: dict(rotation=[angle,0.,0.]),
+            G.GUSSET_BONE: gusset_link(geo, d, angle),
         })
         for name, swing in zip(reversed(ARMS), arm_swing, strict=True):
             changes[name] = dict(rotation=[swing+math.degrees(.4)*stance, 0., 0.],

@@ -154,7 +154,8 @@ class WornModel:
         # The saddle is an articulated join, not a free panel. Its contact
         # with the yoke and linings is measured by verify_cape_attachment.
         self.cloth = self.masks[0] & np.array([n != G.SADDLE_BONE for n in self.names])
-        self.rigid = ~self.masks[0]
+        self.link = np.array([F.fitted(geo) and n == G.GUSSET_BONE for n in self.names])
+        self.rigid = ~self.masks[0] & ~self.link
 
         joints = defaultdict(list)
         for i,(n,c,_) in enumerate(parts):
@@ -245,7 +246,9 @@ def exercise(geo, clips):
             if j == 0:
                 ix=int(corr[:,0].argmax())
                 d = S.adjust(g,*demand[ix],aim)
-                assert np.allclose(v[ix],rig.vertices(d,aim)[0],atol=1e-9,rtol=0)
+                # The separate gusset stretches to the final hinge. Its lap
+                # after lift is exercised directly by verify_cape_attachment.
+                assert np.allclose(v[ix,~rig.link],rig.vertices(d,aim)[0][~rig.link],atol=1e-9,rtol=0)
         count += len(steps)*len(frames)
         missed += summary[1]
         print(f'{name:10s} {amp:.2f} {aim}: {len(steps)*len(frames)} cruces de fases, paño '

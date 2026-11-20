@@ -250,6 +250,7 @@ def build_animations(anim_bones: list[tuple[str, str]], runtime: dict) -> list[d
 
 CAPE_BONES = ("v15_", "v16_", "v17_", "v18_", "v19_", "v20_mount_")
 
+
 def build(geo: dict | None = None, atlas: Image.Image | None = None,
           runtime: dict | None = None) -> dict:
     """Admite geometría y atlas en memoria para comparar antes de exportar."""
@@ -268,7 +269,6 @@ def build(geo: dict | None = None, atlas: Image.Image | None = None,
     bones = geo["bones"]
     bounds = atlas.size
     assert bounds == tuple(geo['description'][f'texture_{axis}'] for axis in ('width','height')), bounds
-
 
     elements, groups, node_by_name = [], [], {}
     anim_bones: list[tuple[str, str]] = []
