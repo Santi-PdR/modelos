@@ -103,9 +103,10 @@ final class CapeTorsoFit {
         // plate instead of shortening its contact rim. Lift it just enough
         // to retain clearance through the sleeve's idle sway.
         double settled = dry * smooth(.78, .99, plateFit);
-        Affine underFold = collar(tuck, crown + hold*smooth(24, 43, down), shift, scale);
-        return new Shape((float) seat, underFold, lip(underFold, tuck, crown, hold),
-                collar(tuck, trim * .16, 0, 1),
+        double foldReach = crown + hold*smooth(24, 43, down);
+        Affine underFold = collar(tuck, foldReach, shift, scale, 0, 0);
+        Affine lip = hold > 0 ? collar(tuck, foldReach, shift, scale, crown, hold) : underFold;
+        return new Shape((float) seat, underFold, lip, collar(tuck, trim * .16, 0, 1, 0, 0),
                 affine(1, compact, .94, .92, 1 - .17 * advance, 0, .18 * advance, -.24 * advance),
                 rest == 0 && settled == 0 ? null : affine(2, 1, 1 - .60 * rest, 1 - .59 * rest,
                         1 - .14 * advance * rest, 0,
@@ -113,25 +114,25 @@ final class CapeTorsoFit {
                         rest * (-.24*advance + .52*sweep + .22*upright) - .38 * settled));
     }
 
-    private static Affine collar(double amount, double reach, double shift, double scale) {
+    private static Affine collar(double amount, double reach, double shift, double scale,
+                                 double lipReach, double hold) {
         if (amount <= 0) return null;
         double[] pivot = PIVOTS[0];
-        return new Affine((float)pivot[0], (float)pivot[1], (float)pivot[2], 0, (float)(-.58*amount),
-                (float)(shift - 1.62*reach*amount*scale), (float)(1 + amount*(.965-1)),
-                (float)(1 + amount*(.41-1)), (float)((1 - .12*reach*amount)*scale));
-    }
-
-    private static Affine lip(Affine fold, double tuck, double reach, double hold) {
-        if (fold == null || hold <= 0) return fold;
-        // The lower fold can compress into the seat, but do not flatten the
-        // exposed rear lip with it. Keep its front edge in place, retain the
-        // original thickness and grow upward from the lower stitched edge.
-        double thickness = 1 - .12*reach*tuck;
-        double raise = TURN_LIP_HEIGHT * hold;
-        return new Affine(fold.x(), fold.y(), fold.z(), fold.dx(),
-                (float)(fold.dy() + raise*(fold.y() + fold.dy() - TURN_LIP_Y)),
-                (float)(fold.dz() - (thickness - fold.sz())*(TURN_LIP_Z - fold.z()) - TURN_LIP_ADVANCE*hold),
-                fold.sx(), (float)(fold.sy()*(1 + raise)), (float)thickness);
+        double dy = -.58*amount, dz = shift - 1.62*reach*amount*scale;
+        double sy = 1 + amount*(.41-1), sz = (1 - .12*reach*amount)*scale;
+        if (hold > 0) {
+            // The lower fold can compress into the seat, but do not flatten
+            // the exposed lip. Retain thickness around its leading edge
+            // and grow upward from the lower stitched edge.
+            double thickness = 1 - .12*lipReach*amount;
+            double raise = TURN_LIP_HEIGHT * hold;
+            dy += raise*(pivot[1] + dy - TURN_LIP_Y);
+            dz -= (thickness - sz)*(TURN_LIP_Z - pivot[2]) + TURN_LIP_ADVANCE*hold;
+            sy *= 1 + raise;
+            sz = thickness;
+        }
+        return new Affine((float)pivot[0], (float)pivot[1], (float)pivot[2], 0, (float)dy, (float)dz,
+                (float)(1 + amount*(.965-1)), (float)sy, (float)sz);
     }
 
     private static Affine affine(int i, double k, double sx, double sy, double sz,
