@@ -1,0 +1,53 @@
+name: Inspect reference mod assets
+on:
+  push:
+    branches: ['arena/a09d390b-modelos']
+permissions:
+  contents: write
+jobs:
+  inspect:
+    if: ${{ contains(github.event.head_commit.message, '[inspect-darkesthours]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download the user-provided reference for analysis only
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 'https://github.com/Santi-PdR/modelos/releases/download/darkesthours-v1.0.0/darkesthours-1.0.0.jar' -o /tmp/darkesthours.jar
+          python3 - <<'PY'
+          import collections, hashlib, re, zipfile
+          from pathlib import Path
+          path=Path('/tmp/darkesthours.jar')
+          assert 200_000_000 < path.stat().st_size < 220_000_000
+          with zipfile.ZipFile(path) as z:
+              names=z.namelist()
+              lines=['Reference: darkesthours-v1.0.0; file darkesthours-1.0.0.jar',
+                     'SHA256: '+hashlib.sha256(path.read_bytes()).hexdigest(),
+                     'Entries: '+str(len(names)), '']
+              for n in ('META-INF/mods.toml','META-INF/MANIFEST.MF','LICENSE','LICENSE.txt','pack.mcmeta'):
+                  if n in names:
+                      inf=z.getinfo(n)
+                      if inf.file_size < 100_000:
+                          lines += ['=== '+n+' ===',z.read(n).decode('utf-8','replace')[:12000],'']
+              lines += ['=== namespace counts ===']
+              roots=collections.Counter('/'.join(n.split('/')[:3]) for n in names if n.startswith(('assets/','data/')))
+              lines += [f'{k}: {v}' for k,v in roots.most_common(100)]
+              lines += ['', '=== matching movesets, animation and camera paths (up to 1200) ===']
+              matches=[n for n in names if re.search(r'moveset|move_set|combat|animation|animator|skill|cinema|cutscene|katana|dagger',n,re.I)]
+              lines += matches[:1200]
+              lines += ['', '=== matching path count ===',str(len(matches)),'', '=== nested jars ===']
+              lines += [n for n in names if n.endswith('.jar')][:100]
+              out=Path('katana_stain/referencias/darkesthours_auditoria.txt')
+              out.parent.mkdir(parents=True,exist_ok=True)
+              out.write_text('\n'.join(lines)+'\n')
+          PY
+      - name: Save audit only, never the reference jar
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add katana_stain/referencias/darkesthours_auditoria.txt
+          if ! git diff --cached --quiet; then
+            git commit -m 'Record reference mod asset inventory'
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
