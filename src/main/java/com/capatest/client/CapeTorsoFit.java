@@ -22,8 +22,10 @@ final class CapeTorsoFit {
     // Front edge and base of the exposed rear collar in model units.
     private static final double TURN_LIP_Y = 21.7;
     private static final double TURN_LIP_Z = 6.0;
-    private static final double TURN_LIP_HEIGHT = .40;
-    private static final double TURN_LIP_ADVANCE = .10;
+    private static final double TURN_LIP_HEIGHT = .70;
+    private static final double TURN_LIP_ADVANCE = .22;
+    private static final double TURN_LIP_RISE = .48;
+    private static final double TURN_LIP_SHIFT = .92;
     static final Shape NONE = new Shape(0, null, null, null, null, null);
 
     record Affine(float x, float y, float z, float dx, float dy, float dz, float sx, float sy, float sz) {}
@@ -59,7 +61,8 @@ final class CapeTorsoFit {
                 || !Double.isFinite(armBack) || !Double.isFinite(sleeve) || !Double.isFinite(dry)
                 || !Double.isFinite(previousSeat) || !Double.isFinite(plateFit)) return NONE;
         double stance = bodyPitch / CapeFit.CROUCH_RADIANS;
-        double down = Math.toDegrees(headPitch), turn = Math.abs(Math.toDegrees(Math.IEEEremainder(relativeYaw, 2*Math.PI)));
+        double signedTurn = Math.toDegrees(Math.IEEEremainder(relativeYaw, 2*Math.PI));
+        double down = Math.toDegrees(headPitch), turn = Math.abs(signedTurn);
         double leanRoom = 1 - smooth(.05, .36, stance);
         double steepRoom = 1 - .82 * smooth(62, 88, down) * smooth(24, 36, turn);
         double sleeveRoom = 1 - smooth(2.85, 6, sleeve);
@@ -104,9 +107,12 @@ final class CapeTorsoFit {
         // to retain clearance through the sleeve's idle sway.
         double settled = dry * smooth(.78, .99, plateFit);
         double foldReach = crown + hold*smooth(24, 43, down);
-        Affine underFold = collar(tuck, foldReach, shift, scale, 0, 0);
-        Affine lip = hold > 0 ? collar(tuck, foldReach, shift, scale, crown, hold) : underFold;
-        return new Shape((float) seat, underFold, lip, collar(tuck, trim * .16, 0, 1, 0, 0),
+        // On a deeper turn the exposed edge follows the near shoulder a
+        // little; the buried fold and stitching do not travel across it.
+        double side = -Math.signum(signedTurn) * TURN_LIP_SHIFT * hold * smooth(48, 57, down);
+        Affine underFold = collar(tuck, foldReach, shift, scale, 0, 0, 0);
+        Affine lip = hold > 0 ? collar(tuck, foldReach, shift, scale, crown, hold, side) : underFold;
+        return new Shape((float) seat, underFold, lip, collar(tuck, trim * .16, 0, 1, 0, 0, 0),
                 affine(1, compact, .94, .92, 1 - .17 * advance, 0, .18 * advance, -.24 * advance),
                 rest == 0 && settled == 0 ? null : affine(2, 1, 1 - .60 * rest, 1 - .59 * rest,
                         1 - .14 * advance * rest, 0,
@@ -115,7 +121,7 @@ final class CapeTorsoFit {
     }
 
     private static Affine collar(double amount, double reach, double shift, double scale,
-                                 double lipReach, double hold) {
+                                 double lipReach, double hold, double side) {
         if (amount <= 0) return null;
         double[] pivot = PIVOTS[0];
         double dy = -.58*amount, dz = shift - 1.62*reach*amount*scale;
@@ -126,12 +132,12 @@ final class CapeTorsoFit {
             // and grow upward from the lower stitched edge.
             double thickness = 1 - .12*lipReach*amount;
             double raise = TURN_LIP_HEIGHT * hold;
-            dy += raise*(pivot[1] + dy - TURN_LIP_Y);
+            dy += raise*(pivot[1] + dy - TURN_LIP_Y) + TURN_LIP_RISE*hold;
             dz -= (thickness - sz)*(TURN_LIP_Z - pivot[2]) + TURN_LIP_ADVANCE*hold;
             sy *= 1 + raise;
             sz = thickness;
         }
-        return new Affine((float)pivot[0], (float)pivot[1], (float)pivot[2], 0, (float)dy, (float)dz,
+        return new Affine((float)pivot[0], (float)pivot[1], (float)pivot[2], (float)side, (float)dy, (float)dz,
                 (float)(1 + amount*(.965-1)), (float)sy, (float)sz);
     }
 

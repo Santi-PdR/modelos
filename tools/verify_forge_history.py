@@ -157,7 +157,7 @@ def study_wide_turn(root):
                 np.testing.assert_allclose(p0[name],p1[name],rtol=0,atol=.015,err_msg=f'{stem}: {name} se movió')
             np.testing.assert_allclose(base[4:],now[4:],rtol=0,atol=.08,err_msg=f'{stem}: las raíces se movieron')
             assert .8 < ref[2] < 1.4 and 5.95 < base[2] < 6.05 and 4.1 < now[2] < 4.45, (stem, ref, base, now)
-            assert .48 < now[3]-base[3] < .83, (stem,'el remate del cuello perdió altura o se levantó demasiado',base[3],now[3])
+            assert 1.35 < now[3]-base[3] < 1.70, (stem,'el remate del cuello perdió altura o se levantó demasiado',base[3],now[3])
             a, b = (isolated_crown(stem,bare,near,s) for s in versions[1:])
             prev,n0,area0 = a
             current,n1,area1 = b
@@ -218,10 +218,12 @@ def gallery(root, view):
 
 def sweep_gallery(root):
     for slot in SLOTS:
-        for turn in (48,60,68,79):
-            file = root/f'giro-vivo-{slot}-{turn:+03d}.png'
-            if file.is_file():
-                thumbnail(file,framing(read(file)),'Recorrido F5')
+        files = [root/f'giro-vivo-{slot}-{turn:+03d}.png' for turn in (48,60,68,79)]
+        assert all(file.is_file() for file in files), (slot,'faltan fotogramas del giro')
+        left,top,right,bottom = zip(*(framing(read(file)) for file in files),strict=True)
+        crop = (min(left),min(top),max(right),max(bottom))
+        for file in files:
+            thumbnail(file,crop,'Recorrido F5')
 
 
 if __name__ == '__main__':

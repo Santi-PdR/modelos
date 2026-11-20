@@ -260,9 +260,11 @@ animación y la documentación de GeckoLib._
   pase de emisión use la misma matriz que el sólido.
   En el [primer ensayo continuo](capa_v16714_giro_primer_ensayo.png),
   el avance fue de 1,72u y el recorrido completó 317 fotogramas por slot,
-  pero sólo quedó visible un 51–55% del cuello anterior. Por eso el
-  remate conserva el grosor del borde alto y crece desde su costura
-  inferior mientras el pliegue bajo se recoge.
+  pero sólo quedó visible un 51–55% del cuello anterior. Conservar el
+  grosor del borde recuperó el 81–83% en la [segunda prueba F5](https://github.com/Santi-PdR/modelos/actions/runs/44761310363),
+  todavía con oclusión y poco apoyo proyectado en el giro más inclinado.
+  El borde sube desde la costura inferior y acompaña al hombro cercano
+  al inclinar más la cabeza, sin desplazar la base ni los dientes.
 - **Aislar la silueta en Forge:** `python3 tools/verify_forge_history.py
   build/fx-smoke-run/fx-shots --giro-amplio` mide 58°/+60° y 48°/−60°
   en pecho y Curios. Cada toma de v1.67.13 o de la candidata tiene

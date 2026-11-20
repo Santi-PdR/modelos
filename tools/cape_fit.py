@@ -201,7 +201,7 @@ def torso_profile():
     code = SOURCE.with_name('CapeTorsoFit.java').read_text()
     pivots = re.search(r'PIVOTS = (\{.*?\});',code,re.S)[1]
     limits = ('KEEP_AFTER', 'SOFTNESS', 'OPEN_FROM', 'OPEN_END', 'DEPTH_START', 'DEPTH_END',
-              'LIP_Y', 'LIP_Z', 'LIP_HEIGHT', 'LIP_ADVANCE')
+              'LIP_Y', 'LIP_Z', 'LIP_HEIGHT', 'LIP_ADVANCE', 'LIP_RISE', 'LIP_SHIFT')
     turn = [float(re.search(r'\bTURN_' + k + r' = ([\d.]+);',code)[1]) for k in limits]
     seat = seat_profile()
     return dict(pivots=json.loads(pivots.replace('{','[').replace('}',']')), turn=turn,
@@ -212,7 +212,8 @@ def torso_shape(stance, pitch, yaw, depth, seat, plate, arm, effort, dry=1., ely
     """CapeTorsoFit in +look-up degrees, with authored affines in mirrored X."""
     if elytra or dry <= 0 or not all(map(math.isfinite,(stance,pitch,yaw,depth,arm,effort,dry,seat,plate))):
         return (0.,None,None,None,None,None)
-    down, turn = -pitch, abs(math.remainder(yaw,360.))
+    signed_turn = math.remainder(yaw,360.)
+    down, turn = -pitch, abs(signed_turn)
     lean_room = 1-smooth(.05,.36,stance)
     steep_room = 1-.82*smooth(62,88,down)*smooth(24,36,turn)
     sleeve_room = 1-smooth(2.85,6,effort)
@@ -238,7 +239,7 @@ def torso_shape(stance, pitch, yaw, depth, seat, plate, arm, effort, dry=1., ely
     crown = trim*(1+1.24*smooth(.76,.995,seat)+.46*smooth(78,87,down)*smooth(.79,.995,seat))
     stroke = .68*smooth(23,43,down)
     outer = stroke*dry*space*(1-smooth(2.85,6,arm))
-    start,soft,opening,end,d0,d1,lip_y,lip_z,lift,advance_lip = profile['turn']
+    start,soft,opening,end,d0,d1,lip_y,lip_z,lift,advance_lip,rise,side = profile['turn']
     lost = max(0.,release-smooth(44,57,start))
     hold = (lost*lost/(lost+soft)*(1-smooth(opening,end,turn))*smooth(30,45,down)*(1-smooth(64,78,down))
             *(1-smooth(d0,d1,depth))*lean_room*steep_room*sleeve_room)
@@ -256,7 +257,8 @@ def torso_shape(stance, pitch, yaw, depth, seat, plate, arm, effort, dry=1., ely
         x,y,z,dx,dy,dz,sx,sy,sz = fold
         thickness = 1-.12*crown*tuck
         raise_by = lift*hold
-        lip = [x,y,z,dx,dy+raise_by*(y+dy-lip_y),dz-(thickness-sz)*(lip_z-z)-advance_lip*hold,
+        drift = -math.copysign(side,signed_turn)*hold*smooth(48,57,down)
+        lip = [x,y,z,dx+drift,dy+raise_by*(y+dy-lip_y)+rise*hold,dz-(thickness-sz)*(lip_z-z)-advance_lip*hold,
                sx,sy*(1+raise_by),thickness]
     return (outer,fold,lip,collar(trim*.16),fit(1,compact,.94,.92,1-.17*advance,.18*advance,-.24*advance),wide)
 

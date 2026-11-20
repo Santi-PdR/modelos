@@ -215,7 +215,8 @@ function plateRim(bone, profile, target, k) {
 function torsoShape(data, stance, look, yaw, depth, seat, plate, arm, effort, dry=1, elytra=false) {
   if (!data || elytra || dry<=0 || ![stance,look,yaw,depth,arm,effort,dry,seat,plate].every(Number.isFinite))
     return [0,null,null,null,null,null];
-  const down=-look, turn=Math.abs(((yaw+180)%360+360)%360-180);
+  const signedTurn=((yaw+180)%360+360)%360-180;
+  const down=-look, turn=Math.abs(signedTurn);
   const leanRoom=1-smooth(.05,.36,stance), steepRoom=1-.82*smooth(62,88,down)*smooth(24,36,turn);
   const sleeveRoom=1-smooth(2.85,6,effort), release=smooth(44,57,turn);
   const space=(1-smooth(.02,.40,depth))*leanRoom*(1-release)*steepRoom;
@@ -231,7 +232,7 @@ function torsoShape(data, stance, look, yaw, depth, seat, plate, arm, effort, dr
     1+tuck*(.965-1),1+tuck*(.41-1),(1-.12*r*tuck)*scale] : null;
   const crown=trim*(1+1.24*smooth(.76,.995,seat)+.46*smooth(78,87,down)*smooth(.79,.995,seat));
   const stroke=.68*smooth(23,43,down), outer=stroke*dry*space*(1-smooth(2.85,6,arm));
-  const [start,soft,opening,end,d0,d1,lipY,lipZ,lift,advanceLip]=data.turn;
+  const [start,soft,opening,end,d0,d1,lipY,lipZ,lift,advanceLip,rise,side]=data.turn;
   const lost=Math.max(0,release-smooth(44,57,start));
   const hold=lost*lost/(lost+soft)*(1-smooth(opening,end,turn))*smooth(30,45,down)*(1-smooth(64,78,down))
     *(1-smooth(d0,d1,depth))*leanRoom*steepRoom*sleeveRoom;
@@ -246,7 +247,9 @@ function torsoShape(data, stance, look, yaw, depth, seat, plate, arm, effort, dr
   let lip=fold;
   if (fold && hold>0) {
     const [x,y,z,dx,dy,dz,sx,sy,sz]=fold, thickness=1-.12*crown*tuck, raise=lift*hold;
-    lip=[x,y,z,dx,dy+raise*(y+dy-lipY),dz-(thickness-sz)*(lipZ-z)-advanceLip*hold,sx,sy*(1+raise),thickness];
+    const drift=-Math.sign(signedTurn)*side*hold*smooth(48,57,down);
+    lip=[x,y,z,dx+drift,dy+raise*(y+dy-lipY)+rise*hold,dz-(thickness-sz)*(lipZ-z)-advanceLip*hold,
+      sx,sy*(1+raise),thickness];
   }
   return [outer,fold,lip,collar(trim*.16),fit(1,compact,.94,.92,1-.17*advance,.18*advance,-.24*advance),wide];
 }
