@@ -73,6 +73,270 @@ public static boolean aerial(int);
 public static boolean sprint(int);
   method calls: 
 
+=== com.eternalcraft.darkesthours.skills.mirage.MirageMoves$InfiniteMirage ===
+public com.eternalcraft.darkesthours.skills.mirage.MirageMoves$InfiniteMirage(net.minecraft.server.level.ServerPlayer, net.minecraft.world.entity.LivingEntity, long);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageMove."<init>" x1, net/minecraft/world/entity/LivingEntity.m_20182_ x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves.flatDir x1, face x1, net/minecraft/world/entity/LivingEntity.m_20205_ x1, net/minecraft/world/phys/Vec3.m_82490_ x1, net/minecraft/world/phys/Vec3.m_82546_ x1, freeAlong x1, perch x1
+private static int[] strikes(int, int...);
+  method calls: 
+public static int striker(int);
+  method calls: 
+public static net.minecraft.world.phys.Vec3 spoke(net.minecraft.world.phys.Vec3, int);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageMoves.turn x1
+public static double lift(float);
+  method calls: java/lang/Math.sin x1
+public static net.minecraft.world.phys.Vec3 bounce(net.minecraft.world.phys.Vec3, float);
+  method calls: net/minecraft/world/phys/Vec3.m_82490_ x2, striker x1, spoke x1, java/lang/Math.min x1, net/minecraft/world/phys/Vec3.m_165921_ x1, java/lang/Math.max x1
+public static net.minecraft.world.phys.Vec3 targetFeet(net.minecraft.world.phys.Vec3, net.minecraft.world.phys.Vec3, float);
+  method calls: lift x1, net/minecraft/world/phys/Vec3.m_82520_ x1, bounce x1, net/minecraft/world/phys/Vec3.m_82549_ x1
+public static net.minecraft.world.phys.Vec3 center(net.minecraft.world.phys.Vec3, double);
+  method calls: net/minecraft/world/phys/Vec3.m_82520_ x1
+public static net.minecraft.world.phys.Vec3 ringFeet(net.minecraft.world.phys.Vec3, net.minecraft.world.phys.Vec3, int);
+  method calls: spoke x1, net/minecraft/world/phys/Vec3.m_82490_ x1, net/minecraft/world/phys/Vec3.m_82549_ x1, net/minecraft/world/phys/Vec3.m_82520_ x1
+public static net.minecraft.world.phys.Vec3 perch(net.minecraft.world.phys.Vec3, net.minecraft.world.phys.Vec3);
+  method calls: net/minecraft/world/phys/Vec3.m_82520_ x1, net/minecraft/world/phys/Vec3.m_82490_ x1, net/minecraft/world/phys/Vec3.m_82546_ x1
+public static net.minecraft.world.phys.Vec3 above(net.minecraft.world.phys.Vec3, net.minecraft.world.phys.Vec3);
+  method calls: net/minecraft/world/phys/Vec3.m_82520_ x1, net/minecraft/world/phys/Vec3.m_82490_ x1, net/minecraft/world/phys/Vec3.m_82546_ x1
+public net.minecraft.world.phys.Vec3 aim();
+  method calls: 
+public net.minecraft.world.phys.Vec3 extra();
+  method calls: 
+public net.minecraft.world.phys.Vec3 aux();
+  method calls: net/minecraft/world/entity/LivingEntity.m_20206_ x1, net/minecraft/world/entity/LivingEntity.m_20205_ x1, net/minecraft/world/phys/Vec3."<init>" x1
+protected void tick(int);
+  method calls: sound x17, net/minecraft/world/phys/Vec3.m_82520_ x7, particles x7, hit x5, hold x4, net/minecraft/world/entity/LivingEntity.m_20206_ x3, blink x3, float_ x3, targetFeet x2, swing x2, steer x2, above x2, net/minecraft/world/phys/Vec3.m_82490_ x2, net/minecraft/world/phys/Vec3.m_82546_ x2, net/minecraft/core/particles/BlockParticleOption."<init>" x2, center x1, pin x1, movePinned x1, particlesForOthers x1, net/minecraft/world/phys/Vec3.m_165921_ x1
+
+=== com.eternalcraft.darkesthours.skills.mirage.MirageMoves$MirrorSplit ===
+public com.eternalcraft.darkesthours.skills.mirage.MirageMoves$MirrorSplit(net.minecraft.server.level.ServerPlayer, net.minecraft.world.entity.LivingEntity, long);
+  method calls: net/minecraft/world/entity/LivingEntity.m_20182_ x2, net/minecraft/world/phys/Vec3.m_82490_ x2, freeAlong x2, com/eternalcraft/darkesthours/skills/mirage/MirageMove."<init>" x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves.flatDir x1, net/minecraft/world/entity/LivingEntity.m_20205_ x1, net/minecraft/world/phys/Vec3.m_82546_ x1, net/minecraft/world/phys/Vec3.m_82549_ x1, face x1
+public static net.minecraft.world.phys.Vec3 cloneStart(net.minecraft.world.phys.Vec3, net.minecraft.world.phys.Vec3, int);
+  method calls: rightOf x1, net/minecraft/world/phys/Vec3.m_82490_ x1, net/minecraft/world/phys/Vec3.m_82549_ x1
+public static net.minecraft.world.phys.Vec3 cloneEnd(net.minecraft.world.phys.Vec3, net.minecraft.world.phys.Vec3, net.minecraft.world.phys.Vec3, int, boolean, double);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageMoves.turn x2, net/minecraft/world/phys/Vec3.m_82490_ x2, net/minecraft/world/phys/Vec3.m_82549_ x2, cloneStart x1
+public net.minecraft.world.phys.Vec3 aim();
+  method calls: 
+public net.minecraft.world.phys.Vec3 extra();
+  method calls: 
+public net.minecraft.world.phys.Vec3 aux();
+  method calls: net/minecraft/world/phys/Vec3."<init>" x1
+private net.minecraft.world.phys.Vec3 clone(int);
+  method calls: cloneEnd x1
+protected void tick(int);
+  method calls: sound x6, net/minecraft/world/phys/Vec3.m_82520_ x5, hit x4, net/minecraft/world/phys/Vec3.m_82549_ x4, chest x3, particles x2, along x2, clone x2, net/minecraft/world/phys/Vec3.m_82490_ x2, net/minecraft/world/phys/Vec3.m_165921_ x1, steer x1, blink x1, float_ x1, swing x1, around x1, away x1, java/util/HashSet."<init>" x1, net/minecraft/world/phys/Vec3."<init>" x1, cloneStart x1, unpinAll x1
+
+=== com.eternalcraft.darkesthours.skills.mirage.MirageMoves$PhantomLegion ===
+public com.eternalcraft.darkesthours.skills.mirage.MirageMoves$PhantomLegion(net.minecraft.server.level.ServerPlayer, long, net.minecraft.world.entity.LivingEntity);
+  method calls: net/minecraft/world/phys/Vec3.m_82520_ x2, around x2, net/minecraft/world/entity/LivingEntity.m_20182_ x2, com/eternalcraft/darkesthours/skills/mirage/MirageMove."<init>" x1, java/util/ArrayList."<init>" x1, java/lang/Math.min x1
+public boolean longRange();
+  method calls: 
+public static net.minecraft.world.phys.Vec3 home(net.minecraft.world.phys.Vec3, net.minecraft.world.phys.Vec3, int);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageMoves.turn x1, net/minecraft/world/phys/Vec3.m_82490_ x1, net/minecraft/world/phys/Vec3.m_82549_ x1
+public static int leap(int);
+  method calls: 
+public static int kick(int);
+  method calls: leap x1
+public static net.minecraft.world.phys.Vec3 kickPoint(net.minecraft.world.phys.Vec3, net.minecraft.world.phys.Vec3, double);
+  method calls: net/minecraft/world/phys/Vec3."<init>" x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves.flatDir x1, net/minecraft/world/phys/Vec3.m_82490_ x1, net/minecraft/world/phys/Vec3.m_82546_ x1
+public static net.minecraft.world.phys.Vec3 wander(net.minecraft.world.phys.Vec3, net.minecraft.world.phys.Vec3, int);
+  method calls: home x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves.turn x1, net/minecraft/world/phys/Vec3.m_82490_ x1, net/minecraft/world/phys/Vec3.m_82549_ x1
+public net.minecraft.world.phys.Vec3 aim();
+  method calls: 
+public int[] ids();
+  method calls: net/minecraft/world/entity/LivingEntity.m_19879_ x1
+private net.minecraft.world.entity.LivingEntity foe(int);
+  method calls: 
+protected void tick(int);
+  method calls: sound x8, home x3, swing x2, net/minecraft/world/phys/Vec3.m_82520_ x2, particles x2, away x2, hit x2, chest x2, foe x1, leap x1, kick x1, net/minecraft/world/entity/LivingEntity.m_6084_ x1, net/minecraft/world/entity/LivingEntity.m_20182_ x1, net/minecraft/world/entity/LivingEntity.m_20205_ x1, kickPoint x1, wander x1, java/util/HashSet."<init>" x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves.shatter x1, around x1
+private static double lambda$new$1(net.minecraft.world.entity.LivingEntity, net.minecraft.world.phys.Vec3, net.minecraft.world.entity.LivingEntity);
+  method calls: net/minecraft/world/entity/LivingEntity.m_20238_ x1
+private static boolean lambda$new$0(net.minecraft.server.level.ServerPlayer, net.minecraft.world.entity.LivingEntity);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageSkills.immune x1, net/minecraft/world/entity/LivingEntity.m_7307_ x1, net/minecraft/world/entity/LivingEntity.m_20270_ x1
+
+=== com.eternalcraft.darkesthours.skills.mirage.MirageSkills ===
+private com.eternalcraft.darkesthours.skills.mirage.MirageSkills();
+  method calls: java/lang/Object."<init>" x1
+public static boolean in(net.minecraft.world.entity.player.Player);
+  method calls: net/minecraft/world/entity/player/Player.m_20148_ x1
+public static boolean untargetable(net.minecraft.world.entity.Entity);
+  method calls: net/minecraft/world/entity/player/Player.m_7500_ x1, net/minecraft/world/entity/player/Player.m_5833_ x1
+public static boolean immune(net.minecraft.world.entity.Entity);
+  method calls: untargetable x1, net/minecraft/world/entity/player/Player.m_7500_ x1, net/minecraft/world/entity/player/Player.m_5833_ x1, net/minecraft/world/entity/player/Player.m_9236_ x1, net/minecraft/server/level/ServerLevel.m_7654_ x1, net/minecraft/server/MinecraftServer.m_129799_ x1
+private static boolean savedBattle(net.minecraft.world.entity.player.Player);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageData.battle x1
+private static void saveBattle(net.minecraft.world.entity.player.Player, boolean);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageData.setBattle x1
+private static int mode(java.util.UUID);
+  method calls: 
+public static void activate(net.minecraft.server.level.ServerPlayer);
+  method calls: net/minecraft/server/level/ServerPlayer.m_20148_ x2, com/eternalcraft/darkesthours/skills/battle/BattleData.has x1, com/eternalcraft/darkesthours/skills/battle/BattleSkills.deactivate x1, com/eternalcraft/darkesthours/skills/mirage/MirageData.grant x1, saveBattle x1, broadcast x1, syncCooldowns x1, com/eternalcraft/darkesthours/skills/SkillCaster.syncBindings x1, net/minecraft/server/level/ServerPlayer.m_213846_ x1, enterSound x1
+public static void toggleStyle(net.minecraft.server.level.ServerPlayer);
+  method calls: net/minecraft/server/level/ServerPlayer.m_20148_ x4, saveBattle x2, broadcast x2, com/eternalcraft/darkesthours/skills/SkillCaster.syncBindings x2, com/eternalcraft/darkesthours/skills/mirage/MirageData.has x1, net/minecraft/server/level/ServerPlayer.m_6084_ x1, net/minecraft/server/level/ServerPlayer.m_5833_ x1, reset x1, net/minecraft/server/level/ServerPlayer.m_284548_ x1, net/minecraft/server/level/ServerPlayer.m_20182_ x1, com/eternalcraft/darkesthours/skills/mirage/MirageSound.play x1, deny x1, syncCooldowns x1, net/minecraft/server/level/ServerPlayer.m_213846_ x1, enterSound x1
+public static void deactivate(net.minecraft.server.level.ServerPlayer);
+  method calls: net/minecraft/server/level/ServerPlayer.m_20148_ x2, reset x1, com/eternalcraft/darkesthours/skills/mirage/MirageData.revoke x1, broadcast x1, com/eternalcraft/darkesthours/skills/SkillCaster.syncBindings x1, net/minecraft/server/level/ServerPlayer.m_284548_ x1, net/minecraft/server/level/ServerPlayer.m_20182_ x1, com/eternalcraft/darkesthours/skills/mirage/MirageSound.play x1
+private static void restore(net.minecraft.server.level.ServerPlayer);
+  method calls: net/minecraft/server/level/ServerPlayer.m_20148_ x3, com/eternalcraft/darkesthours/skills/mirage/MirageData.has x1, com/eternalcraft/darkesthours/skills/mirage/MirageData.ensureDefaults x1, savedBattle x1, broadcast x1, syncTo x1, syncCooldowns x1, com/eternalcraft/darkesthours/skills/SkillCaster.syncBindings x1
+public static void reset(net.minecraft.server.level.ServerPlayer);
+  method calls: net/minecraft/server/level/ServerPlayer.m_20148_ x2, com/eternalcraft/darkesthours/skills/mirage/MirageMove.interrupt x2, net/minecraft/server/level/ServerPlayer.m_20068_ x1, net/minecraft/server/level/ServerPlayer.m_5833_ x1, net/minecraft/server/level/ServerPlayer.m_20242_ x1, com/eternalcraft/darkesthours/skills/mirage/MirageData.has x1, syncCooldowns x1
+public static void forget(java.util.UUID);
+  method calls: 
+private static void enterSound(net.minecraft.server.level.ServerPlayer);
+  method calls: net/minecraft/server/level/ServerPlayer.m_284548_ x3, com/eternalcraft/darkesthours/skills/mirage/MirageSound.play x3, net/minecraft/server/level/ServerPlayer.m_20182_ x1
+private static void broadcast(net.minecraft.server.level.ServerPlayer);
+  method calls: net/minecraft/server/level/ServerPlayer.m_19879_ x1, net/minecraft/server/level/ServerPlayer.m_20148_ x1, mode x1, com/eternalcraft/darkesthours/skills/mirage/MirageNet$State."<init>" x1, net/minecraft/server/level/ServerPlayer.m_284548_ x1, net/minecraft/server/level/ServerLevel.m_6907_ x1, net/minecraftforge/network/PacketDistributor.with x1, net/minecraftforge/network/simple/SimpleChannel.send x1
+private static void syncTo(net.minecraft.server.level.ServerPlayer);
+  method calls: net/minecraft/server/level/ServerPlayer.m_284548_ x1, net/minecraft/server/level/ServerLevel.m_6907_ x1, net/minecraft/server/level/ServerPlayer.m_20148_ x1, mode x1, net/minecraftforge/network/PacketDistributor.with x1, net/minecraft/server/level/ServerPlayer.m_19879_ x1, com/eternalcraft/darkesthours/skills/mirage/MirageNet$State."<init>" x1, net/minecraftforge/network/simple/SimpleChannel.send x1
+public static void syncCooldowns(net.minecraft.server.level.ServerPlayer);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageSkill.ordinal x2, net/minecraft/server/level/ServerPlayer.m_9236_ x1, net/minecraft/world/level/Level.m_46467_ x1, net/minecraft/server/level/ServerPlayer.m_20148_ x1, com/eternalcraft/darkesthours/skills/mirage/MirageSkill.values x1, com/eternalcraft/darkesthours/skills/mirage/MirageSkill.basic x1, java/lang/Math.max x1, net/minecraftforge/network/PacketDistributor.with x1, com/eternalcraft/darkesthours/skills/mirage/MirageNet$Cooldown."<init>" x1, net/minecraftforge/network/simple/SimpleChannel.send x1
+private static boolean busy(net.minecraft.server.level.ServerPlayer);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageSkill.basic x2, com/eternalcraft/darkesthours/skills/mirage/MirageMove.done x1
+private static void deny(net.minecraft.server.level.ServerPlayer, java.lang.String);
+  method calls: net/minecraft/server/level/ServerPlayer.m_5661_ x1
+public static void cast(net.minecraft.server.level.ServerPlayer, java.lang.String);
+  method calls: deny x5, com/eternalcraft/darkesthours/skills/mirage/MirageSkill.ultimate x4, com/eternalcraft/darkesthours/skills/mirage/MirageSkill.ordinal x4, com/eternalcraft/darkesthours/skills/mirage/MirageMove.interrupt x3, com/eternalcraft/darkesthours/skills/mirage/MirageSkill.basic x2, net/minecraftforge/network/PacketDistributor.with x2, com/eternalcraft/darkesthours/skills/mirage/MirageNet$Cooldown."<init>" x2, net/minecraftforge/network/simple/SimpleChannel.send x2, com/eternalcraft/darkesthours/skills/mirage/MirageSkill.byId x1, net/minecraft/server/level/ServerPlayer.m_6084_ x1, net/minecraft/server/level/ServerPlayer.m_5833_ x1, com/eternalcraft/darkesthours/skills/mirage/MirageData.has x1, in x1, com/eternalcraft/darkesthours/skills/mirage/MirageMove.done x1, net/minecraft/server/level/ServerPlayer.m_9236_ x1, net/minecraft/world/level/Level.m_46467_ x1, net/minecraft/server/level/ServerPlayer.m_20148_ x1, targetFor x1, com/eternalcraft/darkesthours/skills/mirage/MirageSkill.requiresTarget x1, net/minecraft/server/level/ServerPlayer.m_217043_ x1
+private static com.eternalcraft.darkesthours.skills.mirage.MirageMove create(com.eternalcraft.darkesthours.skills.mirage.MirageSkill, net.minecraft.server.level.ServerPlayer, net.minecraft.world.entity.LivingEntity, long);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageSkill.ordinal x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$MirrorSplit."<init>" x1, farTarget x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$PhantomLegion."<init>" x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$InfiniteMirage."<init>" x1, java/lang/IllegalArgumentException."<init>" x1
+public static void basic(net.minecraft.server.level.ServerPlayer);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageData.has x1, in x1, net/minecraft/server/level/ServerPlayer.m_6084_ x1, net/minecraft/server/level/ServerPlayer.m_5833_ x1, busy x1, net/minecraft/server/level/ServerPlayer.m_9236_ x1, net/minecraft/world/level/Level.m_46467_ x1, net/minecraft/server/level/ServerPlayer.m_20148_ x1, net/minecraft/server/level/ServerPlayer.m_20142_ x1, com/eternalcraft/darkesthours/skills/mirage/MirageBasic.victimReach x1, victim x1, com/eternalcraft/darkesthours/skills/mirage/MirageSkill.basic x1, com/eternalcraft/darkesthours/skills/mirage/MirageMove.interrupt x1, net/minecraft/server/level/ServerPlayer.m_217043_ x1, com/eternalcraft/darkesthours/skills/mirage/MirageBasic."<init>" x1, com/eternalcraft/darkesthours/skills/mirage/MirageBasic.recovery x1, launch x1
+private static void launch(net.minecraft.server.level.ServerPlayer, com.eternalcraft.darkesthours.skills.mirage.MirageMove);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageSkill.ordinal x1, net/minecraft/server/level/ServerPlayer.m_19879_ x1, net/minecraft/world/entity/LivingEntity.m_19879_ x1, com/eternalcraft/darkesthours/skills/mirage/MirageMove.aim x1, com/eternalcraft/darkesthours/skills/mirage/MirageMove.extra x1, com/eternalcraft/darkesthours/skills/mirage/MirageMove.aux x1, com/eternalcraft/darkesthours/skills/mirage/MirageMove.ids x1, com/eternalcraft/darkesthours/skills/mirage/MirageNet$Fx."<init>" x1, com/eternalcraft/darkesthours/skills/mirage/MirageMove.longRange x1, net/minecraft/server/level/ServerPlayer.m_284548_ x1, net/minecraft/server/level/ServerLevel.m_6907_ x1, net/minecraft/server/level/ServerPlayer.m_20270_ x1, net/minecraftforge/network/PacketDistributor.with x1, net/minecraftforge/network/simple/SimpleChannel.send x1
+public static void onLock(net.minecraft.server.level.ServerPlayer, int, int);
+  method calls: net/minecraft/server/level/ServerPlayer.m_9236_ x1, net/minecraft/world/level/Level.m_46467_ x1, net/minecraft/server/level/ServerPlayer.m_20148_ x1
+private static net.minecraft.world.entity.LivingEntity validEntity(net.minecraft.server.level.ServerPlayer, long, double);
+  method calls: net/minecraft/server/level/ServerPlayer.m_9236_ x1, net/minecraft/world/level/Level.m_6815_ x1, net/minecraft/world/entity/LivingEntity.m_6084_ x1, immune x1, net/minecraft/world/entity/LivingEntity.m_7307_ x1, net/minecraft/world/entity/LivingEntity.m_20270_ x1
+public static net.minecraft.world.entity.LivingEntity lockedTarget(net.minecraft.server.level.ServerPlayer);
+  method calls: net/minecraft/server/level/ServerPlayer.m_20148_ x1, net/minecraft/server/level/ServerPlayer.m_9236_ x1, net/minecraft/world/level/Level.m_46467_ x1, validEntity x1
+public static net.minecraft.world.entity.LivingEntity farTarget(net.minecraft.server.level.ServerPlayer);
+  method calls: net/minecraft/server/level/ServerPlayer.m_9236_ x2, net/minecraft/server/level/ServerPlayer.m_20148_ x1, net/minecraft/world/level/Level.m_46467_ x1, validEntity x1, net/minecraft/server/level/ServerPlayer.m_146892_ x1, net/minecraft/world/entity/LivingEntity.m_20182_ x1, net/minecraft/world/entity/LivingEntity.m_20206_ x1, net/minecraft/world/phys/Vec3.m_82520_ x1, net/minecraft/world/level/ClipContext."<init>" x1, net/minecraft/world/level/Level.m_45547_ x1, net/minecraft/world/phys/HitResult.m_6662_ x1
+public static net.minecraft.world.entity.LivingEntity targetFor(net.minecraft.server.level.ServerPlayer);
+  method calls: lockedTarget x1, aimTarget x1
+public static net.minecraft.world.entity.LivingEntity aimTarget(net.minecraft.server.level.ServerPlayer);
+  method calls: net/minecraft/server/level/ServerPlayer.m_20154_ x3, net/minecraft/world/phys/Vec3.m_82490_ x3, net/minecraft/world/phys/Vec3.m_82549_ x2, net/minecraft/server/level/ServerPlayer.m_146892_ x1, net/minecraft/server/level/ServerPlayer.m_9236_ x1, net/minecraft/world/level/ClipContext."<init>" x1, net/minecraft/world/level/Level.m_45547_ x1, net/minecraft/world/phys/HitResult.m_6662_ x1, net/minecraft/world/phys/HitResult.m_82450_ x1, net/minecraft/world/phys/Vec3.m_82554_ x1, net/minecraft/server/level/ServerPlayer.m_20191_ x1, net/minecraft/world/phys/AABB.m_82369_ x1, net/minecraft/world/phys/AABB.m_82400_ x1, net/minecraft/world/entity/projectile/ProjectileUtil.m_37287_ x1, net/minecraft/world/phys/EntityHitResult.m_82443_ x1
+private static net.minecraft.world.entity.LivingEntity victim(net.minecraft.server.level.ServerPlayer, double, double);
+  method calls: net/minecraft/server/level/ServerPlayer.m_20182_ x2, gap x2, targetFor x1, net/minecraft/server/level/ServerPlayer.m_146892_ x1, net/minecraft/server/level/ServerPlayer.m_20154_ x1, net/minecraft/server/level/ServerPlayer.m_9236_ x1, net/minecraft/server/level/ServerPlayer.m_20191_ x1, net/minecraft/world/phys/AABB.m_82400_ x1, net/minecraft/world/level/Level.m_6443_ x1, net/minecraft/world/entity/LivingEntity.m_20182_ x1, net/minecraft/world/entity/LivingEntity.m_20206_ x1, net/minecraft/world/phys/Vec3.m_82520_ x1, net/minecraft/world/phys/Vec3.m_82546_ x1, net/minecraft/world/phys/Vec3.m_82541_ x1, net/minecraft/world/phys/Vec3.m_82526_ x1, net/minecraft/world/phys/Vec3.m_82553_ x1
+private static double gap(net.minecraft.world.phys.Vec3, net.minecraft.world.entity.LivingEntity);
+  method calls: net/minecraft/world/entity/LivingEntity.m_20182_ x1, net/minecraft/world/phys/Vec3.m_82546_ x1, java/lang/Math.sqrt x1, net/minecraft/world/entity/LivingEntity.m_20205_ x1, java/lang/Math.max x1
+public static void onServerTick(net.minecraftforge.event.TickEvent$ServerTickEvent);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageMove.finish x3, com/eternalcraft/darkesthours/skills/mirage/MirageMove.done x2, com/eternalcraft/darkesthours/skills/mirage/MirageMove.step x1
+public static void onLogin(net.minecraftforge.event.entity.player.PlayerEvent$PlayerLoggedInEvent);
+  method calls: net/minecraftforge/event/entity/player/PlayerEvent$PlayerLoggedInEvent.getEntity x1, restore x1
+public static void onLogout(net.minecraftforge.event.entity.player.PlayerEvent$PlayerLoggedOutEvent);
+  method calls: net/minecraft/server/level/ServerPlayer.m_20148_ x3, net/minecraftforge/event/entity/player/PlayerEvent$PlayerLoggedOutEvent.getEntity x1, com/eternalcraft/darkesthours/skills/mirage/MirageMove.interrupt x1, forget x1
+public static void onDimension(net.minecraftforge.event.entity.player.PlayerEvent$PlayerChangedDimensionEvent);
+  method calls: net/minecraftforge/event/entity/player/PlayerEvent$PlayerChangedDimensionEvent.getEntity x1, restore x1
+public static void onRespawn(net.minecraftforge.event.entity.player.PlayerEvent$PlayerRespawnEvent);
+  method calls: net/minecraftforge/event/entity/player/PlayerEvent$PlayerRespawnEvent.getEntity x1, restore x1
+private static java.lang.String norm(java.lang.String);
+  method calls: java/text/Normalizer.normalize x1, java/lang/String.replaceAll x1, java/lang/String.toLowerCase x1
+public static java.lang.String findBindable(java.lang.String);
+  method calls: java/lang/String.equals x7, norm x3, java/lang/String.contains x3, java/lang/String.isEmpty x1, com/eternalcraft/darkesthours/skills/mirage/MirageSkill.values x1, com/eternalcraft/darkesthours/skills/mirage/MirageSkill.basic x1, java/lang/String.startsWith x1, java/lang/String.length x1
+public static boolean handleBindChat(net.minecraftforge.event.ServerChatEvent, net.minecraft.server.level.ServerPlayer, java.lang.String, boolean);
+  method calls: java/util/regex/Matcher.group x4, java/lang/String.trim x4, bindError x3, java/util/regex/Matcher.matches x2, java/lang/String.length x1, java/lang/String.substring x1, norm x1, java/lang/String.startsWith x1, java/util/regex/Pattern.matcher x1, findBindable x1, net/minecraft/server/level/ServerPlayerGameMode.m_9290_ x1, net/minecraftforge/event/ServerChatEvent.setCanceled x1, com/eternalcraft/darkesthours/skills/SkillBinding.parse x1, com/eternalcraft/darkesthours/skills/mirage/MirageData.setBind x1, com/eternalcraft/darkesthours/skills/SkillCaster.syncBindings x1, com/eternalcraft/darkesthours/skills/mirage/MirageSkill.byId x1, com/eternalcraft/darkesthours/skills/SkillBinding.pretty x1, net/minecraft/server/level/ServerPlayer.m_5661_ x1
+private static void bindError(net.minecraft.server.level.ServerPlayer, java.lang.String);
+  method calls: net/minecraft/network/chat/MutableComponent.m_130940_ x1, net/minecraft/server/level/ServerPlayer.m_5661_ x1
+private static boolean isMirageId(java.lang.String);
+  method calls: java/lang/String.equals x1, com/eternalcraft/darkesthours/skills/mirage/MirageSkill.byId x1
+public static boolean intercept(net.minecraft.server.level.ServerPlayer, com.eternalcraft.darkesthours.skills.SkillBinding, boolean);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageData.effective x1, java/lang/String.isEmpty x1, java/lang/String.equals x1, toggleStyle x1, cast x1
+public static boolean hasBinding(net.minecraft.server.level.ServerPlayer, com.eternalcraft.darkesthours.skills.SkillBinding);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageData.effective x1, java/lang/String.isEmpty x1
+public static java.lang.String syncedBind(net.minecraft.server.level.ServerPlayer, com.eternalcraft.darkesthours.skills.SkillBinding, java.lang.String);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageData.effective x1, java/lang/String.isEmpty x1
+private static boolean lambda$victim$10(net.minecraft.server.level.ServerPlayer, net.minecraft.world.entity.LivingEntity);
+  method calls: net/minecraft/world/entity/LivingEntity.m_6084_ x1, immune x1, net/minecraft/world/entity/LivingEntity.m_7307_ x1
+private static boolean lambda$aimTarget$9(net.minecraft.server.level.ServerPlayer, net.minecraft.world.entity.Entity);
+  method calls: net/minecraft/world/entity/LivingEntity.m_6084_ x1, net/minecraft/world/entity/LivingEntity.m_5833_ x1, immune x1, net/minecraft/world/entity/LivingEntity.m_7307_ x1
+private static long[] lambda$onLock$8(java.util.UUID);
+  method calls: 
+private static net.minecraft.server.level.ServerPlayer lambda$launch$7(net.minecraft.server.level.ServerPlayer);
+  method calls: 
+private static com.eternalcraft.darkesthours.skills.mirage.MirageSkills$Chain lambda$basic$6(java.util.UUID);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageSkills$Chain."<init>" x1
+private static net.minecraft.server.level.ServerPlayer lambda$cast$5(net.minecraft.server.level.ServerPlayer);
+  method calls: 
+private static net.minecraft.server.level.ServerPlayer lambda$cast$4(net.minecraft.server.level.ServerPlayer);
+  method calls: 
+private static long[] lambda$cast$3(java.util.UUID);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageSkill.values x1
+private static net.minecraft.server.level.ServerPlayer lambda$syncCooldowns$2(net.minecraft.server.level.ServerPlayer);
+  method calls: 
+private static net.minecraft.server.level.ServerPlayer lambda$syncTo$1(net.minecraft.server.level.ServerPlayer);
+  method calls: 
+private static net.minecraft.server.level.ServerPlayer lambda$broadcast$0(net.minecraft.server.level.ServerPlayer);
+  method calls: java/util/HashMap."<init>" x3, java/util/HashSet."<init>" x2, java/util/ArrayList."<init>" x2, java/util/regex/Pattern.compile x1
+
+=== com.eternalcraft.darkesthours.skills.mirage.MirageSkills$Chain ===
+private com.eternalcraft.darkesthours.skills.mirage.MirageSkills$Chain();
+  method calls: java/lang/Object."<init>" x1
+
+=== com.eternalcraft.darkesthours.skills.mirage.client.MirageFx$InfiniteMirage ===
+public com.eternalcraft.darkesthours.skills.mirage.client.MirageFx$InfiniteMirage(com.eternalcraft.darkesthours.skills.mirage.MirageNet$Fx);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/client/anim/Anims.ringStrike x2, com/eternalcraft/darkesthours/skills/mirage/client/MirageFx."<init>" x1, com/eternalcraft/darkesthours/skills/mirage/client/anim/Anims.ringGuard x1, com/eternalcraft/darkesthours/skills/mirage/client/anim/Anims.infiniteMirage x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$InfiniteMirage.center x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$InfiniteMirage.above x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$InfiniteMirage.ringFeet x1
+private net.minecraft.world.phys.Vec3 targetChest(float);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageMoves$InfiniteMirage.targetFeet x1, net/minecraft/world/phys/Vec3.m_82520_ x1
+private net.minecraft.world.phys.Vec3 strikeFeet(int, int);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageMoves$InfiniteMirage.spoke x1, targetChest x1, net/minecraft/world/phys/Vec3.m_82490_ x1, net/minecraft/world/phys/Vec3.m_82549_ x1, net/minecraft/world/phys/Vec3.m_82520_ x1
+private int strikeOf(int, float);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageMoves$InfiniteMirage.striker x1
+private net.minecraft.world.phys.Vec3 cloneFeet(int, float);
+  method calls: net/minecraft/world/phys/Vec3.m_165921_ x3, com/eternalcraft/darkesthours/skills/mirage/client/MirageFx.ease x2, strikeOf x1, java/lang/Math.sin x1, net/minecraft/world/phys/Vec3.m_82520_ x1, net/minecraft/util/Mth.m_14045_ x1, strikeFeet x1
+protected void onTick(net.minecraft.client.Minecraft, net.minecraft.client.multiplayer.ClientLevel, int);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/client/MirageClient.shake x4, targetChest x3
+public void clones(float, java.util.List<com.eternalcraft.darkesthours.skills.mirage.client.Clone>);
+  method calls: net/minecraft/world/phys/Vec3.m_82546_ x2, com/eternalcraft/darkesthours/skills/mirage/MirageMove.yawOf x2, net/minecraft/util/Mth.m_14036_ x1, com/eternalcraft/darkesthours/skills/mirage/client/MirageFx.ease x1, strikeOf x1, com/eternalcraft/darkesthours/skills/mirage/client/anim/Anim.sample x1, com/eternalcraft/darkesthours/skills/mirage/MirageNet$Fx.caster x1, com/eternalcraft/darkesthours/skills/mirage/client/MirageFx.trail x1
+public void passes(com.eternalcraft.darkesthours.skills.mirage.client.Frame, java.util.List<com.eternalcraft.darkesthours.skills.mirage.client.PostFx$Pass>);
+  method calls: rel x4, put x4, com/eternalcraft/darkesthours/skills/mirage/client/MirageFx.chestOf x2, targetChest x2, ticks x1, pts x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$InfiniteMirage.striker x1, com/eternalcraft/darkesthours/skills/mirage/client/PostFx$Pass."<init>" x1
+public void screen(com.eternalcraft.darkesthours.skills.mirage.client.Frame, com.eternalcraft.darkesthours.skills.mirage.client.ScreenFx);
+  method calls: targetChest x4, window x3, snapImpact x3, epicImpact x3, uv x2, com/eternalcraft/darkesthours/skills/mirage/client/ScreenFx.speedLines x2, ticks x1, com/eternalcraft/darkesthours/skills/mirage/client/ScreenFx.vignette x1, java/lang/Math.max x1, net/minecraft/world/phys/Vec3.m_82520_ x1, com/eternalcraft/darkesthours/skills/mirage/client/MirageFx.chestOf x1, pulse x1, com/eternalcraft/darkesthours/skills/mirage/client/ScreenFx.flash x1
+public int cutsceneLength();
+  method calls: 
+public com.eternalcraft.darkesthours.skills.mirage.client.CameraPose camera(float);
+  method calls: net/minecraft/world/phys/Vec3.m_82490_ x17, net/minecraft/world/phys/Vec3.m_82520_ x16, net/minecraft/world/phys/Vec3.m_82549_ x12, com/eternalcraft/darkesthours/skills/mirage/client/CameraPose."<init>" x10, com/eternalcraft/darkesthours/skills/mirage/client/CameraPose.above x6, com/eternalcraft/darkesthours/skills/mirage/client/CameraPose.span x5, net/minecraft/world/phys/Vec3.m_82546_ x5, com/eternalcraft/darkesthours/skills/mirage/client/CameraPose.smooth x3, net/minecraft/world/phys/Vec3.m_165921_ x2, com/eternalcraft/darkesthours/skills/mirage/client/CameraPose.orbit x2, java/lang/Math.floor x1, casterFeet x1, targetChest x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$InfiniteMirage.striker x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$InfiniteMirage.spoke x1, net/minecraft/world/phys/Vec3."<init>" x1, java/lang/Math.sin x1
+private void lambda$passes$1(float, net.minecraft.world.phys.Vec3, float[], com.eternalcraft.darkesthours.skills.mirage.client.PostFx$Uniforms);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/client/MirageFx.chestOf x1
+private net.minecraft.world.phys.Vec3 lambda$clones$0(int, float);
+  method calls: cloneFeet x1
+
+=== com.eternalcraft.darkesthours.skills.mirage.client.MirageFx$MirrorSplit ===
+public com.eternalcraft.darkesthours.skills.mirage.client.MirageFx$MirrorSplit(com.eternalcraft.darkesthours.skills.mirage.MirageNet$Fx);
+  method calls: net/minecraft/world/phys/Vec3.m_82520_ x2, com/eternalcraft/darkesthours/skills/mirage/client/MirageFx."<init>" x1, com/eternalcraft/darkesthours/skills/mirage/client/anim/Anims.mirrorSplitClone x1, com/eternalcraft/darkesthours/skills/mirage/client/anim/Anims.mirrorSplit x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$MirrorSplit.cloneStart x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$MirrorSplit.cloneEnd x1, target x1, net/minecraft/world/entity/Entity.m_20206_ x1
+private net.minecraft.world.phys.Vec3 feet(int, float);
+  method calls: net/minecraft/world/phys/Vec3.m_165921_ x2, com/eternalcraft/darkesthours/skills/mirage/client/CameraPose.easeOut x1
+protected void onTick(net.minecraft.client.Minecraft, net.minecraft.client.multiplayer.ClientLevel, int);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/client/MirageClient.shake x2
+public boolean pins();
+  method calls: 
+public void clones(float, java.util.List<com.eternalcraft.darkesthours.skills.mirage.client.Clone>);
+  method calls: net/minecraft/world/phys/Vec3.m_82546_ x2, com/eternalcraft/darkesthours/skills/mirage/MirageMove.yawOf x2, net/minecraft/util/Mth.m_14036_ x1, com/eternalcraft/darkesthours/skills/mirage/MirageNet$Fx.yaw x1, com/eternalcraft/darkesthours/skills/mirage/client/anim/Anim.sample x1, com/eternalcraft/darkesthours/skills/mirage/client/anim/BodyPose.mirrored x1, com/eternalcraft/darkesthours/skills/mirage/MirageNet$Fx.caster x1, com/eternalcraft/darkesthours/skills/mirage/client/MirageFx.trail x1
+public void passes(com.eternalcraft.darkesthours.skills.mirage.client.Frame, java.util.List<com.eternalcraft.darkesthours.skills.mirage.client.PostFx$Pass>);
+  method calls: rel x5, put x5, ticks x1, pts x1, com/eternalcraft/darkesthours/skills/mirage/client/PostFx$Pass."<init>" x1
+public void screen(com.eternalcraft.darkesthours.skills.mirage.client.Frame, com.eternalcraft.darkesthours.skills.mirage.client.ScreenFx);
+  method calls: snapImpact x2, ticks x1, net/minecraft/world/phys/Vec3.m_82520_ x1, epicImpact x1
+private void lambda$passes$1(float, float[], com.eternalcraft.darkesthours.skills.mirage.client.PostFx$Uniforms);
+  method calls: 
+private net.minecraft.world.phys.Vec3 lambda$clones$0(int, float);
+  method calls: feet x1
+
+=== com.eternalcraft.darkesthours.skills.mirage.client.MirageFx$PhantomLegion ===
+public com.eternalcraft.darkesthours.skills.mirage.client.MirageFx$PhantomLegion(com.eternalcraft.darkesthours.skills.mirage.MirageNet$Fx);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/client/MirageFx."<init>" x1, com/eternalcraft/darkesthours/skills/mirage/client/anim/Anims.phantomLegion x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$PhantomLegion.home x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$PhantomLegion.leap x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$PhantomLegion.kick x1, com/eternalcraft/darkesthours/skills/mirage/client/anim/Anims.legionClone x1
+private net.minecraft.world.entity.Entity foe(int);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/MirageNet$Fx.ids x1, net/minecraft/client/Minecraft.m_91087_ x1, net/minecraft/client/multiplayer/ClientLevel.m_6815_ x1, net/minecraft/world/entity/Entity.m_213877_ x1
+private net.minecraft.world.phys.Vec3 kickPoint(int, float);
+  method calls: foe x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$PhantomLegion.wander x1, net/minecraft/world/entity/Entity.m_20318_ x1, net/minecraft/world/entity/Entity.m_20205_ x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$PhantomLegion.kickPoint x1
+private net.minecraft.world.phys.Vec3 feet(int, float, net.minecraft.world.phys.Vec3);
+  method calls: net/minecraft/world/phys/Vec3.m_82520_ x2, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$PhantomLegion.leap x1, com/eternalcraft/darkesthours/skills/mirage/client/CameraPose.easeOut x1, com/eternalcraft/darkesthours/skills/mirage/client/MirageFx.ease x1, net/minecraft/world/phys/Vec3.m_165921_ x1, java/lang/Math.sin x1
+protected void onTick(net.minecraft.client.Minecraft, net.minecraft.client.multiplayer.ClientLevel, int);
+  method calls: com/eternalcraft/darkesthours/skills/mirage/client/MirageClient.shake x2, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$PhantomLegion.kick x1, kickPoint x1
+public void clones(float, java.util.List<com.eternalcraft.darkesthours.skills.mirage.client.Clone>);
+  method calls: net/minecraft/util/Mth.m_14036_ x1, kickPoint x1, net/minecraft/world/phys/Vec3.m_82546_ x1, com/eternalcraft/darkesthours/skills/mirage/MirageMove.yawOf x1, com/eternalcraft/darkesthours/skills/mirage/MirageNet$Fx.caster x1, com/eternalcraft/darkesthours/skills/mirage/client/anim/Anim.sample x1, com/eternalcraft/darkesthours/skills/mirage/client/MirageFx.trail x1
+public void passes(com.eternalcraft.darkesthours.skills.mirage.client.Frame, java.util.List<com.eternalcraft.darkesthours.skills.mirage.client.PostFx$Pass>);
+  method calls: rel x2, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$PhantomLegion.leap x2, put x2, ticks x1, pts x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$PhantomLegion.kick x1, com/eternalcraft/darkesthours/skills/mirage/client/Frame.partial x1, kickPoint x1, com/eternalcraft/darkesthours/skills/mirage/client/MirageFx.chestOf x1, com/eternalcraft/darkesthours/skills/mirage/client/PostFx$Pass."<init>" x1
+public void screen(com.eternalcraft.darkesthours.skills.mirage.client.Frame, com.eternalcraft.darkesthours.skills.mirage.client.ScreenFx);
+  method calls: snapImpact x2, ticks x1, net/minecraft/world/phys/Vec3.m_82520_ x1, com/eternalcraft/darkesthours/skills/mirage/MirageMoves$PhantomLegion.kick x1, com/eternalcraft/darkesthours/skills/mirage/client/Frame.partial x1, kickPoint x1, com/eternalcraft/darkesthours/skills/mirage/client/MirageFx.chestOf x1, epicImpact x1, window x1, com/eternalcraft/darkesthours/skills/mirage/client/ScreenFx.vignette x1
+private void lambda$passes$1(float, float[], com.eternalcraft.darkesthours.skills.mirage.client.PostFx$Uniforms);
+  method calls: 
+private net.minecraft.world.phys.Vec3 lambda$clones$0(int, net.minecraft.world.phys.Vec3, float);
+  method calls: feet x1
+
 === com.eternalcraft.darkesthours.skills.mirage.client.CameraPose ===
 public com.eternalcraft.darkesthours.skills.mirage.client.CameraPose(net.minecraft.world.phys.Vec3, net.minecraft.world.phys.Vec3, float, float);
   method calls: java/lang/Record."<init>" x1
