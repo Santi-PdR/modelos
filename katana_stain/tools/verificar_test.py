@@ -20,7 +20,7 @@ assert 'NetworkDirection.PLAY_TO_SERVER' in java and 'player.canHarmPlayer' in j
 assert 'capatest' not in java
 assert 'paralysis' in (a/'lang/en_us.json').read_text().lower()
 print('OK: 18 fotogramas de Better Combat Particle, tres teclas, seguridad de red e independencia de capatest')
-clips = ('eating_right', 'sword_attack', 'sword_attack2')
+clips = ('sword_attack', 'sword_attack2')
 for clip in clips:
     animation = json.loads((a/'player_animation'/f'{clip}.json').read_text())['animations'][clip]
     assert animation.get('loop', False) is False and animation['animation_length'] > 0
@@ -30,7 +30,8 @@ assert (root/'resources/META-INF/SERIOUS_PLAYER_ANIMATIONS_LICENSE.txt').is_file
 print('OK: tres clips externos no cíclicos, mensaje de animación y licencia')
 
 ability = (root/'java/com/stainkatana/katana/KatanaAbilities.java').read_text()
-assert 'IMPACT_TICK = {2, 7, 7}' in ability and 'RECOVERY_TICK = {6, 16, 29}' in ability
+timeline = (root/'java/com/stainkatana/katana/AbilityTimeline.java').read_text()
+assert 'IMPACT_TICK = {8, 7, 7}' in timeline and 'FINISH_TICK = {16, 16, 29}' in timeline
 assert 'PlayerLoggedOutEvent' in ability and 'ServerStoppedEvent' in ability
 assert 'player.getMainHandItem() != cast.stack' in ability
 anim = (root/'java/com/stainkatana/katana/client/KatanaAnimations.java').read_text()
@@ -63,3 +64,9 @@ assert 'markTarget(stack, target, level)' in ability
 assert 'KatanaNetwork.broadcastVisual' in ability
 assert 'BotSlashParticle180' in (root/'java/com/stainkatana/katana/client/KatanaParticle.java').read_text()
 print('OK: marcas en habilidades y renderer orientado basado en Better Combat Particle')
+
+inspect = json.loads((a/'player_animation/inspect.json').read_text())
+assert inspect['author'] == 'Overseer' and inspect['name'] == 'Inspect'
+assert (root/'resources/META-INF/EMOTECRAFT_EMOTES_CC0.txt').is_file()
+assert 'AbilityTimeline' in ability and 'cast.timeline.cancel()' in ability
+print('OK: gesto de Emotecraft atribuido y cancelación de línea de tiempo')

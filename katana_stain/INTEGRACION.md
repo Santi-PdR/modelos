@@ -174,3 +174,18 @@ compatibilidad de las dos capas, escudos y las tres habilidades en el cliente.
 - Esta versión compila y debe probarse en cliente para evaluar contraste,
   orientación, escala, agarre, sincronización y coste visual. Ninguna prueba
   automática sustituye capturas o vídeo de la partida.
+
+## 0.9.0-test — gesto y pruebas de secuencia
+
+Z usa `Inspect`, una animación de inspección de objetos de Overseer, de la
+colección Emotecraft-emotes (CC0); se incluye con espacios normalizados y se reproduce a
+mayor velocidad. Es un gesto de inspección, no una reproducción literal del
+lamido de sangre de Stain. El impacto de parálisis pasa al tick 8 para dar
+preparación al gesto. Fuente y licencia en `META-INF/EMOTECRAFT_*`.
+
+La secuencia de habilidades se ha aislado en `AbilityTimeline` y se prueba
+con Java para los tres tiempos, repetición, salto de ticks y cancelación. Un
+arma rota durante el primer impacto cancela el resto. Los cortes muestran sus
+trazos al impactar incluso si el objetivo escapó durante la preparación; no
+hay daño ni desgaste si no golpean. Las pruebas no cubren el aspecto visual,
+el combate de Better Combat instalado ni una partida real de cliente.

@@ -33,10 +33,6 @@ import net.minecraft.world.phys.Vec3;
 public final class KatanaAbilities {
     private static final String COOLDOWNS = "StainKatanaAbilities";
     private static final int[] COOLDOWN = {240, 100, 900};
-    // Timings in server ticks: wind-up, then recovery. Damage is revalidated at impact.
-    private static final int[] IMPACT_TICK = {2, 7, 7};
-    private static final int[] RECOVERY_TICK = {6, 16, 29};
-    private static final int[] FADE_OUT_TICK = {4, 13, 24};
     private static final Map<UUID, Cast> CASTS = new ConcurrentHashMap<>();
     private static final class Cast {
         final int ability;
@@ -44,14 +40,13 @@ public final class KatanaAbilities {
         final ResourceKey<Level> dimension;
         final long start;
         final UUID markedTarget;
-        boolean impacted;
-        boolean followUpStarted;
+        final AbilityTimeline timeline;
         boolean followUpImpacted;
-        boolean fading;
         boolean durabilitySpent;
         Cast(int ability, ItemStack stack, ResourceKey<Level> dimension, long start, UUID markedTarget) {
             this.ability = ability; this.stack = stack; this.dimension = dimension;
             this.start = start; this.markedTarget = markedTarget;
+            this.timeline = new AbilityTimeline(ability);
         }
     }
     private KatanaAbilities() { }
@@ -62,14 +57,15 @@ public final class KatanaAbilities {
         Cast cast = CASTS.get(player.getUUID());
         if (cast == null) return;
         if (!player.isAlive() || player.isSpectator() || player.hasEffect(KatanaEffects.PARALYSIS.get())
-                || player.getMainHandItem() != cast.stack || player.level().dimension() != cast.dimension) {
+                || player.getMainHandItem() != cast.stack || !player.level().dimension().equals(cast.dimension)) {
+            cast.timeline.cancel();
             CASTS.remove(player.getUUID());
             KatanaNetwork.broadcastAnimation(player, -1);
             return;
         }
         long elapsed = player.getServer().overworld().getGameTime() - cast.start;
-        if (!cast.impacted && elapsed >= IMPACT_TICK[cast.ability]) {
-            cast.impacted = true;
+        int events = cast.timeline.advance(elapsed);
+        if ((events & AbilityTimeline.IMPACT) != 0) {
             if (cast.ability == 0) {
                 // A second normal hit during the wind-up must not switch the intended victim.
                 CompoundTag tag = cast.stack.getTag();
@@ -80,19 +76,23 @@ public final class KatanaAbilities {
                 slash(player, cast.stack, player.serverLevel(), cast.ability == 2);
             }
         }
-        if (cast.ability == 2 && !cast.followUpStarted && elapsed >= 11) {
-            cast.followUpStarted = true;
+        // A broken/changed sword cannot execute the second strike in the same tick.
+        if (player.getMainHandItem() != cast.stack || cast.stack.isEmpty()) {
+            cast.timeline.cancel(); CASTS.remove(player.getUUID());
+            KatanaNetwork.broadcastAnimation(player, -1);
+            return;
+        }
+        if ((events & AbilityTimeline.FOLLOW_UP) != 0) {
             KatanaNetwork.broadcastAnimation(player, 3);
         }
-        if (cast.ability == 2 && !cast.followUpImpacted && elapsed >= 18) {
+        if ((events & AbilityTimeline.SECOND_IMPACT) != 0) {
             cast.followUpImpacted = true;
             slash(player, cast.stack, player.serverLevel(), true);
         }
-        if (!cast.fading && elapsed >= FADE_OUT_TICK[cast.ability]) {
-            cast.fading = true;
+        if ((events & AbilityTimeline.FADE) != 0) {
             KatanaNetwork.broadcastAnimation(player, -1);
         }
-        if (elapsed >= RECOVERY_TICK[cast.ability]) CASTS.remove(player.getUUID());
+        if ((events & AbilityTimeline.FINISH) != 0) CASTS.remove(player.getUUID());
     }
 
     @SubscribeEvent
@@ -202,11 +202,12 @@ public final class KatanaAbilities {
             }
             level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.55), target.getZ(), 1, 0, 0, 0, 0);
         }
+        // El corte existe aunque la víctima se aparte durante la preparación.
+        arc(level, player, facing, ultimate);
+        level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, .8F, ultimate ? .7F : 1.1F);
         if (hits == 0) {
             player.displayClientMessage(Component.translatable("stainkatana.no_target"), true); return false;
         }
-        arc(level, player, facing, ultimate);
-        level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, .8F, ultimate ? .7F : 1.1F);
         // La ulti puede golpear dos veces, pero desgasta el arma una sola vez.
         Cast current = CASTS.get(player.getUUID());
         if (current == null || !current.durabilitySpent) {

@@ -12,7 +12,7 @@ import java.nio.file.Path;
 /** Exercises PlayerAnimator's actual parser and player, not just JSON syntax. */
 public class AnimationAssetCheck {
     public static void main(String[] args) throws Exception {
-        for (String name : new String[]{"eating_right", "sword_attack", "sword_attack2"}) {
+        for (String name : new String[]{"inspect", "sword_attack", "sword_attack2"}) {
             String path = "/assets/stainkatana/player_animation/" + name + ".json";
             try (InputStream in = AnimationAssetCheck.class.getResourceAsStream(path)) {
                 if (in == null) throw new AssertionError("Missing " + path);
@@ -32,8 +32,7 @@ public class AnimationAssetCheck {
                     if (delta > 0.001) moved = true;
                 }
                 if (player.isActive()) throw new AssertionError(name + ": never finished");
-                // eating_right is a fixed arm pose; the head moves instead.
-                if (!name.equals("eating_right") && !moved) throw new AssertionError(name + ": arm never moved");
+                if (!moved) throw new AssertionError(name + ": arm never moved");
                 System.out.println(name + ": parsed, stopTick=" + clip.stopTick + ", rightArmMoves=" + moved);
             }
         }

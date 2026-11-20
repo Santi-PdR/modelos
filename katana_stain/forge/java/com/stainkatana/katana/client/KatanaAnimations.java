@@ -33,17 +33,15 @@ public final class KatanaAnimations {
     private static final ResourceLocation LAYER = new ResourceLocation(StainKatanaMod.MOD_ID, "abilities");
     private static final Logger LOGGER = LogUtils.getLogger();
     // Official Better Combat katana moves; loaded from the user's installed mod/resource pack,
-    // not redistributed by this mod. Z retains its separately credited gesture.
+    // not redistributed by this mod. Z uses a credited Emotecraft item-inspection gesture.
     private static final String[] BETTER_COMBAT = {null, "two_handed_slash_horizontal_right", "two_handed_slash_vertical_right", "two_handed_slash_horizontal_left"};
-    private static final String[] CLIPS = {"eating_right", "sword_attack", "sword_attack2", "sword_attack"};
+    private static final String[] CLIPS = {"inspect", "sword_attack", "sword_attack2", "sword_attack"};
     private KatanaAnimations() { }
 
     private static final class AbilityLayer extends ModifierLayer<IAnimation> {
         private final MirrorModifier mirror = new MirrorModifier(false);
-        private final SpeedModifier speed = new SpeedModifier(1);
         AbilityLayer() {
             addModifierBefore(mirror);
-            addModifierBefore(speed);
         }
     }
 
@@ -71,12 +69,14 @@ public final class KatanaAnimations {
         }
         // Better Combat 1.9.0 starts at tick zero; beginTick is its wind-up, not a seek offset.
         animation.mirror.setEnabled(player.getMainArm() == HumanoidArm.LEFT);
-        animation.speed.speed = ability == 0 ? 1F : 2F;
         KeyframeAnimationPlayer playing = new KeyframeAnimationPlayer(clip, 0)
                 .setFirstPersonMode(FirstPersonMode.THIRD_PERSON_MODEL)
                 .setFirstPersonConfiguration(new FirstPersonConfiguration()
                         .setShowRightArm(true).setShowLeftArm(true));
-        animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), playing, true);
+        // Keep playback speed inside the clip, so the outer fade remains in real ticks.
+        ModifierLayer<IAnimation> timedClip = new ModifierLayer<>(playing);
+        timedClip.addModifierBefore(new SpeedModifier(ability == 0 ? 4F : 2F));
+        animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
     }
 
     private static KeyframeAnimation loadBetterCombat(int ability) {
