@@ -155,3 +155,22 @@ Sin Better Combat, los clips incorporados siguen siendo el respaldo.
 Estas son mejoras técnicas basadas en fuentes reales, no una verificación
 visual: todavía deben probarse agarre, primera/tercera persona, tiempos,
 compatibilidad de las dos capas, escudos y las tres habilidades en el cliente.
+
+## 0.8.0-test — proporción, marcas y VFX
+
+- El modelo original mide aproximadamente 28,7 unidades; la escala en mano
+  sube de 0,72 a 0,82 en tercera persona (unos 1,47 bloques frente a 1,8 del
+  jugador) y de 0,68 a 0,74 en primera. No se ha alterado la geometría base.
+  Son proporciones de juego, no una medida canónica del arma. Las poses aún
+  necesitan prueba en cliente, también durante las animaciones a dos manos.
+- Se adapta el plano orientado y de doble cara de Better Combat Particle, de
+  Malfu, junto con sus fotogramas existentes y licencia. Los cortes pasan de
+  ser siempre billboards a orientarse por el yaw del atacante y se tiñen de
+  acero rosado y rojo oscuro; la parálisis tiene un trazo carmesí. Los efectos
+  siguen siendo adaptaciones: no son toda la implementación original del mod.
+- Los impactos válidos de X/C marcan a la primera víctima viva, igual que un
+  golpe normal, de modo que Z puede usar esa marca. Se mantiene la validación
+  en servidor y la revisión del objetivo al impactar. El texto se acortó.
+- Esta versión compila y debe probarse en cliente para evaluar contraste,
+  orientación, escala, agarre, sincronización y coste visual. Ninguna prueba
+  automática sustituye capturas o vídeo de la partida.

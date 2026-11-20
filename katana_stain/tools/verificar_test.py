@@ -51,10 +51,15 @@ model = json.loads((a/'models/item/katana_stain.json').read_text())['display']
 for hand in ('thirdperson_righthand', 'thirdperson_lefthand'):
     pose = model[hand]
     assert pose['rotation'] == [90, 0, 0]
-    assert pose['scale'] == [0.72, 0.72, 0.72]
+    assert pose['scale'] == [0.82, 0.82, 0.82]
     assert pose['translation'] == [0, 1, 0]
 # Vanilla's -90 degree hand rotation cancels the model's +90 degree pitch.
 # Approx. grip centre y=-2/16, custom correction +2/16, GeckoLib's residual +.01.
-grip_offset = math.hypot(0.72 * 0.01, 1/16)
+grip_offset = math.hypot(0.82 * 0.01, 1/16)
 assert grip_offset < 0.07
 print('OK: comprobación matemática aproximada de agarre y eje, no es prueba visual')
+
+assert 'markTarget(stack, target, level)' in ability
+assert 'KatanaNetwork.broadcastVisual' in ability
+assert 'BotSlashParticle180' in (root/'java/com/stainkatana/katana/client/KatanaParticle.java').read_text()
+print('OK: marcas en habilidades y renderer orientado basado en Better Combat Particle')

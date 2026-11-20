@@ -49,14 +49,18 @@ public class StainKatanaItem extends SwordItem implements GeoItem {
     @Override
     public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
         if (attacker instanceof Player && target.isAlive() && target.level() instanceof ServerLevel level) {
-            CompoundTag mark = new CompoundTag();
-            mark.putUUID("Target", target.getUUID());
-            mark.putString("Dimension", level.dimension().location().toString());
-            mark.putLong("Expires", level.getGameTime() + MARK_TICKS);
-            stack.getOrCreateTag().put(MARK, mark);
+            markTarget(stack, target, level);
             level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(0.55), target.getZ(), 1, 0, 0, 0, 0);
         }
         return super.hurtEnemy(stack, target, attacker);
+    }
+
+    static void markTarget(ItemStack stack, LivingEntity target, ServerLevel level) {
+        CompoundTag mark = new CompoundTag();
+        mark.putUUID("Target", target.getUUID());
+        mark.putString("Dimension", level.dimension().location().toString());
+        mark.putLong("Expires", level.getGameTime() + MARK_TICKS);
+        stack.getOrCreateTag().put(MARK, mark);
     }
 
     @Override

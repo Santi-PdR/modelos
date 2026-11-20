@@ -174,7 +174,7 @@ public final class KatanaAbilities {
             return false;
         }
         tag.remove(StainKatanaItem.MARK);
-        level.sendParticles(KatanaParticles.PULSE.get(), target.getX(), target.getY(0.55), target.getZ(), 1, 0, 0, 0, 0);
+        KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(0.55), target.getZ(), 2);
         level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(0.55), target.getZ(), 1, 0, 0, 0, 0);
         level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, .7F, .65F);
         player.displayClientMessage(Component.translatable("stainkatana.stun_used"), true);
@@ -194,11 +194,12 @@ public final class KatanaAbilities {
             float damage = (float)Math.max(4, Math.min(ultimate ? 9 : 12, base * (ultimate ? 0.8 : 1.15)));
             if (!target.hurt(player.damageSources().playerAttack(player), damage)) continue;
             hits++;
+            // Marca una única víctima por corte: la primera válida y más próxima.
+            if (hits == 1 && target.isAlive()) StainKatanaItem.markTarget(stack, target, level);
             if (ultimate) {
                 target.addEffect(new MobEffectInstance(KatanaEffects.PARALYSIS.get(), 15, 0, false, false, false));
-                level.sendParticles(KatanaParticles.PULSE.get(), target.getX(), target.getY(.5), target.getZ(), 1, 0, 0, 0, 0);
+                KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.55), target.getZ(), 2);
             }
-            level.sendParticles(KatanaParticles.SLASH.get(), target.getX(), target.getY(.6), target.getZ(), 1, 0, 0, 0, 0);
             level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.55), target.getZ(), 1, 0, 0, 0, 0);
         }
         if (hits == 0) {
@@ -232,14 +233,10 @@ public final class KatanaAbilities {
     }
 
     private static void arc(ServerLevel level, ServerPlayer player, Vec3 forward, boolean ultimate) {
-        // Dos cortes superpuestos para la ulti, uno para el ataque rápido.
-        Vec3 side = new Vec3(-forward.z, 0, forward.x);
-        int strokes = ultimate ? 3 : 1;
-        for (int i = 0; i < strokes; i++) {
-            double shift = (i - (strokes - 1) / 2.0) * .6;
-            Vec3 point = player.position().add(forward.scale(1.8 + i * .25)).add(side.scale(shift));
-            level.sendParticles(KatanaParticles.SLASH.get(), point.x, player.getY() + 1.05 + shift * .2,
-                    point.z, 1, 0, 0, 0, 0);
-        }
+        // El renderizador usa un plano orientado según el atacante, no un billboard.
+        Vec3 point = player.position().add(forward.scale(1.55));
+        Cast cast = CASTS.get(player.getUUID());
+        int style = !ultimate ? 0 : (cast != null && cast.followUpImpacted ? 0 : 1);
+        KatanaNetwork.broadcastVisual(player, point.x, player.getY() + 1.05, point.z, style);
     }
 }

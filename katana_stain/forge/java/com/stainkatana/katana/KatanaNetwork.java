@@ -16,7 +16,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 
 /** Solo acepta un identificador de habilidad, nunca blancos ni daño enviados por el cliente. */
 public final class KatanaNetwork {
-    private static final String VERSION = "4";
+    private static final String VERSION = "5";
     public static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder
             .named(new ResourceLocation(StainKatanaMod.MOD_ID, "abilities"))
             .networkProtocolVersion(() -> VERSION).clientAcceptedVersions(VERSION::equals)
@@ -27,6 +27,8 @@ public final class KatanaNetwork {
                 AbilityMessage::decode, AbilityMessage::handle, Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(1, AnimationMessage.class, AnimationMessage::encode,
                 AnimationMessage::decode, AnimationMessage::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(2, VisualMessage.class, VisualMessage::encode,
+                VisualMessage::decode, VisualMessage::handle, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
     public record AbilityMessage(int ability) {
         public static void encode(AbilityMessage msg, FriendlyByteBuf buf) { buf.writeVarInt(msg.ability); }
@@ -56,6 +58,25 @@ public final class KatanaNetwork {
             NetworkEvent.Context context = supplier.get();
             context.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
                     () -> () -> com.stainkatana.katana.client.KatanaAnimations.play(msg.entityId, msg.ability)));
+            context.setPacketHandled(true);
+        }
+    }
+    public static void broadcastVisual(ServerPlayer player, double x, double y, double z, int style) {
+        CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player),
+                new VisualMessage(x, y, z, player.getYRot(), style));
+    }
+    public record VisualMessage(double x, double y, double z, float yaw, int style) {
+        public static void encode(VisualMessage msg, FriendlyByteBuf buf) {
+            buf.writeDouble(msg.x); buf.writeDouble(msg.y); buf.writeDouble(msg.z);
+            buf.writeFloat(msg.yaw); buf.writeVarInt(msg.style);
+        }
+        public static VisualMessage decode(FriendlyByteBuf buf) {
+            return new VisualMessage(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readFloat(), buf.readVarInt());
+        }
+        public static void handle(VisualMessage msg, Supplier<NetworkEvent.Context> supplier) {
+            NetworkEvent.Context context = supplier.get();
+            context.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
+                    () -> () -> com.stainkatana.katana.client.KatanaVisuals.spawn(msg.x, msg.y, msg.z, msg.yaw, msg.style)));
             context.setPacketHandled(true);
         }
     }

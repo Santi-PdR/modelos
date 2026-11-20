@@ -8,7 +8,7 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
-/** Tres partículas originales, sin dependencias de assets de otros mods. */
+/** Tipos para recursos adaptados de Better Combat Particle; licencia en META-INF. */
 public final class KatanaParticles {
     private static final DeferredRegister<ParticleType<?>> TYPES = DeferredRegister.create(ForgeRegistries.PARTICLE_TYPES, StainKatanaMod.MOD_ID);
     public static final RegistryObject<SimpleParticleType> SLASH = TYPES.register("slash_arc", () -> new SimpleParticleType(false));
