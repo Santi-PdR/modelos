@@ -33,9 +33,11 @@ def placement(geo):
             assert np.mean([old[n][...,2].min()-new[n][...,2].min() for n in roots]) > .39, aim
             assert before[...,2].min()-after[...,2].min() > 1.75, aim
         else:
-            # Same physical rims in the already-fitted overhead fixture.
-            assert all(np.array_equal(v,new[n]) for n,v in old.items() if 'v18_pad' in n), aim
-            assert before[...,2].min()-after[...,2].min() > .40, aim
+            # Keep the leading rim against the sleeve as the rear contracts.
+            old_rim,new_rim = (m['rim_v18_pad_1'][...,2] for m in (old,new))
+            assert abs(old_rim.min()-new_rim.min()) < .045 and old_rim.max()-new_rim.max() > .15, aim
+            assert np.array_equal(old['v18_pad_0'],new['v18_pad_0']), aim
+            assert before[...,2].min()-after[...,2].min() > .95, aim
         assert before[...,1].max()-after[...,1].max() >= 1.75, aim
         print(f'{aim[1]:g}°/{aim[2]:+g}°: ancho parcial {outer(old):.2f} → {outer(new):.2f}u; '
               f'delante del cuello {before[...,2].min():.2f} → {after[...,2].min():.2f}u.')

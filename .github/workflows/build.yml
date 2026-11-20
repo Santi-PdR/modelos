@@ -1020,6 +1020,19 @@ jobs:
             exit 1
           fi
 
+      # Priorizar estas capturas en el presupuesto de anotaciones del job.
+      - name: Documentar v1.28.0 y el modelo actual en F5 tres cuartos
+        if: always() && steps.historic-fit.outcome == 'success'
+        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery diagonal
+
+      - name: Documentar v1.28.0 y el modelo actual en F5 giro opuesto
+        if: always() && steps.historic-fit.outcome == 'success'
+        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery espejo
+
+      - name: Documentar v1.28.0 y el modelo actual en F5 cenital
+        if: always() && steps.historic-fit.outcome == 'success'
+        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery cenital
+
       - name: Medir el anclaje anterior a la rama en Forge
         if: steps.historic-fit.outcome == 'success' && steps.fx-smoke.outcome == 'success'
         run: |
@@ -1032,11 +1045,11 @@ jobs:
           done
 
       - name: Comparar v1.67.11 y las nuevas hombreras en F5 cenital
-        if: always() && steps.fx-smoke.outcome != 'skipped'
+        if: always() && steps.fx-smoke.outcome != 'skipped' && steps.historic-fit.outcome != 'success'
         run: python3 tools/verify_forge_plates.py build/fx-smoke-run/fx-shots --gallery
 
       - name: Medir el borde de las placas contra las mangas en F5
-        if: steps.fx-smoke.outcome == 'success'
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
           set -o pipefail
           python3 tools/verify_forge_plates.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
@@ -1078,18 +1091,6 @@ jobs:
               printf '::notice title=Anclaje y ranura en Forge::%s\n' "${line//%/%25}"
             fi
           done
-
-      - name: Documentar v1.28.0 y el modelo actual en F5 tres cuartos
-        if: always() && steps.historic-fit.outcome == 'success'
-        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery diagonal
-
-      - name: Documentar v1.28.0 y el modelo actual en F5 giro opuesto
-        if: always() && steps.historic-fit.outcome == 'success'
-        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery espejo
-
-      - name: Documentar v1.28.0 y el modelo actual en F5 cenital
-        if: always() && steps.historic-fit.outcome == 'success'
-        run: python3 tools/verify_forge_history.py build/fx-smoke-run/fx-shots --gallery cenital
 
       - name: Comparar el canto de la camiseta en F5 cenital
         if: always() && steps.fx-smoke.outcome == 'success'

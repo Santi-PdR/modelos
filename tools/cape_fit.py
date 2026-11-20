@@ -200,7 +200,8 @@ def rim_frame(name, target, amount):
 def torso_profile():
     code = SOURCE.with_name('CapeTorsoFit.java').read_text()
     pivots = re.search(r'PIVOTS = (\{.*?\});',code,re.S)[1]
-    return dict(pivots=json.loads(pivots.replace('{','[').replace('}',']')))
+    leading_z = float(re.search(r'WIDE_LEADING_Z = ([.\d]+);',code)[1])
+    return dict(pivots=json.loads(pivots.replace('{','[').replace('}',']')),wideLeadingZ=leading_z)
 
 
 def torso_shape(stance, pitch, yaw, depth, seat, plate, arm, effort, dry=1., elytra=False):
@@ -217,15 +218,21 @@ def torso_shape(stance, pitch, yaw, depth, seat, plate, arm, effort, dry=1., ely
     rest = dry*(1-smooth(.72,1,plate))*(1-smooth(.10,.50,stance))*(1-smooth(14,33,pitch))*(1-smooth(70,86,turn))
     sweep, advance = smooth(5,25,effort),reach*smooth(12,42,down)
     upright = 1-smooth(0,23,down)
-    pivots = torso_profile()['pivots']
+    profile = torso_profile()
+    pivots = profile['pivots']
 
     def fit(i,k,sx,sy,sz,dy,dz):
         return [*pivots[i], 0.,k*dy,k*dz,*(1+k*(v-1) for v in (sx,sy,sz))] if k > 0 else None
 
     def collar(r): return fit(0,tuck,.965,.41,1-.12*r,-.58,-1.62*r)
+    crown = trim*(1+1.24*smooth(.76,.995,seat))
+    closure = .18*dry*smooth(.76,.99,plate)
+    compact = rest*(1-smooth(.54,.76,seat))*(1-smooth(.10,.26,stance))
+    wide = fit(2,1,1-.60*rest,1-.59*rest,1-.14*advance*rest-closure,
+               rest*(.065+.37*sweep+.48*advance-.47*upright),
+               rest*(-.24*advance+.52*sweep+.22*upright)+(profile['wideLeadingZ']-pivots[2][2])*closure) if rest or closure else None
     return (.68*smooth(23,43,down)*dry*space*(1-smooth(2.85,6,arm)),
-            collar(trim),collar(trim*.16),fit(1,rest*(1-smooth(.54,.76,seat))*(1-smooth(.10,.26,stance)),.94,.92,1-.17*advance,.18*advance,-.24*advance),
-            fit(2,rest,.40,.41,1-.14*advance,.065+.37*sweep+.48*advance-.47*upright,-.24*advance+.52*sweep+.22*upright))
+            collar(crown),collar(trim*.16),fit(1,compact,.94,.92,1-.17*advance,.18*advance,-.24*advance),wide)
 
 
 def torso_frame(b, transform, prefix="torso_"):

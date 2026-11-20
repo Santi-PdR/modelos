@@ -72,6 +72,7 @@ def visible_attachment(root, view, slot, suffix=''):
 
 
 def verify(root):
+    errors = []
     for view in VIEWS:
         for slot in SLOTS:
             stem = root/f'historia-{view}-{slot}'
@@ -79,21 +80,29 @@ def verify(root):
                 size = image.size
             samples = [np.loadtxt(stem.with_name(stem.name+s+'-camara.tsv'))*size for s in ('-v1280','-v16712','')]
             assert all(m.shape == (8,2) and np.isfinite(m).all() for m in samples)
-            assert max(abs(m-samples[0]).max() for m in samples[1:]) < .65, (view,slot,'cámara F5 no registrada')
+            drift = max(abs(m-samples[0]).max() for m in samples[1:])
+            assert drift < .65, (view,slot,'cámara F5 no registrada',drift)
             old, prior, now = (geometry(root,view,slot,s) for s in ('-v1280','-v16712',''))
             assert 6.2 < old[0] < 6.9 and 6.2 < old[1] < 6.9, (view, slot, old)
             assert .8 < old[2] < 1.4 and 24 < old[3] < 26.1, (view, slot, old)
             assert 1.2 < old[4] < 2.9, (view, slot, old)
             if view == 'cenital':
-                assert prior[2]-now[2] > .25 and now[1] < 7.80 and now[2] < 4.04 and now[3] < 26.65 and now[4] < 3.55, (view,slot,now)
+                correct = prior[2]-now[2] > .95 and now[1] < 7.80 and now[2] < 3.41 and now[3] < 26.65 and now[4] < 3.55
             else:
-                assert prior[1]-now[1] > 2.40 and prior[4]-now[4] > .34 and 6.0 < now[1] < 7.20 and now[2] < 4.31 and now[3] < 25.1 and now[4] < 3.82, (view,slot,now)
+                correct = (prior[1]-now[1] > 2.40 and prior[4]-now[4] > .34 and 6.0 < now[1] < 7.20
+                           and now[2] < 4.31 and now[3] < 25.1 and now[4] < 3.82)
             values = ', '.join(f'{a:.2f}→{b:.2f}→{c:.2f}' for a,b,c in zip(old,prior,now,strict=True))
-            print(f'{view}/{slot} · v1.28.0→v1.67.12→prueba (u): extremos X D/I, Z/Y cuello, Z/Y raíces: {values}',flush=True)
             before, metrics = [visible_attachment(root,view,slot,s) for s in ('-v16712','')]
-            print(f'{view}/{slot} · placas y cuello proyectados sobre píxeles de manto en F5: ' + ', '.join(
-                f'{p} píxeles, {a[1]:.0%}→{x:.0%} a 0,10 anchos de la camiseta' for a,(p,x) in zip(before,metrics,strict=True)),flush=True)
-            assert all(x >= .10 for _,x in metrics), (view,slot,metrics)
+            changes = [x-a for (_,a),(_,x) in zip(before,metrics,strict=True)]
+            pixels = ', '.join(f'{a:.0%}→{x:.0%} ({p}px)' for (_,a),(p,x) in zip(before,metrics,strict=True))
+            print(f'{view}/{slot} · registro {drift:.2f}px · v1.28.0→v1.67.12→prueba (u): '
+                  f'extremos X D/I, Z/Y cuello, Z/Y raíces: {values} · píxeles proyectados '
+                  f'cerca de la camiseta (placas y cuello): {pixels}',flush=True)
+            # Require an improvement in the visible collar and preserve both
+            # sleeve contacts, in addition to the body-space placement test.
+            if not correct or any(x < .10 for _,x in metrics) or changes[2] < .10 or min(changes) < -.05:
+                errors.append((view,slot,correct,[(n,round(f,3)) for n,f in metrics],np.round(changes,3).tolist()))
+    assert not errors, errors
 
 
 def gallery(root, view):

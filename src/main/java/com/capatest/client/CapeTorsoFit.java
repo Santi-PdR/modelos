@@ -13,6 +13,8 @@ final class CapeTorsoFit {
             {4.57, 22.95, 3.55},
             {-4.26, 22.45, 3.75}
     };
+    // The broad plate's leading edge in the pre-fit frame (before the rim hinge).
+    private static final double WIDE_LEADING_Z = 3.03;
     static final Shape NONE = new Shape(0, null, null, null, null);
 
     record Affine(float x, float y, float z, float dx, float dy, float dz, float sx, float sy, float sz) {}
@@ -65,11 +67,19 @@ final class CapeTorsoFit {
         double compact = rest * (1 - smooth(.54, .76, previousSeat)) * (1 - smooth(.10, .26, stance));
         double sweep = smooth(5, 25, sleeve), advance = reach * smooth(12, 42, down);
         double upright = 1 - smooth(0, 23, down);
+        // At deep inclinations the neck is clear of the rear edge. Finish
+        // seating the crown without pulling the teeth away from the roots.
+        double crown = trim * (1 + 1.24 * smooth(.76, .995, previousSeat));
+        // Keep the leading contact rim pinned while drawing the trailing
+        // edge in. This complements, rather than redoes, the sleeve fit.
+        double closure = .18 * dry * smooth(.76, .99, plateFit);
         return new Shape((float) (.68 * smooth(23, 43, down) * stroke),
-                collar(tuck, trim), collar(tuck, trim * .16),
+                collar(tuck, crown), collar(tuck, trim * .16),
                 affine(1, compact, .94, .92, 1 - .17 * advance, 0, .18 * advance, -.24 * advance),
-                affine(2, rest, .40, .41, 1 - .14 * advance, 0,
-                        .065 + .37*sweep + .48*advance - .47*upright, -.24*advance + .52*sweep + .22*upright));
+                rest == 0 && closure == 0 ? null : affine(2, 1, 1 - .60 * rest, 1 - .59 * rest,
+                        1 - .14 * advance * rest - closure, 0,
+                        rest * (.065 + .37*sweep + .48*advance - .47*upright),
+                        rest * (-.24*advance + .52*sweep + .22*upright) + (WIDE_LEADING_Z - PIVOTS[2][2]) * closure));
     }
 
     private static Affine collar(double amount, double reach) {
