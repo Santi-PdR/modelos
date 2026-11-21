@@ -169,6 +169,54 @@ final class CapeWornMotionTest {
         near(0, cape.clearancePace(), 0, "discard transition on render gap");
     }
 
+    private static void sprintIntoCrouch() {
+        var dense = new CapeWornMotion();
+        var sparse = new CapeWornMotion();
+        var normalWalk = new CapeWornMotion();
+        var tap = new CapeWornMotion();
+        double lastTop = 0;
+        for (int tick = 1; tick <= 41; tick++) {
+            boolean crouch = tick >= 21 && tick < 39;
+            var pose = new CapeState.Wearer(false, false, false, false, crouch, tick < 19, .09, 0);
+            var walk = new CapeState.Wearer(false, false, false, false, crouch, false, .09, 0);
+            var shortTap = new CapeState.Wearer(false, false, false, false, tick == 21, tick < 19, .09, 0);
+            float previous = tick <= 21 ? 1 : .24F;
+            float speed = tick < 21 ? 1 : .24F;
+            for (int i = 0; i <= 16; i++) {
+                float f = i / 16F;
+                dense.sample(pose, tick, f, tick-1, tick, previous, speed, 0, 0);
+                tap.sample(shortTap, tick, f, tick-1, tick, previous, speed, 0, 0);
+                double top = dense.crouchTopFloor();
+                double leg = dense.crouchLegFloor();
+                near(top, tap.crouchTopFloor(), 0, "a quick Shift tap must not drop the remaining opening");
+                if (tick < 21 || tick >= 33) {
+                    near(0, top, 0, "hold only during the transition");
+                    near(0, leg, 0, "no stray leg clearance in a settled pose");
+                } else {
+                    if (tick == 21 && i == 0) {
+                        near(49.5, top, 1e-8, "retain the standing sprint opening");
+                        near(64, leg, 1e-8, "retain room for the legs");
+                        near(0, dense.weight(CapeState.SNEAK), 0, "do not change the clip clock");
+                    } else if (lastTop - top > 6.19 / 16 + 1e-10 || top > lastTop) {
+                        throw new AssertionError("crouch release did not close gradually " + tick + "/" + f);
+                    }
+                    if (tick == 27) near(1, dense.weight(CapeState.SNEAK), 0, "six-tick blend still settles");
+                }
+                if (i == 8) {
+                    sparse.sample(pose, tick, f, tick-1, tick, previous, speed, 0, 0);
+                    dense.sample(pose, tick, .0625F, tick-1, tick, previous, speed, 0, 0);
+                    near(top, sparse.crouchTopFloor(), 0, "release independent of FPS");
+                    near(leg, dense.crouchLegFloor(), 0, "earlier layer didn't rewind clearance");
+                    normalWalk.sample(walk, tick, f, tick-1, tick, previous, speed, 0, 0);
+                    near(0, normalWalk.crouchTopFloor(), 0, "walk to crouch is unchanged");
+                }
+                lastTop = top;
+            }
+        }
+        dense.sample(CapeState.Wearer.STILL, 23, .5F, 0, 0, 0, 0, 0, 0);
+        near(0, dense.crouchTopFloor(), 0, "rewind clears the held pose");
+    }
+
     public static void main(String[] args) {
         for (int tick = 1; tick <= TICKS; ++tick) {
             double goal = tick < 16 || tick >= 80 ? 0 : tick >= 39 && tick < 64 ? 1 : .86;
@@ -251,8 +299,9 @@ final class CapeWornMotionTest {
         if (CapeStride.groundedEnvelope(55, .2, .20, .70, 1, 1) < eased + 10)
             throw new AssertionError("clearance for additional arm gesture lost");
         dryTransitions();
+        sprintIntoCrouch();
         swimCycle();
         climbSupport();
-        System.out.println("CapeWornMotion: marcha, dobladillo al frenar, nado y apoyo en escalera continuos por portador");
+        System.out.println("CapeWornMotion: marcha, frenada, paso agachado, nado y escalera continuos por portador");
     }
 }

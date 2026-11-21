@@ -50,9 +50,13 @@ public final class CapeStride {
         return clamp(LEG_GAIN * leg - LEG_INSET - lean(bodyPitch) - LEG_FIT * depth, MID_TARGET_LIMIT);
     }
 
+    static double topGoal(double armGoal, double legGoal) {
+        return clamp(Math.max(armGoal, LEG_SHARE * legGoal), TOP_LIMIT);
+    }
+
     /** Only lift when the clip and the existing torso fit haven't already cleared the stride. */
     public static double topLift(double authoredTop, double armGoal, double legGoal) {
-        double goal = clamp(Math.max(armGoal, LEG_SHARE * legGoal), TOP_LIMIT);
+        double goal = topGoal(armGoal, legGoal);
         return goal > 0 ? raise(goal - authoredTop) : 0;
     }
 

@@ -11,6 +11,9 @@ final class CapeWornMotion {
     private static final double TURN = 2 * Math.PI;
     private static final int SPRINT_FADE = 6;
     private static final int DRY_SPRINT_FADE = 8;
+    // Let the opening from the run settle after the vanilla torso has
+    // already tilted into crouch. The authored six-tick clip mix stays put.
+    private static final int CROUCH_RELEASE = 12;
     private static final int MAX_GAP = 10;
     // Keep the mass of the drape in motion between footfalls. Vanilla's
     // limb amplitude is an input, not a step in the cape's opening angle.
@@ -38,9 +41,10 @@ final class CapeWornMotion {
     private final double[] weights = new double[MODES.length];
     private CapeState target;
     private boolean sprint;
-    private int lastTick, sprintSpan;
+    private int lastTick, sprintSpan, crouchStart;
     private float partial;
     private double start, span, sprintStart, sprintFrom;
+    private double crouchTop, crouchLeg, crouchRetained;
     private double paceFrom, paceTo, swimFrom, swimTo;
     private double drapeFrom, drapeTo, dryFrom, dryTo, previousDry;
     private double fallFrom, fallTo, previousFall;
@@ -68,6 +72,7 @@ final class CapeWornMotion {
             target = null;
             drapeTo = paceTo = unit(speedFrom);
             dryTo = previousDry = dryGoal;
+            crouchTop = crouchLeg = 0;
             swimTo = swimBefore;
             fallTo = previousFall = fallGoal(wearer);
         }
@@ -90,7 +95,7 @@ final class CapeWornMotion {
             fallFrom = approachFall(fallTo, previousFall, missed);
             previousFall = fallGoal(wearer);
             fallTo = approachFall(fallFrom, previousFall, 1);
-            selectBase(wearer, tick, dryGround);
+            selectBase(wearer, tick, dryGround, stepFrom * STRIDE_RADIANS / TURN);
             lastTick = tick;
         }
         blendFamily(weights, time);
@@ -120,7 +125,9 @@ final class CapeWornMotion {
         stride = (stepFrom + ((double) stepTo - stepFrom) * partial) * STRIDE_RADIANS / TURN;
         amplitude = paceFrom + (paceTo - paceFrom) * partial;
         double drape = drapeFrom + (drapeTo - drapeFrom) * partial;
-        clearancePace = amplitude + (drape - amplitude) * (dryFrom + (dryTo - dryFrom) * partial);
+        double dry = dryFrom + (dryTo - dryFrom) * partial;
+        clearancePace = amplitude + (drape - amplitude) * dry;
+        crouchRetained = wearer.elytra() ? 0 : dry * crouchReleaseAt(time);
         limbAmplitude = unit(speedFrom + ((double) speedTo - speedFrom) * partial);
         ground = weights[idle] + weights[blight];
         double step = smooth((amplitude - .04) / .49);
@@ -131,7 +138,7 @@ final class CapeWornMotion {
         weights[CapeState.SPRINT.ordinal()] = ground * step * run;
     }
 
-    private void selectBase(CapeState.Wearer wearer, int tick, boolean dryGround) {
+    private void selectBase(CapeState.Wearer wearer, int tick, boolean dryGround, double strideAtStart) {
         CapeState family = wearer.elytra() ? CapeState.AIR : wearer.crouching() ? CapeState.SNEAK
                 : wearer.blight() ? CapeState.BLIGHT : CapeState.IDLE;
         boolean running = !wearer.water() && wearer.sprinting();
@@ -146,6 +153,17 @@ final class CapeWornMotion {
             sprintSpan = SPRINT_FADE;
             sprintFrom = sprint ? 1 : 0;
         } else if (family != target) {
+            // Shift can arrive a few ticks after sprint turns off. Inspect
+            // the running share at the boundary, not the new sprint flag.
+            // Cache only the standing gait envelope, never a prior draw.
+            if (family == CapeState.SNEAK && (target == CapeState.IDLE || target == CapeState.BLIGHT)
+                    && dryGround && dryFrom >= .99 && drapeFrom >= .62 && runWeight(tick) >= .50
+                    && (crouchTop == 0 || crouchReleaseAt(tick) == 0)) {
+                double gait = CapeStride.groundedEnvelope(0, strideAtStart, drapeFrom, 0, 1, 1);
+                crouchLeg = CapeStride.legGoal(gait * 1.4, 0, 0);
+                crouchTop = CapeStride.topGoal(CapeStride.armGoal(gait, 0, 0), crouchLeg);
+                crouchStart = tick;
+            }
             blendFamily(from, tick);
             span = CapePlayback.transition(target, family);
             start = tick;
@@ -190,6 +208,8 @@ final class CapeWornMotion {
     double stride() { return stride; }
     double ground() { return ground; }
     double strideSupport() { return strideSupport; }
+    double crouchTopFloor() { return crouchTop * crouchRetained; }
+    double crouchLegFloor() { return crouchLeg * crouchRetained; }
     double amplitude() { return amplitude; }
     double clearancePace() { return clearancePace; }
     double limbAmplitude() { return limbAmplitude; }
@@ -197,6 +217,10 @@ final class CapeWornMotion {
     double phase(CapeState mode, double duration) {
         double cycles = mode == CapeState.WALK || mode == CapeState.SPRINT ? stride : time / duration;
         return cycles - Math.floor(cycles); // retain the sub-frame remainder at each loop
+    }
+
+    private double crouchReleaseAt(double at) {
+        return 1 - smooth((at - crouchStart) / CROUCH_RELEASE);
     }
 
     private double runWeight(double at) {

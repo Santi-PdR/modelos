@@ -1007,8 +1007,11 @@ jobs:
           set -euo pipefail
           ver=$(sed -n 's/^mod_version=//p' gradle.properties)
           jar="capatest-$ver.jar"
-          cmp "build/libs/$jar" "entregables/v$ver/$jar"
-          echo '::notice title=Maniobra en Forge::La compilación reproduce byte por byte el JAR entregado.'
+          (cd build/libs && sha256sum -c SHA256SUMS.txt)
+          if [ -f "entregables/v$ver/$jar" ]; then
+            cmp "build/libs/$jar" "entregables/v$ver/$jar"
+            echo '::notice title=Maniobra en Forge::La compilación reproduce byte por byte el JAR entregado.'
+          fi
           log="$RUNNER_TEMP/forge-combined.log"
           mkdir -p build/fx-smoke-run/config
           printf 'earlyWindowControl = false\n' > build/fx-smoke-run/config/fml.toml
@@ -1027,8 +1030,12 @@ jobs:
         id: verify-combined
         if: ${{ steps.combined-smoke.outcome == 'success' }}
         run: |
-          set -o pipefail
-          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_combined.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
+          set -euo pipefail
+          args=()
+          if grep -qx 'mod_version=1.67.29' gradle.properties; then
+            args=(--reference docs/releases/v1.67.28/maniobra/maniobra-forge.tsv)
+          fi
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_combined.py build/fx-smoke-run/fx-shots "${args[@]}" 2>&1 | while IFS= read -r line; do
             case "$line" in
               *AssertionError:*|*Error:*|Fuera\ de\ umbral:*) printf '::error title=Maniobra en Forge::%s\n' "${line//%/%25}" ;;
               pecho:*|curios:*) printf '::notice title=Maniobra en Forge::%s\n' "${line//%/%25}" ;;
@@ -1044,22 +1051,6 @@ jobs:
           path: build/fx-smoke-run/fx-shots/maniobra-*
           if-no-files-found: warn
           retention-days: 30
-
-      - name: Adjuntar sólo las evidencias de la maniobra verificada
-        if: ${{ success() && steps.verify-combined.outcome == 'success' && github.ref_name == 'arena/5a9fa51b-modelos' }}
-        run: |
-          set -euo pipefail
-          ver=$(sed -n 's/^mod_version=//p' gradle.properties)
-          cmp "build/libs/capatest-$ver.jar" "entregables/v$ver/capatest-$ver.jar"
-          dir="docs/releases/v$ver/maniobra"
-          shots=build/fx-smoke-run/fx-shots
-          mkdir -p "$dir"
-          install -m 0644 "$shots"/maniobra-{pecho.tsv,curios.tsv,forge.tsv,forge.jpg} "$dir/"
-          printf 'https://github.com/%s/actions/runs/%s\n' "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$dir/prueba.txt"
-          git add "$dir"
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m 'Adjuntar la maniobra verificada sin modificar el JAR entregado [skip ci]'
-          git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
 
       # Cliente real en mundo desechable. Se prueba aparte del JAR:
       # el código de diagnóstico y Curios nunca se empaquetan en él.
@@ -1245,6 +1236,35 @@ jobs:
             build/fx-smoke-run/fx-shots/hotbar-ciclo.gif
           if-no-files-found: error
           retention-days: 30
+
+      - name: Adjuntar el JAR de prueba v1.67.29 después de ambas pruebas Forge
+        if: >-
+          success() && github.ref_name == 'arena/5a9fa51b-modelos' &&
+          contains(github.event.head_commit.message, '[adjuntar-v16729]') &&
+          steps.verify-combined.outcome == 'success' && steps.fx-smoke.outcome == 'success' &&
+          steps.verify-climb.outcome == 'success' && steps.verify-jumps.outcome == 'success' &&
+          steps.verify-placement.outcome == 'success' && steps.verify-walk.outcome == 'success' &&
+          steps.verify-postures.outcome == 'success' && steps.verify-swim.outcome == 'success'
+        run: |
+          set -euo pipefail
+          grep -qx 'mod_version=1.67.29' gradle.properties
+          jar=capatest-1.67.29.jar
+          (cd build/libs && sha256sum -c SHA256SUMS.txt)
+          proof=docs/releases/v1.67.29
+          out="entregables/v1.67.29/$jar"
+          install -m 0644 -D "build/libs/$jar" "$out"
+          install -m 0644 -D build/libs/SHA256SUMS.txt "$proof/JAR.sha256"
+          mkdir -p "$proof/maniobra"
+          shots=build/fx-smoke-run/fx-shots
+          install -m 0644 "$shots"/maniobra-{pecho.tsv,curios.tsv,forge.tsv,forge.jpg,comparacion.tsv} "$proof/maniobra/"
+          install -m 0644 "$shots"/{continuidad-forge,saltos-forge,costuras-saltos-forge,escalera-forge,nado-forge,revision-alex-forge,holgura-brazos-forge}.tsv "$proof/"
+          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16729_colocacion_forge.jpg
+          printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$proof/compilacion.txt"
+          git add "$proof" docs/capa_v16729_colocacion_forge.jpg
+          git add -f "$out"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'Adjuntar v1.67.29 probada en Forge, sólo para test-1 [skip ci]'
+          git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.

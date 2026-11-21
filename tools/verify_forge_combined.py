@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Audit a continuous sprint → turn and crouch → stop → stand in Forge."""
 import argparse
+import csv
 from collections import defaultdict
 from pathlib import Path
 
@@ -94,7 +95,7 @@ def fit(root, data, slot, rig, source):
 
 
 def gallery(root, pictures, version):
-    w, h = 222, 224
+    w, h = 234, 202
     board = Image.new('RGB', (5*(w+7)+18, 125+2*(h+38)+10), '#17121d')
     pen = ImageDraw.Draw(board)
     text(pen, (15, 10), f'De carrera a reposo agachado · v{version}', 28, bold=True)
@@ -110,13 +111,27 @@ def gallery(root, pictures, version):
     board.save(root/'maniobra-forge.jpg', quality=93, optimize=True)
 
 
-def main(root, diagnostic=False):
+def previous_rows(path):
+    if path is None:
+        return {}
+    with path.open() as f:
+        rows = {r['ranura']: r for r in csv.DictReader(f, delimiter='\t')}
+    assert set(rows) == set(SLOTS), 'faltan ranuras del control .28'
+    for slot, r in rows.items():
+        recorded = timeline(read(path.parent/f'maniobra-{slot}.tsv'), slot)
+        assert r['fuera_de_umbral'] == 'punta' and recorded[2] > 6
+        np.testing.assert_allclose(recorded[1:3], [float(r[k]) for k in ('punta_p90_u_tick','punta_pico_u_tick')], atol=1e-6, rtol=0)
+    return rows
+
+
+def main(root, diagnostic=False, reference=None):
+    baseline = previous_rows(reference)
     geo = load(ARMOR_GEO)
     rig = WornModel(fixed_wearer_pose(geo, 0.))
     source = defaultdict(list)
     for name, box in zip(rig.names, rig.place(matrices(geo)), strict=True):
         source[name].append(box)
-    results, pictures, faults = [], {}, []
+    results, comparison, pictures, faults = [], [], {}, []
     for slot in SLOTS:
         data = read(root/f'maniobra-{slot}.tsv')
         count, p90, peak, tick, dt, top, mid = timeline(data, slot)
@@ -128,6 +143,20 @@ def main(root, diagnostic=False):
             faults_here.append('costura/montura')
         if leg > .05:
             faults_here.append('piernas')
+        if baseline:
+            old = baseline[slot]
+            old_p90, old_peak = (float(old[k]) for k in ('punta_p90_u_tick','punta_pico_u_tick'))
+            t, floor = data['time'], data['crouch_floor']
+            if (floor.max() < 40 or floor.max() > 49.50001 or (floor[(t < 50) | (t >= 66)] != 0).any()
+                    or not ((data['sneak'] >= .999) & (floor > 8)).any() or np.any((floor > 0) & (data['top'] < floor-.36))):
+                faults_here.append('retención del giro de la bisagra')
+            if peak >= .75 * old_peak:
+                faults_here.append('reducción del pico')
+            if head > float(old['placa_cabeza_u']) + .06 or hat > float(old['placa_capa_exterior_u']) + .06:
+                faults_here.append('holgura de hombrera')
+            comparison.append((slot, *(f'{v:.6f}' for v in (old_p90, p90, old_peak, peak, 100*(1-peak/old_peak)))))
+            print(f'{slot}: pico de punta .28 → candidata: {old_peak:.3f} → {peak:.3f}u/tick; '
+                  f'retención máxima {floor.max():.2f}°, sin cambiar la mezcla de Shift.', flush=True)
         faults.extend(f'{slot}: {case}' for case in faults_here)
         result = (p90, peak, tick, dt, top, mid, seam, join, back, drift, head, hat, arm, leg)
         results.append((slot, count, poses, *(f'{v:.6f}' for v in result), ','.join(faults_here) or 'OK'))
@@ -144,6 +173,8 @@ def main(root, diagnostic=False):
     table(root/'maniobra-forge.tsv', 'ranura cuadros poses punta_p90_u_tick punta_pico_u_tick '
           'pico_t pico_delta_t pico_delta_top_deg pico_delta_mid_deg costura_u raiz_u apoyo_u deriva_u '
           'placa_cabeza_u placa_capa_exterior_u pano_brazos_u pano_piernas_u fuera_de_umbral', results)
+    if baseline:
+        table(root/'maniobra-comparacion.tsv', 'ranura p90_base_u_tick p90_u_tick pico_base_u_tick pico_u_tick reduccion_pico_pct', comparison)
     gallery(root, pictures, mod_version())
     if faults:
         message = 'Fuera de umbral: ' + '; '.join(faults)
@@ -156,5 +187,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('shots', type=Path)
     parser.add_argument('--diagnostico', action='store_true', help='Guardar las mediciones incluso si superan el umbral; no certifica la maniobra.')
+    parser.add_argument('--reference', type=Path, help='TSV del diagnóstico .28 y sus trazas en el mismo directorio')
     args = parser.parse_args()
-    main(args.shots, args.diagnostico)
+    main(args.shots, args.diagnostico, args.reference)

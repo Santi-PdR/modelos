@@ -270,6 +270,12 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         }
         double armGoal = CapeStride.armGoal(arm, bodyPitch, 0);
         double legGoal = CapeStride.legGoal(leg, bodyPitch, 0);
+        if (motion != null) {
+            // Holding extra opening must never take room away from a live
+            // limb. Keep the lift of both hinges in the same leg envelope.
+            armGoal = Math.max(armGoal, motion.crouchTopFloor());
+            legGoal = Math.max(legGoal, motion.crouchLegFloor());
+        }
         if (clothTop == null || clothMid == null || (armGoal <= 0 && legGoal <= 0 && wingGoal <= 0))
             return;
         // GeckoLib's baked X is the negative of the authored GEO pitch.

@@ -27,6 +27,7 @@ import cape_stride as S
 
 REFERENCE = P.ROOT/'entregables/v1.67.14/capatest-1.67.14.jar'
 PREVIOUS = P.ROOT/'entregables/v1.67.27/capatest-1.67.27.jar'
+DELIVERED_28 = P.ROOT/'entregables/v1.67.28/capatest-1.67.28.jar'
 ART = ('geo', 'textures', 'animations', 'particles', 'shaders')
 BACKUP = P.ROOT/'docs/respaldos/v1.67.27'
 WORN_ANIMATION = A.ANIM.relative_to(P.ASSETS).as_posix()
@@ -101,11 +102,24 @@ def asset_contract(candidate=None):
     with ZipFile(PREVIOUS) as jar:
         previous = art_entries(jar)
     quiet_assets(previous,source[WORN_ANIMATION])
+    if P.mod_version() == '1.67.29':
+        assert hashlib.sha256(DELIVERED_28.read_bytes()).hexdigest() == 'b2ee2c448715501053611cd4e95a923a9b26e8d4990e080fb721711a74a6d78b'
+        with ZipFile(DELIVERED_28) as jar:
+            assert art_entries(jar) == source, 'el freno agachado debe conservar todo el arte y las curvas de .28'
+        archive = P.ROOT/'docs/respaldos/v1.67.28'
+        for line in (archive/'SHA256SUMS.txt').read_text().splitlines():
+            sha, key = line.split('  ', 1)
+            assert hashlib.sha256((archive/key).read_bytes()).hexdigest() == sha, key
+            if key in source:
+                assert (archive/key).read_bytes() == source[key], key
+        bb = (archive/'CAPA_v1.67.28.bbmodel').read_bytes()
+        assert bb.replace(b'"name":"capa_deteriorer_evilsaiyan_v1_67_28"', b'"name":"capa_deteriorer_evilsaiyan_v1_67_29"') == DOC.read_bytes()
+        print(f'{len(source)} recursos de arte/animación y el contenido editable de .28 se conservan.', flush=True)
     if candidate is not None:
         with ZipFile(candidate) as jar:
             assert jar.testzip() is None
             assert art_entries(jar) == source, 'el JAR no contiene los recursos verificados'
-            assert not any(any(probe in n for probe in ('CapePlacementProbe','CapeFxSmoke','CapeWalkProbe','CapeWaterProbe','CapeJumpProbe','CapeClimbProbe'))
+            assert not any(any(probe in n for probe in ('CapePlacementProbe','CapeFxSmoke','CapeWalkProbe','CapeWaterProbe','CapeJumpProbe','CapeClimbProbe','CapeCombinedProbe'))
                            for n in jar.namelist()), 'se empaquetó el ensayo de Forge'
     print(f'{len(original)-1} recursos idénticos al JAR v1.67.14; respecto a v1.67.27 sólo se retocó reposo/agachado. '
           'Marchas, Blockbench y visor verificados.',flush=True)
