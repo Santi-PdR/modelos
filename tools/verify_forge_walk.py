@@ -60,15 +60,16 @@ def report(data, name):
           f'Máximos en transición: {", ".join(transitions)}.',flush=True)
 
 
-def continuity(data, name, baseline=None):
-    def peaks(values, lo, hi):
-        t = values['time']
-        select = pairs(t,lo,hi)
-        delta = np.diff(t)[select]
-        slopes = np.abs(np.diff(np.c_[values['top'],values['mid']],axis=0)[select]) / delta[:,None]
-        hem = np.linalg.norm(np.diff(points(values,'tip'),axis=0)[select],axis=1) / delta
-        return np.r_[slopes.max(0),hem.max()]
+def peaks(values, lo, hi):
+    t = values['time']
+    select = pairs(t,lo,hi)
+    delta = np.diff(t)[select]
+    slopes = np.abs(np.diff(np.c_[values['top'],values['mid']],axis=0)[select]) / delta[:,None]
+    hem = np.linalg.norm(np.diff(points(values,'tip'),axis=0)[select],axis=1) / delta
+    return np.r_[slopes.max(0),hem.max()]
 
+
+def continuity(data, name, baseline=None):
     t = data['time']
     dt = np.diff(t)
     assert np.isfinite(points(data,'hood')).all() and np.isfinite(data['pace']).all(), name
@@ -84,7 +85,6 @@ def continuity(data, name, baseline=None):
     assert (data['run'][t >= 220] < .01).all() and (data['walk'][t >= 222] < .01).all(), name
     hood = points(data,'hood')
     crown = np.linalg.norm(np.ptp(hood[(t > 106)&(t < 128)],axis=0))
-    assert .10 < crown < .68, (name,'amplitud capucha',crown)
     result = []
     for label, lo, hi in TRANSITIONS+CHANGE:
         p = peaks(data,lo,hi)
@@ -94,6 +94,7 @@ def continuity(data, name, baseline=None):
               + (f' (v1.67.20: {base[0]:.2f}/{base[1]:.2f}°, {base[2]:.3f}u)' if base is not None else ''),flush=True)
     print(f'{name}: {int(sub_tick.sum())} pares dentro del tick y {int(across.sum())} entre ticks; '
           f'arco de la capucha en carrera {crown:.3f}u.',flush=True)
+    assert .10 < crown < .68, (name,'amplitud capucha',crown)
     now = np.array([r[3:6] for r in result])
     assert (now.max(0) < [12.,13.,6.]).all(), (name,'pico de bisagra o punta',now.max(0))
     if baseline is not None:

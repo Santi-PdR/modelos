@@ -17,6 +17,7 @@ import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.constant.DataTickets;
 import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
+import software.bernie.geckolib.util.RenderUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -28,7 +29,8 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     static final String BODY = "chestplate", SEAT = "cape_seat_fit", TOP = "cape_top",
             MID = "cape_mid", TIP = "v17_ribbon_6_seg4", HOOD = "v17_cowl_back_1";
     static final int DURATION = 225;
-    private final Matrix4f[] matrices = new Matrix4f[6];
+    private final Matrix4f[] matrices = new Matrix4f[5];
+    private Vector3f crown;
     private boolean active;
     private boolean testedRepeat;
 
@@ -37,6 +39,7 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     static void arm(CapaArmorRenderer renderer) {
         CapeWalkProbe probe = get(renderer);
         java.util.Arrays.fill(probe.matrices, null);
+        probe.crown = null;
         probe.active = true;
     }
 
@@ -59,10 +62,27 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             case TOP -> 2;
             case MID -> 3;
             case TIP -> 4;
-            case HOOD -> 5;
             default -> -1;
         };
         if (i >= 0) matrices[i] = new Matrix4f(stack.last().pose());
+        if (HOOD.equals(bone.getName())) {
+            // These vertices are in GEO space, not offsets from this bone.
+            // Measure a real crown corner, not a point below the mannequin.
+            var cube = bone.getCubes().get(0);
+            Vector3f point = null;
+            for (var face : cube.quads()) if (face != null)
+                for (var v : face.vertices()) if (point == null || v.position().y() > point.y()) point = v.position();
+            if (point == null) throw new AssertionError("missing crown vertex");
+            stack.pushPose();
+            try {
+                RenderUtils.translateToPivotPoint(stack, cube);
+                RenderUtils.rotateMatrixAroundCube(stack, cube);
+                RenderUtils.translateAwayFromPivotPoint(stack, cube);
+                crown = stack.last().pose().transformPosition(point, new Vector3f());
+            } finally {
+                stack.popPose();
+            }
+        }
     }
 
     static Draw finish(CapaArmorRenderer renderer, float partial) {
@@ -73,7 +93,8 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         var inverseBody = new Matrix4f(matrices[0]).invert();
         var seat = new Matrix4f(inverseBody).mul(matrices[1]);
         var tip = new Matrix4f(inverseBody).mul(matrices[4]);
-        var hood = new Matrix4f(inverseBody).mul(matrices[5]);
+        if (probe.crown == null) throw new AssertionError("missing live crown");
+        var hood = inverseBody.transformPosition(probe.crown, new Vector3f()).mul(16);
         var player = Minecraft.getInstance().player;
         CapeWornMotion motion = CapaArmorModel.wornMotion(player);
         if (!probe.testedRepeat && motion.weight(CapeState.WALK) > .98) {
@@ -88,7 +109,7 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 -Math.toDegrees(renderer.getGeoModel().getBone(TOP).orElseThrow().getRotX()),
                 -Math.toDegrees(renderer.getGeoModel().getBone(MID).orElseThrow().getRotX()),
                 tip.transformPosition(0, 0, .36F, new Vector3f()).mul(16),
-                hood.transformPosition(0, .14F, .04F, new Vector3f()).mul(16));
+                hood);
     }
 
     private static void requireClock(LivingEntity wearer, float partial, CapeWornMotion motion) {
