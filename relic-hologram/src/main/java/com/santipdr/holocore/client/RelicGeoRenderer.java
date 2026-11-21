@@ -6,8 +6,8 @@ import com.santipdr.holocore.config.RelicConfig;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
+import software.bernie.geckolib.core.object.Color;
 import software.bernie.geckolib.renderer.GeoObjectRenderer;
 
 /**
@@ -37,34 +37,77 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
         // Sin desplazamiento: el .geo.json ya viene centrado.
     }
 
+    /** Tinte del pase que se esta dibujando (lo lee {@link #getRenderColor}). */
+    private float tintRed = 1.0F;
+    private float tintGreen = 1.0F;
+    private float tintBlue = 1.0F;
+    private float tintAlpha = 1.0F;
+
     /**
-     * Dos pases sobre el mismo esqueleto ya posado:
+     * Pases sobre el mismo esqueleto ya posado:
      * <ol>
      *   <li>textura base (incluye el aura tenue translucida);</li>
-     *   <li>textura emisiva, que excluye el aura para que el halo no se sume dos
-     *       veces.</li>
+     *   <li>textura emisiva, que excluye el aura para que no se sume dos veces;</li>
+     *   <li>halo: la misma textura emisiva pero con blend <b>aditivo</b>, que suma
+     *       luz en vez de mezclarla. Eso es lo que da el aspecto de brillo
+     *       acumulado sin necesidad de post-proceso ni de shaderpack.</li>
      * </ol>
-     * El segundo pase no vuelve a animar: GeckoLib detecta que es el mismo
+     * Ninguno de los pases vuelve a animar: GeckoLib detecta que es el mismo
      * frame y conserva las matrices de los huesos.
      */
     public void renderHologram(PoseStack poseStack, RelicAnimatable animatable,
                                MultiBufferSource bufferSource, float partialTick, int packedLight) {
         renderPass(poseStack, animatable, bufferSource, partialTick, packedLight,
-                RelicGeoModel.texture());
+                RenderType.entityTranslucentEmissive(RelicGeoModel.texture()),
+                1.0F, 1.0F, 1.0F, 1.0F);
 
         if (RelicConfig.GLOW_LAYER.get()) {
             renderPass(poseStack, animatable, bufferSource, partialTick, packedLight,
-                    RelicGeoModel.glowTexture());
+                    RenderType.entityTranslucentEmissive(RelicGeoModel.glowTexture()),
+                    1.0F, 1.0F, 1.0F, 1.0F);
         }
+
+        if (haloEnabled()) {
+            float i = RelicConfig.HALO_INTENSITY.get().floatValue();
+            // Ligeramente azulado: la reliquia es un nucleo de luz fria.
+            renderPass(poseStack, animatable, bufferSource, partialTick, packedLight,
+                    RelicRenderTypes.ADDITIVE_GLOW.apply(RelicGeoModel.glowTexture()),
+                    0.55F * i, 0.78F * i, 1.0F * i, 1.0F);
+        }
+    }
+
+    /**
+     * El halo es el pase mas caro (tercera pasada sobre 977 cubos), asi que se
+     * salta en calidad LITE y con los efectos reducidos.
+     */
+    private boolean haloEnabled() {
+        return RelicConfig.GLOW_HALO.get()
+                && RelicConfig.QUALITY.get() == RelicConfig.Quality.FULL
+                && !RelicConfig.REDUCED_EFFECTS.get();
     }
 
     private void renderPass(PoseStack poseStack, RelicAnimatable animatable,
                             MultiBufferSource bufferSource, float partialTick, int packedLight,
-                            ResourceLocation texture) {
+                            RenderType renderType, float red, float green, float blue, float alpha) {
+        tintRed = red;
+        tintGreen = green;
+        tintBlue = blue;
+        tintAlpha = alpha;
         // defaultRender limpia this.animatable al terminar, hay que reasignarlo.
         this.animatable = animatable;
         defaultRender(poseStack, animatable, bufferSource,
-                RenderType.entityTranslucentEmissive(texture), null, 0.0F, partialTick, packedLight);
+                renderType, null, 0.0F, partialTick, packedLight);
+    }
+
+    /**
+     * GeckoLib pasa este color como color de vertice de cada cubo, asi que sirve
+     * para atenuar el pase aditivo sin tocar estado global de OpenGL (un
+     * {@code RenderSystem.setShaderColor} afectaria a todo lo que se dibuje
+     * despues).
+     */
+    @Override
+    public Color getRenderColor(RelicAnimatable animatable, float partialTick, int packedLight) {
+        return Color.ofRGBA(tintRed, tintGreen, tintBlue, tintAlpha);
     }
 
     @Override

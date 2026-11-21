@@ -33,8 +33,11 @@ con GeckoLib 4.8.1 y Curios API 5.14.1.
 * `/relic offset <x> <y> <z>`, `/relic scale <factor>`, `/relic side left|right`,
   `/relic quality full|lite`.
 * `/relic pulse` y `/relic release` lanzan las animaciones de una sola vez.
-* Configuración en `config/holocore-common.toml` (estado inicial, efectos
-  reducidos, calidad, lado del hombro).
+* Configuración en `config/holocore-client.toml` (estado inicial, efectos
+  reducidos, calidad, lado del hombro, halo).
+* Tercer pase de render con blend **aditivo** (`visuals.glowHalo`,
+  `visuals.haloIntensity`): el núcleo suma luz, así que se ve el brillo
+  acumulado incluso sin shaderpack. Se salta en `LITE` y con `reducedEffects`.
 
 ### Verificación de esta entrega
 

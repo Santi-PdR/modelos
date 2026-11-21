@@ -86,6 +86,19 @@ instante (no la guardan): cuando el núcleo quede donde quieres, copia los
 números de `/relic info` a `config/holocore-client.toml`. `pulse`, `release` y
 `toggle` sí viajan al servidor, para que el resto de jugadores vea lo mismo.
 
+## Brillo y shaders
+
+Los pases normal y emisivo usan `entityTranslucentEmissive` con el lightmap a
+tope (`FULL_BRIGHT`), que es justo lo que los shaderpacks (Iris/Oculus/OptiFine +
+Complementary, BSL…) usan para detectar emisivos y aplicar su bloom. Encima hay
+un tercer pase con **blend aditivo**: suma luz en vez de mezclarla, así que el
+núcleo brilla también sin shaderpack.
+
+Lo que **no** hace: post-proceso de pantalla (caro y se pelea con los packs) ni
+un `.fsh` propio (con shaderpack acaba en el fallback del pack o invisible). El
+razonamiento completo, con las alternativas y su compatibilidad, está en
+[BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
+
 ## Configuración (`config/holocore-client.toml`)
 
 | Clave | Defecto | Qué hace |
@@ -97,6 +110,8 @@ números de `/relic info` a `config/holocore-client.toml`. `pulse`, `release` y
 | `placement.scale` | `1.0` | Escala global (el modelo mide ~11 px). |
 | `visuals.quality` | `FULL` | `LITE` usa el .geo de 751 cubos y `idle_calm` en reposo. |
 | `visuals.glowLayer` | `true` | Segundo pase emisivo (la textura `_glowing`). |
+| `visuals.glowHalo` | `true` | Tercer pase con blend **aditivo** (suma luz). Se omite en `LITE` y con `reducedEffects`. |
+| `visuals.haloIntensity` | `0.35` | Fuerza del halo aditivo (0–1). |
 | `visuals.reducedEffects` | `false` | Reposo sin rayos/cometas/ondas (`idle_calm`). |
 | `visuals.maxRenderDistance` | `32` | Distancia para dibujar la reliquia de otros jugadores. |
 | `visuals.glitchMinSeconds` / `glitchMaxSeconds` | `20` / `60` | Intervalo del glitch aleatorio (solo en reposo). |
