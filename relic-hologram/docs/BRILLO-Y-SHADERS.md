@@ -454,6 +454,31 @@ void main() {
 }
 ```
 
+### A.1b Los cuatro pases: uno anima, tres dibujan
+
+Estudiado en el código de GeckoLib 4.8 (`GeoRenderer.defaultRender` /
+`reRender` y `GeoObjectRenderer.actuallyRender`), porque la primera versión
+llamaba cuatro veces a `defaultRender`:
+
+* `defaultRender(...)` llama a `actuallyRender(..., isReRender = false, ...)`, y
+  **ahí** está `model.handleAnimations(...)`: evaluar las animaciones y posar los
+  98 huesos. También llama a `doPostRenderCleanup()`, que pone
+  `this.animatable = null` (de ahí que cada pase lo reasigne).
+* `reRender(model, ...)` llama a `actuallyRender(..., isReRender = true, ...)`.
+  `GeoObjectRenderer` solo hace `handleAnimations` cuando `isReRender` es falso,
+  así que este camino **reutiliza la pose** y solo recorre los huesos para
+  emitir vértices con otro `RenderType`. Es exactamente para lo que existe
+  («alternate RenderType layers» en su javadoc).
+
+Con eso: una evaluación de animación por portador y frame en vez de cuatro, y los
+cuatro pases son literalmente la misma pose. Ese último punto importa en un
+contorno aditivo: si cada pase evaluara por su cuenta, `RenderUtils.getCurrentTick()`
+(`Blaze3D.getTime() * 20`) daría tiempos ligeramente distintos y los pases se
+verían desalineados como flecos de color en los bordes.
+
+El tinte de los pases extra se pasa explícito a `reRender` porque en ese camino
+GeckoLib no consulta `getRenderColor`; solo lo lee `defaultRender`.
+
 ### A.2 Cómo se carga
 
 El juego sólo precompila sus propios core shaders, así que hay que construir el

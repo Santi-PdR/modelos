@@ -64,8 +64,16 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
      * <p>{@code fade} llega de {@link RelicCurioRenderer}: para los portadores
      * que no son el jugador local se apaga en los ultimos bloques de
      * {@code maxRenderDistance}, en vez de desaparecer de golpe.</p>
-     * Ninguno de los pases vuelve a animar: GeckoLib detecta que es el mismo
-     * frame y conserva las matrices de los huesos.
+     * <p><b>Solo el primer pase anima.</b> Estudiado en el codigo de GeckoLib
+     * 4.8: {@code defaultRender} llama a {@code actuallyRender} con
+     * {@code isReRender=false}, y es ahi donde se hace
+     * {@code model.handleAnimations(...)} (evaluar las animaciones y posar los 98
+     * huesos). {@code reRender}, en cambio, pasa {@code isReRender=true} y se
+     * salta ese trabajo: dibuja los huesos tal como estan. Con cuatro
+     * {@code defaultRender} se evaluaba la animacion cuatro veces por portador y
+     * frame; con uno + tres {@code reRender} se evalua una, y ademas los cuatro
+     * pases son exactamente la misma pose (sin diferencias de microsegundos entre
+     * pases, que en un contorno aditivo se verian como flecos de color).</p>
      */
     void renderHologram(PoseStack poseStack, RelicAnimatable animatable,
                         MultiBufferSource bufferSource, float partialTick, int packedLight,
@@ -74,12 +82,25 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
         // del frame, con los lotes anteriores ya volcados.
         RelicShaders.reap();
 
-        renderPass(poseStack, animatable, bufferSource, partialTick, packedLight,
+        // Totalmente desvanecida: ni animacion ni pases. update() ya corrio, asi
+        // que el portador sigue contando como "vivo" para el prune.
+        if (fade <= 0.01F) {
+            return;
+        }
+
+        // Modelo horneado compartido por los cuatro pases: reRender necesita el
+        // mismo objeto cuyos huesos ya poso el primer paso.
+        BakedGeoModel model = getGeoModel().getBakedModel(getGeoModel().getModelResource(animatable));
+
+        // Pase 1 (el unico que evalua la animacion).
+        setTint(1.0F, 1.0F, 1.0F, 1.0F);
+        this.animatable = animatable;
+        defaultRender(poseStack, animatable, bufferSource,
                 RenderType.entityTranslucentEmissive(RelicGeoModel.texture()),
-                1.0F, 1.0F, 1.0F, 1.0F);
+                null, 0.0F, partialTick, packedLight);
 
         if (RelicConfig.GLOW_LAYER.get()) {
-            renderPass(poseStack, animatable, bufferSource, partialTick, packedLight,
+            renderExtra(model, poseStack, animatable, bufferSource, partialTick, packedLight,
                     RenderType.entityTranslucentEmissive(RelicGeoModel.glowTexture()),
                     1.0F, 1.0F, 1.0F, 1.0F);
         }
@@ -93,7 +114,7 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
             float i = RelicConfig.HALO_INTENSITY.get().floatValue() * amount;
             // Nucleo de luz fria por defecto, pero arrastrado a medias hacia el
             // color del estado: cargada se ve ambarienta, alerta rojiza.
-            renderPass(poseStack, animatable, bufferSource, partialTick, packedLight,
+            renderExtra(model, poseStack, animatable, bufferSource, partialTick, packedLight,
                     RelicRenderTypes.ADDITIVE_GLOW.apply(RelicGeoModel.glowTexture()),
                     tint(0.55F, glow.red()) * i, tint(0.78F, glow.green()) * i,
                     tint(1.00F, glow.blue()) * i, 1.0F);
@@ -106,7 +127,7 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
         if (glowShader != null) {
             glowShader.safeGetUniform("HoloTime").set(RelicShaders.timeSeconds(partialTick));
             float i = RelicConfig.SHADER_INTENSITY.get().floatValue() * amount;
-            renderPass(poseStack, animatable, bufferSource, partialTick, packedLight,
+            renderExtra(model, poseStack, animatable, bufferSource, partialTick, packedLight,
                     RelicRenderTypes.GLOW_SHADER.apply(RelicGeoModel.glowTexture()),
                     tint(0.65F, glow.red()) * i, tint(0.85F, glow.green()) * i,
                     tint(1.00F, glow.blue()) * i, 1.0F);
@@ -133,17 +154,27 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
                 && !RelicConfig.REDUCED_EFFECTS.get();
     }
 
-    private void renderPass(PoseStack poseStack, RelicAnimatable animatable,
-                            MultiBufferSource bufferSource, float partialTick, int packedLight,
-                            RenderType renderType, float red, float green, float blue, float alpha) {
+    /**
+     * Pase adicional sobre los huesos ya posados ({@code isReRender=true}): no
+     * vuelve a evaluar animaciones. El tinte se pasa explicito porque en este
+     * camino GeckoLib no consulta {@link #getRenderColor}.
+     */
+    private void renderExtra(BakedGeoModel model, PoseStack poseStack, RelicAnimatable animatable,
+                             MultiBufferSource bufferSource, float partialTick, int packedLight,
+                             RenderType renderType, float red, float green, float blue, float alpha) {
+        // defaultRender limpia this.animatable al terminar (doPostRenderCleanup).
+        this.animatable = animatable;
+        reRender(model, poseStack, bufferSource, animatable, renderType,
+                bufferSource.getBuffer(renderType), partialTick, packedLight,
+                OverlayTexture.NO_OVERLAY, red, green, blue, alpha);
+    }
+
+    /** Tinte del pase base, que es el unico que lee {@link #getRenderColor}. */
+    private void setTint(float red, float green, float blue, float alpha) {
         tintRed = red;
         tintGreen = green;
         tintBlue = blue;
         tintAlpha = alpha;
-        // defaultRender limpia this.animatable al terminar, hay que reasignarlo.
-        this.animatable = animatable;
-        defaultRender(poseStack, animatable, bufferSource,
-                renderType, null, 0.0F, partialTick, packedLight);
     }
 
     /**

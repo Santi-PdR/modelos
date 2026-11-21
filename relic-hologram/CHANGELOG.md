@@ -1,5 +1,22 @@
 # Historial de cambios
 
+## 1.0.16 — una animación por frame, no cuatro
+
+* **Los cuatro pases ya no evalúan la animación cuatro veces.** Estudiado en el
+  código de GeckoLib 4.8: `defaultRender` → `actuallyRender(isReRender=false)` es
+  donde vive `model.handleAnimations(...)` (posar los 98 huesos), y `reRender`
+  pasa `isReRender=true` y se salta ese trabajo a propósito (es para «alternate
+  RenderType layers»). Ahora el pase base usa `defaultRender` y los otros tres
+  usan `reRender` sobre la misma pose: **1 evaluación por portador y frame en vez
+  de 4**.
+* Efecto secundario que también se arregla solo: los pases comparten
+  exactamente la misma pose. Antes cada uno recalculaba con
+  `RenderUtils.getCurrentTick()` (reloj de `Blaze3D`, fraccionario), así que
+  había microsegundos de diferencia entre base, emisivo, halo y GLSL — en un
+  contorno aditivo eso se puede ver como flecos de color en los bordes.
+* Si el fade por distancia llega a cero, la reliquia no se procesa ni se dibuja
+  ese frame.
+
 ## 1.0.15 — que los nombres no vuelvan a mentir
 
 * **Nuevo chequeo de CI**: las constantes de `RelicAnimations` tienen que ser
