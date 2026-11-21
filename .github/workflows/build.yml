@@ -1280,5 +1280,9 @@ jobs:
           run-id: 44865764157
           path: ${{ runner.temp }}/forge-v16722
       - run: python3 -m pip install --quiet numpy Pillow
-      - run: OPENBLAS_NUM_THREADS=1 python3 tools/inspect_forge_v16722.py "$RUNNER_TEMP/forge-v16722" pecho
-      - run: OPENBLAS_NUM_THREADS=1 python3 tools/inspect_forge_v16722.py "$RUNNER_TEMP/forge-v16722" curios
+      - run: OPENBLAS_NUM_THREADS=1 python3 tools/inspect_forge_v16722.py "$RUNNER_TEMP/forge-v16722" pecho 0
+      - run: OPENBLAS_NUM_THREADS=1 python3 tools/inspect_forge_v16722.py "$RUNNER_TEMP/forge-v16722" pecho 1
+      - run: OPENBLAS_NUM_THREADS=1 python3 tools/inspect_forge_v16722.py "$RUNNER_TEMP/forge-v16722" pecho 2
+      - run: OPENBLAS_NUM_THREADS=1 python3 tools/inspect_forge_v16722.py "$RUNNER_TEMP/forge-v16722" curios 0
+      - run: OPENBLAS_NUM_THREADS=1 python3 tools/inspect_forge_v16722.py "$RUNNER_TEMP/forge-v16722" curios 1
+      - run: OPENBLAS_NUM_THREADS=1 python3 tools/inspect_forge_v16722.py "$RUNNER_TEMP/forge-v16722" curios 2
