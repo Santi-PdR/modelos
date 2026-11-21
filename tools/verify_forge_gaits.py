@@ -89,10 +89,15 @@ def check_look(root, reference):
     table(root/'hombrera-mirada-forge.tsv','ranura postura cabeza_base_u cabeza_u capa_pelo_base_u capa_pelo_u',rows)
 
 
-def gait(path, walking):
+def gait(path, walking, *, both_sprints=False):
     data = read(path)
     lo,hi,mode = (35,70,'walk') if walking else (107,129,'run')
-    d = data[(data['time'] >= lo) & (data['time'] < hi) & (data[mode] >= .98)]
+    keep = (data['time'] >= lo) & (data['time'] < hi)
+    if both_sprints and not walking:
+        # A second run over the same gait gives independent samples when
+        # frame grabs thin out the first stretch. Fit by stride, not time.
+        keep |= (data['time'] >= 185) & (data['time'] < 194)
+    d = data[keep & (data[mode] >= .98)]
     assert len(d) >= 35 and np.ptp(d['stride']) > 1.6, (path,mode,'faltan zancadas completas')
     phase = (d['stride'] % 1.) * 2 * np.pi
     # Fit to actual vanilla stride, not screenshot tick or game FPS. The

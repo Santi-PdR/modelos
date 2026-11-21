@@ -14,6 +14,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       REFERENCE: 44929858741
       REFERENCE_SOURCE: 845d526888fea106238d9986da2fb05ce9af5d5e
+      MOTION_REFERENCE: 44924671178
+      MOTION_SOURCE: 185c952a81b2abc5d1cbae778108d0b141d3d870
       CANDIDATE: 44930868176
       CANDIDATE_SOURCE: fb91ca29c612c4023a3309038c58afcbb13dd33b
     steps:
@@ -26,6 +28,8 @@ jobs:
           set -euo pipefail
           git diff --exit-code "$CANDIDATE_SOURCE" HEAD -- src/main build.gradle gradle.properties settings.gradle
           gh run view "$REFERENCE" --json headSha,conclusion | jq -e --arg sha "$REFERENCE_SOURCE" \
+            '.headSha == $sha and .conclusion == "success"'
+          gh run view "$MOTION_REFERENCE" --json headSha,conclusion | jq -e --arg sha "$MOTION_SOURCE" \
             '.headSha == $sha and .conclusion == "success"'
           gh run view "$CANDIDATE" --json headSha,status,conclusion,jobs > "$RUNNER_TEMP/candidate.json"
           python3 - <<'PYFORGE'
@@ -58,7 +62,11 @@ jobs:
             gh run download "$run" -n capatest-fx-en-mundo -D "$base/shots"
           done
           cmp "$RUNNER_TEMP/forge-v16727/jar/capatest-1.67.27.jar" entregables/v1.67.27/capatest-1.67.27.jar
-          echo '::notice title=Control .27::JAR reproducido, byte por byte igual al entregado.'
+          motion="$RUNNER_TEMP/forge-marcha-v16727"
+          gh run download "$MOTION_REFERENCE" -n capatest-jar -D "$motion/jar"
+          cmp "$motion/jar/capatest-1.67.27.jar" entregables/v1.67.27/capatest-1.67.27.jar
+          gh run download "$MOTION_REFERENCE" -n capatest-fx-en-mundo -D "$motion/shots"
+          echo '::notice title=Control .27::Las dos tomas .27 usan un JAR byte por byte igual al entregado.'
 
       - name: Comparar los tres retoques con la v1.67.27 entregada
         run: |
@@ -66,7 +74,8 @@ jobs:
           python3 -m pip install --quiet numpy Pillow
           now="$RUNNER_TEMP/forge-v16728"
           OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_placement.py --assets-only --jar "$now/jar/capatest-1.67.28.jar"
-          if ! OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_polish.py "$now/shots" "$RUNNER_TEMP/forge-v16727/shots" > "$RUNNER_TEMP/comparison.log" 2>&1; then
+          if ! OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_polish.py "$now/shots" "$RUNNER_TEMP/forge-v16727/shots" \
+            --motion-reference "$RUNNER_TEMP/forge-marcha-v16727/shots" > "$RUNNER_TEMP/comparison.log" 2>&1; then
             grep -E '(AssertionError|Error:)' "$RUNNER_TEMP/comparison.log" | cut -c1-1500 | while IFS= read -r line; do
               printf '::error title=Diagnóstico de comparación v1.67.28::%s\n' "${line//%/%25}"
             done
@@ -98,6 +107,7 @@ jobs:
           done
           for route in pecho curios steve-pecho steve-curios; do
             install -m 0644 "$RUNNER_TEMP/forge-v16727/shots/paso-$route.tsv" "$proof/paso-$route-v16727.tsv"
+            install -m 0644 "$RUNNER_TEMP/forge-marcha-v16727/shots/paso-$route.tsv" "$proof/paso-$route-marcha-v16727.tsv"
             install -m 0644 "$shots/paso-$route.tsv" "$proof/paso-$route-v16728.tsv"
           done
           install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16728_colocacion_forge.jpg

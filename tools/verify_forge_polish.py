@@ -20,10 +20,11 @@ HOLDS = (('reposo', 230, 302, 72, 6), ('agachado', 318, 370, 52, 4))
 ROUTES = ('pecho', 'curios', 'steve-pecho', 'steve-curios')
 
 
-def rates(data, start, end):
+def rates(data, start, end, *, minimum=20):
     t = data['time']
     use = pairs(t, start, end)
-    assert use.sum() >= 20, (start, end, 'faltan pares de tiempo en Forge', use.sum())
+    assert use.sum() >= minimum and np.ptp(t[:-1][use]) > .65*(end-start), (
+        start, end, 'faltan pares repartidos en la transición', int(use.sum()))
     dt = np.diff(t)[use]
     hem = np.linalg.norm(np.diff(points(data, 'tip'), axis=0)[use], axis=1) / dt
     run_rate = np.abs(np.diff(data['run'])[use]) / dt
@@ -44,7 +45,10 @@ def transitions(root, reference):
         assert settled.any() and now['clearance_pace'][settled].max() < .27, (route, 'el dobladillo no se asienta')
         assert np.ptp(now['collar_z']) < .006, (route, 'se movió el asiento al cambiar el paso')
         for name, begin, end in EVENTS:
-            a, b = (rates(d, begin, end) for d in (old, now))
+            # PNG grabs can thin out the sprint release. Keep a minimum
+            # time coverage as well as a count; the launch/stops stay dense.
+            minimum = 10 if name == 'correr-andar' else 20
+            a, b = (rates(d, begin, end, minimum=minimum) for d in (old, now))
             rows.append((route, name, *(f'{v:.4f}' for v in np.c_[a,b].ravel())))
             print(f'::notice title=Transiciones en Forge::{route}/{name}: punta p90 {a[0]:.3f} → {b[0]:.3f}u/tick; '
                   f'pico {a[1]:.3f} → {b[1]:.3f}u/tick; cambio de peso de carrera {a[2]:.3f} → {b[2]:.3f}/tick.', flush=True)
@@ -72,7 +76,7 @@ def cycle(data, start, stop, duration, crouched):
     return np.r_[c[0,0], 2 * np.linalg.norm(c[1:3], axis=0)]
 
 
-def quiet_and_gait(root, reference):
+def quiet_and_gait(root, reference, motion_reference):
     quiet, stride = [], []
     for slot in SLOTS:
         name = f'paso-{slot}.tsv'
@@ -92,7 +96,7 @@ def quiet_and_gait(root, reference):
             assert np.count_nonzero((weight > .01) & (weight < .99)) >= 8, (slot, start, 'agachado sin mezcla')
         assert now['sneak'][now['time'] > 394].max() == 0, (slot, 'no volvió a reposo')
         for walking in (True, False):
-            a, b = (gait(p/name, walking) for p in (reference,root))
+            a, b = (gait(p/name, walking, both_sprints=True) for p in (motion_reference,root))
             label = 'caminar' if walking else 'correr'
             np.testing.assert_allclose(b,a,atol=.14,rtol=.04,err_msg=f'{slot}: cambió la zancada estable ({label})')
             stride.append((slot,label,*(f'{v:.4f}' for v in np.c_[a,b].ravel())))
@@ -178,12 +182,16 @@ def motion_gallery(root, reference, slot, name, title, track, segments):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('shots', type=Path)
-    ap.add_argument('reference', type=Path)
+    ap.add_argument('reference', type=Path, help='tomas .27 con los ciclos de reposo y agachado')
+    ap.add_argument('--motion-reference', type=Path, required=True,
+                    help='tomas .27 originales, con más muestras continuas sin capturas durante la frenada')
     args = ap.parse_args()
     failed = []
-    for evaluate in (left_fit, quiet_and_gait, transitions):
+    checks = ((left_fit, (args.reference,)), (quiet_and_gait, (args.reference, args.motion_reference)),
+              (transitions, (args.motion_reference,)))
+    for evaluate, reference in checks:
         try:
-            evaluate(args.shots, args.reference)
+            evaluate(args.shots, *reference)
         except AssertionError:
             traceback.print_exc()
             failed.append(evaluate.__name__)
