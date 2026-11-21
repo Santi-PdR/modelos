@@ -1,5 +1,23 @@
 # Historial de cambios
 
+## 1.0.3 — shader propio
+
+* **Cuarto pase con GLSL propio** (`visuals.shaderGlow`): fresnel en el borde y
+  línea de barrido, sumados con blend aditivo sobre la textura emisiva. El pase
+  normal, el halo y el aura no cambian, así que si el shader no está disponible
+  la reliquia se ve exactamente igual que en 1.0.2.
+* El shader se compila en cada recarga de recursos
+  (`RegisterClientReloadListenersEvent`), no al cargar el mod, para que se rehaga
+  al cambiar de pack de recursos.
+* **Se desactiva solo con shaderpack activo** (Iris/Oculus/OptiFine): el pack
+  sustituye el programa y el resultado sería el fallback del pack o nada. Si la
+  API de Iris está disponible se le pregunta si hay pack en uso.
+* Ficheros en `assets/minecraft/shaders/core/holocore_relic_glow.*`, que es donde
+  los busca `ShaderInstance` (la ruta se arma como `shaders/core/<nombre>.json` y
+  el nombre no admite namespace).
+* El CI valida el JSON del programa y exige en el smoke test que el shader
+  compile, así que un GLSL inválido rompe el build en vez de llegar al jugador.
+
 ## 1.0.2 — aura
 
 * **Aura de tres billboards aditivos** alrededor del núcleo

@@ -143,6 +143,44 @@ jobs:
           PY
 
       # ------------------------------------------------------------------
+      # Shader propio: ficheros en assets/minecraft/shaders/core (ahi los busca
+      # ShaderInstance) y coherencia del JSON con el formato de vertice.
+      # ------------------------------------------------------------------
+      - name: Validate shader resources
+        run: |
+          python3 - <<'PY'
+          import json, pathlib
+
+          base = pathlib.Path('relic-hologram/src/main/resources/assets/minecraft/shaders/core')
+          for ext in ('.json', '.vsh', '.fsh'):
+              assert (base / f'holocore_relic_glow{ext}').is_file(), f'falta holocore_relic_glow{ext}'
+
+          doc = json.loads((base / 'holocore_relic_glow.json').read_text())
+          assert doc['vertex'] == 'holocore_relic_glow', doc['vertex']
+          assert doc['fragment'] == 'holocore_relic_glow', doc['fragment']
+          blend = doc['blend']
+          assert (blend['func'], blend['srcrgb'], blend['dstrgb']) == ('add', 'srcalpha', 'one'), blend
+
+          uniforms = {u['name']: u for u in doc['uniforms']}
+          for name in ('ModelViewMat', 'ProjMat', 'ColorModulator', 'HoloTime'):
+              assert name in uniforms, name
+          for uniform in uniforms.values():
+              assert len(uniform['values']) == uniform['count'], uniform['name']
+
+          feed = {'Position', 'Color', 'UV0', 'UV1', 'UV2', 'Normal'}
+          assert set(doc['attributes']) <= feed, set(doc['attributes']) - feed
+          assert [s['name'] for s in doc['samplers']] == ['Sampler0'], doc['samplers']
+
+          for src in ('holocore_relic_glow.vsh', 'holocore_relic_glow.fsh'):
+              text = (base / src).read_text()
+              assert text.lstrip().startswith('#version 150'), src
+              assert 'void main()' in text, src
+          # UV2 es ivec2 en las shaders de entidad: declararlo vec2 rompe el enlace.
+          assert 'in vec2 UV2' not in (base / 'holocore_relic_glow.vsh').read_text()
+          print('Shader OK: aditivo, uniforms y atributos coherentes con NEW_ENTITY.')
+          PY
+
+      # ------------------------------------------------------------------
       # RelicAnimations.java se genera desde el manifiesto: si alguien edito a
       # mano un nombre de animacion, aqui se ve.
       # ------------------------------------------------------------------
@@ -213,7 +251,7 @@ jobs:
           set -euo pipefail
           VER="$(sed -n 's/^mod_version=//p' gradle.properties | tr -d '[:space:]')"
           JAR="build/libs/holocore-$VER.jar"
-          unzip -l "$JAR" | grep -E "META-INF/mods.toml|holocore/geo/|holocore/animations/|holocore/textures/relic/|holocore/lang/|curios/tags|recipes/|holographic_core.json|holographic_core.png"
+          unzip -l "$JAR" | grep -E "META-INF/mods.toml|holocore/geo/|holocore/animations/|holocore/textures/relic/|holocore/lang/|curios/tags|recipes/|holographic_core.json|holographic_core.png|shaders/core/holocore_relic_glow"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -311,6 +349,12 @@ jobs:
           fi
           if ! grep -q "Holographic Core (holocore) cargado" client.log; then
             echo "::error::El mod no registro su arranque (el constructor no se ejecuto)."
+            FAIL=1
+          fi
+          # El shader se compila en la recarga de recursos del arranque: si el
+          # GLSL es invalido o el listener no esta registrado, no hay marca.
+          if ! grep -q "Shader del aura compilado" client.log; then
+            echo "::error::El shader del aura no compilo (GLSL invalido o reload listener sin registrar)."
             FAIL=1
           fi
           for pattern in "Mod loading error has occurred" "Crash report saved to" \

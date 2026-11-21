@@ -8,6 +8,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RegisterClientCommandsEvent;
+import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -41,6 +42,15 @@ public final class RelicClientEvents {
         @SubscribeEvent
         public static void registerKeys(RegisterKeyMappingsEvent event) {
             event.register(RelicKeys.TOGGLE);
+        }
+
+        /**
+         * El shader propio se compila en cada recarga de recursos, no al cargar
+         * el mod: asi se rehace si el jugador cambia de pack.
+         */
+        @SubscribeEvent
+        public static void registerReloadListeners(RegisterClientReloadListenersEvent event) {
+            RelicShaders.register(event);
         }
 
     }

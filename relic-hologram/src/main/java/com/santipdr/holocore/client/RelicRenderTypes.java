@@ -44,6 +44,14 @@ public final class RelicRenderTypes {
     public static final Function<ResourceLocation, RenderType> ADDITIVE_GLOW =
             Util.memoize(Internal::additiveGlow);
 
+    /**
+     * Mismo blend aditivo pero con el shader propio (fresnel + barrido). El
+     * supplier se evalua en cada setup, asi que sobrevive a una recarga de
+     * recursos sin rehacer el RenderType.
+     */
+    public static final Function<ResourceLocation, RenderType> GLOW_SHADER =
+            Util.memoize(Internal::shaderGlow);
+
     private static final class Internal extends RenderType {
 
         private Internal(String name, VertexFormat format, VertexFormat.Mode mode, int bufferSize,
@@ -52,6 +60,21 @@ public final class RelicRenderTypes {
             super(name, format, mode, bufferSize, affectsCrumbling, sortOnUpload, setupState, clearState);
             // Solo existe para heredar los campos protegidos de RenderType.
             throw new IllegalStateException("RelicRenderTypes no se instancia");
+        }
+
+        private static RenderType shaderGlow(ResourceLocation texture) {
+            CompositeState state = CompositeState.builder()
+                    .setShaderState(new ShaderStateShard(RelicShaders::shader))
+                    .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
+                    .setTransparencyState(ADDITIVE_TRANSPARENCY)
+                    .setCullState(NO_CULL)
+                    .setLightmapState(LIGHTMAP)
+                    .setOverlayState(OVERLAY)
+                    .setDepthTestState(LEQUAL_DEPTH_TEST)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .createCompositeState(false);
+            return create("holocore_glow_shader", DefaultVertexFormat.NEW_ENTITY,
+                    VertexFormat.Mode.QUADS, 256, false, true, state);
         }
 
         private static RenderType additiveGlow(ResourceLocation texture) {

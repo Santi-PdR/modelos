@@ -99,10 +99,17 @@ La **aura** son tres billboards (quads que miran a cámara) con la textura
 aditivo. Eso da el resplandor alrededor del núcleo sin tocar la pantalla y sin
 depender del pack; la textura se genera con `tools/make_aura.py`.
 
-Lo que **no** hace: post-proceso de pantalla (caro y se pelea con los packs) ni
-un `.fsh` propio (con shaderpack acaba en el fallback del pack o invisible). El
-razonamiento completo, el código del shader que sí se podría usar y su
-compatibilidad están en [BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
+El **shader propio** (`visuals.shaderGlow`) añade un cuarto pase con fresnel en
+el borde y una línea de barrido de holograma, en GLSL de verdad
+(`assets/minecraft/shaders/core/holocore_relic_glow.{json,vsh,fsh}`). Se compila
+en cada recarga de recursos y **se desactiva solo si hay un shaderpack activo**
+(Iris/Oculus/OptiFine): esos packs sustituyen el programa y la reliquia podría
+quedar invisible. Con pack puesto sigues teniendo halo + aura + el bloom del
+propio pack.
+
+Lo que **no** hace: post-proceso de pantalla (caro y se pelea con los packs). El
+razonamiento completo, la matriz de compatibilidad y los detalles de la API de
+shaders de 1.20.1 están en [BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
 
 ## Configuración (`config/holocore-client.toml`)
 
@@ -119,6 +126,7 @@ compatibilidad están en [BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
 | `visuals.haloIntensity` | `0.35` | Fuerza del halo aditivo (0–1). |
 | `visuals.glowAura` | `true` | Aura: tres billboards aditivos alrededor del núcleo. |
 | `visuals.auraIntensity` | `0.55` | Fuerza del aura (0–1). |
+| `visuals.shaderGlow` | `true` | Pase GLSL propio (fresnel + barrido). Se apaga solo con shaderpack activo. |
 | `visuals.reducedEffects` | `false` | Reposo sin rayos/cometas/ondas (`idle_calm`). |
 | `visuals.maxRenderDistance` | `32` | Distancia para dibujar la reliquia de otros jugadores. |
 | `visuals.glitchMinSeconds` / `glitchMaxSeconds` | `20` / `60` | Intervalo del glitch aleatorio (solo en reposo). |

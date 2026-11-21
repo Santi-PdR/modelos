@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.santipdr.holocore.config.RelicConfig;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.core.object.Color;
@@ -50,7 +51,9 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
      *   <li>textura emisiva, que excluye el aura para que no se sume dos veces;</li>
      *   <li>halo: la misma textura emisiva pero con blend <b>aditivo</b>, que suma
      *       luz en vez de mezclarla. Eso es lo que da el aspecto de brillo
-     *       acumulado sin necesidad de post-proceso ni de shaderpack.</li>
+     *       acumulado sin necesidad de post-proceso ni de shaderpack;</li>
+     *   <li>shader propio (opcional): el mismo blend aditivo, pero con fresnel y
+     *       linea de barrido calculados en GLSL. Ver {@link RelicShaders}.</li>
      * </ol>
      * Ninguno de los pases vuelve a animar: GeckoLib detecta que es el mismo
      * frame y conserva las matrices de los huesos.
@@ -73,6 +76,18 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
             renderPass(poseStack, animatable, bufferSource, partialTick, packedLight,
                     RelicRenderTypes.ADDITIVE_GLOW.apply(RelicGeoModel.glowTexture()),
                     0.55F * i, 0.78F * i, 1.0F * i, 1.0F);
+        }
+
+        // Cuarto pase opcional con GLSL propio: fresnel en el borde y linea de
+        // barrido. Se salta solo si hay shaderpack (el pack sustituiria el
+        // programa) o si el shader no compilo.
+        ShaderInstance glowShader = RelicShaders.ready() ? RelicShaders.shader() : null;
+        if (glowShader != null) {
+            glowShader.safeGetUniform("HoloTime").set(RelicShaders.timeSeconds(partialTick));
+            float i = RelicConfig.HALO_INTENSITY.get().floatValue();
+            renderPass(poseStack, animatable, bufferSource, partialTick, packedLight,
+                    RelicRenderTypes.GLOW_SHADER.apply(RelicGeoModel.glowTexture()),
+                    0.65F * i, 0.85F * i, 1.0F * i, 1.0F);
         }
     }
 

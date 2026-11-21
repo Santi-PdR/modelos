@@ -89,21 +89,18 @@ Detalles que importan:
 * La textura se genera con `python3 tools/make_aura.py` (sin Pillow, PNG a mano
   con `zlib`), para que sea reproducible y revisable en diff.
 
-### C. Core shader propio (fresnel + scanlines de holograma)
+### C. Core shader propio (fresnel + scanlines de holograma) — hecho en 1.0.3
 
-Traer un `.vsh`/`.fsh` con `ShaderInstance` y un `ShaderStateShard(() -> shader)`,
-con uniform propio de tiempo para las líneas de barrido y fresnel en el borde.
-Es factible en 1.20.1, pero:
+`.vsh`/`.fsh` propios cargados con `ShaderInstance` y un
+`ShaderStateShard(() -> shader)`, con uniform de tiempo para el barrido y fresnel
+en el vértice. El detalle completo está en el apéndice A, que ahora describe lo
+que hay en el jar y no un esbozo.
 
-* **Con shaderpack se rompe o desaparece.** Iris/Oculus sustituyen los programas
-  por los del pack; un programa que el pack no conoce acaba en su *fallback* o,
-  como pasó con el shader «unlit» de Forge (Oculus #630), en **invisible**. Lo
-  mismo aplica a OptiFine.
-* Sin pack, la mejora frente al aditivo es pequeña (un fresnel más marcado).
-
-Veredicto: sólo tiene sentido como *modo experto* que se desactive solo cuando hay
-un shaderpack cargado (`ModList.get().isLoaded("oculus")` / `"optifine"`). No es
-el siguiente paso.
+Se implementó como **cuarto pase opcional**, no como reemplazo: si el shader no
+carga o hay shaderpack, los otros tres pases siguen ahí y la reliquia se ve como
+en 1.0.2. Esa decisión es la importante: el riesgo de este camino es que con
+shaderpack el programa acaba en el *fallback* del pack o **invisible** (le pasó a
+Forge con su shader «unlit», Oculus #630), y así el fallo no se nota.
 
 ### D. Post-proceso / bloom real de pantalla
 
@@ -134,26 +131,27 @@ del núcleo. Ajuste fino: subir el brillo de `relic_hologram_glowing.png` (o sub
 
 | Escenario | Base + emisivo | Halo aditivo (A) | Aura billboard (B) | Core shader (C) | Post-proceso (D) |
 |---|---|---|---|---|---|
-| Sin shaderpack | ✅ | ✅ | ✅ | ✅ | ✅ (caro) |
-| Iris/Oculus + Complementary | ✅ bloom del pack | ✅ (como geometría translúcida) | ✅ | ⚠️ fallback / invisible | ❌ |
-| OptiFine sin pack | ✅ | ✅ | ✅ | ⚠️ | ❌ |
+| Sin shaderpack | ✅ | ✅ | ✅ | ✅ shader propio | ✅ (caro) |
+| Iris/Oculus + Complementary | ✅ bloom del pack | ✅ (como geometría translúcida) | ✅ | ⛔ se apaga solo | ❌ |
+| OptiFine sin pack | ✅ | ✅ | ✅ | ⛔ se apaga solo | ❌ |
 | Servidor sin el mod cliente | — | — | — | — | — |
 
 ## 5. Plan por fases
 
 1. **Hecho (1.0.1)**: halo aditivo con `glowHalo` + `haloIntensity`.
 2. **Hecho (1.0.2)**: aura de tres billboards con `glowAura` + `auraIntensity`.
-3. Medir FPS en un portátil y decidir si el halo del modelo se queda activo por
+3. **Hecho (1.0.3)**: shader propio con detección de pack (apéndice A).
+4. Medir FPS en un portátil y decidir si el halo del modelo se queda activo por
    defecto en `LITE` (ahora se omite; el aura sí se dibuja, son tres quads).
-4. Sólo si hace falta: shader propio con detección de pack (apéndice A).
+5. Pendiente de juicio visual: cuánto fresnel/barrido aguanta sin verse «sucio».
+   Es lo único que el CI no puede valorar.
 
-## Apéndice A — el GLSL que sí se podría usar (no está conectado)
+## Apéndice A — el GLSL que lleva el mod desde 1.0.3
 
-Si algún día se quiere fresnel de verdad en el borde y líneas de barrido de
-holograma, esto es lo que haría falta. **No está en el jar**: se deja escrito
-porque la investigación ya está hecha y así no se repite. Todo lo que sigue está
-contrastado con las fuentes de 1.20.1 (`ShaderInstance`, `Program`,
-`RenderStateShard`, `RenderType`) y con el *access transformer* de Forge.
+Esto es exactamente lo que compila el mod (`visuals.shaderGlow`), con el
+razonamiento de por qué cada pieza está donde está. Todo contrastado con las
+fuentes de 1.20.1 (`ShaderInstance`, `Program`, `RenderStateShard`, `RenderType`,
+`VertexBuffer`) y con el *access transformer* de Forge.
 
 ### A.1 Dónde van los ficheros (y por qué ahí)
 
@@ -261,14 +259,23 @@ Ojo: `ShaderStateShard` es `protected` en `RenderStateShard`, igual que
 auxiliar que hereda de `RenderType` (la misma que ya usa `RelicRenderTypes`), no
 basta con instanciarlas desde fuera.
 
-### A.3 Por qué no está conectado
+### A.3 Cómo queda conectado (y sus límites)
 
-Con Iris/Oculus/OptiFine cargados ese programa no forma parte del pipeline del
-pack: se sustituye por el fallback del pack o desaparece (le pasó a Forge con su
-shader «unlit», Oculus #630). Para conectarlo haría falta:
-
-1. apagarlo solo con `ModList.get().isLoaded("oculus")` / `"optifine"`;
-2. un config aparte (`experimentalShader`, por defecto `false`), porque es un
-   camino que no se puede probar en CI más allá de que compile;
-3. que el shader compile durante el *reload*: si el GLSL está mal, el cliente
-   falla al arrancar, y el smoke test del CI sí lo detectaría.
+* `RelicShaders` registra un `PreparableReloadListener` en
+  `RegisterClientReloadListenersEvent`: el shader se compila en cada recarga de
+  recursos y el anterior se cierra con `close()`. Si la compilación falla se
+  registra el error y se sigue sin el pase, no se cae el cliente.
+* **Matrices y color no hay que subirlos a mano**: `BufferUploader` →
+  `VertexBuffer.drawWithShader` rellena `ModelViewMat`, `ProjMat` y
+  `ColorModulator` en cada dibujo, y `Sampler0` sale del `TextureStateShard`. El
+  único uniform propio que se toca por frame es `HoloTime`.
+* El blend lo decide el JSON (`add` / `srcalpha` / `one`): `ShaderInstance.apply()`
+  lo aplica *después* de los estados del `RenderType`, así que gana el del shader.
+* **Se apaga solo** si hay shaderpack: `IrisApi.isShaderPackInUse()` por
+  reflexión cuando Oculus está presente (si la API no está, se asume activo) y
+  detección de OptiFine por `ModList` y por la clase `optifine.Installer`.
+  Comprobación cacheada 5 s para no reflejar en cada frame.
+* El CI valida el JSON (blend, uniforms con `count` correcto, atributos dentro de
+  `NEW_ENTITY`) y **exige la marca `Shader del aura compilado` en el log del
+  smoke test**: si el GLSL deja de compilar, el build falla aunque el cliente
+  arranque.
