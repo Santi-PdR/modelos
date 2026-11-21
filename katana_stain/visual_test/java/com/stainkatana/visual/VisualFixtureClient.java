@@ -255,7 +255,26 @@ public final class VisualFixtureClient {
                     throw new IllegalStateException("Ender Dragon not released after cancellation");
                 System.out.println("STAIN_DRAGON_RELEASED");
             });
-            case 830 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
+            case 825 -> {
+                mc.getSingleplayerServer().execute(() -> {
+                    var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                    player.getInventory().setItem(player.getInventory().selected, savedStack);
+                });
+                mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.LEFT);
+                mc.options.fov().set(35);
+                mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+            }
+            case 845 -> {
+                if (mc.player.getMainArm() != net.minecraft.world.entity.HumanoidArm.LEFT
+                        || mc.player.getMainHandItem().getItem() != StainKatanaMod.KATANA_STAIN.get())
+                    throw new IllegalStateException("Left-handed grip fixture not ready");
+                capture = "20_left_hand_front.png";
+            }
+            case 850 -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case 855 -> capture = "21_left_hand_back.png";
+            case 860 -> { mc.options.fov().set(70); mc.options.setCameraType(CameraType.FIRST_PERSON); }
+            case 865 -> capture = "22_left_hand_first.png";
+            case 870 -> { mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT); System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }
     }
