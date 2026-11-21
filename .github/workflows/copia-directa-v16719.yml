@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - name: Confirmar que el JAR y las tomas proceden de un único run aprobado
         env:
           GH_TOKEN: ${{ github.token }}
