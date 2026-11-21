@@ -37,6 +37,8 @@ compilar, valida que:
   calidad full/lite declaran los mismos 98 huesos;
 * `RelicAnimations.java` coincide con `tools/relic_manifest.json`
   (`python3 tools/gen_relic_constants.py --check`);
+* el tono del aura sobre nieve, piedra y cueva se comprueba con números
+  (`tools/check_aura_math.py`), no a ojo;
 * el JSON del shader propio es coherente (blend aditivo, `count` de cada uniform,
   atributos dentro de `NEW_ENTITY`) y todas las claves de la config están
   documentadas en la tabla de abajo;
@@ -121,7 +123,7 @@ mucho sobre un fondo claro satura los tres canales y el aura se ve **blanca**
 aunque el tinte sea azul. Es lo que pasaba sobre nieve hasta 1.0.10.
 
 Desde 1.0.12 el aura son **dos pases** de los mismos tres quads: uno de **tinte**
-(mezcla normal, color oscurecido) y encima el **aditivo** del brillo. El aditivo
+(mezcla normal con el color del estado) y encima el **aditivo** del brillo. El aditivo
 solo puede aclarar, así que sobre nieve siempre acaba en blanco; el pase de tinte
 es el que conserva el color del estado. Se apaga con `auraTint=false` si prefieres
 solo el brillo.

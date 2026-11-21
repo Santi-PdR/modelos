@@ -118,8 +118,10 @@ lleva a 1.0, o sea blanco). Para conservar el color se dibujan los mismos tres
 quads dos veces:
 
 1. **Tinte** (`RelicRenderTypes.TINT_GLOW`, mezcla alfa normal) con el color del
-   estado oscurecido ×0.55 y una cobertura de `peso × intensidad × 2.2`. Sobre
-   nieve eso baja el fondo un 20–30% hacia cian; sobre una cueva apenas se nota.
+   estado **tal cual** y una cobertura de `peso × intensidad × 1.6`. Mezclar hacia
+   un cian claro quita rojo y verde sin apagar el azul, así que **tiñe sin
+   oscurecer**: sobre nieve el halo queda en (0.80, 0.94, 1.00) frente al fondo
+   (0.93, 0.95, 0.97), tono +0.20 y luminancia −0.03.
 2. **Brillo** (`ADDITIVE_GLOW`) encima, que es el que hace el resplandor en
    oscuro.
 
@@ -127,6 +129,13 @@ Los dos pases comparten geometría y giro, así que no hay que duplicar nada má
 que el bucle de emisión (6 quads en lugar de 3). El **anillo** hace lo mismo
 (2 quads más): sobre nieve el aditivo lo dejaba blanco y se perdía.
 `visuals.auraTint=false` deja solo el aditivo, que es el comportamiento de 1.0.11.
+
+Las constantes no están a ojo: `tools/check_aura_math.py` lee los pesos, el alpha,
+el tinte, el color del estado y el **píxel central del PNG**, compone las dos
+pasadas sobre nieve, piedra y cueva, y falla si el resultado se blanquea, si baja
+la luminancia como una sombra o si pierde el tono. Corre en el CI, así que la
+próxima vez que alguien suba `auraIntensity` o el `AURA_ALPHA` se entera en el
+build y no en una captura.
 
 **Anillo de estado** (`RelicAura.drawRing`, textura `relic_ring.png` de
 `tools/make_ring.py`): un solo billboard de 1.15 bloques, apenas por fuera del

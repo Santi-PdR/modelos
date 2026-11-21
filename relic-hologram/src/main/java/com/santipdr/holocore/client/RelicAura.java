@@ -67,14 +67,16 @@ public final class RelicAura {
      */
     private static final float AURA_ALPHA = 0.55F;
     /**
-     * Cuanto mas cubre el pase de tinte que el aditivo. El tinte tiene que
-     * notarse sobre nieve (donde el aditivo no puede hacer nada) y a la vez no
-     * parecer una mancha en una cueva: 2.2 sobre los mismos pesos deja un 20-30%
-     * de cobertura en el centro.
+     * Cuanto mas cubre el pase de tinte que el aditivo.
+     *
+     * <p>Elegido con numeros, no a ojo: {@code tools/check_aura_math.py} compone
+     * las dos pasadas sobre nieve, piedra y cueva. Con 1.6 sobre los mismos pesos,
+     * sobre nieve el halo queda en (0.80, 0.94, 1.00) frente al fondo
+     * (0.93, 0.95, 0.97): el tono cian sube +0.20 y la luminancia solo baja 0.03,
+     * o sea que se tine sin parecer una sombra. Mas cobertura oscurece de mas;
+     * menos, y el color se pierde.</p>
      */
-    private static final float TINT_ALPHA_BOOST = 2.2F;
-    /** El tinte va con un color mas oscuro que el brillo, o no oscurece nada. */
-    private static final float TINT_DARKEN = 0.55F;
+    private static final float TINT_ALPHA_BOOST = 1.6F;
 
     private RelicAura() {
     }
@@ -115,17 +117,17 @@ public final class RelicAura {
             return;
         }
 
-        // 1) Tinte: mezcla normal con un color mas oscuro. Es el unico pase que
-        //    se ve de color sobre nieve/arena; sobre fondo oscuro casi no se nota
-        //    y el que manda es el aditivo de abajo.
+        // 1) Tinte: mezcla normal con el color del estado tal cual. Es el unico
+        //    pase que se ve de color sobre nieve/arena, porque mezclar hacia un
+        //    cian claro quita rojo y verde sin apagar el azul (no oscurece: tine).
+        //    Sobre fondo oscuro casi no se nota y manda el aditivo de abajo.
         if (RelicConfig.AURA_TINT.get()) {
             VertexConsumer tint = bufferSource.getBuffer(RelicRenderTypes.TINT_GLOW.apply(AURA_TEXTURE));
             for (int layer = 0; layer < DIAMETER.length; layer++) {
                 float coverage = Math.min(1.0F,
                         WEIGHT[layer] * pulseAt(time, layer) * intensity * TINT_ALPHA_BOOST);
                 billboard(tint, frame, DIAMETER[layer] * spread, time * SPIN[layer],
-                        glow.red() * TINT_DARKEN, glow.green() * TINT_DARKEN,
-                        glow.blue() * TINT_DARKEN, coverage);
+                        glow.red(), glow.green(), glow.blue(), coverage);
             }
         }
 
@@ -167,8 +169,7 @@ public final class RelicAura {
             VertexConsumer tint = bufferSource.getBuffer(RelicRenderTypes.TINT_GLOW.apply(RING_TEXTURE));
             float coverage = Math.min(1.0F, amount * 0.9F);
             billboard(tint, frame, size, angle,
-                    glow.red() * TINT_DARKEN, glow.green() * TINT_DARKEN,
-                    glow.blue() * TINT_DARKEN, coverage);
+                    glow.red(), glow.green(), glow.blue(), coverage);
         }
 
         VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(RING_TEXTURE));

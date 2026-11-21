@@ -234,6 +234,12 @@ jobs:
           print('Shader OK: aditivo, uniforms, atributos y apendice sincronizado.')
           PY
 
+      # El aura es aditiva y sobre nieve se quemaba a blanco. Este paso compone
+      # las dos pasadas con los numeros del codigo y falla si se blanquea.
+      - name: Validate aura math
+        working-directory: relic-hologram
+        run: python3 tools/check_aura_math.py
+
       # ------------------------------------------------------------------
       # RelicAnimations.java se genera desde el manifiesto: si alguien edito a
       # mano un nombre de animacion, aqui se ve.

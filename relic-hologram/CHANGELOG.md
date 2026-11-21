@@ -1,9 +1,24 @@
 # Historial de cambios
 
+## 1.0.13 — las constantes del aura, medidas
+
+* Las constantes del pase de tinte ya no son a ojo: `tools/check_aura_math.py`
+  lee del propio código los pesos, el alpha, el tinte, el color del estado y el
+  **píxel central del PNG**, compone las dos pasadas sobre nieve, piedra y cueva y
+  falla si el aura se blanquea, si baja la luminancia como una sombra o si pierde
+  el tono. Corre en el CI.
+* Resultado de medir: el tinte va con el color del estado **tal cual** (antes lo
+  oscurecía ×0.55, que además apagaba el azul) y con cobertura ×1.6 (antes ×2.2).
+  Sobre nieve el halo queda en (0.80, 0.94, 1.00) frente al fondo (0.93, 0.95,
+  0.97): **tono cian +0.20 y luminancia −0.03**, o sea que tiñe sin parecer una
+  mancha gris.
+* El anillo usa el mismo criterio: también se tiñe, porque sobre nieve el aditivo
+  lo dejaba en blanco.
+
 ## 1.0.12 — color de verdad sobre fondos claros
 
-* **El aura pasa a tener dos pases**: uno de **tinte** (mezcla alfa normal, color
-  del estado oscurecido) y encima el **aditivo** de siempre. El aditivo solo puede
+* **El aura pasa a tener dos pases**: uno de **tinte** (mezcla alfa normal con el
+  color del estado) y encima el **aditivo** de siempre. El aditivo solo puede
   aclarar, así que sobre nieve o arena estaba condenado a verse blanco por mucho
   que se bajara la intensidad; mezclando, el halo se ve cian. Sobre cueva el que
   manda sigue siendo el aditivo.
