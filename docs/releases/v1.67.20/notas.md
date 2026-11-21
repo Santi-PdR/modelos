@@ -1,6 +1,6 @@
 # v1.67.20 · Forma original, sólo colocación
 
-**[JAR directo de prueba](https://github.com/Santi-PdR/modelos/raw/bd92d1cdc27ec247dc8fa787a3cb6e01aaeead64/entregables/v1.67.20/capatest-1.67.20.jar)** · [SHA-256](JAR.sha256) · [Comparación en Alex](../../capa_v16720_forma_original_alex.jpg) · [Steve y Alex en Forge](../../capa_v16720_colocacion_forge.jpg) · [Blockbench](../../CAPA_v1.67.20.bbmodel).
+**[JAR directo de prueba](https://github.com/Santi-PdR/modelos/raw/bd92d1cdc27ec247dc8fa787a3cb6e01aaeead64/entregables/v1.67.20/capatest-1.67.20.jar)** · [SHA-256](JAR.sha256) · [Comparación en Alex](../../capa_v16720_forma_original_alex.jpg) · [Steve y Alex en Forge](../../capa_v16720_colocacion_forge.jpg) · [Blockbench v1.67.20](https://github.com/Santi-PdR/modelos/raw/bd92d1cdc27ec247dc8fa787a3cb6e01aaeead64/docs/CAPA_v1.67.20.bbmodel).
 
 [Revisión adicional en Alex](revision.md): cámara F5, agachado, giros y carrera, con el mismo JAR.
 

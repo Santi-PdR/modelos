@@ -96,6 +96,13 @@ final class CapeWornMotionTest {
             prev = clearance;
         }
         if (maxJump > .27) throw new AssertionError("stride envelope jumps: " + maxJump);
+        double eased = CapeStride.groundedEnvelope(0, .2, .20, .70, 1, 1);
+        near(eased, CapeStride.groundedEnvelope(39, .2, .20, .70, 1, 1), 1e-12,
+                "raw limb cannot jerk the heavy hinge during a footfall");
+        near(49, CapeStride.groundedEnvelope(49, .2, .20, .70, 0, 1), 0,
+                "non-grounded pose keeps actual limb clearance");
+        if (CapeStride.groundedEnvelope(55, .2, .20, .70, 1, 1) < eased + 10)
+            throw new AssertionError("clearance for additional arm gesture lost");
         System.out.println("CapeWornMotion: ticks, fracciones, cambio de paso, frenado, pausa e independencia comprobados");
     }
 }

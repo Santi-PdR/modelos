@@ -26,7 +26,7 @@ final class CapeWornMotion {
     private float partial;
     private double start, span, sprintStart, sprintFrom;
     private double paceFrom, paceTo;
-    private double time, stride, amplitude, ground;
+    private double time, stride, amplitude, limbAmplitude, ground;
 
     final CapeResponse response = new CapeResponse();
 
@@ -56,6 +56,7 @@ final class CapeWornMotion {
         blendFamily(weights, time);
         stride = (stepFrom + ((double) stepTo - stepFrom) * partial) * STRIDE_RADIANS / TURN;
         amplitude = paceFrom + (paceTo - paceFrom) * partial;
+        limbAmplitude = unit(speedFrom + ((double) speedTo - speedFrom) * partial);
         int idle = CapeState.IDLE.ordinal(), blight = CapeState.BLIGHT.ordinal();
         ground = weights[idle] + weights[blight];
         double step = smooth((amplitude - .04) / .49);
@@ -111,6 +112,7 @@ final class CapeWornMotion {
     double stride() { return stride; }
     double ground() { return ground; }
     double amplitude() { return amplitude; }
+    double limbAmplitude() { return limbAmplitude; }
 
     double phase(CapeState mode, double duration) {
         double cycles = mode == CapeState.WALK || mode == CapeState.SPRINT ? stride : time / duration;

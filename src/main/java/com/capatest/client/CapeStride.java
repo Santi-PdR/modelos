@@ -31,6 +31,17 @@ public final class CapeStride {
         return actual + raise(anticipated - actual);
     }
 
+    /** Drive the heavy hinges from the eased gait, not whichever foot is
+     * furthest back in this render sample. Keep clearance for non-gait limb
+     * excursions (e.g. an arm gesture), and fade toward the rendered limbs
+     * when leaving the grounded gait. */
+    static double groundedEnvelope(double actual, double stride, double pace, double amplitude, double ground, double scale) {
+        double wave = Math.cos(2 * Math.PI * stride);
+        double gait = Math.toDegrees(pace * scale) * Math.sqrt(.85 + .15 * wave * wave);
+        double extra = raise(actual - Math.toDegrees(amplitude * scale) - 1.5);
+        return actual + ground * (gait + extra - actual);
+    }
+
     public static double armGoal(double arm, double bodyPitch, double depth) {
         return Math.max(0, ARM_GAIN * arm - ARM_INSET - lean(bodyPitch) - ARM_FIT * depth);
     }

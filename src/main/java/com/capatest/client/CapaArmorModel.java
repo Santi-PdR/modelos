@@ -251,9 +251,12 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
 
     private void applyClearance(CapeWornMotion motion) {
         double arm = armBack, leg = legBack;
-        if (motion != null) {
-            arm = CapeStride.walkEnvelope(arm, motion.stride(), motion.amplitude(), motion.ground(), 1);
-            leg = CapeStride.walkEnvelope(leg, motion.stride(), motion.amplitude(), motion.ground(), 1.4);
+        if (motion != null && wingGoal > 0) {
+            arm = CapeStride.walkEnvelope(arm, motion.stride(), motion.limbAmplitude(), motion.ground(), 1);
+            leg = CapeStride.walkEnvelope(leg, motion.stride(), motion.limbAmplitude(), motion.ground(), 1.4);
+        } else if (motion != null) {
+            arm = CapeStride.groundedEnvelope(arm, motion.stride(), motion.amplitude(), motion.limbAmplitude(), motion.ground(), 1);
+            leg = CapeStride.groundedEnvelope(leg, motion.stride(), motion.amplitude(), motion.limbAmplitude(), motion.ground(), 1.4);
         }
         double armGoal = CapeStride.armGoal(arm, bodyPitch, 0);
         double legGoal = CapeStride.legGoal(leg, bodyPitch, 0);
