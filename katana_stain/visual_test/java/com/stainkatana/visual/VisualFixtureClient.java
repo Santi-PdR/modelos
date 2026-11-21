@@ -127,9 +127,12 @@ public final class VisualFixtureClient {
                 player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
                 player.invulnerableTime = 0;
                 float originalHealth = player.getHealth();
-                if (!player.hurt(player.damageSources().mobAttack(victim), 1))
+                // The scene victim is paralyzed and cannot attack; use an independent, unbound source.
+                var attacker = java.util.Objects.requireNonNull(net.minecraft.world.entity.EntityType.ZOMBIE.create(player.serverLevel()));
+                if (!player.hurt(player.damageSources().mobAttack(attacker), 1))
                     throw new IllegalStateException("Control attack did not damage survival player");
                 player.setHealth(originalHealth);
+                player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
                 player.invulnerableTime = 0;
                 com.stainkatana.katana.KatanaAbilities.activate(player, 0);
                 if (player.getPersistentData().getCompound("StainKatanaAbilities").getInt("daggerCharges") != 0)
@@ -140,7 +143,7 @@ public final class VisualFixtureClient {
                     throw new IllegalStateException("Finisher did not teleport behind its target");
                 System.out.println("STAIN_FINISHER_VERIFIED");
                 float casterHealth = player.getHealth();
-                if (player.hurt(player.damageSources().mobAttack(victim), 4) || player.getHealth() != casterHealth)
+                if (player.hurt(player.damageSources().mobAttack(attacker), 4) || player.getHealth() != casterHealth)
                     throw new IllegalStateException("Finisher did not protect its caster");
                 player.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
                 savedStack = player.getMainHandItem();
@@ -205,7 +208,8 @@ public final class VisualFixtureClient {
                 player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
                 player.invulnerableTime = 0;
                 float health = player.getHealth();
-                boolean hurt = player.hurt(player.damageSources().mobAttack(mobs.get(0)), 5);
+                var attacker = java.util.Objects.requireNonNull(net.minecraft.world.entity.EntityType.ZOMBIE.create(player.serverLevel()));
+                boolean hurt = player.hurt(player.damageSources().mobAttack(attacker), 5);
                 if (hurt || player.getHealth() != health)
                     throw new IllegalStateException("C did not protect the caster against entity damage");
                 player.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
@@ -372,6 +376,9 @@ public final class VisualFixtureClient {
             case 860 -> { mc.options.fov().set(70); mc.options.setCameraType(CameraType.FIRST_PERSON); }
             case 865 -> capture = "22_left_hand_first.png";
             case 870 -> { mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT); mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); }
+            case 872 -> com.stainkatana.katana.KatanaClientConfig.HUD_POSITION.set(com.stainkatana.katana.KatanaClientConfig.HudPosition.TOP_CENTER);
+            case 875 -> capture = "29_hud_top_center.png";
+            case 878 -> com.stainkatana.katana.KatanaClientConfig.HUD_POSITION.set(com.stainkatana.katana.KatanaClientConfig.HudPosition.RIGHT_MIDDLE);
             case 880 -> effectSample(com.stainkatana.katana.KatanaVisualStyle.SWING);
             case 884 -> capture = "23_fx_swing.png";
             case 892 -> effectSample(com.stainkatana.katana.KatanaVisualStyle.BLOOD_BIND);
@@ -386,7 +393,9 @@ public final class VisualFixtureClient {
             }
             case 940 -> effectSample(com.stainkatana.katana.KatanaVisualStyle.FINISHER);
             case 944 -> capture = "27_fx_first_night.png";
-            case 954 -> { System.out.println("STAIN_EFFECT_SAMPLES_DONE"); System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
+            case 954 -> com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 1);
+            case 959 -> capture = "30_slash_first_night.png";
+            case 969 -> { System.out.println("STAIN_EFFECT_SAMPLES_DONE"); System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }
     }

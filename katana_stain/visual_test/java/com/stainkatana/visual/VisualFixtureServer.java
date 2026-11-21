@@ -20,6 +20,24 @@ import net.minecraftforge.fml.common.Mod;
 public final class VisualFixtureServer {
     private static int boundTicks;
     private static boolean boundSeen, boundChecked;
+    private static net.minecraft.world.phys.Vec3 casterPosition;
+    private static boolean casterMoved, casterLockVerified;
+    @SubscribeEvent public static void verifyCasterLock(net.minecraftforge.event.TickEvent.LevelTickEvent event) {
+        if (event.phase != net.minecraftforge.event.TickEvent.Phase.END || !(event.level instanceof ServerLevel level)
+                || casterLockVerified || boundTicks == 0 || boundTicks > 5 || level.players().isEmpty()) return;
+        ServerPlayer player = level.players().get(0);
+        if (!casterMoved) {
+            casterPosition = player.position();
+            player.setPos(casterPosition.x + .4, casterPosition.y, casterPosition.z);
+            player.setDeltaMovement(.4, 0, 0);
+            casterMoved = true;
+        } else {
+            if (player.position().distanceToSqr(casterPosition) > .01)
+                throw new IllegalStateException("Ultimate caster was not held at its cinematic anchor");
+            casterLockVerified = true;
+            System.out.println("STAIN_CASTER_MOVEMENT_LOCK_VERIFIED");
+        }
+    }
     @SubscribeEvent public static void verify(net.minecraftforge.event.TickEvent.PlayerTickEvent event) {
         if (event.phase != net.minecraftforge.event.TickEvent.Phase.END || !(event.player instanceof ServerPlayer player) || boundChecked) return;
         var mobs = player.serverLevel().getEntitiesOfClass(Zombie.class, player.getBoundingBox().inflate(20));

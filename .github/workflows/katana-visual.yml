@@ -76,6 +76,7 @@ jobs:
           grep -F 'STAIN_FINISHER_DAMAGE_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-client.log
+          grep -F 'STAIN_CASTER_MOVEMENT_LOCK_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_CASTER_PROTECTION_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_CANCELLATION_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_LONG_RANGE_Z_VERIFIED' /tmp/stain-visual-client.log
@@ -144,7 +145,7 @@ jobs:
                   lines=path.read_text(errors='replace').splitlines()
                   problems=[line for line in lines if any(x in line for x in ('Caused by:', 'Exception', 'Mixin apply failed', 'InvalidInjection', 'InjectionError', 'InvalidMixin'))]
                   markers=[line for line in lines if any(x in line for x in ('STAIN_MULTIPART', 'STAIN_DRAGON_', 'STAIN_VISUAL_FIXTURE_FINISHED'))]
-                  for line in problems[-3:] + markers[-4:]:
+                  for line in problems[:8] + problems[-5:] + markers[-4:]:
                       text=line.replace('%','%25').replace('\r','%0D').replace('\n','%0A')[:2500]
                       print('::error title='+path.name+'::'+text)
                   tail='\n'.join(lines[-10:]).replace('%','%25').replace('\r','%0D').replace('\n','%0A')[:2500]
