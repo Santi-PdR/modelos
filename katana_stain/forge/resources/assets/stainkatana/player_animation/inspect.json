@@ -1019,6 +1019,13 @@
                     "pitch":-0.009960570372641087
                 }
             },
+            {"tick": 1, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"x": 5.0}},
+            {"tick": 12, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"x": 4.5}},
+            {"tick": 20, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"x": 3.5}},
+            {"tick": 27, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"x": 2.5}},
+            {"tick": 35, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"x": 3.5}},
+            {"tick": 45, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"x": 4.5}},
+            {"tick": 59, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"x": 5.0}},
             {"tick": 1, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"pitch": 0}},
             {"tick": 1, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"yaw": 0}},
             {"tick": 1, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"roll": 0}},
