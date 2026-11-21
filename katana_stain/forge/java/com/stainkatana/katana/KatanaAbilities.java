@@ -39,7 +39,7 @@ public final class KatanaAbilities {
     private static final String COOLDOWNS = "StainKatanaAbilities";
     private static final Map<UUID, Cast> CASTS = new ConcurrentHashMap<>();
     private static final Map<UUID, UUID> BOUND_TARGETS = new ConcurrentHashMap<>();
-    private record Backstab(UUID target, ItemStack stack, ResourceKey<Level> dimension, long start, boolean impacted) { }
+    private record Backstab(UUID target, ItemStack stack, ResourceKey<Level> dimension, long start, boolean impacted, Vec3 anchor) { }
     private static final Map<UUID, Backstab> BACKSTABS = new ConcurrentHashMap<>();
     private static final class Cast {
         final int ability;
@@ -133,7 +133,9 @@ public final class KatanaAbilities {
         if (!(event.getEntity() instanceof ServerPlayer player)
                 || (event.getSource().getEntity() == null && event.getSource().getDirectEntity() == null)) return;
         Cast cast = CASTS.get(player.getUUID());
-        if (cast != null && cast.ability == 2 && cast.dimension.equals(player.level().dimension())) event.setCanceled(true);
+        Backstab stab = BACKSTABS.get(player.getUUID());
+        if ((cast != null && cast.ability == 2 && cast.dimension.equals(player.level().dimension()))
+                || (stab != null && stab.dimension().equals(player.level().dimension()))) event.setCanceled(true);
     }
     public static boolean isCinematicallyBound(LivingEntity entity) {
         return !entity.level().isClientSide && BOUND_TARGETS.containsKey(entity.getUUID());
@@ -280,8 +282,9 @@ public final class KatanaAbilities {
         data.putLong("next0", now + CombatTuning.cooldown(0));
         player.getPersistentData().put(COOLDOWNS, data);
         syncCooldowns(player);
-        BACKSTABS.put(player.getUUID(), new Backstab(target.getUUID(), player.getMainHandItem(), player.level().dimension(), now, false));
+        ItemStack sword = player.getMainHandItem();
         moveTo(player, target, spot);
+        BACKSTABS.put(player.getUUID(), new Backstab(target.getUUID(), sword, player.level().dimension(), now, false, player.position()));
         KatanaNetwork.broadcastAnimation(player, 6);
         // Give the short finisher camera a server-selected focus immediately;
         // otherwise it switches to third person but has nothing to frame.
@@ -292,13 +295,16 @@ public final class KatanaAbilities {
         if (stab == null) return;
         long age = player.getServer().overworld().getGameTime() - stab.start();
         Entity entity = player.serverLevel().getEntity(stab.target());
-        if (!player.isAlive() || player.isSpectator() || player.getMainHandItem() != stab.stack()
+        if (!player.isAlive() || player.isSpectator() || player.hasEffect(KatanaEffects.PARALYSIS.get())
                 || !player.level().dimension().equals(stab.dimension()) || !(entity instanceof LivingEntity target)
                 || !legalTarget(player, target) || player.distanceToSqr(target) > 64 || age >= 30) {
             BACKSTABS.remove(player.getUUID()); KatanaNetwork.broadcastAnimation(player, -1); return;
         }
+        player.setDeltaMovement(Vec3.ZERO);
+        if (player.position().distanceToSqr(stab.anchor()) > 0.0025)
+            player.connection.teleport(stab.anchor().x, stab.anchor().y, stab.anchor().z, player.getYRot(), player.getXRot());
         if (age >= 10 && !stab.impacted()) {
-            BACKSTABS.put(player.getUUID(), new Backstab(stab.target(), stab.stack(), stab.dimension(), stab.start(), true));
+            BACKSTABS.put(player.getUUID(), new Backstab(stab.target(), stab.stack(), stab.dimension(), stab.start(), true, stab.anchor()));
             // Never execute an otherwise healthy ordinary target in one blow; preserve at least one health.
             float damage = CombatTuning.backstabDamage(target.getHealth(), target.getMaxHealth());
             boolean landed = damage > 0 && target.hurt(player.damageSources().playerAttack(player), damage);

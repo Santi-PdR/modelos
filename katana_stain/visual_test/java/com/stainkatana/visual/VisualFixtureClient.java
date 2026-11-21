@@ -131,6 +131,12 @@ public final class VisualFixtureClient {
                 if (fromTarget.lengthSqr() > 16 || fromTarget.dot(facing) >= 0)
                     throw new IllegalStateException("Finisher did not teleport behind its target");
                 System.out.println("STAIN_FINISHER_VERIFIED");
+                float casterHealth = player.getHealth();
+                if (player.hurt(player.damageSources().mobAttack(victim), 4) || player.getHealth() != casterHealth)
+                    throw new IllegalStateException("Finisher did not protect its caster");
+                savedStack = player.getMainHandItem();
+                player.getInventory().setItem(player.getInventory().selected, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK));
+                System.out.println("STAIN_FINISHER_ITEM_SWITCH_VERIFIED");
             });
             case 491 -> {
                 if (!com.stainkatana.katana.client.KatanaScene.cameraApplied())
@@ -145,6 +151,10 @@ public final class VisualFixtureClient {
                         || finisherHealth - victim.getHealth() <= player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE))
                     throw new IllegalStateException("Finisher did not land stronger-than-normal, non-lethal damage");
                 System.out.println("STAIN_FINISHER_DAMAGE_VERIFIED");
+            });
+            case 500 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                player.getInventory().setItem(player.getInventory().selected, savedStack);
             });
             case 503 -> capture = "19_finisher_end.png";
             case 550 -> mc.getSingleplayerServer().execute(() -> {
