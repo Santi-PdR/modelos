@@ -471,24 +471,7 @@ public final class VisualFixtureClient {
             case 1272 -> capture = "51_blood_right_third_draw.png";
             case 1276 -> capture = "52_blood_right_third_face.png";
             case 1280 -> capture = "53_blood_right_third_recovery.png";
-            // Move the complete gesture inward and up, then compare several phases.
-            case 1295 -> { mc.options.setCameraType(CameraType.FIRST_PERSON); mc.options.fov().set(70); }
-            case 1300 -> placementSample(-8, -4, -12);
-            case 1304 -> capture = "54_in8_reach.png";
-            case 1307 -> capture = "55_in8_draw.png";
-            case 1311 -> capture = "56_in8_face.png";
-            case 1325 -> placementSample(-12, -4, -12);
-            case 1329 -> capture = "57_in12_reach.png";
-            case 1332 -> capture = "58_in12_draw.png";
-            case 1336 -> capture = "59_in12_face.png";
-            case 1350 -> placementSample(-16, -4, -12);
-            case 1354 -> capture = "60_in16_reach.png";
-            case 1357 -> capture = "61_in16_draw.png";
-            case 1361 -> capture = "62_in16_face.png";
-            case 1425 -> {
-                com.stainkatana.katana.client.KatanaAnimations.gestureDepthTest = 0;
-                com.stainkatana.katana.client.KatanaAnimations.gestureXTest = 0;
-                com.stainkatana.katana.client.KatanaAnimations.gestureYTest = 0;
+            case 1295 -> {
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Y.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Z.set(0.0);
@@ -496,12 +479,6 @@ public final class VisualFixtureClient {
             }
             default -> { }
         }
-    }
-    private static void placementSample(float x, float y, float depth) {
-        com.stainkatana.katana.client.KatanaAnimations.gestureXTest = x;
-        com.stainkatana.katana.client.KatanaAnimations.gestureYTest = y;
-        com.stainkatana.katana.client.KatanaAnimations.gestureDepthTest = depth;
-        bloodSample(0, 0, 0);
     }
     private static void bloodSample(double x, double y, double z) {
         com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(x);

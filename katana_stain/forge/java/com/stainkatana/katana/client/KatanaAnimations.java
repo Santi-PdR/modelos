@@ -31,8 +31,6 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 /** Client-only animation layer, fed only by successful server activations. */
 @Mod.EventBusSubscriber(modid = StainKatanaMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class KatanaAnimations {
-    // Temporary diagnostic, modified by the graphical fixture only.
-    public static float gestureDepthTest, gestureXTest, gestureYTest;
     private static final ResourceLocation LAYER = new ResourceLocation(StainKatanaMod.MOD_ID, "abilities");
     private static final Logger LOGGER = LogUtils.getLogger();
     // Official Better Combat katana moves; loaded from the user's installed mod/resource pack,
@@ -109,9 +107,9 @@ public final class KatanaAnimations {
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                         dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
                         new dev.kosmx.playerAnim.core.util.Vec3f(
-                                gestureXTest + (free ? KatanaClientConfig.BLOOD_HAND_X.get().floatValue() : 0),
-                                -2 + gestureYTest + (free ? KatanaClientConfig.BLOOD_HAND_Y.get().floatValue() : 0),
-                                -8 + gestureDepthTest + (free ? KatanaClientConfig.BLOOD_HAND_Z.get().floatValue() : 0))));
+                                -8 + (free ? KatanaClientConfig.BLOOD_HAND_X.get().floatValue() : 0),
+                                -6 + (free ? KatanaClientConfig.BLOOD_HAND_Y.get().floatValue() : 0),
+                                -14 + (free ? KatanaClientConfig.BLOOD_HAND_Z.get().floatValue() : 0))));
             }) {
                 // Inspect begins at tick zero; the library's default fade divides
                 // by beginTick. The enclosing layer already performs the fade.
