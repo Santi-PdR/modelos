@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.25 — salto, caída y aterrizaje
+
+**[Descargar JAR de prueba v1.67.25](https://github.com/Santi-PdR/modelos/raw/0c3f8dc2b5c3337db6cfb152a99d168e02a7d855/entregables/v1.67.25/capatest-1.67.25.jar)** · [Saltos en Forge](docs/releases/v1.67.25/comparacion-saltos-forge.jpg) · [Medidas y SHA-256](docs/releases/v1.67.25/notas.md).
+
+El salto normal ya no usa el clip de planeo. El manto abre según el descenso, conserva la holgura de la zancada y se asienta al aterrizar. Verificado en Forge, tanto en pecho como en Curios, con el mismo arte y sin cambiar la descarga pública.
+
 ### v1.67.24 — transición de nado
 
 **[Descargar JAR de prueba v1.67.24](https://github.com/Santi-PdR/modelos/raw/1303d5cad7d7a29dae985908c27b82de8c84b8d9/entregables/v1.67.24/capatest-1.67.24.jar)** · [Nado en Forge](docs/releases/v1.67.24/comparacion-nado-forge.jpg) · [Medidas y SHA-256](docs/releases/v1.67.24/notas.md).
