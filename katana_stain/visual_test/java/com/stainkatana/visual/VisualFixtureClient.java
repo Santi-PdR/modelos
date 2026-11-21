@@ -250,6 +250,12 @@ public final class VisualFixtureClient {
                     System.out.println("STAIN_VANILLA_COMBO_VERIFIED " + firstComboDamage + " " + damage);
                 }
             });
+            case 760 -> {
+                mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); mc.options.fov().set(35);
+                com.stainkatana.katana.client.KatanaAnimations.swing(mc.player, 3);
+            }
+            case 764 -> capture = "28_fourth_cut.png";
+            case 775 -> { mc.options.fov().set(70); mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); }
             case 780 -> mc.getSingleplayerServer().execute(() -> {
                 var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                 var world = player.serverLevel();
@@ -319,13 +325,14 @@ public final class VisualFixtureClient {
                 com.stainkatana.katana.KatanaAbilities.activate(player, 2);
                 if (!com.stainkatana.katana.KatanaAbilities.isCinematicallyBound(dragon))
                     throw new IllegalStateException("C did not find a dragon part with its parent out of range");
-                // Cancel on the next server tick, then restore the sword in case 825.
-                player.getInventory().setItem(player.getInventory().selected, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK));
+                // Switching items is allowed; explicitly interrupt the scene before the next visual tests.
+                player.addEffect(new net.minecraft.world.effect.MobEffectInstance(com.stainkatana.katana.KatanaEffects.PARALYSIS.get(), 100));
                 System.out.println("STAIN_MULTIPART_RANGE_VERIFIED");
             });
             case 825 -> {
                 mc.getSingleplayerServer().execute(() -> {
                     var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                    player.removeEffect(com.stainkatana.katana.KatanaEffects.PARALYSIS.get());
                     player.getInventory().setItem(player.getInventory().selected, savedStack);
                 });
                 mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.LEFT);

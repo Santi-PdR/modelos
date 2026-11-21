@@ -123,9 +123,9 @@ public final class KatanaAnimations {
         int comboStep = Math.floorMod(step, 4);
         // Prefer the actual Better Combat katana swings when its animation resources
         // are present, including a vertical fourth cut; keep the offline fallback.
-        KeyframeAnimation clip = loadBetterCombat(new int[]{1, 3, 9, 4}[comboStep]);
+        KeyframeAnimation clip = comboStep == 3 ? loadFourthCut() : loadBetterCombat(new int[]{1, 3, 9, 4}[comboStep]);
         if (clip == null) clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID,
-                new String[]{"combo_1", "combo_2", "combo_3", "sword_attack2"}[comboStep]));
+                new String[]{"combo_1", "combo_2", "combo_3", "combo_heavy"}[comboStep]));
         if (clip == null) return;
         animation.mirror.setEnabled(player.getMainArm() == HumanoidArm.LEFT);
         KeyframeAnimationPlayer playing = new KeyframeAnimationPlayer(clip, 0)
@@ -134,6 +134,19 @@ public final class KatanaAnimations {
         ModifierLayer<IAnimation> timed = new ModifierLayer<>(playing);
         timed.addModifierBefore(new SpeedModifier(2.0F));
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timed, true);
+    }
+
+    private static KeyframeAnimation loadFourthCut() {
+        ResourceLocation id = new ResourceLocation(StainKatanaMod.MOD_ID, "attack_animations/stain_fourth_cut.json");
+        var resource = Minecraft.getInstance().getResourceManager().getResource(id);
+        if (resource.isEmpty()) return null;
+        try (InputStream input = resource.get().open()) {
+            var clips = AnimationSerializing.deserializeAnimation(input);
+            return clips.isEmpty() ? null : clips.get(0);
+        } catch (Exception e) {
+            LOGGER.warn("Cannot load the fourth cut; using fallback", e);
+            return null;
+        }
     }
 
     private static KeyframeAnimation loadBetterCombat(int ability) {

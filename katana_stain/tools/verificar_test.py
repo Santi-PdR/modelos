@@ -46,6 +46,10 @@ assert bc['parent'] == 'bettercombat:katana'
 attacks = bc['attributes']['attacks']
 assert len(attacks) == 4 and len({a['animation'] for a in attacks}) == 4
 assert attacks[3]['damage_multiplier'] > max(a['damage_multiplier'] for a in attacks[:3])
+assert attacks[3]['animation'] == 'stainkatana:stain_fourth_cut'
+heavy = json.loads((a/'attack_animations/stain_fourth_cut.json').read_text())['emote']
+assert heavy['beginTick'] > 0 and heavy['stopTick'] > heavy['endTick']
+assert all(set(move) <= {'tick', 'turn', 'easing', 'rightArm', 'leftArm'} for move in heavy['moves'])
 print('OK: preset de katana Better Combat, prioridad, zurdos y segundo golpe')
 
 # Model transforms are syntax-checked here; hand alignment requires actual client captures.
