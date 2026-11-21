@@ -100,11 +100,11 @@ public final class VisualFixtureClient {
             case 340 -> capture = "14_ultimate_6s.png";
             case 380 -> capture = "15_ultimate_8s.png";
             case 430 -> capture = "16_ultimate_end.png";
-            case 440 -> mc.options.fov().set(35);
+            case 440 -> { mc.options.fov().set(35); mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); }
             case 445 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(0));
             case 449 -> capture = "17a_blood_third_reach.png";
             case 453 -> capture = "17b_blood_third_draw.png";
-            case 460 -> mc.options.fov().set(70);
+            case 460 -> { mc.options.fov().set(70); mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); }
             case 479 -> mc.getSingleplayerServer().execute(() -> {
                 var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                 var mobs = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, player.getBoundingBox().inflate(8));
