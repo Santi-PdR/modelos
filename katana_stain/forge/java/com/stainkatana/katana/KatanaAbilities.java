@@ -76,11 +76,7 @@ public final class KatanaAbilities {
             cancel(player, cast);
             return;
         }
-        if (cast.ability == 2 && cast.casterAnchor != null) {
-            player.setDeltaMovement(Vec3.ZERO);
-            if (player.position().distanceToSqr(cast.casterAnchor) > 0.0025)
-                player.connection.teleport(cast.casterAnchor.x, cast.casterAnchor.y, cast.casterAnchor.z, player.getYRot(), player.getXRot());
-        }
+        if (cast.ability == 2) holdCaster(player, cast);
         long elapsed = player.getServer().overworld().getGameTime() - cast.start;
         int events = cast.timeline.advance(elapsed);
         if (cast.ability == 2) {
@@ -117,11 +113,22 @@ public final class KatanaAbilities {
         if ((events & AbilityTimeline.FINISH) != 0) CASTS.remove(player.getUUID());
     }
 
-    /** Enforce cinematic position after entity ticks, even when potion effects are refused. */
-    @SubscribeEvent public static void holdTargets(TickEvent.LevelTickEvent event) {
+    private static void holdCaster(ServerPlayer player, Cast cast) {
+        if (cast.casterAnchor == null) return;
+        player.setDeltaMovement(Vec3.ZERO);
+        if (player.position().distanceToSqr(cast.casterAnchor) > 0.0025)
+            player.connection.teleport(cast.casterAnchor.x, cast.casterAnchor.y, cast.casterAnchor.z, player.getYRot(), player.getXRot());
+    }
+
+    /** Enforce cinematic positions after entity ticks, including late knockback or movement. */
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.HIGH)
+    public static void holdTargets(TickEvent.LevelTickEvent event) {
         if (event.phase != TickEvent.Phase.END || !(event.level instanceof ServerLevel world)) return;
-        for (Cast cast : CASTS.values()) {
+        for (var entry : CASTS.entrySet()) {
+            Cast cast = entry.getValue();
             if (cast.ability != 2 || cast.anchor == null || !cast.dimension.equals(world.dimension())) continue;
+            ServerPlayer caster = world.getServer().getPlayerList().getPlayer(entry.getKey());
+            if (caster != null && caster.isAlive() && caster.level().dimension().equals(cast.dimension)) holdCaster(caster, cast);
             Entity target = world.getEntity(cast.markedTarget);
             if (!(target instanceof LivingEntity living) || !living.isAlive()) continue;
             if (target.position().distanceToSqr(cast.anchor) > 0.0001) target.teleportTo(cast.anchor.x, cast.anchor.y, cast.anchor.z);
