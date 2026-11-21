@@ -104,6 +104,18 @@ La **aura** son tres billboards (quads que miran a cámara) con la textura
 aditivo. Eso da el resplandor alrededor del núcleo sin tocar la pantalla y sin
 depender del pack; la textura se genera con `tools/make_aura.py`.
 
+El **anillo de estado** (`relic_ring.png`, generado con `tools/make_ring.py`) es
+un cuarto billboard que solo aparece cuando la reliquia tiene algo que contar, y
+tanto el anillo como el aura cambian de color con el estado:
+
+| Estado | Color | Aura | Anillo |
+|---|---|---|---|
+| `idle` | azul frío | 1.0 | tenue, giro lento |
+| `idle_calm` | azul apagado | 0.7 | no sale |
+| `idle_charged` | ámbar | 1.15 | marcado, giro rápido |
+| `idle_alert` | rojo | 1.05 | late como un aviso, gira al revés |
+| `idle_dormant` | gris azulado | 0.35 | no sale |
+
 El **shader propio** (`visuals.shaderGlow`) añade un cuarto pase con fresnel en
 el borde y una línea de barrido de holograma, en GLSL de verdad
 (`assets/minecraft/shaders/core/holocore_relic_glow.{json,vsh,fsh}`). Se compila
@@ -131,6 +143,8 @@ shaders de 1.20.1 están en [BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
 | `visuals.haloIntensity` | `0.35` | Fuerza del halo aditivo (0–1). |
 | `visuals.glowAura` | `true` | Aura: tres billboards aditivos alrededor del núcleo. |
 | `visuals.auraIntensity` | `0.55` | Fuerza del aura (0–1). |
+| `visuals.glowRing` | `true` | Anillo de estado (gira y se tiñe según la reliquia). |
+| `visuals.ringIntensity` | `0.55` | Fuerza del anillo (0–1). |
 | `visuals.shaderGlow` | `true` | Pase GLSL propio (fresnel + barrido). Se apaga solo con shaderpack activo. |
 | `visuals.shaderIntensity` | `0.55` | Fuerza del pase GLSL, independiente del halo. |
 | `visuals.reducedEffects` | `false` | Reposo sin rayos/cometas/ondas (`idle_calm`). |

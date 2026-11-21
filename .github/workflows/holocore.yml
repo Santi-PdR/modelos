@@ -175,13 +175,13 @@ jobs:
                      if f'`{k}`' not in readme and f'`{k.split(".")[-1]}`' not in readme]
           assert not missing, f'claves de config sin documentar en README.md: {missing}'
 
-          aura = root / 'src/main/resources/assets/holocore/textures/relic/relic_aura.png'
-          data = aura.read_bytes()
-          assert data[:8] == b'\x89PNG\r\n\x1a\n', 'relic_aura.png no es un PNG'
-          width, height, depth, color_type = (*struct.unpack('>II', data[16:24]), data[24], data[25])
-          assert (width, height, depth, color_type) == (64, 64, 8, 6), (width, height, depth, color_type)
+          for name in ('relic_aura.png', 'relic_ring.png'):
+              data = (root / 'src/main/resources/assets/holocore/textures/relic' / name).read_bytes()
+              assert data[:8] == b'\x89PNG\r\n\x1a\n', f'{name} no es un PNG'
+              width, height, depth, color_type = (*struct.unpack('>II', data[16:24]), data[24], data[25])
+              assert (width, height, depth, color_type) == (64, 64, 8, 6), (name, width, height, depth, color_type)
 
-          print(f'Docs OK: {len(keys)} claves de config documentadas; relic_aura.png 64x64 RGBA.')
+          print(f'Docs OK: {len(keys)} claves de config documentadas; aura y anillo 64x64 RGBA.')
           PY
 
       # ------------------------------------------------------------------

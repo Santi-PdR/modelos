@@ -27,6 +27,8 @@ public final class RelicConfig {
     public static final ForgeConfigSpec.DoubleValue HALO_INTENSITY;
     public static final ForgeConfigSpec.BooleanValue GLOW_AURA;
     public static final ForgeConfigSpec.DoubleValue AURA_INTENSITY;
+    public static final ForgeConfigSpec.BooleanValue GLOW_RING;
+    public static final ForgeConfigSpec.DoubleValue RING_INTENSITY;
     public static final ForgeConfigSpec.BooleanValue SHADER_GLOW;
     public static final ForgeConfigSpec.DoubleValue SHADER_INTENSITY;
     public static final ForgeConfigSpec.BooleanValue REDUCED_EFFECTS;
@@ -67,6 +69,10 @@ public final class RelicConfig {
                 .define("glowAura", true);
         AURA_INTENSITY = b.comment("Intensidad del aura (0 = invisible, 1 = muy marcada).")
                 .defineInRange("auraIntensity", 0.55D, 0.0D, 1.0D);
+        GLOW_RING = b.comment("Anillo de estado: gira y se tine segun idle/cargada/alerta. En calma y dormida no sale.")
+                .define("glowRing", true);
+        RING_INTENSITY = b.comment("Intensidad del anillo de estado (0 = invisible, 1 = muy marcado).")
+                .defineInRange("ringIntensity", 0.55D, 0.0D, 1.0D);
         SHADER_GLOW = b.comment("Pase GLSL propio (fresnel + linea de barrido) sobre la textura emisiva.",
                         "Se desactiva solo si hay shaderpack activo (Iris/Oculus/OptiFine), porque el pack",
                         "sustituye el programa y la reliquia podria quedar invisible. Usa haloIntensity.")

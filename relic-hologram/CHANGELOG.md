@@ -1,5 +1,19 @@
 # Historial de cambios
 
+## 1.0.5 — anillo de estado
+
+* **Anillo de estado** (`visuals.glowRing`, `visuals.ringIntensity`): cuarto
+  billboard aditivo que solo aparece cuando la reliquia tiene algo que contar, con
+  textura nueva `relic_ring.png` (anillo con tres cortes y un arco más brillante,
+  para que el giro se note) generada con `tools/make_ring.py`.
+* **El aura y el anillo cambian de color con el estado**, reutilizando
+  `RelicAnimatable.loopState()`: azul frío en reposo, azul apagado en calma,
+  **ámbar** cargada (combate), **rojo** en alerta (monstruo cerca, y entonces el
+  anillo gira al revés y late) y gris azulado dormida. Sin lógica nueva de
+  estados: es solo presentación de lo que ya decidía la máquina de animaciones.
+* El CI valida también el tamaño de `relic_ring.png` y sigue exigiendo que todas
+  las claves de la config estén documentadas (ahora 21).
+
 ## 1.0.4 — repaso de calidad
 
 Sin cambios visibles por defecto: es la pasada de «que esté bien hecho».

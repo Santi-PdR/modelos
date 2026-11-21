@@ -13,7 +13,7 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 /**
- * Aura de la reliquia: tres quads que miran a camara y suman luz.
+ * Aura y anillo de la reliquia: billboards aditivos que miran a camara.
  *
  * <p>Esto es el "bloom propio" que se puede hacer sin post-proceso: no se
  * desenfoca la pantalla, se <b>suma</b> una textura radial sobre lo ya dibujado,
@@ -21,45 +21,125 @@ import org.joml.Vector3f;
  * depende de shaders ni de que el jugador tenga un shaderpack, y se dibuja con
  * {@link RelicRenderTypes#ADDITIVE_GLOW}.</p>
  *
- * <p>Los tres quads giran a distinta velocidad y en distinto sentido (el central
- * al reves) para que la textura, que lleva tres arcos, parezca orbitar. Al ser
- * billboards se ven siempre de frente: no hay que tocar el modelo ni sus
- * animaciones.</p>
+ * <p>El color y la intensidad salen del estado de la reliquia
+ * ({@link RelicAnimatable#loopState()}), de modo que el aura sirve tambien para
+ * saber que esta pasando sin mirar el modelo: azul en reposo, ambar cargada, rojo
+ * en alerta y apagada en dormido. El anillo solo aparece en los estados que
+ * importan, y gira en sentidos distintos segun cual sea.</p>
  *
- * <p>El tamano se toma de la matriz del {@code PoseStack} (que ya incluye la
- * escala de la config), y la posicion, de su traslacion: en el render de
- * entidades el {@code PoseStack} esta en coordenadas de mundo, asi que los
- * vertices se emiten directamente sin matriz.</p>
+ * <p>La posicion se toma de la traslacion de la matriz del {@code PoseStack} y la
+ * escala de su primera columna; en el render de entidades el {@code PoseStack}
+ * esta en coordenadas de mundo, asi que los vertices se emiten sin matriz.</p>
  */
 public final class RelicAura {
 
-    private static final ResourceLocation TEXTURE =
+    private static final ResourceLocation AURA_TEXTURE =
             new ResourceLocation("holocore", "textures/relic/relic_aura.png");
+    private static final ResourceLocation RING_TEXTURE =
+            new ResourceLocation("holocore", "textures/relic/relic_ring.png");
 
-    /** Diametro de cada quad en bloques (antes de la escala de la config). */
+    /** Diametro de cada capa del aura, en bloques (antes de la escala de la config). */
     private static final float[] DIAMETER = {1.05F, 1.55F, 2.10F};
     /** Cuanto aporta cada capa (0 = nada). */
     private static final float[] WEIGHT = {0.55F, 0.32F, 0.18F};
-    /** Velocidad de giro, en radianes por tick. Negativa = al reves. */
+    /** Velocidad de giro de cada capa, en radianes por tick. Negativa = al reves. */
     private static final float[] SPIN = {0.035F, -0.022F, 0.010F};
+    /** Diametro del anillo de estado. */
+    private static final float RING_DIAMETER = 2.05F;
 
     private RelicAura() {
     }
 
     /**
-     * Solo se apaga desde la config: son tres quads, no compensa quitarlo en
-     * calidad LITE (el halo aditivo del modelo, que si cuesta, es otra cosa).
+     * Aspecto por estado: color, fuerza del aura, fuerza del anillo y giro de
+     * este (radianes por tick; 0 = no se dibuja).
      */
-    public static boolean enabled() {
-        return RelicConfig.GLOW_AURA.get();
+    private record Style(float red, float green, float blue, float aura, float ring, float spin) {
     }
 
-    public static void render(PoseStack poseStack, MultiBufferSource bufferSource,
-                              float partialTick, float intensity) {
+    private static Style styleFor(RelicAnimatable.LoopState state) {
+        return switch (state) {
+            case CALM -> new Style(0.42F, 0.60F, 0.78F, 0.70F, 0.00F, 0.000F);
+            case CHARGED -> new Style(1.00F, 0.72F, 0.30F, 1.15F, 1.10F, 0.075F);
+            case ALERT -> new Style(1.00F, 0.34F, 0.28F, 1.05F, 0.85F, -0.055F);
+            case DORMANT -> new Style(0.34F, 0.44F, 0.60F, 0.35F, 0.00F, 0.000F);
+            case IDLE -> new Style(0.55F, 0.78F, 1.00F, 1.00F, 0.45F, 0.028F);
+        };
+    }
+
+    /** Solo se apaga si el jugador apaga las dos cosas: son cuatro quads en total. */
+    public static boolean enabled() {
+        return RelicConfig.GLOW_AURA.get() || RelicConfig.GLOW_RING.get();
+    }
+
+    public static void render(PoseStack poseStack, MultiBufferSource bufferSource, float partialTick,
+                              RelicAnimatable.LoopState state) {
+        Style style = styleFor(state);
+        float time = time(partialTick);
+        Frame frame = frame(poseStack);
+
+        if (RelicConfig.GLOW_AURA.get()) {
+            drawAura(bufferSource, frame, time, style);
+        }
+        if (RelicConfig.GLOW_RING.get() && style.ring() > 0.0F) {
+            drawRing(bufferSource, frame, time, state, style);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Aura: tres capas girando a distinta velocidad
+    // ------------------------------------------------------------------
+
+    private static void drawAura(MultiBufferSource bufferSource, Frame frame, float time, Style style) {
+        float intensity = RelicConfig.AURA_INTENSITY.get().floatValue() * style.aura();
         if (intensity <= 0.001F) {
             return;
         }
 
+        VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
+
+        for (int layer = 0; layer < DIAMETER.length; layer++) {
+            // Latido lento: 0.82 .. 1.0, desfasado entre capas.
+            float pulse = 0.82F + 0.18F * sin(time * 0.08F + layer * 1.7F);
+            float weight = WEIGHT[layer] * pulse * intensity;
+            billboard(buffer, frame, DIAMETER[layer], time * SPIN[layer],
+                    style.red() * weight, style.green() * weight, style.blue() * weight);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Anillo: uno solo, girando segun el estado
+    // ------------------------------------------------------------------
+
+    private static void drawRing(MultiBufferSource bufferSource, Frame frame, float time,
+                                 RelicAnimatable.LoopState state, Style style) {
+        float weight = RelicConfig.RING_INTENSITY.get().floatValue() * style.ring();
+        if (weight <= 0.001F) {
+            return;
+        }
+
+        // En alerta el anillo late como un aviso; en los demas estados, respira.
+        boolean alert = state == RelicAnimatable.LoopState.ALERT;
+        float beatSpeed = alert ? 0.45F : 0.15F;
+        float beat = 0.72F + 0.28F * (0.5F + 0.5F * sin(time * beatSpeed));
+        float size = RING_DIAMETER * (alert ? 1.0F + 0.03F * sin(time * beatSpeed) : 1.0F);
+        float glow = weight * beat;
+
+        VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(RING_TEXTURE));
+        billboard(buffer, frame, size, time * style.spin(),
+                style.red() * glow, style.green() * glow, style.blue() * glow);
+    }
+
+    // ------------------------------------------------------------------
+    // Geometria
+    // ------------------------------------------------------------------
+
+    /** Origen, escala y ejes de camara de este frame. */
+    private record Frame(float originX, float originY, float originZ, float scale,
+                         Vector3f left, Vector3f up) {
+    }
+
+    private static Frame frame(PoseStack poseStack) {
         Matrix4f matrix = poseStack.last().pose();
         float originX = matrix.m30();
         float originY = matrix.m31();
@@ -71,48 +151,42 @@ public final class RelicAura {
             scale = 1.0F;
         }
 
-        Minecraft minecraft = Minecraft.getInstance();
-        Camera camera = minecraft.gameRenderer.getMainCamera();
-        Vector3f left = new Vector3f(camera.getLeftVector());
-        Vector3f up = new Vector3f(camera.getUpVector());
+        Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+        return new Frame(originX, originY, originZ, scale,
+                new Vector3f(camera.getLeftVector()), new Vector3f(camera.getUpVector()));
+    }
 
-        float time = minecraft.level == null ? 0.0F : minecraft.level.getGameTime() + partialTick;
+    /**
+     * Emite un quad que mira a camara, centrado en el origen del frame y girado
+     * {@code angle} radianes alrededor del eje de vision.
+     */
+    private static void billboard(VertexConsumer buffer, Frame frame, float diameter, float angle,
+                                  float red, float green, float blue) {
+        float cos = (float) Math.cos(angle);
+        float sin = (float) Math.sin(angle);
 
-        VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(TEXTURE));
+        // Ejes del quad girados alrededor del eje de vision.
+        Vector3f axisX = new Vector3f(frame.left()).mul(cos).add(new Vector3f(frame.up()).mul(sin));
+        Vector3f axisY = new Vector3f(frame.up()).mul(cos).sub(new Vector3f(frame.left()).mul(sin));
 
-        for (int layer = 0; layer < DIAMETER.length; layer++) {
-            float angle = time * SPIN[layer];
-            float cos = (float) Math.cos(angle);
-            float sin = (float) Math.sin(angle);
+        float half = diameter * 0.5F * frame.scale();
+        float x = half * axisX.x();
+        float y = half * axisX.y();
+        float z = half * axisX.z();
+        float ux = half * axisY.x();
+        float uy = half * axisY.y();
+        float uz = half * axisY.z();
 
-            // Ejes del quad girados alrededor del eje de vision.
-            Vector3f axisX = new Vector3f(left).mul(cos).add(new Vector3f(up).mul(sin));
-            Vector3f axisY = new Vector3f(up).mul(cos).sub(new Vector3f(left).mul(sin));
+        float ox = frame.originX();
+        float oy = frame.originY();
+        float oz = frame.originZ();
 
-            float half = DIAMETER[layer] * 0.5F * scale;
-
-            // Latido lento: 0.82 .. 1.0, desfasado entre capas.
-            float pulse = 0.82F + 0.18F * (float) Math.sin(time * 0.08F + layer * 1.7F);
-            float weight = WEIGHT[layer] * pulse * intensity;
-            // Azul frio, como el nucleo.
-            float red = 0.55F * weight;
-            float green = 0.78F * weight;
-            float blue = 1.00F * weight;
-
-            float x = half * axisX.x();
-            float y = half * axisX.y();
-            float z = half * axisX.z();
-            float ux = half * axisY.x();
-            float uy = half * axisY.y();
-            float uz = half * axisY.z();
-
-            quad(buffer,
-                    originX - x - ux, originY - y - uy, originZ - z - uz,
-                    originX - x + ux, originY - y + uy, originZ - z + uz,
-                    originX + x + ux, originY + y + uy, originZ + z + uz,
-                    originX + x - ux, originY + y - uy, originZ + z - uz,
-                    red, green, blue);
-        }
+        quad(buffer,
+                ox - x - ux, oy - y - uy, oz - z - uz,
+                ox - x + ux, oy - y + uy, oz - z + uz,
+                ox + x + ux, oy + y + uy, oz + z + uz,
+                ox + x - ux, oy + y - uy, oz + z - uz,
+                red, green, blue);
     }
 
     private static void quad(VertexConsumer buffer,
@@ -142,5 +216,14 @@ public final class RelicAura {
                 .uv2(LightTexture.FULL_BRIGHT)
                 .normal(0.0F, 1.0F, 0.0F)
                 .endVertex();
+    }
+
+    private static float sin(float value) {
+        return (float) Math.sin(value);
+    }
+
+    private static float time(float partialTick) {
+        Minecraft minecraft = Minecraft.getInstance();
+        return (minecraft.level == null ? 0.0F : minecraft.level.getGameTime()) + partialTick;
     }
 }

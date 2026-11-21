@@ -13,6 +13,7 @@ subir el nivel visual, y con qué se rompe cada una.
 | Efecto de luz fría | La textura emisiva es la que manda el color; la base sólo define el volumen. |
 | Halo aditivo | Tercer pase con blend **aditivo** (`RelicRenderTypes.ADDITIVE_GLOW`), configurable con `glowHalo` / `haloIntensity`. Ver §3.A. |
 | Aura | Tres billboards aditivos que giran, `glowAura` / `auraIntensity`. Ver §3.B. |
+| Anillo de estado | Cuarto billboard que solo sale en idle/cargada/alerta, con el color del estado (`glowRing` / `ringIntensity`). |
 | Shader propio | Cuarto pase con GLSL: fresnel en el borde y línea de barrido, `shaderGlow` / `shaderIntensity`. Se apaga solo con shaderpack. Ver §3.C y apéndice A. |
 
 Es decir: el «glowing», el «bloom propio» y el «glsl» están los tres dentro, cada
@@ -91,6 +92,24 @@ Detalles que importan:
 * La textura se genera con `python3 tools/make_aura.py` (sin Pillow, PNG a mano
   con `zlib`), para que sea reproducible y revisable en diff.
 
+**Anillo de estado** (`RelicAura.drawRing`, textura `relic_ring.png` de
+`tools/make_ring.py`): un solo billboard, más grande que el aura (2.05 bloques),
+que solo se dibuja cuando el estado tiene algo que decir. El estado sale de
+`RelicAnimatable.loopState()`, que ya existía para las animaciones: no hay lógica
+nueva, solo color y giro.
+
+| Estado | Color (r,g,b) | Aura | Anillo | Giro (rad/tick) |
+|---|---|---|---|---|
+| `IDLE` | 0.55 / 0.78 / 1.00 | 1.00 | 0.45 | 0.028 |
+| `CALM` | 0.42 / 0.60 / 0.78 | 0.70 | — | — |
+| `CHARGED` | 1.00 / 0.72 / 0.30 | 1.15 | 1.10 | 0.075 |
+| `ALERT` | 1.00 / 0.34 / 0.28 | 1.05 | 0.85 | −0.055 (al revés, y late) |
+| `DORMANT` | 0.34 / 0.44 / 0.60 | 0.35 | — | — |
+
+El rojo y el ámbar no son arbitrarios: son los mismos tonos que usan los packs de
+UI de Minecraft para «peligro» y «energía», así que se leen sin explicación. Y
+como el anillo late solo en `ALERT`, se distingue de `CHARGED` incluso de reojo.
+
 ### C. Core shader propio (fresnel + scanlines de holograma) — hecho en 1.0.3
 
 `.vsh`/`.fsh` propios cargados con `ShaderInstance` y un
@@ -165,6 +184,8 @@ En `config/holocore-client.toml` (sección `[visuals]`):
     haloIntensity = 0.35
     glowAura = true
     auraIntensity = 0.55
+    glowRing = true
+    ringIntensity = 0.55
     shaderGlow = true
     shaderIntensity = 0.55
 ```
@@ -179,6 +200,10 @@ Qué mirar, en orden:
    (fresnel). Si molesta, bajar `shaderIntensity`.
 4. **Con y sin shaderpack**, mismo mundo y hora: con pack el pase GLSL se apaga
    solo y el bloom lo pone el pack; sin pack manda el aditivo propio.
+5. **Estados**: en reposo el anillo es azul y lento; pega un golpe a un mob y debe
+   pasar a ámbar con giro rápido (`idle_charged`); acércate a un monstruo sin
+   pelear y debe ponerse rojo y latir (`idle_alert`); con `G` (dormida) el aura se
+   apaga a gris y no hay anillo.
 
 ## Apéndice A — el GLSL que lleva el mod desde 1.0.3
 
