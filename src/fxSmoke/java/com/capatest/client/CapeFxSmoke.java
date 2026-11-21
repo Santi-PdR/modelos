@@ -82,6 +82,7 @@ import java.util.concurrent.TimeUnit;
 /** Dev client only, in build/fx-smoke-run. No probes or extra mods in the distribution. */
 @Mod.EventBusSubscriber(modid = CapaTestMod.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class CapeFxSmoke {
+    private static final boolean COMBINED_ONLY = "1".equals(System.getenv("CAPA_PRUEBA_COMBINADA"));
     private static final String ATLAS = "assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan";
     private static final String FRAGMENT = "assets/capatest/shaders/core/cape_bloom.fsh";
     private static final String PACK_ID = "file/fx-probe";
@@ -121,7 +122,8 @@ public final class CapeFxSmoke {
         WINGS("espalda-con-elitros", 18000),
         GLIDE("planeo-real", 6000), WADE("de-pie-en-agua", 6000), SWIM("nado-horizontal", 6000),
         SWIM_EXIT("fin-del-nado", 6000), WADE_BACK("de-pie-en-agua-curios", 6000),
-        SWIM_BACK("nado-horizontal-curios", 6000), SWIM_EXIT_BACK("fin-del-nado-curios", 6000);
+        SWIM_BACK("nado-horizontal-curios", 6000), SWIM_EXIT_BACK("fin-del-nado-curios", 6000),
+        COMBINED_CHEST("maniobra-pecho", 6000), COMBINED_BACK("maniobra-curios", 6000);
 
         final String file;
         final long dayTime;
@@ -134,7 +136,7 @@ public final class CapeFxSmoke {
         boolean hotbar() { return this == HOTBAR_BARE || this == HOTBAR; }
         boolean elytra() { return this == WINGS || this == GLIDE; }
         boolean usesBack() { return this == WALK_STEVE_BACK || this == WALK_ALEX_BACK || this == AUDIT_BACK
-                || (placement() || aquatic() || jump() || climb()) && file.endsWith("-curios") || elytra(); }
+                || (placement() || aquatic() || jump() || climb() || combined()) && file.endsWith("-curios") || elytra(); }
         boolean hasBack() { return this == BOTH || usesBack(); }
         boolean placement() { return ordinal() >= PLACE_STEVE_CHEST.ordinal() && ordinal() <= PLACE_ALEX_BACK.ordinal(); }
         boolean walk() { return ordinal() >= WALK_STEVE_CHEST.ordinal() && ordinal() <= WALK_ALEX_BACK.ordinal(); }
@@ -142,7 +144,8 @@ public final class CapeFxSmoke {
         boolean audit() { return this == AUDIT_CHEST || this == AUDIT_BACK; }
         boolean jump() { return this == JUMP_CHEST || this == JUMP_BACK; }
         boolean climb() { return this == CLIMB_CHEST || this == CLIMB_BACK; }
-        boolean measureMotion() { return walk() || aquatic() || jump() || climb(); }
+        boolean combined() { return this == COMBINED_CHEST || this == COMBINED_BACK; }
+        boolean measureMotion() { return walk() || aquatic() || jump() || climb() || combined(); }
         boolean wade() { return this == WADE || this == WADE_BACK; }
         boolean swim() { return this == SWIM || this == SWIM_BACK; }
         boolean swimExit() { return this == SWIM_EXIT || this == SWIM_EXIT_BACK; }
@@ -171,7 +174,8 @@ public final class CapeFxSmoke {
     private static CapeWalkProbe.Route walkRoute;
     private static CapeJumpProbe jumpRoute;
     private static CapeClimbProbe climbRoute;
-    private static boolean jumpFit;
+    private static CapeCombinedProbe combinedRoute;
+    private static boolean jumpFit, combinedFit;
     private static CapeWalkProbe.Draw walkDraw;
     private static CapeWaterProbe waterRoute;
     private static ItemStack rendered;
@@ -240,6 +244,12 @@ public final class CapeFxSmoke {
                     if (game.getOverlay() != null || (!(game.screen instanceof TitleScreen)
                             && !(game.screen instanceof AccessibilityOnboardingScreen))) return;
                     expectMode(CapeBloom.Mode.HALO, "shader inicial compilado y enlazado");
+                    if (COMBINED_ONLY) {
+                        openWorld(game, "maniobra-smoke");
+                        step = 7;
+                        resetDeadline();
+                        return;
+                    }
                     probe = new GlowProbe();
                     probe.run(CapeBloom.Mode.HALO, true);
                     probe.run(CapeBloom.Mode.CORE, true);
@@ -292,20 +302,7 @@ public final class CapeFxSmoke {
                     expectMode(CapeBloom.Mode.HALO, "recursos reparados: el halo vuelve en el mismo renderer");
                     probe.run(CapeBloom.Mode.HALO, false);
                     checkHaloBatch(game);
-                    game.options.pauseOnLostFocus = false;
-                    game.options.hideGui = true;
-                    game.options.renderDistance().set(4);
-                    game.options.simulationDistance().set(5);
-                    game.options.framerateLimit().set(30);
-                    game.options.setCameraType(CameraType.THIRD_PERSON_BACK);
-                    GameRules rules = new GameRules();
-                    rules.getRule(GameRules.RULE_DAYLIGHT).set(false, null);
-                    rules.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, null);
-                    game.createWorldOpenFlows().createFreshLevel("fx-smoke", new LevelSettings(
-                                    "FX smoke", GameType.CREATIVE, false, Difficulty.PEACEFUL, true,
-                                    rules, WorldDataConfiguration.DEFAULT), new WorldOptions(27, false, false),
-                            registries -> registries.registryOrThrow(Registries.WORLD_PRESET)
-                                    .getHolderOrThrow(WorldPresets.FLAT).value().createWorldDimensions());
+                    openWorld(game, "fx-smoke");
                 }
                 case 7 -> {
                     if (game.player == null || game.screen != null || game.getSingleplayerServer() == null) return;
@@ -315,10 +312,15 @@ public final class CapeFxSmoke {
                         ServerPlayer player = server.getPlayerList().getPlayer(uuid);
                         check(player != null, "server player missing");
                         testSlots(player);
-                        pane = testBirth(player);
+                        pane = COMBINED_ONLY ? player.blockPosition() : testBirth(player);
                     });
                 }
                 case 8 -> {
+                    if (COMBINED_ONLY) {
+                        equipScene(game, Scene.COMBINED_CHEST);
+                        step = 9;
+                        return;
+                    }
                     if (!game.level.getBlockState(pane).is(Blocks.GLASS_PANE)) return;
                     testFlight(game);
                     equipScene(game, Scene.CHEST);
@@ -326,6 +328,15 @@ public final class CapeFxSmoke {
                 case 9 -> {
                     driveScene(game);
                     if (!captured) return;
+                    if (COMBINED_ONLY) {
+                        if (scene == Scene.COMBINED_CHEST) equipScene(game, Scene.COMBINED_BACK);
+                        else {
+                            note("PASS: maniobra combinada, giro y frenada agachada en pecho y Curios");
+                            game.stop();
+                            step = -1;
+                        }
+                        return;
+                    }
                     if (scene.swimExit()) {
                         if (!waterRoute.settled()) return;
                         check(!CapaDeteriorerItem.auraFrame(game.player).posed(), "swim frame persisted after blend");
@@ -346,6 +357,23 @@ public final class CapeFxSmoke {
         } catch (Exception | AssertionError error) {
             fail(game, error);
         }
+    }
+
+    private static void openWorld(Minecraft game, String name) {
+        game.options.pauseOnLostFocus = false;
+        game.options.hideGui = true;
+        game.options.renderDistance().set(4);
+        game.options.simulationDistance().set(5);
+        game.options.framerateLimit().set(30);
+        game.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+        GameRules rules = new GameRules();
+        rules.getRule(GameRules.RULE_DAYLIGHT).set(false, null);
+        rules.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, null);
+        game.createWorldOpenFlows().createFreshLevel(name, new LevelSettings(
+                        COMBINED_ONLY ? "Maniobra combinada" : "FX smoke", GameType.CREATIVE, false, Difficulty.PEACEFUL, true,
+                        rules, WorldDataConfiguration.DEFAULT), new WorldOptions(27, false, false),
+                registries -> registries.registryOrThrow(Registries.WORLD_PRESET)
+                        .getHolderOrThrow(WorldPresets.FLAT).value().createWorldDimensions());
     }
 
     private static void testSlots(ServerPlayer player) {
@@ -436,7 +464,7 @@ public final class CapeFxSmoke {
                 else textures.put(type, savedTexture);
                 return;
             }
-            boolean slim = next.aquatic() || next.audit() || next.jump() || next.climb() || next == Scene.WALK_ALEX_CHEST || next == Scene.WALK_ALEX_BACK
+            boolean slim = next.aquatic() || next.audit() || next.jump() || next.climb() || next.combined() || next == Scene.WALK_ALEX_CHEST || next == Scene.WALK_ALEX_BACK
                     || next.file.startsWith("posicion-alex-");
             ResourceLocation skin = slim ? ALEX : STEVE;
             check(game.getResourceManager().getResource(skin).isPresent(), "missing vanilla skin " + skin);
@@ -452,17 +480,18 @@ public final class CapeFxSmoke {
         scene = next;
         placementRoute = next.placement() ? new CapePlacementProbe.Route() : null;
         auditRoute = next.audit() ? new CapePlacementProbe.PoseAudit() : null;
-        if (next.placement() || next.audit() || next.jump()) game.options.fov().set(42);
+        combinedRoute = next.combined() ? new CapeCombinedProbe(CapeCombinedProbe.runway(pane)) : null;
+        if (next.placement() || next.audit() || next.jump() || next.combined()) game.options.fov().set(42);
         walkRoute = next.walk() ? new CapeWalkProbe.Route(next.studyQuietCloth()) : null;
         jumpRoute = next.jump() ? new CapeJumpProbe(CapeJumpProbe.deck(pane)) : null;
         climbRoute = next.climb() ? new CapeClimbProbe(CapeClimbProbe.column(pane)) : null;
         if (next.climb()) game.options.fov().set(50);
-        if (next.walk() || next.wade() || next.jump() || next.climb()) game.options.framerateLimit().set(60);
+        if (next.walk() || next.wade() || next.jump() || next.climb() || next.combined()) game.options.framerateLimit().set(60);
         if (next.wade()) waterRoute = new CapeWaterProbe();
         if (next == Scene.HOTBAR_BARE) game.options.framerateLimit().set(30);
         stableFrames = observedBirths = 0;
         captured = false;
-        if (next == Scene.HOTBAR_BARE || next.placement() || next.audit() || next.walk() || next.wade() || next.jump() || next.climb()) {
+        if (next == Scene.HOTBAR_BARE || next.placement() || next.audit() || next.walk() || next.wade() || next.jump() || next.climb() || next.combined()) {
             selectSkin(game, next);
         }
         if (next.hotbar()) {
@@ -479,7 +508,7 @@ public final class CapeFxSmoke {
         game.options.keyDown.setDown(false);
         game.options.keyJump.setDown(false);
         game.options.keyShift.setDown(false);
-        if (next == Scene.HOTBAR_BARE || next.walk() || next.audit() || next.jump() || next.climb()) {
+        if (next == Scene.HOTBAR_BARE || next.walk() || next.audit() || next.jump() || next.climb() || next.combined()) {
             game.options.keyUp.setDown(false);
             game.options.keySprint.setDown(false);
         }
@@ -519,7 +548,9 @@ public final class CapeFxSmoke {
                 player.getInventory().setItem(HOTBAR_SLOT, next == Scene.HOTBAR ? mantle() : ItemStack.EMPTY);
                 player.inventoryMenu.broadcastChanges();
             }
-            if (next.climb()) {
+            if (next.combined()) {
+                CapeCombinedProbe.prepare(player, CapeCombinedProbe.runway(pane));
+            } else if (next.climb()) {
                 CapeClimbProbe.prepare(player, CapeClimbProbe.column(pane));
             } else if (next.jump()) {
                 CapeJumpProbe.prepare(player, CapeJumpProbe.deck(pane));
@@ -555,8 +586,11 @@ public final class CapeFxSmoke {
         var player = game.player;
         if (scene.placement()) placementRoute.drive(game);
         if (scene.audit()) auditRoute.drive(game);
-        if (scene.walk() && (scene.usesBack() ? !backOf(player).getStacks().getStackInSlot(0).isEmpty()
-                : player.getItemBySlot(EquipmentSlot.CHEST).is(CapaTestMod.CAPA_DETERIORER.get()))) walkRoute.drive(game);
+        if ((scene.walk() || scene.combined()) && (scene.usesBack() ? !backOf(player).getStacks().getStackInSlot(0).isEmpty()
+                : player.getItemBySlot(EquipmentSlot.CHEST).is(CapaTestMod.CAPA_DETERIORER.get()))) {
+            if (scene.combined()) combinedRoute.drive(game);
+            else walkRoute.drive(game);
+        }
         if (scene.jump()) jumpRoute.drive(game);
         if (scene.climb()) climbRoute.drive(game);
         if (scene.strafe()) {
@@ -579,7 +613,7 @@ public final class CapeFxSmoke {
     private static void beforePlayer(RenderPlayerEvent.Pre event) {
         if (scene != null && event.getEntity() == Minecraft.getInstance().player) {
             playerPose = new Matrix4f(event.getPoseStack().last().pose());
-            if (scene.placement() || scene.audit() || scene.jump()) placementModel = event.getRenderer().getModel();
+            if (scene.placement() || scene.audit() || scene.jump() || scene.combined()) placementModel = event.getRenderer().getModel();
             if (scene.placement() && placementRoute.standing() && !captured && pending == null && stillPlayer == null) {
                 // Keep the sleeves registered between with/without plates.
                 // Keep the vanilla setupAnim path;
@@ -608,7 +642,8 @@ public final class CapeFxSmoke {
         if (scene.placement()) CapePlacementProbe.arm(renderer, placementRoute.control(), placementRoute.shoulderClothControl(),
                 placementRoute.calibration(), false);
         jumpFit = scene.jump() && jumpRoute.measureFit(event.getEntity().tickCount);
-        if (scene.audit() || jumpFit) CapePlacementProbe.arm(renderer, false, false, false, true);
+        combinedFit = scene.combined() && combinedRoute.measureFit(event.getEntity().tickCount);
+        if (scene.audit() || jumpFit || combinedFit) CapePlacementProbe.arm(renderer, false, false, false, true);
         if (scene.measureMotion()) CapeWalkProbe.arm(renderer);
     }
 
@@ -618,7 +653,7 @@ public final class CapeFxSmoke {
         framePasses++;
         rendered = renderer.getCurrentStack();
         armorPose = new Matrix4f(event.getPoseStack().last().pose());
-        if (scene.placement() || scene.audit() || jumpFit)
+        if (scene.placement() || scene.audit() || jumpFit || combinedFit)
             placementDraw = CapePlacementProbe.finish(renderer, event.getPoseStack(), placementModel);
         if (scene.measureMotion()) walkDraw = CapeWalkProbe.finish(renderer, event.getPartialTick());
         frameLight = event.getPackedLight();
@@ -633,6 +668,7 @@ public final class CapeFxSmoke {
         var player = Minecraft.getInstance().player;
         if (player != null && placementRoute != null) placementRoute.camera(event, player);
         if (player != null && auditRoute != null) auditRoute.camera(event, player);
+        if (player != null && combinedRoute != null) combinedRoute.camera(event, player);
         if (player != null && scene != null && scene.studyQuietCloth()) {
             float yaw = Mth.rotLerp((float) event.getPartialTick(), player.yBodyRotO, player.yBodyRot);
             CapePlacementProbe.orbit(event, player, yaw + 32, 12, 3.2, 1.00);
@@ -646,16 +682,18 @@ public final class CapeFxSmoke {
             walkDraw = null;
             placementDraw = null;
             placementModel = null;
-            jumpFit = false;
+            jumpFit = combinedFit = false;
             rendered = ItemStack.EMPTY;
             playerPose = armorPose = null;
             var player = Minecraft.getInstance().player;
             if (player != null && placementRoute != null) placementRoute.aim(player);
             if (player != null && auditRoute != null) auditRoute.aim(player);
+            if (player != null && combinedRoute != null) combinedRoute.aim(player);
             return;
         }
         // Also restore the clock if another mod cancelled the player draw.
         restoreAge();
+        if (combinedRoute != null) combinedRoute.restoreAim();
         if (scene == null || captured && !scene.aquatic() || pending != null) return;
         Minecraft game = Minecraft.getInstance();
         var player = game.player;
@@ -706,7 +744,7 @@ public final class CapeFxSmoke {
             return;
         }
         try {
-            if ((scene.placement() || scene.audit()) && stableFrames < 6 && framePasses != 1) {
+            if ((scene.placement() || scene.audit() || scene.combined()) && stableFrames < 6 && framePasses != 1) {
                 stableFrames++;
                 return;
             }
@@ -726,6 +764,11 @@ public final class CapeFxSmoke {
                 check(player.getModelName().equals(slim ? "slim" : "default")
                         && player.getSkinTextureLocation().equals(slim ? ALEX : STEVE), "wrong walk skin");
                 captured = walkRoute.capture(game, framePartialTick, walkDraw, shots(game), scene.file);
+                return;
+            }
+            if (scene.combined()) {
+                check(player.getModelName().equals("slim") && player.getSkinTextureLocation().equals(ALEX), "wrong combined skin");
+                captured = combinedRoute.capture(game, framePartialTick, walkDraw, placementDraw, shots(game), scene.file);
                 return;
             }
             if (scene.jump()) {

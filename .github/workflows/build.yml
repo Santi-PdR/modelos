@@ -995,6 +995,72 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Probar giro y frenada agachada en Forge (opcional)
+        id: combined-smoke
+        if: github.event_name == 'push' && contains(github.event.head_commit.message, '[probar-maniobra]')
+        env:
+          CAPA_PRUEBA_COMBINADA: '1'
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          GALLIUM_DRIVER: llvmpipe
+          ALSOFT_DRIVERS: 'null'
+        run: |
+          set -euo pipefail
+          ver=$(sed -n 's/^mod_version=//p' gradle.properties)
+          jar="capatest-$ver.jar"
+          cmp "build/libs/$jar" "entregables/v$ver/$jar"
+          echo '::notice title=Maniobra en Forge::La compilación reproduce byte por byte el JAR entregado.'
+          log="$RUNNER_TEMP/forge-combined.log"
+          mkdir -p build/fx-smoke-run/config
+          printf 'earlyWindowControl = false\n' > build/fx-smoke-run/config/fml.toml
+          rc=0
+          timeout --kill-after=12s 210s xvfb-run -a -s '-screen 0 1280x1024x24 +extension GLX -noreset' gradle -PcapeFxSmoke --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
+          if [ "$rc" -ne 0 ] || ! grep -Fq 'FX smoke: PASS: maniobra combinada' "$log" ||
+             grep -Fq -e 'FX smoke: FAIL' -e 'Blight Star Mantle: respuesta del paño desactivada' -e 'se usa el muestreador de GeckoLib' "$log"; then
+            printf '::error title=Maniobra en Forge::No se completó el cliente (salida %s).\n' "$rc"
+            grep -Ei 'exception|assertionerror|\[.*ERROR\]|^> Task .*FAILED|Blight Star Mantle:|GLX|GLFW' "$log" | \
+              grep -Eiv 'token|password|session|https?://' | awk '!seen[$0]++' | tail -n 15 | cut -c1-400 | \
+              while IFS= read -r line; do printf '::warning title=Diagnóstico de maniobra::%s\n' "${line//%/%25}"; done
+            exit 1
+          fi
+
+      - name: Medir pausa, giro y costuras durante la maniobra
+        id: verify-combined
+        if: ${{ steps.combined-smoke.outcome == 'success' }}
+        run: |
+          set -o pipefail
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_combined.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
+            case "$line" in
+              *AssertionError:*|*Error:*) printf '::error title=Maniobra en Forge::%s\n' "${line//%/%25}" ;;
+              pecho:*|curios:*) printf '::notice title=Maniobra en Forge::%s\n' "${line//%/%25}" ;;
+              *) printf '%s\n' "$line" ;;
+            esac
+          done
+
+      - name: Subir capturas y malla de la maniobra en mundo
+        if: ${{ !cancelled() && steps.combined-smoke.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: capatest-maniobra-forge
+          path: build/fx-smoke-run/fx-shots/maniobra-*
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Adjuntar sólo las evidencias de la maniobra verificada
+        if: ${{ success() && steps.verify-combined.outcome == 'success' && github.ref_name == 'arena/5a9fa51b-modelos' }}
+        run: |
+          set -euo pipefail
+          ver=$(sed -n 's/^mod_version=//p' gradle.properties)
+          cmp "build/libs/capatest-$ver.jar" "entregables/v$ver/capatest-$ver.jar"
+          dir="docs/releases/v$ver/maniobra"
+          shots=build/fx-smoke-run/fx-shots
+          mkdir -p "$dir"
+          install -m 0644 "$shots"/maniobra-{pecho.tsv,curios.tsv,forge.tsv,forge.jpg} "$dir/"
+          printf 'https://github.com/%s/actions/runs/%s\n' "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$dir/prueba.txt"
+          git add "$dir"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'Adjuntar la maniobra verificada sin modificar el JAR entregado [skip ci]'
+          git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
+
       # Cliente real en mundo desechable. Se prueba aparte del JAR:
       # el código de diagnóstico y Curios nunca se empaquetan en él.
       - name: Probar FX y equipo en Forge (opcional)
