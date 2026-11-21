@@ -52,8 +52,8 @@ public final class KatanaHud {
         }
         if (!KatanaClientConfig.SHOW_HUD.get() || !(mc.player.getMainHandItem().getItem() instanceof StainKatanaItem)) return;
         // Compact separated ability plates leave more of the world visible.
-        int w = 104, x = KatanaClientConfig.HUD_LEFT.get() ? 8 : Math.max(5, g.guiWidth() - w - 8);
-        int y = Math.max(8, g.guiHeight() - 82);
+        int w = 104, x = Math.max(5, g.guiWidth() - w - 8);
+        int y = Math.max(8, (g.guiHeight() - 69) / 2);
         String[] labels = {"stainkatana.hud.paralysis", "stainkatana.hud.slash", "stainkatana.hud.ultimate"};
         for (int i = 0; i < 3; i++) {
             int row = y + i * 23;

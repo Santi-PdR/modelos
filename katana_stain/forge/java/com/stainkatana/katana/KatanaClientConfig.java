@@ -24,7 +24,7 @@ public final class KatanaClientConfig {
         builder.pop();
         builder.push("interface");
         SHOW_HUD = builder.comment("Show small cooldown panel while holding the katana.").define("showHud", true);
-        HUD_LEFT = builder.comment("Place the katana HUD at the lower left; false uses the right edge.").define("hudLeft", true);
+        HUD_LEFT = builder.comment("Legacy setting; the HUD is now positioned at the middle right.").define("hudLeft", true);
         VANILLA_SWINGS = builder.comment("Animate ordinary katana swings without Better Combat; disable if another animation mod conflicts.").define("vanillaSwings", true);
         BLOOD_FLASH = builder.comment("Show subtle red tint after successful blood paralysis.").define("bloodFlash", true);
         builder.pop();

@@ -49,6 +49,7 @@ public final class KatanaAbilities {
         final UUID markedTarget;
         final AbilityTimeline timeline;
         Vec3 anchor;
+        Vec3 casterAnchor;
         boolean followUpImpacted;
         boolean durabilitySpent;
         int cinematicStroke;
@@ -70,9 +71,14 @@ public final class KatanaAbilities {
         Cast cast = CASTS.get(player.getUUID());
         if (cast == null) return;
         if (!player.isAlive() || player.isSpectator() || player.hasEffect(KatanaEffects.PARALYSIS.get())
-                || player.getMainHandItem() != cast.stack || !player.level().dimension().equals(cast.dimension)) {
+                || (cast.ability != 2 && player.getMainHandItem() != cast.stack) || !player.level().dimension().equals(cast.dimension)) {
             cancel(player, cast);
             return;
+        }
+        if (cast.ability == 2 && cast.casterAnchor != null) {
+            player.setDeltaMovement(Vec3.ZERO);
+            if (player.position().distanceToSqr(cast.casterAnchor) > 0.0025)
+                player.connection.teleport(cast.casterAnchor.x, cast.casterAnchor.y, cast.casterAnchor.z, player.getYRot(), player.getXRot());
         }
         long elapsed = player.getServer().overworld().getGameTime() - cast.start;
         int events = cast.timeline.advance(elapsed);
@@ -121,6 +127,11 @@ public final class KatanaAbilities {
             target.setDeltaMovement(Vec3.ZERO);
             target.hurtMarked = true;
         }
+    }
+    @SubscribeEvent public static void protectCaster(net.minecraftforge.event.entity.living.LivingAttackEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || event.getSource().getEntity() == null) return;
+        Cast cast = CASTS.get(player.getUUID());
+        if (cast != null && cast.ability == 2 && cast.dimension.equals(player.level().dimension())) event.setCanceled(true);
     }
     public static boolean isCinematicallyBound(LivingEntity entity) {
         return !entity.level().isClientSide && BOUND_TARGETS.containsKey(entity.getUUID());
@@ -185,7 +196,7 @@ public final class KatanaAbilities {
             if (arrival != null) moveTo(player, ultimateTarget, arrival);
         }
         Cast newCast = new Cast(ability, stack, level.dimension(), now, targetId);
-        if (ultimateTarget != null) newCast.anchor = ultimateTarget.position();
+        if (ultimateTarget != null) { newCast.anchor = ultimateTarget.position(); newCast.casterAnchor = player.position(); }
         CASTS.put(player.getUUID(), newCast);
         KatanaNetwork.broadcastAnimation(player, ability);
         if (ability == 2) {
@@ -378,7 +389,7 @@ public final class KatanaAbilities {
         if (nextStroke < CombatTuning.ultimateStrikeCount()
                 && elapsed >= CombatTuning.ultimateWindupTick(nextStroke)) {
             Vec3 next = safePosition(player, mob, nextStroke + 1);
-            if (next != null) moveTo(player, mob, next);
+            if (next != null) { moveTo(player, mob, next); cast.casterAnchor = player.position(); }
             KatanaNetwork.broadcastAnimation(player, 7 + cast.cinematicAnimation);
             cast.cinematicAnimation++;
         }
@@ -388,6 +399,9 @@ public final class KatanaAbilities {
             float damage = CombatTuning.damage(player.getAttributeValue(Attributes.ATTACK_DAMAGE), true);
             // Reserve the kill for the last cut, but never protect the mob from other damage sources.
             if (index < CombatTuning.ultimateStrikeCount() - 1) damage = Math.min(damage, Math.max(0, mob.getHealth() - 1));
+            // Vanilla damage immunity can otherwise swallow consecutive cinematic cuts.
+            // Clear it only immediately before a scheduled hit, never every tick.
+            if (damage > 0) mob.invulnerableTime = 0;
             if (damage > 0 && hitUltimate(player, mob, damage)) {
                 if (mob.isAlive()) StainKatanaItem.markTarget(cast.stack, mob, player.serverLevel());
                 if (!cast.durabilitySpent) {

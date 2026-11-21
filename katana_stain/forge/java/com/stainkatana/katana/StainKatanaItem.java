@@ -31,6 +31,14 @@ public class StainKatanaItem extends SwordItem implements GeoItem {
         super(Tiers.NETHERITE, 6, -2.0F, new Properties().stacksTo(1));
     }
 
+    // Keep the blade permanent even if a mod attempts to apply durability damage.
+    @Override public int getMaxDamage(ItemStack stack) { return 0; }
+    @Override public void setDamage(ItemStack stack, int damage) { super.setDamage(stack, 0); }
+    @Override public boolean isEnchantable(ItemStack stack) { return stack.getCount() == 1; }
+    @Override public boolean canApplyAtEnchantingTable(ItemStack stack, net.minecraft.world.item.enchantment.Enchantment enchantment) {
+        return enchantment.category == net.minecraft.world.item.enchantment.EnchantmentCategory.WEAPON;
+    }
+
     @Override
     public void initializeClient(Consumer<IClientItemExtensions> consumer) {
         consumer.accept(new IClientItemExtensions() {
