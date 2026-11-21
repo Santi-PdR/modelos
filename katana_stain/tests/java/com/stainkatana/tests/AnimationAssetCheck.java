@@ -25,6 +25,7 @@ public class AnimationAssetCheck {
                 Vec3f initial = player.get3DTransform("rightArm", TransformType.ROTATION, 0, Vec3f.ZERO);
                 boolean moved = false;
                 boolean freeHandMoved = false;
+                boolean itemMoved = false;
                 Vec3f freeHandStart = player.get3DTransform("leftArm", TransformType.ROTATION, 0, Vec3f.ZERO);
                 for (int i = 0; i < clip.stopTick; i++) {
                     player.tick();
@@ -32,11 +33,14 @@ public class AnimationAssetCheck {
                     Vec3f value = player.get3DTransform("rightArm", TransformType.ROTATION, 0, Vec3f.ZERO);
                     double delta = Math.abs(value.getX() - initial.getX()) + Math.abs(value.getY() - initial.getY()) + Math.abs(value.getZ() - initial.getZ());
                     if (delta > 0.001) moved = true;
+                    Vec3f item = player.get3DTransform("rightItem", TransformType.ROTATION, 0, Vec3f.ZERO);
+                    if (Math.abs(item.getX()) + Math.abs(item.getY()) + Math.abs(item.getZ()) > .1) itemMoved = true;
                     Vec3f freeHand = player.get3DTransform("leftArm", TransformType.ROTATION, 0, Vec3f.ZERO);
                     if (Math.abs(freeHand.getX() - freeHandStart.getX()) + Math.abs(freeHand.getY() - freeHandStart.getY())
                             + Math.abs(freeHand.getZ() - freeHandStart.getZ()) > .1) freeHandMoved = true;
                 }
-                if (name.equals("inspect") && !freeHandMoved) throw new AssertionError("Blood gesture free hand did not move");
+                if (name.equals("inspect") && (!freeHandMoved || !itemMoved))
+                    throw new AssertionError("Blood gesture hand or blade did not move");
                 if (player.isActive()) throw new AssertionError(name + ": never finished");
                 if (!moved) throw new AssertionError(name + ": arm never moved");
                 System.out.println(name + ": parsed, stopTick=" + clip.stopTick + ", rightArmMoves=" + moved);

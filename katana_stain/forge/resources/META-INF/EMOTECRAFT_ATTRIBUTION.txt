@@ -1,6 +1,6 @@
 Inspect, an item-inspection animation by Overseer, from Emotecraft-emotes:
 https://github.com/KosmX/Emotecraft-emotes/blob/3a0b644eb896542dc6c2c8fe519bf5a9e00a8a5f/emotes/Inspect.json
 Repository license: CC0 1.0 Universal (see EMOTECRAFT_EMOTES_CC0.txt).
-The animation has been adapted: free-arm keyframes and the description were changed;
+The animation has been adapted: free-arm and held-item keyframes and the description were changed;
 playback speed and first-person positioning are adjusted with PlayerAnimator.
 The gesture represents inspecting an item, not an explicit blood-licking motion.
