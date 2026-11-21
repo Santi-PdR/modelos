@@ -1,6 +1,7 @@
 package com.stainkatana.katana.client;
 
 import com.stainkatana.StainKatanaMod;
+import com.stainkatana.katana.KatanaClientConfig;
 import dev.kosmx.playerAnim.api.firstPerson.FirstPersonMode;
 import dev.kosmx.playerAnim.api.firstPerson.FirstPersonConfiguration;
 import dev.kosmx.playerAnim.core.data.KeyframeAnimation;
