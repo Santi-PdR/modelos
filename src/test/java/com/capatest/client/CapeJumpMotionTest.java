@@ -47,6 +47,13 @@ final class CapeJumpMotionTest {
                 peak = Math.max(peak, fall);
                 near(1, dense.weight(route == Route.SPRINT ? CapeState.SPRINT : CapeState.IDLE) + fall,
                         1e-12, "maintain the underlying gait");
+                near(1, dense.strideSupport(), 0, "full FALL must not switch off the eased limb envelope");
+                if (route == Route.SPRINT) {
+                    double room = CapeStride.groundedEnvelope(0, dense.stride(), dense.amplitude(),
+                            dense.limbAmplitude(), dense.strideSupport(), 1.4);
+                    near(room, CapeStride.groundedEnvelope(42, dense.stride(), dense.amplitude(),
+                            dense.limbAmplitude(), dense.strideSupport(), 1.4), 1e-12, "not pulled by each running footfall");
+                }
                 if (i == 0) near(last, fall, 1e-12, "no jump at a tick boundary");
                 else check(fall - last <= .14/16 + 1e-10 && last - fall <= .16/16 + 1e-10, "air response lost its slew limit");
                 if (airborne && Math.abs(pose.vertical()) <= .09 && route != Route.REPEAT)
@@ -85,6 +92,7 @@ final class CapeJumpMotionTest {
                     "normalized when transitioning into Elytra");
         }
         near(1, step.weight(CapeState.AIR), 0, "full authored gliding pose");
+        near(0, step.strideSupport(), 0, "do not predict footfalls in Elytra");
         near(0, step.weight(CapeState.FALL), 0, "no falling overlay on full glide");
         sample(step, deep, 125, .5F, 0);
         near(1, step.weight(CapeState.FALL), 0, "returning to view in mid-drop");

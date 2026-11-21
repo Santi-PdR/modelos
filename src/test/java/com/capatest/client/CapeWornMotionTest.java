@@ -53,6 +53,7 @@ final class CapeWornMotionTest {
                 double expected = previous + (current - (double) previous) * partial;
                 near(expected, motion.weight(CapeState.SWIM), 1e-12, "swim follows the visual pose at " + tick + "+" + partial);
                 near(1 - expected, motion.weight(CapeState.IDLE), 1e-12, "upright cloth while wet, even off the bottom");
+                near(1 - expected, motion.strideSupport(), 1e-12, "horizontal swim fades the upright gait envelope");
                 normalized(motion);
                 if (i == 2) {
                     slow.sample(wet, tick, .5F, 0, 0, 0, 0, previous, current);

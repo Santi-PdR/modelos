@@ -36,7 +36,7 @@ final class CapeWornMotion {
     private double start, span, sprintStart, sprintFrom;
     private double paceFrom, paceTo, swimFrom, swimTo;
     private double fallFrom, fallTo, previousFall;
-    private double time, stride, amplitude, limbAmplitude, ground;
+    private double time, stride, amplitude, limbAmplitude, ground, strideSupport;
 
     final CapeResponse response = new CapeResponse();
 
@@ -75,6 +75,11 @@ final class CapeWornMotion {
             lastTick = tick;
         }
         blendFamily(weights, time);
+        int idle = CapeState.IDLE.ordinal(), blight = CapeState.BLIGHT.ordinal();
+        // A FALL clip doesn't stop the vanilla stride from carrying through
+        // a jump. Keep the eased limb envelope independent of fall weight,
+        // otherwise a deep drop puts the top hinge back on each live footfall.
+        strideSupport = weights[idle] + weights[blight];
         // Keep the grounded gait under the drop throughout takeoff and
         // landing. The same free-hem response is still applied afterwards.
         // During a transition into Elytra, don't displace its AIR share.
@@ -91,11 +96,11 @@ final class CapeWornMotion {
         if (swim > 0) {
             for (int i = 0; i < weights.length; i++) weights[i] *= 1 - swim;
             weights[CapeState.SWIM.ordinal()] = swim;
+            strideSupport *= 1 - swim;
         }
         stride = (stepFrom + ((double) stepTo - stepFrom) * partial) * STRIDE_RADIANS / TURN;
         amplitude = paceFrom + (paceTo - paceFrom) * partial;
         limbAmplitude = unit(speedFrom + ((double) speedTo - speedFrom) * partial);
-        int idle = CapeState.IDLE.ordinal(), blight = CapeState.BLIGHT.ordinal();
         ground = weights[idle] + weights[blight];
         double step = smooth((amplitude - .04) / .49);
         double run = runWeight(time);
@@ -161,6 +166,7 @@ final class CapeWornMotion {
     float partial() { return partial; }
     double stride() { return stride; }
     double ground() { return ground; }
+    double strideSupport() { return strideSupport; }
     double amplitude() { return amplitude; }
     double limbAmplitude() { return limbAmplitude; }
 

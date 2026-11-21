@@ -27,7 +27,7 @@ jobs:
     # La rama de artefactos (artifacts/vX.Y.Z) SOLO guarda el .jar. Si el
     # workflow corriera tambien sobre ella, cada push re-construiria el
     # mod entero para nada. Aqui se salta ese run.
-    if: ${{ !startsWith(github.ref, 'refs/heads/artifacts/') && !contains(github.event.head_commit.message, '[revisar-saltos-v16725]') }}
+    if: ${{ !startsWith(github.ref, 'refs/heads/artifacts/') }}
 
     steps:
       - name: Checkout
@@ -1026,6 +1026,30 @@ jobs:
             exit 1
           fi
 
+      - name: Cargar los saltos de referencia de v1.67.24
+        id: jump-reference
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && contains(github.event.head_commit.message, '[comparar-saltos-v16724]') }}
+        uses: actions/download-artifact@v4
+        with:
+          name: capatest-fx-en-mundo
+          github-token: ${{ github.token }}
+          run-id: 44914820262
+          path: ${{ runner.temp }}/forge-saltos-v16724
+
+      - name: Medir despegue, caída y aterrizaje en Forge
+        id: verify-jumps
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && steps.jump-reference.outcome != 'failure' }}
+        run: |
+          set -o pipefail
+          base=()
+          if [ -d "$RUNNER_TEMP/forge-saltos-v16724" ]; then base=(--baseline-shots "$RUNNER_TEMP/forge-saltos-v16724"); fi
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_jumps.py build/fx-smoke-run/fx-shots "${base[@]}" 2>&1 | while IFS= read -r line; do
+            case "$line" in
+              *AssertionError:*|*Error:*) printf '::error title=Saltos en Forge::%s\n' "${line//%/%25}" ;;
+              *) printf '::notice title=Saltos en Forge::%s\n' "${line//%/%25}" ;;
+            esac
+          done
+
       - name: Cargar las tomas de referencia de v1.67.20
         id: old-cape-shots
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && contains(github.event.head_commit.message, '[comparar-v16720]') }}
@@ -1122,30 +1146,6 @@ jobs:
             case "$line" in
               *AssertionError:*|*Error:*) printf '::error title=Ciclo de nado en Forge::%s\n' "${line//%/%25}" ;;
               *) printf '::notice title=Ciclo de nado en Forge::%s\n' "${line//%/%25}" ;;
-            esac
-          done
-
-      - name: Cargar los saltos de referencia de v1.67.24
-        id: jump-reference
-        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && contains(github.event.head_commit.message, '[comparar-saltos-v16724]') }}
-        uses: actions/download-artifact@v4
-        with:
-          name: capatest-fx-en-mundo
-          github-token: ${{ github.token }}
-          run-id: 44914820262
-          path: ${{ runner.temp }}/forge-saltos-v16724
-
-      - name: Medir despegue, caída y aterrizaje en Forge
-        id: verify-jumps
-        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && steps.jump-reference.outcome != 'failure' }}
-        run: |
-          set -o pipefail
-          base=()
-          if [ -d "$RUNNER_TEMP/forge-saltos-v16724" ]; then base=(--baseline-shots "$RUNNER_TEMP/forge-saltos-v16724"); fi
-          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_jumps.py build/fx-smoke-run/fx-shots "${base[@]}" 2>&1 | while IFS= read -r line; do
-            case "$line" in
-              *AssertionError:*|*Error:*) printf '::error title=Saltos en Forge::%s\n' "${line//%/%25}" ;;
-              *) printf '::notice title=Saltos en Forge::%s\n' "${line//%/%25}" ;;
             esac
           done
 

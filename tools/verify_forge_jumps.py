@@ -108,8 +108,10 @@ def verdict(data, spans, now, before, slot):
     if before:
         assert rest['hinge'] < .52 * before['salto']['hinge'] and rest['hem'] < .75 * before['salto']['hem'], (
             slot, 'el salto normal no mejoró con respecto al JAR anterior', rest, before['salto'])
-        assert now['caida-del-borde']['landing'] < .90 * before['caida-del-borde']['landing'], (
-            slot, 'sigue el tirón de la punta al aterrizar del borde')
+        for e in spans[1:]:
+            a, b = now[e.name], before[e.name]
+            assert a['hinge'] < .60 * b['hinge'] and a['landing'] < .90 * b['landing'], (
+                slot, e.name, 'sigue el tirón en el salto con zancada o al aterrizar del borde', a, b)
 
 
 def fit(root, slot, data, spans, rig, source):
