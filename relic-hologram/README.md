@@ -88,6 +88,7 @@ En el juego:
 | Calidad (full/lite) | `/relic quality full\|lite` |
 | Ver valores actuales | `/relic info` (tres líneas: placement, estado en vivo y brillo) |
 | Probar una animación | `/relic anim <nombre>` · `/relic anim list` |
+| Ajustar cualquier clave | `/relic set` (lista) · `/relic set <clave> <valor>` |
 | Medir el coste | `/relic stats` · `/relic stats reset` |
 
 Los comandos de ajuste son de **cliente** y cambian la config en memoria al
@@ -111,6 +112,14 @@ dibujo, separando modelo y aura. Es la forma de comprobar en tu máquina lo de
 1.0.15 en el mismo sitio es la prueba— y de decidir si hace falta `quality=lite`,
 `glowHalo=false` o bajar `maxRenderDistance`: mira el número, cambia la palanca,
 vuelve a mirar. `/relic stats reset` reinicia la media.
+
+`/relic set` ajusta **cualquiera** de las claves de la tabla de configuración en
+caliente, sin cerrar el juego: `/relic set` sin argumentos lista las 22 claves con
+su valor actual, `/relic set auraIntensity 0.55` la cambia y te dice el
+valor nuevo (vale el nombre completo o el corto, siempre que no sea ambiguo). Todo es **en memoria** (el `.toml` no se toca, igual que con
+`/relic offset`): cuando el número te guste, cópialo al archivo. Las dos únicas
+claves sin pasar por aquí son `placement.shoulder` y `visuals.quality`, que tienen
+su propio comando (`/relic side`, `/relic quality`) porque además validan el texto.
 
 `pulse`, `release` y
 `toggle` sí viajan al servidor, para que el resto de jugadores vea lo mismo. El
@@ -232,6 +241,12 @@ shaders de 1.20.1 están en [BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
 | `visuals.alertRadius` | `12` | Radio en el que un monstruo activa `idle_alert`. |
 | `visuals.combatHoldTicks` | `80` | Ticks en estado cargado tras el último golpe. |
 
+Desde 1.0.20 todas estas claves (menos `placement.shoulder` y `visuals.quality`,
+que tienen `/relic side` y `/relic quality`) se pueden probar en caliente con
+`/relic set <clave> <valor>`; el archivo no se modifica, así que cuando encuentres
+el valor lo copias aquí. El CI comprueba que la tabla de `/relic set` y esta tabla
+tienen las mismas claves y los mismos rangos que `RelicConfig`.
+
 Los offsets se aplican en el espacio del hueso `body` del jugador (origen en el
 torso/cuello, Y+ abajo, Z+ espalda), no en el origen de los pies. Por eso el
 `.geo.json` centrado es el correcto: el anclaje al hombro lo pone el código y no
@@ -312,6 +327,9 @@ hay que sumar la traslación que traía `relic_hologram.geo.json`.
       un mob cerca); pasar a tercera **no** reinicia la `activation`.
 - [ ] `/relic stats` responde con los pases por dibujo (4 con base, emisivo, halo y
       GLSL) y los ms por dibujo; `/relic stats reset` los reinicia.
+- [ ] `/relic set` lista las 22 claves; `/relic set visuals.auraIntensity 0.55`
+      cambia el aura al instante y avisa de que es en memoria; un valor fuera de
+      rango se rechaza sin tocar nada.
 - [ ] Distancia > `maxRenderDistance`: deja de renderizarse (sin tirones).
 - [ ] `/relic offset 6 -6 8`, `/relic scale 1.0`, `/relic side left|right` mueven
       el núcleo en caliente y `/relic info` muestra los valores para la config.

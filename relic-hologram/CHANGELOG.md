@@ -1,5 +1,23 @@
 # Historial de cambios
 
+## 1.0.20 — `/relic set`: la configuración, en caliente
+
+* **Nuevo `/relic set`**: `/relic set` sin argumentos lista las **22 claves**
+  ajustables con su valor actual; `/relic set <clave> <valor>` la cambia al
+  instante (`auraIntensity`, `haloIntensity`, `auraTint`, `maxRenderDistance`…).
+  Nada se guarda en el `.toml`, igual que `/relic offset`: sirve para probar sobre
+  la marcha (nieve, arena, cueva) y copiar después el valor que te guste.
+  `placement.shoulder` y `visuals.quality` no pasan por aquí porque ya tienen
+  `/relic side` y `/relic quality`.
+* Un valor fuera de rango o que no es un número se rechaza **sin tocar nada**, y
+  se dice el valor que hay ahora mismo.
+* **Nuevo chequeo de CI** (`Validate config tweaks`): la tabla del comando y
+  `RelicConfig` tienen que coincidir en las claves (ninguna clave nueva se puede
+  quedar sin poder ajustarse), en el tipo (número, entero o booleano) y en el
+  **rango** de `defineInRange`. Si alguien ensancha un rango en la config y no en
+  el comando, el build falla.
+* 5 claves nuevas en `en_us` y `es_es` (38 en cada uno).
+
 ## 1.0.19 — la reliquia ya no se congela en primera persona
 
 * **Bug de verdad, no cosmético**: la máquina de estados se actualizaba dentro

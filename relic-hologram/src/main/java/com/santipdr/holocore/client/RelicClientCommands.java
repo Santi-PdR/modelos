@@ -8,6 +8,7 @@ import com.santipdr.holocore.common.RelicServer;
 import com.santipdr.holocore.config.RelicConfig;
 import com.santipdr.holocore.network.RelicActionPacket;
 import com.santipdr.holocore.network.RelicNetwork;
+import java.util.List;
 import java.util.Locale;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -92,6 +93,17 @@ public final class RelicClientCommands {
                                         SharedSuggestionProvider.suggest(shortNames(), builder))
                                 .executes(ctx -> anim(ctx.getSource(),
                                         StringArgumentType.getString(ctx, "nombre")))))
+                .then(Commands.literal("set")
+                        .executes(ctx -> setList(ctx.getSource()))
+                        .then(Commands.argument("clave", StringArgumentType.word())
+                                .suggests((ctx, builder) ->
+                                        SharedSuggestionProvider.suggest(tweakKeys(), builder))
+                                .executes(ctx -> setShow(ctx.getSource(),
+                                        StringArgumentType.getString(ctx, "clave")))
+                                .then(Commands.argument("valor", StringArgumentType.word())
+                                        .executes(ctx -> setApply(ctx.getSource(),
+                                                StringArgumentType.getString(ctx, "clave"),
+                                                StringArgumentType.getString(ctx, "valor"))))))
                 .then(Commands.literal("stats")
                         .executes(ctx -> stats(ctx.getSource()))
                         .then(Commands.literal("reset").executes(ctx -> statsReset(ctx.getSource()))))
@@ -167,6 +179,200 @@ public final class RelicClientCommands {
             return Component.translatable("message.holocore.glsl.failed");
         }
         return Component.translatable("message.holocore.glsl.on");
+    }
+
+    /**
+     * Una clave ajustable en caliente con {@code /relic set}.
+     *
+     * <p>El tipo y el rango tienen que coincidir <b>exactamente</b> con
+     * {@code RelicConfig}: el CI (paso {@code Validate config tweaks}) compara esta
+     * tabla contra los {@code define}/{@code defineInRange} de la config, asi que
+     * ni una clave olvidada ni un rango desincronizado pasan el build.</p>
+     */
+    private record Tweak(String key, Kind kind, ForgeConfigSpec.ConfigValue<?> value,
+                         double min, double max) {
+
+        enum Kind { NUMBER, WHOLE, FLAG }
+
+        static Tweak number(String key, ForgeConfigSpec.DoubleValue value, double min, double max) {
+            return new Tweak(key, Kind.NUMBER, value, min, max);
+        }
+
+        static Tweak whole(String key, ForgeConfigSpec.IntValue value, int min, int max) {
+            return new Tweak(key, Kind.WHOLE, value, min, max);
+        }
+
+        static Tweak flag(String key, ForgeConfigSpec.BooleanValue value) {
+            return new Tweak(key, Kind.FLAG, value, 0.0D, 0.0D);
+        }
+
+        String current() {
+            return switch (kind) {
+                case NUMBER -> String.format(Locale.ROOT, "%.2f", (Double) value.get());
+                case WHOLE -> String.valueOf(value.get());
+                case FLAG -> String.valueOf(value.get());
+            };
+        }
+
+        /** @return {@code false} si el texto no es un valor valido para la clave */
+        boolean apply(String raw) {
+            switch (kind) {
+                case FLAG -> {
+                    String valor = raw.toLowerCase(Locale.ROOT);
+                    if (valor.equals("true") || valor.equals("on")) {
+                        ((ForgeConfigSpec.BooleanValue) value).set(true);
+                        return true;
+                    }
+                    if (valor.equals("false") || valor.equals("off")) {
+                        ((ForgeConfigSpec.BooleanValue) value).set(false);
+                        return true;
+                    }
+                    return false;
+                }
+                case WHOLE, NUMBER -> {
+                    double parsed;
+                    try {
+                        parsed = Double.parseDouble(raw);
+                    } catch (NumberFormatException ex) {
+                        return false;
+                    }
+                    if (Double.isNaN(parsed) || parsed < min || parsed > max) {
+                        return false;
+                    }
+                    if (kind == Kind.WHOLE) {
+                        ((ForgeConfigSpec.IntValue) value).set((int) Math.round(parsed));
+                    } else {
+                        ((ForgeConfigSpec.DoubleValue) value).set(parsed);
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    /**
+     * Las 22 claves ajustables. Quedan fuera {@code placement.shoulder} y
+     * {@code visuals.quality} porque ya tienen su propio comando ({@code /relic
+     * side} y {@code /relic quality}), que ademas valida el texto.
+     */
+    private static final List<Tweak> TWEAKS = List.of(
+            Tweak.number("placement.offsetX", RelicConfig.OFFSET_X, -32.0D, 32.0D),
+            Tweak.number("placement.offsetY", RelicConfig.OFFSET_Y, -48.0D, 48.0D),
+            Tweak.number("placement.offsetZ", RelicConfig.OFFSET_Z, -24.0D, 48.0D),
+            Tweak.number("placement.scale", RelicConfig.SCALE, 0.1D, 4.0D),
+            Tweak.flag("visuals.glowLayer", RelicConfig.GLOW_LAYER),
+            Tweak.flag("visuals.glowHalo", RelicConfig.GLOW_HALO),
+            Tweak.number("visuals.haloIntensity", RelicConfig.HALO_INTENSITY, 0.0D, 1.0D),
+            Tweak.flag("visuals.glowAura", RelicConfig.GLOW_AURA),
+            Tweak.number("visuals.auraIntensity", RelicConfig.AURA_INTENSITY, 0.0D, 1.0D),
+            Tweak.flag("visuals.auraTint", RelicConfig.AURA_TINT),
+            Tweak.flag("visuals.glowRing", RelicConfig.GLOW_RING),
+            Tweak.number("visuals.ringIntensity", RelicConfig.RING_INTENSITY, 0.0D, 1.0D),
+            Tweak.number("visuals.flashIntensity", RelicConfig.FLASH_INTENSITY, 0.0D, 2.0D),
+            Tweak.flag("visuals.shaderGlow", RelicConfig.SHADER_GLOW),
+            Tweak.number("visuals.shaderIntensity", RelicConfig.SHADER_INTENSITY, 0.0D, 1.0D),
+            Tweak.flag("visuals.reducedEffects", RelicConfig.REDUCED_EFFECTS),
+            Tweak.flag("visuals.idleVariations", RelicConfig.IDLE_VARIATIONS),
+            Tweak.whole("visuals.maxRenderDistance", RelicConfig.MAX_RENDER_DISTANCE, 4, 128),
+            Tweak.whole("visuals.glitchMinSeconds", RelicConfig.GLITCH_MIN_SECONDS, 2, 600),
+            Tweak.whole("visuals.glitchMaxSeconds", RelicConfig.GLITCH_MAX_SECONDS, 2, 900),
+            Tweak.whole("visuals.alertRadius", RelicConfig.ALERT_RADIUS, 2, 48),
+            Tweak.whole("visuals.combatHoldTicks", RelicConfig.COMBAT_HOLD_TICKS, 10, 600));
+
+    private static String[] tweakKeys() {
+        return TWEAKS.stream().map(Tweak::key).toArray(String[]::new);
+    }
+
+    /**
+     * Busca una clave por su nombre completo ({@code visuals.auraIntensity})
+     * <b>o</b> por el corto ({@code auraIntensity}), que es como se escriben en la
+     * tabla del README. Solo se acepta el corto si no es ambiguo.
+     */
+    private static Tweak tweak(String clave) {
+        String buscada = clave.toLowerCase(Locale.ROOT);
+        for (Tweak tweak : TWEAKS) {
+            if (tweak.key().toLowerCase(Locale.ROOT).equals(buscada)) {
+                return tweak;
+            }
+        }
+        Tweak unica = null;
+        for (Tweak tweak : TWEAKS) {
+            if (!tweak.key().toLowerCase(Locale.ROOT).endsWith("." + buscada)) {
+                continue;
+            }
+            if (unica != null) {
+                return null;
+            }
+            unica = tweak;
+        }
+        return unica;
+    }
+
+    /**
+     * {@code /relic set} sin argumentos: todas las claves con su valor actual, en
+     * tres lineas para que quepan en el chat.
+     */
+    private static int setList(CommandSourceStack source) {
+        StringBuilder linea = new StringBuilder();
+        int enLinea = 0;
+        for (Tweak tweak : TWEAKS) {
+            if (enLinea == 8) {
+                String texto = linea.toString();
+                source.sendSuccess(() -> Component.translatable("message.holocore.set_list", texto)
+                        .withStyle(ChatFormatting.DARK_AQUA), false);
+                linea.setLength(0);
+                enLinea = 0;
+            }
+            if (enLinea > 0) {
+                linea.append(" · ");
+            }
+            linea.append(tweak.key()).append('=').append(tweak.current());
+            enLinea++;
+        }
+        if (enLinea > 0) {
+            String texto = linea.toString();
+            source.sendSuccess(() -> Component.translatable("message.holocore.set_list", texto)
+                    .withStyle(ChatFormatting.DARK_AQUA), false);
+        }
+        source.sendSuccess(() -> Component.translatable("message.holocore.set_usage",
+                String.format(Locale.ROOT, "%.2f", RelicConfig.AURA_INTENSITY.get()))
+                .withStyle(ChatFormatting.GRAY), false);
+        return TWEAKS.size();
+    }
+
+    private static int setShow(CommandSourceStack source, String clave) {
+        Tweak tweak = tweak(clave);
+        if (tweak == null) {
+            source.sendFailure(Component.translatable("message.holocore.set_unknown", clave));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("message.holocore.set_value",
+                tweak.key(), tweak.current()).withStyle(ChatFormatting.AQUA), false);
+        return 1;
+    }
+
+    /**
+     * Fija una clave <b>en memoria</b>, igual que {@code /relic offset}: el archivo
+     * no se toca, para poder probar sobre la marcha y copiar despues el valor al
+     * {@code holocore-client.toml}. Un valor fuera del rango de la config se
+     * rechaza entero en vez de recortarse: asi lo que contesta el comando es
+     * siempre lo que se aplico. El CI comprueba que los rangos coinciden.
+     */
+    private static int setApply(CommandSourceStack source, String clave, String valor) {
+        Tweak tweak = tweak(clave);
+        if (tweak == null) {
+            source.sendFailure(Component.translatable("message.holocore.set_unknown", clave));
+            return 0;
+        }
+        if (!tweak.apply(valor)) {
+            source.sendFailure(Component.translatable("message.holocore.set_bad_value",
+                    tweak.key(), tweak.current()));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("message.holocore.set_value",
+                tweak.key(), tweak.current()).withStyle(ChatFormatting.AQUA), false);
+        return 1;
     }
 
     /**

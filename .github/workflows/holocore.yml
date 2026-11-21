@@ -344,6 +344,99 @@ jobs:
           print(f'Comandos OK: {len(subcomandos)} documentados -> {", ".join(subcomandos)}')
           PY
 
+      # /relic set es una segunda copia de la tabla de config (claves, tipos y
+      # rangos). Una copia sin comprobar es una mentira a plazos: aqui se compara
+      # con RelicConfig y falla en cuanto se separan.
+      - name: Validate config tweaks
+        run: |
+          python3 - <<'PY'
+          import pathlib, re
+
+          def codigo(ruta):
+              texto = pathlib.Path(ruta).read_text(encoding='utf-8')
+              texto = re.sub(r'/\*.*?\*/', '', texto, flags=re.S)
+              return re.sub(r'//[^\n]*', '', texto)
+
+          config = codigo('relic-hologram/src/main/java/com/santipdr/holocore/config/RelicConfig.java')
+          comandos = codigo('relic-hologram/src/main/java/com/santipdr/holocore/client/RelicClientCommands.java')
+
+          # --- config: campo -> clave, tipo y rango ---
+          campo_de = {}
+          for m in re.finditer(r'(\w+)\s*=\s*b\.comment\(', config):
+              golpe = re.search(r'\.(define\w*)\("(\w+)"', config[m.end():m.end() + 800])
+              assert golpe, f'no se encontro el define de {m.group(1)}'
+              campo_de[m.group(1)] = golpe.group(2)
+
+          seccion, declaradas = '', {}
+          for linea in config.splitlines():
+              push = re.search(r'\.push\("(\w+)"\)', linea)
+              if push:
+                  seccion = push.group(1)
+                  continue
+              if re.search(r'\.pop\(\)', linea):
+                  seccion = ''
+                  continue
+              rango = re.search(
+                  r'\.defineInRange\("(\w+)",\s*(-?[\d.]+)D?,\s*(-?[\d.]+)D?,\s*(-?[\d.]+)D?\)', linea)
+              if rango:
+                  clave, defecto, minimo, maximo = rango.groups()
+                  # 'D' pegado al numero = literal double; ojo, la clave
+                  # maxRenderDistance tambien lleva una D en el nombre.
+                  entero = not re.search(r'[\d.]D\s*[,)]', linea)
+                  declaradas[f'{seccion}.{clave}'] = ('whole' if entero else 'number',
+                                                      float(minimo), float(maximo))
+                  continue
+              bandera = re.search(r'\.define\("(\w+)",\s*(?:true|false)\)', linea)
+              if bandera:
+                  declaradas[f'{seccion}.{bandera.group(1)}'] = ('flag', 0.0, 0.0)
+                  continue
+              if re.search(r'\.defineEnum\(', linea):
+                  clave = re.search(r'\.defineEnum\("(\w+)"', linea).group(1)
+                  declaradas[f'{seccion}.{clave}'] = ('enum', 0.0, 0.0)
+
+          assert len(declaradas) == 24, f'esperaba 24 claves en RelicConfig, hay {len(declaradas)}'
+
+          # --- comando: Tweak.<tipo>("clave", RelicConfig.CAMPO, min, max) ---
+          tabla = {}
+          for linea in comandos.splitlines():
+              m = re.search(r'Tweak\.(number|whole|flag)\("([\w.]+)",\s*RelicConfig\.(\w+)'
+                              r'(?:,\s*(-?[\d.]+)D?,\s*(-?[\d.]+)D?)?\)', linea)
+              if not m:
+                  continue
+              tipo, clave, campo, minimo, maximo = m.groups()
+              if tipo == 'flag':
+                  tabla[clave] = ('flag', campo, 0.0, 0.0)
+              else:
+                  assert minimo and maximo, f'{clave} sin rango explicito'
+                  tabla[clave] = (tipo, campo, float(minimo), float(maximo))
+
+          assert tabla, 'no se encontro ninguna clave en /relic set'
+
+          # shoulder y quality tienen su propio comando y validan el texto.
+          exentas = {k for k, v in declaradas.items() if v[0] == 'enum'}
+          faltan = sorted(set(declaradas) - exentas - set(tabla))
+          sobran = sorted(set(tabla) - set(declaradas))
+          assert not faltan, f'claves de config sin /relic set: {faltan}'
+          assert not sobran, f'/relic set con claves que no existen en la config: {sobran}'
+
+          for clave, (tipo, campo, minimo, maximo) in sorted(tabla.items()):
+              esperado = declaradas[clave]
+              assert tipo == esperado[0], f'{clave}: tipo {tipo} pero la config es {esperado[0]}'
+              assert campo_de.get(campo) == clave.split('.')[1], \
+                  f'{clave}: apunta a RelicConfig.{campo}, que es {campo_de.get(campo)}'
+              assert (minimo, maximo) == (esperado[1], esperado[2]), \
+                  f'{clave}: rango {minimo}..{maximo} pero la config dice {esperado[1]}..{esperado[2]}'
+
+          # /relic set acepta el nombre corto (auraIntensity). Si dos claves
+          # compartieran nombre corto, esa forma dejaria de funcionar en silencio.
+          cortos = [clave.split('.')[-1] for clave in tabla]
+          repetidos = sorted({c for c in cortos if cortos.count(c) > 1})
+          assert not repetidos, f'nombres cortos ambiguos en /relic set: {repetidos}'
+
+          print(f'Config tweaks OK: {len(tabla)} claves ajustables, {len(exentas)} con comando propio,'
+                f' tipos y rangos iguales a RelicConfig.')
+          PY
+
       # 1.0.19 saco la actualizacion del estado del renderer: en primera persona
       # no hay renderer y la reliquia se quedaba congelada. Esto fija el cableado
       # (tick del cliente + marca de dibujado) para que no vuelva atras.

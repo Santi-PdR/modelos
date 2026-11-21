@@ -31,5 +31,10 @@
   "message.holocore.anim_list": "Animations: %s",
   "message.holocore.stats": "Stats: %s relic(s) in memory · %s draws/s · %s passes per draw",
   "message.holocore.stats_time": "Model %s ms · aura %s ms per draw (%s draws in %s s) — /relic stats reset restarts",
-  "message.holocore.stats_reset": "Stats reset."
+  "message.holocore.stats_reset": "Stats reset.",
+  "message.holocore.set_list": "Adjustable: %s",
+  "message.holocore.set_usage": "Usage: /relic set <key> <value> — e.g. /relic set visuals.auraIntensity %s",
+  "message.holocore.set_value": "%s = %s (in memory; edit holocore-client.toml to keep it)",
+  "message.holocore.set_unknown": "Unknown key: %s (try /relic set)",
+  "message.holocore.set_bad_value": "Not a valid value for %s (currently %s)"
 }
