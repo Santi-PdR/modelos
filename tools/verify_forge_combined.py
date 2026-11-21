@@ -24,7 +24,11 @@ def timeline(data, slot):
     t = data['time']
     keys = data.dtype.names
     assert all(np.isfinite(data[k]).all() for k in keys if k != 'image'), (slot, 'traza inválida')
-    assert len(t) > 115 and t[0] < 2 and t[-1] >= 109 and np.all(np.diff(t) >= 0), (slot, 'ruta incompleta')
+    # The first render can wait for the server's daylight packet, while
+    # the script is still warming up. Require the start-of-run still and
+    # explicit tick coverage within every measured part, not an idle prefix.
+    assert 0 <= t[0] < 27 and t[-1] >= 109 and np.all(np.diff(t) >= 0), (
+        slot, 'ruta incompleta', len(t), float(t[0]), float(t[-1]))
     assert (data['ground'] == 1).all() and not any(data[k].any() for k in ('air', 'fall', 'swim')), (slot, 'no fue una maniobra en suelo seco')
 
     def span(lo, hi):
@@ -48,8 +52,12 @@ def timeline(data, slot):
     use = pairs(t, 44, 85)
     assert use.sum() >= 28, (slot, 'faltan pares en giro y frenada')
     rate = np.linalg.norm(np.diff(points(data, 'tip'), axis=0)[use], axis=1) / np.diff(t)[use]
-    assert 0.2 < np.quantile(rate, .90) and rate.max() < 6., (slot, 'punta inmóvil o latigazo', rate.max())
-    return len(t), np.quantile(rate, .90), rate.max()
+    p90, peak = float(np.quantile(rate, .90)), float(rate.max())
+    peak_tick = float(t[:-1][use][rate.argmax()])
+    print(f'{slot}: ventana registrada {t[0]:.2f}–{t[-1]:.2f} ticks; punta p90/pico '
+          f'{p90:.3f}/{peak:.3f}u/tick, máximo en t={peak_tick:.2f}.', flush=True)
+    assert p90 > .2 and peak < 6., (slot, 'punta inmóvil o latigazo', peak, peak_tick)
+    return len(t), p90, peak
 
 
 def fit(root, data, slot, rig, source):
