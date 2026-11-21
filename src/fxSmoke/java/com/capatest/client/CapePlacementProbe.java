@@ -41,8 +41,12 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     private boolean measuringContact;
     private boolean measuringMotion;
     private boolean active;
+    private final CapaArmorRenderer renderer;
 
-    private CapePlacementProbe(CapaArmorRenderer renderer) { super(renderer); }
+    private CapePlacementProbe(CapaArmorRenderer renderer) {
+        super(renderer);
+        this.renderer = renderer;
+    }
 
     private static Method positionMethod() {
         try {
@@ -76,7 +80,8 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 });
     }
 
-    static void arm(CapaArmorRenderer renderer, boolean hidePlates, boolean measureContact, boolean measureMotion) {
+    static void arm(CapaArmorRenderer renderer, boolean hidePlates, boolean hideShoulderCloth,
+                    boolean measureContact, boolean measureMotion) {
         var p = of(renderer);
         p.active = true;
         p.measuringMotion = measureMotion;
@@ -90,6 +95,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         for (var registered : renderer.getGeoModel().getAnimationProcessor().getRegisteredBones()) {
             if (!(registered instanceof GeoBone b) || !tracked(b.getName())) continue;
             if (plate(b.getName())) b.setHidden(hidePlates);
+            if (CapeFit.SHOULDERS_BONE.equals(b.getName())) b.setHidden(hideShoulderCloth);
             b.setTrackingMatrices(true);
             p.tracked.add(b);
         }
@@ -120,7 +126,10 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             for (var point : new Vector3f[]{new Vector3f(), new Vector3f(1,0,0), new Vector3f(0,1,0), new Vector3f(0,0,1)})
                 points.add(model.transformPosition(point).mul(16));
         }
-        for (var cube : bone.getCubes()) {
+        boolean omitLip = renderer.hidesInteriorLip(bone);
+        for (int i = 0; i < bone.getCubes().size(); ++i) {
+            if (omitLip && i == CapeMountPlacement.LINING_LIP_CUBE) continue;
+            var cube = bone.getCubes().get(i);
             pose.pushPose();
             try {
                 RenderUtils.translateToPivotPoint(pose, cube);
@@ -140,7 +149,8 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                             hi.max(vert.position());
                         }
                     }
-                    if (plate(n)) quad(faces, n, clip, verts[0].position(), verts[1].position(), verts[2].position(), verts[3].position());
+                    if (plate(n) || CapeFit.SHOULDERS_BONE.equals(n))
+                        quad(faces, n, clip, verts[0].position(), verts[1].position(), verts[2].position(), verts[3].position());
                 }
                 if (measuringContact) box(boxes, n, model, lo, hi);
             } finally {
@@ -161,7 +171,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             if (solid != null) require(solid.equals(b.getModelSpaceMatrix(), .0001F),
                     "solid and emissive matrices differ: " + b.getName());
             b.setTrackingMatrices(false);
-            if (plate(b.getName())) b.setHidden(false);
+            if (plate(b.getName()) || CapeFit.SHOULDERS_BONE.equals(b.getName())) b.setHidden(false);
         }
         p.tracked.clear();
         require(player != null, "missing live vanilla model");
@@ -360,6 +370,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
 
         boolean calibration() { return shot == 0; }
         boolean control() { return view() < VIEWS.length && shot % 2 == 1; }
+        boolean shoulderClothControl() { return shot == VIEWS.length * 2; }
         boolean standing() { return view() < VIEWS.length || frame < SWEEP + TURN; }
 
         void aim(LocalPlayer p) {
@@ -374,14 +385,16 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         }
 
         private int view() { return Math.min(shot / 2, VIEWS.length); }
-        private float pitch() { return view() < VIEWS.length ? 0 : frame < SWEEP ? -89 + frame*(178F/(SWEEP-1)) : -64; }
+        private float pitch() {
+            return view() < VIEWS.length || shoulderClothControl() ? 0 : frame < SWEEP ? -89 + frame*(178F/(SWEEP-1)) : -64;
+        }
         private float yaw() {
-            return view() < VIEWS.length || frame < SWEEP || frame >= SWEEP + TURN
+            return view() < VIEWS.length || shoulderClothControl() || frame < SWEEP || frame >= SWEEP + TURN
                     ? 0 : 74*Mth.sin((float) ((frame-SWEEP)*Math.PI/5));
         }
 
         void camera(ViewportEvent.ComputeCameraAngles event, LocalPlayer player) {
-            int view = view();
+            int view = shoulderClothControl() ? 1 : view();
             orbit(event, player, CAMERA_YAW[view], CAMERA_PITCH[view],
                     view == 5 ? 1.62 : view == 6 ? 2.80 : 2.95, view == 5 ? 1.34 : 1.00);
         }
@@ -397,6 +410,11 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             if (standing() && !game.player.onGround()) return false;
             if (standing()) require(Math.abs(draw.pitch()-pitch()) < .02 && Math.abs(draw.yaw()-yaw()) < .02,
                     "pose not applied to live head: " + draw.pitch() + "/" + draw.yaw());
+            if (shoulderClothControl()) {
+                save(game, root, fixture + "-frente-sin-tela-hombros");
+                shot++;
+                return false;
+            }
             if (!control()) {
                 if (rest == null) rest = draw.rigid();
                 require(rest.keySet().equals(draw.rigid().keySet()) && rest.keySet().containsAll(List.of(CapePlateFit.SMALL, CapePlateFit.WIDE)),

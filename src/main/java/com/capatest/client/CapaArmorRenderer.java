@@ -175,6 +175,33 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         }
     }
 
+    boolean hidesInteriorLip(GeoBone bone) {
+        return mountInChest && !elytra && (CapeBacking.LEFT.equals(bone.getName()) || CapeBacking.RIGHT.equals(bone.getName()))
+                && bone.getParent() != null && CapeFit.SEAT_FRAME.equals(bone.getParent().getName())
+                && bone.getCubes().size() == CapeMountPlacement.LINING_CUBES;
+    }
+
+    @Override
+    public void renderCubesOfBone(PoseStack poseStack, GeoBone bone, VertexConsumer buffer, int light, int overlay,
+                                  float red, float green, float blue, float alpha) {
+        if (!hidesInteriorLip(bone)) {
+            super.renderCubesOfBone(poseStack, bone, buffer, light, overlay, red, green, blue, alpha);
+            return;
+        }
+        if (bone.isHidden()) return;
+        // Keep the spine and lower return. Exclude only the obsolete upper
+        // lip from both passes; never mutate the shared baked geometry.
+        for (int i = 0; i < bone.getCubes().size(); ++i) {
+            if (i == CapeMountPlacement.LINING_LIP_CUBE) continue;
+            poseStack.pushPose();
+            try {
+                renderCube(poseStack, bone.getCubes().get(i), buffer, light, overlay, red, green, blue, alpha);
+            } finally {
+                poseStack.popPose();
+            }
+        }
+    }
+
     @Override
     public void renderChildBones(PoseStack poseStack, CapaDeteriorerItem animatable, GeoBone bone,
                                  RenderType renderType, MultiBufferSource buffers, VertexConsumer buffer,

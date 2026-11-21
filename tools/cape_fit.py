@@ -274,6 +274,7 @@ def mount_profile():
     code = SOURCE.with_name('CapeMountPlacement.java').read_text()
     number = r'-?(?:\d+(?:\.\d+)?|\.\d+)'
     values = {name:float(n) for name,n in re.findall(r'final double (\w+) = ('+number+r');', code)}
+    values.update({name:int(n) for name,n in re.findall(r'final int (LINING_\w+) = (\d+);', code)})
     for key, prefix in (('plates',''), ('wingPlates','WING_')):
         values[key] = [list(map(float,re.findall(number, re.search(
             r'\b'+prefix+name+r' = new Plate\([^,]+,([^;]+)\);',code)[1]))) for name in ('SMALL','WIDE')]
@@ -336,6 +337,9 @@ def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False, hoo
         piece = dict(b,**changes.get(n,{}))
         if flex and piece.get('parent') == G.FIT_BONE and hood_moves(n):
             piece['parent'] = 'worn_hood'
+        if (flex and n in B.profile()['names'] and piece.get('parent') == seat and 'LINING_LIP_CUBE' in f
+                and len(piece.get('cubes', ())) == f['LINING_CUBES']):
+            piece['cubes'] = [cube for i, cube in enumerate(piece['cubes']) if i != f['LINING_LIP_CUBE']]
         if fixed and plates and piece.get('parent') == G.FIT_BONE and n in ('v18_pad_0','v18_pad_1'):
             x,y,z,dx,dy,dz,rx,ry,rz = worn_plate(int(n[-1]),elytra,slim)
             pad = dict(name='shoulder_'+n,parent='chestplate',pivot=[x,y,z],offset=[dx,dy,dz],

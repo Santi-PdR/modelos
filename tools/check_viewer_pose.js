@@ -39,6 +39,14 @@ const matrices = vm.runInContext(`${src}
     if (indata.mountPlateSamples) {
       return indata.mountPlateSamples.map(([w,slim,i])=>wornPlate(indata.fit.mount,i,!!w,!!slim));
     }
+    if (indata.mountLiningSamples) {
+      const {geo,fit,parts}=indata;
+      const source=parts.map(n=>geo.bones.find(b=>b.name===n).cubes);
+      return indata.mountLiningSamples.map(wings=>{
+        const posed=fixedWearerPose(geo,fit,0,!!wings,true);
+        return parts.flatMap((n,i)=>source[i].map(c=>+posed.bones.find(b=>b.name===n).cubes.includes(c)));
+      });
+    }
     if (indata.hoodSamples) {
       const {geo,fit,parts}=indata;
       return indata.hoodSamples.map(([stance,wings,...inputs]) => {

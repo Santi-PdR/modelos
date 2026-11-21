@@ -15,7 +15,7 @@ import numpy as np
 import armor_model_pipeline as G
 import cape_animation_pipeline as A
 import cape_fit as F
-from cape_contact import back_and_sleeves, original_dimensions
+from cape_contact import back_and_sleeves, original_dimensions, shoulder_seams
 import cape_tracks as T
 import preview_cloth as P
 from bbmodel_export import DOC
@@ -111,6 +111,27 @@ def hood_parity(geo, java_samples=None):
     print(f'{len(case)} poses de capucha: sólo gira el borde alto, sin mover el asiento ni alterar los élitros.',flush=True)
 
 
+def lining_parity(geo):
+    parts = F.B.profile()['names']
+    source = {b['name']:b['cubes'] for b in geo['bones'] if b['name'] in parts}
+    assert len(source) == 2 and all(len(cs) == 3 for cs in source.values()), source.keys()
+    expected = []
+    for wings in (False,True):
+        pose = F.fixed_wearer_pose(geo,0.,elytra=wings)
+        cubes = {b['name']:b['cubes'] for b in pose['bones'] if b['name'] in parts}
+        expected.append([int(any(c is keep for keep in cubes[n])) for n in parts for c in source[n]])
+    assert expected == [[1,0,1]*2,[1,1,1]*2], expected
+    np.testing.assert_array_equal(viewer(geo=geo,mountLiningSamples=[False,True],parts=parts),expected)
+    # Reproduce the nape stripe's geometric cause using the exact vanilla
+    # solid head, not its transparent outer skin layer.
+    transform = P.matrices(F.fixed_wearer_pose(geo,0.,slim=True))
+    head = (P.CORNERS*8+[-4,0,-4]) @ P.R('x',-79)[:3,:3].T + F.HEAD_PIVOT
+    for n in parts:
+        lip = P.cube_points(source[n][1],transform[n])
+        assert lap(lip[None],head[None]) > .4, n
+    print('Sólo se omiten las dos pestañas que cruzaban la nuca; las demás piezas del forro y los élitros quedan intactos.',flush=True)
+
+
 def exercise(geo):
     model = WornModel(geo)
     names = np.asarray(model.names)
@@ -122,7 +143,6 @@ def exercise(geo):
     box_estimates = []
     contacts_still = []
     authored = model.place(P.matrices(geo))
-    parts_source = {n:authored[names==n] for n in np.unique(names)}
     plates = np.char.startswith(names,'v18_pad_')
     hood = np.array([F.hood_moves(n) for n in names])
     shoulders = names == G.SHOULDERS_BONE
@@ -139,14 +159,20 @@ def exercise(geo):
         assert local[mount,:,1].min() > 10, 'cambió el soporte rígido'
         if not wings and body == 0:
             for slim in (False,True):
-                fitted = model.place(P.matrices(F.fixed_wearer_pose(geo,0.,slim=slim)))
-                parts = {n:fitted[names==n] for n in np.unique(names)}
+                pose = F.fixed_wearer_pose(geo,0.,slim=slim)
+                fitted = model.place(P.matrices(pose))
+                draw = WornModel(pose)
+                rendered, original = (draw.place(mats) for mats in (P.matrices(pose),P.matrices(geo)))
+                draw_names = np.asarray(draw.names)
+                parts = {n:rendered[draw_names==n] for n in np.unique(draw_names)}
+                parts_source = {n:original[draw_names==n] for n in np.unique(draw_names)}
                 parts['body'] = (P.CORNERS*[8,12,4]+[-4,12,-2])[None]
                 parts['jacket'] = (P.CORNERS*[8.5,12.5,4.5]+[-4.25,11.75,-2.25])[None]
                 sleeve = P.CORNERS*[3.5 if slim else 4.5,12.5,4.5]+[3.75,11.25 if slim else 11.75,-2.25]
                 parts['left_sleeve'],parts['right_sleeve'] = sleeve[None],(sleeve*[-1,1,1])[None]
                 label = 'Alex' if slim else 'Steve'
                 original_dimensions(parts, parts_source, label)
+                shoulder_seams(parts, label)
                 np.testing.assert_allclose(fitted[garment] - authored[garment],
                                            np.broadcast_to(offset, fitted[garment].shape), atol=1e-10, rtol=0)
                 contacts_still.append(back_and_sleeves(parts,label))
@@ -190,4 +216,5 @@ if __name__=='__main__':
         geo = P.load(P.ARMOR_GEO)
         parity(geo,args.java_samples)
         hood_parity(geo,args.hood_samples)
+        lining_parity(geo)
         exercise(geo)

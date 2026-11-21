@@ -571,8 +571,9 @@ public final class CapeFxSmoke {
     private static void beforeArmor(GeoRenderEvent.Armor.Pre event) {
         if (scene == null || event.getEntity() != Minecraft.getInstance().player) return;
         if (!(event.getRenderer() instanceof CapaArmorRenderer renderer)) return;
-        if (scene.placement()) CapePlacementProbe.arm(renderer, placementRoute.control(), placementRoute.calibration(), false);
-        if (scene.audit()) CapePlacementProbe.arm(renderer, false, false, true);
+        if (scene.placement()) CapePlacementProbe.arm(renderer, placementRoute.control(), placementRoute.shoulderClothControl(),
+                placementRoute.calibration(), false);
+        if (scene.audit()) CapePlacementProbe.arm(renderer, false, false, false, true);
         if (scene.walk()) CapeWalkProbe.arm(renderer);
     }
 

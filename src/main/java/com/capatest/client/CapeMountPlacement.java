@@ -12,14 +12,20 @@ final class CapeMountPlacement {
     static final double WING_SADDLE_WIDTH = 1.08;
     static final double WING_SADDLE_DEPTH = .33;
     // Present a little of the existing shoulder fabric above the sleeves.
-    static final double SHOULDER_LIFT = .46;
-    static final double SHOULDER_FORWARD = .44;
+    static final double SHOULDER_LIFT = .50;
+    static final double SHOULDER_FORWARD = .76;
+    // Both halves of the old backing have an upper, forward-facing lip.
+    // The fitted seat/saddle already cover its seam; this lip pierces the
+    // nape at a steep downward aim. Keep the other two cubes and the asset.
+    static final int LINING_LIP_CUBE = 1;
+    static final int LINING_CUBES = 3;
 
     // Rigid whole-plate poses over the sleeves; X is mirrored on draw.
+    // Turn the small rim to expose its fabric seam, and level the wide rim.
     static final Plate SMALL = new Plate(CapePlateFit.SMALL, -5.84, 22.35, 4.46,
-            -.50, 2.00, -4.20, -2, 12, 0, .26);
+            -.61, 1.95, -4.06, -9, 24, 1.5, .26);
     static final Plate WIDE = new Plate(CapePlateFit.WIDE, 7.24, 22.43, 4.16,
-            -.82, .98, -3.91, -8, 56, 14, -.15);
+            -.61, .78, -4.00, -17.5, 65, 0, -.15);
 
     // Keep the independent fit with Elytra.
     static final Plate WING_SMALL = new Plate(CapePlateFit.SMALL, -5.84, 22.35, 4.46,

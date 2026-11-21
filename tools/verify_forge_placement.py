@@ -10,7 +10,9 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw
 
-from cape_contact import back_and_sleeves, original_dimensions
+from bbmodel_export import mod_version
+from cape_contact import back_and_sleeves, original_dimensions, shoulder_seams
+from cape_fit import fixed_wearer_pose
 from preview_cloth import ARMOR_GEO, load, matrices
 from verify_v1660 import WornModel
 from verify_forge_mount import emit, read
@@ -66,13 +68,51 @@ def front_coverage(root, fixture):
     return np.asarray(result)
 
 
-def report(root, baseline=None):
+def front_fabric(root, fixture):
+    """Isolate the fabric in the real draw; plate pixels are not cloth pixels."""
+    name = f'{fixture}-frente'
+    worn, control = (read(root/f'{name}{suffix}.png') for suffix in ('','-sin-tela-hombros'))
+    assert worn.shape == control.shape, name
+    mask, = masks_for(root,name,(worn.shape[1],worn.shape[0]),('v20_mount_shoulders',))
+    solid = mask & (np.abs(worn-control).max(2) >= 8)
+    left, right = np.split(solid, [worn.shape[1]//2], axis=1)
+    count = np.asarray([left.sum(), right.sum()])
+    assert min(count) >= 20, (name, 'no se distingue el ribete de tela en ambos hombros', count.tolist())
+    return count
+
+
+def nape_recovery(root, baseline):
+    """Compare dark breaks inside Alex's orange hair in the same vanilla F5 pose."""
+    def hair(path):
+        pixels = read(path)
+        h, w = pixels.shape[:2]
+        r,g,b = pixels[round(.33*h):round(.59*h), w//2-round(.18*h):w//2+round(.18*h)].transpose(2,0,1)
+        orange = (r >= 115) & (r-g >= 27) & (g-b >= 22)
+        # Restrict to dark interruptions flanked by hair on the same scanline.
+        inside = np.maximum.accumulate(orange,1) & np.maximum.accumulate(orange[:,::-1],1)[:,::-1]
+        return orange, inside & (r < 95)
+
+    with (root/'nuca-forge.tsv').open('w') as f:
+        print('ranura\tpostura\tfranja_oscura_base_px\tdevueltos_al_pelo_px',file=f)
+        for slot in ('pecho','curios'):
+            for pose in ('cenital','agachado-cenital'):
+                filename = f'revision-alex-{slot}-{pose}-00.png'
+                _, old = hair(baseline/filename)
+                orange, _ = hair(root/filename)
+                total, recovered = old.sum(), (old & orange).sum()
+                print(slot,pose,total,recovered,sep='\t',file=f)
+                print(f'::notice title=Nuca en Forge::Alex {slot}/{pose}: {recovered}/{total} píxeles de la franja oscura '
+                      'vuelven a mostrar pelo en F5.')
+                assert total >= 30 and recovered >= .65*total, (filename,total,recovered)
+
+
+def report(root, baseline=None, baseline_version='1.67.20'):
     geo = load(ARMOR_GEO)
-    rig = WornModel(geo)
+    rig = WornModel(fixed_wearer_pose(geo,0.))
     original = defaultdict(list)
     for name, cube in zip(rig.names, rig.place(matrices(geo)), strict=True):
         original[name].append(cube)
-    front_rows = []
+    front_rows, fabric_rows = [], []
     for fixture in FIXTURES:
         rows = np.genfromtxt(root/f'{fixture}-recorrido.tsv',names=True,delimiter='\t',dtype=None,encoding='utf-8')
         orbit, aim, jump = (rows[rows['mode']==m] for m in ('orbit','aim','jump'))
@@ -87,15 +127,28 @@ def report(root, baseline=None):
         parts = read_contacts(root,fixture)
         cubes = original_dimensions(parts, original, fixture)
         body, rays, seam, overlap = back_and_sleeves(parts, fixture)
+        weave = shoulder_seams(parts,fixture)
+        fabric = front_fabric(root,fixture)
+        fabric_rows.append((fixture,*fabric,*weave.ravel()))
+        print(f'::notice title=Tela frontal en Forge::{fixture}: {fabric.tolist()} px de tela sobre los hombros; '
+              f'contacto con retornos {weave[:,0].round(3).tolist()}u y placas {weave[:,1].round(3).tolist()}u.')
         visible = front_coverage(root,fixture)
         coverage = [f'{px:.0f} px, {wide:.0%} del ancho' for px,wide in visible]
         if baseline is not None:
             old = front_coverage(baseline,fixture)
             ratio = (visible[:,0].sum()/old[:,0].sum())
             print(f'::notice title=Lectura frontal::{fixture}: {old[:,0].astype(int).tolist()} → '
-                  f'{visible[:,0].astype(int).tolist()} píxeles de placa sobre las mangas ({ratio:.1%} de v1.67.20).')
+                  f'{visible[:,0].astype(int).tolist()} píxeles de placa sobre las mangas ({ratio:.1%} de v{baseline_version}).')
             front_rows.append((fixture, *old[:,0].astype(int), *visible[:,0].astype(int)))
-            assert ratio >= (1.03 if '-alex-' in fixture else .97), (fixture,'lectura frontal',ratio)
+            # The flatter rim exposes fabric instead of maximizing dark plate
+            # pixels. Keep both plates legible (front_coverage) and the total
+            # coverage near the last delivered fit, with a separate fabric gate.
+            if baseline_version == '1.67.20':
+                minimum = 1.03 if '-alex-' in fixture else .97
+            else:
+                minimum = .85
+                assert min(visible[:,0]/old[:,0]) >= .80, (fixture,'disminuyó demasiado una placa',visible,old)
+            assert ratio >= minimum, (fixture,'lectura frontal',ratio)
         print(f'::notice title=Montaje fijo en Forge::{fixture}: órbita {drift[0]:.6f}u ({len(orbit)} vistas); '
               f'mirada {drift[1]:.6f}u ({len(aim)} poses); salto {drift[2]:.6f}u, {jump["lift"].max():.2f} bloques. '
               f'Placas sobre las mangas de frente: {" / ".join(coverage)}. '
@@ -106,25 +159,39 @@ def report(root, baseline=None):
             print('fixture\tbase_compacta\tbase_ancha\tcompacta\tancha',file=f)
             for row in front_rows:
                 print(*row,sep='\t',file=f)
+    with (root/'tela-frontal-forge.tsv').open('w') as f:
+        print('fixture\tizquierda_px\tderecha_px\tcompacta_retorno_u\tcompacta_placa_u\tancha_retorno_u\tancha_placa_u',file=f)
+        for fixture,left,right,*seams in fabric_rows:
+            print(fixture,left,right,*(f'{x:.3f}' for x in seams),sep='\t',file=f)
+    if baseline is not None and baseline_version == '1.67.21':
+        nape_recovery(root,baseline)
 
 
-def comparison(root, baseline):
+def comparison(root, baseline, baseline_version='1.67.20'):
     cw,ch = 270,246
-    board = Image.new('RGB',(cw*3,46+(ch+24)*4),'#15101a')
+    columns = ('FRENTE','TRES CUARTOS','ESPALDA F5','CENITAL F5')
+    board = Image.new('RGB',(cw*len(columns),46+(ch+24)*4),'#15101a')
     pen = ImageDraw.Draw(board)
     pen.text((10,10),'ALEX / FORGE 1.20.1 / MISMA CAMARA POR PAREJA',fill='#ffe4f0')
-    for c,title in enumerate(('FRENTE','ESPALDA F5','CENITAL F5')):
+    for c,title in enumerate(columns):
         pen.text((c*cw+10,30),title,fill='#efc5da')
     for j,slot in enumerate(('pecho','curios')):
-        views = (f'posicion-alex-{slot}-frente.png',f'revision-alex-{slot}-reposo-00.png',f'revision-alex-{slot}-cenital-00.png')
-        for i,(path,title) in enumerate(((baseline,'BASE v1.67.20'),(root,'AJUSTE v1.67.21'))):
+        views = (f'posicion-alex-{slot}-frente.png',f'posicion-alex-{slot}-diagonal.png',
+                 f'posicion-alex-{slot}-espalda.png',f'revision-alex-{slot}-cenital-00.png')
+        # Show the complete silhouette from behind; frame the collar and
+        # sleeve joins more tightly elsewhere, identically in both versions.
+        framing = ((.58,.31),(.62,.32),(1.,.50),(.48,.515))
+        for i,(path,title) in enumerate(((baseline,f'BASE v{baseline_version}'),(root,f'AJUSTE v{mod_version()}'))):
             y = 46+(ch+24)*(j*2+i)
             pen.text((10,y+4),f'{slot.upper()} / {title}',fill='#ffe4f0')
             for c,name in enumerate(views):
                 with Image.open(path/name) as raw:
                     w,h = raw.size
-                    d = min(w,round(h*cw/ch))
-                    crop = raw.crop(((w-d)//2,0,(w+d)//2,h)).convert('RGB')
+                    height, center = framing[c]
+                    hh = round(h*height)
+                    d = min(w,round(hh*cw/ch))
+                    top = round(h*center)-hh//2
+                    crop = raw.crop(((w-d)//2,top,(w+d)//2,top+hh)).convert('RGB')
                     board.paste(crop.resize((cw-6,ch),Image.Resampling.LANCZOS),(c*cw+3,y+19))
     board.save(root/'comparacion-alex-forge.jpg',quality=93,optimize=True)
 
@@ -163,10 +230,11 @@ if __name__=='__main__':
     ap.add_argument('shots', type=Path)
     ap.add_argument('--gallery-only', action='store_true')
     ap.add_argument('--baseline-shots', type=Path)
+    ap.add_argument('--baseline-version', default='1.67.20')
     args = ap.parse_args()
     if args.gallery_only:
         gallery(args.shots)
         if args.baseline_shots:
-            comparison(args.shots,args.baseline_shots)
+            comparison(args.shots,args.baseline_shots,args.baseline_version)
     else:
-        report(args.shots,args.baseline_shots)
+        report(args.shots,args.baseline_shots,args.baseline_version)

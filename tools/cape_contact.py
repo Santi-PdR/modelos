@@ -50,6 +50,24 @@ def original_dimensions(parts, source, label):
     return count
 
 
+def shoulder_seams(parts, label):
+    """Each visible strip must still meet its own plate and collar return."""
+    strips = np.asarray(parts['v20_mount_shoulders'])
+    returns = np.asarray(parts['v17_cowl_return'])
+    assert len(strips) == 2, (label, 'faltan piezas de tela sobre los hombros')
+    seams = []
+    for n in ('v18_pad_0','v18_pad_1'):
+        pad = np.asarray(parts[n])
+        sign = np.sign(pad[:,:,0].mean())
+        fabric = strips[strips[:,:,0].mean(1)*sign>0]
+        back = returns[returns[:,:,0].mean(1)*sign>0]
+        assert len(fabric) == 1 and len(back), (label,n)
+        seam = [lap(fabric,back),lap(fabric,pad)]
+        assert seam[0] > .15 and seam[1] > .28, (label,n,'se separó la tela del hombro',seam)
+        seams.append(seam)
+    return np.asarray(seams)
+
+
 def back_and_sleeves(parts, label):
     """Check visible cloth against bare skin, not a hidden gusset against a jacket."""
     body = np.asarray(parts['body'])

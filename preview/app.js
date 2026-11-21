@@ -286,6 +286,9 @@ function fixedWearerPose(geo, profile, stance, elytra, slim, hood) {
     if (!elytra && fixed && h && name==='v20_mount_shoulders') piece={...piece,offset:[0,f.SHOULDER_LIFT,-f.SHOULDER_FORWARD]};
     if (!elytra && fixed && h && piece.parent===profile.bone && /^v17_cowl_(back|front)_/.test(name))
       piece={...piece,parent:'worn_hood'};
+    if (!elytra && fixed && half>=0 && piece.parent===profile.seat.frame &&
+        f.LINING_LIP_CUBE!==undefined && piece.cubes?.length===f.LINING_CUBES)
+      piece={...piece,cubes:piece.cubes.filter((_,i)=>i!==f.LINING_LIP_CUBE)};
     if (elytra) {
       if (half>=0) piece={...piece,scale:[1,a.tuckY,a.wingZ]};
       if (name==='v20_mount_shoulders') piece={...piece,scale:shoulderScales(0,0,0,true)};

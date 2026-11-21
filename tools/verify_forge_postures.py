@@ -15,7 +15,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from cape_contact import lap, original_dimensions
-from cape_fit import hood_moves
+from cape_fit import fixed_wearer_pose, hood_moves
 from preview_cloth import ARMOR_GEO, load, matrices
 from verify_v1660 import WornModel, contacts
 
@@ -146,7 +146,7 @@ def gallery(root, pictures):
 
 def run(root):
     geo = load(ARMOR_GEO)
-    rig = WornModel(geo)
+    rig = WornModel(fixed_wearer_pose(geo,0.))
     source = defaultdict(list)
     for name, cube in zip(rig.names,rig.place(matrices(geo)),strict=True):
         source[name].append(cube)
