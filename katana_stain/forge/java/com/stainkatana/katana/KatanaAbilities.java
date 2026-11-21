@@ -188,6 +188,9 @@ public final class KatanaAbilities {
         if (ultimateTarget != null) newCast.anchor = ultimateTarget.position();
         CASTS.put(player.getUUID(), newCast);
         KatanaNetwork.broadcastAnimation(player, ability);
+        if (ability == 0) {
+            level.playSound(null, player.blockPosition(), SoundEvents.IRON_GOLEM_REPAIR, SoundSource.PLAYERS, .45F, 1.6F);
+        }
     }
 
     /** Find solid, collision-free and visible footing near the target, without loading chunks. */
@@ -437,7 +440,10 @@ public final class KatanaAbilities {
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 160, 1, false, false, true));
         KatanaNetwork.broadcastVisual(player, player.getX(), player.getY(0.7), player.getZ(), 4);
         KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(0.55), target.getZ(), 2);
-        level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(0.55), target.getZ(), 1, 0, 0, 0, 0);
+        level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(0.55), target.getZ(), 10, .3, .35, .3, .02);
+        Vec3 bloodHand = player.getEyePosition().add(player.getLookAngle().scale(.45)).add(0, -.45, 0);
+        level.sendParticles(KatanaParticles.SHARD.get(), bloodHand.x, bloodHand.y, bloodHand.z, 8, .12, .18, .12, .01);
+        level.playSound(null, player.blockPosition(), SoundEvents.HONEY_BLOCK_BREAK, SoundSource.PLAYERS, .55F, 1.25F);
         level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, .7F, .65F);
         player.displayClientMessage(Component.translatable("stainkatana.stun_used"), true);
         return true;
@@ -462,7 +468,10 @@ public final class KatanaAbilities {
                 KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.55), target.getZ(), 2);
             }
             level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.55), target.getZ(), 4, .25, .25, .25, 0);
-            if (!ultimate) KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.55), target.getZ(), 2);
+            if (!ultimate) {
+                KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.55), target.getZ(), 2);
+                level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, .7F, 1.15F);
+            }
         }
         // El corte existe aunque la víctima se aparte durante la preparación.
         arc(level, player, facing, ultimate);

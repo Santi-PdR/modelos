@@ -1,7 +1,7 @@
 {
     "name": "Inspect",
     "author": "Overseer",
-    "description": "Inspect an item",
+    "description": "Adapted from Overseer Inspect: draw blood along the raised blade with the free hand.",
     "emote":{
         "isLoop": "false",
         "returnTick": 2,
@@ -1018,7 +1018,28 @@
                 "rightArm":{
                     "pitch":-0.009960570372641087
                 }
-            }
+            },
+            {"tick": 1, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"pitch": 0}},
+            {"tick": 1, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"yaw": 0}},
+            {"tick": 1, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"roll": 0}},
+            {"tick": 12, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"pitch": -0.35}},
+            {"tick": 12, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"yaw": 0.15}},
+            {"tick": 12, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"roll": 0.25}},
+            {"tick": 20, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"pitch": -0.9}},
+            {"tick": 20, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"yaw": 0.28}},
+            {"tick": 20, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"roll": 0.65}},
+            {"tick": 27, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"pitch": -1.15}},
+            {"tick": 27, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"yaw": 0.32}},
+            {"tick": 27, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"roll": 0.95}},
+            {"tick": 35, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"pitch": -0.85}},
+            {"tick": 35, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"yaw": 0.18}},
+            {"tick": 35, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"roll": 0.72}},
+            {"tick": 45, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"pitch": -0.42}},
+            {"tick": 45, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"yaw": 0.1}},
+            {"tick": 45, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"roll": 0.35}},
+            {"tick": 59, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"pitch": 0}},
+            {"tick": 59, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"yaw": 0}},
+            {"tick": 59, "easing": "EASEINOUTQUAD", "turn": 0, "leftArm": {"roll": 0}}
         ]
     }
 }

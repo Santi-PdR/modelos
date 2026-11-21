@@ -40,7 +40,7 @@ public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
             // Separate hand-space adjustments: the two vanilla pipelines have different origins.
             // These are provisional and must be checked against the rendered grip, not just the bone pivot.
             if (context == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND || context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND)
-                poseStack.translate(0, -1.2 / 16.0, 0);
+                poseStack.translate(0, 8.4 / 16.0, 0);
             else if (context == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND || context == ItemDisplayContext.FIRST_PERSON_LEFT_HAND)
                 poseStack.translate(0, -1.2 / 16.0, 0);
             super.renderByItem(stack, context, poseStack, buffers, light, overlay);

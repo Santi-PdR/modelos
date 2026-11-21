@@ -28,6 +28,8 @@ public final class KatanaVisuals {
             // Tilt the world-oriented plane toward the viewer: at zero pitch it
             // becomes nearly invisible when viewed from behind at eye level.
             level.addParticle(KatanaParticles.SLASH.get(), x, y, z, visualYaw, 55, 0);
+            // A second, crossing slash gives each confirmed cut a readable silhouette.
+            level.addParticle(KatanaParticles.PULSE.get(), x, y, z, visualYaw, 75, leftHanded ? -20 : 20);
         } else if (style == 1) {
             // First stroke of the ultimate, angled across the body.
             level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw, 90, leftHanded ? -25 : 25);
