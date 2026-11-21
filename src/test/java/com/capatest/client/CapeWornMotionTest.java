@@ -18,11 +18,75 @@ final class CapeWornMotionTest {
             throw new AssertionError(what + ": " + actual + " (expected " + expected + ")");
     }
 
+    private static float swimAt(int tick) {
+        return Math.min(1, .09F * Math.max(0, tick - 111));
+    }
+
     private static void sample(CapeWornMotion gait, int tick, float fraction) {
-        gait.sample(wearer(tick), tick, fraction, STEP[tick-1], STEP[tick], SPEED[tick-1], SPEED[tick]);
+        gait.sample(wearer(tick), tick, fraction, STEP[tick-1], STEP[tick], SPEED[tick-1], SPEED[tick],
+                swimAt(tick - 1), swimAt(tick));
+        normalized(gait);
+    }
+
+    private static void normalized(CapeWornMotion gait) {
         double sum = 0;
-        for (CapeState state : CapeWornMotion.MODES) sum += gait.weight(state);
+        for (CapeState state : CapeWornMotion.MODES) {
+            double weight = gait.weight(state);
+            if (!(weight >= 0 && weight <= 1)) throw new AssertionError(state + " fuera de rango: " + weight);
+            sum += weight;
+        }
         near(1, sum, 1e-12, "normalized blend");
+    }
+
+    private static void swimCycle() {
+        var wet = new CapeState.Wearer(false, false, true, true, false, true, 0, -.12);
+        var land = CapeState.Wearer.STILL;
+        var motion = new CapeWornMotion();
+        var slow = new CapeWornMotion();
+        float previous = 0, current = 0;
+        for (int tick = 1; tick <= 50; tick++) {
+            if (tick >= 8 && tick < 24) current = Math.min(1, previous + .09F);
+            if (tick >= 30) current = Math.max(0, previous - .09F);
+            for (int i = 0; i <= 4; i++) {
+                float partial = i / 4F;
+                motion.sample(wet, tick, partial, 0, 0, 0, 0, previous, current);
+                double expected = previous + (current - (double) previous) * partial;
+                near(expected, motion.weight(CapeState.SWIM), 1e-12, "swim follows the visual pose at " + tick + "+" + partial);
+                near(1 - expected, motion.weight(CapeState.IDLE), 1e-12, "upright cloth while wet, even off the bottom");
+                normalized(motion);
+                if (i == 2) {
+                    slow.sample(wet, tick, .5F, 0, 0, 0, 0, previous, current);
+                    near(expected, slow.weight(CapeState.SWIM), 1e-12, "FPS independent swim");
+                    motion.sample(wet, tick, .125F, 0, 0, 0, 0, previous, current);
+                    near(expected, motion.weight(CapeState.SWIM), 1e-12, "earlier pass didn't rewind swim");
+                }
+            }
+            previous = current;
+        }
+        for (int tick = 51; tick <= 58; tick++)
+            motion.sample(wet, tick, 1, tick - 51, tick - 50, .8F, .8F, 0, 0);
+        near(1, motion.weight(CapeState.WALK), 0, "moving upright in water walks, not sprints");
+        near(0, motion.weight(CapeState.SPRINT), 0, "no sprint flare with feet in water");
+        motion.sample(wet, 80, 1, 0, 0, 0, 0, 1, 1);
+        near(1, motion.weight(CapeState.SWIM), 0, "resume a swimmer already horizontal");
+        // Crossing onto land while the body is still horizontal must not
+        // drop the cloth in one frame or leave the swimming clip stuck.
+        for (int i = 0; i < 11; i++) {
+            motion.sample(land, 81 + i, 0, 0, 0, 0, 0, 1, 1);
+            near(Math.max(0, 1 - .10 * i), motion.weight(CapeState.SWIM), 1e-12, "no snap on the shore");
+            motion.sample(land, 81 + i, 1, 0, 0, 0, 0, 1, 1);
+            near(Math.max(0, .9 - .10 * i), motion.weight(CapeState.SWIM), 1e-12, "shore fades to dry crawl");
+            normalized(motion);
+        }
+        // A dry crawl entering water already has swimAmount=1. Ramp in
+        // instead of selecting the whole SWIM clip at the boundary.
+        motion.sample(wet, 92, .5F, 0, 0, 0, 0, 1, 1);
+        near(.05, motion.weight(CapeState.SWIM), 1e-12, "soft entry while already horizontal");
+        motion.sample(land, 200, .5F, 0, 0, 0, 0, 1, 1);
+        near(0, motion.weight(CapeState.SWIM), 0, "dry crawl after render gap");
+        var glide = new CapeState.Wearer(false, true, true, true, false, true, .10, -.3);
+        motion.sample(glide, 20, .5F, 0, 0, 0, 0, 1, 1);
+        near(1, motion.weight(CapeState.AIR), 0, "glide remains the active pose");
     }
 
     public static void main(String[] args) {
@@ -76,15 +140,15 @@ final class CapeWornMotionTest {
                 case 48 -> near(1, a.weight(CapeState.SPRINT), 0, "full sprint");
                 case 104 -> near(1, a.weight(CapeState.SNEAK), 0, "crouch");
                 case 110 -> near(1, a.weight(CapeState.FALL), 0, "fall independent of step speed");
-                case 119 -> near(1, a.weight(CapeState.SWIM), 0, "swim");
+                case 123 -> near(1, a.weight(CapeState.SWIM), 0, "swim");
             }
         }
         var still = CapeState.Wearer.STILL;
-        a.sample(still, 10, .25F, 0, 0, 0, 0);
+        a.sample(still, 10, .25F, 0, 0, 0, 0, 0, 0);
         near(1, a.weight(CapeState.IDLE), 0, "rewound wearer has no stale pose");
-        a.sample(wearer(50), 50, .75F, 3, 4, 1, 1);
+        a.sample(wearer(50), 50, .75F, 3, 4, 1, 1, 0, 0);
         near(1, a.weight(CapeState.SPRINT), 0, "returning visible wearer resumes current gait");
-        a.sample(still, 100, .25F, 4, 4, 0, 0);
+        a.sample(still, 100, .25F, 4, 4, 0, 0, 0, 0);
         near(.0025, a.phase(CapeState.IDLE, 100), 1e-12, "loop remainder");
         double maxJump = 0, prev = 0;
         for (int i = 0; i <= 100; i++) {
@@ -103,6 +167,7 @@ final class CapeWornMotionTest {
                 "non-grounded pose keeps actual limb clearance");
         if (CapeStride.groundedEnvelope(55, .2, .20, .70, 1, 1) < eased + 10)
             throw new AssertionError("clearance for additional arm gesture lost");
-        System.out.println("CapeWornMotion: ticks, fracciones, cambio de paso, frenado, pausa e independencia comprobados");
+        swimCycle();
+        System.out.println("CapeWornMotion: marcha, frenado, pausa, nado y orilla continuos por portador");
     }
 }

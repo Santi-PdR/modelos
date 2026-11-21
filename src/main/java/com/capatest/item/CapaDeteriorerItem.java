@@ -91,7 +91,10 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
                 state.getController().transitionLength(CapePlayback.FIRST_BLEND);
                 state.setAnimation(ITEM_ANIM);
             } else {
-                CapeState pose = playback.sample(readWearer(entity, state.getData(DataTickets.ITEMSTACK)), entity.tickCount);
+                boolean horizontalSwim = entity instanceof LivingEntity living && living.isVisuallySwimming()
+                        && !living.isPassenger() && !living.isAutoSpinAttack();
+                CapeState pose = playback.sample(readWearer(entity, state.getData(DataTickets.ITEMSTACK)),
+                        entity.tickCount, horizontalSwim);
                 state.getController().transitionLength(playback.blendTicks());
                 state.setAnimation(WORN_ANIMATIONS.get(pose));
             }

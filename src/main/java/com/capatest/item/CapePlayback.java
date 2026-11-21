@@ -18,13 +18,19 @@ public final class CapePlayback {
     private int blendTicks = FIRST_BLEND;
 
     public CapeState sample(CapeState.Wearer wearer, int tick) {
+        return sample(wearer, tick, false);
+    }
+
+    /** The GeckoLib fallback can choose a discrete swim clip. The worn mixer
+     * instead uses the upright family and adds the interpolated swim pose. */
+    public CapeState sample(CapeState.Wearer wearer, int tick, boolean horizontalSwim) {
         if (tick < lastTick || tick - lastTick > 10) locomotion = null;
         lastTick = tick;
         if (wearer.elytra()) {
             locomotion = CapeState.AIR;
-        } else if (wearer.water()) {
+        } else if (wearer.water() && horizontalSwim) {
             locomotion = CapeState.SWIM;
-        } else if (wearer.airborne()) {
+        } else if (wearer.airborne() && !wearer.water()) {
             double threshold = locomotion == CapeState.FALL ? FALL_EXIT : FALL_ENTER;
             locomotion = wearer.vertical() < threshold ? CapeState.FALL : CapeState.AIR;
         } else if (wearer.crouching()) {
@@ -32,7 +38,7 @@ public final class CapePlayback {
         } else {
             double threshold = isStride(locomotion) ? WALK_EXIT : WALK_ENTER;
             locomotion = wearer.horizontalSquared() > threshold
-                    ? (wearer.sprinting() ? CapeState.SPRINT : CapeState.WALK) : CapeState.IDLE;
+                    ? (!wearer.water() && wearer.sprinting() ? CapeState.SPRINT : CapeState.WALK) : CapeState.IDLE;
         }
 
         // The damaged rest pose still has its heartbeat. While moving the cloth must

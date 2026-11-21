@@ -16,6 +16,9 @@ final class CapeWornMotion {
     private static final double OPEN_PER_TICK = .105;
     private static final double CLOSE_PER_TICK = .070;
     private static final double PACE_RATE = .58;
+    // Vanilla changes getSwimAmount by .09/tick. Match that blend in the
+    // water, but don't jump on a wet/dry boundary (e.g. crawling into water).
+    private static final double SWIM_PER_TICK = .10;
     static final CapeState[] MODES = CapeState.values();
     private final CapePlayback selector = new CapePlayback();
     private final double[] from = new double[MODES.length];
@@ -25,13 +28,17 @@ final class CapeWornMotion {
     private int lastTick;
     private float partial;
     private double start, span, sprintStart, sprintFrom;
-    private double paceFrom, paceTo;
+    private double paceFrom, paceTo, swimFrom, swimTo;
     private double time, stride, amplitude, limbAmplitude, ground;
 
     final CapeResponse response = new CapeResponse();
 
     void sample(CapeState.Wearer wearer, int tick, float fraction,
-                float stepFrom, float stepTo, float speedFrom, float speedTo) {
+                float stepFrom, float stepTo, float speedFrom, float speedTo,
+                float vanillaSwimFrom, float vanillaSwimTo) {
+        boolean aquatic = wearer.water() && !wearer.elytra();
+        double swimBefore = aquatic && Float.isFinite(vanillaSwimFrom) ? unit(vanillaSwimFrom) : 0;
+        double swimNow = aquatic && Float.isFinite(vanillaSwimTo) ? unit(vanillaSwimTo) : 0;
         long gap = (long) tick - lastTick;
         boolean fresh = target == null || gap < 0 || gap > MAX_GAP;
         // Extra passes at an earlier fractional time are not a new game tick.
@@ -44,16 +51,26 @@ final class CapeWornMotion {
             response.reset();
             target = null;
             paceTo = unit(speedFrom);
+            swimTo = swimBefore;
         }
         if (fresh || gap > 0) {
             // Tick input, not render frequency. If a frame was skipped, use
             // the previous vanilla speed for the elapsed ticks we didn't see.
             paceFrom = approach(paceTo, unit(speedFrom), fresh ? 0 : (int) gap - 1);
             paceTo = approach(paceFrom, unit(speedTo), 1);
+            swimFrom = approachSwim(swimTo, swimBefore, fresh ? 0 : (int) gap - 1);
+            swimTo = approachSwim(swimFrom, swimNow, 1);
             select(wearer, tick);
             lastTick = tick;
         }
         blendFamily(weights, time);
+        // SWIM is a layer on the other families, not a competing transition
+        // that can lag the body or stay selected after it becomes upright.
+        double swim = swimFrom + (swimTo - swimFrom) * partial;
+        if (swim > 0) {
+            for (int i = 0; i < weights.length; i++) weights[i] *= 1 - swim;
+            weights[CapeState.SWIM.ordinal()] = swim;
+        }
         stride = (stepFrom + ((double) stepTo - stepFrom) * partial) * STRIDE_RADIANS / TURN;
         amplitude = paceFrom + (paceTo - paceFrom) * partial;
         limbAmplitude = unit(speedFrom + ((double) speedTo - speedFrom) * partial);
@@ -73,7 +90,7 @@ final class CapeWornMotion {
             case IDLE, BLIGHT, WALK, SPRINT -> wearer.blight() ? CapeState.BLIGHT : CapeState.IDLE;
             default -> pose;
         };
-        boolean running = wearer.sprinting();
+        boolean running = !wearer.water() && wearer.sprinting();
         if (target == null) {
             target = family;
             Arrays.fill(from, 0);
@@ -104,6 +121,12 @@ final class CapeWornMotion {
             old += Math.max(-CLOSE_PER_TICK, Math.min(OPEN_PER_TICK, delta));
         }
         return old;
+    }
+
+    private static double approachSwim(double old, double goal, int ticks) {
+        double step = SWIM_PER_TICK * ticks;
+        double delta = goal - old;
+        return Math.abs(delta) <= step ? goal : old + Math.copySign(step, delta);
     }
 
     double weight(CapeState mode) { return weights[mode.ordinal()]; }

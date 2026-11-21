@@ -62,8 +62,12 @@ public final class CapeRuntimeTest {
                 "no se alcanza la reproducción del ciclo durante subida y bajada");
         check(p.sample(airborne(false, false, -.05), 22) == CapeState.FALL, "oscilación cerca del ápice");
         check(p.sample(dash, 23) == CapeState.SPRINT && p.blendTicks() == 3, "aterrizaje tardío");
-        check(p.sample(airborne(false, true, -.2), 24) == CapeState.SWIM && p.blendTicks() == 4, "entrada al agua");
-        check(p.sample(airborne(true, true, -.2), 25) == CapeState.AIR, "prioridad de planeo");
+        var wading = new CapeState.Wearer(false, false, true, true, false, true, .024, -.2);
+        check(p.sample(wading, 24) == CapeState.WALK && wading.cosmeticState() == CapeState.SWIM,
+                "vadear no selecciona nado ni carrera, pero conserva los FX acuáticos");
+        check(p.sample(wading, 25, true) == CapeState.SWIM && p.blendTicks() == 4, "nado en el fallback");
+        check(p.sample(wading, 26) == CapeState.WALK && p.blendTicks() == 4, "fin del nado con el cuerpo aún en el agua");
+        check(p.sample(airborne(true, true, -.2), 27, true) == CapeState.AIR, "prioridad de planeo");
         check(p.sample(ground(false, false, .038), 200) == CapeState.IDLE, "historia de otro tramo");
         p.reset();
         check(p.sample(ground(true, false, 0), 0) == CapeState.BLIGHT && p.blendTicks() == 8, "reinicio de modelo");
