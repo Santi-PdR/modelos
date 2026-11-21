@@ -120,6 +120,11 @@ defecto. Dos detalles que esto arregla sin código extra:
 * el anillo **se desvanece** al pasar a `CALM`/`DORMANT` en lugar de desaparecer;
 * al ir de `ALERT` a `IDLE` el giro pasa por cero y se invierte suave, no de golpe.
 
+El mismo factor `aura` del estado multiplica el halo aditivo y el pase GLSL del
+modelo (`RelicGeoRenderer.renderHologram(..., glowScale)`): así `DORMANT` atenúa
+todo el brillo junto y no deja un modelo a plena potencia con el aura apagada,
+que era la incoherencia más visible de 1.0.5.
+
 ### C. Core shader propio (fresnel + scanlines de holograma) — hecho en 1.0.3
 
 `.vsh`/`.fsh` propios cargados con `ShaderInstance` y un

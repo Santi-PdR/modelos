@@ -55,11 +55,17 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
      *   <li>shader propio (opcional): el mismo blend aditivo, pero con fresnel y
      *       linea de barrido calculados en GLSL. Ver {@link RelicShaders}.</li>
      * </ol>
+     *
+     * <p>{@code glowScale} viene del estado de la reliquia (el mismo factor que
+     * usa {@link RelicAura}), para que el modelo entero responda igual: dormida
+     * brilla menos, cargada brilla mas. Sin esto el aura se apagaba en dormido
+     * mientras el halo y el shader seguian a tope, que es justo lo que canta.</p>
      * Ninguno de los pases vuelve a animar: GeckoLib detecta que es el mismo
      * frame y conserva las matrices de los huesos.
      */
     public void renderHologram(PoseStack poseStack, RelicAnimatable animatable,
-                               MultiBufferSource bufferSource, float partialTick, int packedLight) {
+                               MultiBufferSource bufferSource, float partialTick, int packedLight,
+                               float glowScale) {
         renderPass(poseStack, animatable, bufferSource, partialTick, packedLight,
                 RenderType.entityTranslucentEmissive(RelicGeoModel.texture()),
                 1.0F, 1.0F, 1.0F, 1.0F);
@@ -70,8 +76,10 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
                     1.0F, 1.0F, 1.0F, 1.0F);
         }
 
+        float glow = Math.max(0.0F, Math.min(1.25F, glowScale));
+
         if (haloEnabled()) {
-            float i = RelicConfig.HALO_INTENSITY.get().floatValue();
+            float i = RelicConfig.HALO_INTENSITY.get().floatValue() * glow;
             // Ligeramente azulado: la reliquia es un nucleo de luz fria.
             renderPass(poseStack, animatable, bufferSource, partialTick, packedLight,
                     RelicRenderTypes.ADDITIVE_GLOW.apply(RelicGeoModel.glowTexture()),
@@ -84,7 +92,7 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
         ShaderInstance glowShader = RelicShaders.ready() ? RelicShaders.shader() : null;
         if (glowShader != null) {
             glowShader.safeGetUniform("HoloTime").set(RelicShaders.timeSeconds(partialTick));
-            float i = RelicConfig.SHADER_INTENSITY.get().floatValue();
+            float i = RelicConfig.SHADER_INTENSITY.get().floatValue() * glow;
             renderPass(poseStack, animatable, bufferSource, partialTick, packedLight,
                     RelicRenderTypes.GLOW_SHADER.apply(RelicGeoModel.glowTexture()),
                     0.65F * i, 0.85F * i, 1.0F * i, 1.0F);

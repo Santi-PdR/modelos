@@ -120,7 +120,9 @@ Los cambios **no saltan**: `RelicGlowState` interpola color (≈0.30 s) y
 fuerza/giro (≈0.22 s) por portador y con el tiempo real entre frames, así que se
 ve igual a 30 que a 240 FPS. El giro del anillo pasa por cero al cambiar de
 sentido en vez de invertirse de golpe, y el anillo se desvanece al entrar en
-calma o dormido.
+calma o dormido. Ese mismo factor multiplica el halo y el pase GLSL del modelo,
+así que dormida se atenúa **todo** el brillo a la vez y cargada se intensifica,
+en vez de quedar el aura apagada y el modelo a tope.
 
 El **shader propio** (`visuals.shaderGlow`) añade un cuarto pase con fresnel en
 el borde y una línea de barrido de holograma, en GLSL de verdad

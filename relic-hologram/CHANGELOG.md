@@ -1,5 +1,14 @@
 # Historial de cambios
 
+## 1.0.7 — brillo coherente
+
+* El factor de brillo del estado multiplica también el **halo aditivo y el pase
+  GLSL del modelo**, no solo el aura. Antes, dormida (`DORMANT`) dejaba el aura
+  al 35% pero el modelo seguía a tope, y cargada subía el aura sin tocar el
+  modelo: ahora todo el brillo sube y baja a la vez.
+* Es el mismo `RelicGlowState` interpolado de 1.0.6, así que la atenuación al
+  dormir también es una transición y no un corte.
+
 ## 1.0.6 — transiciones
 
 * El aura y el anillo **ya no saltan de color**: `RelicGlowState` interpola por

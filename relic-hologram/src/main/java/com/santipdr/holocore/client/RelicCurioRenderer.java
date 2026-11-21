@@ -81,15 +81,17 @@ public class RelicCurioRenderer implements ICurioRenderer {
 
         // Luz maxima: el nucleo es una fuente de luz, no debe depender del
         // lightmap (cuevas, noche, agua).
-        visual.renderer().renderHologram(poseStack, animatable, bufferSource, partialTicks,
-                LightTexture.FULL_BRIGHT);
+        // El estado de brillo se actualiza antes de dibujar nada: el modelo usa el
+        // mismo factor que el aura, asi que dormida se apaga todo a la vez.
+        RelicAnimatable.LoopState state = animatable.loopState();
+        visual.glow().update(state);
 
-        // Aura + anillo de estado: billboards aditivos sobre el mismo anclaje
-        // (incluye la escala de la config, que se lee de la matriz). El estado se
-        // interpola por portador para que el cambio de color no salte.
+        visual.renderer().renderHologram(poseStack, animatable, bufferSource, partialTicks,
+                LightTexture.FULL_BRIGHT, visual.glow().aura());
+
+        // Aura + anillo: billboards aditivos sobre el mismo anclaje (incluye la
+        // escala de la config, que se lee de la matriz).
         if (RelicAura.enabled()) {
-            RelicAnimatable.LoopState state = animatable.loopState();
-            visual.glow().update(state);
             RelicAura.render(poseStack, bufferSource, partialTicks, state, visual.glow());
         }
 
