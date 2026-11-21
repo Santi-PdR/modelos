@@ -118,7 +118,8 @@ public final class CapeFxSmoke {
         STRAFE_LEFT("traslacion-izquierda", 18000), STRAFE_RIGHT("traslacion-derecha", 18000),
         WINGS("espalda-con-elitros", 18000),
         GLIDE("planeo-real", 6000), WADE("de-pie-en-agua", 6000), SWIM("nado-horizontal", 6000),
-        SWIM_EXIT("fin-del-nado", 6000);
+        SWIM_EXIT("fin-del-nado", 6000), WADE_BACK("de-pie-en-agua-curios", 6000),
+        SWIM_BACK("nado-horizontal-curios", 6000), SWIM_EXIT_BACK("fin-del-nado-curios", 6000);
 
         final String file;
         final long dayTime;
@@ -130,12 +131,17 @@ public final class CapeFxSmoke {
 
         boolean hotbar() { return this == HOTBAR_BARE || this == HOTBAR; }
         boolean elytra() { return this == WINGS || this == GLIDE; }
-        boolean usesBack() { return this == WALK_STEVE_BACK || this == WALK_ALEX_BACK || this == AUDIT_BACK || placement() && file.endsWith("-curios") || elytra(); }
+        boolean usesBack() { return this == WALK_STEVE_BACK || this == WALK_ALEX_BACK || this == AUDIT_BACK
+                || (placement() || aquatic()) && file.endsWith("-curios") || elytra(); }
         boolean hasBack() { return this == BOTH || usesBack(); }
         boolean placement() { return ordinal() >= PLACE_STEVE_CHEST.ordinal() && ordinal() <= PLACE_ALEX_BACK.ordinal(); }
         boolean walk() { return ordinal() >= WALK_STEVE_CHEST.ordinal() && ordinal() <= WALK_ALEX_BACK.ordinal(); }
         boolean audit() { return this == AUDIT_CHEST || this == AUDIT_BACK; }
-        boolean inspectBirths() { return this == GLIDE || this == WADE || this == SWIM; }
+        boolean wade() { return this == WADE || this == WADE_BACK; }
+        boolean swim() { return this == SWIM || this == SWIM_BACK; }
+        boolean swimExit() { return this == SWIM_EXIT || this == SWIM_EXIT_BACK; }
+        boolean aquatic() { return wade() || swim() || swimExit(); }
+        boolean inspectBirths() { return this == GLIDE || wade() || swim(); }
         boolean compareLight() { return this == CHEST || this == NIGHT || this == LAMP; }
         boolean strafe() { return this == STRAFE_LEFT || this == STRAFE_RIGHT; }
     }
@@ -158,6 +164,7 @@ public final class CapeFxSmoke {
     private static PlayerModel<?> placementModel;
     private static CapeWalkProbe.Route walkRoute;
     private static CapeWalkProbe.Draw walkDraw;
+    private static CapeWaterProbe waterRoute;
     private static ItemStack rendered;
     private static Matrix4f playerPose, armorPose;
     private static Entity stillPlayer;
@@ -310,14 +317,17 @@ public final class CapeFxSmoke {
                 case 9 -> {
                     driveScene(game);
                     if (!captured) return;
-                    if (scene != Scene.SWIM_EXIT) {
+                    if (scene.swimExit()) {
+                        if (!waterRoute.settled()) return;
+                        check(!CapaDeteriorerItem.auraFrame(game.player).posed(), "swim frame persisted after blend");
+                        waterRoute.save(shots(game), scene.usesBack() ? "curios" : "pecho");
+                    }
+                    if (scene != Scene.SWIM_EXIT_BACK) {
                         Scene next = Scene.values()[scene.ordinal() + 1];
                         equipScene(game, next);
                         return;
                     }
-                    if (game.player.getSwimAmount(1) > 0) return;
-                    check(!CapaDeteriorerItem.auraFrame(game.player).posed(), "swim frame persisted after blend");
-                    note("PASS: recarga, luz, oclusión, equipo, montaje, hotbar, paso lateral, alas, planeo y nado en Forge");
+                    note("PASS: recarga, luz, oclusión, equipo, montaje, hotbar, paso lateral, alas, planeo y ciclo de nado en las dos ranuras");
                     game.stop();
                 }
                 default -> { return; }
@@ -417,7 +427,7 @@ public final class CapeFxSmoke {
                 else textures.put(type, savedTexture);
                 return;
             }
-            boolean slim = next.audit() || next == Scene.WALK_ALEX_CHEST || next == Scene.WALK_ALEX_BACK
+            boolean slim = next.aquatic() || next.audit() || next == Scene.WALK_ALEX_CHEST || next == Scene.WALK_ALEX_BACK
                     || next.file.startsWith("posicion-alex-");
             ResourceLocation skin = slim ? ALEX : STEVE;
             check(game.getResourceManager().getResource(skin).isPresent(), "missing vanilla skin " + skin);
@@ -435,11 +445,12 @@ public final class CapeFxSmoke {
         auditRoute = next.audit() ? new CapePlacementProbe.PoseAudit() : null;
         if (next.placement() || next.audit()) game.options.fov().set(42);
         walkRoute = next.walk() ? new CapeWalkProbe.Route() : null;
-        if (next.walk()) game.options.framerateLimit().set(60);
+        if (next.walk() || next.wade()) game.options.framerateLimit().set(60);
+        if (next.wade()) waterRoute = new CapeWaterProbe();
         if (next == Scene.HOTBAR_BARE) game.options.framerateLimit().set(30);
         stableFrames = observedBirths = 0;
         captured = false;
-        if (next == Scene.HOTBAR_BARE || next.placement() || next.audit() || next.walk()) {
+        if (next == Scene.HOTBAR_BARE || next.placement() || next.audit() || next.walk() || next.wade()) {
             selectSkin(game, next);
         }
         if (next.hotbar()) {
@@ -458,12 +469,12 @@ public final class CapeFxSmoke {
             game.options.keySprint.setDown(false);
         }
         game.options.keyRight.setDown(false);
-        if (next == Scene.SWIM) {
+        if (next.swim()) {
             game.options.keyUp.setDown(true);
             game.options.keySprint.setDown(true);
             return;
         }
-        if (next == Scene.SWIM_EXIT) {
+        if (next.swimExit()) {
             game.options.keyUp.setDown(false);
             game.options.keySprint.setDown(false);
             game.player.setSprinting(false);
@@ -500,15 +511,17 @@ public final class CapeFxSmoke {
                 player.getAbilities().flying = false;
                 player.onUpdateAbilities();
                 player.teleportTo(level, player.getX(), pane.getY() + 132, player.getZ(), 21, 18);
-            } else if (next == Scene.WADE) {
+            } else if (next.wade()) {
                 BlockPos pool = pane.offset(-3, 5, 11);
-                for (int x = -5; x <= 5; x++) {
-                    for (int z = -1; z <= 26; z++) {
-                        for (int y = 0; y <= 3; y++) {
-                            boolean border = Math.abs(x) == 5 || z == -1 || z == 26;
-                            var block = y == 0 && z % 5 == 0 ? Blocks.SEA_LANTERN
-                                    : y == 0 || border ? Blocks.PRISMARINE : Blocks.WATER;
-                            level.setBlock(pool.offset(x, y, z), block.defaultBlockState(), 2);
+                if (next == Scene.WADE) {
+                    for (int x = -5; x <= 5; x++) {
+                        for (int z = -1; z <= 26; z++) {
+                            for (int y = 0; y <= 3; y++) {
+                                boolean border = Math.abs(x) == 5 || z == -1 || z == 26;
+                                var block = y == 0 && z % 5 == 0 ? Blocks.SEA_LANTERN
+                                        : y == 0 || border ? Blocks.PRISMARINE : Blocks.WATER;
+                                level.setBlock(pool.offset(x, y, z), block.defaultBlockState(), 2);
+                            }
                         }
                     }
                 }
@@ -574,7 +587,7 @@ public final class CapeFxSmoke {
         if (scene.placement()) CapePlacementProbe.arm(renderer, placementRoute.control(), placementRoute.shoulderClothControl(),
                 placementRoute.calibration(), false);
         if (scene.audit()) CapePlacementProbe.arm(renderer, false, false, false, true);
-        if (scene.walk()) CapeWalkProbe.arm(renderer);
+        if (scene.walk() || scene.aquatic()) CapeWalkProbe.arm(renderer);
     }
 
     private static void afterArmor(GeoRenderEvent.Armor.Post event) {
@@ -585,7 +598,7 @@ public final class CapeFxSmoke {
         armorPose = new Matrix4f(event.getPoseStack().last().pose());
         if (scene.placement() || scene.audit())
             placementDraw = CapePlacementProbe.finish(renderer, event.getPoseStack(), placementModel);
-        if (scene.walk()) walkDraw = CapeWalkProbe.finish(renderer, event.getPartialTick());
+        if (scene.walk() || scene.aquatic()) walkDraw = CapeWalkProbe.finish(renderer, event.getPartialTick());
         frameLight = event.getPackedLight();
         framePartialTick = event.getPartialTick();
         if (scene == Scene.WINGS) {
@@ -616,7 +629,7 @@ public final class CapeFxSmoke {
         }
         // Also restore the clock if another mod cancelled the player draw.
         restoreAge();
-        if (scene == null || captured || pending != null) return;
+        if (scene == null || captured && !scene.aquatic() || pending != null) return;
         Minecraft game = Minecraft.getInstance();
         var player = game.player;
         if (player == null || game.screen != null || game.level.getDayTime() != scene.dayTime) return;
@@ -632,6 +645,12 @@ public final class CapeFxSmoke {
                 fail(game, error);
             }
             return;
+        }
+        if (scene.aquatic()) {
+            if (!player.isInWater() || walkDraw == null || framePasses != 1
+                    || rendered != (scene.usesBack() ? back : chest)) return;
+            waterRoute.record(player, framePartialTick, scene.wade() ? "wade" : scene.swim() ? "swim" : "exit", walkDraw);
+            if (captured) return;
         }
         float swim = player.getSwimAmount(1);
         Vec3 velocity = player.getDeltaMovement();
@@ -650,9 +669,9 @@ public final class CapeFxSmoke {
                 yield player.isFallFlying() && player.getFallFlyingTicks() >= 12 && Math.abs(player.elytraRotZ) > .8F
                         && Math.abs(cross) > .001 * Math.sqrt(look.horizontalDistanceSqr()*velocity.horizontalDistanceSqr());
             }
-            case WADE -> player.isInWater() && !player.isVisuallySwimming() && swim == 0;
-            case SWIM -> player.isInWater() && player.isVisuallySwimming() && swim == 1;
-            case SWIM_EXIT -> player.isInWater() && !player.isVisuallySwimming() && swim > .12F && swim < .9F;
+            case WADE, WADE_BACK -> player.isInWater() && !player.isVisuallySwimming() && swim == 0;
+            case SWIM, SWIM_BACK -> player.isInWater() && player.isVisuallySwimming() && swim == 1;
+            case SWIM_EXIT, SWIM_EXIT_BACK -> player.isInWater() && !player.isVisuallySwimming() && swim > .12F && swim < .9F;
             default -> !player.isFallFlying() && !player.isInWater();
         };
         if (!posed) {
@@ -705,7 +724,7 @@ public final class CapeFxSmoke {
                 exposure = "; UV2 borde=" + Math.round(100*edge) + "%, interior=" + Math.round(100*inner)
                         + "%, luz bloque/cielo=" + block + "/" + sky;
             }
-            if (scene != Scene.SWIM_EXIT && ++stableFrames < 18) return;
+            if (!scene.swimExit() && ++stableFrames < 18) return;
             if (scene.inspectBirths() && observedBirths == 0) return;
             if (scene == Scene.WINGS) {
                 check(frameTopDegrees > 24 && frameTopDegrees < 34,
@@ -713,10 +732,10 @@ public final class CapeFxSmoke {
                 exposure = "; bisagra del paño en reposo = " + Math.round(frameTopDegrees * 10) / 10.0 + "°";
             }
             double rootError = 0;
-            if (scene.inspectBirths() || scene == Scene.SWIM_EXIT) {
+            if (scene.inspectBirths() || scene.swimExit()) {
                 var frame = CapaDeteriorerItem.auraFrame(player);
-                check(frame.posed() == (scene != Scene.WADE), scene.file + ": wrong emitter frame");
-                if (scene == Scene.GLIDE || scene == Scene.SWIM) {
+                check(frame.posed() == !scene.wade(), scene.file + ": wrong emitter frame");
+                if (scene == Scene.GLIDE || scene.swim()) {
                     check(playerPose != null && armorPose != null, "missing renderer transform");
                     Matrix4f model = new Matrix4f(playerPose).invert().mul(armorPose)
                             .translate(0, 1.5F, 0).scale(-1, -1, 1);

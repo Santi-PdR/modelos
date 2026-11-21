@@ -1110,6 +1110,17 @@ jobs:
             esac
           done
 
+      - name: Reproducir el fallo de nado de v1.67.23
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
+        run: |
+          set -o pipefail
+          python3 tools/verify_forge_swim.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
+            case "$line" in
+              *AssertionError:*|*Error:*) printf '::error title=Ciclo de nado en Forge::%s\n' "${line//%/%25}" ;;
+              *) printf '::notice title=Ciclo de nado en Forge::%s\n' "${line//%/%25}" ;;
+            esac
+          done
+
       - name: Verificar el icono original en la hotbar de Forge
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
