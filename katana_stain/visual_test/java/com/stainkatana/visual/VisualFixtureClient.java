@@ -447,7 +447,11 @@ public final class VisualFixtureClient {
             // The first-person world-model pass can hide an item outside the
             // camera. Compare the same clip in third person before diagnosing
             // that as an item-rendering or mirroring failure.
-            case 1225 -> { mc.options.fov().set(35); mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); bloodSample(0, 0, 0); }
+            case 1225 -> {
+                if (mc.player.getMainArm() != net.minecraft.world.entity.HumanoidArm.LEFT)
+                    throw new IllegalStateException("Left hand changed before third-person blood sample");
+                mc.options.fov().set(35); mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); bloodSample(0, 0, 0);
+            }
             case 1229 -> capture = "46_blood_left_third_reach.png";
             case 1232 -> capture = "47_blood_left_third_draw.png";
             case 1236 -> capture = "48_blood_left_third_face.png";

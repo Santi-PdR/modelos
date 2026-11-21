@@ -45,11 +45,6 @@ public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
                              MultiBufferSource buffers, int light, int overlay) {
         if (context != ItemDisplayContext.GUI) {
             poseStack.pushPose();
-            // The left-hand item transform is mirrored by Minecraft; without
-            // this wrist-space correction the handle sits beyond the palm.
-            // The dedicated idle first-person arm has its own wrist transform.
-            if (!FIRST_PERSON_ARM.get() && context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND)
-                poseStack.translate(0, 0, -.25F);
             // Separate hand-space adjustments: the two vanilla pipelines have different origins.
             // These are provisional and must be checked against the rendered grip, not just the bone pivot.
             if (context == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND || context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND)
