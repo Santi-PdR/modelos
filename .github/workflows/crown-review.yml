@@ -1,0 +1,57 @@
+name: Identificar el fragmento visible en la maniobra de Alex
+
+on: push
+
+jobs:
+  review:
+    if: github.ref_name == 'arena/5a9fa51b-modelos' && contains(github.event.head_commit.message, '[diagnosticar-corona]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CAPTURE_RUN: '44953657027'
+      CAPTURE_SOURCE: 8aa309267b2727516e78d908d06638d7b6734183
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Comprobar el JAR de v1.67.29 y sus capturas de Forge
+        run: |
+          set -euo pipefail
+          git diff --exit-code "$CAPTURE_SOURCE" HEAD -- src/main src/fxSmoke build.gradle settings.gradle gradle.properties
+          gh run view "$CAPTURE_RUN" --json headSha,status,conclusion,jobs > "$RUNNER_TEMP/run.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          r = json.loads((Path(os.environ['RUNNER_TEMP']) / 'run.json').read_text())
+          assert r['headSha'] == os.environ['CAPTURE_SOURCE'] and r['status'] == 'completed' and r['conclusion'] == 'success'
+          ok = {s['name'] for j in r['jobs'] for s in j['steps'] if s['conclusion'] == 'success'}
+          assert {'Build', 'Verify jar is reproducible', 'Medir pausa, giro y costuras durante la maniobra',
+                  'Subir capturas y malla de la maniobra en mundo'} <= ok, ok
+          PY
+          gh run download "$CAPTURE_RUN" -n capatest-jar -D "$RUNNER_TEMP/compiled"
+          (cd "$RUNNER_TEMP/compiled" && sha256sum -c SHA256SUMS.txt)
+          cmp "$RUNNER_TEMP/compiled/capatest-1.67.29.jar" entregables/v1.67.29/capatest-1.67.29.jar
+          gh run download "$CAPTURE_RUN" -n capatest-maniobra-forge -D "$RUNNER_TEMP/maniobra"
+          for slot in pecho curios; do
+            cmp "$RUNNER_TEMP/maniobra/maniobra-$slot.tsv" "docs/releases/v1.67.29/maniobra/maniobra-$slot.tsv"
+          done
+
+      - name: Medir la malla que coincide con el giro agachado
+        run: |
+          set -euo pipefail
+          out=docs/releases/v1.67.29/maniobra/diagnostico-cuello
+          python3 -m pip install --quiet numpy Pillow
+          OPENBLAS_NUM_THREADS=1 python3 tools/measure_forge_crown.py "$RUNNER_TEMP/maniobra" "$out" | while IFS= read -r line; do
+            printf '::notice title=Malla en Forge::%s\n' "${line//%/%25}"
+          done
+          printf 'https://github.com/%s/actions/runs/%s\nhttps://github.com/%s/actions/runs/%s\n' \
+              "$GITHUB_REPOSITORY" "$CAPTURE_RUN" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$out/prueba.txt"
+          git add "$out"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'Extraer el detalle de la cabeza y el cuello de v1.67.29 [skip ci]'
+          git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
