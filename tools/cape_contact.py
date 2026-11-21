@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import numpy as np
 
-from preview_cloth import CORNERS
 from verify_v1600 import sat
 
 
@@ -11,51 +10,6 @@ def lap(a, b):
     """Best intersection of two groups of oriented, possibly scaled cubes."""
     pairs = np.repeat(a, len(b), axis=0), np.tile(b, (len(a), 1, 1))
     return float(-sat(*pairs).min())
-
-
-def seat_contacts(parts, label):
-    """Check each half of jacket → lining → collar → return → pad → sleeve.
-
-    An overlapping lower seat is not enough: .17 still touched the torso at
-    waist height. Measure three patches per side on its *upper rear* edge.
-    Likewise a plate can cover a sleeve in F5 but remain detached in depth.
-    """
-    def get(*prefixes):
-        boxes = [v for name,v in parts.items() if name.startswith(prefixes)]
-        assert boxes, (label, 'faltan cubos de', prefixes)
-        v = np.concatenate(boxes)
-        assert v.ndim == 3 and v.shape[1:] == (8,3) and np.isfinite(v).all(), (label,prefixes)
-        return v
-
-    jacket = get('jacket')
-    lo, hi = jacket.min((0,1)), jacket.max((0,1))
-    center = (lo[0]+hi[0])/2
-    half = (hi[0]-lo[0])/2
-    collar = get('v17_cowl_front_', 'v17_cowl_back_', 'v17_cowl_tooth_')
-    saddle = get('v20_mount_saddle')
-    collar_return = get('v17_cowl_return')
-    shoulders = get('v20_mount_shoulders')
-    lining = get('v20_mount_backing_')
-    plates = get('v18_pad_')
-    sleeves = get('left_sleeve','right_sleeve')
-    assert len(plates) == 13 and len(shoulders) == 2 and len(sleeves) == 2, label
-    values = []
-    for side in (-1,1):
-        def same_side(v):
-            w = v[side*(v[:,:,0].mean(1)-center) > 0]
-            assert len(w), (label,side,'falta una mitad del encastre')
-            return w
-
-        back, tab, turn, plate, arm = map(same_side,(lining,shoulders,collar_return,plates,sleeves))
-        patch = CORNERS*[.45,1.35,.70]
-        upper = min(lap(back, (patch+[center+side*half*f-.225,hi[1]-1.47,hi[2]-.25])[None])
-                    for f in (.24,.45,.66))
-        contacts = (upper, lap(back,saddle), lap(saddle,collar), lap(collar,turn), lap(turn,tab),
-                    lap(tab,plate), lap(plate,arm))
-        assert np.all(np.asarray(contacts) > [.23,.26,.20,.14,.17,.27,.38]), (
-            label, side, 'encastre espalda/forro/cuello/retorno/hombrera/manga', np.round(contacts,3).tolist())
-        values.append(contacts)
-    return np.min(values, axis=0)
 
 
 def depth_intervals(boxes, xy):
@@ -75,41 +29,57 @@ def depth_intervals(boxes, xy):
         yield sorted(zip(a[hit], b[hit], strict=True))
 
 
-def upper_back_fit(parts, label):
-    """Check the visible rim and support above the first ribs, not the waist pin.
+def original_dimensions(parts, source, label):
+    """An affine fit can keep the asset hashes but still warp the visible model."""
+    edges = np.triu_indices(8, 1)
 
-    In .18 one small contact was enough for the SAT chain even though a
-    broad hollow ran across the neck. Sweep the bare back face (the jacket
-    may be transparent) and reject a stand-off cavity or an oversized rim.
-    """
-    body, = parts['body']
-    lo, hi = body.min(0), body.max(0)
+    def distances(boxes):
+        v = np.asarray(boxes)
+        return np.sort(np.linalg.norm(v[:, edges[0]]-v[:, edges[1]], axis=2), axis=1)
+
+    count = 0
+    for name, boxes in parts.items():
+        if name not in source:
+            continue  # vanilla player boxes
+        target = source[name]
+        assert len(boxes) == len(target), (label, name, 'cambió el número de cubos')
+        np.testing.assert_allclose(distances(boxes), distances(target), atol=.004, rtol=0,
+                                   err_msg=f'{label}: cambió la forma de {name}')
+        count += len(boxes)
+    assert count >= 60, (label, 'faltan piezas visibles de la capa', count)
+    return count
+
+
+def back_and_sleeves(parts, label):
+    """Check visible cloth against bare skin, not a hidden gusset against a jacket."""
+    body = np.asarray(parts['body'])
+    lo, hi = body[0].min(0), body[0].max(0)
     np.testing.assert_allclose(hi-lo, [8,12,4], atol=.006, rtol=0, err_msg=f'{label}: vanilla torso basis')
+    center = (lo[0]+hi[0])/2
     back, top = hi[2], hi[1]
-    center, width = (lo[0]+hi[0])/2, hi[0]-lo[0]
-    rim = np.concatenate([v for n,v in parts.items() if n.startswith(('v17_cowl_back_', 'v17_cowl_front_'))])
-    stand_off = rim[:,:,2].max() - back
-    assert stand_off < 2.75, (label, 'el borde del cuello sigue retrasado (u)', round(stand_off,3))
-    lining = np.concatenate([v for n,v in parts.items() if n.startswith('v20_mount_backing_')])
-    shell = np.concatenate((lining, rim, *[v for n,v in parts.items() if n.startswith(('v17_cowl_tooth_', 'v20_mount_saddle'))]))
-    xy = [(center+width*f, top-drop) for f in np.linspace(-.325,.325,9) for drop in np.linspace(1.02,2.13,7)]
-    max_gap, skin_lap = 0., np.inf
-    for line in depth_intervals(shell, np.array(xy)):
-        support = max((back-a for a,b in line if a <= back and b > back+.12), default=-np.inf)
-        skin_lap = min(skin_lap, support)
-        depth = back
-        for a,b in line:
-            if b <= depth:
-                continue
-            max_gap = max(max_gap, a-depth)
-            depth = b
-    assert skin_lap >= .055 and max_gap <= .30, (
-        label, 'hueco entre piel y cuello (u)', round(skin_lap,3), round(max_gap,3))
-
     roots = [np.asarray(parts[f'v17_ribbon_{i}_seg0']) for i in range(12)]
     assert all(len(r) for r in roots), label
-    supports = np.concatenate([v for n,v in parts.items() if n.startswith(
+    cloth = np.concatenate(roots)
+    # The lower seam of the tall original collar sits on the upper back.
+    # The raised crown above the neck must not be flattened into this plane.
+    samples = [(x, top-drop) for drop in np.linspace(2.55, 4.20, 7)
+               for x in center + np.linspace(-2.50, 2.50, 9)]
+    coverage = np.asarray([any(a <= back+.065 and b > back+.125 for a,b in line)
+                           for line in depth_intervals(cloth, np.asarray(samples))]).reshape(7,9)
+    count = int(coverage.sum())
+    contact = lap(cloth, body)
+    assert contact > .15 and count >= 42 and min(coverage[:, :4].sum(),coverage[:, -4:].sum()) >= 15, (
+        label, 'el paño visible no toca la espalda a ambos lados', round(contact,3), coverage.sum(1).tolist())
+    support = np.concatenate([v for n,v in parts.items() if n.startswith(
         ('v17_cowl_', 'v19_cuellito_', 'v18_pad_', 'v18_chain_', 'v20_mount_saddle'))])
-    root_lap = min(lap(root, supports) for root in roots)
-    assert root_lap > .025, (label, 'el paño no nace de la costura (u)', round(root_lap,3))
-    return np.array([stand_off, max_gap, skin_lap, root_lap])
+    joins = min(lap(r, support) for r in roots)
+    assert joins > .025, (label, 'la raíz no se une al cuello', round(joins,3))
+    pads = [np.asarray(parts[n]) for n in ('v18_pad_0','v18_pad_1')]
+    sleeves = [np.asarray(parts[n]) for n in ('left_sleeve','right_sleeve')]
+    lap_sleeves = np.asarray([[lap(p,s) for s in sleeves] for p in pads])
+    assert sorted(lap_sleeves.argmax(1)) == [0,1] and lap_sleeves.max(1).min() > .35, (label, lap_sleeves)
+    returns = np.asarray(parts['v17_cowl_return'])
+    for p in pads:
+        side = np.sign(p[:,:,0].mean()-center)
+        assert lap(p,returns[(returns[:,:,0].mean(1)-center)*side > 0]) > .13, (label, 'placa sin retorno')
+    return contact, count, joins, lap_sleeves.max(1)

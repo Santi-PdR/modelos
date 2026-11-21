@@ -1219,3 +1219,50 @@ jobs:
           done
           echo "### Borrador $TAG verificado (publicar después de CI SUCCESS)" >> "$GITHUB_STEP_SUMMARY"
           cat "$SUMS" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Adjuntar el JAR exacto y las tomas de la prueba de colocación
+        if: >-
+          success() && github.repository == 'Santi-PdR/modelos' &&
+          github.ref == 'refs/heads/arena/5a9fa51b-modelos' && github.event_name == 'push' &&
+          contains(github.event.head_commit.message, '[capa-v16720-directo]') &&
+          steps.verify-placement.outcome == 'success' && steps.verify-walk.outcome == 'success'
+        run: |
+          set -euo pipefail
+          test "$(git branch --show-current)" = 'arena/5a9fa51b-modelos'
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(sed -n 's/^mod_version=//p' gradle.properties)" = '1.67.20'
+          (cd build/libs && sha256sum -c SHA256SUMS.txt)
+          shots=build/fx-smoke-run/fx-shots
+          out=entregables/v1.67.20/capatest-1.67.20.jar
+          install -D -m 0644 build/libs/capatest-1.67.20.jar "$out"
+          install -D -m 0644 build/libs/SHA256SUMS.txt docs/releases/v1.67.20/JAR.sha256
+          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16720_colocacion_forge.jpg
+          python3 - "$shots" <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageDraw
+          import sys
+          shots = Path(sys.argv[1])
+          cw, ch = 320, 243
+          sheet = Image.new('RGB', (960, 619), '#15101a')
+          draw = ImageDraw.Draw(sheet)
+          draw.text((14, 10), 'ALEX / CURIOS - MISMA CAMARA Y PIEL EN FORGE', fill='#ffe4f0')
+          with Image.open('docs/capa_v16719_encastre_alex.jpg') as previous:
+              sheet.paste(previous.crop((0, 359, 960, 602)), (0, 77))
+          draw.text((14,57), 'v1.67.19 / CUELLO Y PLACAS DEFORMADOS AL EQUIPAR', fill='#ffe4f0')
+          draw.text((14,339), 'v1.67.20 / FORMA ORIGINAL, SOLO POSICION', fill='#ffe4f0')
+          for i,(name,label) in enumerate(zip(('izquierda','diagonal','arriba'),('PERFIL','TRES CUARTOS','CENITAL'))):
+              draw.text((i*cw+14,33), label, fill='#efc5da')
+              with Image.open(shots/f'posicion-alex-curios-{name}.png') as im:
+                  w,h = im.size
+                  top,bottom = (.11,.86) if name=='arriba' else (.04,.66)
+                  y0,y1 = round(h*top),round(h*bottom)
+                  d = min(w,round((y1-y0)*(cw-12)/ch))
+                  pic = im.crop(((w-d)//2,y0,(w-d)//2+d,y1)).convert('RGB')
+                  pic.thumbnail((cw-12,ch),Image.Resampling.LANCZOS)
+                  sheet.paste(pic,(i*cw+(cw-pic.width)//2,359))
+          sheet.save('docs/capa_v16720_forma_original_alex.jpg',quality=94,optimize=True)
+          PY
+          git add -f -- "$out" docs/releases/v1.67.20/JAR.sha256 docs/capa_v16720_colocacion_forge.jpg docs/capa_v16720_forma_original_alex.jpg
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'Adjuntar el JAR de prueba v1.67.20 y las capturas de Forge [skip ci]'
+          git push origin arena/5a9fa51b-modelos

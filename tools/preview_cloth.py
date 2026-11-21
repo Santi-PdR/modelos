@@ -115,7 +115,6 @@ def matrices(geo):
         offset = np.array(b.get("offset", [0, 0, 0])) * [-1, 1, 1]
         scale = b.get("scale", [1, 1, 1])
         affine = np.diag(np.asarray([*scale, 1], float))
-        affine[1, 2] = b.get("liftYZ", 0.)
         local = T(B + offset) @ rotmat(b.get("rotation", [0, 0, 0])) @ affine @ T(-B)
         out[n] = (calc(b["parent"]) if b.get("parent") else np.eye(4)) @ local
         return out[n]

@@ -15,7 +15,7 @@ import numpy as np
 import armor_model_pipeline as G
 import cape_animation_pipeline as A
 import cape_fit as F
-from cape_contact import seat_contacts, upper_back_fit
+from cape_contact import back_and_sleeves, original_dimensions
 import cape_tracks as T
 import preview_cloth as P
 from bbmodel_export import DOC
@@ -97,8 +97,12 @@ def exercise(geo):
     clips = json.loads(A.ANIM.read_text())['animations']
     posed_data = []
     box_estimates = []
-    seat_estimates = []
-    depth_estimates = []
+    contacts_still = []
+    authored = model.place(P.matrices(geo))
+    parts_source = {n:authored[names==n] for n in np.unique(names)}
+    plates = np.char.startswith(names,'v18_pad_')
+    garment = ~(plates | saddle)
+    offset = [0.,-F.mount_profile()['BACK_DROP'],-F.mount_profile()['BACK_FORWARD']]
     for body, wings in product((0.,1.),(False,True)):
         rest = P.matrices(F.wearer_pose(geo,body,0,0,elytra=wings,placed=True))
         inv = np.linalg.inv(rest['chestplate'])
@@ -116,11 +120,11 @@ def exercise(geo):
                 parts['jacket'] = (P.CORNERS*[8.5,12.5,4.5]+[-4.25,11.75,-2.25])[None]
                 sleeve = P.CORNERS*[3.5 if slim else 4.5,12.5,4.5]+[3.75,11.25 if slim else 11.75,-2.25]
                 parts['left_sleeve'],parts['right_sleeve'] = sleeve[None],(sleeve*[-1,1,1])[None]
-                neutral_hat = F.head_in_body(0.,0.,0.,outer=True)[None,None]
-                assert contacts(fitted[None,mount],neutral_hat).min() > 0, 'la montura corta la cabeza en reposo'
                 label = 'Alex' if slim else 'Steve'
-                seat_estimates.append(seat_contacts(parts,label))
-                depth_estimates.append(upper_back_fit(parts,label))
+                original_dimensions(parts, parts_source, label)
+                np.testing.assert_allclose(fitted[garment] - authored[garment],
+                                           np.broadcast_to(offset, fitted[garment].shape), atol=1e-10, rtol=0)
+                contacts_still.append(back_and_sleeves(parts,label))
         aims = list(product((-89.,-60.,-30.,0.,30.,60.,89.),(-73.,-40.,0.,40.,73.)))
         hats = np.asarray([F.head_in_body(body,p,y,outer=True) for p,y in aims])[:,None]
         vv = np.repeat(local[None,mount],len(aims),axis=0)
@@ -138,11 +142,9 @@ def exercise(geo):
                 v = model.place(P.matrices(F.wearer_pose(frame,body,0,0,elytra=wings,placed=True)))
                 np.testing.assert_allclose(v[mount],model.place(rest)[mount],atol=1e-10,rtol=0)
                 posed_data.append(model.joins(v))
-    print('Encastre espalda alta → forro → cuello → retornos → placas → mangas (u):',
-          np.min(seat_estimates,axis=0).round(3).tolist(),flush=True)
-    depth = np.array(depth_estimates)
-    print('Piel sin chaqueta: resalte/hueco/solape/raíces (u):',
-          np.r_[depth[:,:2].max(0),depth[:,2:].min(0)].round(3).tolist(),flush=True)
+    print('Sin deformación; contacto directo paño/piel y rayos con tela en la espalda:',
+          [(round(seat,3), f'{rays}/63', round(seam,3), laps.round(3).tolist())
+           for seat,rays,seam,laps in contacts_still], flush=True)
     seam,root = np.asarray(posed_data).min(0)
     assert seam > .038 and root > .025, (seam,root,'se abrió una costura del paño')
     # The conservative hat sweep intentionally includes extreme neck angles.

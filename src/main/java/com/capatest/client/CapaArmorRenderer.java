@@ -15,8 +15,6 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix3f;
-import org.joml.Matrix4f;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.renderer.GeoArmorRenderer;
@@ -25,10 +23,7 @@ import software.bernie.geckolib.util.RenderUtils;
 public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private final CapaArmorModel capeModel;
     private static final CapeFit.YokeShape WING_LINING = CapeFit.yokeShape(0, 0, 0, true);
-    private static final Matrix4f LINING_SHEAR = new Matrix4f().m21((float) CapeMountPlacement.LINING_LIFT);
-    private static final Matrix3f LINING_NORMAL = new Matrix3f().m12((float) -CapeMountPlacement.LINING_LIFT);
     private boolean mountInChest;
-    private boolean snugSeat;
     private boolean slimSleeves;
     private boolean elytra;
     private boolean armorPassSubmitted;
@@ -109,7 +104,6 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         elytra = player != null && player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA);
         slimSleeves = player != null && player.getModelName().equals("slim");
         mountInChest = bone(CapeFit.BONE) != null && bone(CapeFit.GUSSET_BONE) != null;
-        snugSeat = mountInChest && !elytra && bone(CapeFit.SEAT_FRAME) != null;
         double arm = backArm(model);
         double leg = Math.max(CapeStride.backDegrees(model.leftLeg.xRot, model.leftLeg.yRot),
                 CapeStride.backDegrees(model.rightLeg.xRot, model.rightLeg.yRot));
@@ -129,72 +123,34 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         // The two plates are drawn once from chestplate, not from the
         // original rear placement. Do not reparent the shared baked model.
         if (mountInChest && placedPlate(bone)) return;
-        boolean backing = CapeBacking.LEFT.equals(name) || CapeBacking.RIGHT.equals(name);
-        boolean rim = snugSeat && CapeMountPlacement.rim(name);
+        boolean seat = mountInChest && !elytra && CapeFit.SEAT_FRAME.equals(name);
+        boolean backing = elytra && (CapeBacking.LEFT.equals(name) || CapeBacking.RIGHT.equals(name));
         boolean saddle = mountInChest && CapeMountPlacement.SADDLE_BONE.equals(name);
-        boolean shoulder = CapeFit.SHOULDERS_BONE.equals(name);
-        boolean underYoke = CapeFit.UNDER_YOKE_BONE.equals(name);
-        boolean seat = snugSeat && CapeMountPlacement.SEAT_BONE.equals(name);
-        boolean gusset = snugSeat && CapeFit.GUSSET_BONE.equals(name);
-        boolean drape = snugSeat && CapeFit.DRAPE_BONE.equals(name);
-        boolean fitted = backing || rim || saddle || shoulder || seat || gusset || drape || (underYoke && (snugSeat || elytra));
+        boolean shoulder = elytra && CapeFit.SHOULDERS_BONE.equals(name);
+        boolean underYoke = elytra && CapeFit.UNDER_YOKE_BONE.equals(name);
+        boolean fitted = seat || backing || saddle || shoulder || underYoke;
         if (fitted) poseStack.pushPose();
         try {
-            if (snugSeat && (rim || shoulder)) {
-                double y = CapeMountPlacement.RIM_Y / 16, z = CapeMountPlacement.BACK_PLANE / 16;
-                poseStack.translate(0, y - CapeMountPlacement.RIM_DROP / 16, z);
-                poseStack.scale(1, (float) CapeMountPlacement.RIM_HEIGHT, (float) CapeMountPlacement.RIM_DEPTH);
-                poseStack.translate(0, -y, -z);
-            }
-            if (rim) {
-                if (name.equals("v17_cowl_return")) {
-                    poseStack.translate(0, -CapeMountPlacement.RETURN_DROP / 16, 0);
-                } else if (!name.startsWith("v17_cowl_tooth_")) {
-                    double y = CapeMountPlacement.TRIM_Y / 16, z = CapeMountPlacement.TRIM_Z / 16;
-                    poseStack.translate(0, y - CapeMountPlacement.TRIM_DROP / 16, z);
-                    poseStack.scale((float) CapeMountPlacement.TRIM_WIDTH, (float) CapeMountPlacement.TRIM_HEIGHT, 1);
-                    poseStack.translate(0, -y, -z);
-                }
-            } else if (seat || gusset || (snugSeat && underYoke)) {
-                squeezeDepth(poseStack, gusset ? CapeMountPlacement.GUSSET_DEPTH : CapeMountPlacement.RIM_DEPTH);
+            if (seat) {
+                // One rigid displacement in chest space, shared by the
+                // solid and glow passes. Never rescale the worn mantle.
+                poseStack.translate(0, -CapeMountPlacement.BACK_DROP / 16, -CapeMountPlacement.BACK_FORWARD / 16);
+            } else if (saddle && !elytra) {
+                poseStack.translate(0, 0, CapeMountPlacement.SADDLE_SET / 16);
             } else if (fitted) {
-                if (backing && snugSeat) {
-                    // Shear the outer lip up into the collar without pulling
-                    // its inner seam away from the actual back plane. Use the
-                    // inverse transpose for normals in both render passes.
-                    double z = CapeMountPlacement.LINING_PLANE / 16;
-                    poseStack.translate(0, -CapeMountPlacement.LINING_DROP / 16, z);
-                    poseStack.mulPoseMatrix(LINING_SHEAR);
-                    poseStack.last().normal().mul(LINING_NORMAL);
-                    poseStack.translate(0, 0, -z);
-                    squeezeDepth(poseStack, CapeMountPlacement.LINING_DEPTH);
-                }
+                // Only the pre-existing lining/fold clearance for Elytra.
                 RenderUtils.translateToPivotPoint(poseStack, bone);
                 if (saddle) {
-                    if (snugSeat) {
-                        poseStack.translate(0, -CapeMountPlacement.SADDLE_DROP / 16, CapeMountPlacement.SADDLE_DEPTH / 16);
-                        poseStack.scale((float) CapeMountPlacement.SADDLE_WIDTH, (float) CapeMountPlacement.SADDLE_HEIGHT,
-                                (float) CapeMountPlacement.SADDLE_THICKNESS);
-                    } else {
-                        poseStack.translate(0, 0, CapeMountPlacement.WING_SADDLE_DEPTH / 16);
-                        poseStack.scale((float) CapeMountPlacement.WING_SADDLE_WIDTH, 1, 1);
-                    }
+                    poseStack.translate(0, 0, CapeMountPlacement.WING_SADDLE_DEPTH / 16);
+                    poseStack.scale((float) CapeMountPlacement.WING_SADDLE_WIDTH, 1, 1);
                 } else if (shoulder) {
-                    if (elytra) {
-                        poseStack.scale(1, (float) (CapeFit.SHOULDER_HEIGHT + (1-CapeFit.SHOULDER_HEIGHT)*CapeFit.SHOULDER_MIN),
-                                (float) CapeFit.SHOULDER_MIN);
-                    } else if (snugSeat) {
-                        poseStack.translate(0, CapeMountPlacement.SHOULDER_RISE / 16, 0);
-                        poseStack.scale(1, (float) CapeMountPlacement.SHOULDER_HEIGHT, (float) CapeMountPlacement.SHOULDER_REACH);
-                    }
+                    poseStack.scale(1, (float) (CapeFit.SHOULDER_HEIGHT + (1-CapeFit.SHOULDER_HEIGHT)*CapeFit.SHOULDER_MIN),
+                            (float) CapeFit.SHOULDER_MIN);
                 } else if (underYoke) {
                     poseStack.scale(WING_LINING.width(), WING_LINING.height(), WING_LINING.depth());
-                } else if (backing) {
-                    var fold = elytra ? CapeBacking.TUCKED : CapeBacking.SEATED;
+                } else {
+                    var fold = CapeBacking.TUCKED;
                     poseStack.scale(1, fold.left(), fold.depth());
-                } else if (drape) {
-                    poseStack.translate(0, -CapeMountPlacement.DRAPE_DROP / 16, -CapeMountPlacement.DRAPE_ADVANCE / 16);
-                    poseStack.mulPose(Axis.XP.rotationDegrees((float) -CapeMountPlacement.DRAPE_PITCH));
                 }
                 RenderUtils.translateAwayFromPivotPoint(poseStack, bone);
             }
@@ -203,13 +159,6 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         } finally {
             if (fitted) poseStack.popPose();
         }
-    }
-
-    private static void squeezeDepth(PoseStack poseStack, double scale) {
-        double z = CapeMountPlacement.BACK_PLANE / 16;
-        poseStack.translate(0, 0, z);
-        poseStack.scale(1, 1, (float) scale);
-        poseStack.translate(0, 0, -z);
     }
 
     @Override
@@ -239,7 +188,6 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
             poseStack.mulPose(Axis.ZP.rotationDegrees((float) fit.roll()));
             poseStack.mulPose(Axis.YP.rotationDegrees((float) -fit.yaw()));
             poseStack.mulPose(Axis.XP.rotationDegrees((float) -fit.pitch()));
-            poseStack.scale((float) fit.width(), (float) fit.height(), (float) fit.depth());
             poseStack.translate(-x, -y, -z);
             // Same complete plate geometry, cutout and emission. Nothing is
             // added to the GEO or attached to the camera/helmet/hand pose.

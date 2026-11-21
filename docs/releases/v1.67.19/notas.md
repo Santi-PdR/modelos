@@ -1,6 +1,8 @@
 # v1.67.19 · El nacimiento del manto, junto a la espalda
 
-**[JAR directo de prueba](https://github.com/Santi-PdR/modelos/raw/e574c47f7c646bd7869a071a42f3db5b5947fdc4/entregables/v1.67.19/capatest-1.67.19.jar)** · [SHA-256](JAR.sha256) · [Antes y después en Alex](../../capa_v16719_encastre_alex.jpg) · [Galería completa en Forge](../../capa_v16719_colocacion_forge.jpg) · [Blockbench](../../CAPA_v1.67.19.bbmodel).
+**Prueba descartada:** el ajuste equipado comprimía el cuello y cambiaba las proporciones.
+
+**[JAR directo de prueba](https://github.com/Santi-PdR/modelos/raw/e574c47f7c646bd7869a071a42f3db5b5947fdc4/entregables/v1.67.19/capatest-1.67.19.jar)** · [SHA-256](JAR.sha256) · [Antes y después en Alex](../../capa_v16719_encastre_alex.jpg) · [Galería completa en Forge](../../capa_v16719_colocacion_forge.jpg) · [Blockbench](https://github.com/Santi-PdR/modelos/blob/9bee2a3/docs/CAPA_v1.67.19.bbmodel).
 
 En v1.67.18 el forro tocaba la camiseta, pero el borde visible del cuello sobresalía hasta 6,73 unidades del modelo desde la piel y quedaba una hueco visible detrás de la nuca. La corrección ciñe el borde y los retornos al torso, lleva el forro hasta ese borde y adelanta el arranque de la tela. Las hombreras originales quedan sobre las mangas. Sólo se ajusta cómo se viste el manto: sin cambios al texto, los atributos, las texturas ni los ocho clips. Con élitros se conserva el ajuste anterior.
 
