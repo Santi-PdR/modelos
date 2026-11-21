@@ -138,6 +138,7 @@ public final class CapeFxSmoke {
         boolean hasBack() { return this == BOTH || usesBack(); }
         boolean placement() { return ordinal() >= PLACE_STEVE_CHEST.ordinal() && ordinal() <= PLACE_ALEX_BACK.ordinal(); }
         boolean walk() { return ordinal() >= WALK_STEVE_CHEST.ordinal() && ordinal() <= WALK_ALEX_BACK.ordinal(); }
+        boolean studyQuietCloth() { return this == WALK_ALEX_CHEST || this == WALK_ALEX_BACK; }
         boolean audit() { return this == AUDIT_CHEST || this == AUDIT_BACK; }
         boolean jump() { return this == JUMP_CHEST || this == JUMP_BACK; }
         boolean climb() { return this == CLIMB_CHEST || this == CLIMB_BACK; }
@@ -452,7 +453,7 @@ public final class CapeFxSmoke {
         placementRoute = next.placement() ? new CapePlacementProbe.Route() : null;
         auditRoute = next.audit() ? new CapePlacementProbe.PoseAudit() : null;
         if (next.placement() || next.audit() || next.jump()) game.options.fov().set(42);
-        walkRoute = next.walk() ? new CapeWalkProbe.Route() : null;
+        walkRoute = next.walk() ? new CapeWalkProbe.Route(next.studyQuietCloth()) : null;
         jumpRoute = next.jump() ? new CapeJumpProbe(CapeJumpProbe.deck(pane)) : null;
         climbRoute = next.climb() ? new CapeClimbProbe(CapeClimbProbe.column(pane)) : null;
         if (next.climb()) game.options.fov().set(50);
@@ -632,7 +633,7 @@ public final class CapeFxSmoke {
         var player = Minecraft.getInstance().player;
         if (player != null && placementRoute != null) placementRoute.camera(event, player);
         if (player != null && auditRoute != null) auditRoute.camera(event, player);
-        if (player != null && (scene == Scene.WALK_ALEX_CHEST || scene == Scene.WALK_ALEX_BACK)) {
+        if (player != null && scene != null && scene.studyQuietCloth()) {
             float yaw = Mth.rotLerp((float) event.getPartialTick(), player.yBodyRotO, player.yBodyRot);
             CapePlacementProbe.orbit(event, player, yaw + 32, 12, 3.2, 1.00);
         }

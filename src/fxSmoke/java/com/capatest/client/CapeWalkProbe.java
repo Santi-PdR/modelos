@@ -27,8 +27,9 @@ import java.util.Locale;
 /** Live F5 recording. Inputs move the player; no keyframes or limb poses are injected. */
 final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     static final String BODY = "chestplate", SEAT = "cape_seat_fit", TOP = "cape_top",
-            MID = "cape_mid", TIP = "v17_ribbon_6_seg4", HOOD = "v17_cowl_back_1";
+            MID = "cape_mid", BOTTOM = "cape_bottom", TIP = "v17_ribbon_6_seg4", HOOD = "v17_cowl_back_1";
     static final int DURATION = 225;
+    static final int CROUCH_IN = 310, CROUCH_OUT = 382, QUIET_END = 401;
     private final Matrix4f[] matrices = new Matrix4f[5];
     private Vector3f crown;
     private boolean active;
@@ -102,7 +103,8 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             verifyInterleavedSample(renderer, player, partial);
         }
         var mode = motion.weight(CapeState.SPRINT) > .5 ? CapeState.SPRINT
-                : motion.weight(CapeState.WALK) > .5 ? CapeState.WALK : CapeState.IDLE;
+                : motion.weight(CapeState.WALK) > .5 ? CapeState.WALK
+                : motion.weight(CapeState.SNEAK) > .5 ? CapeState.SNEAK : CapeState.IDLE;
         requireClock(player, partial, motion);
         return new Draw(mode.name(), motion.stride(), motion.amplitude(), motion.weight(CapeState.WALK), motion.weight(CapeState.SPRINT),
                 motion.weight(CapeState.SWIM), motion.weight(CapeState.AIR), motion.weight(CapeState.FALL),
@@ -110,7 +112,8 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 -Math.toDegrees(renderer.getGeoModel().getBone(TOP).orElseThrow().getRotX()),
                 -Math.toDegrees(renderer.getGeoModel().getBone(MID).orElseThrow().getRotX()),
                 tip.transformPosition(0, 0, .36F, new Vector3f()).mul(16), hood,
-                loosePitch(renderer, 2), loosePitch(renderer, 9));
+                loosePitch(renderer, 2), loosePitch(renderer, 9), motion.weight(CapeState.SNEAK),
+                -Math.toDegrees(renderer.getGeoModel().getBone(BOTTOM).orElseThrow().getRotX()));
     }
 
     private static double loosePitch(CapaArmorRenderer renderer, int ribbon) {
@@ -157,14 +160,18 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     }
 
     record Draw(String clip, double stride, double pace, double walk, double run, double swim, double air, double fall,
-                double collarZ, double top, double mid, Vector3f tip, Vector3f hood, double edge2, double edge9) {}
+                double collarZ, double top, double mid, Vector3f tip, Vector3f hood, double edge2, double edge9,
+                double sneak, double bottom) {}
 
     static final class Route {
-        private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tclip\tstride\twalk\trun\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\tpace\thood_x\thood_y\thood_z\tedge2\tedge9\n");
+        private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tclip\tstride\twalk\trun\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\tpace\thood_x\thood_y\thood_z\tedge2\tedge9\tsneak\tbottom\tage\tcrouching\n");
+        private final boolean quietStudy;
         private int start = -1;
         private int shot;
         private int count, lastMotionShot = -1;
         private final int[] landmarks = {16, 44, 63, 84, 110, 149};
+
+        Route(boolean quietStudy) { this.quietStudy = quietStudy; }
 
         void drive(Minecraft game) {
             var p = game.player;
@@ -174,11 +181,12 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             game.options.keyUp.setDown(t >= 20 && t < 73 || t >= 96 && t < 130 || t >= 158 && t < 208);
             game.options.keyLeft.setDown(t >= 73 && t < 92);
             game.options.keySprint.setDown(sprint);
+            game.options.keyShift.setDown(quietStudy && t >= CROUCH_IN && t < CROUCH_OUT);
             if (!sprint) p.setSprinting(false);
             // Real movement in two directions; turn smoothly during the strafe.
             float turn = 30 * Math.max(0F, Math.min(1F, (t - 74) / 17F));
             p.setYRot(3 + turn);
-            p.setXRot(79);
+            p.setXRot(quietStudy && t >= DURATION ? 8 : 79);
         }
 
         boolean capture(Minecraft game, float partial, Draw draw, Path dir, String name) throws IOException {
@@ -191,7 +199,9 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                     .append(draw.top()).append('\t').append(draw.mid()).append('\t').append(draw.tip().x()).append('\t')
                     .append(draw.tip().y()).append('\t').append(draw.tip().z()).append('\t').append(draw.pace()).append('\t')
                     .append(draw.hood().x()).append('\t').append(draw.hood().y()).append('\t').append(draw.hood().z())
-                    .append('\t').append(draw.edge2()).append('\t').append(draw.edge9()).append('\n');
+                    .append('\t').append(draw.edge2()).append('\t').append(draw.edge9())
+                    .append('\t').append(draw.sneak()).append('\t').append(draw.bottom())
+                    .append('\t').append((double) p.tickCount + partial).append('\t').append(p.isCrouching() ? 1 : 0).append('\n');
             count++;
             if (shot < landmarks.length && t >= landmarks[shot]) {
                 try (var image = Screenshot.takeScreenshot(game.getMainRenderTarget())) {
@@ -201,14 +211,18 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             }
             // One real F5 frame every two ticks for a short, reviewable sequence.
             int tick = (int) t;
-            if ((name.equals("paso-pecho") || name.equals("paso-curios")) && tick != lastMotionShot && tick % 2 == 0
-                    && (tick >= 40 && tick < 64 || tick >= 106 && tick < 130)) {
+            boolean gaitShot = tick % 2 == 0 && (tick >= 40 && tick < 64 || tick >= 106 && tick < 130);
+            boolean changeShot = tick % 2 == 0 && tick >= 192 && tick < 218;
+            boolean stillShot = tick >= 230 && tick < 302 && (tick-230) % 6 == 0
+                    || tick >= 318 && tick < 370 && (tick-318) % 4 == 0;
+            if (quietStudy && tick != lastMotionShot && (gaitShot || changeShot || stillShot)) {
                 lastMotionShot = tick;
+                String track = gaitShot ? "ciclo" : changeShot ? "cambio" : "calma";
                 try (var image = Screenshot.takeScreenshot(game.getMainRenderTarget())) {
-                    image.writeToFile(dir.resolve(String.format(Locale.ROOT, "%s-ciclo-%03d.png", name, tick)));
+                    image.writeToFile(dir.resolve(String.format(Locale.ROOT, "%s-%s-%03d.png", name, track, tick)));
                 }
             }
-            if (t < DURATION) return false;
+            if (t < (quietStudy ? QUIET_END : DURATION)) return false;
             if (count < 135) throw new AssertionError("too few walk frames: " + count);
             Files.writeString(dir.resolve(name + ".tsv"), rows);
             return true;
