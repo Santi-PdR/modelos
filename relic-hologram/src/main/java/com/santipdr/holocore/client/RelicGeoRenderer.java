@@ -60,12 +60,16 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
      * que usa {@link RelicAura}: aporta el factor de intensidad (dormida brilla
      * menos, cargada mas) y el color, asi que halo y pase GLSL se tiñen con el
      * estado en vez de quedarse azules fijos mientras el aura se pone roja.</p>
+     *
+     * <p>{@code fade} llega de {@link RelicCurioRenderer}: para los portadores
+     * que no son el jugador local se apaga en los ultimos bloques de
+     * {@code maxRenderDistance}, en vez de desaparecer de golpe.</p>
      * Ninguno de los pases vuelve a animar: GeckoLib detecta que es el mismo
      * frame y conserva las matrices de los huesos.
      */
     void renderHologram(PoseStack poseStack, RelicAnimatable animatable,
                         MultiBufferSource bufferSource, float partialTick, int packedLight,
-                        RelicGlowState glow) {
+                        RelicGlowState glow, float fade) {
         // El programa jubilado por una recarga se cierra aqui: en el primer pase
         // del frame, con los lotes anteriores ya volcados.
         RelicShaders.reap();
@@ -83,7 +87,7 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
         // Factor de brillo del modelo: estado (0.35 dormida .. 1.15 cargada) por
         // el destello del evento, que llega a +60%.
         float amount = Math.max(0.0F, Math.min(1.25F, glow.aura()))
-                * (1.0F + 0.2F * glow.flashScaled());
+                * (1.0F + 0.2F * glow.flashScaled()) * fade;
 
         if (haloEnabled()) {
             float i = RelicConfig.HALO_INTENSITY.get().floatValue() * amount;

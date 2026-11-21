@@ -53,8 +53,11 @@ public final class RelicAura {
     private static final float[] WEIGHT = {0.30F, 0.17F, 0.09F};
     /** Velocidad de giro de cada capa, en radianes por tick. Negativa = al reves. */
     private static final float[] SPIN = {0.035F, -0.022F, 0.010F};
-    /** Diametro del anillo de estado: apenas por fuera del aura, para leerse. */
-    private static final float RING_DIAMETER = 1.15F;
+    /**
+     * Diametro del anillo de estado: por fuera del aura (1.10) con margen
+     * suficiente para leerse como anillo y no como el borde del resplandor.
+     */
+    private static final float RING_DIAMETER = 1.35F;
     /**
      * Alpha de los quads del aura. Con blend aditivo el color final es
      * {@code rgb * alpha}, asi que esto es el mando global de cuanto suma el
@@ -63,6 +66,15 @@ public final class RelicAura {
      * satura los tres canales.
      */
     private static final float AURA_ALPHA = 0.55F;
+    /**
+     * Cuanto mas cubre el pase de tinte que el aditivo. El tinte tiene que
+     * notarse sobre nieve (donde el aditivo no puede hacer nada) y a la vez no
+     * parecer una mancha en una cueva: 2.2 sobre los mismos pesos deja un 20-30%
+     * de cobertura en el centro.
+     */
+    private static final float TINT_ALPHA_BOOST = 2.2F;
+    /** El tinte va con un color mas oscuro que el brillo, o no oscurece nada. */
+    private static final float TINT_DARKEN = 0.55F;
 
     private RelicAura() {
     }
@@ -73,7 +85,7 @@ public final class RelicAura {
     }
 
     static void render(PoseStack poseStack, MultiBufferSource bufferSource, float partialTick,
-                       RelicAnimatable.LoopState state, RelicGlowState glow) {
+                       RelicAnimatable.LoopState state, RelicGlowState glow, float fade) {
         float time = time(partialTick);
         Frame frame = frame(poseStack);
         // Destello de evento: el anillo se enciende aunque el estado no lo tenga,
@@ -81,10 +93,10 @@ public final class RelicAura {
         float flash = glow.flashScaled();
 
         if (RelicConfig.GLOW_AURA.get()) {
-            drawAura(bufferSource, frame, time, glow, flash);
+            drawAura(bufferSource, frame, time, glow, flash, fade);
         }
         if (RelicConfig.GLOW_RING.get() && glow.ring() + flash * 0.8F > 0.01F) {
-            drawRing(bufferSource, frame, time, state, glow, flash);
+            drawRing(bufferSource, frame, time, state, glow, flash, fade);
         }
     }
 
@@ -93,9 +105,9 @@ public final class RelicAura {
     // ------------------------------------------------------------------
 
     private static void drawAura(MultiBufferSource bufferSource, Frame frame, float time,
-                                 RelicGlowState glow, float flash) {
+                                 RelicGlowState glow, float flash, float fade) {
         float intensity = RelicConfig.AURA_INTENSITY.get().floatValue() * glow.aura()
-                * (1.0F + 0.35F * flash);
+                * (1.0F + 0.35F * flash) * fade;
         // El destello abre el aura muy poco: el fogonazo lo da el anillo, que es
         // una linea y no una mancha.
         float spread = 1.0F + 0.10F * flash;
@@ -103,12 +115,24 @@ public final class RelicAura {
             return;
         }
 
-        VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
+        // 1) Tinte: mezcla normal con un color mas oscuro. Es el unico pase que
+        //    se ve de color sobre nieve/arena; sobre fondo oscuro casi no se nota
+        //    y el que manda es el aditivo de abajo.
+        if (RelicConfig.AURA_TINT.get()) {
+            VertexConsumer tint = bufferSource.getBuffer(RelicRenderTypes.TINT_GLOW.apply(AURA_TEXTURE));
+            for (int layer = 0; layer < DIAMETER.length; layer++) {
+                float coverage = Math.min(1.0F,
+                        WEIGHT[layer] * pulseAt(time, layer) * intensity * TINT_ALPHA_BOOST);
+                billboard(tint, frame, DIAMETER[layer] * spread, time * SPIN[layer],
+                        glow.red() * TINT_DARKEN, glow.green() * TINT_DARKEN,
+                        glow.blue() * TINT_DARKEN, coverage);
+            }
+        }
 
+        // 2) Aditivo: el brillo.
+        VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
         for (int layer = 0; layer < DIAMETER.length; layer++) {
-            // Latido lento: 0.82 .. 1.0, desfasado entre capas.
-            float pulse = 0.82F + 0.18F * sin(time * 0.08F + layer * 1.7F);
-            float weight = WEIGHT[layer] * pulse * intensity;
+            float weight = WEIGHT[layer] * pulseAt(time, layer) * intensity;
             billboard(buffer, frame, DIAMETER[layer] * spread, time * SPIN[layer],
                     glow.red() * weight, glow.green() * weight, glow.blue() * weight, AURA_ALPHA);
         }
@@ -119,9 +143,10 @@ public final class RelicAura {
     // ------------------------------------------------------------------
 
     private static void drawRing(MultiBufferSource bufferSource, Frame frame, float time,
-                                 RelicAnimatable.LoopState state, RelicGlowState glow, float flash) {
+                                 RelicAnimatable.LoopState state, RelicGlowState glow, float flash,
+                                 float fade) {
         float weight = RelicConfig.RING_INTENSITY.get().floatValue()
-                * (glow.ring() + 0.7F * flash);
+                * (glow.ring() + 0.7F * flash) * fade;
         if (weight <= 0.001F) {
             return;
         }
@@ -134,9 +159,26 @@ public final class RelicAura {
                 * (alert ? 1.0F + 0.03F * sin(time * beatSpeed) : 1.0F);
         float amount = weight * beat;
 
+        float angle = time * glow.spin();
+
+        // El anillo tambien lleva tinte: sobre nieve el aditivo lo dejaba en
+        // blanco y se perdia. El tinte lo mantiene del color del estado.
+        if (RelicConfig.AURA_TINT.get()) {
+            VertexConsumer tint = bufferSource.getBuffer(RelicRenderTypes.TINT_GLOW.apply(RING_TEXTURE));
+            float coverage = Math.min(1.0F, amount * 0.9F);
+            billboard(tint, frame, size, angle,
+                    glow.red() * TINT_DARKEN, glow.green() * TINT_DARKEN,
+                    glow.blue() * TINT_DARKEN, coverage);
+        }
+
         VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(RING_TEXTURE));
-        billboard(buffer, frame, size, time * glow.spin(),
+        billboard(buffer, frame, size, angle,
                 glow.red() * amount, glow.green() * amount, glow.blue() * amount, 1.0F);
+    }
+
+    /** Latido lento de cada capa del aura: 0.82 .. 1.0, desfasado entre capas. */
+    private static float pulseAt(float time, int layer) {
+        return 0.82F + 0.18F * sin(time * 0.08F + layer * 1.7F);
     }
 
     // ------------------------------------------------------------------

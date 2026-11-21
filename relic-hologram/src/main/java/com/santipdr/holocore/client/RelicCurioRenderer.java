@@ -31,6 +31,8 @@ import top.theillusivec4.curios.api.client.ICurioRenderer;
 public class RelicCurioRenderer implements ICurioRenderer {
 
     private static final float PIXEL = 1.0F / 16.0F;
+    /** Bloques en los que la reliquia de otro jugador se apaga al alejarse. */
+    private static final double FADE_BLOCKS = 8.0;
 
 
     @Override
@@ -47,12 +49,17 @@ public class RelicCurioRenderer implements ICurioRenderer {
             return;
         }
 
+        // Distancia: fuera de maxRenderDistance no se dibuja, y en los ultimos
+        // bloques se apaga poco a poco en vez de desaparecer de golpe.
+        float fade = 1.0F;
         Player local = Minecraft.getInstance().player;
         if (local != null && player != local) {
             double max = RelicConfig.MAX_RENDER_DISTANCE.get();
-            if (local.distanceToSqr(player) > max * max) {
+            double distance = Math.sqrt(local.distanceToSqr(player));
+            if (distance > max) {
                 return;
             }
+            fade = (float) Math.max(0.0, Math.min(1.0, (max - distance) / FADE_BLOCKS));
         }
 
         RelicVisuals.RelicVisual visual = RelicVisuals.visual(player);
@@ -87,12 +94,12 @@ public class RelicCurioRenderer implements ICurioRenderer {
         visual.glow().update(state, animatable.flash());
 
         visual.renderer().renderHologram(poseStack, animatable, bufferSource, partialTicks,
-                LightTexture.FULL_BRIGHT, visual.glow());
+                LightTexture.FULL_BRIGHT, visual.glow(), fade);
 
         // Aura + anillo: billboards aditivos sobre el mismo anclaje (incluye la
         // escala de la config, que se lee de la matriz).
         if (RelicAura.enabled()) {
-            RelicAura.render(poseStack, bufferSource, partialTicks, state, visual.glow());
+            RelicAura.render(poseStack, bufferSource, partialTicks, state, visual.glow(), fade);
         }
 
         poseStack.popPose();

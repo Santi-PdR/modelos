@@ -1,5 +1,20 @@
 # Historial de cambios
 
+## 1.0.12 — color de verdad sobre fondos claros
+
+* **El aura pasa a tener dos pases**: uno de **tinte** (mezcla alfa normal, color
+  del estado oscurecido) y encima el **aditivo** de siempre. El aditivo solo puede
+  aclarar, así que sobre nieve o arena estaba condenado a verse blanco por mucho
+  que se bajara la intensidad; mezclando, el halo se ve cian. Sobre cueva el que
+  manda sigue siendo el aditivo.
+* Nueva clave `visuals.auraTint` (por defecto `true`) para volver al
+  comportamiento de 1.0.11 (solo brillo).
+* **Fade por distancia**: la reliquia de otros jugadores se apaga suavemente en
+  los 8 bloques antes de `maxRenderDistance`, en vez de desaparecer de un frame al
+  otro. La tuya nunca se atenúa.
+* El anillo pasa a 1.35 bloques para separarse del aura (1.10) y leerse como
+  anillo y no como el borde del resplandor.
+
 ## 1.0.11 — el brillo vuelve a ser brillo
 
 Arregla lo que se vio mal en juego: el aura se veía como una **nube blanca** más

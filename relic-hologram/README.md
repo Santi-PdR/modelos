@@ -120,6 +120,12 @@ pesos 0.30 / 0.17 / 0.09 y alpha de quad 0.55. El motivo está explicado en
 mucho sobre un fondo claro satura los tres canales y el aura se ve **blanca**
 aunque el tinte sea azul. Es lo que pasaba sobre nieve hasta 1.0.10.
 
+Desde 1.0.12 el aura son **dos pases** de los mismos tres quads: uno de **tinte**
+(mezcla normal, color oscurecido) y encima el **aditivo** del brillo. El aditivo
+solo puede aclarar, así que sobre nieve siempre acaba en blanco; el pase de tinte
+es el que conserva el color del estado. Se apaga con `auraTint=false` si prefieres
+solo el brillo.
+
 El **anillo de estado** (`relic_ring.png`, generado con `tools/make_ring.py`) es
 un cuarto billboard que solo aparece cuando la reliquia tiene algo que contar
 (1.15 bloques: apenas por fuera del aura, para que se lea como anillo y no como
@@ -188,13 +194,14 @@ shaders de 1.20.1 están en [BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
 | `visuals.haloIntensity` | `0.25` | Fuerza del halo aditivo (0–1). Por encima de 0.4 se ve mancha blanca sobre nieve. |
 | `visuals.glowAura` | `true` | Aura: tres billboards aditivos alrededor del núcleo. |
 | `visuals.auraIntensity` | `0.32` | Fuerza del aura (0–1). Es aditiva: sobre fondo claro suma hacia blanco. |
+| `visuals.auraTint` | `true` | Pase de tinte (mezcla normal) del aura: es lo que da color sobre nieve/arena. |
 | `visuals.glowRing` | `true` | Anillo de estado (gira y se tiñe según la reliquia). |
 | `visuals.ringIntensity` | `0.60` | Fuerza del anillo (0–1). |
 | `visuals.flashIntensity` | `1.0` | Destello al ocurrir algo (pulso, liberación, golpe, nivel, despertar). `0` lo apaga. |
 | `visuals.shaderGlow` | `true` | Pase GLSL propio (borde de silueta + dos barridos). Se apaga solo con shaderpack activo. |
 | `visuals.shaderIntensity` | `0.35` | Fuerza del pase GLSL, independiente del halo. |
 | `visuals.reducedEffects` | `false` | Reposo sin rayos/cometas/ondas (`idle_calm`). |
-| `visuals.maxRenderDistance` | `32` | Distancia para dibujar la reliquia de otros jugadores. |
+| `visuals.maxRenderDistance` | `32` | Distancia para dibujar la reliquia de otros jugadores (se apaga en los últimos 8 bloques). |
 | `visuals.idleVariations` | `true` | Variaciones propias en reposo (temblor, glitch, pulso). `false` = solo glitch. |
 | `visuals.glitchMinSeconds` / `glitchMaxSeconds` | `20` / `60` | Intervalo entre variaciones de reposo. |
 | `visuals.alertRadius` | `12` | Radio en el que un monstruo activa `idle_alert`. |

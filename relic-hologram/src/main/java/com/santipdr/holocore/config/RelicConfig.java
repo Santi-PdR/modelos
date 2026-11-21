@@ -27,6 +27,7 @@ public final class RelicConfig {
     public static final ForgeConfigSpec.DoubleValue HALO_INTENSITY;
     public static final ForgeConfigSpec.BooleanValue GLOW_AURA;
     public static final ForgeConfigSpec.DoubleValue AURA_INTENSITY;
+    public static final ForgeConfigSpec.BooleanValue AURA_TINT;
     public static final ForgeConfigSpec.BooleanValue GLOW_RING;
     public static final ForgeConfigSpec.DoubleValue RING_INTENSITY;
     public static final ForgeConfigSpec.DoubleValue FLASH_INTENSITY;
@@ -73,6 +74,10 @@ public final class RelicConfig {
         AURA_INTENSITY = b.comment("Intensidad del aura (0 = invisible, 1 = muy marcada). El aura es aditiva:",
                         "sobre un fondo claro (nieve, desierto) sumar mucho termina viendose blanco.")
                 .defineInRange("auraIntensity", 0.32D, 0.0D, 1.0D);
+        AURA_TINT = b.comment("Segundo pase del aura con mezcla normal: tine en vez de sumar.",
+                        "Es lo unico que da color sobre nieve o arena, donde un aditivo solo puede",
+                        "blanquear. false = solo el brillo aditivo.")
+                .define("auraTint", true);
         GLOW_RING = b.comment("Anillo de estado: gira y se tine segun idle/cargada/alerta. En calma y dormida no sale.")
                 .define("glowRing", true);
         RING_INTENSITY = b.comment("Intensidad del anillo de estado (0 = invisible, 1 = muy marcado).")

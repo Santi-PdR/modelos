@@ -46,6 +46,16 @@ public final class RelicRenderTypes {
             Util.memoize(Internal::additiveGlow);
 
     /**
+     * Pase que <b>tine</b> en vez de sumar (mezcla alfa normal). Es la unica
+     * forma de que el aura se lea de color sobre un fondo claro: sumando sobre
+     * nieve o arena el resultado clipea a blanco, mezclando se oscurece hacia el
+     * tinte y el ojo ve cian. El brillo sigue viniendo del pase aditivo, que se
+     * dibuja encima.
+     */
+    public static final Function<ResourceLocation, RenderType> TINT_GLOW =
+            Util.memoize(Internal::tintGlow);
+
+    /**
      * Mismo blend aditivo pero con el shader propio (fresnel + barrido). El
      * supplier se evalua en cada setup, asi que sobrevive a una recarga de
      * recursos sin rehacer el RenderType.
@@ -75,6 +85,21 @@ public final class RelicRenderTypes {
                     .setWriteMaskState(COLOR_WRITE)
                     .createCompositeState(false);
             return create("holocore_glow_shader", DefaultVertexFormat.NEW_ENTITY,
+                    VertexFormat.Mode.QUADS, 256, false, true, state);
+        }
+
+        private static RenderType tintGlow(ResourceLocation texture) {
+            CompositeState state = CompositeState.builder()
+                    .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_SHADER)
+                    .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
+                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                    .setCullState(NO_CULL)
+                    .setLightmapState(LIGHTMAP)
+                    .setOverlayState(OVERLAY)
+                    .setDepthTestState(LEQUAL_DEPTH_TEST)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .createCompositeState(false);
+            return create("holocore_tint_glow", DefaultVertexFormat.NEW_ENTITY,
                     VertexFormat.Mode.QUADS, 256, false, true, state);
         }
 

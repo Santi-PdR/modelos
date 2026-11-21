@@ -112,6 +112,22 @@ frentes: textura cian sin blanco en el centro (máximo 0.52 / 0.86 / 1.0), quads
 pegados al núcleo y un quinto del aporte (0.30 + 0.17 + 0.09 = 0.56 × 0.55 de
 alpha), y destello que ya no toca el aura casi nada.
 
+**Dos pases desde 1.0.12: tinte + brillo.** El aditivo tiene un techo físico: solo
+puede sumar, así que sobre un fondo claro nunca puede dar color (sumar a 0.95 lo
+lleva a 1.0, o sea blanco). Para conservar el color se dibujan los mismos tres
+quads dos veces:
+
+1. **Tinte** (`RelicRenderTypes.TINT_GLOW`, mezcla alfa normal) con el color del
+   estado oscurecido ×0.55 y una cobertura de `peso × intensidad × 2.2`. Sobre
+   nieve eso baja el fondo un 20–30% hacia cian; sobre una cueva apenas se nota.
+2. **Brillo** (`ADDITIVE_GLOW`) encima, que es el que hace el resplandor en
+   oscuro.
+
+Los dos pases comparten geometría y giro, así que no hay que duplicar nada más
+que el bucle de emisión (6 quads en lugar de 3). El **anillo** hace lo mismo
+(2 quads más): sobre nieve el aditivo lo dejaba blanco y se perdía.
+`visuals.auraTint=false` deja solo el aditivo, que es el comportamiento de 1.0.11.
+
 **Anillo de estado** (`RelicAura.drawRing`, textura `relic_ring.png` de
 `tools/make_ring.py`): un solo billboard de 1.15 bloques, apenas por fuera del
 aura (1.10), para que se lea como un anillo y no como el borde del resplandor;
@@ -461,6 +477,9 @@ basta con instanciarlas desde fuera.
   único uniform propio que se toca por frame es `HoloTime`.
 * El blend lo decide el JSON (`add` / `srcalpha` / `one`): `ShaderInstance.apply()`
   lo aplica *después* de los estados del `RenderType`, así que gana el del shader.
+* **Fade por distancia**: la reliquia de otros jugadores se apaga en los 8
+  bloques previos a `maxRenderDistance` (multiplica intensidades y alpha) en vez
+  de desaparecer de golpe. La del jugador local nunca se atenúa.
 * **Se apaga solo** si hay shaderpack: `IrisApi.isShaderPackInUse()` por
   reflexión cuando Oculus está presente (si la API no está, se asume activo) y
   detección de OptiFine por `ModList` y por la clase `optifine.Installer`.
