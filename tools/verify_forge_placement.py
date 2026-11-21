@@ -95,6 +95,7 @@ def report(root, baseline=None):
             print(f'::notice title=Lectura frontal::{fixture}: {old[:,0].astype(int).tolist()} → '
                   f'{visible[:,0].astype(int).tolist()} píxeles de placa sobre las mangas ({ratio:.1%} de v1.67.20).')
             front_rows.append((fixture, *old[:,0].astype(int), *visible[:,0].astype(int)))
+            assert ratio >= (1.03 if '-alex-' in fixture else .97), (fixture,'lectura frontal',ratio)
         print(f'::notice title=Montaje fijo en Forge::{fixture}: órbita {drift[0]:.6f}u ({len(orbit)} vistas); '
               f'mirada {drift[1]:.6f}u ({len(aim)} poses); salto {drift[2]:.6f}u, {jump["lift"].max():.2f} bloques. '
               f'Placas sobre las mangas de frente: {" / ".join(coverage)}. '

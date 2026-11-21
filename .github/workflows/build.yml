@@ -1279,39 +1279,3 @@ jobs:
           done
           echo "### Borrador $TAG verificado (publicar después de CI SUCCESS)" >> "$GITHUB_STEP_SUMMARY"
           cat "$SUMS" >> "$GITHUB_STEP_SUMMARY"
-
-  cape-walk-replay:
-    if: github.repository == 'Santi-PdR/modelos' && github.ref == 'refs/heads/arena/5a9fa51b-modelos' && github.event_name == 'push' && contains(github.event.head_commit.message, '[depurar-marcha]')
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: capatest-fx-en-mundo
-          github-token: ${{ github.token }}
-          run-id: 44858943170
-          path: replay
-      - uses: actions/download-artifact@v4
-        with:
-          name: capatest-fx-en-mundo
-          github-token: ${{ github.token }}
-          run-id: 44849476869
-          path: replay-base
-      - name: Revisar todas las transiciones, independientemente de la sonda de capucha
-        run: |
-          pip install --quiet numpy
-          PYTHONPATH=tools python - <<'PY'
-          from pathlib import Path
-          from verify_forge_walk import peaks,read,TRANSITIONS,CHANGE
-          paths=sorted(Path('replay').glob('paso-*.tsv'))
-          assert len(paths)==4,paths
-          for file in paths:
-              old=Path('replay-base')/file.name
-              for name,lo,hi in TRANSITIONS+CHANGE:
-                  values=peaks(read(file),lo,hi).round(3).tolist()
-                  base=peaks(read(old),lo,hi).round(3).tolist() if old.is_file() and (name,lo,hi) in TRANSITIONS else None
-                  print(f'::notice title=Marcha real en Forge::{file.stem} {name}: {values} (base {base})',flush=True)
-          PY
