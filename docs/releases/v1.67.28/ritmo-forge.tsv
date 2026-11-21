@@ -1,0 +1,5 @@
+ranura	marcha	alternancia_base_deg	alternancia_deg	onda_base_deg	onda_deg	rebote_base_deg	rebote_deg
+pecho	caminar	3.4815	3.4813	0.3529	0.3531	1.1433	1.1410
+pecho	correr	0.9290	0.9288	0.3818	0.3851	1.2553	1.2562
+curios	caminar	3.4827	3.4811	0.3557	0.3534	1.1422	1.1418
+curios	correr	0.9291	0.9293	0.3812	0.3847	1.2579	1.2593
