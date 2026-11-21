@@ -314,7 +314,17 @@ jobs:
 
       - name: Build
         working-directory: relic-hologram
-        run: gradle build --stacktrace --no-daemon
+        run: |
+          set -uo pipefail
+          # Un fallo de red al bajar dependencias (Modrinth, maven de Curios) no
+          # debe tenirse de rojo: se reintenta UNA vez. Un error de javac falla
+          # las dos veces y lo reemite el paso siguiente como anotacion.
+          if gradle build --stacktrace --no-daemon; then
+            exit 0
+          fi
+          echo "::warning title=build::primer intento fallido, reintentando en 20 s"
+          sleep 20
+          gradle build --stacktrace --no-daemon
 
       # Solo se ejecuta si algo fallo. El log de Actions no es legible desde
       # fuera (el CDN esta bloqueado), asi que los errores de javac se reemiten
