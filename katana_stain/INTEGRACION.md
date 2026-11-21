@@ -454,3 +454,11 @@ La comparación adicional del gesto con una traslación lateral del brazo y meno
 profundidad en primera persona produjo mayor oclusión y no demostró contacto con
 la hoja; se descartó ese experimento. Persiste la limitación visual del gesto,
 por lo que la prueba automatizada no debe interpretarse como aprobación estética.
+
+### Selección de objetivos multipartes
+Al activar C se consulta también la colección de partes cargadas de Forge: si
+una parte está en el área de búsqueda, se comprueba el objetivo principal por
+alcance, dirección, visibilidad y legalidad. No se cargan chunks por esta
+consulta. El fixture fuerza una parte de Ender Dragon en alcance con el cuerpo
+principal fuera del área, además de comprobar su liberación. Esto no garantiza
+compatibilidad con jefes que implementan protección o partes de otra manera.

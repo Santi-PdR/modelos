@@ -83,6 +83,7 @@ print('OK: segundo corte, zurdos, impulso local y protocolo visual v10')
 assert model['firstperson_righthand']['scale'] == [0.56, 0.56, 0.56]
 assert model['firstperson_lefthand']['scale'] == [0.56, 0.56, 0.56]
 assert 'visualYaw, 55, 0' in visuals and 'yaw, 90, leftHanded ? -25 : 25' in visuals
+assert 'yaw, 55, leftHanded ? 30 : -30' in visuals
 print('OK: escala de primera persona y planos de efectos de prueba')
 
 assert 'startBackstab(player, state, now)' in ability

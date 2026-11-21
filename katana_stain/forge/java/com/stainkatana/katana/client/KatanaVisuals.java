@@ -31,7 +31,9 @@ public final class KatanaVisuals {
             // A second, crossing slash gives each confirmed cut a readable silhouette.
             level.addParticle(KatanaParticles.PULSE.get(), x, y, z, visualYaw, 75, leftHanded ? -20 : 20);
         } else if (style == 1) {
-            // First stroke of the ultimate, angled across the body.
+            // Use the credited Better Combat Particle arc as well as the
+            // blood pulse, so the opening stroke reads as a cut, not just a glyph.
+            level.addParticle(KatanaParticles.SLASH.get(), x, y, z, yaw, 55, leftHanded ? 30 : -30);
             level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw, 90, leftHanded ? -25 : 25);
         } else {
             // Also focuses an active finisher shot; this is a no-op outside a scene.
