@@ -10,7 +10,8 @@
 * Textura nueva `textures/relic/relic_aura.png` (64×64), generada con
   `tools/make_aura.py` para que sea reproducible y no un binario a mano.
 * Documentado el diseño y las alternativas descartadas (GLSL propio, post-proceso)
-  en `docs/BRILLO-Y-SHADERS.md`.
+  en `docs/BRILLO-Y-SHADERS.md`, incluido el shader que se usaría si algún día se
+  conecta (con las rutas y restricciones reales de `ShaderInstance` en 1.20.1).
 
 ## 1.0.1 — halo aditivo
 

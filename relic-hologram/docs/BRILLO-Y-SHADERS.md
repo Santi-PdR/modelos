@@ -151,107 +151,124 @@ del núcleo. Ajuste fino: subir el brillo de `relic_hologram_glowing.png` (o sub
 
 Si algún día se quiere fresnel de verdad en el borde y líneas de barrido de
 holograma, esto es lo que haría falta. **No está en el jar**: se deja escrito
-porque el trabajo de averiguar la API ya está hecho y así no se repite.
+porque la investigación ya está hecha y así no se repite. Todo lo que sigue está
+contrastado con las fuentes de 1.20.1 (`ShaderInstance`, `Program`,
+`RenderStateShard`, `RenderType`) y con el *access transformer* de Forge.
 
-Tres ficheros en `assets/holocore/shaders/relic/`: `glow.json`, `glow.vsh`,
-`glow.fsh`. El JSON es el mismo formato que los *core shaders* del juego:
+### A.1 Dónde van los ficheros (y por qué ahí)
+
+`ShaderInstance` construye siempre la ruta como
+`new ResourceLocation("shaders/core/" + nombre + ".json")`, y el nombre **no
+puede llevar namespace**: si se pasa `holocore:relic_glow` la ruta queda
+`shaders/core/holocore:relic_glow.json` y `ResourceLocation` revienta (el `/` no
+es válido en el namespace). O sea que los ficheros van en el namespace
+`minecraft`, con nombre propio para no pisar ningún core shader del juego:
+
+```
+assets/minecraft/shaders/core/holocore_relic_glow.json
+assets/minecraft/shaders/core/holocore_relic_glow.vsh
+assets/minecraft/shaders/core/holocore_relic_glow.fsh
+```
+
+El JSON, mismo formato que los core shaders de vanilla (`vertex` y `fragment` son
+nombres planos, sin namespace):
 
 ```json
 {
   "blend": { "func": "add", "srcrgb": "srcalpha", "dstrgb": "one" },
-  "vertex": "holocore:shaders/relic/glow",
-  "fragment": "holocore:shaders/relic/glow",
-  "attributes": ["Position", "Color", "UV0"],
+  "vertex": "holocore_relic_glow",
+  "fragment": "holocore_relic_glow",
+  "attributes": ["Position", "Color", "UV0", "UV2", "Normal"],
   "samplers": [{ "name": "Sampler0" }],
   "uniforms": [
     { "name": "ModelViewMat", "type": "matrix4x4", "count": 16, "values": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1] },
     { "name": "ProjMat", "type": "matrix4x4", "count": 16, "values": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1] },
-    { "name": "Time", "type": "float", "count": 1, "values": [0.0] },
-    { "name": "ColorModulator", "type": "float", "count": 4, "values": [1,0,0,0] }
+    { "name": "ColorModulator", "type": "float", "count": 4, "values": [1,1,1,1] },
+    { "name": "HoloTime", "type": "float", "count": 1, "values": [0.0] }
   ]
 }
 ```
 
-`glow.vsh`: pasa posición, color y UV, y calcula el fresnel con la normal en
-espacio de vista (para el borde luminoso):
+`holocore_relic_glow.vsh` — fresnel calculado en espacio de vista:
 
 ```glsl
 #version 150
+
 in vec3 Position;
 in vec4 Color;
 in vec2 UV0;
 in vec3 Normal;
+
 uniform mat4 ModelViewMat;
 uniform mat4 ProjMat;
+
 out vec2 texCoord;
 out vec4 vertexColor;
 out float fresnel;
+
 void main() {
     vec4 viewPos = ModelViewMat * vec4(Position, 1.0);
     vec3 viewNormal = normalize(mat3(ModelViewMat) * Normal);
-    fresnel = pow(1.0 - abs(normalize(viewPos.xyz).z), 2.5);
+    float facing = abs(dot(normalize(-viewPos.xyz), viewNormal));
+    fresnel = pow(1.0 - facing, 2.5);
     gl_Position = ProjMat * viewPos;
     texCoord = UV0;
     vertexColor = Color;
 }
 ```
 
-`glow.fsh`: textura × color + borde + líneas de barrido que suben con el tiempo.
-Es aditivo, así que el alfa no hace falta y todo suma:
+`holocore_relic_glow.fsh` — textura × color, borde y barrido que sube:
 
 ```glsl
 #version 150
+
 uniform sampler2D Sampler0;
-uniform float Time;
 uniform vec4 ColorModulator;
+uniform float HoloTime;
+
 in vec2 texCoord;
 in vec4 vertexColor;
 in float fresnel;
+
 out vec4 fragColor;
+
 void main() {
     vec4 tex = texture(Sampler0, texCoord);
-    float scan = smoothstep(0.45, 0.5, fract(texCoord.y * 6.0 - Time * 0.25));
     float alpha = clamp(tex.a * vertexColor.a, 0.0, 1.0);
+    float scan = smoothstep(0.45, 0.5, fract(texCoord.y * 6.0 - HoloTime));
     vec3 rgb = tex.rgb * vertexColor.rgb + fresnel * 0.35 + scan * 0.08;
     fragColor = vec4(rgb * alpha * ColorModulator.rgb, alpha);
 }
 ```
 
-Para cargarlo hace falta un `ShaderInstance` construido a mano (el juego solo
-precarga los suyos) y reconstruirlo cuando el jugador cambia de pack de recursos:
+### A.2 Cómo se carga
+
+El juego sólo precompila sus propios core shaders, así que hay que construir el
+`ShaderInstance` a mano en un listener de *resource reload* (así se recompila al
+cambiar de pack) y rellenar el uniform propio en cada frame:
 
 ```java
-// en un listener de reload del cliente
-ShaderInstance shader = new ShaderInstance(resourceManager, "holocore:shaders/relic/glow",
+ShaderInstance shader = new ShaderInstance(resourceManager, "holocore_relic_glow",
         DefaultVertexFormat.NEW_ENTITY);
-// ... y en cada frame:
-shader.safeGetUniform("Time").set((level.getGameTime() + partialTick) / 20.0F);
+
+// por frame:
+shader.safeGetUniform("HoloTime").set((level.getGameTime() % 20000) / 20.0F);
 ```
 
-…y un `RenderType` con `.setShaderState(new ShaderStateShard(() -> shader))`.
-**Aquí está el problema**: con Iris/Oculus/OptiFine activos ese programa no está
-en el pipeline del pack, así que se sustituye por el fallback o desaparece (le
-pasó a Forge con su shader «unlit», Oculus #630). Por eso este camino necesita
-además `ModList.get().isLoaded("oculus")` / `"optifine"` para apagarse solo, y
-por eso hoy no está conectado.
+…y usarlo en un `RenderType` con `.setShaderState(new ShaderStateShard(() -> shader))`.
+Ojo: `ShaderStateShard` es `protected` en `RenderStateShard`, igual que
+`TextureStateShard` y `TransparencyStateShard`; por eso hace falta la clase
+auxiliar que hereda de `RenderType` (la misma que ya usa `RelicRenderTypes`), no
+basta con instanciarlas desde fuera.
 
-## 6. Cómo probarlo
+### A.3 Por qué no está conectado
 
-```
-/give @s holocore:holographic_core      # equipar en el slot charm
-/relic quality full                     # o lite, para comparar
-/relic pulse                            # animacion de una sola vez
-```
+Con Iris/Oculus/OptiFine cargados ese programa no forma parte del pipeline del
+pack: se sustituye por el fallback del pack o desaparece (le pasó a Forge con su
+shader «unlit», Oculus #630). Para conectarlo haría falta:
 
-En `config/holocore-client.toml`:
-
-```toml
-[visuals]
-    glowLayer = true
-    glowHalo = true
-    haloIntensity = 0.35
-```
-
-Si con el pack el halo se ve «lavado», bajar `haloIntensity`; si se ve plano sin
-pack, subirlo a 0.5–0.6. Para comparar con y sin shaderpack, mismo mundo, misma
-hora, y mirar la silueta contra una pared oscura.
+1. apagarlo solo con `ModList.get().isLoaded("oculus")` / `"optifine"`;
+2. un config aparte (`experimentalShader`, por defecto `false`), porque es un
+   camino que no se puede probar en CI más allá de que compile;
+3. que el shader compile durante el *reload*: si el GLSL está mal, el cliente
+   falla al arrancar, y el smoke test del CI sí lo detectaría.
