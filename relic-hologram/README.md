@@ -113,9 +113,17 @@ La **aura** son tres billboards (quads que miran a cámara) con la textura
 aditivo. Eso da el resplandor alrededor del núcleo sin tocar la pantalla y sin
 depender del pack; la textura se genera con `tools/make_aura.py`.
 
+Desde 1.0.11 el aura está **pegada al núcleo**: 0.62 / 0.85 / 1.10 bloques de
+diámetro (antes 1.05 / 1.55 / 2.10, o sea cuatro veces el tamaño del modelo),
+pesos 0.30 / 0.17 / 0.09 y alpha de quad 0.55. El motivo está explicado en
+[BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md) §3.B: con blend aditivo, sumar
+mucho sobre un fondo claro satura los tres canales y el aura se ve **blanca**
+aunque el tinte sea azul. Es lo que pasaba sobre nieve hasta 1.0.10.
+
 El **anillo de estado** (`relic_ring.png`, generado con `tools/make_ring.py`) es
-un cuarto billboard que solo aparece cuando la reliquia tiene algo que contar, y
-tanto el anillo como el aura cambian de color con el estado:
+un cuarto billboard que solo aparece cuando la reliquia tiene algo que contar
+(1.15 bloques: apenas por fuera del aura, para que se lea como anillo y no como
+un borde más), y tanto el anillo como el aura cambian de color con el estado:
 
 | Estado | Color | Aura | Anillo |
 |---|---|---|---|
@@ -154,10 +162,12 @@ El tono del halo, del borde y del pase GLSL se mezcla al 50% con el color del
 estado, así que cargada tira a ámbar y alerta a rojo en vez de quedarse azul.
 
 El **destello de evento** (`visuals.flashIntensity`) es lo que hace que la
-reliquia *conteste*: cuando llega un pulso, una liberación, un golpe recibido, una
-subida de nivel o un despertar/dormir, el brillo del modelo, el aura y el anillo
-suben de golpe y se apagan solos en ~0,4 s. El anillo se enciende aunque el estado
-no lo tuviera, así que un golpe se nota también en calma o dormida.
+reliquia *conteste*: cuando llega un pulso, una liberación, un golpe recibido o
+una subida de nivel, el anillo se enciende (aunque el estado no lo tuviera) y el
+brillo sube un poco; todo se apaga solo en ~0,4 s. Desde 1.0.11 el destello es
+**discreto a propósito**: afecta sobre todo al anillo (una línea) y apenas al
+aura y al halo, y ya **no** se dispara al despertar, dormir ni cambiar de estado
+— eso era lo que producía un fogonazo blanco justo al entrar al mundo.
 
 Lo que **no** hace: post-proceso de pantalla (caro y se pelea con los packs). El
 razonamiento completo, la matriz de compatibilidad y los detalles de la API de
@@ -175,17 +185,18 @@ shaders de 1.20.1 están en [BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
 | `visuals.quality` | `FULL` | `LITE` usa el .geo de 751 cubos y `idle_calm` en reposo. |
 | `visuals.glowLayer` | `true` | Segundo pase emisivo (la textura `_glowing`). |
 | `visuals.glowHalo` | `true` | Tercer pase con blend **aditivo** (suma luz). Se omite en `LITE` y con `reducedEffects`. |
-| `visuals.haloIntensity` | `0.35` | Fuerza del halo aditivo (0–1). |
+| `visuals.haloIntensity` | `0.25` | Fuerza del halo aditivo (0–1). Por encima de 0.4 se ve mancha blanca sobre nieve. |
 | `visuals.glowAura` | `true` | Aura: tres billboards aditivos alrededor del núcleo. |
-| `visuals.auraIntensity` | `0.55` | Fuerza del aura (0–1). |
+| `visuals.auraIntensity` | `0.32` | Fuerza del aura (0–1). Es aditiva: sobre fondo claro suma hacia blanco. |
 | `visuals.glowRing` | `true` | Anillo de estado (gira y se tiñe según la reliquia). |
-| `visuals.ringIntensity` | `0.55` | Fuerza del anillo (0–1). |
+| `visuals.ringIntensity` | `0.60` | Fuerza del anillo (0–1). |
 | `visuals.flashIntensity` | `1.0` | Destello al ocurrir algo (pulso, liberación, golpe, nivel, despertar). `0` lo apaga. |
 | `visuals.shaderGlow` | `true` | Pase GLSL propio (borde de silueta + dos barridos). Se apaga solo con shaderpack activo. |
-| `visuals.shaderIntensity` | `0.55` | Fuerza del pase GLSL, independiente del halo. |
+| `visuals.shaderIntensity` | `0.35` | Fuerza del pase GLSL, independiente del halo. |
 | `visuals.reducedEffects` | `false` | Reposo sin rayos/cometas/ondas (`idle_calm`). |
 | `visuals.maxRenderDistance` | `32` | Distancia para dibujar la reliquia de otros jugadores. |
-| `visuals.glitchMinSeconds` / `glitchMaxSeconds` | `20` / `60` | Intervalo del glitch aleatorio (solo en reposo). |
+| `visuals.idleVariations` | `true` | Variaciones propias en reposo (temblor, glitch, pulso). `false` = solo glitch. |
+| `visuals.glitchMinSeconds` / `glitchMaxSeconds` | `20` / `60` | Intervalo entre variaciones de reposo. |
 | `visuals.alertRadius` | `12` | Radio en el que un monstruo activa `idle_alert`. |
 | `visuals.combatHoldTicks` | `80` | Ticks en estado cargado tras el último golpe. |
 
@@ -209,7 +220,11 @@ hay que sumar la traslación que traía `relic_hologram.geo.json`.
 * **Golpe** → `hit` en el controlador de estado **y** `layer_hit` en el segundo
   controlador (solo `relic_react`).
 * **Subir de nivel** → `layer_bump`. **Comando** → `energy_pulse` / `release`.
-* **Glitch** aleatorio solo en reposo, cada 20–60 s.
+* **Variaciones de reposo** (`visuals.idleVariations`): estando quieta y despierta,
+  la reliquia hace cosas sola cada 20–60 s, elegidas por peso — `layer_shake`
+  (35%), `glitch` (30%), `layer_bump` (20%), `energy_pulse` (12%) y `release`
+  (3%). Con `idleVariations=false` vuelve a hacer solo el glitch. El intervalo se
+  ajusta con `glitchMinSeconds` / `glitchMaxSeconds`.
 * Transiciones de 6 ticks (el manifiesto recomienda 4–8) y dos
   `AnimationController` simultáneos: `state` (bucles + acciones) y `layer`
   (solo `layer_*`), para que las capas no pisen los giros.
@@ -255,7 +270,8 @@ shaders.
 * El modelo es de 977 cubos (751 en lite) y se renderiza en dos pases: ~11 700
   quads por reliquia y frame en calidad full. `maxRenderDistance` y
   `quality=lite` son las dos palancas de rendimiento; el escaneo de alerta va
-  cada 10 ticks y el glitch es un contador, no un cálculo por frame.
+  cada 10 ticks y las variaciones de reposo son un contador, no un cálculo por
+  frame.
 
 ## Checklist de pruebas
 

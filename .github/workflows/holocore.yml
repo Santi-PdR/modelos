@@ -242,6 +242,25 @@ jobs:
         working-directory: relic-hologram
         run: python3 tools/gen_relic_constants.py --check
 
+      # Los nombres de animacion tienen que salir de RelicAnimations. En 1.0.10
+      # triggerLayer("layer_hit") pasaba un nombre que no existe en el JSON y el
+      # controlador de capas nunca reproducia nada.
+      - name: Validate animation name literals
+        run: |
+          python3 - <<'PY'
+          import pathlib, re
+
+          malos = []
+          for f in pathlib.Path('relic-hologram/src/main/java').rglob('*.java'):
+              if f.name == 'RelicAnimations.java':
+                  continue
+              texto = f.read_text(encoding='utf-8')
+              for m in re.finditer(r'(triggerLayer|request)\(\s*"([^"]+)"', texto):
+                  malos.append(f'{f.name}: {m.group(0)}')
+          assert not malos, 'usar RelicAnimations.* en vez de literales -> ' + '; '.join(malos)
+          print('Nombres de animacion: todos via RelicAnimations.')
+          PY
+
       - name: Build
         working-directory: relic-hologram
         run: gradle build --stacktrace --no-daemon

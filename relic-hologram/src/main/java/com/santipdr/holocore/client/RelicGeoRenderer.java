@@ -83,7 +83,7 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
         // Factor de brillo del modelo: estado (0.35 dormida .. 1.15 cargada) por
         // el destello del evento, que llega a +60%.
         float amount = Math.max(0.0F, Math.min(1.25F, glow.aura()))
-                * (1.0F + 0.6F * glow.flashScaled());
+                * (1.0F + 0.2F * glow.flashScaled());
 
         if (haloEnabled()) {
             float i = RelicConfig.HALO_INTENSITY.get().floatValue() * amount;
@@ -110,12 +110,13 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
     }
 
     /**
-     * Mezcla el tono frio de base con el componente del estado ({@code 0.5} de
-     * peso). Se hace por canal y no con un {@code mix} de vectores porque el
-     * tinte se pasa a GeckoLib como cuatro floats.
+     * Mezcla el tono frio de base con el componente del estado (un cuarto de
+     * peso: se nota el cambio de color sin perder el azul de nucleo). Se hace por
+     * canal y no con un {@code mix} de vectores porque el tinte se pasa a
+     * GeckoLib como cuatro floats.
      */
     private static float tint(float cool, float state) {
-        return cool * 0.5F + state * 0.5F;
+        return cool * 0.75F + state * 0.25F;
     }
 
     /**

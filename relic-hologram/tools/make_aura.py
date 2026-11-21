@@ -6,6 +6,12 @@ suma esta textura al framebuffer. Por eso el PNG no es un circulo perfecto: llev
 tres arcos tenues (las "estelas orbitales") para que, al girar y contra-girar los
 dos primeros quads, se note el movimiento en vez de parecer una mancha fija.
 
+<b>Nada de blanco en el centro.</b> La version 1.0.10 tenia el centro a RGB
+(254,255,255) con alpha 254: sumado tres veces y encima de nieve, el resultado
+clipa a blanco y el aura se ve como una nube. Aqui el nucleo es azul-cian
+saturado y el degradado es mas corto, para que sume luz de color en vez de
+quemar el fondo.
+
 Uso:  python3 tools/make_aura.py [salida]
 Por defecto escribe assets/holocore/textures/relic/relic_aura.png
 """
@@ -38,10 +44,11 @@ def pixel(nx, ny):
     """Devuelve (r, g, b, a) con nx, ny en [-1, 1] respecto al centro."""
     dist = math.hypot(nx, ny)
 
-    # Nucleo: degradado radial que cae a cero antes del borde del quad.
-    core = smoothstep(1.0, 0.0, dist) ** 2.2
-    # Un halo ancho y muy suave, para que el quad no tenga borde visible.
-    halo = smoothstep(1.0, 0.35, dist) * 0.35
+    # Nucleo: degradado radial mas cerrado que antes (2.2 -> 3.0) y con el pico
+    # recortado: el quad ya es mas pequeno, no hace falta que llene el PNG.
+    core = smoothstep(1.0, 0.0, dist) ** 3.0 * 0.92
+    # Halo estrecho y muy suave, solo para que no se vea el borde del quad.
+    halo = smoothstep(1.0, 0.55, dist) * 0.18
 
     alpha = max(core, halo)
 
@@ -60,10 +67,11 @@ def pixel(nx, ny):
             alpha += radial * ends * weight * 0.55
 
     alpha = max(0.0, min(1.0, alpha))
-    # Azul frio: mas rojo cerca del centro (blanco-azulado) y azul puro fuera.
+    # Azul frio de verdad: el rojo sube poco en el centro, asi que el nucleo se
+    # queda cian y no blanco (que es lo que hacia que el aura pareciera una nube).
     warm = smoothstep(0.55, 0.0, dist)
-    red = 0.55 + 0.45 * warm
-    green = 0.78 + 0.22 * warm
+    red = 0.22 + 0.30 * warm
+    green = 0.62 + 0.24 * warm
     blue = 1.0
     return (
         int(round(red * 255)),

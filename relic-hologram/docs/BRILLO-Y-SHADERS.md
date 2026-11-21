@@ -79,8 +79,9 @@ modelo ni sus animaciones y el aura hereda la escala de la config.
 
 Detalles que importan:
 
-* **Tres capas, no una**: diámetros 1.05 / 1.55 / 2.10 bloques con aportes
-  0.55 / 0.32 / 0.18. Una sola capa se ve como una pegatina plana.
+* **Tres capas, no una**: diámetros 0.62 / 0.85 / 1.10 bloques con aportes
+  0.30 / 0.17 / 0.09 y alpha de quad 0.55. Una sola capa se ve como una pegatina
+  plana, pero tres capas grandes se ven como una nube (ver más abajo).
 * **Giros opuestos** (0.035 / −0.022 / 0.010 rad por tick): la textura lleva tres
   arcos, así que el giro se nota como estelas orbitando. Con un degradado
   perfectamente radial girar no se vería.
@@ -92,9 +93,29 @@ Detalles que importan:
 * La textura se genera con `python3 tools/make_aura.py` (sin Pillow, PNG a mano
   con `zlib`), para que sea reproducible y revisable en diff.
 
+**Por qué hasta 1.0.10 el aura se veía como una nube blanca** (medido, no
+supuesto). Tres cosas se sumaban:
+
+1. La textura tenía el **centro a RGB (254, 255, 255)** con alpha 254: el
+   degradado radial llegaba al blanco puro antes de caer.
+2. Los quads medían 1.05 / 1.55 / 2.10 bloques, o sea **hasta tres veces el
+   núcleo** (0.7 bloques), y con alpha a 1.0 el aporte sumado en el centro era
+   ~0.47 × tinte.
+3. El destello de 1.0.9 multiplicaba eso por 1.9 y abría el aura un 22 %, y
+   **también se disparaba al entrar al mundo** (transición a despierta).
+
+Con blend aditivo el resultado es `fondo + aporte`; sobre nieve el fondo ya está
+a ~0.95, así que cualquier aporte de más de ~0.05 por canal clipea a 1.0 y el
+aura se ve **blanca aunque el tinte sea azul**. No es que el color estuviera mal:
+es que el aditivo, sobre un fondo claro, no puede oscurecer. Arreglado en tres
+frentes: textura cian sin blanco en el centro (máximo 0.52 / 0.86 / 1.0), quads
+pegados al núcleo y un quinto del aporte (0.30 + 0.17 + 0.09 = 0.56 × 0.55 de
+alpha), y destello que ya no toca el aura casi nada.
+
 **Anillo de estado** (`RelicAura.drawRing`, textura `relic_ring.png` de
-`tools/make_ring.py`): un solo billboard, más grande que el aura (2.05 bloques),
-que solo se dibuja cuando el estado tiene algo que decir. El estado sale de
+`tools/make_ring.py`): un solo billboard de 1.15 bloques, apenas por fuera del
+aura (1.10), para que se lea como un anillo y no como el borde del resplandor;
+solo se dibuja cuando el estado tiene algo que decir. El estado sale de
 `RelicAnimatable.loopState()`, que ya existía para las animaciones: no hay lógica
 nueva, solo color y giro.
 
@@ -133,17 +154,19 @@ animación. El destello les engancha un valor 0..1,2 que sube de golpe y decae c
 
 | Evento | Pico | Dónde se dispara |
 |---|---|---|
-| `/relic release` | 1,00 | `snapshot.release()` |
-| `/relic pulse` | 0,85 | `snapshot.pulse()` (solo con la reliquia despierta) |
-| subida de nivel | 0,55 | `snapshot.bump()` |
-| despertar / dormir | 0,55 / 0,45 | transición a o desde `DORMANT` |
-| recibir daño | 0,45 | `snapshot.hit()` |
-| glitch aleatorio | 0,35 | solo en reposo |
-| entrar en `CHARGED` / `ALERT` | 0,30 | `applyLoop` |
+| `/relic release` | 0,80 | `snapshot.release()` |
+| `/relic pulse` | 0,60 | `snapshot.pulse()` (solo con la reliquia despierta) |
+| subida de nivel | 0,40 | `snapshot.bump()` |
+| recibir daño | 0,30 | `snapshot.hit()` |
+| variación de reposo | 0 / 0,15 / 0,30 / 0,40 | según la que salga |
 
-Se aplica en tres sitios y siempre con el mismo número: aura (`×(1+0,9·flash)` y
-se abre un 22% en diámetro), anillo (`ring + 0,8·flash`, y crece un 30%) y modelo
-(halo y GLSL, `×(1+0,6·flash)`). El anillo se dibuja si `ring + 0,8·flash` pasa de
+Despertar, dormir y los cambios de estado **no** destellan: era lo que producía
+un fogonazo blanco justo al entrar al mundo.
+
+Se aplica en tres sitios y siempre con el mismo número: aura (`×(1+0,35·flash)` y
+se abre un 10% en diámetro), anillo (`ring + 0,7·flash`, y crece un 25%) y modelo
+(halo y GLSL, `×(1+0,2·flash)`). El peso está en el anillo porque es una línea:
+se ve el pulso sin encender medio núcleo. El anillo se dibuja si `ring + 0,8·flash` pasa de
 0,01, así que un golpe enciende el anillo aunque `CALM`/`DORMANT` no lo tengan.
 El pico nunca baja: dos golpes seguidos no se apagan entre sí.
 
@@ -253,6 +276,11 @@ Qué mirar, en orden:
 6. **Destello**: `/relic pulse` y `/relic release` deben notarse como un fogonazo
    corto (el anillo se enciende aunque esté en calma). Recibir daño de un mob hace
    lo mismo con menos fuerza; con `flashIntensity=0` no debe verse ninguno.
+7. **Sobre nieve o arena** (el peor fondo posible para un aditivo): el aura debe
+   seguir leyéndose **azul/cian**. Si se ve blanca, está sumando demasiado:
+   baja `auraIntensity` (0.2–0.3) o `haloIntensity`.
+8. **Standby**: sin tocar nada, en reposo, cada 20–60 s debe hacer algo —
+   temblor corto, glitch, un pulso. Con `idleVariations=false`, solo glitches.
 
 ## Apéndice A — el GLSL que lleva el mod desde 1.0.3 (revisado en 1.0.8)
 

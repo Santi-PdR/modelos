@@ -1,5 +1,46 @@
 # Historial de cambios
 
+## 1.0.11 — el brillo vuelve a ser brillo
+
+Arregla lo que se vio mal en juego: el aura se veía como una **nube blanca** más
+grande que el jugador, y la reliquia no hacía nada sola en standby.
+
+**El aura, otra vez pegada al núcleo** (esto es la vuelta atrás que pediste):
+
+* diámetros 0.62 / 0.85 / 1.10 bloques (eran 1.05 / 1.55 / 2.10, hasta cuatro
+  veces el tamaño del núcleo), aportes 0.30 / 0.17 / 0.09 (eran 0.55 / 0.32 /
+  0.18) y alpha de quad 0.55.
+* la textura ya **no tiene blanco en el centro**: el núcleo es cian (132, 219,
+  255) y el degradado es más corto, así que suma color en vez de quemar el fondo.
+* el anillo pasa a 1.15 bloques, apenas por fuera del aura, y por defecto es un
+  poco más fuerte: es el que tiene que leerse.
+
+**Por qué se veía blanco** (está contado con números en `BRILLO-Y-SHADERS.md`
+§3.B): con blend aditivo el resultado es `fondo + aporte`, y sobre nieve el fondo
+ya está a ~0.95, así que un aporte de más de ~0.05 por canal satura a 1.0. El
+tinte era azul; el resultado no podía serlo. Antes sumaban tres capas grandes con
+el centro en blanco puro **y** un destello que multiplicaba por 1.9.
+
+**Destello mucho más discreto**: picos 0.80 / 0.60 / 0.40 / 0.30 (eran 1.00 / 0.85
+/ 0.55 / 0.45), el peso está en el anillo (línea) y no en el aura (mancha), y ya
+**no** se dispara al despertar, dormir ni cambiar de estado — eso era lo que
+producía el fogonazo al entrar al mundo.
+
+**Arreglo de verdad: las capas nunca se reprodujeron.** `triggerLayer("layer_hit")`
+y `triggerLayer("layer_bump")` pasaban un nombre que no existe en el JSON (las
+claves son `animation.relic.layer_hit`, etc.), así que GeckoLib no encontraba la
+animación y el segundo controlador no hacía nada desde 1.0.0. Ahora usa
+`RelicAnimations.LAYER_*` y el CI prohíbe los nombres literales.
+
+**La reliquia hace cosas sola** (`visuals.idleVariations`): en reposo, cada
+20–60 s elige por peso entre `layer_shake` (35%), `glitch` (30%), `layer_bump`
+(20%), `energy_pulse` (12%) y `release` (3%). Antes solo había glitch.
+
+**Defaults más bajos** (`auraIntensity` 0.32, `haloIntensity` 0.25,
+`shaderIntensity` 0.35, `ringIntensity` 0.60). Si ya tienes el
+`holocore-client.toml`, tus números guardados mandan: pon esos valores a mano o
+borra el archivo para que se regeneren.
+
 ## 1.0.10 — red contenida y `/relic info` que informa
 
 * **El estado ya no se manda a todo el servidor**: solo a la misma dimensión y a

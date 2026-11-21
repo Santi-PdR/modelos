@@ -73,7 +73,7 @@ public final class RelicAnimatable implements GeoAnimatable {
     private int combatTicks;
     private int threatTicks;
     private int scanCooldown;
-    private int glitchCountdown = -1;
+    private int idleCountdown = -1;
 
     /**
      * Destello de evento (0..1.2): sube de golpe cuando pasa algo y se apaga
@@ -163,14 +163,14 @@ public final class RelicAnimatable implements GeoAnimatable {
             this.seenPulse = snapshot.pulse();
             if (this.active && isRecent(now, snapshot.pulse())) {
                 request(RelicAnimations.ENERGY_PULSE);
-                boostFlash(0.85F);
+                boostFlash(0.60F);
             }
         }
         if (snapshot.release() != this.seenRelease) {
             this.seenRelease = snapshot.release();
             if (isRecent(now, snapshot.release())) {
                 request(RelicAnimations.RELEASE);
-                boostFlash(1.0F);
+                boostFlash(0.80F);
             }
         }
         if (snapshot.hit() != this.seenHit) {
@@ -178,15 +178,15 @@ public final class RelicAnimatable implements GeoAnimatable {
             if (this.active && isRecent(now, snapshot.hit())) {
                 // Doble capa: la reaccion del modelo y el envoltorio relic_react.
                 request(RelicAnimations.HIT);
-                triggerLayer("layer_hit");
-                boostFlash(0.45F);
+                triggerLayer(RelicAnimations.LAYER_HIT);
+                boostFlash(0.30F);
             }
         }
         if (snapshot.bump() != this.seenBump) {
             this.seenBump = snapshot.bump();
             if (isRecent(now, snapshot.bump())) {
-                triggerLayer("layer_bump");
-                boostFlash(0.55F);
+                triggerLayer(RelicAnimations.LAYER_BUMP);
+                boostFlash(0.40F);
             }
         }
 
@@ -222,15 +222,20 @@ public final class RelicAnimatable implements GeoAnimatable {
             this.threatTicks = hasThreat(player) ? 40 : Math.max(0, this.threatTicks - 10);
         }
 
-        // --- Glitch aleatorio, solo en reposo ------------------------
-        if (this.glitchCountdown < 0) {
-            this.glitchCountdown = nextGlitchDelay();
-        } else if (--this.glitchCountdown <= 0) {
-            if (this.active && isRest(this.loop) && !RelicConfig.REDUCED_EFFECTS.get()) {
-                request(RelicAnimations.GLITCH);
-                boostFlash(0.35F);
+        // --- Variaciones de reposo: la reliquia tambien hace cosas sola ----
+        // Antes solo habia un glitch cada 20-60 s; ahora se elige entre varias
+        // animaciones de una vez (y capas) para que el standby no sea un bucle
+        // congelado esperando a que el jugador pulse una tecla.
+        if (this.idleCountdown < 0) {
+            this.idleCountdown = nextIdleDelay();
+        } else if (--this.idleCountdown <= 0) {
+            // Solo en reposo y con la cola vacia: encadenar animaciones de una vez
+            // se veria como un tic nervioso.
+            if (this.active && isRest(this.loop) && !RelicConfig.REDUCED_EFFECTS.get()
+                    && this.pending.isEmpty()) {
+                playIdleVariation();
             }
-            this.glitchCountdown = nextGlitchDelay();
+            this.idleCountdown = nextIdleDelay();
         }
 
         LoopState desired = !this.active ? LoopState.DORMANT
@@ -257,23 +262,22 @@ public final class RelicAnimatable implements GeoAnimatable {
         boolean quick = this.toggledAt != Long.MIN_VALUE && now - this.toggledAt < QUICK_TOGGLE_WINDOW;
 
         if (previous == LoopState.DORMANT && next != LoopState.DORMANT) {
+            // Sin destello: entrar al mundo o despertar la reliquia no es un
+            // evento, y encender el brillo a tope al entrar se veia como un flash
+            // blanco encima del jugador.
             request(quick ? RelicAnimations.WAKE : RelicAnimations.ACTIVATION);
-            boostFlash(0.55F);
         } else if (previous != LoopState.DORMANT && next == LoopState.DORMANT) {
             request(quick ? RelicAnimations.SLEEP : RelicAnimations.DEACTIVATION);
-            boostFlash(0.45F);
         }
 
         if (restBefore && next == LoopState.CHARGED) {
             request(RelicAnimations.CHARGE_UP);
-            boostFlash(0.30F);
         } else if (previous == LoopState.CHARGED && restAfter) {
             request(RelicAnimations.CHARGE_DOWN);
         }
 
         if (restBefore && next == LoopState.ALERT) {
             request(RelicAnimations.ALERT_UP);
-            boostFlash(0.30F);
         } else if (previous == LoopState.ALERT && restAfter) {
             request(RelicAnimations.ALERT_DOWN);
         }
@@ -301,12 +305,64 @@ public final class RelicAnimatable implements GeoAnimatable {
                 monster -> monster.isAlive() && !monster.isSpectator()).isEmpty();
     }
 
-    private int nextGlitchDelay() {
+    private int nextIdleDelay() {
         int min = RelicConfig.GLITCH_MIN_SECONDS.get();
         int max = Math.max(min, RelicConfig.GLITCH_MAX_SECONDS.get());
         // RandomSource propio: no toca el RNG del mundo (que debe seguir siendo
         // determinista) ni el del jugador.
         return this.random.nextInt(min, max + 1) * 20;
+    }
+
+    /**
+     * Una variacion de reposo: nombre exacto del JSON, si va en el controlador de
+     * capas, peso relativo y destello que deja.
+     */
+    private record IdleVariation(String name, boolean layer, int weight, float flash) {
+    }
+
+    /**
+     * Repertorio de standby. Las capas ({@code layer_*}) solo animan
+     * {@code relic_react}, asi que se pueden disparar encima de cualquier bucle
+     * sin romperlo; {@code energy_pulse} y {@code release} son de una vez y
+     * vuelven al estado actual, por eso van con peso bajo.
+     */
+    private static final IdleVariation[] IDLE_VARIATIONS = {
+            new IdleVariation(RelicAnimations.LAYER_SHAKE, true, 35, 0.00F),
+            new IdleVariation(RelicAnimations.GLITCH, false, 30, 0.15F),
+            new IdleVariation(RelicAnimations.LAYER_BUMP, true, 20, 0.00F),
+            new IdleVariation(RelicAnimations.ENERGY_PULSE, false, 12, 0.30F),
+            new IdleVariation(RelicAnimations.RELEASE, false, 3, 0.40F),
+    };
+
+    private void playIdleVariation() {
+        IdleVariation variation = pickIdleVariation();
+        if (variation.layer()) {
+            triggerLayer(variation.name());
+        } else {
+            request(variation.name());
+        }
+        if (variation.flash() > 0.0F) {
+            boostFlash(variation.flash());
+        }
+    }
+
+    private IdleVariation pickIdleVariation() {
+        if (!RelicConfig.IDLE_VARIATIONS.get()) {
+            // Comportamiento anterior: solo el glitch.
+            return IDLE_VARIATIONS[1];
+        }
+        int total = 0;
+        for (IdleVariation variation : IDLE_VARIATIONS) {
+            total += variation.weight();
+        }
+        int roll = this.random.nextInt(total);
+        for (IdleVariation variation : IDLE_VARIATIONS) {
+            roll -= variation.weight();
+            if (roll < 0) {
+                return variation;
+            }
+        }
+        return IDLE_VARIATIONS[0];
     }
 
     /** Sube el destello, nunca lo baja: dos golpes seguidos no se apagan entre si. */

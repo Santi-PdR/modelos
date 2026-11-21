@@ -33,6 +33,7 @@ public final class RelicConfig {
     public static final ForgeConfigSpec.BooleanValue SHADER_GLOW;
     public static final ForgeConfigSpec.DoubleValue SHADER_INTENSITY;
     public static final ForgeConfigSpec.BooleanValue REDUCED_EFFECTS;
+    public static final ForgeConfigSpec.BooleanValue IDLE_VARIATIONS;
     public static final ForgeConfigSpec.IntValue MAX_RENDER_DISTANCE;
     public static final ForgeConfigSpec.IntValue GLITCH_MIN_SECONDS;
     public static final ForgeConfigSpec.IntValue GLITCH_MAX_SECONDS;
@@ -63,17 +64,19 @@ public final class RelicConfig {
         GLOW_HALO = b.comment("Tercer pase con blend ADITIVO: suma luz y da el efecto de brillo acumulado sin shaders.",
                         "Solo se aplica con quality=FULL y reducedEffects=false; en LITE se omite por rendimiento.")
                 .define("glowHalo", true);
-        HALO_INTENSITY = b.comment("Intensidad del halo aditivo (0 = nada, 1 = el maximo). 0.35 es lo que se ve bien en el juego.")
-                .defineInRange("haloIntensity", 0.35D, 0.0D, 1.0D);
+        HALO_INTENSITY = b.comment("Intensidad del halo aditivo (0 = nada, 1 = el maximo). 0.25 es lo que se ve bien;",
+                        "mas de 0.4 empieza a verse como una mancha blanca sobre nieve o arena.")
+                .defineInRange("haloIntensity", 0.25D, 0.0D, 1.0D);
         GLOW_AURA = b.comment("Aura de tres quads que miran a camara: es el 'bloom propio' sin post-proceso.",
                         "Funciona igual con y sin shaderpack, y cuesta tres quads.")
                 .define("glowAura", true);
-        AURA_INTENSITY = b.comment("Intensidad del aura (0 = invisible, 1 = muy marcada).")
-                .defineInRange("auraIntensity", 0.55D, 0.0D, 1.0D);
+        AURA_INTENSITY = b.comment("Intensidad del aura (0 = invisible, 1 = muy marcada). El aura es aditiva:",
+                        "sobre un fondo claro (nieve, desierto) sumar mucho termina viendose blanco.")
+                .defineInRange("auraIntensity", 0.32D, 0.0D, 1.0D);
         GLOW_RING = b.comment("Anillo de estado: gira y se tine segun idle/cargada/alerta. En calma y dormida no sale.")
                 .define("glowRing", true);
         RING_INTENSITY = b.comment("Intensidad del anillo de estado (0 = invisible, 1 = muy marcado).")
-                .defineInRange("ringIntensity", 0.55D, 0.0D, 1.0D);
+                .defineInRange("ringIntensity", 0.60D, 0.0D, 1.0D);
         FLASH_INTENSITY = b.comment("Destello al ocurrir algo: pulso, liberacion, golpe recibido, subida de nivel",
                         "o despertar/dormir. Multiplica el pico del destello; 0 lo apaga del todo.")
                 .defineInRange("flashIntensity", 1.0D, 0.0D, 2.0D);
@@ -83,14 +86,17 @@ public final class RelicConfig {
                 .define("shaderGlow", true);
         SHADER_INTENSITY = b.comment("Intensidad del pase GLSL (borde + barridos). Separada del halo",
                         "para poder bajar el borde sin apagar el brillo.")
-                .defineInRange("shaderIntensity", 0.55D, 0.0D, 1.0D);
+                .defineInRange("shaderIntensity", 0.35D, 0.0D, 1.0D);
         REDUCED_EFFECTS = b.comment("Usa idle_calm (sin rayos, cometas ni ondas) cuando el estado es normal.")
                 .define("reducedEffects", false);
+        IDLE_VARIATIONS = b.comment("La reliquia hace variaciones propias cada cierto tiempo en reposo",
+                        "(temblor, glitch, pulso...). false = solo el glitch aleatorio de antes.")
+                .define("idleVariations", true);
         MAX_RENDER_DISTANCE = b.comment("Distancia maxima (bloques) a la que se renderiza la reliquia de OTROS jugadores. El propio jugador siempre se renderiza.")
                 .defineInRange("maxRenderDistance", 32, 4, 128);
-        GLITCH_MIN_SECONDS = b.comment("Intervalo minimo entre glitches aleatorios (solo en idle).")
+        GLITCH_MIN_SECONDS = b.comment("Intervalo minimo entre variaciones de reposo (tambien glitches).")
                 .defineInRange("glitchMinSeconds", 20, 2, 600);
-        GLITCH_MAX_SECONDS = b.comment("Intervalo maximo entre glitches aleatorios (solo en idle).")
+        GLITCH_MAX_SECONDS = b.comment("Intervalo maximo entre variaciones de reposo.")
                 .defineInRange("glitchMaxSeconds", 60, 2, 900);
         ALERT_RADIUS = b.comment("Radio (bloques) en el que un monstruo pone la reliquia en estado de alerta.")
                 .defineInRange("alertRadius", 12, 2, 48);
