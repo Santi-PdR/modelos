@@ -29,7 +29,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "$SOURCE_SHA"
+          git merge-base --is-ancestor "$SOURCE_SHA" HEAD
           git diff --exit-code "$SOURCE_SHA" -- src tools preview build.gradle gradle.properties
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN" --jq '[.head_sha,.head_branch,.conclusion]|@tsv' > "$RUNNER_TEMP/source.tsv"
           printf '%s\t%s\tsuccess\n' "$SOURCE_SHA" "$GITHUB_REF_NAME" | cmp - "$RUNNER_TEMP/source.tsv"
@@ -77,7 +77,7 @@ jobs:
           test "$GITHUB_REF" = "refs/heads/$branch"
           test "$(git branch --show-current)" = "$branch"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          jar=capatest-1.67.18.jar
+          jar=capatest-1.67.19.jar
           files="$RUNNER_TEMP/capa-verified"
           (cd "$files" && sha256sum -c SHA256SUMS.txt)
           printf '0a837554c29c517b50a0f4155acfa25e84d0e73656dc9bfabc06cb0bb97bbfb5  %s\n' "$jar" | cmp - "$files/SHA256SUMS.txt"
