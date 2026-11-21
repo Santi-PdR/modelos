@@ -41,7 +41,12 @@ compilar, valida que:
 Cambios por versión: [CHANGELOG.md](CHANGELOG.md).
 
 Para publicar el jar como Release: ejecutar el workflow a mano con
-`publicar = true`, o un push cuyo mensaje contenga `[publicar]`.
+`publicar = true`, o un push cuyo mensaje contenga **`[publicar-holocore]`**.
+
+> La palabra clave es exclusiva de este mod a propósito: `.github/workflows/`
+> `build.yml` (el workflow viejo de *Mantle of the Blight Star* / `capatest`)
+> también publica cuando ve `[publicar]` en el mensaje, así que reutilizarla
+> desde aquí re-subía la release `v1.28.0` del otro mod.
 
 ## Probar en el juego
 

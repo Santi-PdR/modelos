@@ -205,8 +205,10 @@ jobs:
           if-no-files-found: error
 
       - name: Publish release
+        # Palabra clave EXCLUSIVA de este mod: build.yml (capatest) tambien
+        # escucha [publicar], y usar la misma disparaba la release del otro mod.
         if: >-
-          (github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar]')) ||
+          (github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar-holocore]')) ||
           (github.event_name == 'workflow_dispatch' && inputs.publicar == true)
         working-directory: relic-hologram
         env:
