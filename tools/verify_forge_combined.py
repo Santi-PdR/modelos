@@ -70,7 +70,10 @@ def fit(root, data, slot, rig, source):
     assert len(held) >= 13 and held['yaw'].min() > 54.5 and held['pitch'].max() < -34.5, (slot, 'faltó el giro en el render real')
     assert sampled['yaw'][0] < .05 and abs(sampled['yaw'][-1]) < .05, (slot, 'faltó barrer la mirada')
     roots = np.array([name.endswith('_seg0') for name in rig.names])
-    fixed = rig.rigid & ~np.array([hood_moves(name) for name in rig.names])
+    # The sewn nape trim has a local render stroke in .31. The rest is still
+    # the original fixed rig; verify_forge_nape checks this exception itself.
+    trim = mod_version() == '1.67.31'
+    fixed = rig.rigid & ~np.array([hood_moves(name) or trim and name.startswith('v18_chain_') for name in rig.names])
     plate = np.array([name == 'v18_pad_1' for name in rig.names])
     reference = None
     worst = np.zeros(4)

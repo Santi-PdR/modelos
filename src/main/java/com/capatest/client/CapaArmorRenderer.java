@@ -29,6 +29,7 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private boolean armorPassSubmitted;
     private boolean sampleFit;
     private double hoodClearance, rearTuck;
+    private CapeHood.Nape nape = CapeHood.NO_NAPE;
 
     double hoodClearance() { return hoodClearance; }
     double rearTuck() { return rearTuck; }
@@ -124,12 +125,16 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     // camera orientation, move the rigid mount, or touch the Elytra fit.
     private void fitHood(HumanoidModel<?> model, boolean enabled, boolean dryGround) {
         hoodClearance = rearTuck = 0;
+        nape = CapeHood.NO_NAPE;
         if (!enabled) return;
         double up = -Math.toDegrees(model.head.xRot);
         double turn = Math.toDegrees(model.head.yRot - model.body.yRot);
         double lean = Math.toDegrees(model.body.xRot);
         hoodClearance = CapeHood.lookClearance(up, turn, lean);
-        if (dryGround) rearTuck = CapeHood.rearTuck(up, turn, lean);
+        if (dryGround) {
+            rearTuck = CapeHood.rearTuck(up, turn, lean);
+            nape = CapeHood.nape(up, turn, lean);
+        }
     }
 
     @Override
@@ -147,13 +152,17 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         boolean shoulder = (mountInChest || elytra) && CapeFit.SHOULDERS_BONE.equals(name);
         boolean underYoke = elytra && CapeFit.UNDER_YOKE_BONE.equals(name);
         GeoBone parent = bone.getParent();
-        boolean hood = mountInChest && !elytra && CapeHood.moves(name)
-                && parent != null && CapeFit.BONE.equals(parent.getName());
+        boolean collarPart = mountInChest && !elytra && parent != null && CapeFit.BONE.equals(parent.getName());
+        boolean hood = collarPart && CapeHood.moves(name);
+        var trim = collarPart ? nape.forBone(name) : CapeHood.FIXED;
         double sprint = sprintEdge();
         var edge = sprint > 0 && parent != null ? CapeSprintEdge.offset(name, parent.getName()) : null;
-        boolean fitted = seat || backing || saddle || shoulder || underYoke || hood || edge != null;
+        boolean fitted = seat || backing || saddle || shoulder || underYoke || hood || trim != CapeHood.FIXED || edge != null;
         if (fitted) poseStack.pushPose();
         try {
+            // This pose-only stroke is shared by cutout and bloom. The trim
+            // keeps its rigid shape, the cloth roots and mount don't move.
+            if (trim != CapeHood.FIXED) poseStack.translate(trim.x() / 16, trim.y() / 16, trim.z() / 16);
             if (seat) {
                 // One rigid displacement in chest space, shared by the
                 // solid and glow passes. Never rescale the worn mantle.

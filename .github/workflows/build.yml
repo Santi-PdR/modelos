@@ -557,12 +557,13 @@ jobs:
           assert 'RIBBONS = 12' in _armor_model and 'LAST_SEGMENT = 4' in _armor_model
           assert 'rearPadBaseX' not in _armor_model
           assert 'CapeMountPlacement.plate(elytra, false)' in armor_renderer
-          # La mirada sólo puede entrar en el pliegue de la capucha. No
-          # volver a mover la montura ni leer cámara para adaptar el paño.
+          # La mirada sólo entra en la capucha y la tira cosida. Nada de
+          # mover la montura ni leer la cámara para adaptar el paño.
           _hood_input = re.search(r'private void fitHood\([^\n]*\) \{\n.*?\n    \}', armor_renderer, re.S)
           assert _hood_input and armor_renderer.count('fold.pitch() + hoodClearance') == 1
           assert 'CapeHood.lookClearance(up, turn, lean)' in _hood_input[0]
-          assert 'if (dryGround) rearTuck = CapeHood.rearTuck(up, turn, lean)' in _hood_input[0]
+          assert re.search(r'if \(dryGround\) \{\s*rearTuck = CapeHood.rearTuck\(up, turn, lean\);\s*nape = CapeHood.nape', _hood_input[0])
+          assert 'collarPart ? nape.forBone(name) : CapeHood.FIXED' in armor_renderer
           assert 'double tuck = CapeHood.rear(name) ? rearTuck : 0;' in armor_renderer
           _without_hood_aim = armor_renderer.replace(_hood_input[0], '')
           assert not re.search(r'\b(model\.head\.|getXRot\(|getYHeadRot\(|getCamera|backset\()', _without_hood_aim)
@@ -801,9 +802,11 @@ jobs:
           java -cp "$CLASSES" com.capatest.client.CapeHoodTest --samples > "$CLASSES/hood.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeHoodTest --aim > "$CLASSES/hood-aim.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeHoodTest --rear > "$CLASSES/hood-rear.tsv"
+          java -cp "$CLASSES" com.capatest.client.CapeHoodTest --nape > "$CLASSES/hood-nape.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeSprintEdgeTest > "$CLASSES/sprint-edge.tsv"
           OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_placement.py --java-samples "$CLASSES/placement.tsv" --hood-samples "$CLASSES/hood.tsv" \
-            --look-samples "$CLASSES/hood-aim.tsv" --edge-samples "$CLASSES/sprint-edge.tsv" --rear-samples "$CLASSES/hood-rear.tsv"
+            --look-samples "$CLASSES/hood-aim.tsv" --edge-samples "$CLASSES/sprint-edge.tsv" --rear-samples "$CLASSES/hood-rear.tsv" \
+            --nape-samples "$CLASSES/hood-nape.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeWornMotionTest
           java -cp "$CLASSES" com.capatest.client.CapeJumpMotionTest
           java -cp "$CLASSES" com.capatest.client.CapeWingFitTest
@@ -1037,7 +1040,7 @@ jobs:
         run: |
           set -euo pipefail
           args=()
-          if grep -Eq '^mod_version=1\.67\.(29|30)$' gradle.properties; then
+          if grep -Eq '^mod_version=1\.67\.(29|30|31)$' gradle.properties; then
             args=(--reference docs/releases/v1.67.28/maniobra/maniobra-forge.tsv)
           fi
           OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_combined.py build/fx-smoke-run/fx-shots "${args[@]}" 2>&1 | while IFS= read -r line; do
@@ -1062,6 +1065,21 @@ jobs:
             esac
           done
 
+      - name: Verificar la nuca de Alex durante el giro y el freno en Forge
+        id: verify-nape
+        if: ${{ steps.verify-crown.outcome == 'success' && contains(github.event.head_commit.message, '[probar-nuca]') }}
+        run: |
+          set -euo pipefail
+          shots=build/fx-smoke-run/fx-shots
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_nape.py docs/releases/v1.67.30/maniobra/diagnostico-nuca \
+            "$shots/maniobra-nuca" --shots "$shots" 2>&1 | while IFS= read -r line; do
+            case "$line" in
+              *AssertionError:*|*Error:*) printf '::error title=Nuca en Forge::%s\n' "${line//%/%25}" ;;
+              pecho:*|curios:*) printf '::notice title=Nuca en Forge::%s\n' "${line//%/%25}" ;;
+              *) printf '%s\n' "$line" ;;
+            esac
+          done
+
       - name: Subir capturas y malla de la maniobra en mundo
         if: ${{ !cancelled() && steps.combined-smoke.outcome != 'skipped' }}
         uses: actions/upload-artifact@v4
@@ -1070,28 +1088,6 @@ jobs:
           path: build/fx-smoke-run/fx-shots/maniobra-*
           if-no-files-found: warn
           retention-days: 30
-
-      - name: Guardar el control de nuca con y sin cada grupo de cubos
-        if: >-
-          github.ref_name == 'arena/5a9fa51b-modelos' && steps.verify-combined.outcome == 'success' &&
-          contains(github.event.head_commit.message, '[aislar-nuca]')
-        run: |
-          set -euo pipefail
-          base=docs/releases/v1.67.30/maniobra/diagnostico-nuca/control
-          jar=capatest-1.67.30.jar
-          cmp "build/libs/$jar" "entregables/v1.67.30/$jar"
-          for set in maniobra sin-cadena sin-borde; do
-            OPENBLAS_NUM_THREADS=1 python3 tools/extract_forge_nape.py build/fx-smoke-run/fx-shots \
-              "$base/$set" --prefix "$set" --stills-only
-            for slot in pecho curios; do
-              install -m 0644 "build/fx-smoke-run/fx-shots/$set-$slot.tsv" "$base/$set/$slot.tsv"
-            done
-          done
-          printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$base/prueba.txt"
-          git add "$base"
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m 'Registrar la ablación del borde y la cadena de v1.67.30 [skip ci]'
-          git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
 
       # Cliente real en mundo desechable. Se prueba aparte del JAR:
       # el código de diagnóstico y Curios nunca se empaquetan en él.
@@ -1278,34 +1274,36 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Adjuntar el JAR de prueba v1.67.30 después de ambas pruebas Forge
+      - name: Adjuntar el JAR de prueba v1.67.31 después de ambas pruebas Forge
         if: >-
           success() && github.ref_name == 'arena/5a9fa51b-modelos' &&
-          contains(github.event.head_commit.message, '[adjuntar-v16730]') &&
+          contains(github.event.head_commit.message, '[adjuntar-v16731]') &&
           steps.verify-combined.outcome == 'success' && steps.verify-crown.outcome == 'success' &&
+          steps.verify-nape.outcome == 'success' &&
           steps.fx-smoke.outcome == 'success' &&
           steps.verify-climb.outcome == 'success' && steps.verify-jumps.outcome == 'success' &&
           steps.verify-placement.outcome == 'success' && steps.verify-walk.outcome == 'success' &&
           steps.verify-postures.outcome == 'success' && steps.verify-swim.outcome == 'success'
         run: |
           set -euo pipefail
-          grep -qx 'mod_version=1.67.30' gradle.properties
-          jar=capatest-1.67.30.jar
+          grep -qx 'mod_version=1.67.31' gradle.properties
+          jar=capatest-1.67.31.jar
           (cd build/libs && sha256sum -c SHA256SUMS.txt)
-          proof=docs/releases/v1.67.30
-          out="entregables/v1.67.30/$jar"
+          proof=docs/releases/v1.67.31
+          out="entregables/v1.67.31/$jar"
           install -m 0644 -D "build/libs/$jar" "$out"
           install -m 0644 -D build/libs/SHA256SUMS.txt "$proof/JAR.sha256"
           mkdir -p "$proof/maniobra"
           shots=build/fx-smoke-run/fx-shots
-          install -m 0644 "$shots"/maniobra-{pecho.tsv,curios.tsv,forge.tsv,forge.jpg,comparacion.tsv,corona.tsv,corona.jpg} "$proof/maniobra/"
+          install -m 0644 "$shots"/maniobra-{pecho.tsv,curios.tsv,forge.tsv,forge.jpg,comparacion.tsv,corona.tsv,corona.jpg,nuca.tsv,nuca-malla.tsv,nuca.jpg} "$proof/maniobra/"
+          cp -a "$shots/maniobra-nuca/detalle" "$proof/maniobra/detalle-nuca"
           install -m 0644 "$shots"/{continuidad-forge,saltos-forge,costuras-saltos-forge,escalera-forge,nado-forge,revision-alex-forge,holgura-brazos-forge}.tsv "$proof/"
-          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16730_colocacion_forge.jpg
+          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16731_colocacion_forge.jpg
           printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$proof/compilacion.txt"
-          git add "$proof" docs/capa_v16730_colocacion_forge.jpg
+          git add "$proof" docs/capa_v16731_colocacion_forge.jpg
           git add -f "$out"
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m 'Adjuntar v1.67.30 probada en Forge, sólo para test-1 [skip ci]'
+            commit -m 'Adjuntar v1.67.31 probada en Forge, sólo para test-1 [skip ci]'
           git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
 
       # [publicar] prepara una release verificable sin escribir a otras

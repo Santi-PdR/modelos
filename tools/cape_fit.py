@@ -316,6 +316,32 @@ def rear_tuck(up, yaw, lean):
             * smooth(h['REAR_TURN_START'],h['REAR_TURN_FULL'],abs(math.remainder(yaw,360.))))
 
 
+NAPE_LIP = ('v17_cowl_back_0', 'v17_cowl_back_1', 'v17_cowl_front_0', 'v17_cowl_front_2', 'v17_cowl_front_3')
+
+
+def nape_shifts(up, yaw, lean):
+    """Chain and selected cowl offsets in post-bake torso axes, in model units."""
+    if not all(math.isfinite(v) for v in (up,yaw,lean)):
+        return [(0.,)*3]*2
+    h = hood_profile()
+    turn = math.remainder(yaw,360.)
+    angle = abs(turn)
+    weight = (smooth(h['REAR_LEAN_START'],h['REAR_LEAN_FULL'],lean) * smooth(h['NAPE_UP_START'],h['NAPE_UP_FULL'],up)
+              * smooth(h['NAPE_TURN_START'],h['NAPE_TURN_FULL'],angle))
+    lip = weight*(1-smooth(h['NAPE_TURN_RELEASE'],h['NAPE_TURN_END'],angle))
+    open_ = 1-smooth(h['CHAIN_RELEASE'],h['CHAIN_END'],angle)
+    chain = weight*open_*h['CHAIN_INSET']
+    yaw, bend = math.radians(turn), math.radians(lean)
+    x,a = math.sin(yaw),math.cos(yaw)
+    y,z = a*math.sin(bend),-a*math.cos(bend)
+    k = h['NAPE_INSET']
+    return [(chain*x,chain*y,chain*z), (lip*(k*x+math.copysign(h['NAPE_SIDE']*(1+open_),turn)),lip*k*y,lip*k*z)]
+
+
+def nape_piece(name):
+    return 0 if name.startswith('v18_chain_') else 1 if name in NAPE_LIP else None
+
+
 @lru_cache(maxsize=1)
 def sprint_edge_profile():
     code = SOURCE.with_name('CapeSprintEdge.java').read_text()
@@ -372,7 +398,7 @@ def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False, hoo
             changes[G.SADDLE_BONE] = dict(offset=[0.,0.,f['WING_SADDLE_DEPTH']],scale=[f['WING_SADDLE_WIDTH'],1.,1.])
     bones = []
     flex = fixed and not elytra
-    tuck = 0.
+    tuck, trim = 0., None
     if flex:
         h = hood_profile()
         pitch,yaw,roll = hood if hood is not None else (h['REST_PITCH'],0.,0.)
@@ -382,15 +408,30 @@ def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False, hoo
                      offset=[0.,0.,h['SET_BACK']],rotation=[-pitch,-yaw,roll],cubes=[])
         bones.append(frame)
         tuck = rear_tuck(look,turn,lean)
+        rear = dict(frame,name='worn_hood_rear',
+                    offset=[0.,-h['REAR_DROP']*tuck,h['SET_BACK']-h['REAR_INSET']*tuck],
+                    rotation=[-pitch+h['REAR_FOLD']*tuck,-yaw,roll])
         if tuck:
-            bones.append(dict(frame,name='worn_hood_rear',
-                              offset=[0.,-h['REAR_DROP']*tuck,h['SET_BACK']-h['REAR_INSET']*tuck],
-                              rotation=[-pitch+h['REAR_FOLD']*tuck,-yaw,roll]))
+            bones.append(rear)
+        trim = nape_shifts(look,turn,lean)
+        if any(trim[1]):
+            # Convert from the post-bake axes to authored GEO X.
+            dx,dy,dz = trim[1]
+            for hinge in [frame, rear] if tuck else [frame]:
+                x,y,z = hinge['offset']
+                bones.append(dict(hinge,name=hinge['name']+'_nape',offset=[x-dx,y+dy,z+dz]))
     for b in geo['bones']:
         n = b['name']
         piece = dict(b,**changes.get(n,{}))
-        if flex and piece.get('parent') == G.FIT_BONE and hood_moves(n):
-            piece['parent'] = 'worn_hood_rear' if tuck and n.startswith('v17_cowl_back_') else 'worn_hood'
+        if flex and piece.get('parent') == G.FIT_BONE:
+            if hood_moves(n):
+                piece['parent'] = 'worn_hood_rear' if tuck and n.startswith('v17_cowl_back_') else 'worn_hood'
+                if n in NAPE_LIP and any(trim[1]):
+                    piece['parent'] += '_nape'
+            if nape_piece(n) == 0 and any(trim[0]):
+                dx,dy,dz = trim[0]
+                x,y,z = piece.get('offset',(0.,0.,0.))
+                piece['offset'] = [x-dx,y+dy,z+dz]
         if flex and sprint_edge > 0 and (edge := sprint_edge_offset(n,piece.get('parent'))) is not None:
             # The bake mirrors X; Offset is defined in the post-bake axes.
             x,y,z = piece.get('offset',(0.,0.,0.))

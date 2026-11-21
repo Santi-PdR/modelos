@@ -283,6 +283,20 @@ function rearTuck(h, up, yaw, lean) {
     smooth(h.REAR_TURN_START,h.REAR_TURN_FULL,turn);
 }
 
+const NAPE_LIP=['v17_cowl_back_0','v17_cowl_back_1','v17_cowl_front_0','v17_cowl_front_2','v17_cowl_front_3'];
+
+function napeShifts(h, up, yaw, lean) {
+  if (!h?.NAPE_INSET || ![up,yaw,lean].every(Number.isFinite)) return [[0,0,0],[0,0,0]];
+  const turn=((yaw%360+540)%360)-180, angle=Math.abs(turn);
+  const weight=smooth(h.REAR_LEAN_START,h.REAR_LEAN_FULL,lean)*smooth(h.NAPE_UP_START,h.NAPE_UP_FULL,up)*
+    smooth(h.NAPE_TURN_START,h.NAPE_TURN_FULL,angle);
+  const lip=weight*(1-smooth(h.NAPE_TURN_RELEASE,h.NAPE_TURN_END,angle));
+  const open=1-smooth(h.CHAIN_RELEASE,h.CHAIN_END,angle), chain=weight*open*h.CHAIN_INSET;
+  const r=turn*Math.PI/180, bend=lean*Math.PI/180, a=Math.cos(r);
+  const x=Math.sin(r), y=a*Math.sin(bend), z=-a*Math.cos(bend), k=h.NAPE_INSET;
+  return [[chain*x,chain*y,chain*z],[lip*(k*x+h.NAPE_SIDE*(1+open)*Math.sign(turn)),lip*k*y,lip*k*z]];
+}
+
 function sprintEdgeOffset(e, name, parent) {
   if (!e || !['cape_top','cape_mid','cape_bottom'].includes(parent)) return null;
   const hit=/^v17_ribbon_(\d+)_seg([1-4])$/.exec(name);
@@ -297,7 +311,7 @@ function fixedWearerPose(geo, profile, stance, elytra, slim, hood, look=0, turn=
   const f=profile.mount;
   const fixed=geo.bones.some(b=>b.name===profile.bone) && geo.bones.some(b=>b.name===profile.gussetBone);
   const a=profile.backing, h=profile.hood, bones=[];
-  let tuck=0;
+  let tuck=0, trim;
   if (fixed && !elytra && h) {
     const [pitch,yaw,roll]=hood || [h.REST_PITCH,0,0];
     const lean=stance*profile.bodyAngle;
@@ -306,8 +320,14 @@ function fixedWearerPose(geo, profile, stance, elytra, slim, hood, look=0, turn=
       offset:[0,0,h.SET_BACK],rotation:[-pitch-extra,-yaw,roll],cubes:[]};
     bones.push(frame);
     tuck=rearTuck(h,look,turn,lean);
-    if (tuck) bones.push({...frame,name:'worn_hood_rear',offset:[0,-h.REAR_DROP*tuck,h.SET_BACK-h.REAR_INSET*tuck],
-      rotation:[-pitch-extra+h.REAR_FOLD*tuck,-yaw,roll]});
+    const rear={...frame,name:'worn_hood_rear',offset:[0,-h.REAR_DROP*tuck,h.SET_BACK-h.REAR_INSET*tuck],
+      rotation:[-pitch-extra+h.REAR_FOLD*tuck,-yaw,roll]};
+    if (tuck) bones.push(rear);
+    trim=napeShifts(h,look,turn,lean);
+    if (trim[1].some(Boolean)) for (const hinge of tuck ? [frame,rear] : [frame]) {
+      const [x,y,z]=hinge.offset, [dx,dy,dz]=trim[1];
+      bones.push({...hinge,name:hinge.name+'_nape',offset:[x-dx,y+dy,z+dz]});
+    }
   }
   for (let piece of geo.bones) {
     const name=piece.name, half=a.names.indexOf(name);
@@ -315,8 +335,15 @@ function fixedWearerPose(geo, profile, stance, elytra, slim, hood, look=0, turn=
     if (!elytra && fixed && name===profile.seat.frame) piece={...piece,offset:[0,-f.BACK_DROP,-f.BACK_FORWARD]};
     if (!elytra && fixed && name==='v20_mount_saddle') piece={...piece,offset:[0,0,f.SADDLE_SET]};
     if (!elytra && fixed && h && name==='v20_mount_shoulders') piece={...piece,offset:[0,f.SHOULDER_LIFT,-f.SHOULDER_FORWARD]};
-    if (!elytra && fixed && h && piece.parent===profile.bone && /^v17_cowl_(back|front)_/.test(name))
-      piece={...piece,parent:tuck && name.startsWith('v17_cowl_back_') ? 'worn_hood_rear' : 'worn_hood'};
+    if (trim && piece.parent===profile.bone) {
+      if (/^v17_cowl_(back|front)_/.test(name)) {
+        const hinge=tuck && name.startsWith('v17_cowl_back_') ? 'worn_hood_rear' : 'worn_hood';
+        piece={...piece,parent:hinge+(NAPE_LIP.includes(name) && trim[1].some(Boolean) ? '_nape' : '')};
+      } else if (name.startsWith('v18_chain_') && trim[0].some(Boolean)) {
+        const [x,y,z]=piece.offset || [0,0,0], [dx,dy,dz]=trim[0];
+        piece={...piece,offset:[x-dx,y+dy,z+dz]};
+      }
+    }
     const edge=!elytra && fixed && edgeAmount>0 && sprintEdgeOffset(profile.sprintEdge,name,piece.parent);
     if (edge) {
       const [x,y,z]=piece.offset || [0,0,0];

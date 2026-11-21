@@ -1,0 +1,5 @@
+ranura	momento	tick_completo	tick_sin_cadena	tick_sin_borde	muestras	granate_original	granate_completo	granate_sin_cadena	granate_sin_borde	pelo_recuperado_sin_cadena	pelo_recuperado_sin_borde	corte_cadena_u2	corte_borde_u2	corte_frente_u2
+pecho	63	63	63	63	5184	1041	1045	1000	803	22	268	0.000000	1.381158	1.325403
+pecho	77	77	77	77	5184	1826	1821	1276	1570	567	233	3.906991	2.336206	4.913922
+curios	63	63	63	63	5184	998	1006	997	762	22	245	0.000000	1.353706	1.341488
+curios	77	77	77	77	5184	1789	1857	1286	1608	653	267	4.481738	2.275742	4.700445

@@ -6,7 +6,7 @@ El borde posterior de la capucha se repliega al levantar y girar la cabeza en pa
 
 ## Pruebas en Forge
 
-[Detalle antes/después](maniobra/maniobra-corona.jpg) · [Vista completa de la maniobra](maniobra/maniobra-forge.jpg) · [Medición de corona y píxeles](maniobra/maniobra-corona.tsv) · [Diagnóstico .29](../v1.67.29/maniobra/diagnostico-cuello/README.md).
+[Detalle antes/después](maniobra/maniobra-corona.jpg) · [Vista completa de la maniobra](maniobra/maniobra-forge.jpg) · [Medición de corona y píxeles](maniobra/maniobra-corona.tsv) · [Diagnóstico .29](../v1.67.29/maniobra/diagnostico-cuello/README.md) · [Diagnóstico del cruce restante en la nuca](maniobra/diagnostico-nuca/README.md).
 
 | Ranura y momento | Altura de la corona sobre el tope del pelo (.29 → .30), u | Suma de cortes en esa cara, u² | Píxeles granate / muestra interior .30 |
 | --- | ---: | ---: | ---: |
@@ -24,4 +24,4 @@ La punta del paño sigue frenando sin el tirón: **2,95 → 2,96 u/tick** en pec
 - Minecraft Java **1.20.1**, Forge **47.3.0**, GeckoLib **4.8.1**; Curios **5.14.1** opcional.
 - Cerrá Minecraft y pegá todo el [bloque de PowerShell](instalar-test-1.txt). Verifica **751.904 bytes** y el SHA-256 antes de retirar JAR anteriores de `capatest`. Verificado estáticamente; no se ejecutó en tu Windows.
 - Si querés volver a la .29, quitá primero `capatest-1.67.30.jar` de `test-1/mods`, y luego usá el [instalador fijado de esa versión](../v1.67.29/instalar-test-1.txt). No se cambió ese JAR, su instalador ni las publicaciones.
-- [Blockbench](../../CAPA_v1.67.30.bbmodel) · [Visor offline](../../capa_v1170_visor.html). Las curvas editables no cambian; el repliegue es un ajuste de render equipado.
+- [Blockbench](https://github.com/Santi-PdR/modelos/blob/22026f27db7c2e588804495ea16d96c98af2204d/docs/CAPA_v1.67.30.bbmodel) · [Visor offline](../../capa_v1170_visor.html). Las curvas editables no cambian; el repliegue es un ajuste de render equipado.

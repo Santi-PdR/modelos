@@ -36,13 +36,59 @@ final class CapeHood {
     private static final double REAR_UP_FULL = 28;
     private static final double REAR_TURN_START = 7;
     private static final double REAR_TURN_FULL = 27;
+    private static final double NAPE_UP_START = 4;
+    private static final double NAPE_UP_FULL = 18;
+    private static final double NAPE_TURN_START = 9;
+    private static final double NAPE_TURN_FULL = 26;
+    private static final double NAPE_TURN_RELEASE = 56;
+    private static final double NAPE_TURN_END = 72;
+    private static final double CHAIN_RELEASE = 45;
+    private static final double CHAIN_END = 55;
+    private static final double CHAIN_INSET = 1.45;
+    private static final double NAPE_INSET = 1.15;
+    private static final double NAPE_SIDE = .55;
     static final Pose REST = new Pose(REST_PITCH, 0, 0);
+    static final Shift FIXED = new Shift(0, 0, 0);
+    static final Nape NO_NAPE = new Nape(FIXED, FIXED);
 
     // Angles in the baked frame; positive pitch moves the crown away from
     // the neck. The collar teeth, returns, mount and cloth roots stay sewn.
     record Pose(double pitch, double yaw, double roll) {}
+    record Shift(double x, double y, double z) {}
+    record Nape(Shift chain, Shift lip) {
+        Shift forBone(String name) {
+            if (chainLink(name)) return chain;
+            // The edges exposed at the nape, not the entire hood or collar.
+            return switch (name) {
+                case "v17_cowl_back_0", "v17_cowl_back_1", "v17_cowl_front_0",
+                        "v17_cowl_front_2", "v17_cowl_front_3" -> lip;
+                default -> FIXED;
+            };
+        }
+    }
 
     private CapeHood() {}
+
+    static boolean chainLink(String name) { return name.startsWith("v18_chain_"); }
+
+    /** Retract the lower trim into its sewn seat, independently of the crown fold. */
+    static Nape nape(double up, double yaw, double lean) {
+        if (!Double.isFinite(up) || !Double.isFinite(yaw) || !Double.isFinite(lean)) return NO_NAPE;
+        double turn = Math.IEEEremainder(yaw, 360), absTurn = Math.abs(turn);
+        double weight = smooth(REAR_LEAN_START, REAR_LEAN_FULL, lean) * smooth(NAPE_UP_START, NAPE_UP_FULL, up)
+                * smooth(NAPE_TURN_START, NAPE_TURN_FULL, absTurn);
+        double lip = weight * (1 - smooth(NAPE_TURN_RELEASE, NAPE_TURN_END, absTurn));
+        if (lip == 0) return NO_NAPE;
+        double open = 1 - smooth(CHAIN_RELEASE, CHAIN_END, absTurn);
+        double chain = weight * open * CHAIN_INSET;
+        double aim = Math.toRadians(turn), bend = Math.toRadians(lean);
+        // Translate along the head's horizontal heading, expressed in torso
+        // axes. The extra inboard stroke keeps the cowl tip off the near side.
+        double x = Math.sin(aim), along = Math.cos(aim);
+        double y = along * Math.sin(bend), z = -along * Math.cos(bend);
+        return new Nape(chain == 0 ? FIXED : new Shift(chain*x, chain*y, chain*z),
+                new Shift(lip*(NAPE_INSET*x + Math.copySign(NAPE_SIDE*(1 + open), turn)), lip*NAPE_INSET*y, lip*NAPE_INSET*z));
+    }
 
     static boolean rear(String name) { return name.startsWith("v17_cowl_back_"); }
 
