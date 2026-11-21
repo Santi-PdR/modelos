@@ -1,6 +1,6 @@
 # v1.67.17 · Montaje fijo en F5 y hombreras de frente
 
-**Prueba descartada:** el cuello quedó bajo y retrasado y las placas se veían separadas del manto. Para `test-1`, usá la [v1.67.19 corregida](../v1.67.19/notas.md).
+**Prueba descartada:** el cuello quedó bajo y retrasado y las placas se veían separadas del manto. Para `test-1`, usá la [v1.67.20](../v1.67.20/notas.md).
 
 [Descargar JAR de prueba](https://github.com/Santi-PdR/modelos/raw/287c3c960c8c18f59ed6935a3cba843cb5ea0909/entregables/v1.67.17/capatest-1.67.17.jar) · [SHA-256](JAR.sha256) · [Capturas en Forge](../../capa_v16717_colocacion_forge.jpg) · [PowerShell para `test-1`](instalar-directo-test-1.txt) · [Blockbench](https://github.com/Santi-PdR/modelos/blob/2cb51791c4083944d0ec774e8d0540ff02ee2d07/docs/CAPA_v1.67.17.bbmodel).
 

@@ -11,11 +11,15 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
-### v1.67.19 — manto ceñido a la espalda alta
+### v1.67.20 — forma original, sólo colocación
 
-**[Descargar JAR de prueba v1.67.19](https://github.com/Santi-PdR/modelos/raw/e574c47f7c646bd7869a071a42f3db5b5947fdc4/entregables/v1.67.19/capatest-1.67.19.jar)** · [Antes y después en Alex](docs/capa_v16719_encastre_alex.jpg) · [Galería de Forge](docs/capa_v16719_colocacion_forge.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.19/notas.md).
+**[Descargar JAR de prueba v1.67.20](https://github.com/Santi-PdR/modelos/raw/bd92d1cdc27ec247dc8fa787a3cb6e01aaeead64/entregables/v1.67.20/capatest-1.67.20.jar)** · [Comparación en Alex](docs/capa_v16720_forma_original_alex.jpg) · [Steve y Alex en Forge](docs/capa_v16720_colocacion_forge.jpg) · [Notas y SHA-256](docs/releases/v1.67.20/notas.md).
 
-El borde del cuello y la costura del paño se acercan a la espalda real, no a la cabeza. El ajuste funciona en pecho y Curios, con las texturas, clips, descripción del ítem y efectos originales. Se conserva la variante para élitros. No cambia el instalador público.
+Sin escalar el cuello, ni estirar las placas: se mueve el manto original junto al torso y se acomodan las hombreras completas sobre las mangas. Mismos recursos de arte, animaciones, descripción y variante para élitros. No se cambia el instalador público.
+
+### v1.67.19 — comparación descartada
+
+Aunque el forro tocaba el torso, el paño seguía separado y el cuello se deformaba al equiparlo. [Capturas y notas históricas](docs/releases/v1.67.19/notas.md).
 
 ### v1.67.18 — comparación descartada
 

@@ -1,6 +1,6 @@
 # v1.67.16 · Capa original, ajuste al equiparla
 
-Esta prueba todavía ajusta el manto con la mirada. La prueba vigente es [v1.67.19, con el encastre a la espalda](../v1.67.19/notas.md).
+Esta prueba todavía ajusta el manto con la mirada. La prueba vigente es [v1.67.20](../v1.67.20/notas.md).
 
 [Descargar JAR de prueba](https://github.com/Santi-PdR/modelos/raw/082c38eacc81906e9698d89196a7e797735663d0/entregables/v1.67.16/capatest-1.67.16.jar) · [SHA-256](JAR.sha256) · [Capturas F5](../../capa_v16716_colocacion_forge.jpg) · [PowerShell para `test-1`](instalar-directo-test-1.txt) · [Blockbench](https://github.com/Santi-PdR/modelos/blob/abcbb0158ddeaf00eb6758ea55836ad6b3e019a8/docs/CAPA_v1.67.16.bbmodel) · [Visor offline](https://github.com/Santi-PdR/modelos/blob/abcbb0158ddeaf00eb6758ea55836ad6b3e019a8/docs/capa_v1170_visor.html)
 

@@ -296,16 +296,14 @@ animación y la documentación de GeckoLib._
   agacharse o nadar. Pecho y Curios comparten los mismos pases sólido y de
   emisión. El visor reproduce estas transformaciones; Blockbench conserva
   la geometría original sin aplicarlas a los clips.
-- **Encastre v1.67.19:** `CapeMountPlacement` ciñe el borde y los retornos
-  a la espalda en el marco de `chestplate`. El borde exterior del forro
-  sube hasta el cuello sin separar la costura de la piel; la bisagra se
-  adelanta sin achatar el paño. Los cubos y clips no se editan. Pecho y
-  Curios comparten el mismo ajuste; los élitros mantienen su variante.
-  `gradle -PcapeFxSmoke runClient` usa las dos pieles vanilla y registra
-  las caras reales: torso sin chaqueta, respaldo, borde, raíces y placas.
-  `tools/verify_forge_placement.py` mide huecos en la espalda alta además
-  de comprobar la cobertura de las mangas y la órbita independiente de
-  la mirada. El visor equipa el mismo ajuste; el .bbmodel es el rig fuente.
+- **Colocación v1.67.20:** sólo se traslada `cape_seat_fit` con respecto al
+  torso. Se posa cada placa entera y se traslada el soporte interior para
+  que la tela flexible no se despegue de la costura. No se escala ninguna
+  pieza de la capa equipada normal. La variante para élitros se conserva.
+  La sonda comprueba las caras reales del paño visible contra la espalda
+  sin chaqueta y las placas sobre las mangas. Además mide las distancias
+  entre las esquinas de cada cubo dibujado y las coteja con el GEO original
+  para detectar deformaciones introducidas en tiempo de render.
 - **Pulso del icono (v1.67.8):** 32 fotogramas a un tick por cuadro, mismo
   contorno y duración de 1,6 s. Se comprueba el recorrido de la cresta de
   luz en la hotbar vanilla; se conservan el dibujo y el reposo de v1.67.7.

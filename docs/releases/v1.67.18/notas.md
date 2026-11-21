@@ -1,6 +1,6 @@
 # v1.67.18 · Cuello y hombreras asentados
 
-**Prueba descartada:** las capturas en `test-1` mostraron que todavía sobresalían el borde del cuello y la salida de la tela. La prueba vigente es [v1.67.19](../v1.67.19/notas.md). Los resultados que siguen son históricos.
+**Prueba descartada:** las capturas en `test-1` mostraron que todavía sobresalían el borde del cuello y la salida de la tela. La prueba vigente es [v1.67.20](../v1.67.20/notas.md). Los resultados que siguen son históricos.
 
 [JAR de prueba](https://github.com/Santi-PdR/modelos/raw/945bc2d7d7f65765f766a7b59f9746fecc9b07fa/entregables/v1.67.18/capatest-1.67.18.jar) · [SHA-256](JAR.sha256) · [Capturas de Forge](../../capa_v16718_colocacion_forge.jpg) · [Blockbench](https://github.com/Santi-PdR/modelos/raw/5200616227cd6baa57869567833b3d8f015fbd06/docs/CAPA_v1.67.18.bbmodel).
 
