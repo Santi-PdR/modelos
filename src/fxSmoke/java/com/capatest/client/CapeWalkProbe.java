@@ -109,8 +109,13 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 seat.transformPosition(0, 25/16F, 7.4F/16, new Vector3f()).z() * 16,
                 -Math.toDegrees(renderer.getGeoModel().getBone(TOP).orElseThrow().getRotX()),
                 -Math.toDegrees(renderer.getGeoModel().getBone(MID).orElseThrow().getRotX()),
-                tip.transformPosition(0, 0, .36F, new Vector3f()).mul(16),
-                hood);
+                tip.transformPosition(0, 0, .36F, new Vector3f()).mul(16), hood,
+                loosePitch(renderer, 2), loosePitch(renderer, 9));
+    }
+
+    private static double loosePitch(CapaArmorRenderer renderer, int ribbon) {
+        var bone = renderer.getGeoModel().getBone("v17_ribbon_" + ribbon + "_seg4").orElseThrow();
+        return -Math.toDegrees(bone.getRotX() - bone.getInitialSnapshot().getRotX());
     }
 
     private static void requireClock(LivingEntity wearer, float partial, CapeWornMotion motion) {
@@ -152,13 +157,13 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     }
 
     record Draw(String clip, double stride, double pace, double walk, double run, double swim, double air, double fall,
-                double collarZ, double top, double mid, Vector3f tip, Vector3f hood) {}
+                double collarZ, double top, double mid, Vector3f tip, Vector3f hood, double edge2, double edge9) {}
 
     static final class Route {
-        private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tclip\tstride\twalk\trun\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\tpace\thood_x\thood_y\thood_z\n");
+        private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tclip\tstride\twalk\trun\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\tpace\thood_x\thood_y\thood_z\tedge2\tedge9\n");
         private int start = -1;
         private int shot;
-        private int count;
+        private int count, lastMotionShot = -1;
         private final int[] landmarks = {16, 44, 63, 84, 110, 149};
 
         void drive(Minecraft game) {
@@ -185,13 +190,23 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                     .append(draw.stride()).append('\t').append(draw.walk()).append('\t').append(draw.run()).append('\t').append(draw.collarZ()).append('\t')
                     .append(draw.top()).append('\t').append(draw.mid()).append('\t').append(draw.tip().x()).append('\t')
                     .append(draw.tip().y()).append('\t').append(draw.tip().z()).append('\t').append(draw.pace()).append('\t')
-                    .append(draw.hood().x()).append('\t').append(draw.hood().y()).append('\t').append(draw.hood().z()).append('\n');
+                    .append(draw.hood().x()).append('\t').append(draw.hood().y()).append('\t').append(draw.hood().z())
+                    .append('\t').append(draw.edge2()).append('\t').append(draw.edge9()).append('\n');
             count++;
             if (shot < landmarks.length && t >= landmarks[shot]) {
                 try (var image = Screenshot.takeScreenshot(game.getMainRenderTarget())) {
                     image.writeToFile(dir.resolve(String.format(Locale.ROOT, "%s-%02d.png", name, landmarks[shot])));
                 }
                 shot++;
+            }
+            // One real F5 frame every two ticks for a short, reviewable sequence.
+            int tick = (int) t;
+            if ((name.equals("paso-pecho") || name.equals("paso-curios")) && tick != lastMotionShot && tick % 2 == 0
+                    && (tick >= 40 && tick < 64 || tick >= 106 && tick < 130)) {
+                lastMotionShot = tick;
+                try (var image = Screenshot.takeScreenshot(game.getMainRenderTarget())) {
+                    image.writeToFile(dir.resolve(String.format(Locale.ROOT, "%s-ciclo-%03d.png", name, tick)));
+                }
             }
             if (t < DURATION) return false;
             if (count < 135) throw new AssertionError("too few walk frames: " + count);

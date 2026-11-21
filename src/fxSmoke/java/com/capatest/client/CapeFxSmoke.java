@@ -632,6 +632,10 @@ public final class CapeFxSmoke {
         var player = Minecraft.getInstance().player;
         if (player != null && placementRoute != null) placementRoute.camera(event, player);
         if (player != null && auditRoute != null) auditRoute.camera(event, player);
+        if (player != null && (scene == Scene.WALK_ALEX_CHEST || scene == Scene.WALK_ALEX_BACK)) {
+            float yaw = Mth.rotLerp((float) event.getPartialTick(), player.yBodyRotO, player.yBodyRot);
+            CapePlacementProbe.orbit(event, player, yaw + 32, 12, 3.2, 1.00);
+        }
     }
 
     private static void frame(TickEvent.RenderTickEvent event) {

@@ -283,7 +283,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         if (!pass) throw new AssertionError(reason);
     }
 
-    private static void orbit(ViewportEvent.ComputeCameraAngles event, LocalPlayer player,
+    static void orbit(ViewportEvent.ComputeCameraAngles event, LocalPlayer player,
                               float yaw, float pitch, double radius, double center) {
         double radY = Math.toRadians(yaw), radX = Math.toRadians(pitch);
         double t = event.getPartialTick();
