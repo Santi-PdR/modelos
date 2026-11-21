@@ -104,13 +104,16 @@ public final class KatanaAnimations {
                 // The animation's free hand is leftArm before the outer mirror
                 // modifier swaps it for left-handed players.
                 boolean free = part.equals("leftArm");
+                // The mirrored world-model pass is not a simple screen-space
+                // reflection. Retain its previous framing for left-handed play
+                // until the independent left-hand alignment has been verified.
+                boolean leftHanded = player.getMainArm() == HumanoidArm.LEFT;
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                         dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
                         new dev.kosmx.playerAnim.core.util.Vec3f(
-                                (player.getMainArm() == HumanoidArm.LEFT ? 8 : -8)
-                                        + (free ? KatanaClientConfig.BLOOD_HAND_X.get().floatValue() : 0),
-                                -6 + (free ? KatanaClientConfig.BLOOD_HAND_Y.get().floatValue() : 0),
-                                -14 + (free ? KatanaClientConfig.BLOOD_HAND_Z.get().floatValue() : 0))));
+                                (leftHanded ? 0 : -8) + (free ? KatanaClientConfig.BLOOD_HAND_X.get().floatValue() : 0),
+                                (leftHanded ? -2 : -6) + (free ? KatanaClientConfig.BLOOD_HAND_Y.get().floatValue() : 0),
+                                (leftHanded ? -8 : -14) + (free ? KatanaClientConfig.BLOOD_HAND_Z.get().floatValue() : 0))));
             }) {
                 // Inspect begins at tick zero; the library's default fade divides
                 // by beginTick. The enclosing layer already performs the fade.
