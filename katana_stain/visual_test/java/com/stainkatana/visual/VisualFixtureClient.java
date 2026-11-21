@@ -471,23 +471,20 @@ public final class VisualFixtureClient {
             case 1272 -> capture = "51_blood_right_third_draw.png";
             case 1276 -> capture = "52_blood_right_third_face.png";
             case 1280 -> capture = "53_blood_right_third_recovery.png";
-            // Compare view-space placement with both arms moved back from the camera.
+            // Move the complete gesture inward and up, then compare several phases.
             case 1295 -> { mc.options.setCameraType(CameraType.FIRST_PERSON); mc.options.fov().set(70); }
-            case 1300 -> placementSample(0, 0, -12);
-            case 1304 -> capture = "54_far_base_reach.png";
-            case 1307 -> capture = "55_far_base_draw.png";
-            case 1325 -> placementSample(4, 0, -12);
-            case 1329 -> capture = "56_far_x_plus_reach.png";
-            case 1332 -> capture = "57_far_x_plus_draw.png";
-            case 1350 -> placementSample(-4, 0, -12);
-            case 1354 -> capture = "58_far_x_minus_reach.png";
-            case 1357 -> capture = "59_far_x_minus_draw.png";
-            case 1375 -> placementSample(0, 4, -12);
-            case 1379 -> capture = "60_far_y_plus_reach.png";
-            case 1382 -> capture = "61_far_y_plus_draw.png";
-            case 1400 -> placementSample(0, -4, -12);
-            case 1404 -> capture = "62_far_y_minus_reach.png";
-            case 1407 -> capture = "63_far_y_minus_draw.png";
+            case 1300 -> placementSample(-8, -4, -12);
+            case 1304 -> capture = "54_in8_reach.png";
+            case 1307 -> capture = "55_in8_draw.png";
+            case 1311 -> capture = "56_in8_face.png";
+            case 1325 -> placementSample(-12, -4, -12);
+            case 1329 -> capture = "57_in12_reach.png";
+            case 1332 -> capture = "58_in12_draw.png";
+            case 1336 -> capture = "59_in12_face.png";
+            case 1350 -> placementSample(-16, -4, -12);
+            case 1354 -> capture = "60_in16_reach.png";
+            case 1357 -> capture = "61_in16_draw.png";
+            case 1361 -> capture = "62_in16_face.png";
             case 1425 -> {
                 com.stainkatana.katana.client.KatanaAnimations.gestureDepthTest = 0;
                 com.stainkatana.katana.client.KatanaAnimations.gestureXTest = 0;
