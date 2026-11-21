@@ -504,6 +504,10 @@ desde 1.0.17 no se reserva nada por frame y portador:
   en blanco, se empaqueta el ARGB igual que GeckoLib y se reutiliza el mismo
   objeto mientras el tinte no cambie.
 
+Todo esto se puede ver en el juego: `/relic stats` da los pases por dibujo y los
+milisegundos por dibujo, con modelo y aura por separado, así que comparar 1.0.15
+con esta versión en el mismo sitio es una medida y no una impresión.
+
 Nada de esto cambia un píxel: son las mismas cuentas con menos objetos. El CI lo
 comprueba con dos pasos nuevos —`Validate render path allocations` (prohíbe
 `new` en `RelicAura` y `RelicGlowState` salvo en constantes de clase) y

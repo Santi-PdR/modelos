@@ -88,6 +88,12 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
             return;
         }
 
+        // Cronometro de /relic stats: dos nanoTime por reliquia y frame, del orden
+        // de decenas de nanosegundos frente a los cientos de microsegundos que
+        // cuesta recorrer los 977 cubos.
+        long began = System.nanoTime();
+        int drawnPasses = 0;
+
         // Modelo horneado compartido por los cuatro pases: reRender necesita el
         // mismo objeto cuyos huesos ya poso el primer paso.
         BakedGeoModel model = getGeoModel().getBakedModel(getGeoModel().getModelResource(animatable));
@@ -98,11 +104,13 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
         defaultRender(poseStack, animatable, bufferSource,
                 RenderType.entityTranslucentEmissive(RelicGeoModel.texture()),
                 null, 0.0F, partialTick, packedLight);
+        drawnPasses++;
 
         if (RelicConfig.GLOW_LAYER.get()) {
             renderExtra(model, poseStack, animatable, bufferSource, partialTick, packedLight,
                     RenderType.entityTranslucentEmissive(RelicGeoModel.glowTexture()),
                     1.0F, 1.0F, 1.0F, 1.0F);
+            drawnPasses++;
         }
 
         // Factor de brillo del modelo: estado (0.35 dormida .. 1.15 cargada) por
@@ -118,6 +126,7 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
                     RelicRenderTypes.ADDITIVE_GLOW.apply(RelicGeoModel.glowTexture()),
                     tint(0.55F, glow.red()) * i, tint(0.78F, glow.green()) * i,
                     tint(1.00F, glow.blue()) * i, 1.0F);
+            drawnPasses++;
         }
 
         // Cuarto pase opcional con GLSL propio: fresnel en el borde y linea de
@@ -131,7 +140,12 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
                     RelicRenderTypes.GLOW_SHADER.apply(RelicGeoModel.glowTexture()),
                     tint(0.65F, glow.red()) * i, tint(0.85F, glow.green()) * i,
                     tint(1.00F, glow.blue()) * i, 1.0F);
+            drawnPasses++;
         }
+
+        // Se anota al final, con lo que de verdad se dibujo: si el halo o el GLSL
+        // estaban apagados, no cuentan como pase.
+        RelicRenderStats.model(System.nanoTime() - began, drawnPasses);
     }
 
     /**

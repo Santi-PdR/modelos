@@ -1,5 +1,24 @@
 # Historial de cambios
 
+## 1.0.18 — `/relic stats`: el ahorro, en números
+
+* **Nuevo `/relic stats`** (y `/relic stats reset`): dice cuántos **pases por
+  dibujo** se están emitiendo (1 si solo queda el pase base, 4 con base, emisivo,
+  halo y GLSL), cuántos dibujos por segundo y cuántos **milisegundos** cuesta una
+  reliquia, con modelo y aura por separado. Es la única forma de ver lo de 1.0.16
+  y 1.0.17, que por diseño no cambian ni un píxel: comparar en el mismo sitio con
+  1.0.15 es una medida y no una impresión. También sirve para decidir si hace
+  falta `quality=lite`, `glowHalo=false` o bajar `maxRenderDistance`.
+* Se mide **por dibujo** (una reliquia visible en un frame), no por frame del
+  juego: dos `System.nanoTime()` y un `long` sumado, decenas de nanosegundos
+  frente a los cientos de microsegundos que se miden. Todo en el hilo del
+  cliente, sin hilos ni volátiles: los comandos corren en el mismo hilo que
+  renderiza.
+* **Nuevo chequeo de CI** (`Validate documented commands`): cada literal de
+  primer nivel del árbol `/relic` tiene que aparecer en el README con `/relic`
+  delante. Un comando sin documentar es un comando que nadie encuentra.
+* 3 claves nuevas en `en_us` y `es_es` (33 en cada uno).
+
 ## 1.0.17 — el camino de render ya no reserva memoria (y el README deja de repetirse)
 
 * **Cero asignaciones por frame y portador** en el aura, el anillo y el estado

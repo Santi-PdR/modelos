@@ -99,7 +99,11 @@ public class RelicCurioRenderer implements ICurioRenderer {
         // Aura + anillo: billboards aditivos sobre el mismo anclaje (incluye la
         // escala de la config, que se lee de la matriz).
         if (RelicAura.enabled()) {
+            // Cronometrado aparte para que /relic stats diga cuanto es modelo y
+            // cuanto aura: son dos palancas distintas (pases vs billboards).
+            long began = System.nanoTime();
             RelicAura.render(poseStack, bufferSource, partialTicks, state, visual.glow(), fade);
+            RelicRenderStats.aura(System.nanoTime() - began);
         }
 
         poseStack.popPose();

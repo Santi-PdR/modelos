@@ -88,6 +88,7 @@ En el juego:
 | Calidad (full/lite) | `/relic quality full\|lite` |
 | Ver valores actuales | `/relic info` (tres líneas: placement, estado en vivo y brillo) |
 | Probar una animación | `/relic anim <nombre>` · `/relic anim list` |
+| Medir el coste | `/relic stats` · `/relic stats reset` |
 
 Los comandos de ajuste son de **cliente** y cambian la config en memoria al
 instante (no la guardan): cuando el núcleo quede donde quieres, copia los
@@ -101,6 +102,15 @@ mandando ahora mismo.
 (`/relic anim layer_shake`, `/relic anim release`, `/relic anim idle_calm`…), así
 que se pueden revisar todas sin depender de que un mob te pegue o de esperar a que
 salga una variación de reposo. Las de bucle se reproducen una vez.
+
+`/relic stats` mide lo que no se ve. Dice cuántos **pases por dibujo** se están
+emitiendo (1 si solo queda el pase base, 4 con base, emisivo, halo y GLSL),
+cuántos dibujos por segundo y cuántos **milisegundos** cuesta una reliquia por
+dibujo, separando modelo y aura. Es la forma de comprobar en tu máquina lo de
+1.0.16 (una evaluación de animación por frame en vez de cuatro) —comparar con
+1.0.15 en el mismo sitio es la prueba— y de decidir si hace falta `quality=lite`,
+`glowHalo=false` o bajar `maxRenderDistance`: mira el número, cambia la palanca,
+vuelve a mirar. `/relic stats reset` reinicia la media.
 
 `pulse`, `release` y
 `toggle` sí viajan al servidor, para que el resto de jugadores vea lo mismo. El
@@ -291,6 +301,8 @@ hay que sumar la traslación que traía `relic_hologram.geo.json`.
 - [ ] Noche, cueva y agua: sigue luminoso.
 - [ ] Sin shaders y con Iris/Oculus: sin errores en el log y sin desaparición.
 - [ ] `quality=lite` y `glowLayer=false` no rompen las animaciones.
+- [ ] `/relic stats` responde con los pases por dibujo (4 con base, emisivo, halo y
+      GLSL) y los ms por dibujo; `/relic stats reset` los reinicia.
 - [ ] Distancia > `maxRenderDistance`: deja de renderizarse (sin tirones).
 - [ ] `/relic offset 6 -6 8`, `/relic scale 1.0`, `/relic side left|right` mueven
       el núcleo en caliente y `/relic info` muestra los valores para la config.

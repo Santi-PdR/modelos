@@ -320,6 +320,30 @@ jobs:
           print('Nombres de animacion: todos via RelicAnimations.')
           PY
 
+      # Un comando nuevo sin fila en el README es un comando que no existe para
+      # nadie: /relic stats nacio en 1.0.18 y esto lo deja escrito.
+      - name: Validate documented commands
+        run: |
+          python3 - <<'PY'
+          import pathlib, re
+
+          java = pathlib.Path(
+              'relic-hologram/src/main/java/com/santipdr/holocore/client/RelicClientCommands.java'
+          ).read_text(encoding='utf-8')
+          codigo = re.sub(r'/\*.*?\*/', '', java, flags=re.S)
+          codigo = re.sub(r'//[^\n]*', '', codigo)
+          literales = sorted(set(re.findall(r'Commands\.literal\("([a-z]+)"\)', codigo)))
+          assert 'relic' in literales, f'sin raiz /relic: {literales}'
+          subcomandos = [n for n in literales if n != 'relic']
+
+          readme = pathlib.Path('relic-hologram/README.md').read_text(encoding='utf-8')
+          filas = [linea for linea in readme.splitlines() if '/relic' in linea]
+          faltan = [n for n in subcomandos
+                    if not any(re.search(r'\b' + n + r'\b', fila) for fila in filas)]
+          assert not faltan, f'comandos sin documentar en README.md: {faltan}'
+          print(f'Comandos OK: {len(subcomandos)} documentados -> {", ".join(subcomandos)}')
+          PY
+
       # 1.0.16 quitaba tres de las cuatro evaluaciones de animacion por frame. Es
       # una mejora invisible: si alguien vuelve a llamar a defaultRender en los
       # pases extra, no rompe nada y nadie se entera hasta que baja el FPS. Esto

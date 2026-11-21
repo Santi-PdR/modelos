@@ -28,5 +28,8 @@
   "message.holocore.off": "no",
   "message.holocore.anim": "Reproduciendo %s.",
   "message.holocore.anim_unknown": "No existe esa animación: %s (prueba /relic anim list).",
-  "message.holocore.anim_list": "Animaciones: %s"
+  "message.holocore.anim_list": "Animaciones: %s",
+  "message.holocore.stats": "Estadísticas: %s reliquia(s) en memoria · %s dibujos/s · %s pases por dibujo",
+  "message.holocore.stats_time": "Modelo %s ms · aura %s ms por dibujo (%s dibujos en %s s) — /relic stats reset reinicia",
+  "message.holocore.stats_reset": "Estadísticas reiniciadas."
 }

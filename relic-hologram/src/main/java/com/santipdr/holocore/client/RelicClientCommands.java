@@ -91,6 +91,9 @@ public final class RelicClientCommands {
                                         SharedSuggestionProvider.suggest(shortNames(), builder))
                                 .executes(ctx -> anim(ctx.getSource(),
                                         StringArgumentType.getString(ctx, "nombre")))))
+                .then(Commands.literal("stats")
+                        .executes(ctx -> stats(ctx.getSource()))
+                        .then(Commands.literal("reset").executes(ctx -> statsReset(ctx.getSource()))))
                 .then(Commands.literal("info").executes(ctx -> info(ctx.getSource()))));
     }
 
@@ -163,6 +166,37 @@ public final class RelicClientCommands {
             return Component.translatable("message.holocore.glsl.failed");
         }
         return Component.translatable("message.holocore.glsl.on");
+    }
+
+    /**
+     * {@code /relic stats}: cuanto cuesta de verdad dibujar la reliquia.
+     *
+     * <p>Todo lo que cambio en 1.0.16 y 1.0.17 es invisible: el halo sigue
+     * brillando igual. Estas cifras son la unica forma de ver el ahorro, y de
+     * paso de comprobar que los pases que se dibujan son los que la config
+     * permite (1 sin nada, 4 con base, emisivo, halo y GLSL).</p>
+     */
+    private static int stats(CommandSourceStack source) {
+        long dibujos = RelicRenderStats.draws();
+        double segundos = Math.max(0.001, RelicRenderStats.seconds());
+        String porSegundo = dibujos == 0 ? "0" : String.format(Locale.ROOT, "%.0f", dibujos / segundos);
+        String pases = dibujos == 0 ? "-" : String.format(Locale.ROOT, "%.2f",
+                (double) RelicRenderStats.passes() / dibujos);
+        String modelo = String.format(Locale.ROOT, "%.2f", RelicRenderStats.modelMillis());
+        String aura = String.format(Locale.ROOT, "%.2f", RelicRenderStats.auraMillis());
+        String ventana = String.format(Locale.ROOT, "%.1f", segundos);
+        source.sendSuccess(() -> Component.translatable("message.holocore.stats",
+                RelicVisuals.size(), porSegundo, pases).withStyle(ChatFormatting.AQUA), false);
+        source.sendSuccess(() -> Component.translatable("message.holocore.stats_time",
+                modelo, aura, dibujos, ventana).withStyle(ChatFormatting.DARK_AQUA), false);
+        return 1;
+    }
+
+    private static int statsReset(CommandSourceStack source) {
+        RelicRenderStats.reset();
+        source.sendSuccess(() -> Component.translatable("message.holocore.stats_reset")
+                .withStyle(ChatFormatting.AQUA), false);
+        return 1;
     }
 
     /**
