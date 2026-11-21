@@ -421,7 +421,31 @@ public final class VisualFixtureClient {
             case 1112 -> capture = "36_blood_z_plus.png";
             case 1130 -> bloodSample(0, 0, -4);
             case 1137 -> capture = "37_blood_z_minus.png";
+            // Sample a full gesture for both handedness settings. A single frame
+            // cannot establish hand-to-blade contact or catch mirroring errors.
             case 1155 -> {
+                mc.getSingleplayerServer().execute(() -> {
+                    var dragon = mc.getSingleplayerServer().overworld().getEntity(dragonId);
+                    if (dragon != null) dragon.discard();
+                });
+                bloodSample(0, 0, 0);
+            }
+            case 1159 -> capture = "38_blood_right_reach.png";
+            case 1162 -> capture = "39_blood_right_draw.png";
+            case 1166 -> capture = "40_blood_right_face.png";
+            case 1170 -> capture = "41_blood_right_recovery.png";
+            case 1180 -> mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.LEFT);
+            case 1195 -> {
+                if (mc.player.getMainArm() != net.minecraft.world.entity.HumanoidArm.LEFT)
+                    throw new IllegalStateException("Left-handed blood fixture did not synchronize");
+                bloodSample(0, 0, 0);
+            }
+            case 1199 -> capture = "42_blood_left_reach.png";
+            case 1202 -> capture = "43_blood_left_draw.png";
+            case 1206 -> capture = "44_blood_left_face.png";
+            case 1210 -> capture = "45_blood_left_recovery.png";
+            case 1225 -> {
+                mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Y.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Z.set(0.0);
