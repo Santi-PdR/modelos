@@ -13,6 +13,8 @@ Se equipa en el pecho o en `back` con Curios opcional.
 
 ### v1.67.24 — transición de nado
 
+**[Descargar JAR de prueba v1.67.24](https://github.com/Santi-PdR/modelos/raw/1303d5cad7d7a29dae985908c27b82de8c84b8d9/entregables/v1.67.24/capatest-1.67.24.jar)** · [Nado en Forge](docs/releases/v1.67.24/comparacion-nado-forge.jpg) · [Medidas y SHA-256](docs/releases/v1.67.24/notas.md).
+
 El paño distingue vadear de nadar en horizontal y se recoge al volver a ponerse de pie. El cambio actúa al equipar la capa en Minecraft; el proyecto de Blockbench conserva los mismos ocho clips.
 
 ### v1.67.23 — holgura al mirar arriba y en carrera

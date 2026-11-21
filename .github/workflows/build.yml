@@ -1110,24 +1110,12 @@ jobs:
             esac
           done
 
-      - name: Cargar el ciclo de nado de referencia (v1.67.23, pecho)
-        id: swim-reference
-        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && contains(github.event.head_commit.message, '[comparar-nado-v16723]') }}
-        uses: actions/download-artifact@v4
-        with:
-          name: capatest-fx-en-mundo
-          github-token: ${{ github.token }}
-          run-id: 44900094439
-          path: ${{ runner.temp }}/forge-nado-v16723
-
       - name: Verificar la entrada y salida del nado en pecho y Curios
         id: verify-swim
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
           set -o pipefail
-          base=()
-          if [ -d "$RUNNER_TEMP/forge-nado-v16723" ]; then base=(--baseline-shots "$RUNNER_TEMP/forge-nado-v16723"); fi
-          python3 tools/verify_forge_swim.py build/fx-smoke-run/fx-shots "${base[@]}" 2>&1 | while IFS= read -r line; do
+          python3 tools/verify_forge_swim.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
             case "$line" in
               *AssertionError:*|*Error:*) printf '::error title=Ciclo de nado en Forge::%s\n' "${line//%/%25}" ;;
               *) printf '::notice title=Ciclo de nado en Forge::%s\n' "${line//%/%25}" ;;
@@ -1163,44 +1151,6 @@ jobs:
             build/fx-smoke-run/fx-shots/hotbar-ciclo.gif
           if-no-files-found: error
           retention-days: 30
-
-      # Anclar una sola vez en la rama de prueba los mismos bytes que pasaron Forge.
-      - name: Adjuntar la candidata v1.67.24 y las pruebas de nado
-        if: >-
-          github.event_name == 'push' && contains(github.event.head_commit.message, '[adjuntar-v16724]') &&
-          steps.fx-smoke.outcome == 'success' && steps.swim-reference.outcome == 'success' &&
-          steps.verify-placement.outcome == 'success' && steps.verify-walk.outcome == 'success' &&
-          steps.verify-postures.outcome == 'success' && steps.verify-swim.outcome == 'success'
-        run: |
-          set -euo pipefail
-          test "$(git branch --show-current)" = "$GITHUB_REF_NAME"
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          grep -qx 'mod_version=1.67.24' gradle.properties
-          jar=capatest-1.67.24.jar
-          jar_dir=build/libs
-          shots=build/fx-smoke-run/fx-shots
-          release=docs/releases/v1.67.24
-          out="entregables/v1.67.24/$jar"
-          (cd "$jar_dir" && sha256sum -c SHA256SUMS.txt)
-          python3 -m zipfile -t "$jar_dir/$jar"
-          test ! -e "$out"
-          install -D -m 0644 "$jar_dir/$jar" "$out"
-          install -D -m 0644 "$jar_dir/SHA256SUMS.txt" "$release/JAR.sha256"
-          for proof in comparacion-nado-forge.jpg nado-forge.tsv holgura-brazos-forge.tsv continuidad-forge.tsv revision-alex-forge.tsv; do
-            test -s "$shots/$proof"
-            install -m 0644 "$shots/$proof" "$release/"
-          done
-          install -m 0644 "$RUNNER_TEMP/forge-nado-v16723/nado-ciclo-pecho.tsv" "$release/nado-ciclo-pecho-v16723.tsv"
-          for slot in pecho curios; do
-            install -m 0644 "$shots/nado-ciclo-$slot.tsv" "$release/nado-ciclo-$slot-v16724.tsv"
-          done
-          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16724_colocacion_forge.jpg
-          printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$release/compilacion.txt"
-          git add -- "$release" docs/capa_v16724_colocacion_forge.jpg
-          git add -f -- "$out"
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m 'Adjuntar v1.67.24 verificada y su comparación en agua [skip ci]'
-          git push origin "$GITHUB_REF_NAME"
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.
