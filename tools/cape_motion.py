@@ -25,8 +25,8 @@ class Style:
 
 STYLES = {
     "idle":       Style(3.60, (.35, .65, -.55), (.44, .87, 1.48), (.12, .48, .89), .38, 1.56, .25, 1.04),
-    "caminar":    Style(1.00, (7, 4.8, -2.7), (1.22, 2.7, 4.3), (.51, 1.35, 2.6), 2.4, 4.2, .42, 1.13),
-    "correr":     Style(0.72, (26, 12, -7.4), (1.3, 2.75, 4.6), (.39, .97, 1.95), -6.0, 5.6, .82, .80),
+    "caminar":    Style(1.00, (7, 4.8, -2.7), (.57, 1.42, 2.85), (.36, .84, 1.78), 2.4, 4.0, -.24, 1.08),
+    "correr":     Style(0.72, (26, 12, -7.4), (.44, 1.06, 2.42), (.20, .53, 1.06), -6.0, 4.4, -.37, .78),
     "volar":      Style(1.35, (44, 11, -4.7), (1.42, 2.72, 4.0), (.63, 1.76, 3.5), 10.8, 7.60, 1.46, .83),
     "caer":       Style(0.90, (17, 17, 19), (1.5, 3.1, 5.1), (.79, 1.95, 3.8), 5.1, 7.0, 1.65, 1.08),
     "agachado":   Style(2.60, (7.5, -3.25, -4.75), (.66, 1.09, 1.5), (.13, .45, .91), -9.5, 1.85, .28, 1.0),
@@ -34,6 +34,7 @@ STYLES = {
     "deterioro":  Style(3.00, (5.8, 2.15, 8.3), (1.7, 2.68, 4.35), (.69, 2.23, 3.55), 4.3, 6.8, 1.10, 1.12),
 }
 SECTIONS = ("cape_top", "cape_mid", "cape_bottom")
+GAITS = ("caminar", "correr")
 RIBBON = re.compile(r"v17_ribbon_(\d+)_seg(\d+)")
 
 
@@ -45,11 +46,38 @@ def beat(angle: float) -> float:
     return .56 * ((1.0 + math.cos(angle)) / 2) ** 3 + .44 * ((1.0 - math.cos(angle)) / 2) ** 3
 
 
+def gait_hinge(spec: Style, i: int, t: float, sprint: bool) -> tuple[float, float, float]:
+    # Vanilla's stride is one full left/right pair. Load twice per cycle,
+    # with the return travelling down the cloth instead of pumping its seat.
+    a = t + spec.phase - spec.lag * .54 * i
+    recoil = .82 * math.sin(2 * a) + .18 * math.sin(a - .35)
+    yaw = (.12 + i * .22 if sprint else .24 + i * .32) * math.sin(a + .85)
+    roll = spec.roll[i] * math.sin(a - .55)
+    return spec.pitch[i] + spec.flex[i] * recoil, yaw, roll
+
+
+def gait_ribbon(spec: Style, side: float, q: float, seg: int, t: float, sprint: bool) -> tuple[float, float, float]:
+    a = t + spec.phase - spec.lag * (.40 + .24 * seg + .036 * seg**2)
+    amp = spec.ripple * q * (.76 + .24 * abs(side))
+    recoil = math.sin(2 * a - .16)
+    # Walking transfers weight from edge to edge. In a sprint the drape
+    # stays swept back and the hem mostly follows the two smaller rebounds.
+    cross = math.sin(a - .42)
+    pitch = amp * (.32 * recoil + .10 * math.sin(a + .35 * side))
+    pitch += (0.78 if sprint else 2.8) * side * q * cross
+    yaw = .14 * amp * math.cos(a + .35 * side) - .22 * spec.spread * side * q
+    roll = amp * (.32 * math.sin(a - .65) + .18 * side * recoil) - .71 * side * spec.spread * q
+    roll += (0.5 if sprint else 1.7) * q * side * cross
+    return pitch, yaw, roll
+
+
 def sample(name: str, style: str, f: float) -> tuple[float, float, float]:
     spec = STYLES[style]
     t = 2 * math.pi * (f % 1.0)
     if name in SECTIONS:
         i = SECTIONS.index(name)
+        if style in GAITS:
+            return gait_hinge(spec, i, t, style == "correr")
         phase = t + spec.phase - spec.lag * i
         # La onda se propaga desde la costura sin volver a reposo al cerrar
         # el ciclo. La sección superior es la más contenida.
@@ -57,11 +85,7 @@ def sample(name: str, style: str, f: float) -> tuple[float, float, float]:
             .86 * math.sin(phase) + .14 * math.sin(2 * phase + .45))
         roll = spec.roll[i] * math.sin(phase - .7)
         yaw = (.36 + i * .39) * math.sin(phase + 1.1)
-        if style == "caminar":
-            # Dos pasos por vuelta; la oscilación lateral cambia de pie.
-            pitch += (.65 + i*.67) * math.cos(2*phase - .6)
-            yaw += (.25 + i*.31) * math.sin(phase - .66)
-        elif style == "volar":
+        if style == "volar":
             # Planeo más sostenido, con balanceo, no aleteo desde el cuello.
             yaw += (.18 + i*.48) * math.cos(phase - .48)
         elif style == "caer":
@@ -81,29 +105,26 @@ def sample(name: str, style: str, f: float) -> tuple[float, float, float]:
         if not 1 <= seg <= LAST_JOINT:
             return 0., 0., 0.
         side = (col - 5.5) / 5.5
-        hand = math.copysign(1.0, side)
         # The sewn root has no extra local swing. At the last articulated
         # segment three solids share one rotation; no flapping loose tip.
         tail = seg / LAST_JOINT
         q = tail**1.45
-        a = t + spec.phase - spec.lag * (.36 * seg + .038 * seg**2)
-        wave = math.sin(a + .35 * side) + .14 * math.sin(2 * a + .42)
-        amp = spec.ripple * q * (.76 + .24 * abs(side))
-        pitch = .42 * amp * wave
-        yaw = .24 * amp * math.cos(a + .35*side) - .22 * spec.spread * side * q
-        roll = amp * (.60 * math.sin(a - .62) + .27 * side * wave) - .71 * side * spec.spread * q
-        if style == "caminar":
-            pitch += 1.55 * side * q * math.sin(a - .45)
-            roll += hand * 1.75 * q * math.sin(a - .63)
-        elif style == "correr":
-            pitch += 1.32 * q * math.sin(2 * a + .82 + .55*side)
-        elif style == "caer":
-            pitch += 2.36 * q * (.5 + .5 * math.cos(a - .22))**3
-        elif style == "agua":
-            yaw += 1.32 * q * math.cos(a - .55)
-        elif style == "deterioro":
-            pitch += 3.15 * q * beat(a)
-            roll += 3.35 * q * hand * beat(a) * math.sin(2*a + .32*side)
+        if style in GAITS:
+            pitch, yaw, roll = gait_ribbon(spec, side, q, seg, t, style == "correr")
+        else:
+            a = t + spec.phase - spec.lag * (.36 * seg + .038 * seg**2)
+            wave = math.sin(a + .35 * side) + .14 * math.sin(2 * a + .42)
+            amp = spec.ripple * q * (.76 + .24 * abs(side))
+            pitch = .42 * amp * wave
+            yaw = .24 * amp * math.cos(a + .35*side) - .22 * spec.spread * side * q
+            roll = amp * (.60 * math.sin(a - .62) + .27 * side * wave) - .71 * side * spec.spread * q
+            if style == "caer":
+                pitch += 2.36 * q * (.5 + .5 * math.cos(a - .22))**3
+            elif style == "agua":
+                yaw += 1.32 * q * math.cos(a - .55)
+            elif style == "deterioro":
+                pitch += 3.15 * q * beat(a)
+                roll += 3.35 * q * math.copysign(1., side) * beat(a) * math.sin(2*a + .32*side)
         if col in (0, 10):
             pitch, yaw, roll = pitch*.63, yaw*.56, roll*.60
         return pitch, yaw, roll
@@ -133,7 +154,28 @@ def _self_test() -> None:
     assert sample("cape_top", "volar", .5)[0] > sample("cape_top", "correr", .5)[0] + 8
     assert sample("cape_bottom", "caer", .5)[0] > sample("cape_bottom", "volar", .5)[0] + 18
     assert sample(tip, "agachado", .25)[2] < sample(tip, "volar", .25)[2]
-    print("8 curvas rotacionales periódicas, con tangentes periódicas y perfiles de bisagra distintos")
+
+    phases = [j/120 for j in range(120)]
+    def pitches(name, style):
+        return [sample(name, style, f)[0] for f in phases]
+
+    # Two rebounds, increasing amplitude and a later crest at each hinge.
+    # Alternation across the walking hem is distinct from that rebound.
+    side_to_side = []
+    for style in GAITS:
+        sections = [pitches(n, style) for n in SECTIONS]
+        arcs = [max(a) - min(a) for a in sections]
+        assert .6 < arcs[0] < 1.25 and arcs[0] * 1.5 < arcs[1] < arcs[2] < 6
+        for a in sections:
+            strength = [math.hypot(sum(v * math.sin(n * 2*math.pi*f) for v, f in zip(a, phases)),
+                                   sum(v * math.cos(n * 2*math.pi*f) for v, f in zip(a, phases))) for n in (1,2)]
+            assert strength[1] > 4 * strength[0], (style, strength)
+        crests = [max(range(60), key=a.__getitem__) for a in sections]
+        assert crests[0] < crests[1] < crests[2], (style, crests)
+        edge = [x-y for x, y in zip(*(pitches(f'v17_ribbon_{c}_seg4',style) for c in (2,9)))]
+        side_to_side.append(max(edge) - min(edge))
+    assert side_to_side[0] > 3 * side_to_side[1]
+    print("8 curvas periódicas; doble apoyo, retardo hacia el dobladillo y balance distinto al andar y correr")
 
 
 if __name__ == "__main__":

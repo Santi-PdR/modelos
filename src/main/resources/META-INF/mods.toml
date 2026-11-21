@@ -9,9 +9,9 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.67.26: el paño distingue el apoyo en una escalera de la caída libre al soltarse.
-El icono de referencia pulsa en la hotbar. Se conservan los ocho clips,
-la holgura con élitros, la inercia del paño, el halo nocturno y las brasas.
+v1.67.27: hombrera izquierda más recogida; nueva flexión del paño al caminar y correr.
+Se conservan el apoyo en escaleras, el ajuste con élitros, el halo y las brasas.
+El icono de referencia pulsa en la hotbar.
 '''
 
 [[dependencies.${mod_id}]]

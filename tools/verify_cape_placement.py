@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Lock the v1.67.14 art and check position-only changes in the torso frame."""
+"""Check frozen art, the two reauthored gait clips, and live-fit parity."""
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
+import re
 import subprocess
 from itertools import product
 from pathlib import Path
@@ -18,18 +20,69 @@ import cape_fit as F
 from cape_contact import back_and_sleeves, lap as group_lap, original_dimensions, shoulder_seams
 import cape_tracks as T
 import preview_cloth as P
-from bbmodel_export import DOC
+from bbmodel_export import DOC, build_animations, uid
 from verify_cape_backing import lap
 from verify_v1660 import WornModel, contacts
 import cape_stride as S
 
 REFERENCE = P.ROOT/'entregables/v1.67.14/capatest-1.67.14.jar'
 ART = ('geo', 'textures', 'animations', 'particles', 'shaders')
+BACKUP = P.ROOT/'docs/respaldos/v1.67.26'
+WORN_ANIMATION = A.ANIM.relative_to(P.ASSETS).as_posix()
+GAIT_CLIPS = ('animation.moving', 'animation.sprint')
 
 
 def art_entries(jar):
     return {n.split('assets/capatest/',1)[1]:jar.read(n) for n in jar.namelist()
             if n.startswith(tuple(f'assets/capatest/{kind}/' for kind in ART)) and not n.endswith('/')}
+
+
+def gait_assets(reference, worn):
+    # Freeze the backup, and only allow the values at the original rotation
+    # keys of the two cloth gaits to differ (not key times or any other clip).
+    assert (BACKUP/WORN_ANIMATION).read_bytes() == reference[WORN_ANIMATION]
+    folded = 'animations/item/cape_folded.animation.json'
+    assert (BACKUP/folded).read_bytes() == reference[folded]
+    before, restored = json.loads(reference[WORN_ANIMATION]), json.loads(worn)
+    runtime = json.loads(worn)
+    assert runtime == A.build(), 'el JAR y la curva fuente no coinciden'
+    for clip in GAIT_CLIPS:
+        old = before['animations'][clip]
+        tracks = restored['animations'][clip]['bones']
+        changed = 0
+        for name, channels in old['bones'].items():
+            if A.animated(name):
+                for t, key in channels['rotation'].items():
+                    rotation = tracks[name]['rotation'][t]
+                    changed += rotation['vector'] != key['vector']
+                    rotation['vector'] = key['vector']
+        assert changed, (clip, 'no se actualizó la marcha')
+    assert restored == before, 'cambiaron pistas fuera de las rotaciones de marcha'
+
+    bb = DOC.read_bytes()
+    model, original = json.loads(bb), json.loads((BACKUP/'CAPA_v1.67.26.bbmodel').read_text())
+    del original['name']
+    digest = hashlib.sha256(json.dumps(original,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+    assert digest == 'e6c8fbf2dd3f4f68e950e1cfee8dfc9db52f177261432d033d1664b22a17c939', 'cambió el respaldo Blockbench'
+    names = [b['name'] for b in P.load(P.ARMOR_GEO)['bones'] if A.animated(b['name'])]
+    assert model['animations'] == build_animations([(n, uid(n+'/group')) for n in names], runtime)
+    for now, old in zip(model['animations'],original['animations'],strict=True):
+        if old['name'] in ('caminar','correr'):
+            for gid, anim in old['animators'].items():
+                keys = now['animators'][gid]['keyframes']
+                for k, previous in zip(keys,anim['keyframes'],strict=True):
+                    for field in ('data_points','bezier_left_value','bezier_right_value'):
+                        k[field] = previous[field]
+    del model['name']
+    assert model == original, 'cambió el modelo o la animación de Blockbench fuera de las dos marchas'
+
+    html = (P.ROOT/'docs/capa_v1170_visor.html').read_text()
+    payload = re.search(r'^const INLINE_ANIMATIONS = (.+);$',html,re.M)
+    fit = re.search(r'^const INLINE_FIT = (.+);$',html,re.M)
+    project = re.search(r'href="data:[^;"\n]+;base64,([A-Za-z0-9+/=]+)" download="'+re.escape(DOC.name)+'"',html)
+    assert payload and json.loads(payload[1]) == runtime, 'visor con animaciones antiguas'
+    assert fit and json.loads(fit[1]) == F.viewer_profile(placed=True), 'visor con montaje antiguo'
+    assert project and base64.b64decode(project[1],validate=True) == bb, 'visor con proyecto antiguo'
 
 
 def asset_contract(candidate=None):
@@ -39,19 +92,18 @@ def asset_contract(candidate=None):
               for p in (P.ASSETS/kind).rglob('*') if p.is_file()}
     assert source.keys() == original.keys(), original.keys() ^ source.keys()
     for name,data in original.items():
-        assert data == source[name], f'cambió el arte original: {name}'
+        if name != WORN_ANIMATION:
+            assert data == source[name], f'cambió el arte original: {name}'
     assert G.build() == json.loads(P.ARMOR_GEO.read_text()), 'el generador no produce el modelo restaurado'
-    model = json.loads(DOC.read_text())
-    del model['name']
-    digest = hashlib.sha256(json.dumps(model,sort_keys=True,separators=(',',':')).encode()).hexdigest()
-    assert digest == 'e6c8fbf2dd3f4f68e950e1cfee8dfc9db52f177261432d033d1664b22a17c939', 'cambió el proyecto de Blockbench'
+    gait_assets(original,source[WORN_ANIMATION])
     if candidate is not None:
         with ZipFile(candidate) as jar:
             assert jar.testzip() is None
-            assert art_entries(jar) == original, 'el JAR no contiene los recursos originales'
+            assert art_entries(jar) == source, 'el JAR no contiene los recursos verificados'
             assert not any(any(probe in n for probe in ('CapePlacementProbe','CapeFxSmoke','CapeWalkProbe','CapeWaterProbe','CapeJumpProbe','CapeClimbProbe'))
                            for n in jar.namelist()), 'se empaquetó el ensayo de Forge'
-    print(f'{len(original)} recursos idénticos al JAR v1.67.14 y proyecto Blockbench intacto (salvo nombre de versión).',flush=True)
+    print(f'{len(original)-1} recursos idénticos al JAR v1.67.14; sólo cambiaron las rotaciones de marcha/carrera. '
+          'Blockbench y visor coinciden.',flush=True)
 
 
 def viewer(**data):

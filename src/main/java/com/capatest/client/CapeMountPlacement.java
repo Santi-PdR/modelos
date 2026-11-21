@@ -21,11 +21,12 @@ final class CapeMountPlacement {
     static final int LINING_CUBES = 3;
 
     // Rigid whole-plate poses over the sleeves; X is mirrored on draw.
-    // Turn the small rim to expose its fabric seam, and level the wide rim.
     static final Plate SMALL = new Plate(CapePlateFit.SMALL, -5.84, 22.35, 4.46,
             -.61, 1.95, -4.06, -9, 24, 1.5, .26);
+    // The wearer's left, on the right of the front F5 view. Turn the wide
+    // end along the sleeve instead of sliding the inner lip into the head.
     static final Plate WIDE = new Plate(CapePlateFit.WIDE, 7.24, 22.43, 4.16,
-            -.61, .78, -4.00, -17.5, 65, 0, -.15);
+            -.66, .50, -3.62, -14.5, 77, 0, -.15);
 
     // Keep the independent fit with Elytra.
     static final Plate WING_SMALL = new Plate(CapePlateFit.SMALL, -5.84, 22.35, 4.46,
