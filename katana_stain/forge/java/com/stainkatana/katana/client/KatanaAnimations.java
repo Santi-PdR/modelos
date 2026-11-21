@@ -76,9 +76,11 @@ public final class KatanaAnimations {
         }
         // X uses a timed adaptation of Improved Animations' sword motion;
         // other abilities retain their existing reference clips for now.
-        KeyframeAnimation clip = ability == 1 ? null : loadBetterCombat(ability);
+        boolean overhead = ability == 2 || ability == 9 || ability == 12 || ability == 15;
+        KeyframeAnimation clip = ability == 1 || overhead ? null : loadBetterCombat(ability);
         boolean external = clip != null;
-        if (!external) clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID, CLIPS[ability]));
+        if (!external) clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID,
+                overhead ? "stain_c_overhead" : CLIPS[ability]));
         if (clip == null) {
             LOGGER.warn("Missing katana animation for ability {}", ability);
             return;
