@@ -29,6 +29,7 @@ public final class RelicConfig {
     public static final ForgeConfigSpec.DoubleValue AURA_INTENSITY;
     public static final ForgeConfigSpec.BooleanValue GLOW_RING;
     public static final ForgeConfigSpec.DoubleValue RING_INTENSITY;
+    public static final ForgeConfigSpec.DoubleValue FLASH_INTENSITY;
     public static final ForgeConfigSpec.BooleanValue SHADER_GLOW;
     public static final ForgeConfigSpec.DoubleValue SHADER_INTENSITY;
     public static final ForgeConfigSpec.BooleanValue REDUCED_EFFECTS;
@@ -73,11 +74,14 @@ public final class RelicConfig {
                 .define("glowRing", true);
         RING_INTENSITY = b.comment("Intensidad del anillo de estado (0 = invisible, 1 = muy marcado).")
                 .defineInRange("ringIntensity", 0.55D, 0.0D, 1.0D);
-        SHADER_GLOW = b.comment("Pase GLSL propio (fresnel + linea de barrido) sobre la textura emisiva.",
+        FLASH_INTENSITY = b.comment("Destello al ocurrir algo: pulso, liberacion, golpe recibido, subida de nivel",
+                        "o despertar/dormir. Multiplica el pico del destello; 0 lo apaga del todo.")
+                .defineInRange("flashIntensity", 1.0D, 0.0D, 2.0D);
+        SHADER_GLOW = b.comment("Pase GLSL propio (borde de silueta + dos barridos) sobre la textura emisiva.",
                         "Se desactiva solo si hay shaderpack activo (Iris/Oculus/OptiFine), porque el pack",
-                        "sustituye el programa y la reliquia podria quedar invisible. Usa haloIntensity.")
+                        "sustituye el programa y la reliquia podria quedar invisible. Su fuerza es shaderIntensity.")
                 .define("shaderGlow", true);
-        SHADER_INTENSITY = b.comment("Intensidad del pase GLSL (fresnel + barrido). Separada del halo",
+        SHADER_INTENSITY = b.comment("Intensidad del pase GLSL (borde + barridos). Separada del halo",
                         "para poder bajar el borde sin apagar el brillo.")
                 .defineInRange("shaderIntensity", 0.55D, 0.0D, 1.0D);
         REDUCED_EFFECTS = b.comment("Usa idle_calm (sin rayos, cometas ni ondas) cuando el estado es normal.")

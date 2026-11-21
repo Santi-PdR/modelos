@@ -39,6 +39,8 @@ public final class RelicAnimatable implements GeoAnimatable {
 
     /** Ticks durante los que se considera "reciente" un sello del servidor. */
     private static final int EVENT_WINDOW_TICKS = 40;
+    /** Constante de tiempo del destello de un evento, en segundos. */
+    private static final float FLASH_TAU = 0.42F;
     /** Ticks durante los que se usa wake/sleep en vez de activation/deactivation. */
     private static final int QUICK_TOGGLE_WINDOW = 400;
     private static final String LAYER_CONTROLLER = "layer";
@@ -72,6 +74,13 @@ public final class RelicAnimatable implements GeoAnimatable {
     private int threatTicks;
     private int scanCooldown;
     private int glitchCountdown = -1;
+
+    /**
+     * Destello de evento (0..1.2): sube de golpe cuando pasa algo y se apaga
+     * solo. Lo usa el brillo del modelo y el aura; ver {@link #flash()}.
+     */
+    private float flash;
+    private long flashNanos;
 
     public RelicAnimatable(UUID wearer) {
         this.wearer = wearer;
@@ -117,6 +126,16 @@ public final class RelicAnimatable implements GeoAnimatable {
         return this.active;
     }
 
+    /**
+     * Destello actual, de 0 a ~1.2. Es lo que convierte un evento del servidor
+     * (pulso, liberacion, golpe, subida de nivel, despertar) en algo visible: el
+     * halo, el pase GLSL y el aura lo multiplican, y el anillo se enciende
+     * aunque el estado no lo tuviera.
+     */
+    public float flash() {
+        return this.flash;
+    }
+
     // ------------------------------------------------------------------
     // Logica de estado
     // ------------------------------------------------------------------
@@ -129,6 +148,9 @@ public final class RelicAnimatable implements GeoAnimatable {
     public void update(Player player, ClientRelicStates.Snapshot snapshot, float partialTick) {
         long now = player.level().getGameTime();
         this.lastRenderTick = now;
+        // El destello se apaga con tiempo real y no con ticks: asi no se queda a
+        // medias cuando el juego va a 5 FPS.
+        decayFlash();
 
         boolean wasActive = this.active;
         this.active = snapshot.active();
@@ -141,12 +163,14 @@ public final class RelicAnimatable implements GeoAnimatable {
             this.seenPulse = snapshot.pulse();
             if (this.active && isRecent(now, snapshot.pulse())) {
                 request(RelicAnimations.ENERGY_PULSE);
+                boostFlash(0.85F);
             }
         }
         if (snapshot.release() != this.seenRelease) {
             this.seenRelease = snapshot.release();
             if (isRecent(now, snapshot.release())) {
                 request(RelicAnimations.RELEASE);
+                boostFlash(1.0F);
             }
         }
         if (snapshot.hit() != this.seenHit) {
@@ -155,12 +179,14 @@ public final class RelicAnimatable implements GeoAnimatable {
                 // Doble capa: la reaccion del modelo y el envoltorio relic_react.
                 request(RelicAnimations.HIT);
                 triggerLayer("layer_hit");
+                boostFlash(0.45F);
             }
         }
         if (snapshot.bump() != this.seenBump) {
             this.seenBump = snapshot.bump();
             if (isRecent(now, snapshot.bump())) {
                 triggerLayer("layer_bump");
+                boostFlash(0.55F);
             }
         }
 
@@ -202,6 +228,7 @@ public final class RelicAnimatable implements GeoAnimatable {
         } else if (--this.glitchCountdown <= 0) {
             if (this.active && isRest(this.loop) && !RelicConfig.REDUCED_EFFECTS.get()) {
                 request(RelicAnimations.GLITCH);
+                boostFlash(0.35F);
             }
             this.glitchCountdown = nextGlitchDelay();
         }
@@ -231,18 +258,22 @@ public final class RelicAnimatable implements GeoAnimatable {
 
         if (previous == LoopState.DORMANT && next != LoopState.DORMANT) {
             request(quick ? RelicAnimations.WAKE : RelicAnimations.ACTIVATION);
+            boostFlash(0.55F);
         } else if (previous != LoopState.DORMANT && next == LoopState.DORMANT) {
             request(quick ? RelicAnimations.SLEEP : RelicAnimations.DEACTIVATION);
+            boostFlash(0.45F);
         }
 
         if (restBefore && next == LoopState.CHARGED) {
             request(RelicAnimations.CHARGE_UP);
+            boostFlash(0.30F);
         } else if (previous == LoopState.CHARGED && restAfter) {
             request(RelicAnimations.CHARGE_DOWN);
         }
 
         if (restBefore && next == LoopState.ALERT) {
             request(RelicAnimations.ALERT_UP);
+            boostFlash(0.30F);
         } else if (previous == LoopState.ALERT && restAfter) {
             request(RelicAnimations.ALERT_DOWN);
         }
@@ -276,6 +307,30 @@ public final class RelicAnimatable implements GeoAnimatable {
         // RandomSource propio: no toca el RNG del mundo (que debe seguir siendo
         // determinista) ni el del jugador.
         return this.random.nextInt(min, max + 1) * 20;
+    }
+
+    /** Sube el destello, nunca lo baja: dos golpes seguidos no se apagan entre si. */
+    private void boostFlash(float strength) {
+        if (strength > this.flash) {
+            this.flash = strength;
+        }
+    }
+
+    private void decayFlash() {
+        long now = System.nanoTime();
+        if (this.flashNanos == 0L) {
+            this.flashNanos = now;
+            return;
+        }
+        float delta = (now - this.flashNanos) / 1_000_000_000.0F;
+        this.flashNanos = now;
+        if (this.flash <= 0.0F || delta <= 0.0F) {
+            return;
+        }
+        this.flash *= (float) Math.exp(-Math.min(delta, 0.25F) / FLASH_TAU);
+        if (this.flash < 0.01F) {
+            this.flash = 0.0F;
+        }
     }
 
     private static boolean isRecent(long now, long stamp) {

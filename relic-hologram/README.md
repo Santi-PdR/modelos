@@ -144,6 +144,12 @@ Dos detalles que hacen que el borde se vea siempre:
 El tono del halo, del borde y del pase GLSL se mezcla al 50% con el color del
 estado, así que cargada tira a ámbar y alerta a rojo en vez de quedarse azul.
 
+El **destello de evento** (`visuals.flashIntensity`) es lo que hace que la
+reliquia *conteste*: cuando llega un pulso, una liberación, un golpe recibido, una
+subida de nivel o un despertar/dormir, el brillo del modelo, el aura y el anillo
+suben de golpe y se apagan solos en ~0,4 s. El anillo se enciende aunque el estado
+no lo tuviera, así que un golpe se nota también en calma o dormida.
+
 Lo que **no** hace: post-proceso de pantalla (caro y se pelea con los packs). El
 razonamiento completo, la matriz de compatibilidad y los detalles de la API de
 shaders de 1.20.1 están en [BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
@@ -165,7 +171,8 @@ shaders de 1.20.1 están en [BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
 | `visuals.auraIntensity` | `0.55` | Fuerza del aura (0–1). |
 | `visuals.glowRing` | `true` | Anillo de estado (gira y se tiñe según la reliquia). |
 | `visuals.ringIntensity` | `0.55` | Fuerza del anillo (0–1). |
-| `visuals.shaderGlow` | `true` | Pase GLSL propio (fresnel + barrido). Se apaga solo con shaderpack activo. |
+| `visuals.flashIntensity` | `1.0` | Destello al ocurrir algo (pulso, liberación, golpe, nivel, despertar). `0` lo apaga. |
+| `visuals.shaderGlow` | `true` | Pase GLSL propio (borde de silueta + dos barridos). Se apaga solo con shaderpack activo. |
 | `visuals.shaderIntensity` | `0.55` | Fuerza del pase GLSL, independiente del halo. |
 | `visuals.reducedEffects` | `false` | Reposo sin rayos/cometas/ondas (`idle_calm`). |
 | `visuals.maxRenderDistance` | `32` | Distancia para dibujar la reliquia de otros jugadores. |

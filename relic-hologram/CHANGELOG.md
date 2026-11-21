@@ -1,5 +1,22 @@
 # Historial de cambios
 
+## 1.0.9 — la reliquia contesta
+
+* **Destello de evento** (`visuals.flashIntensity`): la reliquia ya no solo cambia
+  de estado, también reacciona. Un pulso, una liberación, un golpe recibido, una
+  subida de nivel o el despertar/dormir suben de golpe el brillo del modelo, el
+  aura y el anillo, y todo se apaga solo en ~0,4 s con decaimiento exponencial.
+* El anillo se **enciende aunque el estado no lo tuviera**: un golpe en calma o
+  con la reliquia dormida también deja ver el pulso, que es justo cuando el
+  jugador quiere saber que pasó algo.
+* Aura y anillo se **abren** durante el destello (22% y 30% de diámetro), lo que
+  da la sensación de expansión sin mover ni un vértice nuevo: siguen siendo cuatro
+  quads.
+* El pico no se baja entre eventos (`max`), así que dos golpes seguidos en combate
+  se ven como un parpadeo continuo y no como dos destellos recortados.
+* Arreglados dos comentarios de la config que mentían: `shaderGlow` decía «usa
+  haloIntensity» (usa `shaderIntensity`) y describía el pase con el look de 1.0.3.
+
 ## 1.0.8 — shader más limpio y tres arreglos
 
 * **El borde ya no depende de las normales del modelo.** El fresnel se calcula con

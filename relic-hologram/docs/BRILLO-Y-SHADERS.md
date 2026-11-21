@@ -121,9 +121,31 @@ defecto. Dos detalles que esto arregla sin código extra:
 * al ir de `ALERT` a `IDLE` el giro pasa por cero y se invierte suave, no de golpe.
 
 El mismo factor `aura` del estado multiplica el halo aditivo y el pase GLSL del
-modelo (`RelicGeoRenderer.renderHologram(..., glowScale)`): así `DORMANT` atenúa
-todo el brillo junto y no deja un modelo a plena potencia con el aura apagada,
-que era la incoherencia más visible de 1.0.5.
+modelo (`RelicGeoRenderer.renderHologram(..., RelicGlowState glow)`): así
+`DORMANT` atenúa todo el brillo junto y no deja un modelo a plena potencia con el
+aura apagada, que era la incoherencia más visible de 1.0.5.
+
+**Destello de evento** (`RelicAnimatable.flash`, escalado por
+`visuals.flashIntensity`): los eventos ya existían — sellos de `gameTime` que el
+servidor replica y que el cliente compara con el último visto para disparar la
+animación. El destello les engancha un valor 0..1,2 que sube de golpe y decae con
+`e^(-dt/0.42 s)` en tiempo real, con `dt` topado a 0,25 s:
+
+| Evento | Pico | Dónde se dispara |
+|---|---|---|
+| `/relic release` | 1,00 | `snapshot.release()` |
+| `/relic pulse` | 0,85 | `snapshot.pulse()` (solo con la reliquia despierta) |
+| subida de nivel | 0,55 | `snapshot.bump()` |
+| despertar / dormir | 0,55 / 0,45 | transición a o desde `DORMANT` |
+| recibir daño | 0,45 | `snapshot.hit()` |
+| glitch aleatorio | 0,35 | solo en reposo |
+| entrar en `CHARGED` / `ALERT` | 0,30 | `applyLoop` |
+
+Se aplica en tres sitios y siempre con el mismo número: aura (`×(1+0,9·flash)` y
+se abre un 22% en diámetro), anillo (`ring + 0,8·flash`, y crece un 30%) y modelo
+(halo y GLSL, `×(1+0,6·flash)`). El anillo se dibuja si `ring + 0,8·flash` pasa de
+0,01, así que un golpe enciende el anillo aunque `CALM`/`DORMANT` no lo tengan.
+El pico nunca baja: dos golpes seguidos no se apagan entre sí.
 
 ### C. Core shader propio (fresnel + scanlines de holograma) — hecho en 1.0.3
 
@@ -228,6 +250,9 @@ Qué mirar, en orden:
    pasar a ámbar con giro rápido (`idle_charged`); acércate a un monstruo sin
    pelear y debe ponerse rojo y latir (`idle_alert`); con `G` (dormida) el aura se
    apaga a gris y no hay anillo.
+6. **Destello**: `/relic pulse` y `/relic release` deben notarse como un fogonazo
+   corto (el anillo se enciende aunque esté en calma). Recibir daño de un mob hace
+   lo mismo con menos fuerza; con `flashIntensity=0` no debe verse ninguno.
 
 ## Apéndice A — el GLSL que lleva el mod desde 1.0.3 (revisado en 1.0.8)
 

@@ -1,5 +1,7 @@
 package com.santipdr.holocore.client;
 
+import com.santipdr.holocore.config.RelicConfig;
+
 /**
  * Aspecto actual del aura y del anillo de un portador, <b>interpolado</b>.
  *
@@ -37,6 +39,12 @@ final class RelicGlowState {
         };
     }
 
+    /**
+     * Destello de evento sin suavizar: {@link RelicAnimatable#flash()} ya viene
+     * con su propia envolvente de decaimiento, asi que aqui solo se guarda.
+     */
+    private float flash;
+
     private float red = 0.55F;
     private float green = 0.78F;
     private float blue = 1.00F;
@@ -47,8 +55,12 @@ final class RelicGlowState {
     private boolean initialised;
     private long lastNanos;
 
-    /** Acerca los valores al estado indicado. Se llama una vez por frame y portador. */
-    void update(RelicAnimatable.LoopState state) {
+    /**
+     * Acerca los valores al estado indicado y guarda el destello del evento.
+     * Se llama una vez por frame y portador.
+     */
+    void update(RelicAnimatable.LoopState state, float flash) {
+        this.flash = Math.max(0.0F, Math.min(1.2F, flash));
         Target target = targetFor(state);
 
         if (!this.initialised) {
@@ -89,6 +101,19 @@ final class RelicGlowState {
 
     private static float lerp(float from, float to, float factor) {
         return from + (to - from) * factor;
+    }
+
+    /**
+     * Destello (0..1.2) ya escalado por {@code visuals.flashIntensity}: es el
+     * unico sitio donde se aplica esa config, para que halo, GLSL y aura suban
+     * exactamente lo mismo.
+     */
+    float flashScaled() {
+        if (this.flash <= 0.0F) {
+            return 0.0F;
+        }
+        double configured = RelicConfig.FLASH_INTENSITY.get();
+        return this.flash * (float) Math.max(0.0D, Math.min(2.0D, configured));
     }
 
     float red() {

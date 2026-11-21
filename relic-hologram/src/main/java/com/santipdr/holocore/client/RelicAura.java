@@ -63,12 +63,15 @@ public final class RelicAura {
                        RelicAnimatable.LoopState state, RelicGlowState glow) {
         float time = time(partialTick);
         Frame frame = frame(poseStack);
+        // Destello de evento: el anillo se enciende aunque el estado no lo tenga,
+        // asi un pulso o un golpe se nota tambien en calma o dormida.
+        float flash = glow.flashScaled();
 
         if (RelicConfig.GLOW_AURA.get()) {
-            drawAura(bufferSource, frame, time, glow);
+            drawAura(bufferSource, frame, time, glow, flash);
         }
-        if (RelicConfig.GLOW_RING.get() && glow.ring() > 0.001F) {
-            drawRing(bufferSource, frame, time, state, glow);
+        if (RelicConfig.GLOW_RING.get() && glow.ring() + flash * 0.8F > 0.01F) {
+            drawRing(bufferSource, frame, time, state, glow, flash);
         }
     }
 
@@ -76,8 +79,13 @@ public final class RelicAura {
     // Aura: tres capas girando a distinta velocidad
     // ------------------------------------------------------------------
 
-    private static void drawAura(MultiBufferSource bufferSource, Frame frame, float time, RelicGlowState glow) {
-        float intensity = RelicConfig.AURA_INTENSITY.get().floatValue() * glow.aura();
+    private static void drawAura(MultiBufferSource bufferSource, Frame frame, float time,
+                                 RelicGlowState glow, float flash) {
+        float intensity = RelicConfig.AURA_INTENSITY.get().floatValue() * glow.aura()
+                * (1.0F + 0.9F * flash);
+        // Al destellar el aura tambien se abre un poco, que es lo que da la
+        // sensacion de "expansion" sin mover geometria.
+        float spread = 1.0F + 0.22F * flash;
         if (intensity <= 0.001F) {
             return;
         }
@@ -88,7 +96,7 @@ public final class RelicAura {
             // Latido lento: 0.82 .. 1.0, desfasado entre capas.
             float pulse = 0.82F + 0.18F * sin(time * 0.08F + layer * 1.7F);
             float weight = WEIGHT[layer] * pulse * intensity;
-            billboard(buffer, frame, DIAMETER[layer], time * SPIN[layer],
+            billboard(buffer, frame, DIAMETER[layer] * spread, time * SPIN[layer],
                     glow.red() * weight, glow.green() * weight, glow.blue() * weight);
         }
     }
@@ -98,8 +106,9 @@ public final class RelicAura {
     // ------------------------------------------------------------------
 
     private static void drawRing(MultiBufferSource bufferSource, Frame frame, float time,
-                                 RelicAnimatable.LoopState state, RelicGlowState glow) {
-        float weight = RelicConfig.RING_INTENSITY.get().floatValue() * glow.ring();
+                                 RelicAnimatable.LoopState state, RelicGlowState glow, float flash) {
+        float weight = RelicConfig.RING_INTENSITY.get().floatValue()
+                * (glow.ring() + 0.8F * flash);
         if (weight <= 0.001F) {
             return;
         }
@@ -108,7 +117,8 @@ public final class RelicAura {
         boolean alert = state == RelicAnimatable.LoopState.ALERT;
         float beatSpeed = alert ? 0.45F : 0.15F;
         float beat = 0.72F + 0.28F * (0.5F + 0.5F * sin(time * beatSpeed));
-        float size = RING_DIAMETER * (alert ? 1.0F + 0.03F * sin(time * beatSpeed) : 1.0F);
+        float size = RING_DIAMETER * (1.0F + 0.30F * flash)
+                * (alert ? 1.0F + 0.03F * sin(time * beatSpeed) : 1.0F);
         float amount = weight * beat;
 
         VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(RING_TEXTURE));

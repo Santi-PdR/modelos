@@ -80,7 +80,10 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
                     1.0F, 1.0F, 1.0F, 1.0F);
         }
 
-        float amount = Math.max(0.0F, Math.min(1.25F, glow.aura()));
+        // Factor de brillo del modelo: estado (0.35 dormida .. 1.15 cargada) por
+        // el destello del evento, que llega a +60%.
+        float amount = Math.max(0.0F, Math.min(1.25F, glow.aura()))
+                * (1.0F + 0.6F * glow.flashScaled());
 
         if (haloEnabled()) {
             float i = RelicConfig.HALO_INTENSITY.get().floatValue() * amount;
