@@ -94,6 +94,13 @@ def continuity(data, name, baseline=None):
               + (f' (v1.67.20: {base[0]:.2f}/{base[1]:.2f}°, {base[2]:.3f}u)' if base is not None else ''),flush=True)
     print(f'{name}: {int(sub_tick.sum())} pares dentro del tick y {int(across.sum())} entre ticks; '
           f'arco de la capucha en carrera {crown:.3f}u.',flush=True)
+    now = np.array([r[3:6] for r in result])
+    assert (now.max(0) < [12.,13.,6.]).all(), (name,'pico de bisagra o punta',now.max(0))
+    if baseline is not None:
+        reference = np.array([r[6:9] for r in result[:len(TRANSITIONS)]]).max(0)
+        comparable = now[:len(TRANSITIONS)].max(0)
+        assert comparable[0] < .9*reference[0] and comparable[2] < reference[2], (
+            name,'no bajó el peor salto de la bisagra y de la punta',comparable,reference)
     return result
 
 

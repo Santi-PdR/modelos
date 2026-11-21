@@ -119,6 +119,8 @@ def report(root, slot, rig, source):
         assert a[:,-1].max() < .05, (fixture,phase,'intersección nueva con pierna',row)
         if phase in ('cenital','agachado-cenital'):
             assert a[:,6].max() <= .05, (fixture,phase,'placa en la nuca',row)
+        elif phase == 'giro':
+            assert a[:,6].max() <= 1.06, (fixture,phase,'creció el cruce de la placa',row)
     return rows, images
 
 

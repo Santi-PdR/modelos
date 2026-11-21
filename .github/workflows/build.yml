@@ -1041,7 +1041,10 @@ jobs:
 
       - name: Lámina con Steve y Alex, pecho y Curios
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
-        run: python3 tools/verify_forge_placement.py build/fx-smoke-run/fx-shots --gallery-only
+        run: |
+          base=()
+          if [ -d "$RUNNER_TEMP/forge-v16720" ]; then base=(--baseline-shots "$RUNNER_TEMP/forge-v16720"); fi
+          python3 tools/verify_forge_placement.py build/fx-smoke-run/fx-shots --gallery-only "${base[@]}"
 
       - name: Medir ciclos y transiciones reales al caminar en F5
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
@@ -1098,6 +1101,36 @@ jobs:
             build/fx-smoke-run/fx-shots/hotbar-ciclo.gif
           if-no-files-found: error
           retention-days: 30
+
+      - name: Adjuntar el JAR y las mediciones exactas de v1.67.21
+        if: >-
+          success() && github.repository == 'Santi-PdR/modelos' && github.ref == 'refs/heads/arena/5a9fa51b-modelos' &&
+          github.event_name == 'push' && contains(github.event.head_commit.message, '[adjuntar-v16721]') &&
+          steps.fx-smoke.outcome == 'success' && steps.old-cape-shots.outcome == 'success' &&
+          steps.verify-placement.outcome == 'success' && steps.verify-walk.outcome == 'success' && steps.verify-postures.outcome == 'success'
+        run: |
+          set -euo pipefail
+          grep -qx 'mod_version=1.67.21' gradle.properties
+          (cd build/libs && sha256sum -c SHA256SUMS.txt)
+          release=docs/releases/v1.67.21
+          deliver=entregables/v1.67.21
+          jar=capatest-1.67.21.jar
+          shots=build/fx-smoke-run/fx-shots
+          test ! -e "$deliver/$jar"
+          mkdir -p "$release" "$deliver"
+          cp "build/libs/$jar" "$deliver/"
+          cp build/libs/SHA256SUMS.txt "$release/JAR.sha256"
+          for proof in comparacion-alex-forge.jpg lectura-frontal-forge.tsv continuidad-forge.tsv revision-alex-forge.{jpg,tsv}; do
+            test -s "$shots/$proof"
+            cp "$shots/$proof" "$release/"
+          done
+          cp "$shots/colocacion-original-forge.jpg" docs/capa_v16721_colocacion_forge.jpg
+          printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$release/compilacion.txt"
+          git add "$release" "$deliver/$jar" docs/capa_v16721_colocacion_forge.jpg
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Adjuntar el JAR exacto y la verificación de v1.67.21 en Forge [skip ci]'
+          git push origin "HEAD:$GITHUB_REF_NAME"
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.

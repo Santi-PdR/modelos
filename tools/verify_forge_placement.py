@@ -72,6 +72,7 @@ def report(root, baseline=None):
     original = defaultdict(list)
     for name, cube in zip(rig.names, rig.place(matrices(geo)), strict=True):
         original[name].append(cube)
+    front_rows = []
     for fixture in FIXTURES:
         rows = np.genfromtxt(root/f'{fixture}-recorrido.tsv',names=True,delimiter='\t',dtype=None,encoding='utf-8')
         orbit, aim, jump = (rows[rows['mode']==m] for m in ('orbit','aim','jump'))
@@ -93,11 +94,38 @@ def report(root, baseline=None):
             ratio = (visible[:,0].sum()/old[:,0].sum())
             print(f'::notice title=Lectura frontal::{fixture}: {old[:,0].astype(int).tolist()} → '
                   f'{visible[:,0].astype(int).tolist()} píxeles de placa sobre las mangas ({ratio:.1%} de v1.67.20).')
+            front_rows.append((fixture, *old[:,0].astype(int), *visible[:,0].astype(int)))
         print(f'::notice title=Montaje fijo en Forge::{fixture}: órbita {drift[0]:.6f}u ({len(orbit)} vistas); '
               f'mirada {drift[1]:.6f}u ({len(aim)} poses); salto {drift[2]:.6f}u, {jump["lift"].max():.2f} bloques. '
               f'Placas sobre las mangas de frente: {" / ".join(coverage)}. '
               f'{cubes} cubos sin deformación; contacto paño/piel {body:.3f}u a través de {rays}/63 muestras, '
               f'costura {seam:.3f}u y apoyo sobre mangas {overlap.round(3).tolist()}u.')
+    if baseline is not None:
+        with (root/'lectura-frontal-forge.tsv').open('w') as f:
+            print('fixture\tbase_compacta\tbase_ancha\tcompacta\tancha',file=f)
+            for row in front_rows:
+                print(*row,sep='\t',file=f)
+
+
+def comparison(root, baseline):
+    cw,ch = 270,246
+    board = Image.new('RGB',(cw*3,46+(ch+24)*4),'#15101a')
+    pen = ImageDraw.Draw(board)
+    pen.text((10,10),'ALEX / FORGE 1.20.1 / MISMA CAMARA POR PAREJA',fill='#ffe4f0')
+    for c,title in enumerate(('FRENTE','ESPALDA F5','CENITAL F5')):
+        pen.text((c*cw+10,30),title,fill='#efc5da')
+    for j,slot in enumerate(('pecho','curios')):
+        views = (f'posicion-alex-{slot}-frente.png',f'revision-alex-{slot}-reposo-00.png',f'revision-alex-{slot}-cenital-00.png')
+        for i,(path,title) in enumerate(((baseline,'BASE v1.67.20'),(root,'AJUSTE v1.67.21'))):
+            y = 46+(ch+24)*(j*2+i)
+            pen.text((10,y+4),f'{slot.upper()} / {title}',fill='#ffe4f0')
+            for c,name in enumerate(views):
+                with Image.open(path/name) as raw:
+                    w,h = raw.size
+                    d = min(w,round(h*cw/ch))
+                    crop = raw.crop(((w-d)//2,0,(w+d)//2,h)).convert('RGB')
+                    board.paste(crop.resize((cw-6,ch),Image.Resampling.LANCZOS),(c*cw+3,y+19))
+    board.save(root/'comparacion-alex-forge.jpg',quality=93,optimize=True)
 
 
 def gallery(root):
@@ -137,5 +165,7 @@ if __name__=='__main__':
     args = ap.parse_args()
     if args.gallery_only:
         gallery(args.shots)
+        if args.baseline_shots:
+            comparison(args.shots,args.baseline_shots)
     else:
         report(args.shots,args.baseline_shots)
