@@ -903,7 +903,7 @@ jobs:
             grep -qx 'com/capatest/client/CapaSparkParticle.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeSparkFrame.class' /tmp/jar-contents.txt
             grep -qx 'com/capatest/item/CapeSparkPath.class' /tmp/jar-contents.txt
-            if grep -Eq '^(com/capatest/client/(CapeFxSmoke|CapeWalkProbe|CapePlacementProbe|CapeLookSweep|CapeTurnSweep|CapeHistoricFitProbe|CapeHistoricalArmorRenderer|CapePlateProbe)|assets/capatest/geo/test/)' /tmp/jar-contents.txt; then
+            if grep -Eq '^(com/capatest/client/(CapeFxSmoke|Cape[[:alnum:]]*Probe|CapeLookSweep|CapeTurnSweep|CapeHistoricalArmorRenderer)|assets/capatest/geo/test/)' /tmp/jar-contents.txt; then
               echo '::error::El JAR de distribución incluye código de la prueba de cliente.'
               exit 1
             fi
@@ -1025,6 +1025,17 @@ jobs:
               while IFS= read -r line; do printf '::warning title=Diagnóstico de cliente::%s\n' "${line//%/%25}"; done
             exit 1
           fi
+
+      - name: Registrar el paño de v1.67.25 en una escalera en Forge
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
+        run: |
+          set -o pipefail
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_climb.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
+            case "$line" in
+              *AssertionError:*|*Error:*) printf '::error title=Escalera en Forge::%s\n' "${line//%/%25}" ;;
+              *) printf '::notice title=Escalera en Forge::%s\n' "${line//%/%25}" ;;
+            esac
+          done
 
       - name: Medir despegue, caída y aterrizaje en Forge
         id: verify-jumps

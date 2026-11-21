@@ -115,6 +115,7 @@ public final class CapeFxSmoke {
         WALK_ALEX_CHEST("paso-pecho", 6000), WALK_ALEX_BACK("paso-curios", 6000),
         AUDIT_CHEST("revision-alex-pecho", 6000), AUDIT_BACK("revision-alex-curios", 6000),
         JUMP_CHEST("saltos-pecho", 6000), JUMP_BACK("saltos-curios", 6000),
+        CLIMB_CHEST("escalera-pecho", 6000), CLIMB_BACK("escalera-curios", 6000),
         HOTBAR_BARE("hotbar-vacia", 6000), HOTBAR("hotbar", 6000),
         STRAFE_LEFT("traslacion-izquierda", 18000), STRAFE_RIGHT("traslacion-derecha", 18000),
         WINGS("espalda-con-elitros", 18000),
@@ -133,12 +134,14 @@ public final class CapeFxSmoke {
         boolean hotbar() { return this == HOTBAR_BARE || this == HOTBAR; }
         boolean elytra() { return this == WINGS || this == GLIDE; }
         boolean usesBack() { return this == WALK_STEVE_BACK || this == WALK_ALEX_BACK || this == AUDIT_BACK
-                || (placement() || aquatic() || jump()) && file.endsWith("-curios") || elytra(); }
+                || (placement() || aquatic() || jump() || climb()) && file.endsWith("-curios") || elytra(); }
         boolean hasBack() { return this == BOTH || usesBack(); }
         boolean placement() { return ordinal() >= PLACE_STEVE_CHEST.ordinal() && ordinal() <= PLACE_ALEX_BACK.ordinal(); }
         boolean walk() { return ordinal() >= WALK_STEVE_CHEST.ordinal() && ordinal() <= WALK_ALEX_BACK.ordinal(); }
         boolean audit() { return this == AUDIT_CHEST || this == AUDIT_BACK; }
         boolean jump() { return this == JUMP_CHEST || this == JUMP_BACK; }
+        boolean climb() { return this == CLIMB_CHEST || this == CLIMB_BACK; }
+        boolean measureMotion() { return walk() || aquatic() || jump() || climb(); }
         boolean wade() { return this == WADE || this == WADE_BACK; }
         boolean swim() { return this == SWIM || this == SWIM_BACK; }
         boolean swimExit() { return this == SWIM_EXIT || this == SWIM_EXIT_BACK; }
@@ -166,6 +169,7 @@ public final class CapeFxSmoke {
     private static PlayerModel<?> placementModel;
     private static CapeWalkProbe.Route walkRoute;
     private static CapeJumpProbe jumpRoute;
+    private static CapeClimbProbe climbRoute;
     private static boolean jumpFit;
     private static CapeWalkProbe.Draw walkDraw;
     private static CapeWaterProbe waterRoute;
@@ -331,7 +335,7 @@ public final class CapeFxSmoke {
                         equipScene(game, next);
                         return;
                     }
-                    note("PASS: recarga, luz, oclusión, montaje, hotbar, marcha, saltos, aterrizajes, alas, planeo y nado");
+                    note("PASS: recarga, luz, oclusión, montaje, hotbar, marcha, saltos, aterrizajes, escalera, alas, planeo y nado");
                     game.stop();
                 }
                 default -> { return; }
@@ -431,7 +435,7 @@ public final class CapeFxSmoke {
                 else textures.put(type, savedTexture);
                 return;
             }
-            boolean slim = next.aquatic() || next.audit() || next.jump() || next == Scene.WALK_ALEX_CHEST || next == Scene.WALK_ALEX_BACK
+            boolean slim = next.aquatic() || next.audit() || next.jump() || next.climb() || next == Scene.WALK_ALEX_CHEST || next == Scene.WALK_ALEX_BACK
                     || next.file.startsWith("posicion-alex-");
             ResourceLocation skin = slim ? ALEX : STEVE;
             check(game.getResourceManager().getResource(skin).isPresent(), "missing vanilla skin " + skin);
@@ -450,12 +454,14 @@ public final class CapeFxSmoke {
         if (next.placement() || next.audit() || next.jump()) game.options.fov().set(42);
         walkRoute = next.walk() ? new CapeWalkProbe.Route() : null;
         jumpRoute = next.jump() ? new CapeJumpProbe(CapeJumpProbe.deck(pane)) : null;
-        if (next.walk() || next.wade() || next.jump()) game.options.framerateLimit().set(60);
+        climbRoute = next.climb() ? new CapeClimbProbe(CapeClimbProbe.column(pane)) : null;
+        if (next.climb()) game.options.fov().set(50);
+        if (next.walk() || next.wade() || next.jump() || next.climb()) game.options.framerateLimit().set(60);
         if (next.wade()) waterRoute = new CapeWaterProbe();
         if (next == Scene.HOTBAR_BARE) game.options.framerateLimit().set(30);
         stableFrames = observedBirths = 0;
         captured = false;
-        if (next == Scene.HOTBAR_BARE || next.placement() || next.audit() || next.walk() || next.wade() || next.jump()) {
+        if (next == Scene.HOTBAR_BARE || next.placement() || next.audit() || next.walk() || next.wade() || next.jump() || next.climb()) {
             selectSkin(game, next);
         }
         if (next.hotbar()) {
@@ -469,8 +475,10 @@ public final class CapeFxSmoke {
             game.options.fov().set(70);
         }
         game.options.keyLeft.setDown(false);
+        game.options.keyBack.setDown(false);
         game.options.keyJump.setDown(false);
-        if (next == Scene.HOTBAR_BARE || next.walk() || next.audit() || next.jump()) {
+        game.options.keyShift.setDown(false);
+        if (next == Scene.HOTBAR_BARE || next.walk() || next.audit() || next.jump() || next.climb()) {
             game.options.keyUp.setDown(false);
             game.options.keySprint.setDown(false);
         }
@@ -510,7 +518,9 @@ public final class CapeFxSmoke {
                 player.getInventory().setItem(HOTBAR_SLOT, next == Scene.HOTBAR ? mantle() : ItemStack.EMPTY);
                 player.inventoryMenu.broadcastChanges();
             }
-            if (next.jump()) {
+            if (next.climb()) {
+                CapeClimbProbe.prepare(player, CapeClimbProbe.column(pane));
+            } else if (next.jump()) {
                 CapeJumpProbe.prepare(player, CapeJumpProbe.deck(pane));
             } else if (next.audit() || next.walk() || next == Scene.STRAFE_LEFT) {
                 // Unobstructed ground for the real F5 camera and sprint.
@@ -547,6 +557,7 @@ public final class CapeFxSmoke {
         if (scene.walk() && (scene.usesBack() ? !backOf(player).getStacks().getStackInSlot(0).isEmpty()
                 : player.getItemBySlot(EquipmentSlot.CHEST).is(CapaTestMod.CAPA_DETERIORER.get()))) walkRoute.drive(game);
         if (scene.jump()) jumpRoute.drive(game);
+        if (scene.climb()) climbRoute.drive(game);
         if (scene.strafe()) {
             game.options.keyLeft.setDown(scene == Scene.STRAFE_LEFT);
             game.options.keyRight.setDown(scene == Scene.STRAFE_RIGHT);
@@ -597,7 +608,7 @@ public final class CapeFxSmoke {
                 placementRoute.calibration(), false);
         jumpFit = scene.jump() && jumpRoute.measureFit(event.getEntity().tickCount);
         if (scene.audit() || jumpFit) CapePlacementProbe.arm(renderer, false, false, false, true);
-        if (scene.walk() || scene.aquatic() || scene.jump()) CapeWalkProbe.arm(renderer);
+        if (scene.measureMotion()) CapeWalkProbe.arm(renderer);
     }
 
     private static void afterArmor(GeoRenderEvent.Armor.Post event) {
@@ -608,7 +619,7 @@ public final class CapeFxSmoke {
         armorPose = new Matrix4f(event.getPoseStack().last().pose());
         if (scene.placement() || scene.audit() || jumpFit)
             placementDraw = CapePlacementProbe.finish(renderer, event.getPoseStack(), placementModel);
-        if (scene.walk() || scene.aquatic() || scene.jump()) walkDraw = CapeWalkProbe.finish(renderer, event.getPartialTick());
+        if (scene.measureMotion()) walkDraw = CapeWalkProbe.finish(renderer, event.getPartialTick());
         frameLight = event.getPackedLight();
         framePartialTick = event.getPartialTick();
         if (scene == Scene.WINGS) {
@@ -715,6 +726,11 @@ public final class CapeFxSmoke {
             if (scene.jump()) {
                 check(player.getModelName().equals("slim") && player.getSkinTextureLocation().equals(ALEX), "wrong jump skin");
                 captured = jumpRoute.capture(game, framePartialTick, walkDraw, placementDraw, shots(game), scene.file);
+                return;
+            }
+            if (scene.climb()) {
+                check(player.getModelName().equals("slim") && player.getSkinTextureLocation().equals(ALEX), "wrong climbing skin");
+                captured = climbRoute.capture(game, framePartialTick, walkDraw, shots(game), scene.file);
                 return;
             }
             if (scene.audit()) {

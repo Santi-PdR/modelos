@@ -49,7 +49,7 @@ def asset_contract(candidate=None):
         with ZipFile(candidate) as jar:
             assert jar.testzip() is None
             assert art_entries(jar) == original, 'el JAR no contiene los recursos originales'
-            assert not any(any(probe in n for probe in ('CapePlacementProbe','CapeFxSmoke','CapeWalkProbe','CapeWaterProbe','CapeJumpProbe'))
+            assert not any(any(probe in n for probe in ('CapePlacementProbe','CapeFxSmoke','CapeWalkProbe','CapeWaterProbe','CapeJumpProbe','CapeClimbProbe'))
                            for n in jar.namelist()), 'se empaquetó el ensayo de Forge'
     print(f'{len(original)} recursos idénticos al JAR v1.67.14 y proyecto Blockbench intacto (salvo nombre de versión).',flush=True)
 

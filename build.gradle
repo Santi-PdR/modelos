@@ -121,8 +121,7 @@ tasks.withType(org.gradle.api.tasks.bundling.AbstractArchiveTask).configureEach 
 }
 
 tasks.named('jar', Jar).configure {
-    exclude 'com/capatest/client/CapeFxSmoke*.class', 'com/capatest/client/CapeWalkProbe*.class',
-            'com/capatest/client/CapePlacementProbe*.class', 'assets/capatest/geo/test/*'
+    exclude 'com/capatest/client/CapeFxSmoke*.class', 'com/capatest/client/Cape*Probe*.class', 'assets/capatest/geo/test/*'
     manifest {
         attributes([
                 "Specification-Title"   : mod_id,
