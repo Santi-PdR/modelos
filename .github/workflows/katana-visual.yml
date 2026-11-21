@@ -64,6 +64,7 @@ jobs:
           grep -F 'STAIN_DRAGON_SELECTED' /tmp/stain-visual-client.log
           grep -F 'STAIN_DRAGON_HELD' /tmp/stain-visual-client.log
           grep -F 'STAIN_DRAGON_RELEASED' /tmp/stain-visual-client.log
+          grep -F 'STAIN_MULTIPART_RANGE_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-client.log
           grep -F 'STAIN_FIXTURE_CLIP=bettercombat' /tmp/stain-visual-client.log
           grep -F 'STAIN_CAMERA_VERIFIED' /tmp/stain-visual-client.log
@@ -100,6 +101,7 @@ jobs:
           grep -F 'STAIN_DRAGON_SELECTED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_DRAGON_HELD' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_DRAGON_RELEASED' /tmp/stain-visual-fallback.log
+          grep -F 'STAIN_MULTIPART_RANGE_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-fallback.log
           test "$(find run/stain-visual-test -name '*.png' | wc -l)" -ge 10
           mv run/stain-visual-test run/stain-visual-vanilla
@@ -122,6 +124,7 @@ jobs:
           grep -F 'STAIN_DRAGON_SELECTED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_DRAGON_HELD' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_DRAGON_RELEASED' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_MULTIPART_RANGE_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-full-bc.log
           test "$(find run/stain-visual-test -name '*.png' | wc -l)" -ge 10
           mv run/stain-visual-test run/stain-visual-full-bc
