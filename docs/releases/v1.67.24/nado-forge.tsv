@@ -1,0 +1,4 @@
+version	ranura	cuadros	nado_vertical	nado_horizontal	nado_al_erguirse	error_max_peso	bisagra_vertical_deg	bisagra_horizontal_deg	bisagra_al_erguirse_deg	pico_sup_deg_tick	pico_med_deg_tick	pico_punta_u_tick
+v1.67.23	pecho	147	1.0000000	1.0000000	1.0000000	1.00000000	16.2928	15.1094	13.8791	0.1670	0.3156	0.2499
+v1.67.24	pecho	158	0.0000000	1.0000000	0.0000000	0.00000005	15.4817	15.7243	4.1747	8.7201	1.2903	3.6145
+v1.67.24	curios	155	0.0000000	1.0000000	0.0000000	0.00000005	3.9531	16.2582	3.9719	5.7582	1.2034	2.6327
