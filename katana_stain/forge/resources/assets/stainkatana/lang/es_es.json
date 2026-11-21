@@ -16,5 +16,8 @@
   "stainkatana.ultimate_used": "Sentencia del Asesino",
   "effect.stainkatana.blood_paralysis": "Parálisis de sangre",
   "stainkatana.resisted": "La víctima resistió la parálisis.",
-  "item.stainkatana.katana_stain.flavour": "«Solo un héroe de verdad puede detenerme.»"
+  "item.stainkatana.katana_stain.flavour": "«Solo un héroe de verdad puede detenerme.»",
+  "stainkatana.hud.paralysis": "PARÁLISIS",
+  "stainkatana.hud.slash": "CORTE",
+  "stainkatana.hud.ultimate": "SENTENCIA"
 }

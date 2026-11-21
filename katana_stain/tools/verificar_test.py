@@ -10,7 +10,7 @@ for effect, count in [('slash_arc',6),('blood_shard',6),('blood_pulse',6)]:
  for entry in data['textures']:
   ns,name=entry.split(':'); assert ns=='stainkatana'
   image=(a/'textures/particle'/f'{name}.png').read_bytes()
-  assert image[:8]==b'\x89PNG\r\n\x1a\n' and struct.unpack('>II',image[16:24])==(128,128)
+  assert image[:8]==b'\x89PNG\r\n\x1a\n' and struct.unpack('>II',image[16:24])==(64,64)
 for lang in ('es_es','en_us'):
  d=json.loads((a/'lang'/f'{lang}.json').read_text(encoding='utf8'))
  assert all(k in d for k in ('key.stainkatana.stun','key.stainkatana.slash','key.stainkatana.ultimate','effect.stainkatana.blood_paralysis'))

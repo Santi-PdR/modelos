@@ -29,6 +29,6 @@ for y in range(h):
 bbox=im.getbbox()
 if not bbox: raise ValueError('Empty reference')
 im=im.crop(bbox)
-im.thumbnail((120,120), Image.Resampling.LANCZOS)
-out=Image.new('RGBA',(128,128)); out.alpha_composite(im,((128-im.width)//2,(128-im.height)//2))
+im.thumbnail((60,60), Image.Resampling.LANCZOS)
+out=Image.new('RGBA',(64,64)); out.alpha_composite(im,((64-im.width)//2,(64-im.height)//2))
 out.save(root/'forge/resources/assets/stainkatana/textures/item/katana_stain_icon.png')

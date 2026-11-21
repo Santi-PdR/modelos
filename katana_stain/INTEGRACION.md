@@ -422,3 +422,13 @@ o probar interacciones con otros mods de animación.
 - Misma versión en cliente y servidor; no incluye la capa ni los clips de Better
   Combat, Ultimate Battle o Darkest Hours. Requiere Forge 1.20.1, GeckoLib 4.8.1
   y Player Animator Forge 1.0.2-rc1 o compatible. Better Combat es opcional.
+
+### Optimización de texturas (trabajo en curso)
+La textura editable del modelo se conserva a 512 × 512 en el `.bbmodel`; la
+exportación de juego la reduce a 256 × 256 con muestreo vecino. El espacio UV
+de GeckoLib sigue siendo 512 × 512. El icono y las partículas de juego se
+reducen a 64 × 64; la daga ya era 16 × 16. Para regenerar el modelo se necesita
+Pillow (`python -m pip install Pillow`); `tools/optimizar_texturas.py` es
+idempotente, y `tools/preparar_icono.py` regenera el icono desde el original.
+La mejora potencial es de área de texel, no una medida de VRAM del juego: los
+atlas, mipmaps y otros mods también influyen. Falta comprobación visual real.

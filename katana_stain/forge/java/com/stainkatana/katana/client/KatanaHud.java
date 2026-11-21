@@ -8,6 +8,7 @@ import com.stainkatana.katana.StainKatanaItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.event.TickEvent;
@@ -50,35 +51,37 @@ public final class KatanaHud {
             g.fill(0, 0, g.guiWidth(), g.guiHeight(), (alpha << 24) | 0x00950018);
         }
         if (!KatanaClientConfig.SHOW_HUD.get() || !(mc.player.getMainHandItem().getItem() instanceof StainKatanaItem)) return;
-        int w = 82, x = Math.max(5, g.guiWidth() - w - 8), y = Math.max(8, g.guiHeight() / 2 - 32);
-        // A restrained, layered burgundy panel with individual skill seals.
-        g.fill(x + 2, y, x + w - 2, y + 2, 0xFF931D31);
-        g.fill(x, y + 2, x + w, y + 65, 0xC6120D12);
-        g.fill(x, y + 2, x + 1, y + 65, 0xFF671828);
-        g.fill(x + w - 1, y + 2, x + w, y + 65, 0xFF671828);
-        g.fill(x + 2, y + 65, x + w - 2, y + 66, 0xFF671828);
+        // Compact separated ability plates leave more of the world visible.
+        int w = 104, x = Math.max(5, g.guiWidth() - w - 8), y = Math.max(8, g.guiHeight() / 2 - 34);
+        String[] labels = {"stainkatana.hud.paralysis", "stainkatana.hud.slash", "stainkatana.hud.ultimate"};
         for (int i = 0; i < 3; i++) {
-            int row = y + 4 + i * 20;
+            int row = y + i * 23;
             boolean ready = synced && remaining[i] == 0;
-            g.fill(x + 3, row, x + 21, row + 17, ready ? 0xFF9E273B : 0xFF50202A);
-            g.fill(x + 4, row + 1, x + 20, row + 16, 0xFF241019);
-            g.fill(x + 5, row + 2, x + 19, row + 3, ready ? 0xFFE0757A : 0xFF8A343C);
+            int accent = ready ? 0xFFCF5861 : 0xFF74313B;
+            g.fill(x + 2, row + 2, x + w, row + 21, 0xB40A080B);
+            g.fill(x, row, x + 21, row + 21, 0xDD1C1115);
+            g.fill(x, row, x + 2, row + 21, accent);
+            g.fill(x + 2, row, x + 21, row + 1, 0xFF6C343B);
+            g.fill(x + 2, row + 20, x + 21, row + 21, 0xFF452229);
             String key = KatanaKeys.get(i).getTranslatedKeyMessage().getString();
-            key = mc.font.plainSubstrByWidth(key, 14);
-            g.drawCenteredString(mc.font, key, x + 12, row + 5, 0xFFF2D6D6);
+            key = mc.font.plainSubstrByWidth(key, 16);
+            g.drawCenteredString(mc.font, key, x + 11, row + 6, 0xFFF2DFD8);
+            String label = mc.font.plainSubstrByWidth(Component.translatable(labels[i]).getString(), 52);
+            g.drawString(mc.font, label, x + 26, row + 3, ready ? 0xFFF0D7CF : 0xFFAF9692, false);
+            String time = synced ? (remaining[i] > 0 ? Integer.toString((remaining[i] + 19) / 20) + "s" : "") : "--";
+            g.drawString(mc.font, time, x + w - 5 - mc.font.width(time), row + 3, 0xFFE6A0A2, false);
+            int barX = x + 26, barWidth = w - 32;
+            g.fill(barX, row + 15, barX + barWidth, row + 17, 0xFF392329);
+            int fill = synced ? barWidth - (int)Math.ceil((double)remaining[i] * barWidth / CombatTuning.cooldown(i)) : 0;
+            if (fill > 0) g.fill(barX, row + 15, barX + fill, row + 17, accent);
             if (i == 0) {
                 for (int blood = 0; blood < 2; blood++) {
-                    int sx = x + 25 + blood * 6;
-                    g.fill(sx, row + 4, sx + 4, row + 9,
-                            synced && charges > blood ? 0xFFE53A50 : 0xFF52202A);
+                    int sx = x + w - 16 + blood * 6;
+                    int color = synced && charges > blood ? 0xFFFF6A72 : 0xFF60343A;
+                    g.fill(sx + 1, row + 10, sx + 3, row + 11, color);
+                    g.fill(sx, row + 11, sx + 4, row + 13, color);
                 }
             }
-            String time = synced ? (remaining[i] > 0 ? Integer.toString((remaining[i] + 19) / 20) + "s" : "OK") : "--";
-            g.drawString(mc.font, time, x + w - 6 - mc.font.width(time), row + 2, ready ? 0xFFF3CBC2 : 0xFFE39A9E, false);
-            int barX = x + 25, barWidth = w - 32;
-            g.fill(barX, row + 13, barX + barWidth, row + 16, 0xFF3E1921);
-            int fill = synced ? barWidth - (int)Math.ceil((double)remaining[i] * barWidth / CombatTuning.cooldown(i)) : 0;
-            g.fill(barX, row + 13, barX + Math.max(0, fill), row + 15, ready ? 0xFFDA5964 : 0xFFA51C34);
         }
     }
 }

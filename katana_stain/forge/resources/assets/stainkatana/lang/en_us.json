@@ -16,5 +16,8 @@
   "stainkatana.ultimate_used": "Hero Killer Judgment",
   "effect.stainkatana.blood_paralysis": "Blood Paralysis",
   "stainkatana.resisted": "The target resisted paralysis.",
-  "item.stainkatana.katana_stain.flavour": "“Only a true hero can stop me.”"
+  "item.stainkatana.katana_stain.flavour": "“Only a true hero can stop me.”",
+  "stainkatana.hud.paralysis": "PARALYSIS",
+  "stainkatana.hud.slash": "SLASH",
+  "stainkatana.hud.ultimate": "SENTENCE"
 }

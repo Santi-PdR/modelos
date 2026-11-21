@@ -8,8 +8,11 @@ a = R/'katana_stain/forge/resources/assets/stainkatana'
 g = json.loads((a/'geo/item/katana_stain.geo.json').read_text())['minecraft:geometry'][0]
 assert m['resolution'] == {'width':512, 'height':512}
 embedded = base64.b64decode(m['textures'][0]['source'].split(',',1)[1], validate=True)
-assert embedded == (a/'textures/item/katana_stain.png').read_bytes()
 assert struct.unpack('>II', embedded[16:24]) == (512,512)
+runtime = (a/'textures/item/katana_stain.png').read_bytes()
+assert runtime[:8] == b'\x89PNG\r\n\x1a\n'
+assert struct.unpack('>II', runtime[16:24]) == (256,256)
+assert (g['description']['texture_width'], g['description']['texture_height']) == (512,512)
 by_id={e['uuid']:e for e in m['elements']}; groups={g['uuid']:g for g in m['groups']}
 bones={b['name']:b for b in g['bones']}
 assert {'hoja','guarda','empunadura'} <= set(bones)
@@ -38,4 +41,4 @@ def walk(nodes):
 walk(m['outliner'])
 assert visible==82
 assert not any(b['name']=='vaina' for b in g['bones'])
-print('OK: .bbmodel reabierto; textura embebida y 82 cubos exportados coinciden; vaina oculta')
+print('OK: .bbmodel reabierto; textura editable 512, textura de juego 256 y 82 cubos exportados; vaina oculta')

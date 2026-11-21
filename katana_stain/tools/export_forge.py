@@ -32,4 +32,7 @@ walk(model['outliner'])
 geo={'format_version':'1.12.0','minecraft:geometry':[{'description':{'identifier':'geometry.katana_stain','texture_width':512,'texture_height':512,'visible_bounds_width':4,'visible_bounds_height':4,'visible_bounds_offset':[0,1,0]},'bones':bones}]}
 path=root/'geo/item/katana_stain.geo.json';path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps(geo,indent=2)+'\n')
 path=root/'textures/item/katana_stain.png';path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(base64.b64decode(model['textures'][0]['source'].split(',',1)[1]))
+# Preserve editable source resolution while shipping a smaller runtime texture.
+from optimizar_texturas import optimize_model
+optimize_model()
 print('Wrote',sum(len(b.get('cubes',[])) for b in bones),'cubes,',len(bones),'bones')
