@@ -1,0 +1,3 @@
+9301d31f5cb6c3a746392248668e6b59f3db2078f99e2acdc58adcfb3141dd0b  animations/item/armor/capa_deteriorer_evilsaiyan.animation.json
+1d17cd59806d25383d848081d78541c13013cb4ef709aac597584eb1f7868abb  animations/item/cape_folded.animation.json
+52c44ee315d5617ba51357631d890bdb2155a67d4a31667c7859f52617ea78a2  CAPA_v1.67.28.bbmodel
