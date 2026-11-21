@@ -13,7 +13,9 @@ Se equipa en el pecho o en `back` con Curios opcional.
 
 ### v1.67.22 — ajuste de hombros y nuca
 
-La rama ensaya un encastre más unido entre el borde granate y las placas, con el faldón y el apoyo dorsal de v1.67.21.
+**[Descargar JAR de prueba v1.67.22](https://github.com/Santi-PdR/modelos/raw/061b28ba00e54d94ca79092b3c1c3844fa10143c/entregables/v1.67.22/capatest-1.67.22.jar)** · [Antes y después en Alex](docs/releases/v1.67.22/comparacion-alex-forge.jpg) · [Steve y Alex en Forge](docs/capa_v16722_colocacion_forge.jpg) · [Medidas y SHA-256](docs/releases/v1.67.22/notas.md).
+
+La placa ancha queda más plana y el borde granate se distingue mejor bajo las placas. En las cenitales de Alex desaparece la raya oscura grande del forro. Se conserva la caída de v1.67.21, su encastre en la espalda y el movimiento independiente de la capucha. Es una prueba en pecho y Curios; no sustituye la descarga pública.
 
 ### v1.67.21 — continuidad y ajuste equipado
 
