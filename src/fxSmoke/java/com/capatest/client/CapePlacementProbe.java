@@ -406,6 +406,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                     var current = draw.rigid().get(entry.getKey());
                     var start = entry.getValue();
                     require(start.size() == current.size(), "changed cube topology");
+                    if (CapeHood.moves(entry.getKey())) continue;
                     for (int i=0; i<start.size(); i++) diff = Math.max(diff, start.get(i).distance(current.get(i)));
                 }
                 double lift = Double.isNaN(ground) ? 0 : game.player.getY() - ground;

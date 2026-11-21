@@ -26,9 +26,9 @@ import java.util.Locale;
 /** Live F5 recording. Inputs move the player; no keyframes or limb poses are injected. */
 final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     static final String BODY = "chestplate", SEAT = "cape_seat_fit", TOP = "cape_top",
-            MID = "cape_mid", TIP = "v17_ribbon_6_seg4";
-    static final int DURATION = 156;
-    private final Matrix4f[] matrices = new Matrix4f[5];
+            MID = "cape_mid", TIP = "v17_ribbon_6_seg4", HOOD = "v17_cowl_back_1";
+    static final int DURATION = 225;
+    private final Matrix4f[] matrices = new Matrix4f[6];
     private boolean active;
     private boolean testedRepeat;
 
@@ -59,6 +59,7 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             case TOP -> 2;
             case MID -> 3;
             case TIP -> 4;
+            case HOOD -> 5;
             default -> -1;
         };
         if (i >= 0) matrices[i] = new Matrix4f(stack.last().pose());
@@ -72,6 +73,7 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         var inverseBody = new Matrix4f(matrices[0]).invert();
         var seat = new Matrix4f(inverseBody).mul(matrices[1]);
         var tip = new Matrix4f(inverseBody).mul(matrices[4]);
+        var hood = new Matrix4f(inverseBody).mul(matrices[5]);
         var player = Minecraft.getInstance().player;
         CapeWornMotion motion = CapaArmorModel.wornMotion(player);
         if (!probe.testedRepeat && motion.weight(CapeState.WALK) > .98) {
@@ -80,11 +82,18 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         }
         var mode = motion.weight(CapeState.SPRINT) > .5 ? CapeState.SPRINT
                 : motion.weight(CapeState.WALK) > .5 ? CapeState.WALK : CapeState.IDLE;
-        return new Draw(mode.name(), motion.stride(), motion.weight(CapeState.WALK), motion.weight(CapeState.SPRINT),
+        requireClock(player, partial, motion);
+        return new Draw(mode.name(), motion.stride(), motion.amplitude(), motion.weight(CapeState.WALK), motion.weight(CapeState.SPRINT),
                 seat.transformPosition(0, 25/16F, 7.4F/16, new Vector3f()).z() * 16,
                 -Math.toDegrees(renderer.getGeoModel().getBone(TOP).orElseThrow().getRotX()),
                 -Math.toDegrees(renderer.getGeoModel().getBone(MID).orElseThrow().getRotX()),
-                tip.transformPosition(0, 0, .36F, new Vector3f()).mul(16));
+                tip.transformPosition(0, 0, .36F, new Vector3f()).mul(16),
+                hood.transformPosition(0, .14F, .04F, new Vector3f()).mul(16));
+    }
+
+    private static void requireClock(LivingEntity wearer, float partial, CapeWornMotion motion) {
+        if (Math.abs(motion.time() - (wearer.tickCount + (double) partial)) > .0001)
+            throw new AssertionError("walking cape and player are on different render ticks");
     }
 
     private static void verifyInterleavedSample(CapaArmorRenderer renderer, LivingEntity walker, float partial) {
@@ -93,6 +102,7 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         var item = (CapaDeteriorerItem) stack.getItem();
         var bones = new GeoBone[] {model.getBone(TOP).orElseThrow(), model.getBone(MID).orElseThrow(), model.getBone(TIP).orElseThrow()};
         var original = java.util.Arrays.stream(bones).map(CapeWalkProbe::rotation).toList();
+        var hood = ((CapaArmorModel) model).hood();
         // Exercise a second wearer on the same actual baked rig, at the
         // same partial tick, then replay the visible wearer in the same frame.
         var still = new ArmorStand(walker.level(), walker.getX(), walker.getY(), walker.getZ());
@@ -103,6 +113,8 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         for (int i = 0; i < bones.length; ++i)
             if (!original.get(i).equals(rotation(bones[i]), .000002F))
                 throw new AssertionError("repeated same-frame animation changed " + bones[i].getName());
+        if (!hood.equals(((CapaArmorModel) model).hood()))
+            throw new AssertionError("repeated same-frame animation changed hood");
     }
 
     private static AnimationState<CapaDeteriorerItem> state(CapaDeteriorerItem item, LivingEntity wearer,
@@ -117,11 +129,11 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         return new Vector3f(bone.getRotX(),bone.getRotY(),bone.getRotZ());
     }
 
-    record Draw(String clip, double stride, double walk, double run, double collarZ,
-                double top, double mid, Vector3f tip) {}
+    record Draw(String clip, double stride, double pace, double walk, double run, double collarZ,
+                double top, double mid, Vector3f tip, Vector3f hood) {}
 
     static final class Route {
-        private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tclip\tstride\twalk\trun\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\n");
+        private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tclip\tstride\twalk\trun\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\tpace\thood_x\thood_y\thood_z\n");
         private int start = -1;
         private int shot;
         private int count;
@@ -131,10 +143,11 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             var p = game.player;
             if (start < 0) start = p.tickCount;
             int t = p.tickCount - start;
-            game.options.keyUp.setDown(t >= 20 && t < 73 || t >= 96 && t < 130);
+            boolean sprint = t >= 96 && t < 130 || t >= 175 && t < 194;
+            game.options.keyUp.setDown(t >= 20 && t < 73 || t >= 96 && t < 130 || t >= 158 && t < 208);
             game.options.keyLeft.setDown(t >= 73 && t < 92);
-            game.options.keySprint.setDown(t >= 96 && t < 130);
-            if (t >= 130) p.setSprinting(false);
+            game.options.keySprint.setDown(sprint);
+            if (!sprint) p.setSprinting(false);
             // Real movement in two directions; turn smoothly during the strafe.
             float turn = 30 * Math.max(0F, Math.min(1F, (t - 74) / 17F));
             p.setYRot(3 + turn);
@@ -149,7 +162,8 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                     .append(p.walkAnimation.speed(partial)).append('\t').append(draw.clip()).append('\t')
                     .append(draw.stride()).append('\t').append(draw.walk()).append('\t').append(draw.run()).append('\t').append(draw.collarZ()).append('\t')
                     .append(draw.top()).append('\t').append(draw.mid()).append('\t').append(draw.tip().x()).append('\t')
-                    .append(draw.tip().y()).append('\t').append(draw.tip().z()).append('\n');
+                    .append(draw.tip().y()).append('\t').append(draw.tip().z()).append('\t').append(draw.pace()).append('\t')
+                    .append(draw.hood().x()).append('\t').append(draw.hood().y()).append('\t').append(draw.hood().z()).append('\n');
             count++;
             if (shot < landmarks.length && t >= landmarks[shot]) {
                 try (var image = Screenshot.takeScreenshot(game.getMainRenderTarget())) {

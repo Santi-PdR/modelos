@@ -126,9 +126,11 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         boolean seat = mountInChest && !elytra && CapeFit.SEAT_FRAME.equals(name);
         boolean backing = elytra && (CapeBacking.LEFT.equals(name) || CapeBacking.RIGHT.equals(name));
         boolean saddle = mountInChest && CapeMountPlacement.SADDLE_BONE.equals(name);
-        boolean shoulder = elytra && CapeFit.SHOULDERS_BONE.equals(name);
+        boolean shoulder = (mountInChest || elytra) && CapeFit.SHOULDERS_BONE.equals(name);
         boolean underYoke = elytra && CapeFit.UNDER_YOKE_BONE.equals(name);
-        boolean fitted = seat || backing || saddle || shoulder || underYoke;
+        boolean hood = mountInChest && !elytra && CapeHood.moves(name)
+                && bone.getParent() != null && CapeFit.BONE.equals(bone.getParent().getName());
+        boolean fitted = seat || backing || saddle || shoulder || underYoke || hood;
         if (fitted) poseStack.pushPose();
         try {
             if (seat) {
@@ -137,6 +139,18 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                 poseStack.translate(0, -CapeMountPlacement.BACK_DROP / 16, -CapeMountPlacement.BACK_FORWARD / 16);
             } else if (saddle && !elytra) {
                 poseStack.translate(0, 0, CapeMountPlacement.SADDLE_SET / 16);
+            } else if (hood) {
+                // The same local hinge in both passes: no writes to shared
+                // bones, neck alignment, or translation of the sewn roots.
+                var fold = capeModel.hood();
+                double y = CapeHood.PIVOT_Y / 16, z = CapeHood.PIVOT_Z / 16;
+                poseStack.translate(0, y, z + CapeHood.SET_BACK / 16);
+                poseStack.mulPose(Axis.ZP.rotationDegrees((float) fold.roll()));
+                poseStack.mulPose(Axis.YP.rotationDegrees((float) fold.yaw()));
+                poseStack.mulPose(Axis.XP.rotationDegrees((float) fold.pitch()));
+                poseStack.translate(0, -y, -z);
+            } else if (shoulder && !elytra) {
+                poseStack.translate(0, CapeMountPlacement.SHOULDER_LIFT / 16, -CapeMountPlacement.SHOULDER_FORWARD / 16);
             } else if (fitted) {
                 // Only the pre-existing lining/fold clearance for Elytra.
                 RenderUtils.translateToPivotPoint(poseStack, bone);

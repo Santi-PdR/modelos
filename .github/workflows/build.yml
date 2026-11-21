@@ -27,7 +27,7 @@ jobs:
     # La rama de artefactos (artifacts/vX.Y.Z) SOLO guarda el .jar. Si el
     # workflow corriera tambien sobre ella, cada push re-construiria el
     # mod entero para nada. Aqui se salta ese run.
-    if: ${{ !startsWith(github.ref, 'refs/heads/artifacts/') && !contains(github.event.head_commit.message, '[leer-marcha-v16720]') }}
+    if: ${{ !startsWith(github.ref, 'refs/heads/artifacts/') }}
 
     steps:
       - name: Checkout
@@ -783,11 +783,12 @@ jobs:
           CLASSES="$RUNNER_TEMP/cape-state-test"
           mkdir -p "$CLASSES"
           javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/{CapeState,CapePlayback,CapeSparkFrame}.java \
-            src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeBacking,CapePlateFit,CapeTorsoFit,CapeMountPlacement,CapeStride,CapeTint,CapeEmber,CapeNocturne,CapeWingFit,CapeWornMotion}.java \
+            src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeBacking,CapePlateFit,CapeTorsoFit,CapeMountPlacement,CapeStride,CapeTint,CapeEmber,CapeNocturne,CapeWingFit,CapeWornMotion,CapeHood}.java \
             src/test/java/com/capatest/item/{CapeStateTest,CapeSparkFrameTest}.java \
-            src/test/java/com/capatest/client/{CapeFitTest,CapeMountPlacementTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeSettleTest,CapeSwayTest,CapeWingFitTest,CapeWornMotionTest}.java
+            src/test/java/com/capatest/client/{CapeFitTest,CapeMountPlacementTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeSettleTest,CapeSwayTest,CapeWingFitTest,CapeWornMotionTest,CapeHoodTest}.java
           java -cp "$CLASSES" com.capatest.client.CapeMountPlacementTest --samples > "$CLASSES/placement.tsv"
-          OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_placement.py --java-samples "$CLASSES/placement.tsv"
+          java -cp "$CLASSES" com.capatest.client.CapeHoodTest --samples > "$CLASSES/hood.tsv"
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_placement.py --java-samples "$CLASSES/placement.tsv" --hood-samples "$CLASSES/hood.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeWornMotionTest
           java -cp "$CLASSES" com.capatest.client.CapeWingFitTest
           java -cp "$CLASSES" com.capatest.client.CapeWingFitTest --samples > "$CLASSES/wings.tsv"
@@ -1014,12 +1015,24 @@ jobs:
             exit 1
           fi
 
+      - name: Cargar las tomas de referencia de v1.67.20
+        id: old-cape-shots
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && contains(github.event.head_commit.message, '[comparar-v16720]') }}
+        uses: actions/download-artifact@v4
+        with:
+          name: capatest-fx-en-mundo
+          github-token: ${{ github.token }}
+          run-id: 44849476869
+          path: ${{ runner.temp }}/forge-v16720
+
       - name: Comprobar órbita, mirada y placas sobre las mangas en Forge
         id: verify-placement
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
           set -o pipefail
-          python3 tools/verify_forge_placement.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
+          base=()
+          if [ -d "$RUNNER_TEMP/forge-v16720" ]; then base=(--baseline-shots "$RUNNER_TEMP/forge-v16720"); fi
+          python3 tools/verify_forge_placement.py build/fx-smoke-run/fx-shots "${base[@]}" 2>&1 | while IFS= read -r line; do
             case "$line" in
               *AssertionError:*|*Error:*) printf '::error title=Colocación en Forge::%s\n' "${line//%/%25}" ;;
               *) printf '%s\n' "$line" ;;
@@ -1035,7 +1048,9 @@ jobs:
         id: verify-walk
         run: |
           set -o pipefail
-          python3 tools/verify_forge_walk.py build/fx-smoke-run/fx-shots --motion-only 2>&1 | while IFS= read -r line; do
+          base=()
+          if [ -d "$RUNNER_TEMP/forge-v16720" ]; then base=(--baseline-shots "$RUNNER_TEMP/forge-v16720"); fi
+          python3 tools/verify_forge_walk.py build/fx-smoke-run/fx-shots --motion-only "${base[@]}" 2>&1 | while IFS= read -r line; do
             case "$line" in
               *AssertionError:*|*Error:*) printf '::error title=Marcha en Forge::%s\n' "${line//%/%25}" ;;
               *) printf '::notice title=Marcha en Forge::%s\n' "${line//%/%25}" ;;
@@ -1231,41 +1246,3 @@ jobs:
           done
           echo "### Borrador $TAG verificado (publicar después de CI SUCCESS)" >> "$GITHUB_STEP_SUMMARY"
           cat "$SUMS" >> "$GITHUB_STEP_SUMMARY"
-
-
-  cape-motion-baseline:
-    if: github.repository == 'Santi-PdR/modelos' && github.ref == 'refs/heads/arena/5a9fa51b-modelos' && github.event_name == 'push' && contains(github.event.head_commit.message, '[leer-marcha-v16720]')
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: capatest-fx-en-mundo
-          github-token: ${{ github.token }}
-          run-id: 44849476869
-          path: baseline
-      - name: Localizar las aceleraciones rápidas de v1.67.20
-        run: |
-          python - <<'PY'
-          import csv, math
-          from pathlib import Path
-          for path in sorted(Path('baseline').rglob('paso-*.tsv')):
-              with path.open() as f:
-                  frames=list(csv.DictReader(f, delimiter='\t'))
-              points=[]
-              for a,b in zip(frames,frames[1:]):
-                  t0,t1=map(float,(a['time'],b['time'])); dt=t1-t0
-                  if not .05<dt<1.1: continue
-                  top,mid = (abs(float(b[k])-float(a[k]))/dt for k in ('top','mid'))
-                  tip=math.dist([float(a['tip_'+k]) for k in 'xyz'],[float(b['tip_'+k]) for k in 'xyz'])/dt
-                  points.append((t0,t1,top,mid,tip,a['clip'],b['clip'],float(a['leg_speed']),float(b['leg_speed'])))
-              for name,lo,hi in [('arranque',18,36),('andar',36,70),('giro',71,94),('arranque carrera',95,106),('carrera',107,128),('freno',129,152)]:
-                  selected=[p for p in points if lo<=p[0] and p[1]<hi]
-                  if not selected: continue
-                  winners=[max(selected,key=lambda p:p[i]) for i in (2,3,4)]
-                  row='; '.join(f'{w[i]:.2f}/tick @{w[0]:.2f}→{w[1]:.2f} {w[5]}→{w[6]} speed {w[7]:.2f}→{w[8]:.2f}' for i,w in zip((2,3,4),winners))
-                  print(f'::notice title=Base v1.67.20::{path.stem} {name} picos bisagras/punta: {row}')
-          assert len(list(Path('baseline').rglob('paso-*.tsv')))==2
-          PY

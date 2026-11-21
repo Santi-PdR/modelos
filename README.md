@@ -7,9 +7,13 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [JAR anterior v1.67.12](https://github.com/Santi-PdR/modelos/releases/download/v1.67.12/capatest-1.67.12.jar)
 · [JAR anterior v1.67.11](https://github.com/Santi-PdR/modelos/releases/download/v1.67.11/capatest-1.67.11.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench de la rama](docs/CAPA_v1.67.20.bbmodel)
+· [Proyecto Blockbench de la rama](docs/CAPA_v1.67.21.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+
+### v1.67.21 — continuidad y ajuste equipado
+
+Candidata para probar en Forge: transición más suave al andar, girar y frenar; hombreras un poco más altas, tela más visible de frente y movimiento sólo en el borde alto de la capucha. La descarga verificada anterior se conserva abajo mientras se prueban estos cambios.
 
 ### v1.67.20 — forma original, sólo colocación
 

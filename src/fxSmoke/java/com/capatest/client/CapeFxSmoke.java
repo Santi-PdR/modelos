@@ -111,7 +111,8 @@ public final class CapeFxSmoke {
         BOTH("ambos-noche-encantado", 18000),
         PLACE_STEVE_CHEST("posicion-steve-pecho", 6000), PLACE_STEVE_BACK("posicion-steve-curios", 6000),
         PLACE_ALEX_CHEST("posicion-alex-pecho", 6000), PLACE_ALEX_BACK("posicion-alex-curios", 6000),
-        WALK_CHEST("paso-pecho", 6000), WALK_BACK("paso-curios", 6000),
+        WALK_STEVE_CHEST("paso-steve-pecho", 6000), WALK_STEVE_BACK("paso-steve-curios", 6000),
+        WALK_ALEX_CHEST("paso-pecho", 6000), WALK_ALEX_BACK("paso-curios", 6000),
         AUDIT_CHEST("revision-alex-pecho", 6000), AUDIT_BACK("revision-alex-curios", 6000),
         HOTBAR_BARE("hotbar-vacia", 6000), HOTBAR("hotbar", 6000),
         STRAFE_LEFT("traslacion-izquierda", 18000), STRAFE_RIGHT("traslacion-derecha", 18000),
@@ -129,10 +130,10 @@ public final class CapeFxSmoke {
 
         boolean hotbar() { return this == HOTBAR_BARE || this == HOTBAR; }
         boolean elytra() { return this == WINGS || this == GLIDE; }
-        boolean usesBack() { return this == WALK_BACK || this == AUDIT_BACK || placement() && file.endsWith("-curios") || elytra(); }
+        boolean usesBack() { return this == WALK_STEVE_BACK || this == WALK_ALEX_BACK || this == AUDIT_BACK || placement() && file.endsWith("-curios") || elytra(); }
         boolean hasBack() { return this == BOTH || usesBack(); }
         boolean placement() { return ordinal() >= PLACE_STEVE_CHEST.ordinal() && ordinal() <= PLACE_ALEX_BACK.ordinal(); }
-        boolean walk() { return this == WALK_CHEST || this == WALK_BACK; }
+        boolean walk() { return ordinal() >= WALK_STEVE_CHEST.ordinal() && ordinal() <= WALK_ALEX_BACK.ordinal(); }
         boolean audit() { return this == AUDIT_CHEST || this == AUDIT_BACK; }
         boolean inspectBirths() { return this == GLIDE || this == WADE || this == SWIM; }
         boolean compareLight() { return this == CHEST || this == NIGHT || this == LAMP; }
@@ -416,7 +417,8 @@ public final class CapeFxSmoke {
                 else textures.put(type, savedTexture);
                 return;
             }
-            boolean slim = next.audit() || next.file.startsWith("posicion-alex-");
+            boolean slim = next.audit() || next == Scene.WALK_ALEX_CHEST || next == Scene.WALK_ALEX_BACK
+                    || next.file.startsWith("posicion-alex-");
             ResourceLocation skin = slim ? ALEX : STEVE;
             check(game.getResourceManager().getResource(skin).isPresent(), "missing vanilla skin " + skin);
             SKIN_MODEL.set(info, slim ? "slim" : "default");
@@ -433,11 +435,11 @@ public final class CapeFxSmoke {
         auditRoute = next.audit() ? new CapePlacementProbe.PoseAudit() : null;
         if (next.placement() || next.audit()) game.options.fov().set(42);
         walkRoute = next.walk() ? new CapeWalkProbe.Route() : null;
-        if (next == Scene.WALK_CHEST) game.options.framerateLimit().set(60);
+        if (next.walk()) game.options.framerateLimit().set(60);
         if (next == Scene.HOTBAR_BARE) game.options.framerateLimit().set(30);
         stableFrames = observedBirths = 0;
         captured = false;
-        if (next == Scene.HOTBAR_BARE || next.placement() || next.audit()) {
+        if (next == Scene.HOTBAR_BARE || next.placement() || next.audit() || next.walk()) {
             selectSkin(game, next);
         }
         if (next.hotbar()) {
@@ -451,7 +453,7 @@ public final class CapeFxSmoke {
             game.options.fov().set(70);
         }
         game.options.keyLeft.setDown(false);
-        if (next == Scene.HOTBAR_BARE || next == Scene.WALK_BACK || next.audit()) {
+        if (next == Scene.HOTBAR_BARE || next.walk() || next.audit()) {
             game.options.keyUp.setDown(false);
             game.options.keySprint.setDown(false);
         }
@@ -491,7 +493,7 @@ public final class CapeFxSmoke {
                 player.getInventory().setItem(HOTBAR_SLOT, next == Scene.HOTBAR ? mantle() : ItemStack.EMPTY);
                 player.inventoryMenu.broadcastChanges();
             }
-            if (next.audit() || next == Scene.STRAFE_LEFT) {
+            if (next.audit() || next.walk() || next == Scene.STRAFE_LEFT) {
                 // Unobstructed ground for the real F5 camera and sprint.
                 player.teleportTo(level, pane.getX() - 6, player.getY(), pane.getZ() - 6, 0, 0);
             } else if (next == Scene.GLIDE) {
@@ -673,6 +675,9 @@ public final class CapeFxSmoke {
                 return;
             }
             if (scene.walk()) {
+                boolean slim = scene == Scene.WALK_ALEX_CHEST || scene == Scene.WALK_ALEX_BACK;
+                check(player.getModelName().equals(slim ? "slim" : "default")
+                        && player.getSkinTextureLocation().equals(slim ? ALEX : STEVE), "wrong walk skin");
                 captured = walkRoute.capture(game, framePartialTick, walkDraw, shots(game), scene.file);
                 return;
             }

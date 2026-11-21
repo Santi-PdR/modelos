@@ -10,16 +10,29 @@ def read(path):
     return np.genfromtxt(path, names=True, dtype=None, encoding='utf-8', delimiter='\t')
 
 
+TRANSITIONS = (('arranque',18,36),('giro',70,94),('carrera',95,109),('freno',128,151))
+CHANGE = (('andar-correr',174,188),('correr-andar',193,207))
+
+
+def points(data, name):
+    return np.column_stack([data[f'{name}_{k}'] for k in 'xyz'])
+
+
+def pairs(t, start=-np.inf, end=np.inf):
+    dt = np.diff(t)
+    return (t[:-1] >= start) & (t[1:] < end) & (dt > .08) & (dt < 1.1)
+
+
 def report(data, name):
     t = data['time']
     dt = np.diff(t)
     in_walk = (t >= 35) & (t < 70)
     in_sprint = (t >= 107) & (t < 129)
     assert data['leg_speed'][in_walk].mean() > .36 and data['leg_speed'][in_sprint].mean() > .52, name
-    mask = in_walk[1:] & in_walk[:-1] & (dt > .08) & (dt < 1.1)
-    jumped = (np.diff(data['stride']) < 0) & mask
+    mask = pairs(t,35,70)
+    jumped = (np.diff(data['stride']) < -1e-6) & (mask if 'pace' not in data.dtype.names else pairs(t))
     delta = np.abs(np.diff(data['top']))
-    tip = np.column_stack([data[k] for k in ('tip_x', 'tip_y', 'tip_z')])
+    tip = points(data,'tip')
     transfer = np.linalg.norm(np.diff(tip, axis=0), axis=1)
     depth = data['collar_z'][in_walk]
     sway = np.ptp(depth)
@@ -29,12 +42,15 @@ def report(data, name):
     # 12.459–12.535u/tick. The mantle must also move, not just freeze.
     assert np.isfinite(tip).all() and mask.sum() >= 35, name
     assert sway < .26 and not jumped.any() and hinge < 10 and .02 < hem < 4.1, (name,sway,hinge,hem)
-    assert np.max(np.abs(data['stride'] - data['leg_pos'] * np.float32(.6662) / (2 * np.pi))) < 2e-6, name
+    leg_pos = data['leg_pos']
+    expected = leg_pos * np.float32(.6662) / (2 * np.pi)
+    tolerance = 2e-6 + np.abs(expected) * np.finfo(np.float32).eps
+    assert (np.abs(data['stride'] - expected) < tolerance).all(), name
     assert (data['walk'][in_walk] >= .98).mean() > .95 and (data['run'][in_sprint] >= .98).mean() > .8, name
-    assert (data['walk'][t < 17] < .01).all() and (data['run'][t > 147] < .01).all(), name
+    assert (data['walk'][t < 17] < .01).all() and (data['run'][(t > 147) & (t < 156)] < .01).all(), name
     transitions = []
-    for label, start, end in (('arranque',18,36),('giro',70,94),('carrera',95,109),('freno',128,151)):
-        select = (t[:-1] >= start) & (t[1:] < end) & (dt > .08) & (dt < 1.1)
+    for label, start, end in TRANSITIONS:
+        select = pairs(t,start,end)
         assert np.count_nonzero(select) >= 12, (name,label)
         max_turn = np.max(delta[select] / dt[select])
         transitions.append(f'{label} {max_turn:.1f}°/tick')
@@ -42,6 +58,43 @@ def report(data, name):
     print(f'{name}: {len(t)} cuadros y {int(mask.sum())} pares de paso estable; vaivén del asiento {sway:.3f}u; '
           f'reinicios de fase {int(jumped.sum())}; bisagra p95 {hinge:.2f}°/tick; extremo p95 {hem:.3f}u/tick. '
           f'Máximos en transición: {", ".join(transitions)}.',flush=True)
+
+
+def continuity(data, name, baseline=None):
+    def peaks(values, lo, hi):
+        t = values['time']
+        select = pairs(t,lo,hi)
+        delta = np.diff(t)[select]
+        slopes = np.abs(np.diff(np.c_[values['top'],values['mid']],axis=0)[select]) / delta[:,None]
+        hem = np.linalg.norm(np.diff(points(values,'tip'),axis=0)[select],axis=1) / delta
+        return np.r_[slopes.max(0),hem.max()]
+
+    t = data['time']
+    dt = np.diff(t)
+    assert np.isfinite(points(data,'hood')).all() and np.isfinite(data['pace']).all(), name
+    assert np.min(dt) >= 0 and t.max() >= 225, name
+    sub_tick = pairs(t) & (np.floor(t[1:]) == np.floor(t[:-1]))
+    across = pairs(t) & (np.floor(t[1:]) == np.floor(t[:-1])+1)
+    assert sub_tick.sum() >= 80 and across.sum() >= 95, (name,'sub-tick sampling missing')
+    valid = pairs(t)
+    pace_slope = np.diff(data['pace'])[valid] / dt[valid]
+    assert pace_slope.max() < .106 and pace_slope.min() > -.071, (name,'impulso de velocidad',pace_slope.min(),pace_slope.max())
+    assert (data['run'][(t >= 185)&(t < 194)] > .98).mean() > .8, (name,'no cambió a carrera sin parar')
+    assert (data['walk'][(t >= 202)&(t < 208)] > .98).mean() > .8, (name,'no volvió a andar sin parar')
+    assert (data['run'][t >= 220] < .01).all() and (data['walk'][t >= 222] < .01).all(), name
+    hood = points(data,'hood')
+    crown = np.linalg.norm(np.ptp(hood[(t > 106)&(t < 128)],axis=0))
+    assert .10 < crown < .68, (name,'amplitud capucha',crown)
+    result = []
+    for label, lo, hi in TRANSITIONS+CHANGE:
+        p = peaks(data,lo,hi)
+        base = peaks(baseline,lo,hi) if baseline is not None and (label,lo,hi) in TRANSITIONS else None
+        result.append((name.removeprefix('paso-'),label, int(pairs(t,lo,hi).sum()), *p, *([-1.]*3 if base is None else base)))
+        print(f'{name} / {label}: bisagras {p[0]:.2f}/{p[1]:.2f}°/tick, punta {p[2]:.3f}u/tick'
+              + (f' (v1.67.20: {base[0]:.2f}/{base[1]:.2f}°, {base[2]:.3f}u)' if base is not None else ''),flush=True)
+    print(f'{name}: {int(sub_tick.sum())} pares dentro del tick y {int(across.sum())} entre ticks; '
+          f'arco de la capucha en carrera {crown:.3f}u.',flush=True)
+    return result
 
 
 def upper_edge(root):
@@ -83,9 +136,22 @@ if __name__ == '__main__':
     ap.add_argument('shots', type=Path)
     ap.add_argument('--motion-only', action='store_true',
                     help='omitir la comparativa de camiseta v1.67.10 si no se capturaron escenas históricas')
+    ap.add_argument('--baseline-shots', type=Path)
     args = ap.parse_args()
-    for slot in ('pecho', 'curios'):
-        name = 'paso-' + slot
-        report(read(args.shots / (name + '.tsv')), name)
+    table = []
+    for name in ('paso-pecho','paso-curios','paso-steve-pecho','paso-steve-curios'):
+        path = args.shots / (name + '.tsv')
+        if 'steve' in name and not path.is_file() and args.baseline_shots is None:
+            continue # historical recording
+        data = read(path)
+        report(data, name)
+        if 'pace' in data.dtype.names:
+            old = read(args.baseline_shots / path.name) if args.baseline_shots and 'steve' not in name else None
+            table.extend(continuity(data,name,old))
+    if table:
+        with (args.shots/'continuidad-forge.tsv').open('w') as f:
+            print('ruta\tfase\tpares\tarriba_deg_tick\tmedio_deg_tick\tpunta_u_tick\tbase_arriba\tbase_medio\tbase_punta',file=f)
+            for *labels,a,b,c,d,e,g in table:
+                print(*labels,*(f'{v:.3f}' for v in (a,b,c,d,e,g)),sep='\t',file=f)
     if not args.motion_only:
         upper_edge(args.shots)

@@ -11,12 +11,15 @@ final class CapeMountPlacement {
     static final String SADDLE_BONE = "v20_mount_saddle";
     static final double WING_SADDLE_WIDTH = 1.08;
     static final double WING_SADDLE_DEPTH = .33;
+    // Present a little of the existing shoulder fabric above the sleeves.
+    static final double SHOULDER_LIFT = .46;
+    static final double SHOULDER_FORWARD = .55;
 
     // Rigid whole-plate poses over the sleeves; X is mirrored on draw.
     static final Plate SMALL = new Plate(CapePlateFit.SMALL, -5.84, 22.35, 4.46,
-            0, 1.40, -3.92, 0, 8, 0, .26);
+            -.50, 2.00, -4.20, -2, 12, 0, .26);
     static final Plate WIDE = new Plate(CapePlateFit.WIDE, 7.24, 22.43, 4.16,
-            -.66, .42, -3.90, 0, 48, 0, -.15);
+            -.66, 1.12, -4.25, 0, 48, 0, -.15);
 
     // Keep the independent fit with Elytra.
     static final Plate WING_SMALL = new Plate(CapePlateFit.SMALL, -5.84, 22.35, 4.46,

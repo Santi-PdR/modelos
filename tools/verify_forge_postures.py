@@ -15,6 +15,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from cape_contact import lap, original_dimensions
+from cape_fit import hood_moves
 from preview_cloth import ARMOR_GEO, load, matrices
 from verify_v1660 import WornModel, contacts
 
@@ -54,6 +55,8 @@ def report(root, slot, rig, source):
     collar = np.char.startswith(names, 'v17_cowl_') | np.char.startswith(names, 'v19_cuellito_')
     plates = np.char.startswith(names, 'v18_pad_')
     roots = np.char.endswith(names, '_seg0')
+    hood = np.array([hood_moves(n) for n in names])
+    unmoving = rig.rigid & ~hood
     expected = set(source) | set(ACTOR)
     rows, images = [], []
     i = 0
@@ -81,10 +84,10 @@ def report(root, slot, rig, source):
             # Prevent an armour model or fat sleeve placeholder from passing as Alex.
             for k, dims in ((0,(8,12,4)), (2,(8,8,8)), (3,(9,9,9)), (4,(3,12,4)), (5,(3,12,4))):
                 np.testing.assert_allclose(np.linalg.norm(actors[k,[1,3,4]]-actors[k,0],axis=1), dims, atol=.01, rtol=0)
-            rigid = local[rig.rigid]
             if baseline is None:
-                baseline = rigid.copy()
-            drift = np.linalg.norm(rigid-baseline,axis=2).max()
+                baseline = local.copy()
+            stroke = np.linalg.norm(local-baseline,axis=2)
+            drift = stroke[unmoving].max()
             assert drift < .006, (label_sample, 'la montura cambió en coordenadas del torso', drift)
             contact = contacts(local[None],actors[None])[0]
             hit = [max(0.,-contact[k,m].min()) for k,m in (
@@ -92,7 +95,7 @@ def report(root, slot, rig, source):
                 (slice(6,8),rig.cloth),(slice(8,10),rig.cloth))]
             seam, root_join = rig.joins(local)
             back = lap(local[roots], actors[:1])
-            motion.append([drift,seam,root_join,back,*hit])
+            motion.append([drift,seam,root_join,back,stroke[hood].max(),*hit])
             if r['image'] != '-':
                 assert r['image'] == f'{fixture}-{phase}-{frame:02d}.png', label_sample
                 path = root/r['image']
@@ -104,12 +107,18 @@ def report(root, slot, rig, source):
         # Show the largest measured arm overlap among the saved race frames.
         images.append((label,max(photos, key=lambda item:item[0])[1]))
         a = np.array(motion)
-        hits = [f'{np.count_nonzero(col > .05)}/{count} ({col.max():.3f}u)' for col in a[:,4:].T]
-        row = [slot,phase,count,f'{a[:,0].max():.6f}',*[f'{v:.3f}' for v in a[:,1:4].min(0)],*hits]
+        hits = [f'{np.count_nonzero(col > .05)}/{count} ({col.max():.3f}u)' for col in a[:,5:].T]
+        crown = a[:,4].max()
+        row = [slot,phase,count,f'{a[:,0].max():.6f}',*[f'{v:.3f}' for v in a[:,1:4].min(0)],f'{crown:.3f}',*hits]
         rows.append(row)
         print(f'::notice title=Posturas Alex en Forge::{slot}/{phase}: unión mínima de raíz {row[5]}u; '
-              f'contacto paño/torso {row[6]}u; cuello/cabeza {hits[0]}, placas/cabeza {hits[1]}, '
-              f'paño/brazos {hits[4]}, paño/piernas {hits[6]}.', flush=True)
+              f'contacto paño/torso {row[6]}u; recorrido capucha {crown:.3f}u; cuello/cabeza {hits[0]}, '
+              f'placas/cabeza {hits[1]}, paño/brazos {hits[4]}, paño/piernas {hits[6]}.', flush=True)
+        assert (a[:,1:4].min(0) > [.038,.025,.018]).all(), (fixture,phase,'se abrió el paño',row)
+        assert crown < .80 and (phase != 'carrera' or crown > .13), (fixture,phase,'recorrido capucha',crown)
+        assert a[:,-1].max() < .05, (fixture,phase,'intersección nueva con pierna',row)
+        if phase in ('cenital','agachado-cenital'):
+            assert a[:,6].max() <= .05, (fixture,phase,'placa en la nuca',row)
     return rows, images
 
 
@@ -147,7 +156,7 @@ def run(root):
     with (root/'revision-alex-forge.tsv').open('w') as f:
         writer = csv.writer(f, delimiter='\t', lineterminator='\n')
         writer.writerow(('ranura','postura','cuadros','deriva_rigida_max_u','costura_min_u','raiz_min_u',
-                         'solape_paño_torso_min_u',*METRICS))
+                         'solape_paño_torso_min_u','recorrido_capucha_max_u',*METRICS))
         writer.writerows(rows)
     gallery(root,pictures)
 

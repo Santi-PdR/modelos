@@ -72,7 +72,10 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     private double legBack;
     private double bodyPitch;
     private double wingGoal;
+    private CapeHood.Pose hood = CapeHood.REST;
     private boolean disabled;
+
+    CapeHood.Pose hood() { return hood; }
 
     void setClearancePose(double arm, double leg, double pitch, double wingGoal) {
         this.armBack = arm;
@@ -124,7 +127,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         }
         var motion = sampleMotion(wearer, state);
         wornClips.apply(motion);
-        applyFit(wearer, state.getPartialTick(), motion, true);
+        applyFit(wearer, motion, true);
     }
 
     @Override
@@ -133,7 +136,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         // Resource packs may supply non-linear or Molang-driven tracks. In
         // that case leave authored motion to GeckoLib rather than flatten it.
         if (resolveRig() && state.getData(DataTickets.ENTITY) instanceof LivingEntity wearer)
-            applyFit(wearer, state.getPartialTick(), sampleMotion(wearer, state), false);
+            applyFit(wearer, sampleMotion(wearer, state), false);
     }
 
     static CapeWornMotion wornMotion(LivingEntity wearer) {
@@ -142,19 +145,24 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
 
     private static CapeWornMotion sampleMotion(LivingEntity wearer, AnimationState<CapaDeteriorerItem> state) {
         var motion = MOTION.computeIfAbsent(wearer, key -> new CapeWornMotion());
-        float partial = state.getPartialTick();
-        float phase = wearer.walkAnimation.position(partial) * (wearer.isBaby() ? 3 : 1);
-        float speed = wearer.isPassenger() || !wearer.isAlive() ? 0 : wearer.walkAnimation.speed(partial);
+        var walk = wearer.walkAnimation;
+        int limbScale = wearer.isBaby() ? 3 : 1;
+        boolean moves = !wearer.isPassenger() && wearer.isAlive();
         motion.sample(CapaDeteriorerItem.readWearer(wearer, state.getData(DataTickets.ITEMSTACK)),
-                wearer.tickCount, partial, phase, speed);
+                wearer.tickCount, state.getPartialTick(), walk.position(0) * limbScale, walk.position(1) * limbScale,
+                moves ? walk.speed(0) : 0, moves ? walk.speed(1) : 0);
         return motion;
     }
 
-    private void applyFit(LivingEntity wearer, float partial, CapeWornMotion motion, boolean coordinated) {
+    private void applyFit(LivingEntity wearer, CapeWornMotion motion, boolean coordinated) {
         applyVisibilidad();
+        hood = CapeHood.REST;
         if (disabled) return;
         try {
-            applyClothResponse(wearer, partial, motion);
+            applyClothResponse(wearer, motion.partial(), motion);
+            var response = motion.response;
+            if (coordinated) hood = CapeHood.pose(motion.time(), motion.stride(), motion.amplitude() * motion.ground(),
+                    response.turnAt(.16), response.sideAt(.12), wearer.getId());
             applyClearance(coordinated ? motion : null);
         } catch (Exception | LinkageError error) {
             disabled = true;

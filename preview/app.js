@@ -261,15 +261,31 @@ function wornPlate(f, index, elytra, slim) {
   return plate;
 }
 
-function fixedWearerPose(geo, profile, stance, elytra, slim) {
+function hoodPose(h,ticks,stride,pace,turn=0,side=0,seed=0) {
+  const breath=Math.sin(h.BREATH_RATE*ticks+h.BREATH_OFFSET*seed);
+  const step=2*Math.PI*stride-h.STEP_DELAY;
+  return [h.REST_PITCH+h.BREATH*breath+pace*(h.OPEN+h.ROCK*Math.cos(step)),
+          h.TURN_YAW*turn+h.ROCK_YAW*pace*Math.sin(step),
+          h.SIDE_ROLL*side-h.TURN_ROLL*turn+h.ROCK_ROLL*pace*Math.sin(step)];
+}
+
+function fixedWearerPose(geo, profile, stance, elytra, slim, hood) {
   const f=profile.mount;
   const fixed=geo.bones.some(b=>b.name===profile.bone) && geo.bones.some(b=>b.name===profile.gussetBone);
-  const a=profile.backing, bones=[];
+  const a=profile.backing, h=profile.hood, bones=[];
+  if (fixed && !elytra && h) {
+    const [pitch,yaw,roll]=hood || [h.REST_PITCH,0,0];
+    bones.push({name:'worn_hood',parent:profile.bone,pivot:[0,h.PIVOT_Y,h.PIVOT_Z],
+      offset:[0,0,h.SET_BACK],rotation:[-pitch,-yaw,roll],cubes:[]});
+  }
   for (let piece of geo.bones) {
     const name=piece.name, half=a.names.indexOf(name);
     if (name==='chestplate') piece={...piece,rotation:[stance*profile.bodyAngle,0,0],offset:[0,-3.2*stance,0]};
     if (!elytra && fixed && name===profile.seat.frame) piece={...piece,offset:[0,-f.BACK_DROP,-f.BACK_FORWARD]};
     if (!elytra && fixed && name==='v20_mount_saddle') piece={...piece,offset:[0,0,f.SADDLE_SET]};
+    if (!elytra && fixed && h && name==='v20_mount_shoulders') piece={...piece,offset:[0,f.SHOULDER_LIFT,-f.SHOULDER_FORWARD]};
+    if (!elytra && fixed && h && piece.parent===profile.bone && /^v17_cowl_(back|front)_/.test(name))
+      piece={...piece,parent:'worn_hood'};
     if (elytra) {
       if (half>=0) piece={...piece,scale:[1,a.tuckY,a.wingZ]};
       if (name==='v20_mount_shoulders') piece={...piece,scale:shoulderScales(0,0,0,true)};
@@ -290,8 +306,8 @@ function fixedWearerPose(geo, profile, stance, elytra, slim) {
   return {...geo,bones};
 }
 
-function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm, slim=false) {
-  if (profile.mount) return fixedWearerPose(geo,profile,stance,elytra,slim);
+function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm, slim=false, hood) {
+  if (profile.mount) return fixedWearerPose(geo,profile,stance,elytra,slim,hood);
   const depth=backset(profile,stance,look,turn);
   const anchor = profile.backing;
   const seat = profile.seat;
@@ -857,6 +873,9 @@ function draw(now) {
   const base=referenceView ? GEO : poseAt(GEO,clip,clipTime);
   const wingPose=referenceView ? null : WINGS[wingMode.value === 'folded' && stance ? 'crouched' : wingMode.value];
   const clearanceGait=strideFit.checked ? gait : null;
+  const stridePhase=gait ? elapsed*(.8+.95*amplitude) : clipTime/clip.length;
+  const pace=gait ? amplitude : motionState==='animation.sprint' ? 1 : motionState==='animation.moving' ? .7 : 0;
+  const hood=FIT.hood && hoodPose(FIT.hood,elapsed*20,stridePhase,pace);
   const backArm=Math.max(...(gait?.arms || [0,0]).map(
     a=>Math.asin(Math.sin(a*Math.PI/180+stance*.4))*180/Math.PI));
   const armEffort=Math.max(backArm,...(gait?.arms || [0,0]).map(a=>Math.abs(a+stance*FIT.bodyAngle)));
@@ -864,7 +883,7 @@ function draw(now) {
   const guide=wingPose ? wingGoal(WINGS,wingPose[0],wingPose[2],FIT.bodyAngle*stance,depth) : 0;
   const fit=(pose, goal)=>{
     if (clearanceGait || goal>0) pose=clearancePose(pose,clearanceGait,stance,depth,goal);
-    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn,!!wingPose,backArm,armEffort),hidden);
+    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn,!!wingPose,backArm,armEffort,false,hood),hidden);
   };
   const drift=demo ? swayPose(base,SWAY,t) : null;
   const current=drift && swayFit.checked ? drift : base;

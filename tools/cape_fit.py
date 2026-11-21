@@ -287,7 +287,26 @@ def worn_plate(index, elytra, slim):
     return pose
 
 
-def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False):
+@lru_cache(maxsize=1)
+def hood_profile():
+    code = SOURCE.with_name('CapeHood.java').read_text()
+    return {k: float(v) for k,v in re.findall(r'\bdouble ([A-Z_]+) = ([0-9.]+);', code)}
+
+
+def hood_moves(name):
+    return name.startswith(('v17_cowl_back_', 'v17_cowl_front_'))
+
+
+def hood_pose(ticks, stride, pace, turn=0., side=0., seed=0):
+    h = hood_profile()
+    breathe = math.sin(h['BREATH_RATE']*ticks + h['BREATH_OFFSET']*seed)
+    step = 2*math.pi*stride - h['STEP_DELAY']
+    return (h['REST_PITCH'] + h['BREATH']*breathe + pace*(h['OPEN'] + h['ROCK']*math.cos(step)),
+            h['TURN_YAW']*turn + h['ROCK_YAW']*pace*math.sin(step),
+            h['SIDE_ROLL']*side - h['TURN_ROLL']*turn + h['ROCK_ROLL']*pace*math.sin(step))
+
+
+def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False, hood=None):
     f = mount_profile()
     names = {b['name'] for b in geo['bones']}
     fixed = G.FIT_BONE in names and G.GUSSET_BONE in names
@@ -296,6 +315,7 @@ def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False):
     if fixed and not elytra:
         changes[seat] = dict(offset=[0.,-f['BACK_DROP'],-f['BACK_FORWARD']])
         changes[G.SADDLE_BONE] = dict(offset=[0.,0.,f['SADDLE_SET']])
+        changes[G.SHOULDERS_BONE] = dict(offset=[0.,f['SHOULDER_LIFT'],-f['SHOULDER_FORWARD']])
     if elytra:
         l,r,z = B.solve(None,0.,elytra=True)
         left,right = B.profile()['names']
@@ -305,9 +325,17 @@ def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False):
         if fixed:
             changes[G.SADDLE_BONE] = dict(offset=[0.,0.,f['WING_SADDLE_DEPTH']],scale=[f['WING_SADDLE_WIDTH'],1.,1.])
     bones = []
+    flex = fixed and not elytra
+    if flex:
+        h = hood_profile()
+        pitch,yaw,roll = hood if hood is not None else (h['REST_PITCH'],0.,0.)
+        bones.append(dict(name='worn_hood',parent=G.FIT_BONE,pivot=[0.,h['PIVOT_Y'],h['PIVOT_Z']],
+                          offset=[0.,0.,h['SET_BACK']],rotation=[-pitch,-yaw,roll],cubes=[]))
     for b in geo['bones']:
         n = b['name']
         piece = dict(b,**changes.get(n,{}))
+        if flex and piece.get('parent') == G.FIT_BONE and hood_moves(n):
+            piece['parent'] = 'worn_hood'
         if fixed and plates and piece.get('parent') == G.FIT_BONE and n in ('v18_pad_0','v18_pad_1'):
             x,y,z,dx,dy,dz,rx,ry,rz = worn_plate(int(n[-1]),elytra,slim)
             pad = dict(name='shoulder_'+n,parent='chestplate',pivot=[x,y,z],offset=[dx,dy,dz],
@@ -322,6 +350,7 @@ def viewer_profile(*, placed=False):
     fit = dict(profile(),backing=B.profile(),seat=seat_profile(),plates=plate_profile(),torso=torso_profile())
     if placed:
         fit['mount'] = mount_profile()
+        fit['hood'] = hood_profile()
     return fit
 
 

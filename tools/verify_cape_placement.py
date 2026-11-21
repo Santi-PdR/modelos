@@ -88,6 +88,29 @@ def parity(geo, java_samples=None):
           + (' Perfil fijo de Java verificado.' if java_samples else ''),flush=True)
 
 
+def hood_parity(geo, java_samples=None):
+    samples = np.loadtxt(java_samples) if java_samples else None
+    inputs = samples[:, :6].tolist() if samples is not None else [
+        [20*t,phase,pace,turn,side,42] for t,phase,pace,turn,side in
+        product((0.,1.1),(.03,.53), (0.,.7,1.),(-1.,1.),(-1.,1.))]
+    poses = [F.hood_pose(*args) for args in inputs]
+    if samples is not None:
+        np.testing.assert_allclose(poses,samples[:,6:],atol=1e-10,rtol=0)
+    case = [[i % 2, (i//2) % 2, *args] for i,args in enumerate(inputs)]
+    parts = ['v17_cowl_back_1','v17_cowl_front_3','v17_cowl_tooth_3','v17_cowl_return',
+             'v18_pad_0',G.SADDLE_BONE,G.SHOULDERS_BONE,'v17_ribbon_6_seg0']
+    expected = []
+    for (stance,wings,*_),pose in zip(case,poses,strict=True):
+        model = P.matrices(F.fixed_wearer_pose(geo,stance,elytra=wings,slim=True,hood=pose))
+        fixed = P.matrices(F.fixed_wearer_pose(geo,stance,elytra=wings,slim=True))
+        for n in model:
+            if n != 'worn_hood' and (wings or not F.hood_moves(n)):
+                np.testing.assert_array_equal(model[n],fixed[n],err_msg=f'la capucha movió {n}')
+        expected.append([*pose, *[v for n in parts for v in model[n].ravel()]])
+    np.testing.assert_allclose(viewer(geo=geo,hoodSamples=case,parts=parts),expected,atol=5e-9,rtol=0)
+    print(f'{len(case)} poses de capucha: sólo gira el borde alto, sin mover el asiento ni alterar los élitros.',flush=True)
+
+
 def exercise(geo):
     model = WornModel(geo)
     names = np.asarray(model.names)
@@ -101,7 +124,9 @@ def exercise(geo):
     authored = model.place(P.matrices(geo))
     parts_source = {n:authored[names==n] for n in np.unique(names)}
     plates = np.char.startswith(names,'v18_pad_')
-    garment = ~(plates | saddle)
+    hood = np.array([F.hood_moves(n) for n in names])
+    shoulders = names == G.SHOULDERS_BONE
+    garment = ~(plates | saddle | hood | shoulders)
     offset = [0.,-F.mount_profile()['BACK_DROP'],-F.mount_profile()['BACK_FORWARD']]
     for body, wings in product((0.,1.),(False,True)):
         rest = P.matrices(F.wearer_pose(geo,body,0,0,elytra=wings,placed=True))
@@ -157,10 +182,12 @@ if __name__=='__main__':
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('--jar',type=Path)
     ap.add_argument('--java-samples',type=Path)
+    ap.add_argument('--hood-samples',type=Path)
     ap.add_argument('--assets-only',action='store_true')
     args = ap.parse_args()
     asset_contract(args.jar)
     if not args.assets_only:
         geo = P.load(P.ARMOR_GEO)
         parity(geo,args.java_samples)
+        hood_parity(geo,args.hood_samples)
         exercise(geo)
