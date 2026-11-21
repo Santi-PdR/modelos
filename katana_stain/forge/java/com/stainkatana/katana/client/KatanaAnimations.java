@@ -43,7 +43,7 @@ public final class KatanaAnimations {
         "two_handed_slam", "two_handed_spin", "one_handed_slash_switch_blade_left", "two_handed_slam_heavy"
     };
     private static final String[] CLIPS = {
-        "inspect", "sword_attack", "scene_01", "sword_attack", "sword_attack2", "sword_attack", "combo_heavy",
+        "inspect", "stain_x_cut", "scene_01", "sword_attack", "sword_attack2", "sword_attack", "combo_heavy",
         "scene_02", "scene_03", "scene_04", "scene_05", "scene_06", "scene_07", "scene_08", "scene_09", "scene_10"
     };
     private KatanaAnimations() { }
@@ -74,7 +74,9 @@ public final class KatanaAnimations {
             animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(3, Ease.INOUTSINE), null);
             return;
         }
-        KeyframeAnimation clip = loadBetterCombat(ability);
+        // X uses a timed adaptation of Improved Animations' sword motion;
+        // other abilities retain their existing reference clips for now.
+        KeyframeAnimation clip = ability == 1 ? null : loadBetterCombat(ability);
         boolean external = clip != null;
         if (!external) clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID, CLIPS[ability]));
         if (clip == null) {
@@ -105,7 +107,7 @@ public final class KatanaAnimations {
                 @Override protected float getFadeIn(float delta) { return 1F; }
             });
         }
-        timedClip.addModifierBefore(new SpeedModifier(ability == 0 ? 3F : (ability >= 2 ? 1.4F : 2F)));
+        timedClip.addModifierBefore(new SpeedModifier(ability == 0 ? 3F : (ability == 1 ? 1F : 1.4F)));
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
     }
 

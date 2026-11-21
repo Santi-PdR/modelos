@@ -177,6 +177,12 @@ public final class VisualFixtureClient {
                 savedStack = player.getMainHandItem();
                 if (savedStack.isDamageableItem() || !savedStack.getItem().isEnchantable(savedStack))
                     throw new IllegalStateException("Katana durability or enchantability is incorrect");
+                var damageBook = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ENCHANTED_BOOK);
+                net.minecraft.world.item.EnchantedBookItem.addEnchantment(damageBook, new net.minecraft.world.item.enchantment.EnchantmentInstance(net.minecraft.world.item.enchantment.Enchantments.SHARPNESS, 1));
+                var repairBook = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ENCHANTED_BOOK);
+                net.minecraft.world.item.EnchantedBookItem.addEnchantment(repairBook, new net.minecraft.world.item.enchantment.EnchantmentInstance(net.minecraft.world.item.enchantment.Enchantments.MENDING, 1));
+                if (!savedStack.getItem().isBookEnchantable(savedStack, damageBook) || savedStack.getItem().isBookEnchantable(savedStack, repairBook))
+                    throw new IllegalStateException("Katana anvil enchantment policy is incorrect");
                 float health = player.getHealth();
                 boolean hurt = player.hurt(player.damageSources().mobAttack(mobs.get(0)), 5);
                 if (hurt || player.getHealth() != health)

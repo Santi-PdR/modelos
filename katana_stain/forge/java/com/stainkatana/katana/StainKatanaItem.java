@@ -39,6 +39,13 @@ public class StainKatanaItem extends SwordItem implements GeoItem {
     @Override public boolean canApplyAtEnchantingTable(ItemStack stack, net.minecraft.world.item.enchantment.Enchantment enchantment) {
         return enchantment.category == net.minecraft.world.item.enchantment.EnchantmentCategory.WEAPON;
     }
+    @Override public boolean isBookEnchantable(ItemStack stack, ItemStack book) {
+        // An unbreakable blade has no use for Mending or Unbreaking. Keep the
+        // same weapon-only policy in anvils and at the enchanting table.
+        var enchantments = net.minecraft.world.item.enchantment.EnchantmentHelper.getEnchantments(book);
+        return !enchantments.isEmpty() && enchantments.keySet().stream()
+                .allMatch(enchantment -> enchantment.category == net.minecraft.world.item.enchantment.EnchantmentCategory.WEAPON);
+    }
 
     @Override
     public void initializeClient(Consumer<IClientItemExtensions> consumer) {

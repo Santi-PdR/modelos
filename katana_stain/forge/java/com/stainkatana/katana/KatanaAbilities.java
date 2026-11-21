@@ -301,10 +301,11 @@ public final class KatanaAbilities {
             BACKSTABS.put(player.getUUID(), new Backstab(stab.target(), stab.stack(), stab.dimension(), stab.start(), true));
             // Never execute an otherwise healthy ordinary target in one blow; preserve at least one health.
             float damage = CombatTuning.backstabDamage(target.getHealth(), target.getMaxHealth());
-            if (damage > 0) target.hurt(player.damageSources().playerAttack(player), damage);
+            boolean landed = damage > 0 && target.hurt(player.damageSources().playerAttack(player), damage);
+            player.serverLevel().playSound(null, player.blockPosition(), betterCombatSound("rapier_stab", SoundEvents.PLAYER_ATTACK_SWEEP), SoundSource.PLAYERS, .65F, 1.1F);
             KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.7), target.getZ(), KatanaVisualStyle.FINISHER);
             player.serverLevel().sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.7), target.getZ(), 16, .35, .4, .35, .04);
-            player.serverLevel().playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, 1.0F, .75F);
+            if (landed) player.serverLevel().playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, .75F, .8F);
         }
     }
 
@@ -406,6 +407,11 @@ public final class KatanaAbilities {
             // Clear it only immediately before a scheduled hit, never every tick.
             if (damage > 0) mob.invulnerableTime = 0;
             if (damage > 0 && hitUltimate(player, mob, damage)) {
+                // Contact has its own transient, separate from the blade's whoosh.
+                player.serverLevel().playSound(null, mob.blockPosition(),
+                        index == CombatTuning.ultimateStrikeCount() - 1 ? SoundEvents.PLAYER_ATTACK_CRIT : SoundEvents.PLAYER_ATTACK_STRONG,
+                        SoundSource.PLAYERS, index == CombatTuning.ultimateStrikeCount() - 1 ? .8F : .38F,
+                        index == CombatTuning.ultimateStrikeCount() - 1 ? .8F : 1.1F);
                 if (mob.isAlive()) StainKatanaItem.markTarget(cast.stack, mob, player.serverLevel());
                 if (!cast.durabilitySpent) {
                     cast.durabilitySpent = true;
@@ -510,7 +516,7 @@ public final class KatanaAbilities {
             level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.55), target.getZ(), 4, .25, .25, .25, 0);
             if (!ultimate) {
                 KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.55), target.getZ(), KatanaVisualStyle.HIT);
-                level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, .7F, 1.15F);
+                level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, .45F, 1.05F);
             }
         }
         // El corte existe aunque la víctima se aparte durante la preparación.
@@ -539,9 +545,11 @@ public final class KatanaAbilities {
 
     private static SoundEvent katanaSwingSound() {
         // Borrow the installed Better Combat sound; never ship its audio in our JAR.
-        ResourceLocation id = new ResourceLocation("bettercombat", "katana_slash");
-        return ForgeRegistries.SOUND_EVENTS.containsKey(id)
-                ? ForgeRegistries.SOUND_EVENTS.getValue(id) : SoundEvents.PLAYER_ATTACK_SWEEP;
+        return betterCombatSound("katana_slash", SoundEvents.PLAYER_ATTACK_SWEEP);
+    }
+    private static SoundEvent betterCombatSound(String path, SoundEvent fallback) {
+        ResourceLocation id = new ResourceLocation("bettercombat", path);
+        return ForgeRegistries.SOUND_EVENTS.containsKey(id) ? ForgeRegistries.SOUND_EVENTS.getValue(id) : fallback;
     }
 
     private static Vec3 facing(ServerPlayer player) {

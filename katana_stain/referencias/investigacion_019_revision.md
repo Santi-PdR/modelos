@@ -13,3 +13,5 @@
 
 ## Verificación que aún hace falta
 Las capturas en software no demuestran agarre palma-empuñadura en movimiento ni audio, y no prueban compatibilidad universal de jefes. La cinemática, cambio de ítem, daño recibido, temporización de impactos, y ambos modos de HUD requieren pruebas reales en cliente/servidor; la integración con mods de animación puede alterar el resultado.
+
+- Improved Animations, https://github.com/ProjectSlenders/Improved-Animations, commit `9371f058d3b29e25bce6ef67ec1ea416dac0e4b1`, MIT (copyright Adam-dawoud): se adaptaron las curvas de brazos y giro de torso de `attack_sword.json` para probar un corte X propio. Se excluyeron traslaciones y canales no compatibles; la adaptación se genera con `tools/adaptar_corte.py` y requiere revisión visual y sincronización en juego. Licencia incluida en META-INF.

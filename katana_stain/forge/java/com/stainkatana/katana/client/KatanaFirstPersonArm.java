@@ -32,7 +32,9 @@ public final class KatanaFirstPersonArm {
         float root = Mth.sqrt(swing);
         PoseStack pose = event.getPoseStack();
         pose.pushPose();
-        pose.translate(sign * (-.3F * Mth.sin(root * Mth.PI) + .86F),
+        // Keep the hand and blade together, but bring the grip slightly
+        // inward so the hilt is not pushed against the screen edge.
+        pose.translate(sign * (-.3F * Mth.sin(root * Mth.PI) + .76F),
                 .4F * Mth.sin(root * Mth.TWO_PI) - .50F - event.getEquipProgress() * .6F,
                 -.4F * Mth.sin(swing * Mth.PI) - .72F);
         pose.mulPose(Axis.YP.rotationDegrees(sign * 45));
