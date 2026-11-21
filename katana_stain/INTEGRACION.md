@@ -467,3 +467,21 @@ La comparación de un ajuste separado de profundidad para la mano libre en
 primera persona pasó el fixture, pero dejó la mano fuera de cuadro durante gran
 parte del gesto. Se descartó y se conservaron las capturas del ajuste anterior;
 la prueba funcional por sí sola no valida la coreografía.
+
+
+## 0.19.0-test — candidata para prueba en juego
+
+Versión de prueba, no una versión definitiva. Incluye el HUD desplazable, las
+texturas de menor resolución, el ajuste de primera persona en reposo, el nuevo
+ritmo de C y su búsqueda de partes de jefes cargadas. También gira la hoja
+únicamente durante el gesto de sangre; se basa en Inspect de Emotecraft (CC0)
+y utiliza partículas de Better Combat Particle (MIT), no efectos de Darkest
+Hours. El renderer y agarre normales en tercera persona no se han cambiado.
+
+El fixture Forge ha comprobado jugador diestro y zurdo, con y sin Better Combat,
+el remate por Z, C sobre un Ender Dragon y la selección de una parte cuando el
+cuerpo del dragón queda fuera de la caja de búsqueda. No prueba todos los mods,
+latencias, jefes ni demuestra que el gesto toque la hoja. En capturas la hoja se
+acerca a la cara, pero la mano libre aún no recorre claramente el filo; el
+encuadre y los sonidos deben juzgarse en una partida real. Cliente y servidor
+necesitan el mismo JAR y se mantienen las dependencias indicadas para 0.18.
