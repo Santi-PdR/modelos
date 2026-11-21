@@ -449,3 +449,8 @@ antes de la preparación del golpe, no en el mismo tick del impacto; si no hay
 posición válida se permanece en el sitio. La cámara recibe el objetivo desde
 el inicio. El gesto Z y sus ajustes de primera persona siguen siendo prototipos
 para revisión visual; las capturas no demuestran contacto exacto con la hoja.
+
+La comparación adicional del gesto con una traslación lateral del brazo y menor
+profundidad en primera persona produjo mayor oclusión y no demostró contacto con
+la hoja; se descartó ese experimento. Persiste la limitación visual del gesto,
+por lo que la prueba automatizada no debe interpretarse como aprobación estética.
