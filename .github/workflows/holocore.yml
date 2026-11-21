@@ -268,13 +268,24 @@ jobs:
         run: |
           set +e
           command -v xvfb-run || sudo apt-get install -y xvfb
-          timeout 600 xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient --no-daemon > client.log 2>&1
+          timeout 480 xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient --no-daemon > client.log 2>&1
           echo "exit=$?"
           grep -n "Sound engine started\|Startup took\|Created:" client.log | head -20 || true
           echo '--- ultimas lineas ---'
           tail -60 client.log
           if ! grep -q "Sound engine started" client.log; then
             echo "::error::El cliente no llego a arrancar (sin 'Sound engine started')."
+            # El resumen del job se puede leer por API aunque el CDN de logs no
+            # sea accesible: se deja aqui el diagnostico.
+            {
+              echo "### Diagnostico runClient"
+              echo ''
+              echo '```'
+              grep -nE "Exception|Caused by|ERROR|error|Failed|failed|xvfb|Crash|Could not" client.log | tail -80 || true
+              echo '--- tail ---'
+              tail -120 client.log || true
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
           if grep -qE "Crash report saved to|A fatal error has been detected|Failed to create display" client.log; then
