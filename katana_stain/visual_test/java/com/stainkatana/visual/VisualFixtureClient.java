@@ -100,7 +100,15 @@ public final class VisualFixtureClient {
             case 340 -> capture = "14_ultimate_6s.png";
             case 380 -> capture = "15_ultimate_8s.png";
             case 430 -> capture = "16_ultimate_end.png";
-            case 440 -> { mc.options.fov().set(35); mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); }
+            case 440 -> {
+                mc.options.fov().set(35); mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+                // Move the marked fixture mob aside so it cannot obscure the player's gesture.
+                mc.getSingleplayerServer().execute(() -> {
+                    var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                    var mobs = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, player.getBoundingBox().inflate(8));
+                    if (!mobs.isEmpty()) mobs.get(0).teleportTo(player.getX() + 3, player.getY(), player.getZ() + 1);
+                });
+            }
             case 445 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(0));
             case 449 -> capture = "17a_blood_third_reach.png";
             case 453 -> capture = "17b_blood_third_draw.png";
