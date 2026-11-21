@@ -66,7 +66,7 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             default -> -1;
         };
         if (i >= 0) matrices[i] = new Matrix4f(stack.last().pose());
-        if (HOOD.equals(bone.getName())) {
+        if (HOOD.equals(bone.getName()) && !bone.getCubes().isEmpty()) {
             // These vertices are in GEO space, not offsets from this bone.
             // Measure a real crown corner, not a point below the mannequin.
             var cube = bone.getCubes().get(0);
@@ -86,7 +86,7 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         }
     }
 
-    static Draw finish(CapaArmorRenderer renderer, float partial) {
+    static Draw finish(CapaArmorRenderer renderer, float partial, boolean withoutCrown) {
         CapeWalkProbe probe = get(renderer);
         probe.active = false;
         var matrices = probe.matrices;
@@ -94,8 +94,8 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         var inverseBody = new Matrix4f(matrices[0]).invert();
         var seat = new Matrix4f(inverseBody).mul(matrices[1]);
         var tip = new Matrix4f(inverseBody).mul(matrices[4]);
-        if (probe.crown == null) throw new AssertionError("missing live crown");
-        var hood = inverseBody.transformPosition(probe.crown, new Vector3f()).mul(16);
+        if (withoutCrown != (probe.crown == null)) throw new AssertionError("unexpected crown in test draw");
+        var hood = withoutCrown ? new Vector3f() : inverseBody.transformPosition(probe.crown, new Vector3f()).mul(16);
         var player = Minecraft.getInstance().player;
         CapeWornMotion motion = CapaArmorModel.wornMotion(player);
         if (!probe.testedRepeat && motion.weight(CapeState.WALK) > .98) {

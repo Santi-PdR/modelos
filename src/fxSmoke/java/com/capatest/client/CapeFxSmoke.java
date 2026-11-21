@@ -665,7 +665,7 @@ public final class CapeFxSmoke {
         armorPose = new Matrix4f(event.getPoseStack().last().pose());
         if (scene.placement() || scene.audit() || jumpFit || combinedFit)
             placementDraw = CapePlacementProbe.finish(renderer, event.getPoseStack(), placementModel);
-        if (scene.measureMotion()) walkDraw = CapeWalkProbe.finish(renderer, event.getPartialTick());
+        if (scene.measureMotion()) walkDraw = CapeWalkProbe.finish(renderer, event.getPartialTick(), "v17_cowl_back_".equals(scene.omitted));
         frameLight = event.getPackedLight();
         framePartialTick = event.getPartialTick();
         if (scene == Scene.WINGS) {
