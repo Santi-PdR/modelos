@@ -462,22 +462,7 @@ public final class VisualFixtureClient {
             case 1272 -> capture = "51_blood_right_third_draw.png";
             case 1276 -> capture = "52_blood_right_third_face.png";
             case 1280 -> capture = "53_blood_right_third_recovery.png";
-            case 1290 -> mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.LEFT);
-            case 1305 -> leftOffsetSample(.25F, 0, 0);
-            case 1312 -> capture = "54_left_item_x_plus.png";
-            case 1330 -> leftOffsetSample(-.25F, 0, 0);
-            case 1337 -> capture = "55_left_item_x_minus.png";
-            case 1355 -> leftOffsetSample(0, .25F, 0);
-            case 1362 -> capture = "56_left_item_y_plus.png";
-            case 1380 -> leftOffsetSample(0, -.25F, 0);
-            case 1387 -> capture = "57_left_item_y_minus.png";
-            case 1405 -> leftOffsetSample(0, 0, .25F);
-            case 1412 -> capture = "58_left_item_z_plus.png";
-            case 1430 -> leftOffsetSample(0, 0, -.25F);
-            case 1437 -> capture = "59_left_item_z_minus.png";
-            case 1455 -> {
-                java.util.Arrays.fill(com.stainkatana.katana.KatanaRenderer.diagnosticOffset, 0);
-                mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
+            case 1295 -> {
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Y.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Z.set(0.0);
@@ -485,11 +470,6 @@ public final class VisualFixtureClient {
             }
             default -> { }
         }
-    }
-    private static void leftOffsetSample(float x, float y, float z) {
-        float[] offset = com.stainkatana.katana.KatanaRenderer.diagnosticOffset;
-        offset[0] = x; offset[1] = y; offset[2] = z;
-        bloodSample(0, 0, 0);
     }
     private static void bloodSample(double x, double y, double z) {
         com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(x);
