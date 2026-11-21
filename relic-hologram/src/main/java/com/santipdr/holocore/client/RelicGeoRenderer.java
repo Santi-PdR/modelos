@@ -177,6 +177,20 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
         tintAlpha = alpha;
     }
 
+    /** Color empaquetado del ultimo frame y el objeto que se devolvio entonces. */
+    private int cachedArgb;
+    private Color cachedColor;
+
+    /**
+     * Igual que {@code Color.ofRGBA(float,float,float,float)} de GeckoLib 4.8.1:
+     * {@code (int) (v * 255 + 0.5)} y mascara de 8 bits por canal. Se replica en
+     * vez de llamarlo porque esa version crea un {@code Color} nuevo en cada
+     * llamada, y esto se llama una vez por portador y frame.
+     */
+    private static int channel255(float value) {
+        return ((int) (value * 255.0F + 0.5F)) & 0xFF;
+    }
+
     /**
      * GeckoLib pasa este color como color de vertice de cada cubo, asi que sirve
      * para atenuar el pase aditivo sin tocar estado global de OpenGL (un
@@ -185,7 +199,15 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
      */
     @Override
     public Color getRenderColor(RelicAnimatable animatable, float partialTick, int packedLight) {
-        return Color.ofRGBA(tintRed, tintGreen, tintBlue, tintAlpha);
+        // El pase base siempre va en blanco, asi que en regimen estable esto no
+        // crea nada: se reutiliza el mismo Color mientras el empaquetado no cambie.
+        int argb = (channel255(tintAlpha) << 24) | (channel255(tintRed) << 16)
+                | (channel255(tintGreen) << 8) | channel255(tintBlue);
+        if (cachedColor == null || argb != cachedArgb) {
+            cachedArgb = argb;
+            cachedColor = new Color(argb);
+        }
+        return cachedColor;
     }
 
     @Override

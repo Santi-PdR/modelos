@@ -10,7 +10,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
 
 /**
  * Aura y anillo de la reliquia: billboards aditivos que miran a camara.
@@ -186,26 +185,53 @@ public final class RelicAura {
     // Geometria
     // ------------------------------------------------------------------
 
-    /** Origen, escala y ejes de camara de este frame. */
-    private record Frame(float originX, float originY, float originZ, float scale,
-                         Vector3f left, Vector3f up) {
+    /**
+     * Origen, escala y ejes de camara de este frame.
+     *
+     * <p>Es una instancia <b>reutilizada</b>, no un {@code record}: el render corre
+     * en el hilo de render, un portador detras de otro, asi que no hay dos frames
+     * a la vez. Antes cada frame creaba un {@code record} y, por cada billboard,
+     * cuatro {@code Vector3f} para girar los ejes: del orden de 35 objetos por
+     * portador y frame, que a 240 FPS y diez reliquias en pantalla son ~88 000
+     * objetos por segundo solo de basura para el recolector.</p>
+     */
+    private static final class Frame {
+        private float originX;
+        private float originY;
+        private float originZ;
+        private float scale;
+        private float leftX;
+        private float leftY;
+        private float leftZ;
+        private float upX;
+        private float upY;
+        private float upZ;
     }
+
+    /** Unico frame vivo: se rellena en {@link #frame} y se lee en {@link #billboard}. */
+    private static final Frame FRAME = new Frame();
 
     private static Frame frame(PoseStack poseStack) {
         Matrix4f matrix = poseStack.last().pose();
-        float originX = matrix.m30();
-        float originY = matrix.m31();
-        float originZ = matrix.m32();
+        Frame frame = FRAME;
+        frame.originX = matrix.m30();
+        frame.originY = matrix.m31();
+        frame.originZ = matrix.m32();
         // Escala uniforme aproximada: longitud de la primera columna.
         float scale = (float) Math.sqrt(
                 matrix.m00() * matrix.m00() + matrix.m01() * matrix.m01() + matrix.m02() * matrix.m02());
-        if (!(scale > 0.0F) || Float.isNaN(scale)) {
-            scale = 1.0F;
-        }
+        frame.scale = (scale > 0.0F) && !Float.isNaN(scale) ? scale : 1.0F;
 
+        // Ejes de la camara tal cual: se leen sus componentes en el acto, sin
+        // copiarlos a ningun vector propio.
         Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
-        return new Frame(originX, originY, originZ, scale,
-                new Vector3f(camera.getLeftVector()), new Vector3f(camera.getUpVector()));
+        frame.leftX = camera.getLeftVector().x();
+        frame.leftY = camera.getLeftVector().y();
+        frame.leftZ = camera.getLeftVector().z();
+        frame.upX = camera.getUpVector().x();
+        frame.upY = camera.getUpVector().y();
+        frame.upZ = camera.getUpVector().z();
+        return frame;
     }
 
     /**
@@ -217,21 +243,26 @@ public final class RelicAura {
         float cos = (float) Math.cos(angle);
         float sin = (float) Math.sin(angle);
 
-        // Ejes del quad girados alrededor del eje de vision.
-        Vector3f axisX = new Vector3f(frame.left()).mul(cos).add(new Vector3f(frame.up()).mul(sin));
-        Vector3f axisY = new Vector3f(frame.up()).mul(cos).sub(new Vector3f(frame.left()).mul(sin));
+        // Ejes del quad girados alrededor del eje de vision: una combinacion
+        // lineal de los ejes de la camara, sin asignar nada.
+        float axX = frame.leftX * cos + frame.upX * sin;
+        float axY = frame.leftY * cos + frame.upY * sin;
+        float axZ = frame.leftZ * cos + frame.upZ * sin;
+        float ayX = frame.upX * cos - frame.leftX * sin;
+        float ayY = frame.upY * cos - frame.leftY * sin;
+        float ayZ = frame.upZ * cos - frame.leftZ * sin;
 
-        float half = diameter * 0.5F * frame.scale();
-        float x = half * axisX.x();
-        float y = half * axisX.y();
-        float z = half * axisX.z();
-        float ux = half * axisY.x();
-        float uy = half * axisY.y();
-        float uz = half * axisY.z();
+        float half = diameter * 0.5F * frame.scale;
+        float x = half * axX;
+        float y = half * axY;
+        float z = half * axZ;
+        float ux = half * ayX;
+        float uy = half * ayY;
+        float uz = half * ayZ;
 
-        float ox = frame.originX();
-        float oy = frame.originY();
-        float oz = frame.originZ();
+        float ox = frame.originX;
+        float oy = frame.originY;
+        float oz = frame.originZ;
 
         quad(buffer,
                 ox - x - ux, oy - y - uy, oz - z - uz,

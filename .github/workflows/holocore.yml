@@ -181,7 +181,15 @@ jobs:
               width, height, depth, color_type = (*struct.unpack('>II', data[16:24]), data[24], data[25])
               assert (width, height, depth, color_type) == (64, 64, 8, 6), (name, width, height, depth, color_type)
 
-          print(f'Docs OK: {len(keys)} claves de config documentadas; aura y anillo 64x64 RGBA.')
+          # Dos secciones "## Brillo y shaders" convivieron hasta 1.0.16: la segunda
+          # era la de antes de 1.0.12 y seguia diciendo "dos pases" y "~11 700
+          # quads". Un encabezado repetido es la senal mas barata de ese desague.
+          secciones = re.findall(r'^## (.+)$', readme, re.M)
+          repetidas = sorted({x for x in secciones if secciones.count(x) > 1})
+          assert not repetidas, f'README.md con secciones repetidas: {repetidas}'
+
+          print(f'Docs OK: {len(keys)} claves de config documentadas; aura y anillo 64x64 RGBA;'
+                f' {len(secciones)} secciones de README sin repetir.')
           PY
 
       # ------------------------------------------------------------------
@@ -310,6 +318,60 @@ jobs:
                   malos.append(f'{f.name}: {m.group(0)}')
           assert not malos, 'usar RelicAnimations.* en vez de literales -> ' + '; '.join(malos)
           print('Nombres de animacion: todos via RelicAnimations.')
+          PY
+
+      # 1.0.16 quitaba tres de las cuatro evaluaciones de animacion por frame. Es
+      # una mejora invisible: si alguien vuelve a llamar a defaultRender en los
+      # pases extra, no rompe nada y nadie se entera hasta que baja el FPS. Esto
+      # la fija: un defaultRender (el que anima), ningun actuallyRender suelto y
+      # tres renderExtra (que van por reRender sobre la pose ya posada).
+      - name: Validate single animation evaluation
+        run: |
+          python3 - <<'PY'
+          import pathlib, re
+
+          fuente = pathlib.Path(
+              'relic-hologram/src/main/java/com/santipdr/holocore/client/RelicGeoRenderer.java'
+          ).read_text(encoding='utf-8')
+          codigo = re.sub(r'/\*.*?\*/', '', fuente, flags=re.S)
+          codigo = re.sub(r'//[^\n]*', '', codigo)
+
+          # \b para que preRender( no cuente como reRender(.
+          def veces(llamada):
+              return len(re.findall(r'\b' + re.escape(llamada) + r'\(', codigo))
+
+          assert veces('defaultRender') == 1, f'defaultRender: {veces("defaultRender")} (debe ser 1)'
+          assert veces('actuallyRender') == 0, 'no llamar a actuallyRender directamente'
+          assert veces('reRender') == 1, f'reRender: {veces("reRender")} (debe ser 1, dentro de renderExtra)'
+          # La declaracion lleva BakedGeoModel delante; las llamadas empiezan por model.
+          extra = len(re.findall(r'renderExtra\(\s*model', codigo))
+          assert extra == 3, f'renderExtra(model...): {extra} (deben ser 3)'
+          print('Animacion OK: 1 defaultRender + 3 renderExtra (= 1 sola evaluacion por frame).')
+          PY
+
+      # 1.0.17: el aura y el estado interpolado no reservan memoria por frame.
+      # Antes eran ~35 objetos por portador y frame. Un `new` nuevo en estos dos
+      # ficheros (fuera de constantes de clase) devuelve la basura al recolector.
+      - name: Validate render path allocations
+        run: |
+          python3 - <<'PY'
+          import pathlib, re
+
+          base = pathlib.Path('relic-hologram/src/main/java/com/santipdr/holocore/client')
+          malos = []
+          for nombre in ('RelicAura.java', 'RelicGlowState.java'):
+              fuente = (base / nombre).read_text(encoding='utf-8')
+              codigo = re.sub(r'/\*.*?\*/', '', fuente, flags=re.S)
+              codigo = re.sub(r'//[^\n]*', '', codigo)
+              for numero, linea in enumerate(codigo.splitlines(), 1):
+                  if ' new ' not in linea:
+                      continue
+                  # Solo se permiten objetos creados al cargar la clase.
+                  if 'private static final' in linea or 'new ResourceLocation(' in linea:
+                      continue
+                  malos.append(f'{nombre}:{numero}: {linea.strip()}')
+          assert not malos, 'asignacion en el camino de render -> ' + '; '.join(malos)
+          print('Render path OK: aura y estado sin asignaciones por frame.')
           PY
 
       - name: Build

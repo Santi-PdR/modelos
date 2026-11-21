@@ -54,8 +54,13 @@ def leer_constantes():
     darken = 1.0  # el tinte usa el color del estado tal cual
 
     state = STATE_JAVA.read_text(encoding='utf-8')
-    idle = re.search(r'case IDLE -> new Target\(([^)]*)\)', state).group(1)
-    tinte = floats(idle)[:3]
+    # 1.0.17 movio los destinos de estado a constantes TARGET_* (antes se creaba
+    # un Target por frame). Se aceptan las dos formas para que el numero salga
+    # sea cual sea la que este en el codigo.
+    idle = (re.search(r'TARGET_IDLE = new Target\(([^)]*)\)', state)
+            or re.search(r'case IDLE -> new Target\(([^)]*)\)', state))
+    assert idle is not None, 'no se encontro el color del estado IDLE en RelicGlowState'
+    tinte = floats(idle.group(1))[:3]
 
     config = CONFIG_JAVA.read_text(encoding='utf-8')
     intensidad = floats(re.search(r'"auraIntensity", ([\d.]+)D', config).group(1))[0]

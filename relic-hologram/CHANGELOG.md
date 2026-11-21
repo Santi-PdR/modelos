@@ -1,5 +1,30 @@
 # Historial de cambios
 
+## 1.0.17 — el camino de render ya no reserva memoria (y el README deja de repetirse)
+
+* **Cero asignaciones por frame y portador** en el aura, el anillo y el estado
+  interpolado. `RelicAura` creaba un `record Frame` por frame y cuatro `Vector3f`
+  por billboard para girar los ejes; con tint + aditivo + anillo eran **35
+  objetos por portador y frame** (a 240 FPS con diez reliquias, ~88 000 objetos
+  por segundo). Ahora `Frame` es una instancia reutilizada y el giro son seis
+  multiplicaciones en `float`. `RelicGlowState.targetFor` devuelve constantes
+  `static final` en vez de crear un `Target`, y `getRenderColor` reutiliza el
+  `Color` mientras el tinte no cambie (el pase base va siempre en blanco).
+  Ningún píxel cambia: son las mismas cuentas con menos objetos.
+* **Dos chequeos nuevos de CI**: `Validate render path allocations` prohíbe `new`
+  en `RelicAura` y `RelicGlowState` salvo en constantes de clase, y
+  `Validate single animation evaluation` fija lo de 1.0.16 (un `defaultRender`,
+  ningún `actuallyRender`, tres `renderExtra`). Las dos mejoras de rendimiento
+  ya no pueden perderse en silencio.
+* **README sin secciones duplicadas.** Había dos «Brillo y shaders»: la segunda
+  era la de antes de 1.0.12 («El modelo se dibuja dos veces», «~11 700 quads por
+  reliquia y frame»). Se queda una sola, con el recuento real (cuatro pases,
+  ~23 000 quads con todo encendido) y el tinte del halo corregido a un cuarto
+  del color del estado, que es lo que hace el código desde 1.0.12. El CI ahora
+  falla si un `##` se repite en el README.
+* `docs/BRILLO-Y-SHADERS.md` §A.1c: lo que sí cuesta por frame (geometría) y lo
+  que se dejó de asignar.
+
 ## 1.0.16 — una animación por frame, no cuatro
 
 * **Los cuatro pases ya no evalúan la animación cuatro veces.** Estudiado en el

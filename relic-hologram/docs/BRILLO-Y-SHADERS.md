@@ -479,6 +479,38 @@ verían desalineados como flecos de color en los bordes.
 El tinte de los pases extra se pasa explícito a `reRender` porque en ese camino
 GeckoLib no consulta `getRenderColor`; solo lo lee `defaultRender`.
 
+### A.1c Lo que sí se paga por frame: geometría, no memoria
+
+Quitar tres evaluaciones de animación deja el coste donde de verdad está: emitir
+vértices. Con 977 cubos son 5 866 quads por pase, y con los cuatro pases
+encendidos ~23 000 quads por reliquia y frame (4 506 por pase en `lite`). Eso no
+se puede evitar sin cambiar el modelo, así que las palancas siguen siendo
+`maxRenderDistance`, `quality`, `glowHalo` y `shaderGlow`.
+
+Lo que **sí** se podía quitar es la basura que generaba el camino de render, y
+desde 1.0.17 no se reserva nada por frame y portador:
+
+* `RelicAura` giraba los ejes del billboard creando cuatro `Vector3f` por quad
+  (`left*cos + up*sin` y `up*cos - left*sin`) más un `record Frame` por frame.
+  Ahora `Frame` es una instancia reutilizada (el render corre en el hilo de
+  render, un portador detrás de otro) y el giro son seis multiplicaciones en
+  `float`. Entre tint, aditivo y anillo eran **35 objetos por portador y frame**;
+  a 240 FPS con diez reliquias en pantalla, ~88 000 objetos por segundo que solo
+  alimentaban al recolector.
+* `RelicGlowState.targetFor(...)` creaba un `Target` por frame; los cinco
+  destinos son ahora `static final`.
+* `RelicGeoRenderer.getRenderColor(...)` llamaba a `Color.ofRGBA(...)`, que en
+  GeckoLib 4.8.1 construye un `record Color` nuevo. Como el pase base va siempre
+  en blanco, se empaqueta el ARGB igual que GeckoLib y se reutiliza el mismo
+  objeto mientras el tinte no cambie.
+
+Nada de esto cambia un píxel: son las mismas cuentas con menos objetos. El CI lo
+comprueba con dos pasos nuevos —`Validate render path allocations` (prohíbe
+`new` en `RelicAura` y `RelicGlowState` salvo en constantes de clase) y
+`Validate single animation evaluation` (un solo `defaultRender`, ningún
+`actuallyRender`, tres `renderExtra`)—, así que la mejora de 1.0.16 y esta no
+pueden perderse en silencio.
+
 ### A.2 Cómo se carga
 
 El juego sólo precompila sus propios core shaders, así que hay que construir el

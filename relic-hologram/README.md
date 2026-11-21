@@ -117,6 +117,11 @@ Complementary, BSL…) usan para detectar emisivos y aplicar su bloom. Encima ha
 un tercer pase con **blend aditivo**: suma luz en vez de mezclarla, así que el
 núcleo brilla también sin shaderpack.
 
+Los dos pases emisivos llevan `LightTexture.FULL_BRIGHT`, así que el núcleo **se ve
+igual de noche, en cuevas, bajo el agua y con la antorcha apagada**, con y sin
+shaderpack. Si el coste molesta: `glowLayer=false` deja solo el pase base (que ya
+es fullbright), `glowHalo=false` quita el halo y `shaderGlow=false` el GLSL.
+
 La **aura** son tres billboards (quads que miran a cámara) con la textura
 `relic_aura.png`, girando a distinta velocidad, sumados con el mismo blend
 aditivo. Eso da el resplandor alrededor del núcleo sin tocar la pantalla y sin
@@ -173,8 +178,9 @@ Dos detalles que hacen que el borde se vea siempre:
 * el borde entra también en la **alpha**, así que la silueta brilla aunque la
   textura emisiva sea transparente justo ahí.
 
-El tono del halo, del borde y del pase GLSL se mezcla al 50% con el color del
-estado, así que cargada tira a ámbar y alerta a rojo en vez de quedarse azul.
+El tono del halo, del borde y del pase GLSL es un **cuarto** del color del estado
+(tres cuartos de azul frío de núcleo), así que cargada tira a ámbar y alerta a rojo
+sin dejar de leerse como holograma.
 
 El **destello de evento** (`visuals.flashIntensity`) es lo que hace que la
 reliquia *conteste*: cuando llega un pulso, una liberación, un golpe recibido o
@@ -245,31 +251,6 @@ hay que sumar la traslación que traía `relic_hologram.geo.json`.
   `AnimationController` simultáneos: `state` (bucles + acciones) y `layer`
   (solo `layer_*`), para que las capas no pisen los giros.
 
-## Brillo y shaders
-
-El modelo se dibuja dos veces con `RenderType.entityTranslucentEmissive`:
-
-1. textura base (`relic_hologram.png`, incluye el aura tenue);
-2. textura emisiva (`relic_hologram_glowing.png`, sin el aura, para no sumarla
-   dos veces).
-
-Ese `RenderType` usa el shader emisivo de vanilla (sin término difuso por normal)
-y se le pasa `LightTexture.FULL_BRIGHT`, así que **se ve igual de noche, en
-cuevas, bajo el agua y con la antorcha apagada**. No hay ninguna dependencia de
-shaders.
-
-* **Iris/Oculus:** al ser `RenderType` de entidad estándar, los shaders lo tratan
-  como cualquier entidad translúcida: sigue siendo fullbright, pero el paquete de
-  shaders puede aplicarles bloom propio o teñirlo con su grading. No hay
-  uniforms propios que puedan romperse.
-* **Bloom real opcional:** si instalas un mod de post-proceso (p. ej. un shader
-  con bloom), la textura emisiva ya alimenta ese bloom. No se integra ningún mod
-  de bloom de forma obligatoria.
-* **Sombreado:** al usar el shader emisivo, el núcleo no recibe sombra de caras;
-  lo que se ve es el brillo de la textura, no el `lightmap`.
-* Si en tu equipo el doble pase pesa demasiado, `glowLayer=false` deja solo el
-  pase base (que ya es fullbright).
-
 ## Notas sobre los assets (sin modificarlos)
 
 * Se usan `relic_hologram_centered.geo.json`, `relic_hologram_lite_centered.geo.json`
@@ -283,15 +264,19 @@ shaders.
   `relic_hologram_glowing.png` (que es casi todo el atlas) el modelo base quedaría
   vacío, así que se implementa el brillo con dos pases emisivos en vez de
   `AutoGlowingGeoLayer`. La textura entregada se usa tal cual, sin renombrar.
-* El modelo es de 977 cubos (751 en lite) y se renderiza en dos pases: ~11 700
-  quads por reliquia y frame en calidad full. `maxRenderDistance` y
-  `quality=lite` son las dos palancas de rendimiento; el escaneo de alerta va
-  cada 10 ticks y las variaciones de reposo son un contador, no un cálculo por
-  frame.
+* El modelo es de 977 cubos (751 en lite) y se dibuja en **hasta cuatro pases**
+  (base, emisivo, halo y GLSL): 5 866 quads por pase en calidad full, ~23 000
+  quads por reliquia y frame con todo encendido; en lite, 4 506 por pase.
+  `maxRenderDistance` (32 bloques), `quality=lite`, `glowHalo` y `shaderGlow` son
+  las palancas. Lo que **no** se paga cuatro veces es la animación: desde 1.0.16
+  solo el pase base la evalúa y los otros tres reutilizan la pose, y desde 1.0.17
+  el aura, el anillo y el estado no reservan memoria por frame. El escaneo de
+  alerta va cada 10 ticks y las variaciones de reposo son un contador, no un
+  cálculo por frame.
 
 ## Checklist de pruebas
 
-- [ ] `./gradlew build` produce `holocore-1.0.0.jar` y `/relic info` responde.
+- [ ] `./gradlew build` produce `holocore-<versión>.jar` y `/relic info` responde.
 - [ ] Creativo: aparece en la pestaña *Holographic Core* y en la búsqueda.
 - [ ] Receta de crafteo correcta (amatista + cristales + diamante).
 - [ ] Equipar en `charm` → `activation` y luego `idle` en bucle.

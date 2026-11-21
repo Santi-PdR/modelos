@@ -29,13 +29,25 @@ final class RelicGlowState {
     record Target(float red, float green, float blue, float aura, float ring, float spin) {
     }
 
+    /**
+     * Los cinco destinos, creados <b>una vez</b>. Son constantes: el estado que
+     * pide cada uno no cambia en caliente (la config se aplica al usarlos, no
+     * aqui), asi que no hay motivo para crear un {@code Target} por portador y
+     * frame.
+     */
+    private static final Target TARGET_CALM = new Target(0.42F, 0.60F, 0.78F, 0.70F, 0.00F, 0.000F);
+    private static final Target TARGET_CHARGED = new Target(1.00F, 0.72F, 0.30F, 1.15F, 1.10F, 0.075F);
+    private static final Target TARGET_ALERT = new Target(1.00F, 0.34F, 0.28F, 1.05F, 0.85F, -0.055F);
+    private static final Target TARGET_DORMANT = new Target(0.34F, 0.44F, 0.60F, 0.35F, 0.00F, 0.000F);
+    private static final Target TARGET_IDLE = new Target(0.55F, 0.78F, 1.00F, 1.00F, 0.45F, 0.028F);
+
     static Target targetFor(RelicAnimatable.LoopState state) {
         return switch (state) {
-            case CALM -> new Target(0.42F, 0.60F, 0.78F, 0.70F, 0.00F, 0.000F);
-            case CHARGED -> new Target(1.00F, 0.72F, 0.30F, 1.15F, 1.10F, 0.075F);
-            case ALERT -> new Target(1.00F, 0.34F, 0.28F, 1.05F, 0.85F, -0.055F);
-            case DORMANT -> new Target(0.34F, 0.44F, 0.60F, 0.35F, 0.00F, 0.000F);
-            case IDLE -> new Target(0.55F, 0.78F, 1.00F, 1.00F, 0.45F, 0.028F);
+            case CALM -> TARGET_CALM;
+            case CHARGED -> TARGET_CHARGED;
+            case ALERT -> TARGET_ALERT;
+            case DORMANT -> TARGET_DORMANT;
+            case IDLE -> TARGET_IDLE;
         };
     }
 
