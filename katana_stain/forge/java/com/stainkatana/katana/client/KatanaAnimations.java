@@ -89,6 +89,22 @@ public final class KatanaAnimations {
                         .setShowRightArm(true).setShowLeftArm(true));
         // Keep playback speed inside the clip, so the outer fade remains in real ticks.
         ModifierLayer<IAnimation> timedClip = new ModifierLayer<>(playing);
+        if (ability == 0) {
+            // PlayerAnimator renders world-model arms in first person. Lift those
+            // arms only in that render pass so the blood-draw stays in view;
+            // the third-person animation and gameplay positions are unchanged.
+            timedClip.addModifierBefore(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier(part -> {
+                if (!FirstPersonMode.isFirstPersonPass() || !(part.equals("leftArm") || part.equals("rightArm")))
+                    return java.util.Optional.empty();
+                return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
+                        dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
+                        new dev.kosmx.playerAnim.core.util.Vec3f(0, -5, -2)));
+            }) {
+                // Inspect begins at tick zero; the library's default fade divides
+                // by beginTick. The enclosing layer already performs the fade.
+                @Override protected float getFadeIn(float delta) { return 1F; }
+            });
+        }
         timedClip.addModifierBefore(new SpeedModifier(ability == 0 ? 3F : (ability >= 2 ? 1.4F : 2F)));
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
     }
