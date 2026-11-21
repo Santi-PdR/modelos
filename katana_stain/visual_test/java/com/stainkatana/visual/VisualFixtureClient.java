@@ -180,8 +180,16 @@ public final class VisualFixtureClient {
             case 605 -> mc.getSingleplayerServer().execute(() -> {
                 var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                 var mobs = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, player.getBoundingBox().inflate(20));
-                if (mobs.isEmpty() || mobs.get(0).hasEffect(com.stainkatana.katana.KatanaEffects.CINEMATIC_BIND.get()))
+                if (mobs.isEmpty() || !com.stainkatana.katana.KatanaAbilities.isCinematicallyBound(mobs.get(0)))
+                    throw new IllegalStateException("C stopped after changing items");
+                player.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
+            });
+            case 610 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                var mobs = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, player.getBoundingBox().inflate(20));
+                if (mobs.isEmpty() || com.stainkatana.katana.KatanaAbilities.isCinematicallyBound(mobs.get(0)))
                     throw new IllegalStateException("C cancellation did not release mob");
+                player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
                 player.getInventory().setItem(player.getInventory().selected, savedStack);
                 System.out.println("STAIN_CANCELLATION_VERIFIED");
             });
@@ -260,7 +268,7 @@ public final class VisualFixtureClient {
                         || !com.stainkatana.katana.KatanaAbilities.isCinematicallyBound(living)
                         || living.position().distanceToSqr(dragonAnchor) > .25)
                     throw new IllegalStateException("Ender Dragon not held at cinematic anchor");
-                player.getInventory().setItem(player.getInventory().selected, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK));
+                player.setGameMode(net.minecraft.world.level.GameType.SPECTATOR);
                 System.out.println("STAIN_DRAGON_HELD");
             });
             case 815 -> mc.getSingleplayerServer().execute(() -> {
@@ -269,6 +277,7 @@ public final class VisualFixtureClient {
                 if (dragon instanceof net.minecraft.world.entity.LivingEntity living
                         && com.stainkatana.katana.KatanaAbilities.isCinematicallyBound(living))
                     throw new IllegalStateException("Ender Dragon not released after cancellation");
+                player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
                 System.out.println("STAIN_DRAGON_RELEASED");
             });
             case 820 -> mc.getSingleplayerServer().execute(() -> {
