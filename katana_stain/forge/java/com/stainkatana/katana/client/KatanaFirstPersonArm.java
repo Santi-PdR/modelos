@@ -59,6 +59,14 @@ public final class KatanaFirstPersonArm {
             // The first-person skin-arm matrix faces the opposite way from the
             // world model's arm. Rotate around the wrist, not the blade tip.
             pose.mulPose(Axis.XP.rotationDegrees(180));
+            // Turn the raised blade toward the center of the screen while keeping
+            // the pivot on the wrist. Conjugating by the current orientation makes
+            // this a camera-space turn, mirrored for the opposite hand.
+            org.joml.Quaternionf wristOrientation = pose.last().pose().getUnnormalizedRotation(new org.joml.Quaternionf());
+            org.joml.Quaternionf screenTurn = new org.joml.Quaternionf(wristOrientation).invert()
+                    .mul(new org.joml.Quaternionf().rotationZ(sign * (float)Math.PI / 2))
+                    .mul(wristOrientation);
+            pose.mulPose(screenTurn);
             var context = right ? net.minecraft.world.item.ItemDisplayContext.THIRD_PERSON_RIGHT_HAND
                     : net.minecraft.world.item.ItemDisplayContext.THIRD_PERSON_LEFT_HAND;
             mc.getItemRenderer().renderStatic(event.getItemStack(), context, event.getPackedLight(),

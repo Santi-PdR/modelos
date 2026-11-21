@@ -39,7 +39,11 @@ public final class VisualFixtureClient {
                 mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
                 mc.options.fov().set(35);
             }
-            case 18 -> capture = "00a_left_third.png";
+            case 18 -> {
+                if (mc.player.getMainArm() != net.minecraft.world.entity.HumanoidArm.LEFT)
+                    throw new IllegalStateException("Left-handed fixture did not synchronize");
+                capture = "00a_left_third.png";
+            }
             case 21 -> mc.options.setCameraType(CameraType.FIRST_PERSON);
             case 26 -> capture = "00b_left_first.png";
             case 29 -> {
@@ -49,7 +53,11 @@ public final class VisualFixtureClient {
             case 35 -> mc.setScreen(new InventoryScreen(mc.player));
             case 40 -> capture = "01_inventory.png";
             case 48 -> mc.setScreen(null);
-            case 58 -> { mc.options.setCameraType(CameraType.FIRST_PERSON); capture = "02_first_person.png"; }
+            case 58 -> {
+                if (mc.player.getMainArm() != net.minecraft.world.entity.HumanoidArm.RIGHT)
+                    throw new IllegalStateException("Right-handed fixture did not synchronize");
+                mc.options.setCameraType(CameraType.FIRST_PERSON); capture = "02_first_person.png";
+            }
             case 70 -> { mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); mc.options.fov().set(35); capture = "03_third_back.png"; }
             case 82 -> { mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); capture = "04_third_front.png"; }
             case 95 -> { mc.options.fov().set(70); mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); }
