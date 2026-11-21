@@ -1026,38 +1026,12 @@ jobs:
             exit 1
           fi
 
-      - name: Esperar la captura de referencia antes de comparar
-        if: >-
-          !cancelled() && steps.fx-smoke.outcome == 'success' &&
-          contains(github.event.head_commit.message, '[adjuntar-v16726]')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: timeout 360s gh run watch 44918559887 --exit-status --interval 15
-
-      - name: Cargar la escalera de referencia de v1.67.25
-        id: climb-reference
-        if: >-
-          !cancelled() && steps.fx-smoke.outcome == 'success' &&
-          contains(github.event.head_commit.message, '[adjuntar-v16726]')
-        uses: actions/download-artifact@v4
-        with:
-          run-id: 44918559887
-          name: capatest-fx-en-mundo
-          path: ${{ runner.temp }}/forge-escalera-v16725
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Verificar apoyo, salida y caída de la escalera en Forge
         id: verify-climb
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
-        env:
-          CLIMB_REFERENCE: ${{ steps.climb-reference.outcome }}
         run: |
-          set -euo pipefail
-          args=()
-          if [ "$CLIMB_REFERENCE" = success ]; then
-            args+=(--baseline-shots "$RUNNER_TEMP/forge-escalera-v16725")
-          fi
-          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_climb.py build/fx-smoke-run/fx-shots "${args[@]}" 2>&1 | while IFS= read -r line; do
+          set -o pipefail
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_climb.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
             case "$line" in
               *AssertionError:*|*Error:*) printf '::error title=Escalera en Forge::%s\n' "${line//%/%25}" ;;
               *) printf '::notice title=Escalera en Forge::%s\n' "${line//%/%25}" ;;
@@ -1204,45 +1178,6 @@ jobs:
             build/fx-smoke-run/fx-shots/hotbar-ciclo.gif
           if-no-files-found: error
           retention-days: 30
-
-      - name: Adjuntar la prueba verificada v1.67.26 a esta rama
-        if: >-
-          success() && github.event_name == 'push' && github.ref == 'refs/heads/arena/5a9fa51b-modelos' &&
-          contains(github.event.head_commit.message, '[adjuntar-v16726]') &&
-          steps.fx-smoke.outcome == 'success' && steps.climb-reference.outcome == 'success' &&
-          steps.verify-climb.outcome == 'success' && steps.verify-jumps.outcome == 'success' &&
-          steps.verify-placement.outcome == 'success' && steps.verify-walk.outcome == 'success' &&
-          steps.verify-postures.outcome == 'success' && steps.verify-swim.outcome == 'success'
-        run: |
-          set -euo pipefail
-          test "$(git branch --show-current)" = "$GITHUB_REF_NAME"
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          grep -qx 'mod_version=1.67.26' gradle.properties
-          jar=capatest-1.67.26.jar
-          shots=build/fx-smoke-run/fx-shots
-          proof=docs/releases/v1.67.26
-          out="entregables/v1.67.26/$jar"
-          (cd build/libs && sha256sum -c SHA256SUMS.txt)
-          python3 -m zipfile -t "build/libs/$jar"
-          test ! -e "$out"
-          install -D -m 0644 "build/libs/$jar" "$out"
-          install -D -m 0644 build/libs/SHA256SUMS.txt "$proof/JAR.sha256"
-          for file in comparacion-escalera-forge.jpg escalera-forge.tsv saltos-forge.tsv costuras-saltos-forge.tsv \
-              nado-forge.tsv continuidad-forge.tsv revision-alex-forge.tsv holgura-brazos-forge.tsv; do
-            test -s "$shots/$file"
-            install -m 0644 "$shots/$file" "$proof/"
-          done
-          for slot in pecho curios; do
-            install -m 0644 "$RUNNER_TEMP/forge-escalera-v16725/escalera-$slot.tsv" "$proof/escalera-$slot-v16725.tsv"
-            install -m 0644 "$shots/escalera-$slot.tsv" "$proof/escalera-$slot-v16726.tsv"
-          done
-          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16726_colocacion_forge.jpg
-          printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$proof/compilacion.txt"
-          git add -- "$proof" docs/capa_v16726_colocacion_forge.jpg
-          git add -f -- "$out"
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m 'Adjuntar v1.67.26 verificada y la comparación en escalera [skip ci]'
-          git push origin "$GITHUB_REF_NAME"
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.

@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.26 — apoyo en la escalera
+
+**[Descargar JAR de prueba v1.67.26](https://github.com/Santi-PdR/modelos/raw/0fd30c035b93414591e807be775d030a5bc87ca1/entregables/v1.67.26/capatest-1.67.26.jar)** · [Escalera en Forge](docs/releases/v1.67.26/comparacion-escalera-forge.jpg) · [Medidas y SHA-256](docs/releases/v1.67.26/notas.md).
+
+El paño distingue el apoyo al trepar, sostenerse o deslizarse por una escalera de la caída libre al soltarse. Verificado en Forge en pecho y Curios. Se mantienen el arte, los efectos y la descarga pública.
+
 ### v1.67.25 — salto, caída y aterrizaje
 
 **[Descargar JAR de prueba v1.67.25](https://github.com/Santi-PdR/modelos/raw/0c3f8dc2b5c3337db6cfb152a99d168e02a7d855/entregables/v1.67.25/capatest-1.67.25.jar)** · [Saltos en Forge](docs/releases/v1.67.25/comparacion-saltos-forge.jpg) · [Medidas y SHA-256](docs/releases/v1.67.25/notas.md).
