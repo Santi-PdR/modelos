@@ -123,6 +123,14 @@ public final class VisualFixtureClient {
                     throw new IllegalStateException("Two successful Zs did not charge the finisher");
                 var victim = mobs.get(0);
                 finisherTarget = victim.getUUID(); finisherHealth = victim.getHealth();
+                // Creative mode would make both protection checks vacuous.
+                player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+                player.invulnerableTime = 0;
+                float originalHealth = player.getHealth();
+                if (!player.hurt(player.damageSources().mobAttack(victim), 1))
+                    throw new IllegalStateException("Control attack did not damage survival player");
+                player.setHealth(originalHealth);
+                player.invulnerableTime = 0;
                 com.stainkatana.katana.KatanaAbilities.activate(player, 0);
                 if (player.getPersistentData().getCompound("StainKatanaAbilities").getInt("daggerCharges") != 0)
                     throw new IllegalStateException("Pressing Z did not start the finisher or consume charges");
@@ -134,6 +142,7 @@ public final class VisualFixtureClient {
                 float casterHealth = player.getHealth();
                 if (player.hurt(player.damageSources().mobAttack(victim), 4) || player.getHealth() != casterHealth)
                     throw new IllegalStateException("Finisher did not protect its caster");
+                player.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
                 savedStack = player.getMainHandItem();
                 player.getInventory().setItem(player.getInventory().selected, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK));
                 System.out.println("STAIN_FINISHER_ITEM_SWITCH_VERIFIED");
@@ -193,10 +202,13 @@ public final class VisualFixtureClient {
                 net.minecraft.world.item.EnchantedBookItem.addEnchantment(repairBook, new net.minecraft.world.item.enchantment.EnchantmentInstance(net.minecraft.world.item.enchantment.Enchantments.MENDING, 1));
                 if (!savedStack.getItem().isBookEnchantable(savedStack, damageBook) || savedStack.getItem().isBookEnchantable(savedStack, repairBook))
                     throw new IllegalStateException("Katana anvil enchantment policy is incorrect");
+                player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+                player.invulnerableTime = 0;
                 float health = player.getHealth();
                 boolean hurt = player.hurt(player.damageSources().mobAttack(mobs.get(0)), 5);
                 if (hurt || player.getHealth() != health)
                     throw new IllegalStateException("C did not protect the caster against entity damage");
+                player.setGameMode(net.minecraft.world.level.GameType.CREATIVE);
                 player.getInventory().setItem(player.getInventory().selected, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK));
                 System.out.println("STAIN_CASTER_PROTECTION_VERIFIED");
             });
