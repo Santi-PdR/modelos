@@ -284,6 +284,10 @@ public final class VisualFixtureClient {
                     throw new IllegalStateException("Multipart parent must be outside the normal search box");
                 player.setYRot(0); player.setXRot(0);
                 player.getPersistentData().getCompound("StainKatanaAbilities").putLong("next2", 0);
+                System.out.println("STAIN_MULTIPART_DIAG registered=" + player.serverLevel().getPartEntities().contains(part)
+                        + " partAlive=" + part.isAlive() + " partBox=" + part.getBoundingBox()
+                        + " eye=" + player.getEyePosition() + " look=" + player.getLookAngle()
+                        + " sword=" + player.getMainHandItem() + " data=" + player.getPersistentData().getCompound("StainKatanaAbilities"));
                 com.stainkatana.katana.KatanaAbilities.activate(player, 2);
                 if (!com.stainkatana.katana.KatanaAbilities.isCinematicallyBound(dragon))
                     throw new IllegalStateException("C did not find a dragon part with its parent out of range");
