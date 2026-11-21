@@ -100,9 +100,11 @@ public final class VisualFixtureClient {
             case 340 -> capture = "14_ultimate_6s.png";
             case 380 -> capture = "15_ultimate_8s.png";
             case 430 -> capture = "16_ultimate_end.png";
+            case 440 -> mc.options.fov().set(35);
             case 445 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(0));
             case 449 -> capture = "17a_blood_third_reach.png";
             case 453 -> capture = "17b_blood_third_draw.png";
+            case 460 -> mc.options.fov().set(70);
             case 479 -> mc.getSingleplayerServer().execute(() -> {
                 var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                 var mobs = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, player.getBoundingBox().inflate(8));
@@ -253,7 +255,31 @@ public final class VisualFixtureClient {
                     throw new IllegalStateException("Ender Dragon not released after cancellation");
                 System.out.println("STAIN_DRAGON_RELEASED");
             });
-            case 830 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
+            case 825 -> {
+                mc.getSingleplayerServer().execute(() -> {
+                    var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                    player.getInventory().setItem(player.getInventory().selected, savedStack);
+                });
+                mc.options.fov().set(35);
+                mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+            }
+            case 840 -> com.stainkatana.katana.KatanaRenderer.fixtureGripTilt = -90;
+            case 845 -> capture = "20a_grip_minus90_back.png";
+            case 850 -> mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+            case 855 -> capture = "20b_grip_minus90_front.png";
+            case 860 -> { com.stainkatana.katana.KatanaRenderer.fixtureGripTilt = -45; mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); }
+            case 865 -> capture = "21a_grip_minus45_back.png";
+            case 870 -> mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+            case 875 -> capture = "21b_grip_minus45_front.png";
+            case 880 -> { com.stainkatana.katana.KatanaRenderer.fixtureGripTilt = 45; mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); }
+            case 885 -> capture = "22a_grip_plus45_back.png";
+            case 890 -> mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+            case 895 -> capture = "22b_grip_plus45_front.png";
+            case 900 -> { com.stainkatana.katana.KatanaRenderer.fixtureGripTilt = 90; mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); }
+            case 905 -> capture = "23a_grip_plus90_back.png";
+            case 910 -> mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+            case 915 -> capture = "23b_grip_plus90_front.png";
+            case 920 -> { com.stainkatana.katana.KatanaRenderer.fixtureGripTilt = 0; System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }
     }
