@@ -39,7 +39,7 @@ public final class KatanaAbilities {
     private static final String COOLDOWNS = "StainKatanaAbilities";
     private static final Map<UUID, Cast> CASTS = new ConcurrentHashMap<>();
     private static final Map<UUID, UUID> BOUND_TARGETS = new ConcurrentHashMap<>();
-    private record Backstab(UUID target, ItemStack stack, ResourceKey<Level> dimension, long start) { }
+    private record Backstab(UUID target, ItemStack stack, ResourceKey<Level> dimension, long start, boolean impacted) { }
     private static final Map<UUID, Backstab> BACKSTABS = new ConcurrentHashMap<>();
     private static final class Cast {
         final int ability;
@@ -171,6 +171,11 @@ public final class KatanaAbilities {
             player.displayClientMessage(Component.translatable("stainkatana.no_target"), true);
             return;
         }
+        if (ability == 2 && arrival == null) {
+            // Airborne or very large bosses can lack safe footing. The bind still works,
+            // but do not silently imply the caster was teleported.
+            player.displayClientMessage(Component.translatable("stainkatana.no_safe_teleport"), true);
+        }
         state.putLong(key, now + CombatTuning.cooldown(ability));
         player.getPersistentData().put(COOLDOWNS, state);
         syncCooldowns(player);
@@ -197,22 +202,24 @@ public final class KatanaAbilities {
             double offset = behindOnly ? (attempt == 1 ? Math.PI / 6 : attempt == 2 ? -Math.PI / 6 : 0) : attempt * Math.PI / 4.0;
             double angle = base + offset;
             double radius = Math.max(1.65, target.getBbWidth() * .5 + .9);
-            Vec3 destination = new Vec3(target.getX() + Math.sin(angle) * radius, target.getY(), target.getZ() - Math.cos(angle) * radius);
-            var feet = net.minecraft.core.BlockPos.containing(destination);
-            var below = feet.below();
-            if (!level.hasChunkAt(feet) || !level.getWorldBorder().isWithinBounds(feet)
-                    || !level.getBlockState(below).isFaceSturdy(level, below, net.minecraft.core.Direction.UP)
-                    || !level.getFluidState(feet).isEmpty() || !level.getFluidState(feet.above()).isEmpty()) continue;
-            var floor = level.getBlockState(below);
-            if (floor.is(net.minecraft.world.level.block.Blocks.MAGMA_BLOCK)
-                    || floor.is(net.minecraft.world.level.block.Blocks.CAMPFIRE)
-                    || floor.is(net.minecraft.world.level.block.Blocks.SOUL_CAMPFIRE)
-                    || floor.is(net.minecraft.world.level.block.Blocks.CACTUS)) continue;
-            Vec3 delta = destination.subtract(player.position());
-            if (delta.lengthSqr() > 17 * 17 || !level.noCollision(player, player.getBoundingBox().move(delta))) continue;
-            var hit = level.clip(new net.minecraft.world.level.ClipContext(player.position().add(0, .6, 0), destination.add(0, .6, 0),
-                    net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, player));
-            if (hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS) return destination;
+            for (int dy : new int[]{0, -1, 1, -2, 2, -3}) {
+                Vec3 destination = new Vec3(target.getX() + Math.sin(angle) * radius, Math.floor(target.getY()) + dy, target.getZ() - Math.cos(angle) * radius);
+                var feet = net.minecraft.core.BlockPos.containing(destination);
+                var below = feet.below();
+                if (!level.hasChunkAt(feet) || !level.getWorldBorder().isWithinBounds(feet)
+                        || !level.getBlockState(below).isFaceSturdy(level, below, net.minecraft.core.Direction.UP)
+                        || !level.getFluidState(feet).isEmpty() || !level.getFluidState(feet.above()).isEmpty()) continue;
+                var floor = level.getBlockState(below);
+                if (floor.is(net.minecraft.world.level.block.Blocks.MAGMA_BLOCK)
+                        || floor.is(net.minecraft.world.level.block.Blocks.CAMPFIRE)
+                        || floor.is(net.minecraft.world.level.block.Blocks.SOUL_CAMPFIRE)
+                        || floor.is(net.minecraft.world.level.block.Blocks.CACTUS)) continue;
+                Vec3 delta = destination.subtract(player.position());
+                if (delta.lengthSqr() > 17 * 17 || !level.noCollision(player, player.getBoundingBox().move(delta))) continue;
+                var hit = level.clip(new net.minecraft.world.level.ClipContext(player.position().add(0, .6, 0), destination.add(0, .6, 0),
+                        net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, player));
+                if (hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS) return destination;
+            }
         }
         return null;
     }
@@ -242,7 +249,7 @@ public final class KatanaAbilities {
         data.putLong("next0", now + CombatTuning.cooldown(0));
         player.getPersistentData().put(COOLDOWNS, data);
         syncCooldowns(player);
-        BACKSTABS.put(player.getUUID(), new Backstab(target.getUUID(), player.getMainHandItem(), player.level().dimension(), now));
+        BACKSTABS.put(player.getUUID(), new Backstab(target.getUUID(), player.getMainHandItem(), player.level().dimension(), now, false));
         moveTo(player, target, spot);
         KatanaNetwork.broadcastAnimation(player, 6);
     }
@@ -256,12 +263,14 @@ public final class KatanaAbilities {
                 || !legalTarget(player, target) || player.distanceToSqr(target) > 64 || age >= 30) {
             BACKSTABS.remove(player.getUUID()); KatanaNetwork.broadcastAnimation(player, -1); return;
         }
-        if (age == 10) {
+        if (age >= 10 && !stab.impacted()) {
+            BACKSTABS.put(player.getUUID(), new Backstab(stab.target(), stab.stack(), stab.dimension(), stab.start(), true));
             // Never execute an otherwise healthy ordinary target in one blow; preserve at least one health.
             float damage = CombatTuning.backstabDamage(target.getHealth(), target.getMaxHealth());
             if (damage > 0) target.hurt(player.damageSources().playerAttack(player), damage);
             KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.7), target.getZ(), 2);
-            player.serverLevel().sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.7), target.getZ(), 8, .3, .3, .3, 0);
+            player.serverLevel().sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.7), target.getZ(), 16, .35, .4, .35, .04);
+            player.serverLevel().playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, 1.0F, .75F);
         }
     }
 
@@ -354,7 +363,8 @@ public final class KatanaAbilities {
                 }
             }
             KatanaNetwork.broadcastVisual(player, mob.getX(), mob.getY(.55), mob.getZ(), index % 2 == 0 ? 1 : 3);
-            player.serverLevel().sendParticles(KatanaParticles.SHARD.get(), mob.getX(), mob.getY(.55), mob.getZ(), 3, .3, .3, .3, 0);
+            double spread = Math.min(2.0, Math.max(.35, mob.getBbWidth() * .35));
+            player.serverLevel().sendParticles(KatanaParticles.SHARD.get(), mob.getX(), mob.getY(.55), mob.getZ(), 12, spread, Math.min(1.5, mob.getBbHeight() * .25), spread, .03);
             player.serverLevel().playSound(null, mob.blockPosition(), katanaSwingSound(), SoundSource.PLAYERS, .65F, index % 2 == 0 ? .9F : 1.1F);
         }
         if ((events & AbilityTimeline.FADE) != 0) KatanaNetwork.broadcastAnimation(player, -1);

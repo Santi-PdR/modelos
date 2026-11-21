@@ -8,6 +8,7 @@
   "key.stainkatana.ultimate": "Sentencia del Asesino",
   "stainkatana.cooldown": "Habilidad disponible en %s s.",
   "stainkatana.no_mark": "Primero golpea para marcar con sangre.",
+  "stainkatana.no_safe_teleport": "No hay una posición segura para el teletransporte.",
   "stainkatana.target_unavailable": "La víctima marcada está fuera de alcance, oculta o ausente.",
   "stainkatana.no_target": "No hay objetivos válidos delante.",
   "stainkatana.stun_used": "Parálisis de sangre",

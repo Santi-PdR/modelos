@@ -107,7 +107,11 @@ public final class KatanaScene {
         if (trace.getType() != net.minecraft.world.phys.HitResult.Type.MISS)
             desired = trace.getLocation().lerp(center, .12);
         if (cameraPosition == null) cameraPosition = event.getCamera().getPosition();
-        cameraPosition = cameraPosition.lerp(desired, .14 * strength(partial));
+        // Exponential smoothing measured in game ticks, not rendered frames: the
+        // shot behaves consistently at both low and high frame rates.
+        double frameTicks = Math.max(0, Math.min(3, mc.getDeltaFrameTime()));
+        double blend = 1.0 - Math.pow(1.0 - .36 * strength(partial), frameTicks);
+        cameraPosition = cameraPosition.lerp(desired, blend);
         var interpolatedTrace = mc.level.clip(new net.minecraft.world.level.ClipContext(center, cameraPosition,
                 net.minecraft.world.level.ClipContext.Block.COLLIDER,
                 net.minecraft.world.level.ClipContext.Fluid.NONE, player));

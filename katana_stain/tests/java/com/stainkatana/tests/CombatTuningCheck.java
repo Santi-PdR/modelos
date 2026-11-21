@@ -23,8 +23,8 @@ public final class CombatTuningCheck {
             }
             if (CombatTuning.damage(Double.NaN, ultimate) != 8) throw new AssertionError("nonfinite damage");
         }
-        if (CombatTuning.backstabDamage(20, 20) != 15 || CombatTuning.backstabDamage(5, 20) != 4
-                || CombatTuning.backstabDamage(1, 20) != 0 || CombatTuning.backstabDamage(1000, 1000) != 30)
+        if (CombatTuning.backstabDamage(20, 20) != 18 || CombatTuning.backstabDamage(5, 20) != 4
+                || CombatTuning.backstabDamage(1, 20) != 0 || CombatTuning.backstabDamage(1000, 1000) != 60)
             throw new AssertionError("backstab cap");
         System.out.println("OK: cooldowns, PvP duration and damage bounds");
     }

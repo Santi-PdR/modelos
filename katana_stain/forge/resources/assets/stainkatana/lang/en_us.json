@@ -8,6 +8,7 @@
   "key.stainkatana.ultimate": "Hero Killer Judgment",
   "stainkatana.cooldown": "Ability ready in %s s.",
   "stainkatana.no_mark": "Land a hit to apply a blood mark first.",
+  "stainkatana.no_safe_teleport": "No safe position is available for teleportation.",
   "stainkatana.target_unavailable": "Marked target is out of range, out of sight or unloaded.",
   "stainkatana.no_target": "No valid target in front.",
   "stainkatana.stun_used": "Blood paralysis",
