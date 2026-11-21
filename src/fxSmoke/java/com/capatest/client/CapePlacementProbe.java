@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /** Actual equipped mesh and vanilla sleeves, with independent camera and aim controls. */
@@ -38,6 +39,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     private final List<GeoBone> tracked = new ArrayList<>();
     private final StringBuilder faces = new StringBuilder(), boxes = new StringBuilder();
     private boolean measuringContact;
+    private boolean measuringMotion;
     private boolean active;
 
     private CapePlacementProbe(CapaArmorRenderer renderer) { super(renderer); }
@@ -74,10 +76,11 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 });
     }
 
-    static void arm(CapaArmorRenderer renderer, boolean hidePlates, boolean measureContact) {
+    static void arm(CapaArmorRenderer renderer, boolean hidePlates, boolean measureContact, boolean measureMotion) {
         var p = of(renderer);
         p.active = true;
-        p.measuringContact = measureContact;
+        p.measuringMotion = measureMotion;
+        p.measuringContact = measureContact || measureMotion;
         p.inverseChest = null;
         p.projection = new Matrix4f(RenderSystem.getProjectionMatrix()).mul(RenderSystem.getModelViewMatrix());
         p.rigid.clear();
@@ -101,11 +104,13 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             inverseChest = new Matrix4f(pose.last().pose()).invert();
             return;
         }
+        boolean rigidPiece = tracked(n);
         boolean sewnRoot = measuringContact && n.startsWith("v17_ribbon_") && n.endsWith("_seg0");
-        if ((!tracked(n) && !sewnRoot) || (!anchor(n) && (bone.isHidden() || bone.getCubes().isEmpty()))) return;
+        if ((!rigidPiece && !sewnRoot && !measuringMotion)
+                || (!anchor(n) && (bone.isHidden() || bone.getCubes().isEmpty()))) return;
         require(inverseChest != null, "missing live torso transform");
         List<Vector3f> points = new ArrayList<>();
-        if (!sewnRoot) {
+        if (rigidPiece) {
             require(solid.put(bone, new Matrix4f(bone.getModelSpaceMatrix())) == null, "cape piece drawn twice: " + n);
             rigid.put(n, points);
         }
@@ -129,7 +134,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                     if (face == null) continue;
                     var verts = face.vertices();
                     for (var vert : verts) {
-                        if (!sewnRoot) points.add(model.transformPosition(vert.position(), new Vector3f()).mul(16));
+                        if (rigidPiece) points.add(model.transformPosition(vert.position(), new Vector3f()).mul(16));
                         if (measuringContact) {
                             lo.min(vert.position());
                             hi.max(vert.position());
@@ -167,6 +172,15 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         if (p.measuringContact) {
             p.playerPart(copy, player.jacket, "jacket", .25F, false);
             p.playerPart(copy, player.body, "body", 0, false);
+        }
+        if (p.measuringMotion) {
+            // Base skin and optional outer layer are separate obstacles.
+            p.playerPart(copy, player.head, "head", 0, false);
+            p.playerPart(copy, player.hat, "hat", .5F, false);
+            p.playerPart(copy, player.leftArm, "left_arm", 0, false);
+            p.playerPart(copy, player.rightArm, "right_arm", 0, false);
+            p.playerPart(copy, player.leftLeg, "left_leg", 0, false);
+            p.playerPart(copy, player.rightLeg, "right_leg", 0, false);
         }
         return new Draw(Map.copyOf(p.rigid), p.faces.toString(), p.boxes.toString(), (float) Math.toDegrees(player.head.xRot),
                 (float) Math.toDegrees(player.head.yRot));
@@ -217,6 +231,121 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         if (!pass) throw new AssertionError(reason);
     }
 
+    private static void orbit(ViewportEvent.ComputeCameraAngles event, LocalPlayer player,
+                              float yaw, float pitch, double radius, double center) {
+        double radY = Math.toRadians(yaw), radX = Math.toRadians(pitch);
+        double t = event.getPartialTick();
+        double x = Mth.lerp(t, player.xo, player.getX()) + radius * Math.sin(radY)*Math.cos(radX);
+        double y = Mth.lerp(t, player.yo, player.getY()) + center + radius * Math.sin(radX);
+        double z = Mth.lerp(t, player.zo, player.getZ()) - radius * Math.cos(radY)*Math.cos(radX);
+        try {
+            POSITION.invoke(event.getCamera(), x, y, z);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("could not set the Forge probe camera", e);
+        }
+        event.setYaw(yaw);
+        event.setPitch(pitch);
+    }
+
+    /** Sample the real crouch/sprint pose and unmodified third-person top view. */
+    static final class PoseAudit {
+        private record Phase(String name, float pitch, float yaw, boolean crouch, boolean sprint,
+                             boolean vanillaCamera, int samples) {}
+        private static final List<Phase> PHASES = List.of(
+                new Phase("reposo", 8, 0, false, false, true, 8),
+                new Phase("cenital", 79, 22, false, false, true, 8),
+                new Phase("mirada-alta", -64, 0, false, false, false, 8),
+                new Phase("giro", -35, 55, false, false, false, 8),
+                new Phase("agachado", 0, 0, true, false, false, 12),
+                new Phase("agachado-cenital", 79, 22, true, false, true, 8),
+                new Phase("carrera", 0, 0, false, true, false, 24));
+        private final StringBuilder trace = new StringBuilder(
+                "sample\tphase\ttick\tpose\tsprint\tspeed\tpitch\tyaw\tvanilla\tcamera_pitch\tcamera_yaw\timage\n");
+        private final StringBuilder boxes = new StringBuilder();
+        private int phase, frame, sample;
+        private int start = -1, lastTick = -1;
+
+        private boolean done() { return phase >= PHASES.size(); }
+
+        void drive(Minecraft game) {
+            if (done()) return;
+            var q = PHASES.get(phase);
+            if (start < 0) start = game.player.tickCount;
+            game.options.keyShift.setDown(q.crouch());
+            game.options.keyUp.setDown(q.sprint());
+            game.options.keySprint.setDown(q.sprint());
+        }
+
+        void aim(LocalPlayer p) {
+            if (done()) return;
+            var q = PHASES.get(phase);
+            p.setYBodyRot(0);
+            p.yBodyRotO = 0;
+            p.setYRot(q.yaw());
+            p.yRotO = q.yaw();
+            p.setYHeadRot(q.yaw());
+            p.yHeadRotO = q.yaw();
+            p.setXRot(q.pitch());
+            p.xRotO = q.pitch();
+        }
+
+        void camera(ViewportEvent.ComputeCameraAngles event, LocalPlayer p) {
+            if (done()) return;
+            var q = PHASES.get(phase);
+            if (!q.vanillaCamera()) {
+                float yaw = switch (q.name()) {
+                    case "mirada-alta" -> 90;
+                    case "giro" -> 63;
+                    default -> -62;
+                };
+                orbit(event, p, yaw, 10, 2.95, .97);
+            }
+        }
+
+        boolean capture(Minecraft game, Path root, String name, Draw draw, float partial) throws IOException {
+            var q = PHASES.get(phase);
+            var p = game.player;
+            float speed = p.walkAnimation.speed(partial);
+            if (start < 0 || p.tickCount - start < (q.sprint() ? 15 : 7) || p.tickCount == lastTick
+                    || !p.onGround() || p.isCrouching() != q.crouch() || p.isSprinting() != q.sprint()
+                    || (q.sprint() ? speed < .48F : speed > .025F)) return false;
+            require(draw != null && !draw.boxes().isEmpty(), "missing motion geometry");
+            require(Math.abs(draw.pitch()-q.pitch()) < .02 && Math.abs(draw.yaw()-q.yaw()) < .02,
+                    q.name() + ": wrong live aim " + draw.pitch() + "/" + draw.yaw());
+            var cam = game.gameRenderer.getMainCamera();
+            if (q.vanillaCamera()) require(Math.abs(cam.getXRot() - q.pitch()) < .02
+                    && Math.abs(cam.getYRot() - q.yaw()) < .02, q.name() + ": vanilla F5 camera not applied");
+
+            String image = "-";
+            if (frame == 0 || q.sprint() && (frame % 6 == 0 || frame == q.samples()-1)) {
+                image = String.format(Locale.ROOT, "%s-%s-%02d.png", name, q.name(), frame);
+                try (var shot = Screenshot.takeScreenshot(game.getMainRenderTarget())) {
+                    shot.writeToFile(root.resolve(image));
+                }
+            }
+            trace.append(sample).append('\t').append(q.name()).append('\t').append(p.tickCount)
+                    .append('\t').append(p.getPose().name()).append('\t').append(p.isSprinting())
+                    .append('\t').append(speed).append('\t').append(draw.pitch()).append('\t').append(draw.yaw())
+                    .append('\t').append(q.vanillaCamera()).append('\t').append(cam.getXRot())
+                    .append('\t').append(cam.getYRot()).append('\t').append(image).append('\n');
+            draw.boxes().lines().forEach(box -> boxes.append(sample).append('\t').append(box).append('\n'));
+            sample++;
+            lastTick = p.tickCount;
+            if (++frame < q.samples()) return false;
+            phase++;
+            frame = 0;
+            start = -1;
+            if (!done()) return false;
+            game.options.keyShift.setDown(false);
+            game.options.keyUp.setDown(false);
+            game.options.keySprint.setDown(false);
+            p.setSprinting(false);
+            Files.writeString(root.resolve(name + "-posturas.tsv"), trace);
+            Files.writeString(root.resolve(name + "-cubos.tsv"), boxes);
+            return true;
+        }
+    }
+
     /** Seven camera orbits at neutral aim; a separate aim sweep at one viewpoint. */
     static final class Route {
         private static final String[] VIEWS = {"espalda", "frente", "izquierda", "derecha", "arriba", "abajo", "diagonal"};
@@ -253,21 +382,8 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
 
         void camera(ViewportEvent.ComputeCameraAngles event, LocalPlayer player) {
             int view = view();
-            float yaw = CAMERA_YAW[view], pitch = CAMERA_PITCH[view];
-            double radY = Math.toRadians(yaw), radX = Math.toRadians(pitch);
-            double radius = view == 5 ? 1.62 : view == 6 ? 2.80 : 2.95;
-            double center = view == 5 ? 1.34 : 1.00;
-            double t = event.getPartialTick();
-            double x = Mth.lerp(t, player.xo, player.getX()) + radius * Math.sin(radY)*Math.cos(radX);
-            double y = Mth.lerp(t, player.yo, player.getY()) + center + radius * Math.sin(radX);
-            double z = Mth.lerp(t, player.zo, player.getZ()) - radius * Math.cos(radY)*Math.cos(radX);
-            try {
-                POSITION.invoke(event.getCamera(), x, y, z);
-            } catch (ReflectiveOperationException e) {
-                throw new AssertionError("could not set the Forge probe camera", e);
-            }
-            event.setYaw(yaw);
-            event.setPitch(pitch);
+            orbit(event, player, CAMERA_YAW[view], CAMERA_PITCH[view],
+                    view == 5 ? 1.62 : view == 6 ? 2.80 : 2.95, view == 5 ? 1.34 : 1.00);
         }
 
         void drive(Minecraft game) {
