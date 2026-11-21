@@ -4,6 +4,10 @@ import java.util.Locale;
 
 final class CapeHoodTest {
     public static void main(String[] args) {
+        if (args.length == 1 && args[0].equals("--rear")) {
+            checkRear();
+            return;
+        }
         if (args.length == 1 && args[0].equals("--aim")) {
             checkAim();
             return;
@@ -29,6 +33,29 @@ final class CapeHoodTest {
         if (CapeHood.moves("v17_cowl_return") || CapeHood.moves("v17_cowl_tooth_3") || CapeHood.moves("cape_top")
                 || !CapeHood.moves("v17_cowl_back_1") || !CapeHood.moves("v17_cowl_front_2"))
             throw new AssertionError("hood hinge reached the mount");
+    }
+
+    private static void checkRear() {
+        for (double lean : new double[]{-29, 0, 17, 20, 26, 28.65}) {
+            for (double yaw : new double[]{-415,-55,-27,-7,0,7,22,27,55,415}) {
+                double previous = 0;
+                for (int i = -900; i <= 900; i++) {
+                    double up = .1*i, tuck = CapeHood.rearTuck(up, yaw, lean);
+                    if (tuck < previous || tuck - previous > .0066 || tuck < 0 || tuck > 1
+                            || tuck != CapeHood.rearTuck(up, -yaw, lean))
+                        throw new AssertionError("jerk, overflow or asymmetry in the rear fit");
+                    if ((up <= 5 || lean <= 17 || Math.abs(yaw) <= 7) && tuck != 0)
+                        throw new AssertionError("rear fit escaped the upward crouched turn");
+                    previous = tuck;
+                }
+                for (double up : new double[]{-79, 0, 5, 14, 22, 35, 64, 89})
+                    System.out.printf(Locale.ROOT,"%f\t%f\t%f\t%.12f%n", up,yaw,lean,CapeHood.rearTuck(up,yaw,lean));
+            }
+        }
+        if (CapeHood.rearTuck(35,55,28.65) != 1 || CapeHood.rearTuck(35,55,Double.NaN) != 0
+                || !CapeHood.rear("v17_cowl_back_0") || CapeHood.rear("v17_cowl_front_0")
+                || CapeHood.rear("v18_pad_1") || CapeHood.rear("v17_cowl_return"))
+            throw new AssertionError("incorrect crown band or crouch envelope");
     }
 
     private static void checkAim() {

@@ -24,6 +24,18 @@ final class CapeHood {
     private static final double TURN_END = 72;
     private static final double LEAN_START = 2;
     private static final double LEAN_END = 10;
+    // A crouched torso can present the tall rear band through the top face
+    // of the vanilla head. Tuck it under the collar instead of increasing
+    // the upright fold (which lifts it through that tilted face).
+    static final double REAR_DROP = 1.50;
+    static final double REAR_INSET = .25;
+    static final double REAR_FOLD = 16;
+    private static final double REAR_LEAN_START = 17;
+    private static final double REAR_LEAN_FULL = 28.5;
+    private static final double REAR_UP_START = 5;
+    private static final double REAR_UP_FULL = 28;
+    private static final double REAR_TURN_START = 7;
+    private static final double REAR_TURN_FULL = 27;
     static final Pose REST = new Pose(REST_PITCH, 0, 0);
 
     // Angles in the baked frame; positive pitch moves the crown away from
@@ -32,8 +44,17 @@ final class CapeHood {
 
     private CapeHood() {}
 
+    static boolean rear(String name) { return name.startsWith("v17_cowl_back_"); }
+
     static boolean moves(String name) {
-        return name.startsWith("v17_cowl_back_") || name.startsWith("v17_cowl_front_");
+        return rear(name) || name.startsWith("v17_cowl_front_");
+    }
+
+    /** Rear-band tuck for a sustained upward turn; the front seam stays put. */
+    static double rearTuck(double up, double yaw, double lean) {
+        if (!Double.isFinite(up) || !Double.isFinite(yaw) || !Double.isFinite(lean)) return 0;
+        return smooth(REAR_LEAN_START, REAR_LEAN_FULL, lean) * smooth(REAR_UP_START, REAR_UP_FULL, up)
+                * smooth(REAR_TURN_START, REAR_TURN_FULL, Math.abs(Math.IEEEremainder(yaw, 360)));
     }
 
     /** Extra fold when the back of an upright wearer's head tilts into the crown.

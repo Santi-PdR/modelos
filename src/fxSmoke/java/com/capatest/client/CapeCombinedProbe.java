@@ -21,8 +21,8 @@ final class CapeCombinedProbe {
     private static final int[] SHOTS = {27, 52, 63, 77, 103};
     private final BlockPos runway;
     private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tstride\tground\tsprinting\tcrouching\t"
-            + "walk\trun\tsneak\tair\tfall\tswim\ttop\tmid\ttip_x\ttip_y\ttip_z\tseat_z\tpitch\tyaw\tfit\tcrouch_floor\timage\n");
-    private final StringBuilder boxes = new StringBuilder();
+            + "walk\trun\tsneak\tair\tfall\tswim\ttop\tmid\ttip_x\ttip_y\ttip_z\tseat_z\tpitch\tyaw\tfit\tcrouch_floor\trear_tuck\timage\n");
+    private final StringBuilder boxes = new StringBuilder(), head = new StringBuilder();
     private int start = -1, fitTick = -1, nextShot;
     private LocalPlayer aimed;
     private float originalHead, originalHeadOld, originalPitch, originalPitchOld;
@@ -113,6 +113,7 @@ final class CapeCombinedProbe {
             if (tick > SHOTS[nextShot] + 2) throw new AssertionError(name + ": missed screenshot near " + SHOTS[nextShot]);
             image = String.format(Locale.ROOT, "%s-%03d.png", name, tick);
             nextShot++;
+            head.append(tick).append('\t').append(fit.headTop());
             try (var shot = Screenshot.takeScreenshot(game.getMainRenderTarget())) {
                 shot.writeToFile(root.resolve(image));
             }
@@ -131,10 +132,12 @@ final class CapeCombinedProbe {
                 .append('\t').append(tip.x()).append('\t').append(tip.y()).append('\t').append(tip.z())
                 .append('\t').append(pose.collarZ()).append('\t').append(fit == null ? 0 : fit.pitch())
                 .append('\t').append(fit == null ? 0 : fit.yaw()).append('\t').append(fit == null ? 0 : 1)
-                .append('\t').append(CapaArmorModel.wornMotion(p).crouchTopFloor()).append('\t').append(image).append('\n');
+                .append('\t').append(CapaArmorModel.wornMotion(p).crouchTopFloor())
+                .append('\t').append(fit == null ? 0 : fit.rearTuck()).append('\t').append(image).append('\n');
         if (tick < END) return false;
         Files.writeString(root.resolve(name + ".tsv"), rows);
         Files.writeString(root.resolve(name + "-cubos.tsv"), boxes);
+        Files.writeString(root.resolve(name + "-cabeza.tsv"), head);
         return true;
     }
 }

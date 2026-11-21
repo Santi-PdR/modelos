@@ -21,4 +21,4 @@ También pasaron [marcha](continuidad-forge.tsv), [escalera](escalera-forge.tsv)
 
 - Minecraft Java **1.20.1**, Forge **47.3.0**, GeckoLib **4.8.1**; Curios **5.14.1** opcional.
 - Cerrá Minecraft y pegá el [bloque PowerShell de `test-1`](instalar-test-1.txt). Verifica **751.338 bytes** y el SHA-256 del JAR antes de retirar versiones anteriores de `capatest`. Se comprobó el bloque estáticamente; no se ejecutó en tu Windows. No se cambió la descarga ni el instalador públicos.
-- [Blockbench](../../CAPA_v1.67.29.bbmodel) · [Visor offline](../../capa_v1170_visor.html) · [Respaldo exacto de v1.67.28](../../respaldos/v1.67.28/README.md). Las curvas editables son las mismas; la retención sólo actúa al equipar en Forge. Para volver a la .28, retirá primero el JAR .29 de `test-1/mods`.
+- [Blockbench](https://github.com/Santi-PdR/modelos/blob/309543f8f06f6e2d00c3722d980e8815ed111e31/docs/CAPA_v1.67.29.bbmodel) · [Visor offline](../../capa_v1170_visor.html) · [Respaldo exacto de v1.67.28](../../respaldos/v1.67.28/README.md). Las curvas editables son las mismas; la retención sólo actúa al equipar en Forge. Para volver a la .28, retirá primero el JAR .29 de `test-1/mods`.

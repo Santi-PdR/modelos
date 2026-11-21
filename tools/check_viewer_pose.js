@@ -58,6 +58,9 @@ const matrices = vm.runInContext(`${src}
     if (indata.lookClearanceSamples) {
       return indata.lookClearanceSamples.map(args=>hoodAim(indata.fit.hood,...args));
     }
+    if (indata.rearTuckSamples) {
+      return indata.rearTuckSamples.map(args=>rearTuck(indata.fit.hood,...args));
+    }
     if (indata.sprintEdgeSamples) {
       return indata.sprintEdgeSamples.map(([r,s])=>sprintEdgeOffset(indata.fit.sprintEdge,'v17_ribbon_'+r+'_seg'+s,'cape_top') || [0,0,0]);
     }

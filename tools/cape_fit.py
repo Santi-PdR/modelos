@@ -307,6 +307,15 @@ def hood_aim(up, yaw, lean):
             * (1-smooth(h['LEAN_START'],h['LEAN_END'],abs(lean))))
 
 
+def rear_tuck(up, yaw, lean):
+    if not all(math.isfinite(v) for v in (up,yaw,lean)):
+        return 0.
+    h = hood_profile()
+    return (smooth(h['REAR_LEAN_START'],h['REAR_LEAN_FULL'],lean)
+            * smooth(h['REAR_UP_START'],h['REAR_UP_FULL'],up)
+            * smooth(h['REAR_TURN_START'],h['REAR_TURN_FULL'],abs(math.remainder(yaw,360.))))
+
+
 @lru_cache(maxsize=1)
 def sprint_edge_profile():
     code = SOURCE.with_name('CapeSprintEdge.java').read_text()
@@ -363,17 +372,25 @@ def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False, hoo
             changes[G.SADDLE_BONE] = dict(offset=[0.,0.,f['WING_SADDLE_DEPTH']],scale=[f['WING_SADDLE_WIDTH'],1.,1.])
     bones = []
     flex = fixed and not elytra
+    tuck = 0.
     if flex:
         h = hood_profile()
         pitch,yaw,roll = hood if hood is not None else (h['REST_PITCH'],0.,0.)
-        pitch += hood_aim(look,turn,stance*profile()['bodyAngle'])
-        bones.append(dict(name='worn_hood',parent=G.FIT_BONE,pivot=[0.,h['PIVOT_Y'],h['PIVOT_Z']],
-                          offset=[0.,0.,h['SET_BACK']],rotation=[-pitch,-yaw,roll],cubes=[]))
+        lean = stance*profile()['bodyAngle']
+        pitch += hood_aim(look,turn,lean)
+        frame = dict(name='worn_hood',parent=G.FIT_BONE,pivot=[0.,h['PIVOT_Y'],h['PIVOT_Z']],
+                     offset=[0.,0.,h['SET_BACK']],rotation=[-pitch,-yaw,roll],cubes=[])
+        bones.append(frame)
+        tuck = rear_tuck(look,turn,lean)
+        if tuck:
+            bones.append(dict(frame,name='worn_hood_rear',
+                              offset=[0.,-h['REAR_DROP']*tuck,h['SET_BACK']-h['REAR_INSET']*tuck],
+                              rotation=[-pitch+h['REAR_FOLD']*tuck,-yaw,roll]))
     for b in geo['bones']:
         n = b['name']
         piece = dict(b,**changes.get(n,{}))
         if flex and piece.get('parent') == G.FIT_BONE and hood_moves(n):
-            piece['parent'] = 'worn_hood'
+            piece['parent'] = 'worn_hood_rear' if tuck and n.startswith('v17_cowl_back_') else 'worn_hood'
         if flex and sprint_edge > 0 and (edge := sprint_edge_offset(n,piece.get('parent'))) is not None:
             # The bake mirrors X; Offset is defined in the post-bake axes.
             x,y,z = piece.get('offset',(0.,0.,0.))

@@ -102,7 +102,7 @@ def asset_contract(candidate=None):
     with ZipFile(PREVIOUS) as jar:
         previous = art_entries(jar)
     quiet_assets(previous,source[WORN_ANIMATION])
-    if P.mod_version() == '1.67.29':
+    if P.mod_version() in ('1.67.29', '1.67.30'):
         assert hashlib.sha256(DELIVERED_28.read_bytes()).hexdigest() == 'b2ee2c448715501053611cd4e95a923a9b26e8d4990e080fb721711a74a6d78b'
         with ZipFile(DELIVERED_28) as jar:
             assert art_entries(jar) == source, 'el freno agachado debe conservar todo el arte y las curvas de .28'
@@ -113,7 +113,8 @@ def asset_contract(candidate=None):
             if key in source:
                 assert (archive/key).read_bytes() == source[key], key
         bb = (archive/'CAPA_v1.67.28.bbmodel').read_bytes()
-        assert bb.replace(b'"name":"capa_deteriorer_evilsaiyan_v1_67_28"', b'"name":"capa_deteriorer_evilsaiyan_v1_67_29"') == DOC.read_bytes()
+        versioned_name = 'capa_deteriorer_evilsaiyan_v' + P.mod_version().replace('.', '_')
+        assert bb.replace(b'"name":"capa_deteriorer_evilsaiyan_v1_67_28"', f'"name":"{versioned_name}"'.encode()) == DOC.read_bytes()
         print(f'{len(source)} recursos de arte/animación y el contenido editable de .28 se conservan.', flush=True)
     if candidate is not None:
         with ZipFile(candidate) as jar:
@@ -252,6 +253,16 @@ def clearance_parity(geo, java_look=None, java_edge=None):
     print(f'Holgura equipada: {len(aims)} miradas, {len(offsets)} tramos y 108 poses de carrera; raíces y élitros intactos.',flush=True)
 
 
+def rear_parity(java_rear=None):
+    aims = list(product((-79.,5.,14.,22.,35.,89.), (-55.,-22.,0.,22.,55.), (0.,17.,26.,28.65)))
+    if java_rear:
+        rows = np.loadtxt(java_rear)
+        aims = rows[:,:3].tolist()
+        np.testing.assert_allclose(rows[:,3], [F.rear_tuck(*a) for a in aims], atol=1e-10, rtol=0)
+    np.testing.assert_allclose(viewer(rearTuckSamples=aims), [F.rear_tuck(*a) for a in aims], atol=1e-10, rtol=0)
+    print(f'{len(aims)} miradas: repliegue posterior continuo y simétrico; mismo ajuste en Java y el visor.', flush=True)
+
+
 def lining_parity(geo):
     parts = F.B.profile()['names']
     source = {b['name']:b['cubes'] for b in geo['bones'] if b['name'] in parts}
@@ -351,6 +362,7 @@ if __name__=='__main__':
     ap.add_argument('--java-samples',type=Path)
     ap.add_argument('--hood-samples',type=Path)
     ap.add_argument('--look-samples',type=Path)
+    ap.add_argument('--rear-samples',type=Path)
     ap.add_argument('--edge-samples',type=Path)
     ap.add_argument('--assets-only',action='store_true')
     args = ap.parse_args()
@@ -360,5 +372,6 @@ if __name__=='__main__':
         parity(geo,args.java_samples)
         hood_parity(geo,args.hood_samples)
         clearance_parity(geo,args.look_samples,args.edge_samples)
+        rear_parity(args.rear_samples)
         lining_parity(geo)
         exercise(geo)

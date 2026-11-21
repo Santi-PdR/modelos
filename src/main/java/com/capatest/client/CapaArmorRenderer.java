@@ -28,9 +28,10 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private boolean elytra;
     private boolean armorPassSubmitted;
     private boolean sampleFit;
-    private double hoodClearance;
+    private double hoodClearance, rearTuck;
 
     double hoodClearance() { return hoodClearance; }
+    double rearTuck() { return rearTuck; }
     double sprintEdge() { return mountInChest && !elytra ? capeModel.sprintEdge() : 0; }
 
     public CapaArmorRenderer() {
@@ -111,15 +112,24 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         double arm = backArm(model);
         double leg = Math.max(CapeStride.backDegrees(model.leftLeg.xRot, model.leftLeg.yRot),
                 CapeStride.backDegrees(model.rightLeg.xRot, model.rightLeg.yRot));
-        // Only the upper hood uses aim. The mount, plates and paño don't
-        // follow the head, and the separate Elytra fit is not affected.
         boolean upright = player != null && !player.isFallFlying() && !player.isSwimming() && !player.isPassenger();
-        hoodClearance = mountInChest && !elytra && upright
-                ? CapeHood.lookClearance(-Math.toDegrees(model.head.xRot),
-                        Math.toDegrees(model.head.yRot - model.body.yRot), Math.toDegrees(model.body.xRot)) : 0;
+        boolean dryGround = upright && player.onGround() && !player.isInWaterOrBubble() && !player.onClimbable();
+        fitHood(model, mountInChest && !elytra && upright, dryGround);
         double wings = elytra ? CapeWingFit.topGoal(Math.toDegrees(player.elytraRotX), Math.toDegrees(player.elytraRotZ),
                 Math.toDegrees(model.body.xRot), 0) : 0;
         capeModel.setClearancePose(arm, leg, model.body.xRot, wings);
+    }
+
+    // Aim is local to the hood, sampled once per base draw. Never use
+    // camera orientation, move the rigid mount, or touch the Elytra fit.
+    private void fitHood(HumanoidModel<?> model, boolean enabled, boolean dryGround) {
+        hoodClearance = rearTuck = 0;
+        if (!enabled) return;
+        double up = -Math.toDegrees(model.head.xRot);
+        double turn = Math.toDegrees(model.head.yRot - model.body.yRot);
+        double lean = Math.toDegrees(model.body.xRot);
+        hoodClearance = CapeHood.lookClearance(up, turn, lean);
+        if (dryGround) rearTuck = CapeHood.rearTuck(up, turn, lean);
     }
 
     @Override
@@ -154,11 +164,13 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                 // The same local hinge in both passes: no writes to shared
                 // bones, neck alignment, or translation of the sewn roots.
                 var fold = capeModel.hood();
+                double tuck = CapeHood.rear(name) ? rearTuck : 0;
                 double y = CapeHood.PIVOT_Y / 16, z = CapeHood.PIVOT_Z / 16;
-                poseStack.translate(0, y, z + CapeHood.SET_BACK / 16);
+                poseStack.translate(0, y - tuck * CapeHood.REAR_DROP / 16,
+                        z + (CapeHood.SET_BACK - tuck * CapeHood.REAR_INSET) / 16);
                 poseStack.mulPose(Axis.ZP.rotationDegrees((float) fold.roll()));
                 poseStack.mulPose(Axis.YP.rotationDegrees((float) fold.yaw()));
-                poseStack.mulPose(Axis.XP.rotationDegrees((float) (fold.pitch() + hoodClearance)));
+                poseStack.mulPose(Axis.XP.rotationDegrees((float) (fold.pitch() + hoodClearance - tuck * CapeHood.REAR_FOLD)));
                 poseStack.translate(0, -y, -z);
             } else if (edge != null) {
                 // Render-only offset in the section frame, identical in cutout and glow.

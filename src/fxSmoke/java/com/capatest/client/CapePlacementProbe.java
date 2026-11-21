@@ -40,6 +40,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     private final List<GeoBone> tracked = new ArrayList<>();
     private final Map<String, Matrix4f> sections = new LinkedHashMap<>();
     private final StringBuilder faces = new StringBuilder(), boxes = new StringBuilder(), withoutEdge = new StringBuilder();
+    private final StringBuilder headTop = new StringBuilder();
     private boolean measuringContact;
     private boolean measuringMotion;
     private boolean active;
@@ -96,6 +97,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         p.faces.setLength(0);
         p.boxes.setLength(0);
         p.withoutEdge.setLength(0);
+        p.headTop.setLength(0);
         for (var registered : renderer.getGeoModel().getAnimationProcessor().getRegisteredBones()) {
             if (!(registered instanceof GeoBone b) || !(tracked(b.getName()) || measureMotion && sprintEdge(b) != null)) continue;
             if (plate(b.getName())) b.setHidden(hidePlates);
@@ -201,7 +203,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     }
 
     record Draw(Map<String,List<Vector3f>> rigid, String faces, String boxes, float pitch, float yaw,
-                double hoodClearance, String withoutEdge) {}
+                double hoodClearance, String withoutEdge, String headTop, double rearTuck) {}
 
     static Draw finish(CapaArmorRenderer renderer, PoseStack armor, PlayerModel<?> player) {
         var p = of(renderer);
@@ -235,7 +237,8 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             p.playerPart(copy, player.rightLeg, "right_leg", 0, false);
         }
         return new Draw(Map.copyOf(p.rigid), p.faces.toString(), p.boxes.toString(), (float) Math.toDegrees(player.head.xRot),
-                (float) Math.toDegrees(player.head.yRot), renderer.hoodClearance(), p.withoutEdge.toString());
+                (float) Math.toDegrees(player.head.yRot), renderer.hoodClearance(), p.withoutEdge.toString(),
+                p.headTop.toString(), renderer.rearTuck());
     }
 
     private void playerPart(PoseStack stack, ModelPart part, String name, float inflate, boolean sleeve) {
@@ -247,6 +250,11 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             float z0 = (cube.minZ-inflate)/16, z1 = (cube.maxZ+inflate)/16;
             if (measuringContact) box(boxes, name, new Matrix4f(inverseChest).mul(pose.pose()),
                     new Vector3f(x0,y0,z0), new Vector3f(x1,y1,z1));
+            if (name.equals("head")) {
+                var screen = new Matrix4f(projection).mul(pose.pose());
+                quad(headTop, "top", screen, new Vector3f(x0,y0,z0), new Vector3f(x1,y0,z0),
+                        new Vector3f(x1,y0,z1), new Vector3f(x0,y0,z1));
+            }
             if (!sleeve) return;
             // Top and upper-front strip only, for the front-coverage gate.
             var clip = new Matrix4f(projection).mul(pose.pose());
