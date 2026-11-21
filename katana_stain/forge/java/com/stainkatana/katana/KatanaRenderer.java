@@ -15,6 +15,7 @@ import software.bernie.geckolib.renderer.GeoItemRenderer;
 
 /** Icono plano en la interfaz; geometría GeckoLib en mano, suelo y marco. */
 public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
+    public static float fixtureGripTilt = Float.NaN;
     private static final ThreadLocal<Boolean> FIRST_PERSON_ARM = ThreadLocal.withInitial(() -> false);
 
     /** Preserve the dedicated first-person wrist pose while using the same item model. */
@@ -56,8 +57,9 @@ public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
                 // Turn around the item origin, preserving the wrist position. The
                 // visual fixture compared both faces at -90, -45, +45 and +90.
                 poseStack.translate(.5, .5, .5);
-                poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(
-                        context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND ? 45 : -45));
+                float tilt = Float.isNaN(fixtureGripTilt)
+                        ? (context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND ? 45 : -45) : fixtureGripTilt;
+                poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(tilt));
                 poseStack.translate(-.5, -.5, -.5);
             }
             super.renderByItem(stack, context, poseStack, buffers, light, overlay);

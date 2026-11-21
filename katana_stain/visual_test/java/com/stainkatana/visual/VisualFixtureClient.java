@@ -276,13 +276,28 @@ public final class VisualFixtureClient {
                 if (mc.player.getMainArm() != net.minecraft.world.entity.HumanoidArm.LEFT
                         || mc.player.getMainHandItem().getItem() != StainKatanaMod.KATANA_STAIN.get())
                     throw new IllegalStateException("Left-handed grip fixture not ready");
-                capture = "20_left_hand_front.png";
+                com.stainkatana.katana.KatanaRenderer.fixtureGripTilt = -90;
+                capture = "20_left_minus90_front.png";
             }
             case 850 -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
-            case 855 -> capture = "21_left_hand_back.png";
-            case 860 -> { mc.options.fov().set(70); mc.options.setCameraType(CameraType.FIRST_PERSON); }
-            case 865 -> capture = "22_left_hand_first.png";
-            case 870 -> { mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT); System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
+            case 855 -> capture = "20_left_minus90_back.png";
+            case 860 -> { com.stainkatana.katana.KatanaRenderer.fixtureGripTilt = -45; mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); }
+            case 865 -> capture = "21_left_minus45_front.png";
+            case 870 -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case 875 -> capture = "21_left_minus45_back.png";
+            case 880 -> { com.stainkatana.katana.KatanaRenderer.fixtureGripTilt = 0; mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); }
+            case 885 -> capture = "22_left_zero_front.png";
+            case 890 -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case 895 -> capture = "22_left_zero_back.png";
+            case 900 -> { com.stainkatana.katana.KatanaRenderer.fixtureGripTilt = 90; mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); }
+            case 905 -> capture = "23_left_plus90_front.png";
+            case 910 -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+            case 915 -> capture = "23_left_plus90_back.png";
+            case 920 -> {
+                com.stainkatana.katana.KatanaRenderer.fixtureGripTilt = Float.NaN;
+                mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
+                System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop();
+            }
             default -> { }
         }
     }
