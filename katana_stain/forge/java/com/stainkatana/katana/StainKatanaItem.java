@@ -32,6 +32,7 @@ public class StainKatanaItem extends SwordItem implements GeoItem {
     }
 
     // Keep the blade permanent even if a mod attempts to apply durability damage.
+    @Override public boolean isDamageable(ItemStack stack) { return false; }
     @Override public int getMaxDamage(ItemStack stack) { return 0; }
     @Override public void setDamage(ItemStack stack, int damage) { super.setDamage(stack, 0); }
     @Override public boolean isEnchantable(ItemStack stack) { return stack.getCount() == 1; }
