@@ -31,6 +31,18 @@ public final class RelicServer {
 
     private static final Map<UUID, Stamps> STAMPS = new ConcurrentHashMap<>();
 
+    /**
+     * Ticks minimos entre dos acciones del mismo jugador. El cliente manda un
+     * paquete por tecla o comando, y cada uno acaba en un broadcast: sin esto un
+     * cliente modificado puede inundar el servidor pidiendo pulsos.
+     */
+    private static final int ACTION_COOLDOWN_TICKS = 4;
+
+    /** Radio (bloques) al que se replica el estado; mas lejos no se ve. */
+    private static final double BROADCAST_RADIUS = 64.0D;
+
+    private static final Map<UUID, Long> LAST_ACTION = new ConcurrentHashMap<>();
+
     private RelicServer() {
     }
 
@@ -74,12 +86,22 @@ public final class RelicServer {
         return new RelicStatePacket(player.getUUID(), active, s.hit(), s.pulse(), s.release(), s.bump());
     }
 
-    /** Reenvia el estado completo a todos los clientes. */
+    /** Reenvia el estado completo a los clientes que pueden ver al portador. */
     public static void broadcast(ServerPlayer player, boolean active) {
         if (player.level().isClientSide()) {
             return;
         }
-        RelicNetwork.toAll(packetOf(player, active));
+        RelicNetwork.toNear(player, BROADCAST_RADIUS, packetOf(player, active));
+    }
+
+    /**
+     * True si el jugador pide acciones demasiado seguidas. Se queda con la ultima
+     * marca incluso cuando descarta, para que el spam no reinicie la espera.
+     */
+    private static boolean throttled(ServerPlayer player) {
+        long now = player.level().getGameTime();
+        Long last = LAST_ACTION.put(player.getUUID(), now);
+        return last != null && now - last < ACTION_COOLDOWN_TICKS;
     }
 
     /** Llamado al equipar/desequipar (server side) para que el cambio se vea ya. */
@@ -91,6 +113,9 @@ public final class RelicServer {
     }
 
     public static void toggle(ServerPlayer player) {
+        if (throttled(player)) {
+            return;
+        }
         Optional<ItemStack> relic = findRelic(player);
         if (relic.isEmpty()) {
             player.displayClientMessage(Component.translatable("message.holocore.not_equipped"), true);
@@ -105,6 +130,9 @@ public final class RelicServer {
     }
 
     public static void pulse(ServerPlayer player) {
+        if (throttled(player)) {
+            return;
+        }
         if (findRelic(player).isEmpty()) {
             player.displayClientMessage(Component.translatable("message.holocore.not_equipped"), true);
             return;
@@ -114,6 +142,9 @@ public final class RelicServer {
     }
 
     public static void release(ServerPlayer player) {
+        if (throttled(player)) {
+            return;
+        }
         if (findRelic(player).isEmpty()) {
             player.displayClientMessage(Component.translatable("message.holocore.not_equipped"), true);
             return;
@@ -179,6 +210,7 @@ public final class RelicServer {
     @SubscribeEvent
     public static void onLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         STAMPS.remove(event.getEntity().getUUID());
+        LAST_ACTION.remove(event.getEntity().getUUID());
     }
 
     @SubscribeEvent

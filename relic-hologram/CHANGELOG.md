@@ -1,5 +1,22 @@
 # Historial de cambios
 
+## 1.0.10 — red contenida y `/relic info` que informa
+
+* **El estado ya no se manda a todo el servidor**: solo a la misma dimensión y a
+  64 bloques del portador. Antes cada golpe, pulso o subida de nivel de cada
+  jugador generaba un paquete para todos los jugadores conectados, aunque la
+  reliquia ni se dibujara en su pantalla. Quien se acerque después lo recibe al
+  empezar a trackear al portador, que ya estaba implementado.
+* **Anti-spam de acciones**: el servidor ignora `toggle`/`pulse`/`release` con
+  menos de 4 ticks de diferencia por jugador. Sin esto, un cliente modificado
+  podía pedir pulsos en bucle y cada uno acababa en un broadcast. El límite es
+  invisible para una persona (4 ticks = 0,2 s).
+* **`/relic info` añade una segunda línea** con lo que no se puede adivinar
+  mirando: estado del bucle (`idle`/`calm`/`charged`/`alert`/`dormant`), el
+  destello actual en porcentaje y, cuando el pase GLSL está apagado, **por qué**
+  (`shaderGlow=false`, shaderpack activo o no compiló). Sale del visual ya
+  montado: si no lo hay, no se crea uno para contestar.
+
 ## 1.0.9 — la reliquia contesta
 
 * **Destello de evento** (`visuals.flashIntensity`): la reliquia ya no solo cambia

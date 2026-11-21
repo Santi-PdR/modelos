@@ -84,12 +84,21 @@ En el juego:
 | Afinar escala | `/relic scale <0.1–4.0>` |
 | Cambiar de hombro | `/relic side left\|right` |
 | Calidad (full/lite) | `/relic quality full\|lite` |
-| Ver valores actuales | `/relic info` |
+| Ver valores actuales | `/relic info` (dos líneas: placement y estado en vivo) |
 
 Los comandos de ajuste son de **cliente** y cambian la config en memoria al
 instante (no la guardan): cuando el núcleo quede donde quieres, copia los
-números de `/relic info` a `config/holocore-client.toml`. `pulse`, `release` y
-`toggle` sí viajan al servidor, para que el resto de jugadores vea lo mismo.
+números de `/relic info` a `config/holocore-client.toml`. La segunda línea de
+`info` dice lo que no se puede adivinar mirando: estado del bucle (`charged`,
+`alert`…), destello actual y por qué el pase GLSL está apagado si lo está
+(`shaderGlow=false`, shaderpack activo o no compiló).
+
+`pulse`, `release` y
+`toggle` sí viajan al servidor, para que el resto de jugadores vea lo mismo. El
+estado se replica solo a quien puede verlo (misma dimensión, ≤64 bloques; quien
+se acerque después lo recibe al empezar a trackear), y el servidor ignora más de
+una acción cada 4 ticks por jugador, así que un cliente modificado no puede
+inundar la red.
 
 ## Brillo y shaders
 

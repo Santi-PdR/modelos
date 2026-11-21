@@ -35,6 +35,14 @@ public final class RelicVisuals {
                         new RelicGlowState()));
     }
 
+    /**
+     * Visual ya existente, sin crear nada: lo usa {@code /relic info} para
+     * diagnosticar sin instanciar medio renderer si el jugador no lleva reliquia.
+     */
+    public static RelicVisual existing(Player player) {
+        return VISUALS.get(player.getUUID());
+    }
+
     public static void prune(long gameTime) {
         VISUALS.entrySet().removeIf(entry ->
                 gameTime - entry.getValue().animatable().lastRenderTick() > IDLE_EXPIRY_TICKS);

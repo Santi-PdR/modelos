@@ -17,5 +17,10 @@
   "message.holocore.info": "offset %s / %s / %s px, scale %s, shoulder %s, quality %s",
   "message.holocore.bad_side": "Use left or right.",
   "message.holocore.bad_quality": "Use full or lite.",
-  "curios.identifier.charm": "Charm"
+  "curios.identifier.charm": "Charm",
+  "message.holocore.diag": "state %s · flash %s · GLSL %s",
+  "message.holocore.glsl.on": "on",
+  "message.holocore.glsl.config": "off (shaderGlow=false)",
+  "message.holocore.glsl.pack": "off (shaderpack active)",
+  "message.holocore.glsl.failed": "off (did not compile, see the log)"
 }

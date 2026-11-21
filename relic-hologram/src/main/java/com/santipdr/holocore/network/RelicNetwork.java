@@ -44,8 +44,20 @@ public final class RelicNetwork {
         CHANNEL.sendToServer(message);
     }
 
-    public static void toAll(Object message) {
-        CHANNEL.send(PacketDistributor.ALL.noArg(), message);
+    /**
+     * Estado a los jugadores que pueden verlo: misma dimension y a menos de
+     * {@code radius} bloques de {@code origin}. Mas lejos el paquete sobra (la
+     * reliquia ni se dibuja) y quien se acerque despues lo recibe al empezar a
+     * trackear al portador ({@code StartTracking}).
+     */
+    public static void toNear(ServerPlayer origin, double radius, Object message) {
+        double limit = radius * radius;
+        for (ServerPlayer other : origin.server.getPlayerList().getPlayers()) {
+            if (other == origin
+                    || (other.level() == origin.level() && other.distanceToSqr(origin) <= limit)) {
+                CHANNEL.send(PacketDistributor.PLAYER.with(() -> other), message);
+            }
+        }
     }
 
     public static void toPlayer(ServerPlayer player, Object message) {

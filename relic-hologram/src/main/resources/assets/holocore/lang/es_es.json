@@ -17,5 +17,10 @@
   "message.holocore.info": "offset %s / %s / %s px, escala %s, hombro %s, calidad %s",
   "message.holocore.bad_side": "Usa left o right.",
   "message.holocore.bad_quality": "Usa full o lite.",
-  "curios.identifier.charm": "Amuleto"
+  "curios.identifier.charm": "Amuleto",
+  "message.holocore.diag": "estado %s · destello %s · GLSL %s",
+  "message.holocore.glsl.on": "activo",
+  "message.holocore.glsl.config": "apagado (shaderGlow=false)",
+  "message.holocore.glsl.pack": "apagado (shaderpack activo)",
+  "message.holocore.glsl.failed": "apagado (no compiló, ver el log)"
 }

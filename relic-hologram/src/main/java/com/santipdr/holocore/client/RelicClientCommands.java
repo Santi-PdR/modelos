@@ -6,11 +6,14 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.santipdr.holocore.config.RelicConfig;
 import com.santipdr.holocore.network.RelicActionPacket;
 import com.santipdr.holocore.network.RelicNetwork;
+import java.util.Locale;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.ForgeConfigSpec;
 
 /**
@@ -99,7 +102,40 @@ public final class RelicClientCommands {
                         shoulder, quality)
                 .withStyle(ChatFormatting.AQUA);
         source.sendSuccess(() -> message, false);
+        source.sendSuccess(RelicClientCommands::diag, false);
         return 1;
+    }
+
+    /**
+     * Segunda linea de {@code /relic info}: lo que no se puede adivinar mirando.
+     * El estado en vivo sale del visual ya montado (si no lo hay, no se crea uno
+     * para contestar) y el GLSL dice <b>por que</b> esta apagado cuando lo esta:
+     * config, shaderpack o compilacion fallida.
+     */
+    private static Component diag() {
+        String state = "-";
+        String flash = "-";
+        Player player = Minecraft.getInstance().player;
+        RelicVisuals.RelicVisual visual = player == null ? null : RelicVisuals.existing(player);
+        if (visual != null) {
+            state = visual.animatable().loopState().name().toLowerCase(Locale.ROOT);
+            flash = String.format(Locale.ROOT, "%.0f%%", visual.glow().flashScaled() * 100.0F);
+        }
+        return Component.translatable("message.holocore.diag", state, flash, glslStatus())
+                .withStyle(ChatFormatting.DARK_AQUA);
+    }
+
+    private static Component glslStatus() {
+        if (!RelicConfig.SHADER_GLOW.get()) {
+            return Component.translatable("message.holocore.glsl.config");
+        }
+        if (RelicShaders.shaderPackActive()) {
+            return Component.translatable("message.holocore.glsl.pack");
+        }
+        if (RelicShaders.shader() == null) {
+            return Component.translatable("message.holocore.glsl.failed");
+        }
+        return Component.translatable("message.holocore.glsl.on");
     }
 
     private static void set(ForgeConfigSpec.DoubleValue value, double newValue) {
