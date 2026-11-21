@@ -1,5 +1,15 @@
 # Historial de cambios
 
+## 1.0.15 — que los nombres no vuelvan a mentir
+
+* **Nuevo chequeo de CI**: las constantes de `RelicAnimations` tienen que ser
+  exactamente las claves de `relic_hologram.animation.json`. Antes solo se
+  comparaban contra el manifiesto, así que un nombre mal escrito pasaba el build y
+  se quedaba en silencio hasta que GeckoLib no encontraba la animación — es la
+  clase de bug que dejó las capas muertas hasta 1.0.11.
+* `tools/check_aura_math.py` comprueba además que el **anillo quede por fuera del
+  aura**: es una línea, y dentro del resplandor no se lee como anillo.
+
 ## 1.0.14 — banco de pruebas en el chat
 
 * **`/relic anim <nombre>`** reproduce cualquiera de las 20 animaciones por su

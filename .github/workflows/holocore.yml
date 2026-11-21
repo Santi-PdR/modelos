@@ -270,6 +270,32 @@ jobs:
       # Los nombres de animacion tienen que salir de RelicAnimations. En 1.0.10
       # triggerLayer("layer_hit") pasaba un nombre que no existe en el JSON y el
       # controlador de capas nunca reproducia nada.
+      # Las constantes de RelicAnimations tienen que ser exactamente las claves del
+      # JSON de animaciones. Un nombre de mas (o de menos) se queda en silencio
+      # hasta que GeckoLib no encuentra la animacion y el hueso no se mueve.
+      - name: Validate animation names against JSON
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, re
+
+          java = pathlib.Path(
+              'relic-hologram/src/main/java/com/santipdr/holocore/common/RelicAnimations.java'
+          ).read_text(encoding='utf-8')
+          declaradas = set(re.findall(r'public static final String \w+ = "(animation\.relic\.[^"]+)";', java))
+
+          json_path = pathlib.Path(
+              'relic-hologram/src/main/resources/assets/holocore/animations/relic_hologram.animation.json'
+          )
+          reales = set(json.loads(json_path.read_text(encoding='utf-8'))['animations'])
+
+          assert declaradas, 'no se encontro ninguna constante de animacion en RelicAnimations.java'
+          faltan = sorted(declaradas - reales)
+          sobran = sorted(reales - declaradas)
+          assert not faltan, f'constantes que no existen en el JSON: {faltan}'
+          assert not sobran, f'animaciones del JSON sin constante: {sobran}'
+          print(f'Animaciones OK: {len(reales)} claves del JSON = {len(declaradas)} constantes de Java.')
+          PY
+
       - name: Validate animation name literals
         run: |
           python3 - <<'PY'

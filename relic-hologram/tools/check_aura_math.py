@@ -50,6 +50,7 @@ def leer_constantes():
     pesos = floats(re.search(r'WEIGHT = \{([^}]*)\}', aura).group(1))
     alpha = floats(re.search(r'AURA_ALPHA = ([\d.]+)F', aura).group(1))[0]
     boost = floats(re.search(r'TINT_ALPHA_BOOST = ([\d.]+)F', aura).group(1))[0]
+    anillo = floats(re.search(r'RING_DIAMETER = ([\d.]+)F', aura).group(1))[0]
     darken = 1.0  # el tinte usa el color del estado tal cual
 
     state = STATE_JAVA.read_text(encoding='utf-8')
@@ -58,7 +59,7 @@ def leer_constantes():
 
     config = CONFIG_JAVA.read_text(encoding='utf-8')
     intensidad = floats(re.search(r'"auraIntensity", ([\d.]+)D', config).group(1))[0]
-    return diametros, pesos, alpha, boost, darken, tinte, intensidad
+    return diametros, pesos, alpha, boost, darken, tinte, intensidad, anillo
 
 
 def leer_pixel_central():
@@ -129,13 +130,17 @@ def componer(fondo, pesos, alpha, boost, darken, tinte, intensidad, tex):
 
 
 def main():
-    diametros, pesos, alpha, boost, darken, tinte, intensidad = leer_constantes()
+    diametros, pesos, alpha, boost, darken, tinte, intensidad, anillo = leer_constantes()
     tex = leer_pixel_central()
     print(f'textura centro: rgb {tuple(round(c, 2) for c in tex[:3])} alpha {tex[3]:.2f}')
     print(f'diametros {diametros}  pesos {pesos}  auraAlpha {alpha}  '
           f'tinte +{boost}x oscurecido {darken}  intensidad {intensidad}')
 
     fallos = []
+    # El anillo es una linea: si queda dentro del aura no se lee como anillo.
+    if anillo <= max(diametros):
+        fallos.append(f'el anillo ({anillo} bloques) queda dentro del aura ({max(diametros)})')
+
     for nombre, fondo in BACKGROUNDS.items():
         salida = componer(fondo, pesos, alpha, boost, darken, tinte, intensidad, tex)
         tono = salida[2] - salida[0]
