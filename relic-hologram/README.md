@@ -45,6 +45,10 @@ Para publicar el jar como Release: ejecutar el workflow a mano con
 
 `./gradlew runClient` arranca un cliente de desarrollo con GeckoLib y Curios.
 
+> El CI lanza ademas `runClient` bajo xvfb (sin GPU): comprueba que el mod
+> construye, que Curios registra el renderer y que el cliente no cae. Ese test
+> ya encontro un fallo real (un evento del bus FORGE registrado en el bus MOD).
+>
 > **Nota de dev:** Curios 5.14.1 trae su refmap de Mixin con nombres SRG
 > (`f_19803_` = `Entity.firstTick`); con mappings `official` y en entorno de
 > desarrollo ese refmap no se remapea y el arranque falla en `AccessorEntity`.

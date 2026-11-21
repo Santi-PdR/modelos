@@ -113,6 +113,16 @@ jobs:
           lite_desc = lite['minecraft:geometry'][0]['description']
           assert full_desc['identifier'] == 'geometry.relic_hologram_centered'
           assert lite_desc['identifier'] == 'geometry.relic_hologram_lite_centered'
+          for doc in (geo, lite):
+              for bone in doc['minecraft:geometry'][0]['bones']:
+                  assert bone.get('name'), 'hueso sin nombre'
+                  assert len(bone.get('pivot', [])) == 3, bone['name']
+                  for cube in bone.get('cubes', []):
+                      assert len(cube['origin']) == 3 and len(cube['size']) == 3, bone['name']
+                      assert 'uv' in cube or 'uv' in bone, bone['name']
+              assert doc['minecraft:geometry'][0]['description']['texture_width'] == 64
+              assert doc['minecraft:geometry'][0]['description']['texture_height'] == 96
+
           full_bones = {b['name'] for b in geo['minecraft:geometry'][0]['bones']}
           lite_bones = {b['name'] for b in lite['minecraft:geometry'][0]['bones']}
           assert full_bones == lite_bones, full_bones ^ lite_bones
@@ -231,6 +241,83 @@ jobs:
               --target "$GITHUB_SHA"
           fi
           echo "Publicado $TAG (sha256:$SHA)"
+
+  # --------------------------------------------------------------------
+  # Arranque real del cliente en CI, sin GPU (xvfb + llvmpipe).
+  # Comprueba que el mod carga, que el renderer de Curios se registra y que
+  # GeckoLib encuentra los .geo.json / .animation.json. No sustituye a la
+  # prueba visual en el juego.
+  # --------------------------------------------------------------------
+  client-smoke:
+    name: runClient (xvfb, sin GPU)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: build
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle 8.8
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.8'
+
+      - name: Launch client (xvfb) and check mod loading
+        working-directory: relic-hologram
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          MESA_GL_VERSION_OVERRIDE: '4.5'
+        run: |
+          set +e
+          command -v xvfb-run || sudo apt-get install -y xvfb
+          # En CI no hay tarjeta de sonido: el cliente apaga el audio y sigue.
+          # Un cliente sano NO termina solo, asi que timeout (124) = exito.
+          timeout 480 xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient --no-daemon > client.log 2>&1
+          RC=$?
+          echo "exit=$RC"
+          grep -n "Holographic Core (holocore) cargado" client.log | head -3 || true
+          echo '--- ultimas lineas ---'
+          tail -40 client.log
+
+          FAIL=0
+          if [ "$RC" -ne 124 ] && [ "$RC" -ne 0 ]; then
+            echo "::error::runClient termino con codigo $RC (se esperaba 124 = seguia vivo)."
+            FAIL=1
+          fi
+          if ! grep -q "Holographic Core (holocore) cargado" client.log; then
+            echo "::error::El mod no registro su arranque (el constructor no se ejecuto)."
+            FAIL=1
+          fi
+          for pattern in "Mod loading error has occurred" "Crash report saved to" \
+                         "Unable to find model" "Error loading model file" "Failed to create display"; do
+            if grep -q "$pattern" client.log; then
+              echo "::error::encontrado en el log: $pattern"
+              FAIL=1
+            fi
+          done
+
+          if [ "$FAIL" -ne 0 ]; then
+            {
+              echo "### Diagnostico runClient"
+              echo ''
+              echo '```'
+              grep -nE "Exception|Caused by|ERROR|FATAL|Crash|Failed|holocore" client.log | tail -60 || true
+              echo '--- tail ---'
+              tail -100 client.log || true
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "Cliente arrancado y mod cargado sin errores."
+
 
   # --------------------------------------------------------------------
   # Arranque real del cliente en CI, sin GPU (xvfb + llvmpipe).
