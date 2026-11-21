@@ -329,7 +329,13 @@ public final class VisualFixtureClient {
             case 908 -> capture = "25_fx_finisher.png";
             case 916 -> effectSample(com.stainkatana.katana.KatanaVisualStyle.ULTIMATE_FINAL);
             case 920 -> capture = "26_fx_final.png";
-            case 928 -> { System.out.println("STAIN_EFFECT_SAMPLES_DONE"); System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
+            case 928 -> {
+                mc.options.setCameraType(CameraType.FIRST_PERSON);
+                mc.getSingleplayerServer().execute(() -> mc.getSingleplayerServer().overworld().setDayTime(18000));
+            }
+            case 940 -> effectSample(com.stainkatana.katana.KatanaVisualStyle.FINISHER);
+            case 944 -> capture = "27_fx_first_night.png";
+            case 954 -> { System.out.println("STAIN_EFFECT_SAMPLES_DONE"); System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }
     }
@@ -337,7 +343,10 @@ public final class VisualFixtureClient {
         var player = Minecraft.getInstance().player;
         if (player == null) throw new IllegalStateException("No player for FX sample");
         var forward = player.getLookAngle().multiply(1, 0, 1).normalize();
-        var point = player.position().add(forward.scale(2)).add(0, 1.1, 0);
+        // Offset the third-person sample so the caster does not occlude the effect.
+        var side = new net.minecraft.world.phys.Vec3(forward.z, 0, -forward.x);
+        double lateral = Minecraft.getInstance().options.getCameraType().isFirstPerson() ? 0 : 1.4;
+        var point = player.position().add(forward.scale(2.5)).add(side.scale(lateral)).add(0, 1.1, 0);
         com.stainkatana.katana.client.KatanaVisuals.spawn(player.getId(), point.x, point.y, point.z,
                 player.getYRot(), style, player.getMainArm() == net.minecraft.world.entity.HumanoidArm.LEFT);
     }
