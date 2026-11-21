@@ -462,3 +462,8 @@ alcance, dirección, visibilidad y legalidad. No se cargan chunks por esta
 consulta. El fixture fuerza una parte de Ender Dragon en alcance con el cuerpo
 principal fuera del área, además de comprobar su liberación. Esto no garantiza
 compatibilidad con jefes que implementan protección o partes de otra manera.
+
+La comparación de un ajuste separado de profundidad para la mano libre en
+primera persona pasó el fixture, pero dejó la mano fuera de cuadro durante gran
+parte del gesto. Se descartó y se conservaron las capturas del ajuste anterior;
+la prueba funcional por sí sola no valida la coreografía.
