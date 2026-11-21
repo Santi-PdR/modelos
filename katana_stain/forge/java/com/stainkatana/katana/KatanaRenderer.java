@@ -56,7 +56,8 @@ public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
                 // Turn around the item origin, preserving the wrist position. The
                 // visual fixture compared both faces at -90, -45, +45 and +90.
                 poseStack.translate(.5, .5, .5);
-                poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(-45));
+                poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(
+                        context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND ? 45 : -45));
                 poseStack.translate(-.5, -.5, -.5);
             }
             super.renderByItem(stack, context, poseStack, buffers, light, overlay);
