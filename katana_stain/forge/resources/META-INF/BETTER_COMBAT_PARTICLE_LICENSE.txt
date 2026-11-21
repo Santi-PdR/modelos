@@ -2,7 +2,7 @@ Better Combat Particle — textures by Malfu
 Source: https://github.com/MalfuXT/malfu-mods-bc_slash_particle-1.20.1
 Revision: 9d6a5245778f42903749e6f572396ff0043c15bd
 The upstream fabric.mod.json declares MIT. Textures topslash90, topslash180 and
-botstab have been resampled to 64 x 64 and are redistributed under the following license.
+botstab and topslash360 have been resampled to 64 x 64 and are redistributed under the following license.
 The oriented double-sided slash particle renderer is adapted from
 BotSlashParticle180 by Malfu; textures are tinted at runtime.
 

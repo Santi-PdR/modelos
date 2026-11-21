@@ -14,6 +14,7 @@ public final class KatanaParticles {
     public static final RegistryObject<SimpleParticleType> SLASH = TYPES.register("slash_arc", () -> new SimpleParticleType(false));
     public static final RegistryObject<SimpleParticleType> SHARD = TYPES.register("blood_shard", () -> new SimpleParticleType(false));
     public static final RegistryObject<SimpleParticleType> PULSE = TYPES.register("blood_pulse", () -> new SimpleParticleType(false));
+    public static final RegistryObject<SimpleParticleType> RING = TYPES.register("blood_ring", () -> new SimpleParticleType(false));
     private KatanaParticles() { }
     public static void register(IEventBus bus) { TYPES.register(bus); }
 }

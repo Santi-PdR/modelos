@@ -30,8 +30,8 @@ public final class KatanaParticle extends TextureSheetParticle {
         this.sprites = sprites; this.style = style;
         this.yawAngle = (float) yaw; this.pitchAngle = (float) pitch; this.rollAngle = (float) angle;
         this.hasPhysics = false;
-        this.lifetime = style == 0 ? 8 : style == 1 ? 7 : 10;
-        this.quadSize = style == 0 ? 1.35F : style == 1 ? 0.32F : 1.45F;
+        this.lifetime = style == 0 ? 8 : style == 1 ? 7 : style == 3 ? 12 : 10;
+        this.quadSize = style == 0 ? 1.35F : style == 1 ? 0.32F : style == 3 ? 1.65F : 1.45F;
         // The slash planes encode orientation in dx/dy/dz, while shard packets
         // carry actual velocity. Do not discard the blood particles' motion.
         if (style == 1) {
@@ -41,6 +41,7 @@ public final class KatanaParticle extends TextureSheetParticle {
             this.xd = this.yd = this.zd = 0;
         }
         if (style == 0) this.setColor(1.0F, .65F, .65F);
+        else if (style == 3) this.setColor(.95F, .24F, .26F);
         else this.setColor(.82F, .13F, .16F);
         this.alpha = style == 0 ? .85F : .80F;
         this.setSpriteFromAge(sprites);
@@ -72,7 +73,11 @@ public final class KatanaParticle extends TextureSheetParticle {
         for (Vector4f corner : corners) { rotation.transform(corner); corner.add(x, y, z, 0); }
         float[] u = {getU1(), getU1(), getU0(), getU0()};
         float[] v = {getV1(), getV0(), getV0(), getV1()};
-        int light = getLightColor(partialTick);
+        // Keep the short effect legible at night without making the world emissive.
+        int ambient = getLightColor(partialTick);
+        int block = Math.max(ambient & 0xffff, 0xa0);
+        int sky = Math.max((ambient >>> 16) & 0xffff, 0xa0);
+        int light = block | (sky << 16);
         for (int i = 0; i < 8; i++) {
             int n = i < 4 ? i : 7 - i;
             out.vertex(corners[n].x(), corners[n].y(), corners[n].z()).uv(u[n], v[n])
@@ -90,6 +95,12 @@ public final class KatanaParticle extends TextureSheetParticle {
         private final SpriteSet sprites; public ShardProvider(SpriteSet sprites) { this.sprites = sprites; }
         public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double dx, double dy, double dz) {
             return new KatanaParticle(level, x, y, z, dx, dy, dz, sprites, 1);
+        }
+    }
+    public static final class RingProvider implements ParticleProvider<SimpleParticleType> {
+        private final SpriteSet sprites; public RingProvider(SpriteSet sprites) { this.sprites = sprites; }
+        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double dx, double dy, double dz) {
+            return new KatanaParticle(level, x, y, z, dx, dy, dz, sprites, 3);
         }
     }
     public static final class PulseProvider implements ParticleProvider<SimpleParticleType> {

@@ -4,7 +4,7 @@ import json, struct
 from pathlib import Path
 root=Path(__file__).resolve().parents[2]/'build-katana-input'
 a=root/'resources/assets/stainkatana'
-for effect, count in [('slash_arc',6),('blood_shard',6),('blood_pulse',6)]:
+for effect, count in [('slash_arc',6),('blood_shard',6),('blood_pulse',6),('blood_ring',7)]:
  data=json.loads((a/'particles'/f'{effect}.json').read_text())
  assert len(data['textures'])==count
  for entry in data['textures']:
@@ -19,7 +19,7 @@ assert 'ParticleTypes.' not in java and 'DustParticleOptions' not in java
 assert 'NetworkDirection.PLAY_TO_SERVER' in java and 'player.canHarmPlayer' in java
 assert 'capatest' not in java
 assert 'paralysis' in (a/'lang/en_us.json').read_text().lower()
-print('OK: 18 fotogramas de Better Combat Particle, tres teclas, seguridad de red e independencia de capatest')
+print('OK: 25 fotogramas de Better Combat Particle, tres teclas, seguridad de red e independencia de capatest')
 clips = ('sword_attack', 'sword_attack2')
 for clip in clips:
     animation = json.loads((a/'player_animation'/f'{clip}.json').read_text())['animations'][clip]

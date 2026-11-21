@@ -39,17 +39,19 @@ public final class KatanaVisuals {
             level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw, 90, sign * 25);
             if (style == KatanaVisualStyle.ULTIMATE_FINAL) {
                 level.addParticle(KatanaParticles.SLASH.get(), x, y, z, yaw + 180, 70, sign * 35);
+                level.addParticle(KatanaParticles.RING.get(), x, y - .65, z, yaw, 0, 0);
                 sparks(level, x, y, z, yaw, 8);
             }
         } else if (style == KatanaVisualStyle.BLOOD_BIND) {
-            // Two offset glyph planes and a compact burst make a successful mark
-            // distinct from an ordinary cut without another texture atlas.
+            // An expanding, grounded ring and a vertical glyph distinguish a bind
+            // from an ordinary cut, using credited Better Combat Particle frames.
+            level.addParticle(KatanaParticles.RING.get(), x, y - .65, z, yaw, 0, 0);
             level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw, 90, 0);
-            level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw + 90, 65, 0);
             sparks(level, x, y, z, yaw, 5);
         } else if (style == KatanaVisualStyle.FINISHER) {
             level.addParticle(KatanaParticles.SLASH.get(), x, y, z, yaw, 65, sign * 35);
             level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw + 180, 80, -sign * 30);
+            level.addParticle(KatanaParticles.RING.get(), x, y, z, yaw, 70, sign * 15);
             sparks(level, x, y, z, yaw, 8);
         } else if (style == KatanaVisualStyle.HIT) {
             sparks(level, x, y, z, yaw, 3);
