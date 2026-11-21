@@ -96,9 +96,12 @@ public final class KatanaAnimations {
             timedClip.addModifierBefore(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier(part -> {
                 if (!FirstPersonMode.isFirstPersonPass() || !(part.equals("leftArm") || part.equals("rightArm")))
                     return java.util.Optional.empty();
+                // Keep the sword arm in its proven pose, while framing the free
+                // arm separately. This affects only the local first-person pass.
+                boolean free = part.equals(player.getMainArm() == HumanoidArm.RIGHT ? "leftArm" : "rightArm");
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                         dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
-                        new dev.kosmx.playerAnim.core.util.Vec3f(0, -2, -8)));
+                        new dev.kosmx.playerAnim.core.util.Vec3f(0, -2, free ? -5 : -8)));
             }) {
                 // Inspect begins at tick zero; the library's default fade divides
                 // by beginTick. The enclosing layer already performs the fade.
