@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.30 — borde de la capucha en el giro agachado
+
+**[Descargar JAR de prueba v1.67.30](https://github.com/Santi-PdR/modelos/raw/22026f27db7c2e588804495ea16d96c98af2204d/entregables/v1.67.30/capatest-1.67.30.jar)** · [PowerShell para test-1](docs/releases/v1.67.30/instalar-test-1.txt) · [Detalle antes/después](docs/releases/v1.67.30/maniobra/maniobra-corona.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.30/notas.md).
+
+El borde alto se repliega al mirar arriba y girar agachado. Probado en Forge con Alex en pecho y Curios. Se conserva la frenada de la .29, su arte y encastre.
+
 ### v1.67.29 — frenada y paso agachado
 
 **[Descargar JAR de prueba v1.67.29](https://github.com/Santi-PdR/modelos/raw/309543f8f06f6e2d00c3722d980e8815ed111e31/entregables/v1.67.29/capatest-1.67.29.jar)** · [PowerShell para test-1](docs/releases/v1.67.29/instalar-test-1.txt) · [Maniobra en Forge](docs/releases/v1.67.29/maniobra/maniobra-forge.jpg) · [Medidas y SHA-256](docs/releases/v1.67.29/notas.md).
