@@ -27,7 +27,7 @@ jobs:
     # La rama de artefactos (artifacts/vX.Y.Z) SOLO guarda el .jar. Si el
     # workflow corriera tambien sobre ella, cada push re-construiria el
     # mod entero para nada. Aqui se salta ese run.
-    if: ${{ !startsWith(github.ref, 'refs/heads/artifacts/') }}
+    if: ${{ !startsWith(github.ref, 'refs/heads/artifacts/') && !contains(github.event.head_commit.message, '[inspeccionar-v16722]') }}
 
     steps:
       - name: Checkout
@@ -1260,3 +1260,25 @@ jobs:
           done
           echo "### Borrador $TAG verificado (publicar después de CI SUCCESS)" >> "$GITHUB_STEP_SUMMARY"
           cat "$SUMS" >> "$GITHUB_STEP_SUMMARY"
+
+  inspect-v16722:
+    name: Medir la referencia de Forge v1.67.22
+    if: >-
+      github.repository == 'Santi-PdR/modelos' && github.ref == 'refs/heads/arena/5a9fa51b-modelos' &&
+      github.event_name == 'push' && contains(github.event.head_commit.message, '[inspeccionar-v16722]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: capatest-fx-en-mundo
+          github-token: ${{ github.token }}
+          run-id: 44865764157
+          path: ${{ runner.temp }}/forge-v16722
+      - run: python3 -m pip install --quiet numpy Pillow
+      - run: OPENBLAS_NUM_THREADS=1 python3 tools/inspect_forge_v16722.py "$RUNNER_TEMP/forge-v16722" pecho
+      - run: OPENBLAS_NUM_THREADS=1 python3 tools/inspect_forge_v16722.py "$RUNNER_TEMP/forge-v16722" curios
