@@ -243,6 +243,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: build
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -260,8 +262,12 @@ jobs:
 
       - name: Launch client and wait for the sound engine
         working-directory: relic-hologram
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+          MESA_GL_VERSION_OVERRIDE: '4.5'
         run: |
           set +e
+          command -v xvfb-run || sudo apt-get install -y xvfb
           timeout 600 xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient --no-daemon > client.log 2>&1
           echo "exit=$?"
           grep -n "Sound engine started\|Startup took\|Created:" client.log | head -20 || true
@@ -280,3 +286,28 @@ jobs:
             exit 1
           fi
           echo "Cliente arrancado sin errores de carga del mod."
+
+      # El CDN de logs de Actions no es accesible desde todos los entornos, asi
+      # que el diagnostico se deja versionado en el repo cuando algo falla.
+      - name: Save diagnostics on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p ci-logs
+          {
+            echo "# runClient smoke test: fallo"
+            echo
+            echo "## Marcadores"
+            grep -nE "Sound engine started|Startup took|Created:|Crash report|Exception|Caused by|Error|error|Failed|failed|xvfb" \
+              relic-hologram/client.log | tail -250 || true
+            echo
+            echo "## Ultimas 400 lineas"
+            tail -400 relic-hologram/client.log || true
+          } > ci-logs/runclient-last.log
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ci-logs/runclient-last.log
+          git commit -m "ci: diagnostico del smoke test de runClient" || true
+          git push || true
