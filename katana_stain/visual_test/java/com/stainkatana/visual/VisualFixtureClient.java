@@ -22,7 +22,7 @@ public final class VisualFixtureClient {
     private static float comboHealth;
     private static float firstComboDamage;
     private static java.util.UUID dragonId, finisherTarget;
-    private static float finisherHealth;
+    private static float finisherHealth, finisherSwordAttack;
     private static net.minecraft.world.phys.Vec3 dragonAnchor;
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
@@ -130,6 +130,7 @@ public final class VisualFixtureClient {
                     throw new IllegalStateException("Two successful Zs did not charge the finisher");
                 var victim = mobs.get(0);
                 finisherTarget = victim.getUUID(); finisherHealth = victim.getHealth();
+                finisherSwordAttack = (float)player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
                 // Creative mode would make both protection checks vacuous.
                 player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
                 player.invulnerableTime = 0;
@@ -167,7 +168,7 @@ public final class VisualFixtureClient {
                 var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                 var target = player.serverLevel().getEntity(finisherTarget);
                 if (!(target instanceof net.minecraft.world.entity.LivingEntity victim) || !victim.isAlive()
-                        || finisherHealth - victim.getHealth() <= player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE))
+                        || finisherHealth - victim.getHealth() <= finisherSwordAttack)
                     throw new IllegalStateException("Finisher did not land stronger-than-normal, non-lethal damage");
                 System.out.println("STAIN_FINISHER_DAMAGE_VERIFIED");
             });

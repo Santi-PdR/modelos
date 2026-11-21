@@ -18,7 +18,8 @@ import net.minecraftforge.fml.common.Mod;
 /** CI fixture only. Not compiled into the distributed mod. */
 @Mod.EventBusSubscriber(modid = StainKatanaMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class VisualFixtureServer {
-    private static int boundTicks;
+    private static int boundTicks, ultimateHealthDrops;
+    private static float lastBoundHealth;
     private static boolean boundSeen, boundChecked;
     private static net.minecraft.world.phys.Vec3 casterPosition;
     private static boolean casterMoved, casterLockVerified;
@@ -43,12 +44,16 @@ public final class VisualFixtureServer {
         var mobs = player.serverLevel().getEntitiesOfClass(Zombie.class, player.getBoundingBox().inflate(20));
         if (mobs.isEmpty()) return;
         boolean bound = mobs.get(0).hasEffect(com.stainkatana.katana.KatanaEffects.CINEMATIC_BIND.get());
-        if (bound) { boundSeen = true; boundTicks++; }
-        else if (boundSeen) {
+        if (bound) {
+            float health = mobs.get(0).getHealth();
+            if (boundSeen && health < lastBoundHealth - .001F) ultimateHealthDrops++;
+            lastBoundHealth = health;
+            boundSeen = true; boundTicks++;
+        } else if (boundSeen) {
             if (boundTicks < 180) throw new IllegalStateException("Ultimate ended early, bound ticks=" + boundTicks);
-            if (mobs.get(0).getHealth() >= 1000F) throw new IllegalStateException("Ultimate caused no damage");
+            if (ultimateHealthDrops < 3) throw new IllegalStateException("Ultimate caused too few separate health drops: " + ultimateHealthDrops);
             boundChecked = true;
-            System.out.println("STAIN_ULTIMATE_VERIFIED ticks=" + boundTicks);
+            System.out.println("STAIN_ULTIMATE_VERIFIED ticks=" + boundTicks + " healthDrops=" + ultimateHealthDrops);
         }
     }
     @SubscribeEvent public static void login(PlayerEvent.PlayerLoggedInEvent event) {
