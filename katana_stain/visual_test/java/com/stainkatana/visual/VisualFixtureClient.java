@@ -278,6 +278,9 @@ public final class VisualFixtureClient {
                     throw new IllegalStateException("Dragon missing for multipart range fixture");
                 player.getInventory().setItem(player.getInventory().selected, savedStack);
                 dragon.teleportTo(player.getX(), player.getY() + 3, player.getZ() + 30);
+                // Move all other parts with the parent; otherwise stale hitboxes
+                // from its previous location can be closer than the test part.
+                for (var other : dragon.getParts()) other.setPos(dragon.getX(), dragon.getY(), dragon.getZ());
                 var part = dragon.getParts()[0];
                 part.setPos(player.getX(), player.getEyeY() - .4, player.getZ() + 8);
                 if (dragon.getBoundingBox().intersects(player.getBoundingBox().inflate(15)))
