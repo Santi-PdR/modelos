@@ -1030,7 +1030,7 @@ jobs:
           set -o pipefail
           OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_combined.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
             case "$line" in
-              *AssertionError:*|*Error:*) printf '::error title=Maniobra en Forge::%s\n' "${line//%/%25}" ;;
+              *AssertionError:*|*Error:*|Fuera\ de\ umbral:*) printf '::error title=Maniobra en Forge::%s\n' "${line//%/%25}" ;;
               pecho:*|curios:*) printf '::notice title=Maniobra en Forge::%s\n' "${line//%/%25}" ;;
               *) printf '%s\n' "$line" ;;
             esac

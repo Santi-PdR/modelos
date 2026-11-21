@@ -29,7 +29,10 @@ def timeline(data, slot):
     # explicit tick coverage within every measured part, not an idle prefix.
     assert 0 <= t[0] < 27 and t[-1] >= 109 and np.all(np.diff(t) >= 0), (
         slot, 'ruta incompleta', len(t), float(t[0]), float(t[-1]))
-    assert (data['ground'] == 1).all() and not any(data[k].any() for k in ('air', 'fall', 'swim')), (slot, 'no fue una maniobra en suelo seco')
+    # The second equip can inherit an airborne sample while the teleport
+    # settles. The measurement starts on the established sprint at t=24.
+    airborne = (data['ground'] != 1) | (data['air'] > 0) | (data['fall'] > 0) | (data['swim'] > 0)
+    assert not np.any(airborne & (t >= 24)), (slot, 'no fue una maniobra en suelo seco', t[airborne].tolist()[:16])
 
     def span(lo, hi):
         mask = (t >= lo) & (t < hi)
@@ -131,8 +134,8 @@ def main(root, diagnostic=False):
         visible = data[data['image'] != '-']
         assert len(visible) == len(STILLS), (slot, 'capturas incompletas')
         for sample, (at, _) in zip(visible, STILLS, strict=True):
-            tick = int(sample['time'])
-            assert at <= tick <= at + 2 and sample['image'] == f'maniobra-{slot}-{tick:03d}.png', (slot, at, sample)
+            captured_at = int(sample['time'])
+            assert at <= captured_at <= at + 2 and sample['image'] == f'maniobra-{slot}-{captured_at:03d}.png', (slot, at, sample)
         pictures[slot] = [root/name for name in visible['image']]
         print(f'{slot}: {count} cuadros, {poses} poses con malla; punta p90/pico {p90:.3f}/{peak:.3f}u/tick; '
               f'pico en t={tick:.2f}, intervalo {dt:.3f}, bisagras Δ{top:.2f}/{mid:.2f}°; '
