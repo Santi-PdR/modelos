@@ -34,6 +34,9 @@ public final class KatanaVisuals {
             // First stroke of the ultimate, angled across the body.
             level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw, 90, leftHanded ? -25 : 25);
         } else {
+            // Also focuses an active finisher shot; this is a no-op outside a scene.
+            if (Minecraft.getInstance().player != null && Minecraft.getInstance().player.getId() == entityId)
+                KatanaScene.impact(false, leftHanded, x, y, z);
             // Paralysis feedback around the marked target.
             level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw, 90, 0);
         }

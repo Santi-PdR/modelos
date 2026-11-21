@@ -432,3 +432,12 @@ Pillow (`python -m pip install Pillow`); `tools/optimizar_texturas.py` es
 idempotente, y `tools/preparar_icono.py` regenera el icono desde el original.
 La mejora potencial es de área de texel, no una medida de VRAM del juego: los
 atlas, mipmaps y otros mods también influyen. Falta comprobación visual real.
+En estas 21 imágenes, sin contar la daga, se pasa de 835.584 a 208.896
+texeles (un cuarto). A cuatro bytes por texel serían aproximadamente 3,19 MiB
+frente a 0,80 MiB antes de atlas, mipmaps, compresión y otras copias: no es una
+medición del consumo real de Minecraft ni de los demás mods.
+
+El HUD de prueba se coloca abajo a la izquierda para no tapar el arma en primera
+persona; `interface.hudLeft=false` lo cambia a la derecha y `showHud=false` lo
+oculta. Una vez cargadas las dos marcas, Z muestra «REMATE» aunque el cooldown
+anterior siga contando, porque el servidor permite ese uso de la habilidad.

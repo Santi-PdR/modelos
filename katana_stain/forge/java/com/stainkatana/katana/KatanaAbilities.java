@@ -265,6 +265,9 @@ public final class KatanaAbilities {
         BACKSTABS.put(player.getUUID(), new Backstab(target.getUUID(), player.getMainHandItem(), player.level().dimension(), now, false));
         moveTo(player, target, spot);
         KatanaNetwork.broadcastAnimation(player, 6);
+        // Give the short finisher camera a server-selected focus immediately;
+        // otherwise it switches to third person but has nothing to frame.
+        KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.55), target.getZ(), 2);
     }
     private static void tickBackstab(ServerPlayer player) {
         Backstab stab = BACKSTABS.get(player.getUUID());

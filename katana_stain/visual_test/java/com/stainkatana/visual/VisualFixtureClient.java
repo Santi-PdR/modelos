@@ -129,7 +129,12 @@ public final class VisualFixtureClient {
                     throw new IllegalStateException("Finisher did not teleport behind its target");
                 System.out.println("STAIN_FINISHER_VERIFIED");
             });
-            case 491 -> capture = "18_finisher.png";
+            case 491 -> {
+                if (!com.stainkatana.katana.client.KatanaScene.cameraApplied())
+                    throw new IllegalStateException("Finisher camera did not acquire a target");
+                System.out.println("STAIN_FINISHER_CAMERA_VERIFIED");
+                capture = "18_finisher.png";
+            }
             case 495 -> mc.getSingleplayerServer().execute(() -> {
                 var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                 var target = player.serverLevel().getEntity(finisherTarget);
