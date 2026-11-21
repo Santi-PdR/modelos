@@ -1,0 +1,29 @@
+name: Reanalizar la captura de saltos de Forge
+on: push
+permissions:
+  contents: read
+  actions: read
+jobs:
+  review:
+    if: ${{ github.ref_name == 'arena/5a9fa51b-modelos' && contains(github.event.head_commit.message, '[revisar-saltos-v16725]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 44914820262
+          name: capatest-fx-en-mundo
+          path: ${{ runner.temp }}/jump-base
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 44915563527
+          name: capatest-fx-en-mundo
+          path: ${{ runner.temp }}/jump-current
+      - run: python3 -m pip install --quiet numpy Pillow
+      - name: Diagnóstico de pecho
+        run: PYTHONPATH=tools OPENBLAS_NUM_THREADS=1 python3 tools/_review_jumps.py pecho
+      - name: Diagnóstico de Curios
+        run: PYTHONPATH=tools OPENBLAS_NUM_THREADS=1 python3 tools/_review_jumps.py curios
