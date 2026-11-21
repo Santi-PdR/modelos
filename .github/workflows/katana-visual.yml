@@ -97,9 +97,12 @@ jobs:
           grep -F 'STAIN_VANILLA_COMBO_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_ULTIMATE_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_FINISHER_VERIFIED' /tmp/stain-visual-fallback.log
+          grep -F 'STAIN_FINISHER_ITEM_SWITCH_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_FINISHER_DAMAGE_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-fallback.log
+          grep -F 'STAIN_CASTER_MOVEMENT_LOCK_VERIFIED' /tmp/stain-visual-fallback.log
+          grep -F 'STAIN_CASTER_PROTECTION_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_CANCELLATION_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_LONG_RANGE_Z_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_DRAGON_SELECTED' /tmp/stain-visual-fallback.log
@@ -121,15 +124,19 @@ jobs:
           grep -F 'STAIN_CAMERA_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_ULTIMATE_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_FINISHER_VERIFIED' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_FINISHER_ITEM_SWITCH_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_FINISHER_DAMAGE_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_CASTER_MOVEMENT_LOCK_VERIFIED' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_CASTER_PROTECTION_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_CANCELLATION_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_LONG_RANGE_Z_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_DRAGON_SELECTED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_DRAGON_HELD' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_DRAGON_RELEASED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_MULTIPART_RANGE_VERIFIED' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_BC_ATTACK_FX_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_EFFECT_SAMPLES_DONE' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-full-bc.log
           test "$(find run/stain-visual-test -name '*.png' | wc -l)" -ge 10

@@ -89,6 +89,13 @@ public final class VisualFixtureClient {
             }
             case 186 -> capture = "13_normal_attack.png";
             case 190 -> mc.options.keyAttack.setDown(false);
+            case 205 -> {
+                if (net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) {
+                    if (com.stainkatana.katana.client.KatanaBetterCombatFx.cueCount() == 0)
+                        throw new IllegalStateException("Better Combat attack did not trigger a katana cue");
+                    System.out.println("STAIN_BC_ATTACK_FX_VERIFIED");
+                }
+            }
             case 220 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(2));
             case 230 -> capture = "07_ultimate_start.png";
             case 260 -> {

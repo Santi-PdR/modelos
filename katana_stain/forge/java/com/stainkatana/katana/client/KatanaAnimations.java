@@ -107,6 +107,20 @@ public final class KatanaAnimations {
                 @Override protected float getFadeIn(float delta) { return 1F; }
             });
         }
+        if (ability == 1) {
+            // The world-model arm can otherwise fill the entire first-person
+            // view. Move only the first-person render pass away from the eye;
+            // the third-person pose and server hit schedule are unchanged.
+            timedClip.addModifierBefore(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier(part -> {
+                if (!FirstPersonMode.isFirstPersonPass() || !(part.equals("leftArm") || part.equals("rightArm")))
+                    return java.util.Optional.empty();
+                return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
+                        dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
+                        new dev.kosmx.playerAnim.core.util.Vec3f(0, 1, 5)));
+            }) {
+                @Override protected float getFadeIn(float delta) { return 1F; }
+            });
+        }
         timedClip.addModifierBefore(new SpeedModifier(ability == 0 ? 3F : (ability == 1 ? 1F : 1.4F)));
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
     }
