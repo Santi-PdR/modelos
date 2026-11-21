@@ -157,7 +157,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         var trim = collarPart ? nape.forBone(name) : CapeHood.FIXED;
         double sprint = sprintEdge();
         var edge = sprint > 0 && parent != null ? CapeSprintEdge.offset(name, parent.getName()) : null;
-        boolean fitted = seat || backing || saddle || shoulder || underYoke || hood || trim != CapeHood.FIXED || edge != null;
+        boolean wingFit = elytra && (backing || saddle || shoulder || underYoke);
+        boolean fitted = seat || saddle || shoulder || wingFit || hood || trim != CapeHood.FIXED || edge != null;
         if (fitted) poseStack.pushPose();
         try {
             // This pose-only stroke is shared by cutout and bloom. The trim
@@ -186,7 +187,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                 poseStack.translate(sprint * edge.x() / 16, 0, sprint * edge.z() / 16);
             } else if (shoulder && !elytra) {
                 poseStack.translate(0, CapeMountPlacement.SHOULDER_LIFT / 16, -CapeMountPlacement.SHOULDER_FORWARD / 16);
-            } else if (fitted) {
+            } else if (wingFit) {
+                // A pose-stack push for the nape alone must not scale the trim.
                 // Only the pre-existing lining/fold clearance for Elytra.
                 RenderUtils.translateToPivotPoint(poseStack, bone);
                 if (saddle) {
