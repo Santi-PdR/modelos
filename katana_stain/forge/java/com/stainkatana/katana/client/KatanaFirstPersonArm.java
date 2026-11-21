@@ -67,6 +67,12 @@ public final class KatanaFirstPersonArm {
                     .mul(new org.joml.Quaternionf().rotationZ(sign * (float)Math.PI / 2))
                     .mul(wristOrientation);
             pose.mulPose(screenTurn);
+            // Bring the middle of the grip onto the palm rather than resting its
+            // pommel on the fingertips. Express the nudge in view space.
+            org.joml.Quaternionf itemOrientation = pose.last().pose().getUnnormalizedRotation(new org.joml.Quaternionf());
+            org.joml.Vector3f gripNudge = new org.joml.Vector3f(sign * .10F, -.10F, 0)
+                    .rotate(itemOrientation.invert());
+            pose.translate(gripNudge.x(), gripNudge.y(), gripNudge.z());
             var context = right ? net.minecraft.world.item.ItemDisplayContext.THIRD_PERSON_RIGHT_HAND
                     : net.minecraft.world.item.ItemDisplayContext.THIRD_PERSON_LEFT_HAND;
             mc.getItemRenderer().renderStatic(event.getItemStack(), context, event.getPackedLight(),
