@@ -139,7 +139,10 @@ final class CapeWornMotionTest {
                 case 34, 75 -> near(1, a.weight(CapeState.WALK), 0, "full walk");
                 case 48 -> near(1, a.weight(CapeState.SPRINT), 0, "full sprint");
                 case 104 -> near(1, a.weight(CapeState.SNEAK), 0, "crouch");
-                case 110 -> near(1, a.weight(CapeState.FALL), 0, "fall independent of step speed");
+                case 110 -> {
+                    if (!(a.weight(CapeState.FALL) > .33 && a.weight(CapeState.FALL) < .40))
+                        throw new AssertionError("a short fall should only partly open the cape");
+                }
                 case 123 -> near(1, a.weight(CapeState.SWIM), 0, "swim");
             }
         }

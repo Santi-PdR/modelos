@@ -20,9 +20,10 @@ final class CapeJumpProbe {
     private static final int EDGE = 19;
     private final StringBuilder rows = new StringBuilder("time\ton_ground\theight\tvertical\tspeed\tpace\tleg_pos\tstride\trun\tair\tfall"
             + "\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\n");
+    private final StringBuilder boxes = new StringBuilder();
     private final BlockPos deck;
     private NativeImage apex, contact;
-    private int start = -1;
+    private int start = -1, fitTick = -1;
     private boolean rose;
 
     CapeJumpProbe(BlockPos deck) {
@@ -63,7 +64,15 @@ final class CapeJumpProbe {
         if (!run) p.setSprinting(false);
     }
 
-    boolean capture(Minecraft game, float partial, CapeWalkProbe.Draw draw, Path dir, String name) throws IOException {
+    boolean measureFit(int tick) {
+        int t = tick - start;
+        if (start < 0 || fitTick == tick || (t & 1) != 0) return false;
+        return t >= JUMP - 2 && t <= JUMP + 20 || t >= RUN_JUMP - 4 && t <= RUN_JUMP + 20
+                || t >= 102 && t <= BRAKE + 6;
+    }
+
+    boolean capture(Minecraft game, float partial, CapeWalkProbe.Draw draw, CapePlacementProbe.Draw fit,
+                    Path dir, String name) throws IOException {
         if (start < 0) return false;
         var p = game.player;
         if (p.isInWater() || p.isFallFlying() || p.getAbilities().flying)
@@ -78,6 +87,11 @@ final class CapeJumpProbe {
                 .append(draw.run()).append('\t').append(draw.air()).append('\t').append(draw.fall()).append('\t')
                 .append(draw.collarZ()).append('\t').append(draw.top()).append('\t').append(draw.mid()).append('\t')
                 .append(tip.x()).append('\t').append(tip.y()).append('\t').append(tip.z()).append('\n');
+        if (fit != null) {
+            fitTick = p.tickCount;
+            int elapsed = fitTick - start;
+            fit.boxes().lines().forEach(box -> boxes.append(elapsed).append('\t').append(box).append('\n'));
+        }
         if (t >= JUMP && t < JUMP + 19) {
             if (!p.onGround() && height > .7) rose = true;
             if (rose && apex == null && !p.onGround() && height > 1 && travel.vertical() < .10)
@@ -92,6 +106,7 @@ final class CapeJumpProbe {
             shotB.writeToFile(dir.resolve(name + "-contacto.png"));
         }
         Files.writeString(dir.resolve(name + ".tsv"), rows);
+        Files.writeString(dir.resolve(name + "-cubos.tsv"), boxes);
         return true;
     }
 }

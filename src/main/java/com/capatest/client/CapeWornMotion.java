@@ -19,8 +19,14 @@ final class CapeWornMotion {
     // Vanilla changes getSwimAmount by .09/tick. Match that blend in the
     // water, but don't jump on a wet/dry boundary (e.g. crawling into water).
     private static final double SWIM_PER_TICK = .10;
+    // Ordinary jumps never borrow the gliding hinge. A small lift builds at
+    // takeoff, then the FALL pose opens progressively with downward travel.
+    private static final double JUMP_LOFT = .22;
+    private static final double FALL_START = .06;
+    private static final double FALL_FULL = .58; // blocks/tick downward
+    private static final double FALL_OPEN = .14;
+    private static final double FALL_SETTLE = .16;
     static final CapeState[] MODES = CapeState.values();
-    private final CapePlayback selector = new CapePlayback();
     private final double[] from = new double[MODES.length];
     private final double[] weights = new double[MODES.length];
     private CapeState target;
@@ -29,6 +35,7 @@ final class CapeWornMotion {
     private float partial;
     private double start, span, sprintStart, sprintFrom;
     private double paceFrom, paceTo, swimFrom, swimTo;
+    private double fallFrom, fallTo, previousFall;
     private double time, stride, amplitude, limbAmplitude, ground;
 
     final CapeResponse response = new CapeResponse();
@@ -47,23 +54,37 @@ final class CapeWornMotion {
         partial = fresh || gap != 0 ? fractionInTick : Math.max(partial, fractionInTick);
         time = tick + (double) partial;
         if (fresh) {
-            selector.reset();
             response.reset();
             target = null;
             paceTo = unit(speedFrom);
             swimTo = swimBefore;
+            fallTo = previousFall = fallGoal(wearer);
         }
         if (fresh || gap > 0) {
             // Tick input, not render frequency. If a frame was skipped, use
-            // the previous vanilla speed for the elapsed ticks we didn't see.
-            paceFrom = approach(paceTo, unit(speedFrom), fresh ? 0 : (int) gap - 1);
+            // the previous inputs for the elapsed ticks we didn't see.
+            int missed = fresh ? 0 : (int) gap - 1;
+            paceFrom = approach(paceTo, unit(speedFrom), missed);
             paceTo = approach(paceFrom, unit(speedTo), 1);
-            swimFrom = approachSwim(swimTo, swimBefore, fresh ? 0 : (int) gap - 1);
-            swimTo = approachSwim(swimFrom, swimNow, 1);
-            select(wearer, tick);
+            swimFrom = slew(swimTo, swimBefore, SWIM_PER_TICK * missed);
+            swimTo = slew(swimFrom, swimNow, SWIM_PER_TICK);
+            fallFrom = approachFall(fallTo, previousFall, missed);
+            previousFall = fallGoal(wearer);
+            fallTo = approachFall(fallFrom, previousFall, 1);
+            selectBase(wearer, tick);
             lastTick = tick;
         }
         blendFamily(weights, time);
+        // Keep the grounded gait under the drop throughout takeoff and
+        // landing. The same free-hem response is still applied afterwards.
+        // During a transition into Elytra, don't displace its AIR share.
+        double fall = fallFrom + (fallTo - fallFrom) * partial;
+        if (fall > 0) {
+            int glide = CapeState.AIR.ordinal();
+            for (int i = 0; i < weights.length; i++)
+                if (i != glide) weights[i] *= 1 - fall;
+            weights[CapeState.FALL.ordinal()] = fall * (1 - weights[glide]);
+        }
         // SWIM is a layer on the other families, not a competing transition
         // that can lag the body or stay selected after it becomes upright.
         double swim = swimFrom + (swimTo - swimFrom) * partial;
@@ -84,12 +105,9 @@ final class CapeWornMotion {
         weights[CapeState.SPRINT.ordinal()] = ground * step * run;
     }
 
-    private void select(CapeState.Wearer wearer, int tick) {
-        CapeState pose = selector.sample(wearer, tick);
-        CapeState family = switch (pose) {
-            case IDLE, BLIGHT, WALK, SPRINT -> wearer.blight() ? CapeState.BLIGHT : CapeState.IDLE;
-            default -> pose;
-        };
+    private void selectBase(CapeState.Wearer wearer, int tick) {
+        CapeState family = wearer.elytra() ? CapeState.AIR : wearer.crouching() ? CapeState.SNEAK
+                : wearer.blight() ? CapeState.BLIGHT : CapeState.IDLE;
         boolean running = !wearer.water() && wearer.sprinting();
         if (target == null) {
             target = family;
@@ -123,8 +141,17 @@ final class CapeWornMotion {
         return old;
     }
 
-    private static double approachSwim(double old, double goal, int ticks) {
-        double step = SWIM_PER_TICK * ticks;
+    private static double fallGoal(CapeState.Wearer wearer) {
+        if (!wearer.airborne() || wearer.elytra() || wearer.water()) return 0;
+        double descent = Double.isFinite(wearer.vertical()) ? -wearer.vertical() : 0;
+        return JUMP_LOFT + (1 - JUMP_LOFT) * smooth((descent - FALL_START) / (FALL_FULL - FALL_START));
+    }
+
+    private static double approachFall(double old, double goal, int ticks) {
+        return slew(old, goal, ticks * (goal >= old ? FALL_OPEN : FALL_SETTLE));
+    }
+
+    private static double slew(double old, double goal, double step) {
         double delta = goal - old;
         return Math.abs(delta) <= step ? goal : old + Math.copySign(step, delta);
     }

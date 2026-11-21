@@ -2,12 +2,19 @@
 """Measure cape motion through real jumps and a ledge drop in the torso frame."""
 import argparse
 import csv
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
+from cape_contact import lap, original_dimensions
+from cape_fit import fixed_wearer_pose, hood_moves
+from preview_cloth import ARMOR_GEO, load, matrices, mod_version
+from verify_forge_postures import ACTOR, read_boxes
 from verify_forge_walk import pairs, points, read
+from verify_v1660 import WornModel, contacts
 
 SLOTS = ('pecho', 'curios')
 CASES = ('salto', 'salto-en-carrera', 'caida-del-borde')
@@ -77,18 +84,149 @@ def report(root, slot, reference=False):
     return data, spans, result
 
 
-def write(root, version, rows):
+def verdict(data, spans, now, before, slot):
+    assert data['air'].max() < 1e-8, (slot, 'sigue usando el clip de planeo en el suelo o el salto')
+    assert data['fall'].min() >= 0 and data['fall'].max() <= 1, (slot, 'peso inválido')
+    for event in spans[:2]:
+        air = data[event.start:event.land]
+        apex = (np.abs(air['vertical']) < .09) & (air['height'] > 1.)
+        assert apex.any() and np.all((air['fall'][apex] > .16) & (air['fall'][apex] < .32)), (
+            slot, event.name, 'el paño no respeta el ápice')
+        assert .70 < now[event.name]['fall'] <= 1, (slot, event.name, 'se perdió la apertura al bajar')
+    rest = now['salto']
+    assert rest['top'] < 24 and rest['hinge'] < 8 and rest['hem'] < 5, (slot, 'latigazo en el salto quieto', rest)
+    assert now['caida-del-borde']['fall'] > .93, (slot, 'se perdió la caída sostenida')
+    for e in spans:
+        touchdown = data['time'][e.land]
+        recovering = (data['time'] >= touchdown) & (data['time'] < touchdown + 2)
+        settled = (data['time'] >= touchdown + 7) & (data['time'] < touchdown + 9)
+        assert np.all(data['fall'][recovering] > .35) and settled.any() and data['fall'][settled].max() < .005, (
+            slot, e.name, 'el paño no se asienta progresivamente')
+    for e in spans[1:]:
+        grounded = (data['time'] >= data['time'][e.land] + 8) & (data['time'] < data['time'][e.land] + 11)
+        assert grounded.any() and data['run'][grounded].max() > .94, (slot, e.name, 'no retomó la carrera')
+    if before:
+        assert rest['hinge'] < .52 * before['salto']['hinge'] and rest['hem'] < .75 * before['salto']['hem'], (
+            slot, 'el salto normal no mejoró con respecto al JAR anterior', rest, before['salto'])
+        assert now['caida-del-borde']['landing'] < .90 * before['caida-del-borde']['landing'], (
+            slot, 'sigue el tirón de la punta al aterrizar del borde')
+
+
+def fit(root, slot, data, spans, rig, source):
+    boxes = read_boxes(root / f'saltos-{slot}-cubos.tsv')
+    ticks = np.array(sorted(boxes))
+    for event in spans:
+        a, b = (int(data['time'][i]) for i in (event.start, event.land))
+        assert ((ticks >= a) & (ticks < b)).sum() >= 4 and ((ticks >= b) & (ticks <= b + 6)).sum() >= 2, (
+            slot, event.name, 'faltan cubos de vuelo o de aterrizaje', a, b, ticks)
+    roots = np.array([name.endswith('_seg0') for name in rig.names])
+    fixed = rig.rigid & ~np.array([hood_moves(name) for name in rig.names])
+    min_fit = np.full(3, np.inf)
+    leg_hit, arm_hit, drift = 0., 0., 0.
+    first = None
+    for tick, group in boxes.items():
+        label = (slot, tick)
+        assert set(group) == set(source) | set(ACTOR), (label, 'cajas de la pose incompletas')
+        assert original_dimensions(group, source, label) == len(rig.names)
+        assert all(len(group[name]) == 1 for name in ACTOR), label
+        live = np.array([group[name].pop(0) for name in rig.names])
+        if first is None:
+            first = live[fixed]
+        drift = max(drift, np.linalg.norm(live[fixed] - first, axis=2).max())
+        torso = np.array(group['body'])
+        limbs = np.array([group[name][0] for name in ('left_arm', 'right_arm', 'left_leg', 'right_leg')])
+        hit = contacts(live[None, rig.cloth], limbs[None])[0]
+        arm_hit = max(arm_hit, -hit[:2].min())
+        leg_hit = max(leg_hit, -hit[2:].min())
+        min_fit = np.minimum(min_fit, [*rig.joins(live), lap(live[roots], torso)])
+    assert (min_fit > [.038, .025, .018]).all() and drift < .006, (slot, 'deriva o costura en salto', min_fit, drift)
+    assert leg_hit < .05, (slot, 'el nuevo recorrido del paño alcanza las piernas', leg_hit)
+    print(f'{slot}: {len(boxes)} poses de vuelo y suelo; costura/raíz/apoyo {min_fit[0]:.3f}/{min_fit[1]:.3f}/{min_fit[2]:.3f}u; '
+          f'deriva {drift:.6f}u; cruces máximos en brazos/piernas {arm_hit:.4f}/{leg_hit:.4f}u.', flush=True)
+    return [slot, len(boxes), *(f'{v:.6f}' for v in (*min_fit, drift, arm_hit, leg_hit))]
+
+
+def save(root, reports, fit_rows=()):
     fields = ('frames', 'airtime', 'air', 'fall', 'top', 'hinge', 'middle', 'hem', 'landing')
     with (root / 'saltos-forge.tsv').open('w', newline='') as f:
         out = csv.writer(f, delimiter='\t', lineterminator='\n')
         out.writerow(['version', 'ranura', 'prueba', *fields])
-        for slot, variants in rows.items():
+        for (version, slot), variants in reports.items():
             for name, row in variants.items():
                 out.writerow([version, slot, name, row['frames'], *(f'{row[key]:.5f}' for key in fields[1:])])
+    if fit_rows:
+        with (root / 'costuras-saltos-forge.tsv').open('w', newline='') as f:
+            out = csv.writer(f, delimiter='\t', lineterminator='\n')
+            out.writerow(['ranura', 'cuadros', 'costura_u', 'raiz_u', 'apoyo_u', 'deriva_u', 'pico_brazo_u', 'pico_pierna_u'])
+            out.writerows(fit_rows)
+
+
+def gallery(root, baseline, curves, version):
+    canvas = Image.new('RGB', (1400, 728), '#15111d')
+    pen = ImageDraw.Draw(canvas)
+    title = ImageFont.truetype('DejaVuSans-Bold.ttf', 30)
+    label = ImageFont.truetype('DejaVuSans.ttf', 18)
+    small = ImageFont.truetype('DejaVuSans.ttf', 14)
+    white, quiet, before, after = '#f6ecf5', '#cebbd6', '#f4a4ca', '#97e2da'
+    pen.text((24, 19), 'El manto en un salto normal', fill=white, font=title)
+    pen.text((24, 59), 'Alex · capturas de Forge en tercera persona · v1.67.24 frente a ' + version, fill=quiet, font=label)
+    for x, heading in ((24, 'EN EL ÁPICE'), (472, 'AL TOCAR SUELO'), (928, 'BISAGRA SUPERIOR RESPECTO DEL TORSO')):
+        pen.text((x, 104), heading, fill=quiet, font=small)
+    for j, slot in enumerate(SLOTS):
+        y = 159 + 270*j
+        pen.text((24, y-29), slot.upper(), fill=white, font=label)
+        for k, pose in enumerate(('apice', 'contacto')):
+            for i, (shots, tag, color) in enumerate(((baseline, 'v1.67.24', before), (root, version, after))):
+                x = 24 + 448*k + 214*i
+                with Image.open(shots / f'saltos-{slot}-{pose}.png') as photo:
+                    crop = ImageOps.fit(photo.convert('RGB'), (204, 208), Image.Resampling.LANCZOS)
+                canvas.paste(crop, (x, y))
+                pen.text((x,y+216), tag, fill=color, font=small)
+        x0, y0, w, h = 978, y+16, 391, 158
+        for v in (0, 15, 30, 45):
+            s = y0+h-v/50*h
+            pen.line((x0,s,x0+w,s), fill='#3c3247', width=1)
+            pen.text((x0-36,s-9), f'{v}°', fill=quiet, font=small)
+        for t in (0, 5, 10, 15, 20):
+            s = x0+(t+1)/22*w
+            pen.text((s,y0+h+9), str(t), fill=quiet, font=small, anchor='mt')
+        for (data, event), color in zip(curves[slot], (before, after), strict=True):
+            t = data['time'] - np.floor(data['time'][event.start])
+            visible = (t >= -1) & (t <= 21)
+            xx = x0+(t+1)/22*w
+            yy = y0+h-np.clip(data['top'],0,50)/50*h
+            pen.line(list(zip(xx[visible], yy[visible], strict=True)), fill=color, width=3, joint='curve')
+            x, z = xx[event.land], yy[event.land]
+            pen.ellipse((x-4,z-4,x+4,z+4), fill=color)
+        pen.text((x0, y0+h+33), 'Ticks desde el despegue  ·  ● primer cuadro en suelo', fill=quiet, font=small)
+    pen.text((24, 697), 'La gráfica no incluye el desplazamiento de la cámara ni del jugador. Son dos recorridos independientes.',
+             fill=quiet, font=small)
+    canvas.save(root / 'comparacion-saltos-forge.jpg', quality=94, optimize=True)
 
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('shots', type=Path)
+    ap.add_argument('--baseline-shots', type=Path)
     args = ap.parse_args()
-    write(args.shots, 'v1.67.24', {slot: report(args.shots, slot, reference=True)[2] for slot in SLOTS})
+    summary, curves, fit_rows = {}, {}, []
+    version = 'v' + mod_version()
+    geo = load(ARMOR_GEO)
+    rig = WornModel(fixed_wearer_pose(geo, 0., slim=True))
+    source = defaultdict(list)
+    for name, cube in zip(rig.names, rig.place(matrices(geo)), strict=True):
+        source[name].append(cube)
+    for slot in SLOTS:
+        before = None
+        if args.baseline_shots:
+            ref, old_events, before = report(args.baseline_shots, slot, reference=True)
+            summary['v1.67.24', slot] = before
+        data, spans, result = report(args.shots, slot)
+        verdict(data, spans, result, before, slot)
+        summary[version, slot] = result
+        fit_rows.append(fit(args.shots, slot, data, spans, rig, source))
+        if args.baseline_shots:
+            curves[slot] = ((ref, old_events[0]), (data, spans[0]))
+    save(args.shots, summary, fit_rows)
+    if args.baseline_shots:
+        gallery(args.shots, args.baseline_shots, curves, version)

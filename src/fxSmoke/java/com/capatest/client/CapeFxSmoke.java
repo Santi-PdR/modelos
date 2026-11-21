@@ -166,6 +166,7 @@ public final class CapeFxSmoke {
     private static PlayerModel<?> placementModel;
     private static CapeWalkProbe.Route walkRoute;
     private static CapeJumpProbe jumpRoute;
+    private static boolean jumpFit;
     private static CapeWalkProbe.Draw walkDraw;
     private static CapeWaterProbe waterRoute;
     private static ItemStack rendered;
@@ -566,7 +567,7 @@ public final class CapeFxSmoke {
     private static void beforePlayer(RenderPlayerEvent.Pre event) {
         if (scene != null && event.getEntity() == Minecraft.getInstance().player) {
             playerPose = new Matrix4f(event.getPoseStack().last().pose());
-            if (scene.placement() || scene.audit()) placementModel = event.getRenderer().getModel();
+            if (scene.placement() || scene.audit() || scene.jump()) placementModel = event.getRenderer().getModel();
             if (scene.placement() && placementRoute.standing() && !captured && pending == null && stillPlayer == null) {
                 // Keep the sleeves registered between with/without plates.
                 // Keep the vanilla setupAnim path;
@@ -594,7 +595,8 @@ public final class CapeFxSmoke {
         if (!(event.getRenderer() instanceof CapaArmorRenderer renderer)) return;
         if (scene.placement()) CapePlacementProbe.arm(renderer, placementRoute.control(), placementRoute.shoulderClothControl(),
                 placementRoute.calibration(), false);
-        if (scene.audit()) CapePlacementProbe.arm(renderer, false, false, false, true);
+        jumpFit = scene.jump() && jumpRoute.measureFit(event.getEntity().tickCount);
+        if (scene.audit() || jumpFit) CapePlacementProbe.arm(renderer, false, false, false, true);
         if (scene.walk() || scene.aquatic() || scene.jump()) CapeWalkProbe.arm(renderer);
     }
 
@@ -604,7 +606,7 @@ public final class CapeFxSmoke {
         framePasses++;
         rendered = renderer.getCurrentStack();
         armorPose = new Matrix4f(event.getPoseStack().last().pose());
-        if (scene.placement() || scene.audit())
+        if (scene.placement() || scene.audit() || jumpFit)
             placementDraw = CapePlacementProbe.finish(renderer, event.getPoseStack(), placementModel);
         if (scene.walk() || scene.aquatic() || scene.jump()) walkDraw = CapeWalkProbe.finish(renderer, event.getPartialTick());
         frameLight = event.getPackedLight();
@@ -628,6 +630,7 @@ public final class CapeFxSmoke {
             walkDraw = null;
             placementDraw = null;
             placementModel = null;
+            jumpFit = false;
             rendered = ItemStack.EMPTY;
             playerPose = armorPose = null;
             var player = Minecraft.getInstance().player;
@@ -711,7 +714,7 @@ public final class CapeFxSmoke {
             }
             if (scene.jump()) {
                 check(player.getModelName().equals("slim") && player.getSkinTextureLocation().equals(ALEX), "wrong jump skin");
-                captured = jumpRoute.capture(game, framePartialTick, walkDraw, shots(game), scene.file);
+                captured = jumpRoute.capture(game, framePartialTick, walkDraw, placementDraw, shots(game), scene.file);
                 return;
             }
             if (scene.audit()) {

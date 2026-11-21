@@ -10,7 +10,7 @@ on:
         default: false
         type: boolean
       probar_halo:
-        description: 'Probar montaje, marcha, nado, hotbar, halo y élitros en un cliente Forge con pantalla virtual'
+        description: 'Probar montaje, marcha, saltos, nado, hotbar, halo y élitros en un cliente Forge con pantalla virtual'
         required: false
         default: false
         type: boolean
@@ -700,7 +700,9 @@ jobs:
           stand = (root / 'docs/capa_v1170_visor.html').read_text()
           assert 'fetch(' not in stand and 'assets/' not in stand, 'visor no autocontenido'
           assert 'INLINE_GEO' in stand
-          assert f'download="CAPA_v{ver}.bbmodel"' in stand, 'visor sin version'
+          import base64
+          embedded = base64.b64encode(_bbpath.read_bytes()).decode('ascii')
+          assert f'base64,{embedded}" download="CAPA_v{ver}.bbmodel"' in stand, 'el visor incluye un .bbmodel distinto'
 
           assert 'spawnAura(Level level, Player player, ItemStack equipped)' in java
           assert 'spawnAura(player.level(), player, displayed.stack())' in (root / 'src/main/java/com/capatest/compat/CuriosCompat.java').read_text()
@@ -790,7 +792,7 @@ jobs:
           javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/{CapeState,CapePlayback,CapeSparkFrame}.java \
             src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeBacking,CapePlateFit,CapeTorsoFit,CapeMountPlacement,CapeStride,CapeTint,CapeEmber,CapeNocturne,CapeWingFit,CapeWornMotion,CapeHood,CapeSprintEdge}.java \
             src/test/java/com/capatest/item/{CapeStateTest,CapeSparkFrameTest}.java \
-            src/test/java/com/capatest/client/{CapeFitTest,CapeMountPlacementTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeSettleTest,CapeSwayTest,CapeWingFitTest,CapeWornMotionTest,CapeHoodTest,CapeSprintEdgeTest}.java
+            src/test/java/com/capatest/client/{CapeFitTest,CapeMountPlacementTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeSettleTest,CapeSwayTest,CapeWingFitTest,CapeWornMotionTest,CapeJumpMotionTest,CapeHoodTest,CapeSprintEdgeTest}.java
           java -cp "$CLASSES" com.capatest.client.CapeMountPlacementTest --samples > "$CLASSES/placement.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeHoodTest --samples > "$CLASSES/hood.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeHoodTest --aim > "$CLASSES/hood-aim.tsv"
@@ -798,6 +800,7 @@ jobs:
           OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_placement.py --java-samples "$CLASSES/placement.tsv" --hood-samples "$CLASSES/hood.tsv" \
             --look-samples "$CLASSES/hood-aim.tsv" --edge-samples "$CLASSES/sprint-edge.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeWornMotionTest
+          java -cp "$CLASSES" com.capatest.client.CapeJumpMotionTest
           java -cp "$CLASSES" com.capatest.client.CapeWingFitTest
           java -cp "$CLASSES" com.capatest.client.CapeWingFitTest --samples > "$CLASSES/wings.tsv"
           OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_cape_wings.py "$CLASSES/wings.tsv"
@@ -1122,11 +1125,24 @@ jobs:
             esac
           done
 
-      - name: Registrar los saltos de referencia de v1.67.24 en Forge
-        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
+      - name: Cargar los saltos de referencia de v1.67.24
+        id: jump-reference
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && contains(github.event.head_commit.message, '[comparar-saltos-v16724]') }}
+        uses: actions/download-artifact@v4
+        with:
+          name: capatest-fx-en-mundo
+          github-token: ${{ github.token }}
+          run-id: 44914820262
+          path: ${{ runner.temp }}/forge-saltos-v16724
+
+      - name: Medir despegue, caída y aterrizaje en Forge
+        id: verify-jumps
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && steps.jump-reference.outcome != 'failure' }}
         run: |
           set -o pipefail
-          python3 tools/verify_forge_jumps.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
+          base=()
+          if [ -d "$RUNNER_TEMP/forge-saltos-v16724" ]; then base=(--baseline-shots "$RUNNER_TEMP/forge-saltos-v16724"); fi
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_jumps.py build/fx-smoke-run/fx-shots "${base[@]}" 2>&1 | while IFS= read -r line; do
             case "$line" in
               *AssertionError:*|*Error:*) printf '::error title=Saltos en Forge::%s\n' "${line//%/%25}" ;;
               *) printf '::notice title=Saltos en Forge::%s\n' "${line//%/%25}" ;;
@@ -1134,6 +1150,7 @@ jobs:
           done
 
       - name: Verificar el icono original en la hotbar de Forge
+        id: verify-hotbar
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
           PYTHONPATH=tools python3 - <<'PYICON'
@@ -1163,6 +1180,46 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      # Pin this test once, only on the current Arena branch after every Forge gate.
+      - name: Adjuntar v1.67.25 verificada y la comparación de saltos
+        if: >-
+          github.event_name == 'push' && github.ref_name == 'arena/5a9fa51b-modelos' &&
+          contains(github.event.head_commit.message, '[adjuntar-v16725]') &&
+          steps.fx-smoke.outcome == 'success' && steps.jump-reference.outcome == 'success' &&
+          steps.verify-placement.outcome == 'success' && steps.verify-walk.outcome == 'success' &&
+          steps.verify-postures.outcome == 'success' && steps.verify-swim.outcome == 'success' &&
+          steps.verify-jumps.outcome == 'success' && steps.verify-hotbar.outcome == 'success'
+        run: |
+          set -euo pipefail
+          test "$(git branch --show-current)" = "$GITHUB_REF_NAME"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          grep -qx 'mod_version=1.67.25' gradle.properties
+          jar=capatest-1.67.25.jar
+          shots=build/fx-smoke-run/fx-shots
+          proof=docs/releases/v1.67.25
+          out="entregables/v1.67.25/$jar"
+          (cd build/libs && sha256sum -c SHA256SUMS.txt)
+          python3 -m zipfile -t "build/libs/$jar"
+          test ! -e "$out"
+          install -D -m 0644 "build/libs/$jar" "$out"
+          install -D -m 0644 build/libs/SHA256SUMS.txt "$proof/JAR.sha256"
+          for file in comparacion-saltos-forge.jpg saltos-forge.tsv costuras-saltos-forge.tsv nado-forge.tsv \
+              continuidad-forge.tsv revision-alex-forge.tsv holgura-brazos-forge.tsv; do
+            test -s "$shots/$file"
+            install -m 0644 "$shots/$file" "$proof/"
+          done
+          for slot in pecho curios; do
+            install -m 0644 "$RUNNER_TEMP/forge-saltos-v16724/saltos-$slot.tsv" "$proof/saltos-$slot-v16724.tsv"
+            install -m 0644 "$shots/saltos-$slot.tsv" "$proof/saltos-$slot-v16725.tsv"
+          done
+          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16725_colocacion_forge.jpg
+          printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$proof/compilacion.txt"
+          git add -- "$proof" docs/capa_v16725_colocacion_forge.jpg
+          git add -f -- "$out"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'Adjuntar v1.67.25 verificada y la comparación de saltos [skip ci]'
+          git push origin "$GITHUB_REF_NAME"
+
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.
       - name: Stage verified release (draft)
@@ -1175,11 +1232,12 @@ jobs:
           FIT_RESULT: ${{ steps.verify-placement.outcome }}
           WALK_RESULT: ${{ steps.verify-walk.outcome }}
           SWIM_RESULT: ${{ steps.verify-swim.outcome }}
+          JUMP_RESULT: ${{ steps.verify-jumps.outcome }}
         run: |
           set -euo pipefail
           if [ "$FORGE_RESULT" != success ] || [ "$FIT_RESULT" != success ] ||
-             [ "$WALK_RESULT" != success ] || [ "$SWIM_RESULT" != success ]; then
-            echo '::error::El borrador requiere pasar el cliente Forge, la colocación fija, la marcha y el nado.'
+             [ "$WALK_RESULT" != success ] || [ "$SWIM_RESULT" != success ] || [ "$JUMP_RESULT" != success ]; then
+            echo '::error::El borrador requiere pasar el cliente Forge, la colocación fija, la marcha, los saltos y el nado.'
             exit 1
           fi
           # runClient usa fuentes de diagnóstico. El JAR preparado más arriba
