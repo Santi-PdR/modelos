@@ -56,6 +56,9 @@ public final class KatanaFirstPersonArm {
             pose.mulPose(Axis.XP.rotationDegrees(-90));
             pose.mulPose(Axis.YP.rotationDegrees(180));
             pose.translate(sign / 16.0, .125, -.625);
+            // The first-person skin-arm matrix faces the opposite way from the
+            // world model's arm. Rotate around the wrist, not the blade tip.
+            pose.mulPose(Axis.XP.rotationDegrees(180));
             var context = right ? net.minecraft.world.item.ItemDisplayContext.THIRD_PERSON_RIGHT_HAND
                     : net.minecraft.world.item.ItemDisplayContext.THIRD_PERSON_LEFT_HAND;
             mc.getItemRenderer().renderStatic(event.getItemStack(), context, event.getPackedLight(),

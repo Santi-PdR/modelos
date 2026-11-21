@@ -236,7 +236,9 @@ public final class KatanaAbilities {
         var chunk = new net.minecraft.world.level.ChunkPos(net.minecraft.core.BlockPos.containing(destination));
         level.getChunkSource().addRegionTicket(net.minecraft.server.level.TicketType.POST_TELEPORT, chunk, 1, player.getId());
         level.playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, .5F, 1.25F);
+        level.sendParticles(KatanaParticles.SHARD.get(), player.getX(), player.getY(.5), player.getZ(), 6, .2, .3, .2, .025);
         player.connection.teleport(destination.x, destination.y, destination.z, yaw, player.getXRot(), java.util.Collections.emptySet());
+        level.sendParticles(KatanaParticles.SHARD.get(), destination.x, destination.y + .9, destination.z, 6, .2, .3, .2, .025);
         player.setYHeadRot(yaw);
         player.setDeltaMovement(Vec3.ZERO);
     }
@@ -253,7 +255,7 @@ public final class KatanaAbilities {
         }
         Vec3 spot = safePosition(player, target, 0, true);
         if (spot == null) {
-            player.displayClientMessage(Component.translatable("stainkatana.target_unavailable"), true);
+            player.displayClientMessage(Component.translatable("stainkatana.no_safe_teleport"), true);
             return;
         }
         data.putInt("daggerCharges", 0);

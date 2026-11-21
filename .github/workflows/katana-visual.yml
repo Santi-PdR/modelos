@@ -32,6 +32,10 @@ jobs:
           done
           sudo apt-get update -qq
           sudo apt-get install -y xvfb libgl1-mesa-dri
+      - name: Verify animation parser and combat timing
+        run: |
+          STAIN_BC_TEST_DIR="$PWD/build-katana-input/resources/assets/bettercombat/attack_animations" \
+            gradle verifyKatanaAnimations verifyKatanaTimeline verifyKatanaSceneCurve verifyKatanaCombatTuning -PkatanaOnly --no-daemon
       - name: Generate a flat test world with Forge
         run: |
           set -euo pipefail

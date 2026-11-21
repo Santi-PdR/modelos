@@ -26,6 +26,16 @@ public final class CombatTuningCheck {
         if (CombatTuning.backstabDamage(20, 20) != 18 || CombatTuning.backstabDamage(5, 20) != 4
                 || CombatTuning.backstabDamage(1, 20) != 0 || CombatTuning.backstabDamage(1000, 1000) != 60)
             throw new AssertionError("backstab cap");
+        for (int maximum = 1; maximum <= 1000; maximum++) {
+            for (int health = 1; health <= maximum; health += Math.max(1, maximum / 25)) {
+                float hit = CombatTuning.backstabDamage(health, maximum);
+                if (!Float.isFinite(hit) || hit < 0 || hit > 60 || hit > health - 1)
+                    throw new AssertionError("backstab must remain finite, capped and non-lethal");
+            }
+        }
+        if (CombatTuning.backstabDamage(Float.NaN, 20) != 0
+                || CombatTuning.backstabDamage(20, Float.POSITIVE_INFINITY) != 0)
+            throw new AssertionError("backstab nonfinite input");
         System.out.println("OK: cooldowns, PvP duration and damage bounds");
     }
 }
