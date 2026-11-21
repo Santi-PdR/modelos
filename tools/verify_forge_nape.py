@@ -82,10 +82,14 @@ class Capture:
         with Image.open(self.path) as im:
             self.rgb = np.array(im.convert('RGB'), dtype=np.int16)
 
-    def sample(self, side=False):
+    def sample(self, side=0):
+        assert side in (-1, 0, 1), side
         axis = 0 if side else 2
-        assert self.eye[axis] > 1, (self.path, 'cara no visible', self.eye)
-        p = face_grid(X0,X1,Y0,Y1,side)
+        visible = self.eye[axis] < 0 if side == -1 else self.eye[axis] > 1
+        assert visible, (self.path, 'cara no visible', self.eye)
+        p = face_grid(X0,X1,Y0,Y1,side != 0)
+        if side == -1:
+            p[:,0] = 0.
         ij = np.floor(project(p,self.camera,self.size)-self.origin).astype(int)
         w,h = self.rgb.shape[1],self.rgb.shape[0]
         assert (ij >= 0).all() and (ij < [w,h]).all(), self.path

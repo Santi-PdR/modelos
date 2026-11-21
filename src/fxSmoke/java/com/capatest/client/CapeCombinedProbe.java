@@ -25,6 +25,8 @@ final class CapeCombinedProbe {
     private static final int GO = 12, SHIFT = 50, STOP = 69, STAND = 90, END = 109;
     private static final int[] SHOTS = {27, 52, 63, 77, 103};
     private final BlockPos runway;
+    private final int direction;
+    private final boolean followNape;
     private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tstride\tground\tsprinting\tcrouching\t"
             + "walk\trun\tsneak\tair\tfall\tswim\ttop\tmid\ttip_x\ttip_y\ttip_z\tseat_z\tpitch\tyaw\tfit\tcrouch_floor\trear_tuck\timage\n");
     private final StringBuilder boxes = new StringBuilder(), head = new StringBuilder();
@@ -33,7 +35,11 @@ final class CapeCombinedProbe {
     private LocalPlayer aimed;
     private float originalHead, originalHeadOld, originalPitch, originalPitchOld;
 
-    CapeCombinedProbe(BlockPos runway) { this.runway = runway; }
+    CapeCombinedProbe(BlockPos runway, int direction, boolean followNape) {
+        this.runway = runway;
+        this.direction = direction;
+        this.followNape = followNape;
+    }
 
     static BlockPos runway(BlockPos spawn) { return spawn.offset(-6, -1, -6); }
 
@@ -84,8 +90,8 @@ final class CapeCombinedProbe {
         originalHeadOld = p.yHeadRotO;
         originalPitch = p.getXRot();
         originalPitchOld = p.xRotO;
-        p.setYHeadRot(p.yBodyRot + 55*turn(t));
-        p.yHeadRotO = p.yBodyRotO + 55*turn(t-1);
+        p.setYHeadRot(p.yBodyRot + direction*55*turn(t));
+        p.yHeadRotO = p.yBodyRotO + direction*55*turn(t-1);
         p.setXRot(-35*turn(t));
         p.xRotO = -35*turn(t-1);
     }
@@ -101,7 +107,7 @@ final class CapeCombinedProbe {
 
     void camera(ViewportEvent.ComputeCameraAngles event, LocalPlayer p) {
         float yaw = Mth.rotLerp((float) event.getPartialTick(), p.yBodyRotO, p.yBodyRot);
-        CapePlacementProbe.orbit(event, p, yaw + 57, 13, 3.3, .97);
+        CapePlacementProbe.orbit(event, p, yaw + direction*57, 13, 3.3, .97);
     }
 
     // Counterfactual only, compiled in the disposable Forge client. Omit
@@ -140,10 +146,14 @@ final class CapeCombinedProbe {
         int tick = p.tickCount - start;
         double t = tick + (double) partial;
         String image = "-";
-        if (nextShot < SHOTS.length && tick >= SHOTS[nextShot] && fit != null) {
-            if (tick > SHOTS[nextShot] + 2) throw new AssertionError(name + ": missed screenshot near " + SHOTS[nextShot]);
+        boolean landmark = nextShot < SHOTS.length && tick >= SHOTS[nextShot];
+        boolean unwind = followNape && tick >= 78 && tick <= 83;
+        if (fit != null && (landmark || unwind)) {
+            if (landmark) {
+                if (tick > SHOTS[nextShot] + 2) throw new AssertionError(name + ": missed screenshot near " + SHOTS[nextShot]);
+                nextShot++;
+            }
             image = String.format(Locale.ROOT, "%s-%03d.png", name, tick);
-            nextShot++;
             head.append(tick).append('\t').append(fit.headTop());
             try (var shot = Screenshot.takeScreenshot(game.getMainRenderTarget())) {
                 shot.writeToFile(root.resolve(image));

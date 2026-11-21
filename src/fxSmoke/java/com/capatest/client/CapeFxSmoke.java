@@ -84,6 +84,7 @@ import java.util.concurrent.TimeUnit;
 public final class CapeFxSmoke {
     private static final boolean COMBINED_ONLY = "1".equals(System.getenv("CAPA_PRUEBA_COMBINADA"));
     private static final boolean NAPE_ABLATION = COMBINED_ONLY && "1".equals(System.getenv("CAPA_AISLAR_NUCA"));
+    private static final boolean NAPE_RETURN = COMBINED_ONLY && !NAPE_ABLATION && "1".equals(System.getenv("CAPA_SEGUIR_NUCA"));
     private static final String ATLAS = "assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan";
     private static final String FRAGMENT = "assets/capatest/shaders/core/cape_bloom.fsh";
     private static final String PACK_ID = "file/fx-probe";
@@ -126,7 +127,8 @@ public final class CapeFxSmoke {
         SWIM_BACK("nado-horizontal-curios", 6000), SWIM_EXIT_BACK("fin-del-nado-curios", 6000),
         COMBINED_CHEST("maniobra-pecho", 6000), COMBINED_BACK("maniobra-curios", 6000),
         NO_CHAIN_CHEST("sin-cadena-pecho", 6000, "v18_chain_"), NO_CHAIN_BACK("sin-cadena-curios", 6000, "v18_chain_"),
-        NO_BAND_CHEST("sin-borde-pecho", 6000, "v17_cowl_back_"), NO_BAND_BACK("sin-borde-curios", 6000, "v17_cowl_back_");
+        NO_BAND_CHEST("sin-borde-pecho", 6000, "v17_cowl_back_"), NO_BAND_BACK("sin-borde-curios", 6000, "v17_cowl_back_"),
+        REVERSE_CHEST("giro-inverso-pecho", 6000), REVERSE_BACK("giro-inverso-curios", 6000);
 
         final String file;
         final long dayTime;
@@ -151,7 +153,8 @@ public final class CapeFxSmoke {
         boolean audit() { return this == AUDIT_CHEST || this == AUDIT_BACK; }
         boolean jump() { return this == JUMP_CHEST || this == JUMP_BACK; }
         boolean climb() { return this == CLIMB_CHEST || this == CLIMB_BACK; }
-        boolean combined() { return this == COMBINED_CHEST || this == COMBINED_BACK || omitted != null; }
+        boolean reverse() { return this == REVERSE_CHEST || this == REVERSE_BACK; }
+        boolean combined() { return this == COMBINED_CHEST || this == COMBINED_BACK || reverse() || omitted != null; }
         boolean measureMotion() { return walk() || aquatic() || jump() || climb() || combined(); }
         boolean wade() { return this == WADE || this == WADE_BACK; }
         boolean swim() { return this == SWIM || this == SWIM_BACK; }
@@ -336,8 +339,10 @@ public final class CapeFxSmoke {
                     driveScene(game);
                     if (!captured) return;
                     if (COMBINED_ONLY) {
-                        if (scene == Scene.COMBINED_CHEST || NAPE_ABLATION && scene != Scene.NO_BAND_BACK)
+                        if (scene == Scene.COMBINED_CHEST || scene == Scene.REVERSE_CHEST || NAPE_ABLATION && scene != Scene.NO_BAND_BACK)
                             equipScene(game, Scene.values()[scene.ordinal() + 1]);
+                        else if (NAPE_RETURN && scene == Scene.COMBINED_BACK)
+                            equipScene(game, Scene.REVERSE_CHEST);
                         else {
                             note("PASS: maniobra combinada, giro y frenada agachada en pecho y Curios");
                             game.stop();
@@ -488,7 +493,8 @@ public final class CapeFxSmoke {
         scene = next;
         placementRoute = next.placement() ? new CapePlacementProbe.Route() : null;
         auditRoute = next.audit() ? new CapePlacementProbe.PoseAudit() : null;
-        combinedRoute = next.combined() ? new CapeCombinedProbe(CapeCombinedProbe.runway(pane)) : null;
+        combinedRoute = next.combined()
+                ? new CapeCombinedProbe(CapeCombinedProbe.runway(pane), next.reverse() ? -1 : 1, NAPE_RETURN) : null;
         if (next.placement() || next.audit() || next.jump() || next.combined()) game.options.fov().set(42);
         walkRoute = next.walk() ? new CapeWalkProbe.Route(next.studyQuietCloth()) : null;
         jumpRoute = next.jump() ? new CapeJumpProbe(CapeJumpProbe.deck(pane)) : null;
