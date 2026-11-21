@@ -133,15 +133,16 @@ jobs:
         run: |
           python3 - <<'PY2'
           from pathlib import Path
-          for name in ('/tmp/stain-visual-server.log','/tmp/stain-visual-client.log','/tmp/stain-visual-fallback.log','/tmp/stain-visual-full-bc.log'):
+          for name in ('/tmp/stain-visual-client.log','/tmp/stain-visual-fallback.log','/tmp/stain-visual-full-bc.log','/tmp/stain-visual-server.log'):
               path=Path(name)
               if path.exists():
                   lines=path.read_text(errors='replace').splitlines()
-                  interesting=[line for line in lines if any(x in line for x in ('STAIN_VISUAL_', 'Caused by:', 'Mixin apply failed', 'InvalidInjection', 'InjectionError', 'InvalidMixin', 'Exception:'))]
-                  for line in interesting[-15:]:
-                      text=line.replace('%','%25').replace('\r','%0D').replace('\n','%0A')[:3500]
+                  problems=[line for line in lines if any(x in line for x in ('Caused by:', 'Exception', 'Mixin apply failed', 'InvalidInjection', 'InjectionError', 'InvalidMixin'))]
+                  markers=[line for line in lines if any(x in line for x in ('STAIN_MULTIPART', 'STAIN_DRAGON_', 'STAIN_VISUAL_FIXTURE_FINISHED'))]
+                  for line in problems[-3:] + markers[-4:]:
+                      text=line.replace('%','%25').replace('\r','%0D').replace('\n','%0A')[:2500]
                       print('::error title='+path.name+'::'+text)
-                  tail='\n'.join(lines[-15:]).replace('%','%25').replace('\r','%0D').replace('\n','%0A')[:3500]
+                  tail='\n'.join(lines[-10:]).replace('%','%25').replace('\r','%0D').replace('\n','%0A')[:2500]
                   print('::error title='+path.name+' tail::'+tail)
           PY2
           echo "::error title=Visual screenshots::$(find run/stain-visual-test -name '*.png' -printf '%f ' 2>/dev/null || true)"
