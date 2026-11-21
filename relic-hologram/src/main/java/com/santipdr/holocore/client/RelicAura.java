@@ -130,14 +130,15 @@ public final class RelicAura {
     /**
      * El RenderType aditivo usa el mismo formato de vertice que las entidades
      * ({@code NEW_ENTITY}), asi que hay que rellenar color, UV, overlay,
-     * lightmap y normal en ese orden aunque aqui solo usemos la UV.
+     * lightmap y normal en ese orden aunque aqui solo usemos la UV. En 1.20.1 el
+     * metodo del overlay se llama {@code overlayCoords}, no {@code overlay}.
      */
     private static void vertex(VertexConsumer buffer, float x, float y, float z,
                                float u, float v, float red, float green, float blue) {
         buffer.vertex(x, y, z)
                 .color(red, green, blue, 1.0F)
                 .uv(u, v)
-                .overlay(OverlayTexture.NO_OVERLAY)
+                .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(LightTexture.FULL_BRIGHT)
                 .normal(0.0F, 1.0F, 0.0F)
                 .endVertex();
