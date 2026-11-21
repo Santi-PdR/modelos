@@ -226,7 +226,15 @@ public final class KatanaAbilities {
     private static void moveTo(ServerPlayer player, LivingEntity target, Vec3 destination) {
         double dx = target.getX() - destination.x, dz = target.getZ() - destination.z;
         float yaw = (float)Math.toDegrees(Math.atan2(-dx, dz));
-        player.teleportTo(player.serverLevel(), destination.x, destination.y, destination.z, yaw, player.getXRot());
+        // Adapted from SlashBlade: Resharped's handleServerPlayerTeleportation (MIT).
+        // Same-dimension player teleport goes through the connection and keeps the
+        // destination chunk briefly ticketed, instead of moving only the server entity.
+        var level = player.serverLevel();
+        var chunk = new net.minecraft.world.level.ChunkPos(net.minecraft.core.BlockPos.containing(destination));
+        level.getChunkSource().addRegionTicket(net.minecraft.server.level.TicketType.POST_TELEPORT, chunk, 1, player.getId());
+        level.playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, .5F, 1.25F);
+        player.connection.teleport(destination.x, destination.y, destination.z, yaw, player.getXRot(), java.util.Collections.emptySet());
+        player.setYHeadRot(yaw);
         player.setDeltaMovement(Vec3.ZERO);
     }
     private static void startBackstab(ServerPlayer player, CompoundTag data, long now) {
