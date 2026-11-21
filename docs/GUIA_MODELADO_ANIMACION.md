@@ -296,17 +296,16 @@ animación y la documentación de GeckoLib._
   agacharse o nadar. Pecho y Curios comparten los mismos pases sólido y de
   emisión. El visor reproduce estas transformaciones; Blockbench conserva
   la geometría original sin aplicarlas a los clips.
-- **Encastre v1.67.18:** el asiento, fuelle y bisagra vuelven a sus
-  posiciones del GEO. El forro original apoya en la espalda alta y los
-  retornos del cuello solapan las placas, que se ajustan completas a las
-  mangas anchas o finas en el marco de `chestplate`. No se modifican sus
-  cubos ni se usa la mirada para colocarlos. Con élitros se conserva la
-  variante corta del ajuste. `gradle -PcapeFxSmoke runClient` guarda tomas
-  registradas con las pieles vanilla, un recorrido F5 separado del de la
-  mirada y las coordenadas de contacto de la chaqueta, retornos y placas.
-  `tools/verify_forge_placement.py` exige el encastre en tres dimensiones
-  además de ver ambas placas de frente. El visor usa los mismos ajustes;
-  el proyecto de Blockbench conserva íntegro el rig original.
+- **Encastre v1.67.19:** `CapeMountPlacement` ciñe el borde y los retornos
+  a la espalda en el marco de `chestplate`. El borde exterior del forro
+  sube hasta el cuello sin separar la costura de la piel; la bisagra se
+  adelanta sin achatar el paño. Los cubos y clips no se editan. Pecho y
+  Curios comparten el mismo ajuste; los élitros mantienen su variante.
+  `gradle -PcapeFxSmoke runClient` usa las dos pieles vanilla y registra
+  las caras reales: torso sin chaqueta, respaldo, borde, raíces y placas.
+  `tools/verify_forge_placement.py` mide huecos en la espalda alta además
+  de comprobar la cobertura de las mangas y la órbita independiente de
+  la mirada. El visor equipa el mismo ajuste; el .bbmodel es el rig fuente.
 - **Pulso del icono (v1.67.8):** 32 fotogramas a un tick por cuadro, mismo
   contorno y duración de 1,6 s. Se comprueba el recorrido de la cresta de
   luz en la hotbar vanilla; se conservan el dibujo y el reposo de v1.67.7.

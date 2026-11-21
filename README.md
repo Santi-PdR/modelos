@@ -3,7 +3,7 @@
 Capa cosmética para **Minecraft Java 1.20.1 · Forge 47.3.0 · GeckoLib 4.8.1**.
 Se equipa en el pecho o en `back` con Curios opcional.
 
-[Descargar JAR v1.67.13 (prueba)](https://github.com/Santi-PdR/modelos/releases/download/v1.67.13/capatest-1.67.13.jar)
+[Descargar JAR publicado v1.67.13](https://github.com/Santi-PdR/modelos/releases/download/v1.67.13/capatest-1.67.13.jar)
 · [JAR anterior v1.67.12](https://github.com/Santi-PdR/modelos/releases/download/v1.67.12/capatest-1.67.12.jar)
 · [JAR anterior v1.67.11](https://github.com/Santi-PdR/modelos/releases/download/v1.67.11/capatest-1.67.11.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
@@ -11,11 +11,15 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
-### v1.67.18 — encastre del cuello y las hombreras
+### v1.67.19 — manto ceñido a la espalda alta
 
-El cuello vuelve a la espalda alta y los retornos enlazan con las dos placas originales, asentadas sobre las mangas de Steve y Alex. La montura no depende de la órbita F5 ni de la mirada. Es un ajuste en el render equipado de pecho y Curios: el GEO, las texturas, los ocho clips, el brillo y el icono se conservan. No cambia el instalador publicado.
+**[Descargar JAR de prueba v1.67.19](https://github.com/Santi-PdR/modelos/raw/e574c47f7c646bd7869a071a42f3db5b5947fdc4/entregables/v1.67.19/capatest-1.67.19.jar)** · [PowerShell sin respaldos para `test-1`](docs/releases/v1.67.19/instalar-directo-test-1.txt) · [Antes y después en Alex](docs/capa_v16719_encastre_alex.jpg) · [Galería de Forge](docs/capa_v16719_colocacion_forge.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.19/notas.md).
 
-**[Descargar JAR de prueba v1.67.18](https://github.com/Santi-PdR/modelos/raw/945bc2d7d7f65765f766a7b59f9746fecc9b07fa/entregables/v1.67.18/capatest-1.67.18.jar)** · [Capturas reales de Forge](docs/capa_v16718_colocacion_forge.jpg) · [PowerShell para `test-1`](docs/releases/v1.67.18/instalar-directo-test-1.txt) · [Pruebas y SHA-256](docs/releases/v1.67.18/notas.md).
+El borde del cuello y la costura del paño se acercan a la espalda real, no a la cabeza. El ajuste funciona en pecho y Curios, con las texturas, clips, descripción del ítem y efectos originales. Se conserva la variante para élitros. No cambia el instalador público.
+
+### v1.67.18 — comparación descartada
+
+El forro tocaba el torso, pero el manto todavía quedaba separado arriba. [Capturas históricas](docs/capa_v16718_colocacion_forge.jpg) · [Notas](docs/releases/v1.67.18/notas.md).
 
 ### v1.67.17 — comparación descartada
 
@@ -25,7 +29,7 @@ La montura quedó fija, pero retrasó y bajó el cuello y separó las hombreras 
 
 Se restaura el modelo de v1.67.14, con el mismo paño, cuello, relieve, atlas, brillo y animaciones. Al mirar arriba, el montaje queda más cerca del torso; las hombreras originales se asientan un poco más arriba en reposo. No cambia el instalador, el icono ni la descarga pública.
 
-**[Descargar JAR de prueba v1.67.16](https://github.com/Santi-PdR/modelos/raw/082c38eacc81906e9698d89196a7e797735663d0/entregables/v1.67.16/capatest-1.67.16.jar)** · [Capturas F5 en pecho y Curios](docs/capa_v16716_colocacion_forge.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.16/notas.md) · [PowerShell para `test-1`](docs/releases/v1.67.16/instalar-directo-test-1.txt).
+**[Descargar JAR de prueba v1.67.16](https://github.com/Santi-PdR/modelos/raw/082c38eacc81906e9698d89196a7e797735663d0/entregables/v1.67.16/capatest-1.67.16.jar)** · [Capturas F5 en pecho y Curios](docs/capa_v16716_colocacion_forge.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.16/notas.md).
 
 ### v1.67.15 — ensayo descartado de yugo fijo
 
@@ -47,72 +51,7 @@ La referencia de montaje es v1.28.0, que comparte el GEO equipado con v1.27.0. E
 
 **[Prerelease v1.67.13](https://github.com/Santi-PdR/modelos/releases/tag/v1.67.13)** · [Ejecución verificada en Forge](https://github.com/Santi-PdR/modelos/actions/runs/44655102247). El SHA-256 del JAR publicado coincide con el de esa prueba. v1.67.12 queda disponible por separado.
 
-#### Instalar en `test-1`
-
-Con Minecraft cerrado, pegá el bloque completo en **PowerShell de Windows**. No hace falta bajar un ZIP ni guardar un `.ps1`: el bloque descarga el JAR solo y lo verifica antes de tocar `mods`.
-
-```powershell
-& {
-    $ErrorActionPreference = 'Stop'
-    $mods = 'D:\Minecraft\SKLauncher\sklauncher-data-v4\instances\test-1\mods'
-    $jar = 'capatest-1.67.13.jar'
-    $sha = '9d50d50d13da11048c964f5f7fbc4ec1686e8da88f60808fbda4a3ea5e07c249'
-    $url = "https://github.com/Santi-PdR/modelos/releases/download/v1.67.13/$jar"
-    $folder = Get-Item -LiteralPath $mods
-    if ($folder -isnot [IO.DirectoryInfo] -or ($folder.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-        throw 'No se encontro una carpeta mods valida para test-1.'
-    }
-
-    $installed = @(Get-ChildItem -LiteralPath $mods -File -Force | Where-Object { $_.Name -like 'capatest-*.jar' })
-    if ($installed | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }) {
-        throw 'Hay un enlace capatest en mods. No se cambio ningun archivo.'
-    }
-    $target = Join-Path $mods $jar
-    if ($installed.Count -eq 1 -and $installed[0].Name -eq $jar -and
-        (Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash -eq $sha) {
-        Write-Host "$jar ya esta instalado y verificado."
-        return
-    }
-
-    $id = [guid]::NewGuid().ToString('N')
-    $tmp = Join-Path $mods ".capatest-$id.tmp"
-    $root = Join-Path $folder.Parent.FullName 'capatest-respaldos'
-    $backup = Join-Path $root ((Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + $id)
-    $moved = @()
-    try {
-        Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $tmp
-        if ((Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash -ne $sha) {
-            throw 'La descarga no paso la verificacion. No se cambio ningun mod.'
-        }
-        if ($installed.Count -gt 0) {
-            $backupRoot = Get-Item -LiteralPath $root -Force -ErrorAction SilentlyContinue
-            if ($backupRoot -and ($backupRoot -isnot [IO.DirectoryInfo] -or
-                ($backupRoot.Attributes -band [IO.FileAttributes]::ReparsePoint))) {
-                throw "No se puede guardar el respaldo en $root."
-            }
-            [void][IO.Directory]::CreateDirectory($backup)
-        }
-        foreach ($old in $installed) {
-            [IO.File]::Move($old.FullName, (Join-Path $backup $old.Name))
-            $moved += $old
-        }
-        [IO.File]::Move($tmp, $target)
-    } catch {
-        $failure = $_
-        foreach ($old in $moved) {
-            try { [IO.File]::Move((Join-Path $backup $old.Name), $old.FullName) }
-            catch { Write-Warning "$($old.Name) quedo guardado en $backup." }
-        }
-        throw $failure
-    } finally {
-        Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
-    }
-    Write-Host "$jar instalado y verificado en test-1."
-    if ($moved.Count -gt 0) { Write-Host "JAR anteriores guardados en $backup." }
-}
-```
-
-Los JAR anteriores de la capa quedan en `test-1\capatest-respaldos`. Para volver atrás, con el juego cerrado quitá el JAR nuevo de `mods` y devolvé sólo la versión anterior que quieras usar. El bloque no modifica GeckoLib, Curios ni otros mods.
+Para **`test-1`**, usá el [PowerShell de la prueba vigente, sin respaldos](docs/releases/v1.67.19/instalar-directo-test-1.txt).
 
 ### v1.67.12 — las placas se asientan sobre las mangas
 

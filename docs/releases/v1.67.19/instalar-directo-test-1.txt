@@ -1,0 +1,84 @@
+Mantle of the Blight Star v1.67.19 — instalación de prueba sin respaldos
+
+Cerrá Minecraft y pegá sólo el bloque & { ... } completo en PowerShell de Windows.
+Verifica el JAR antes de borrar otras versiones y los respaldos de capatest de test-1.
+No cambia el instalador público, los mundos ni otros mods.
+
+& {
+    $ErrorActionPreference = 'Stop'
+    $ProgressPreference = 'SilentlyContinue'
+    $mods = 'D:\Minecraft\SKLauncher\sklauncher-data-v4\instances\test-1\mods'
+    $jar = 'capatest-1.67.19.jar'
+    $size = 743681
+    $hash = '0a837554c29c517b50a0f4155acfa25e84d0e73656dc9bfabc06cb0bb97bbfb5'
+    $ref = 'e574c47f7c646bd7869a071a42f3db5b5947fdc4'
+    $asset = "entregables/v1.67.19/$jar"
+    $api = "https://api.github.com/repos/Santi-PdR/modelos/contents/${asset}?ref=$ref"
+    $raw = "https://github.com/Santi-PdR/modelos/raw/$ref/$asset"
+    $link = [IO.FileAttributes]::ReparsePoint
+
+    function Test-CapatestJar($Path) {
+        $f = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+        return ($f -is [IO.FileInfo] -and -not ($f.Attributes -band $link) -and
+            $f.Length -eq $size -and (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash -eq $hash)
+    }
+
+    $folder = Get-Item -LiteralPath $mods -Force
+    if ($folder -isnot [IO.DirectoryInfo] -or ($folder.Attributes -band $link)) {
+        throw "Carpeta de mods no valida: $mods"
+    }
+    for ($parent = $folder.Parent; $parent; $parent = $parent.Parent) {
+        if ($parent.Attributes -band $link) { throw "No se siguen carpetas enlazadas: $parent" }
+    }
+    $old = @(Get-ChildItem -LiteralPath $mods -File -Force | Where-Object Name -like 'capatest-*.jar')
+    if ($old | Where-Object { $_.Attributes -band $link }) {
+        throw 'Hay un enlace de capatest en mods. No se cambio ningun archivo.'
+    }
+    $target = Join-Path $mods $jar
+    $existing = Get-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue
+    if ($existing -and ($existing -isnot [IO.FileInfo] -or ($existing.Attributes -band $link))) {
+        throw "El destino no es un JAR normal: $target"
+    }
+    if (-not (Test-CapatestJar $target)) {
+        $tmp = Join-Path $mods ('.capatest-' + [guid]::NewGuid().ToString('N') + '.tmp')
+        try {
+            try {
+                Invoke-WebRequest -UseBasicParsing -Uri $api -Headers @{ Accept = 'application/vnd.github.raw+json' } -OutFile $tmp
+                if (-not (Test-CapatestJar $tmp)) { throw 'Respuesta de descarga no valida.' }
+            } catch {
+                [IO.File]::Delete($tmp)
+                Invoke-WebRequest -UseBasicParsing -Uri $raw -OutFile $tmp
+                if (-not (Test-CapatestJar $tmp)) { throw 'Tamano o SHA-256 incorrecto. No se cambio ningun JAR.' }
+            }
+            if (Test-Path -LiteralPath $target) {
+                [IO.File]::Replace($tmp, $target, [NullString]::Value)
+            } else {
+                [IO.File]::Move($tmp, $target)
+            }
+        } finally {
+            [IO.File]::Delete($tmp)
+        }
+    }
+    if (-not (Test-CapatestJar $target)) { throw 'No se pudo verificar la instalacion; no se limpiaron versiones anteriores.' }
+
+    foreach ($file in $old) {
+        if ($file.Name -ne $jar) { Remove-Item -LiteralPath $file.FullName -Force }
+    }
+    $root = Join-Path $folder.Parent.FullName 'capatest-respaldos'
+    $backup = Get-Item -LiteralPath $root -Force -ErrorAction SilentlyContinue
+    if ($backup -is [IO.DirectoryInfo] -and -not ($backup.Attributes -band $link)) {
+        foreach ($dir in (Get-ChildItem -LiteralPath $root -Directory -Force)) {
+            if (($dir.Attributes -band $link) -or $dir.Name -notmatch '^(?:\d{8}-\d{6}-)?[0-9a-f]{32}$') { continue }
+            foreach ($file in (Get-ChildItem -LiteralPath $dir.FullName -File -Force)) {
+                if ($file.Name -like 'capatest-*.jar' -and -not ($file.Attributes -band $link)) {
+                    Remove-Item -LiteralPath $file.FullName -Force
+                }
+            }
+            if (-not (Get-ChildItem -LiteralPath $dir.FullName -Force)) { [IO.Directory]::Delete($dir.FullName) }
+        }
+        if (-not (Get-ChildItem -LiteralPath $root -Force)) { [IO.Directory]::Delete($root) }
+    } elseif ($backup) {
+        Write-Warning "No se siguio una ruta de respaldos que no es una carpeta normal: $root"
+    }
+    Write-Host "$jar instalado y verificado en test-1. No se guardaron versiones anteriores."
+}
