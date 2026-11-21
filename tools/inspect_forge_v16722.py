@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 from cape_fit import fixed_wearer_pose
 from preview_cloth import ARMOR_GEO, load
-from verify_v12000 import WornModel, contacts
+from verify_v1660 import WornModel, contacts
 from verify_forge_postures import read_boxes, ACTOR
 
 p=argparse.ArgumentParser()
