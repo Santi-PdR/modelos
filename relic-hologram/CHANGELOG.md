@@ -1,5 +1,22 @@
 # Historial de cambios
 
+## 1.0.4 — repaso de calidad
+
+Sin cambios visibles por defecto: es la pasada de «que esté bien hecho».
+
+* `visuals.shaderIntensity`: el pase GLSL tiene su propia intensidad, separada de
+  `haloIntensity`, para poder bajar el fresnel sin apagar el brillo.
+* Si una recompilación del shader falla (pack de recursos roto, GLSL tocado), se
+  **conserva el programa anterior** en vez de dejarlo nulo: antes una recarga
+  fallida podía tumbar el render en el siguiente frame.
+* El CI comprueba ahora que **cada clave de la config está documentada** en la
+  tabla del README (19 claves), que la textura del aura es 64×64 RGBA y que el
+  JSON del shader sigue siendo coherente.
+* Las notas de cada release se generan de la entrada correspondiente del
+  CHANGELOG, no de un texto fijo, así que la release cuenta lo que trae su jar.
+* Documentación: nueva sección «Cómo probarlo» en `docs/BRILLO-Y-SHADERS.md` y
+  corregido el apéndice (donde decía que `RenderType.create` no era accesible).
+
 ## 1.0.3 — shader propio
 
 * **Cuarto pase con GLSL propio** (`visuals.shaderGlow`): fresnel en el borde y

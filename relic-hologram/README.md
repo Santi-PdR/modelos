@@ -10,7 +10,7 @@ Curios y se anima con GeckoLib 4.
 | Minecraft | 1.20.1 |
 | Forge | 47.4.0 (rango `[47.4,)`) |
 | Java | 17 |
-| GeckoLib | **4.8.1** (`geckolib-forge-1.20.1-4.8.1`, Modrinth `bVtfWE8S`) |
+| GeckoLib | **4.8.1** compilado (`geckolib-forge-1.20.1-4.8.1`, Modrinth `bVtfWE8S`); el `mods.toml` acepta `[4.8.1,)`, así que 4.8.4 también vale |
 | Curios API | **5.14.1+1.20.1** (última build para Forge 1.20.1) |
 | modid | `holocore` |
 
@@ -23,7 +23,7 @@ el ítem no tendría slot y sin GeckoLib no hay modelo.
 ```bash
 cd relic-hologram
 ./gradlew build          # o: gradle build
-# -> build/libs/holocore-1.0.0.jar
+# -> build/libs/holocore-<mod_version>.jar  (la versión sale de gradle.properties)
 ```
 
 El workflow `.github/workflows/holocore.yml` hace lo mismo en CI y, antes de
@@ -36,7 +36,12 @@ compilar, valida que:
 * están las 20 animaciones, las capas solo tocan `relic_react`, y los .geo de
   calidad full/lite declaran los mismos 98 huesos;
 * `RelicAnimations.java` coincide con `tools/relic_manifest.json`
-  (`python3 tools/gen_relic_constants.py --check`).
+  (`python3 tools/gen_relic_constants.py --check`);
+* el JSON del shader propio es coherente (blend aditivo, `count` de cada uniform,
+  atributos dentro de `NEW_ENTITY`) y todas las claves de la config están
+  documentadas en la tabla de abajo;
+* el shader **compila de verdad**: el arranque del cliente tiene que dejar
+  `Shader del aura compilado` en el log, o el build falla.
 
 Cambios por versión: [CHANGELOG.md](CHANGELOG.md).
 
@@ -127,6 +132,7 @@ shaders de 1.20.1 están en [BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
 | `visuals.glowAura` | `true` | Aura: tres billboards aditivos alrededor del núcleo. |
 | `visuals.auraIntensity` | `0.55` | Fuerza del aura (0–1). |
 | `visuals.shaderGlow` | `true` | Pase GLSL propio (fresnel + barrido). Se apaga solo con shaderpack activo. |
+| `visuals.shaderIntensity` | `0.55` | Fuerza del pase GLSL, independiente del halo. |
 | `visuals.reducedEffects` | `false` | Reposo sin rayos/cometas/ondas (`idle_calm`). |
 | `visuals.maxRenderDistance` | `32` | Distancia para dibujar la reliquia de otros jugadores. |
 | `visuals.glitchMinSeconds` / `glitchMaxSeconds` | `20` / `60` | Intervalo del glitch aleatorio (solo en reposo). |

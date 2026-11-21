@@ -19,11 +19,12 @@ import java.util.function.Function;
  *
  * <p>El halo necesita <b>sumar</b> luz en vez de mezclarla (blend aditivo), y eso
  * no existe en ningun RenderType publico de 1.20.1 con el formato de vertice de
- * entidades. La unica via es construir uno: en 1.20.1 {@code RenderType.create}
- * no es publico, asi que se hace lo mismo que hace Forge en
- * {@code ForgeRenderTypes}: una clase interna que hereda de {@link RenderType}
- * solo para tener acceso a los estados protegidos ({@code ADDITIVE_TRANSPARENCY},
- * {@code LIGHTMAP}, {@code NO_CULL}, {@code COLOR_WRITE}) y a {@code create(...)}.</p>
+ * entidades. La unica via es construir uno. En vanilla {@code RenderType.create}
+ * es privado; aqui se puede llamar porque el access transformer de Forge lo
+ * publica, pero ademas hace falta heredar de {@link RenderType} para llegar a los
+ * estados protegidos de {@code RenderStateShard} ({@code ADDITIVE_TRANSPARENCY},
+ * {@code LIGHTMAP}, {@code NO_CULL}, {@code COLOR_WRITE}, {@code ShaderStateShard}
+ * y {@code TextureStateShard}). Es el mismo patron que usa {@code ForgeRenderTypes}.</p>
  *
  * <p>Se usa a proposito el shader de entidad translucida estandar
  * ({@code RENDERTYPE_ENTITY_TRANSLUCENT_SHADER}) y no un shader propio: un

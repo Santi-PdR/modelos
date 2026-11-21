@@ -143,6 +143,48 @@ jobs:
           PY
 
       # ------------------------------------------------------------------
+      # Deriva silenciosa de documentacion: cada clave de la config tiene que
+      # estar en la tabla del README, y la textura del aura tiene que tener el
+      # tamano que espera el codigo.
+      # ------------------------------------------------------------------
+      - name: Validate docs and config coherence
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, struct
+
+          root = pathlib.Path('relic-hologram')
+          source = (root / 'src/main/java/com/santipdr/holocore/config/RelicConfig.java').read_text()
+          readme = (root / 'README.md').read_text()
+
+          keys, section = [], ''
+          for line in source.splitlines():
+              push = re.search(r'\.push\("([A-Za-z]+)"\)', line)
+              if push:
+                  section = push.group(1)
+              if re.search(r'\.pop\(\)', line):
+                  section = ''
+              define = re.search(r'\.define(?:Enum|InRange)?\("([A-Za-z0-9_]+)"', line)
+              if define:
+                  name = define.group(1)
+                  keys.append(f'{section}.{name}' if section else name)
+
+          assert keys, 'no se encontro ninguna clave en RelicConfig'
+          # Vale tanto `seccion.clave` como la clave suelta: la tabla del README
+          # agrupa las dos claves de glitch en una sola fila.
+          missing = [k for k in keys
+                     if f'`{k}`' not in readme and f'`{k.split(".")[-1]}`' not in readme]
+          assert not missing, f'claves de config sin documentar en README.md: {missing}'
+
+          aura = root / 'src/main/resources/assets/holocore/textures/relic/relic_aura.png'
+          data = aura.read_bytes()
+          assert data[:8] == b'\x89PNG\r\n\x1a\n', 'relic_aura.png no es un PNG'
+          width, height, depth, color_type = (*struct.unpack('>II', data[16:24]), data[24], data[25])
+          assert (width, height, depth, color_type) == (64, 64, 8, 6), (width, height, depth, color_type)
+
+          print(f'Docs OK: {len(keys)} claves de config documentadas; relic_aura.png 64x64 RGBA.')
+          PY
+
+      # ------------------------------------------------------------------
       # Shader propio: ficheros en assets/minecraft/shaders/core (ahi los busca
       # ShaderInstance) y coherencia del JSON con el formato de vertice.
       # ------------------------------------------------------------------
@@ -277,21 +319,36 @@ jobs:
           SHA="$(sha256sum "$JAR" | cut -d' ' -f1)"
           TAG="v$VER"
           NOTES="$(mktemp)"
-          cat > "$NOTES" <<MD
-          Reliquia cosmetica **Holographic Core** para Forge 1.20.1.
+          # Las notas salen del CHANGELOG de esa version y no de un texto fijo:
+          # asi la release cuenta lo que trae ESTE jar.
+          python3 - "$VER" "$SHA" > "$NOTES" <<'PY'
+          import os, pathlib, re, sys
 
-          Requiere **GeckoLib 4.8.1+** y **Curios API 5.14.1+** (ambos obligatorios).
+          version, sha = sys.argv[1], sys.argv[2]
+          repo = os.environ.get('GITHUB_REPOSITORY', 'Santi-PdR/modelos')
+          changelog = pathlib.Path('CHANGELOG.md').read_text(encoding='utf-8')
 
-          - Modelo y animaciones v19 sin modificar (977 cubos; opcion lite de 751).
-          - Slot \`charm\` de Curios, maximo una equipada.
-          - Brillo fullbright con textura emisiva (sin dependencias de shaders).
-          - Tecla **G** para despertar/dormir; \`/relic offset|scale|side|quality\` para ajustar.
-          - \`/relic pulse\` y \`/relic release\` para las animaciones de una sola vez.
+          print('Reliquia cosmetica **Holographic Core** para Forge 1.20.1.')
+          print()
+          print('Requiere **GeckoLib 4.8.1+** y **Curios API 5.14.1+** (obligatorios).')
+          print()
 
-          SHA-256 del jar: \`$SHA\`
-          MD
+          match = re.search(rf'^## {re.escape(version)} .*?(?=^## |\Z)', changelog, re.M | re.S)
+          print(match.group(0).strip() if match else '(sin entrada en CHANGELOG.md)')
+          print()
+          print(f'SHA-256 del jar: `{sha}`')
+          print()
+          print('```powershell')
+          print(f"$u='https://github.com/{repo}/releases/download/v{version}/holocore-{version}.jar'")
+          print('Invoke-WebRequest -UseBasicParsing -Uri $u -OutFile "$env:TEMP\holocore.jar"')
+          print('(Get-FileHash "$env:TEMP\holocore.jar" -Algorithm SHA256).Hash')
+          print('```')
+          PY
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$JAR" --clobber
+            # Tambien las notas: una release que ya existia se queda contando la
+            # version anterior para siempre.
+            gh release edit "$TAG" --notes-file "$NOTES"
           else
             gh release create "$TAG" "$JAR" \
               --title "Holographic Core $TAG" \

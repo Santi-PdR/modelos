@@ -109,16 +109,23 @@ public final class RelicShaders {
     }
 
     private static void install(ShaderInstance loaded) {
+        if (loaded == null) {
+            // Si esta recarga fallo (pack de recursos roto, GLSL tocado en un
+            // resource pack...) se conserva el programa anterior: peor es dejar
+            // el RenderType con un shader nulo y petar en el primer dibujo.
+            if (shader == null) {
+                HoloCore.LOGGER.warn("Sin shader {}: el pase GLSL queda desactivado", PROGRAM);
+            }
+            return;
+        }
         ShaderInstance previous = shader;
         shader = loaded;
         if (previous != null) {
             previous.close();
         }
-        if (loaded != null) {
-            // Marcador que el smoke test del CI busca en el log: si el GLSL no
-            // compila, esta linea no aparece y el CI falla.
-            HoloCore.LOGGER.info("Shader del aura compilado ({})", PROGRAM);
-        }
+        // Marcador que el smoke test del CI busca en el log: si el GLSL no
+        // compila, esta linea no aparece y el CI falla.
+        HoloCore.LOGGER.info("Shader del aura compilado ({})", PROGRAM);
     }
 
     private static ShaderInstance build(ResourceManager manager) {

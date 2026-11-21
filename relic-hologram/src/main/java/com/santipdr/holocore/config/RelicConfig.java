@@ -28,6 +28,7 @@ public final class RelicConfig {
     public static final ForgeConfigSpec.BooleanValue GLOW_AURA;
     public static final ForgeConfigSpec.DoubleValue AURA_INTENSITY;
     public static final ForgeConfigSpec.BooleanValue SHADER_GLOW;
+    public static final ForgeConfigSpec.DoubleValue SHADER_INTENSITY;
     public static final ForgeConfigSpec.BooleanValue REDUCED_EFFECTS;
     public static final ForgeConfigSpec.IntValue MAX_RENDER_DISTANCE;
     public static final ForgeConfigSpec.IntValue GLITCH_MIN_SECONDS;
@@ -70,6 +71,9 @@ public final class RelicConfig {
                         "Se desactiva solo si hay shaderpack activo (Iris/Oculus/OptiFine), porque el pack",
                         "sustituye el programa y la reliquia podria quedar invisible. Usa haloIntensity.")
                 .define("shaderGlow", true);
+        SHADER_INTENSITY = b.comment("Intensidad del pase GLSL (fresnel + barrido). Separada del halo",
+                        "para poder bajar el borde sin apagar el brillo.")
+                .defineInRange("shaderIntensity", 0.55D, 0.0D, 1.0D);
         REDUCED_EFFECTS = b.comment("Usa idle_calm (sin rayos, cometas ni ondas) cuando el estado es normal.")
                 .define("reducedEffects", false);
         MAX_RENDER_DISTANCE = b.comment("Distancia maxima (bloques) a la que se renderiza la reliquia de OTROS jugadores. El propio jugador siempre se renderiza.")

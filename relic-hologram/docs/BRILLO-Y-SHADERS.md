@@ -12,9 +12,11 @@ subir el nivel visual, y con qué se rompe cada una.
 | Textura emisiva aparte | Segundo pase con `relic_hologram_glowing.png` sobre `RenderType.entityTranslucentEmissive`. |
 | Efecto de luz fría | La textura emisiva es la que manda el color; la base sólo define el volumen. |
 | Halo aditivo | Tercer pase con blend **aditivo** (`RelicRenderTypes.ADDITIVE_GLOW`), configurable con `glowHalo` / `haloIntensity`. Ver §3.A. |
+| Aura | Tres billboards aditivos que giran, `glowAura` / `auraIntensity`. Ver §3.B. |
+| Shader propio | Cuarto pase con GLSL: fresnel en el borde y línea de barrido, `shaderGlow` / `shaderIntensity`. Se apaga solo con shaderpack. Ver §3.C y apéndice A. |
 
-Es decir: el «glowing» ya está, y el «bloom propio» en su versión barata también,
-desde esta versión.
+Es decir: el «glowing», el «bloom propio» y el «glsl» están los tres dentro, cada
+uno en la versión que aguanta un shaderpack sin romperse.
 
 ## 2. Qué significa «shaders» aquí
 
@@ -145,6 +147,38 @@ del núcleo. Ajuste fino: subir el brillo de `relic_hologram_glowing.png` (o sub
    defecto en `LITE` (ahora se omite; el aura sí se dibuja, son tres quads).
 5. Pendiente de juicio visual: cuánto fresnel/barrido aguanta sin verse «sucio».
    Es lo único que el CI no puede valorar.
+
+## 6. Cómo probarlo
+
+```
+/give @s holocore:holographic_core      # equipar en el slot charm
+/relic quality full                     # o lite, para comparar
+/relic pulse                            # animacion de una sola vez
+/relic info                             # offset y escala actuales
+```
+
+En `config/holocore-client.toml` (sección `[visuals]`):
+
+```toml
+    glowLayer = true
+    glowHalo = true
+    haloIntensity = 0.35
+    glowAura = true
+    auraIntensity = 0.55
+    shaderGlow = true
+    shaderIntensity = 0.55
+```
+
+Qué mirar, en orden:
+
+1. **`latest.log`** debe tener `Shader del aura compilado (holocore_relic_glow)`.
+   Si no está, el pase GLSL no compiló en ese equipo (y el CI lo habría cazado).
+2. **Silueta contra pared oscura**, de noche: halo y aura se tienen que ver sin
+   cambiar la luz del mundo.
+3. **De canto**: el borde del núcleo debe brillar más que la cara frontal
+   (fresnel). Si molesta, bajar `shaderIntensity`.
+4. **Con y sin shaderpack**, mismo mundo y hora: con pack el pase GLSL se apaga
+   solo y el bloom lo pone el pack; sin pack manda el aditivo propio.
 
 ## Apéndice A — el GLSL que lleva el mod desde 1.0.3
 

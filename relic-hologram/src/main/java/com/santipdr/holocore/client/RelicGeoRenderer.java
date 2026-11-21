@@ -84,7 +84,7 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
         ShaderInstance glowShader = RelicShaders.ready() ? RelicShaders.shader() : null;
         if (glowShader != null) {
             glowShader.safeGetUniform("HoloTime").set(RelicShaders.timeSeconds(partialTick));
-            float i = RelicConfig.HALO_INTENSITY.get().floatValue();
+            float i = RelicConfig.SHADER_INTENSITY.get().floatValue();
             renderPass(poseStack, animatable, bufferSource, partialTick, packedLight,
                     RelicRenderTypes.GLOW_SHADER.apply(RelicGeoModel.glowTexture()),
                     0.65F * i, 0.85F * i, 1.0F * i, 1.0F);
