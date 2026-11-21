@@ -397,3 +397,28 @@ o probar interacciones con otros mods de animación.
 - C busca entidades vivas no jugadoras por su caja de colisión y contempla piezas multiparte Forge. Su contención no depende de que el jefe acepte el efecto de poción; al cancelar se libera. La prueba automatizada selecciona, sujeta y libera un Ender Dragon en un entorno controlado, no garantiza compatibilidad universal con todos los jefes o ataques de terceros.
 - Se ajustaron por separado las transformaciones de agarre de primera y tercera persona; se requiere revisión humana, especialmente durante animaciones y con otros mods. El cuarto golpe de Better Combat usa un corte vertical de su instalación en vez del slam; sin Better Combat usa un clip alternativo de Serious Player Animations, atribuido.
 - La cámara C recorre varias posiciones suavizadas, y comprueba obstáculos; es un diseño propio basado en el análisis estructural de las escenas de Darkest Hours, no sus recursos ni su coreografía. El visualizador usa recursos de Better Combat Particle, no de Darkest Hours.
+
+
+## 0.18.0-test — versión para prueba en juego
+
+- El remate se activa pulsando Z tras dos parálisis exitosas. La selección y el
+  daño se resuelven en el servidor; el golpe bruto está limitado a 60 puntos,
+  el 90 % de la vida máxima y la vida actual menos uno. Armadura, resistencias
+  y modificaciones de terceros alteran el daño real. Si no hay una posición
+  segura detrás, no consume las cargas y muestra un aviso.
+- Los desplazamientos usan una adaptación acreditada de SlashBlade: Resharped;
+  se buscan varias alturas y no se fuerzan chunks ni se atraviesan obstáculos.
+  C sigue pudiendo comenzar sin mover al jugador cuando no hay suelo seguro.
+- La cámara de C suaviza sus movimientos en función del tiempo entre fotogramas;
+  los ataques incluyen efectos y sonidos, con animaciones de Better Combat cuando
+  están disponibles y alternativas si no lo están.
+- Las pruebas automáticas cubren las tres configuraciones del fixture, el remate
+  por Z y la selección, contención y liberación del Ender Dragon controlado. No
+  son una partida real ni garantizan compatibilidad con todos los jefes custom.
+- Limitaciones conocidas: el agarre zurdo en tercera persona necesita ajustes;
+  el gesto de sangre todavía no recorre claramente la hoja, y las proporciones
+  de los brazos en primera persona requieren revisión. Sonidos y movimiento no
+  han sido evaluados auditivamente ni mediante una partida humana.
+- Misma versión en cliente y servidor; no incluye la capa ni los clips de Better
+  Combat, Ultimate Battle o Darkest Hours. Requiere Forge 1.20.1, GeckoLib 4.8.1
+  y Player Animator Forge 1.0.2-rc1 o compatible. Better Combat es opcional.
