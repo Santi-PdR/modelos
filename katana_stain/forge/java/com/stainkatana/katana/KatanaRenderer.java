@@ -15,8 +15,14 @@ import software.bernie.geckolib.renderer.GeoItemRenderer;
 
 /** Icono plano en la interfaz; geometría GeckoLib en mano, suelo y marco. */
 public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
-    // Visual fixture uses this to compare candidate wrist rotations; zero in normal play.
-    public static float fixtureGripTilt;
+    private static final ThreadLocal<Boolean> FIRST_PERSON_ARM = ThreadLocal.withInitial(() -> false);
+
+    /** Preserve the dedicated first-person wrist pose while using the same item model. */
+    public static void renderFromFirstPersonArm(Runnable draw) {
+        boolean previous = FIRST_PERSON_ARM.get();
+        FIRST_PERSON_ARM.set(true);
+        try { draw.run(); } finally { FIRST_PERSON_ARM.set(previous); }
+    }
     private static final ResourceLocation ICON = new ResourceLocation(StainKatanaMod.MOD_ID,
             "textures/item/katana_stain_icon.png");
 
@@ -45,11 +51,12 @@ public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
                 poseStack.translate(0, 5.0 / 16.0, 0);
             else if (context == ItemDisplayContext.FIRST_PERSON_RIGHT_HAND || context == ItemDisplayContext.FIRST_PERSON_LEFT_HAND)
                 poseStack.translate(0, -1.2 / 16.0, 0);
-            if (fixtureGripTilt != 0 && (context == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND
+            if (!FIRST_PERSON_ARM.get() && (context == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND
                     || context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND)) {
-                // ItemRenderer has translated the model origin by -0.5 on each axis.
+                // Turn around the item origin, preserving the wrist position. The
+                // visual fixture compared both faces at -90, -45, +45 and +90.
                 poseStack.translate(.5, .5, .5);
-                poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(fixtureGripTilt));
+                poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(-45));
                 poseStack.translate(-.5, -.5, -.5);
             }
             super.renderByItem(stack, context, poseStack, buffers, light, overlay);

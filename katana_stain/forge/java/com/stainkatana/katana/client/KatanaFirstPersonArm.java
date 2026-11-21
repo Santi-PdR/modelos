@@ -75,9 +75,10 @@ public final class KatanaFirstPersonArm {
             pose.translate(gripNudge.x(), gripNudge.y(), gripNudge.z());
             var context = right ? net.minecraft.world.item.ItemDisplayContext.THIRD_PERSON_RIGHT_HAND
                     : net.minecraft.world.item.ItemDisplayContext.THIRD_PERSON_LEFT_HAND;
-            mc.getItemRenderer().renderStatic(event.getItemStack(), context, event.getPackedLight(),
-                    net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, pose,
-                    event.getMultiBufferSource(), mc.level, mc.player.getId());
+            com.stainkatana.katana.KatanaRenderer.renderFromFirstPersonArm(() ->
+                    mc.getItemRenderer().renderStatic(event.getItemStack(), context, event.getPackedLight(),
+                            net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY, pose,
+                            event.getMultiBufferSource(), mc.level, mc.player.getId()));
             pose.popPose();
             event.setCanceled(true);
         }
