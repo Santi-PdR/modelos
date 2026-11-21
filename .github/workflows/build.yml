@@ -557,7 +557,12 @@ jobs:
           assert 'RIBBONS = 12' in _armor_model and 'LAST_SEGMENT = 4' in _armor_model
           assert 'rearPadBaseX' not in _armor_model
           assert 'CapeMountPlacement.plate(elytra, false)' in armor_renderer
-          assert not re.search(r'\b(model\.head\.|getXRot\(|getYHeadRot\(|getCamera|backset\()', armor_renderer)
+          # La mirada sólo puede entrar en el pliegue de la capucha. No
+          # volver a mover la montura ni leer cámara para adaptar el paño.
+          _hood_input = re.search(r'hoodClearance = [^;]*?CapeHood\.lookClearance\([^;]*?;', armor_renderer, re.S)
+          assert _hood_input and armor_renderer.count('fold.pitch() + hoodClearance') == 1
+          _without_hood_aim = armor_renderer.replace(_hood_input[0], '')
+          assert not re.search(r'\b(model\.head\.|getXRot\(|getYHeadRot\(|getCamera|backset\()', _without_hood_aim)
           assert all(x not in armor_renderer for x in ('CapeTorsoFit', 'applyPlateRim', 'CapeBacking.solve', 'CapePlateFit.influence'))
           # v1.22.0: OCHO estados reales, no cuatro clonados.
           assert all(f'"{k}"' in _motion for k in
