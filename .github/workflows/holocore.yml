@@ -366,6 +366,12 @@ jobs:
           done
 
           if [ "$FAIL" -ne 0 ]; then
+            # Las lineas del shader como anotaciones: el log de Actions no se
+            # puede leer desde fuera, las anotaciones si.
+            grep -aiE "holocore_relic_glow|Shader del aura|No se pudo compilar|ChainedJsonException|GLSL|shader" client.log \
+              | tail -15 | while IFS= read -r line; do
+                  echo "::error title=shader::${line//'%'/'%25'}"
+                done || true
             {
               echo "### Diagnostico runClient"
               echo ''

@@ -132,14 +132,18 @@ public final class RelicShaders {
 
     private static final class Reload implements PreparableReloadListener {
 
+        /**
+         * La compilacion va en el ejecutor del juego, no en el de fondo: crear un
+         * programa GL requiere el contexto de OpenGL, que solo existe en el hilo
+         * de render. Ahi tambien corre GameRenderer.reloadShaders.
+         */
         @Override
         public CompletableFuture<Void> reload(PreparationBarrier barrier, ResourceManager manager,
                                               ProfilerFiller prepProfiler, ProfilerFiller reloadProfiler,
                                               Executor backgroundExecutor, Executor gameExecutor) {
-            return CompletableFuture
-                    .supplyAsync(() -> build(manager), backgroundExecutor)
+            return CompletableFuture.completedFuture(null)
                     .thenCompose(barrier::wait)
-                    .thenAcceptAsync(RelicShaders::install, gameExecutor);
+                    .thenRunAsync(() -> install(build(manager)), gameExecutor);
         }
     }
 }
