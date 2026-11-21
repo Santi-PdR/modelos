@@ -13,7 +13,9 @@ Se equipa en el pecho o en `back` con Curios opcional.
 
 ### v1.67.28 — dobladillo, reposo y agachado
 
-Candidata en pruebas: transiciones del paño más suaves, nuevos ciclos de reposo y agachado y más espacio junto a la hombrera izquierda al girar. Los ciclos de caminar y correr de v1.67.27 se conservan. [Respaldo de v1.67.27](docs/respaldos/v1.67.27/README.md).
+**[Descargar JAR de prueba v1.67.28](https://github.com/Santi-PdR/modelos/raw/5adcba808cff1cbdc59dda6b0c31fc6f76594188/entregables/v1.67.28/capatest-1.67.28.jar)** · [PowerShell para test-1](docs/releases/v1.67.28/instalar-test-1.txt) · [Hombrera de frente y en giro](docs/releases/v1.67.28/comparacion-giro-forge.jpg) · [Reposo y agachado](docs/releases/v1.67.28/comparacion-calma-pecho-forge.gif) · [Medidas y SHA-256](docs/releases/v1.67.28/notas.md).
+
+El paño abre y frena más suave, con menor vaivén al agacharse. La hombrera izquierda conserva el encastre frontal y deja más margen en el giro. Se mantienen los ciclos de marcha y carrera de v1.67.27. Probado en Forge en pecho y Curios. [Respaldo de v1.67.27](docs/respaldos/v1.67.27/README.md).
 
 ### v1.67.27 — hombrera izquierda, marcha y carrera
 

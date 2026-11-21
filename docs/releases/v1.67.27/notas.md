@@ -27,7 +27,7 @@ También pasaron las pruebas en Forge de [escalera](escalera-forge.tsv), [salto,
 
 - Minecraft Java **1.20.1**, Forge **47.3.0**, GeckoLib **4.8.1**. Curios **5.14.1** es opcional para equipar en `back`.
 - Cerrá Minecraft y reemplazá el `capatest` anterior en `test-1/mods`. El [bloque de PowerShell](instalar-test-1.txt) descarga a TEMP, verifica tamaño y SHA-256 antes de colocar el JAR, y sólo retira versiones anteriores de `capatest` después de verificar la instalada. JAR: **749,905 bytes**. No cambia el instalador público.
-- [Proyecto Blockbench v1.67.27](../../CAPA_v1.67.27.bbmodel) y [visor offline](../../capa_v1170_visor.html). Blockbench guarda las curvas de base; el calce equipado sobre el jugador se ve en el visor o en Forge.
+- [Proyecto Blockbench v1.67.27](../../respaldos/v1.67.27/CAPA_v1.67.27.bbmodel) y [visor offline](../../capa_v1170_visor.html). Blockbench guarda las curvas de base; el calce equipado sobre el jugador se ve en el visor o en Forge.
 - [Respaldo exacto de las animaciones y el proyecto .26](../../respaldos/v1.67.26/README.md), guardado en Git en [`4814167`](https://github.com/Santi-PdR/modelos/commit/48141672ca1e35046aaf3290098321aaf8101450).
 
 [Captura de referencia .26](https://github.com/Santi-PdR/modelos/actions/runs/44922651110), con JAR idéntico al entregado · [Build y pruebas de v1.67.27](https://github.com/Santi-PdR/modelos/actions/runs/44924671178) · [Fuentes verificadas](https://github.com/Santi-PdR/modelos/tree/185c952a81b2abc5d1cbae778108d0b141d3d870).
