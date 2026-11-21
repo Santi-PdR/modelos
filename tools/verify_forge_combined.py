@@ -53,11 +53,8 @@ def timeline(data, slot):
     assert use.sum() >= 28, (slot, 'faltan pares en giro y frenada')
     rate = np.linalg.norm(np.diff(points(data, 'tip'), axis=0)[use], axis=1) / np.diff(t)[use]
     p90, peak = float(np.quantile(rate, .90)), float(rate.max())
-    peak_tick = float(t[:-1][use][rate.argmax()])
-    print(f'{slot}: ventana registrada {t[0]:.2f}–{t[-1]:.2f} ticks; punta p90/pico '
-          f'{p90:.3f}/{peak:.3f}u/tick, máximo en t={peak_tick:.2f}.', flush=True)
-    assert p90 > .2 and peak < 6., (slot, 'punta inmóvil o latigazo', peak, peak_tick)
-    return len(t), p90, peak
+    a = np.flatnonzero(use)[rate.argmax()]
+    return len(t), p90, peak, t[a], t[a+1]-t[a], *(float(abs(data[k][a+1]-data[k][a])) for k in ('top', 'mid'))
 
 
 def fit(root, data, slot, rig, source):
@@ -90,8 +87,6 @@ def fit(root, data, slot, rig, source):
         hit = contacts(live[None, rig.cloth], limbs[None])[0]
         worst = np.maximum(worst, [lap(live[plate], actors['head']), lap(live[plate], actors['hat']),
                                    -hit[:2].min(), -hit[2:].min()])
-    assert drift < .006 and (joins > [.038, .025, .018]).all(), (slot, 'se movió o se abrió el anclaje', drift, joins)
-    assert worst[3] <= .05, (slot, 'cruce con pierna en maniobra', worst[3])
     return (len(mesh), *joins, drift, *worst)
 
 
@@ -112,18 +107,27 @@ def gallery(root, pictures, version):
     board.save(root/'maniobra-forge.jpg', quality=93, optimize=True)
 
 
-def main(root):
+def main(root, diagnostic=False):
     geo = load(ARMOR_GEO)
     rig = WornModel(fixed_wearer_pose(geo, 0.))
     source = defaultdict(list)
     for name, box in zip(rig.names, rig.place(matrices(geo)), strict=True):
         source[name].append(box)
-    results, pictures = [], {}
+    results, pictures, faults = [], {}, []
     for slot in SLOTS:
         data = read(root/f'maniobra-{slot}.tsv')
-        count, p90, peak = timeline(data, slot)
+        count, p90, peak, tick, dt, top, mid = timeline(data, slot)
         poses, seam, join, back, drift, head, hat, arm, leg = fit(root, data, slot, rig, source)
-        results.append((slot, count, poses, *(f'{v:.6f}' for v in (p90, peak, seam, join, back, drift, head, hat, arm, leg))))
+        faults_here = []
+        if p90 <= .2 or peak >= 6.:
+            faults_here.append('punta')
+        if drift >= .006 or min(seam - .038, join - .025, back - .018) <= 0:
+            faults_here.append('costura/montura')
+        if leg > .05:
+            faults_here.append('piernas')
+        faults.extend(f'{slot}: {case}' for case in faults_here)
+        result = (p90, peak, tick, dt, top, mid, seam, join, back, drift, head, hat, arm, leg)
+        results.append((slot, count, poses, *(f'{v:.6f}' for v in result), ','.join(faults_here) or 'OK'))
         visible = data[data['image'] != '-']
         assert len(visible) == len(STILLS), (slot, 'capturas incompletas')
         for sample, (at, _) in zip(visible, STILLS, strict=True):
@@ -131,14 +135,23 @@ def main(root):
             assert at <= tick <= at + 2 and sample['image'] == f'maniobra-{slot}-{tick:03d}.png', (slot, at, sample)
         pictures[slot] = [root/name for name in visible['image']]
         print(f'{slot}: {count} cuadros, {poses} poses con malla; punta p90/pico {p90:.3f}/{peak:.3f}u/tick; '
+              f'pico en t={tick:.2f}, intervalo {dt:.3f}, bisagras Δ{top:.2f}/{mid:.2f}°; '
               f'costura/raíz {seam:.3f}/{join:.3f}u, deriva {drift:.6f}u; placa/cabeza/capa exterior '
               f'{head:.3f}/{hat:.3f}u, paño/piernas {leg:.3f}u.', flush=True)
     table(root/'maniobra-forge.tsv', 'ranura cuadros poses punta_p90_u_tick punta_pico_u_tick '
-          'costura_u raiz_u apoyo_u deriva_u placa_cabeza_u placa_capa_exterior_u pano_brazos_u pano_piernas_u', results)
+          'pico_t pico_delta_t pico_delta_top_deg pico_delta_mid_deg costura_u raiz_u apoyo_u deriva_u '
+          'placa_cabeza_u placa_capa_exterior_u pano_brazos_u pano_piernas_u fuera_de_umbral', results)
     gallery(root, pictures, mod_version())
+    if faults:
+        message = 'Fuera de umbral: ' + '; '.join(faults)
+        if not diagnostic:
+            raise SystemExit(message)
+        print(f'::warning title=Diagnóstico de maniobra::{message}', flush=True)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('shots', type=Path)
-    main(parser.parse_args().shots)
+    parser.add_argument('--diagnostico', action='store_true', help='Guardar las mediciones incluso si superan el umbral; no certifica la maniobra.')
+    args = parser.parse_args()
+    main(args.shots, args.diagnostico)

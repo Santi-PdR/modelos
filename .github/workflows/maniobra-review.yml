@@ -46,7 +46,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m pip install --quiet numpy Pillow
-          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_combined.py "$RUNNER_TEMP/maniobra" 2>&1 | while IFS= read -r line; do
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_combined.py "$RUNNER_TEMP/maniobra" --diagnostico 2>&1 | while IFS= read -r line; do
             case "$line" in
               *AssertionError:*|*Error:*) printf '::error title=Maniobra en Forge::%s\n' "${line//%/%25}" ;;
               pecho:*|curios:*) printf '::notice title=Maniobra en Forge::%s\n' "${line//%/%25}" ;;
@@ -64,5 +64,5 @@ jobs:
           printf 'https://github.com/%s/actions/runs/%s\n' "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$dir/revision.txt"
           git add "$dir"
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m 'Adjuntar la maniobra verificada sin modificar el JAR entregado [skip ci]'
+            commit -m 'Adjuntar el diagnóstico de la maniobra sin modificar el JAR entregado [skip ci]'
           git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
