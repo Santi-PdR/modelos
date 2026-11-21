@@ -94,10 +94,15 @@ Complementary, BSL…) usan para detectar emisivos y aplicar su bloom. Encima ha
 un tercer pase con **blend aditivo**: suma luz en vez de mezclarla, así que el
 núcleo brilla también sin shaderpack.
 
+La **aura** son tres billboards (quads que miran a cámara) con la textura
+`relic_aura.png`, girando a distinta velocidad, sumados con el mismo blend
+aditivo. Eso da el resplandor alrededor del núcleo sin tocar la pantalla y sin
+depender del pack; la textura se genera con `tools/make_aura.py`.
+
 Lo que **no** hace: post-proceso de pantalla (caro y se pelea con los packs) ni
 un `.fsh` propio (con shaderpack acaba en el fallback del pack o invisible). El
-razonamiento completo, con las alternativas y su compatibilidad, está en
-[BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
+razonamiento completo, el código del shader que sí se podría usar y su
+compatibilidad están en [BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
 
 ## Configuración (`config/holocore-client.toml`)
 
@@ -112,6 +117,8 @@ razonamiento completo, con las alternativas y su compatibilidad, está en
 | `visuals.glowLayer` | `true` | Segundo pase emisivo (la textura `_glowing`). |
 | `visuals.glowHalo` | `true` | Tercer pase con blend **aditivo** (suma luz). Se omite en `LITE` y con `reducedEffects`. |
 | `visuals.haloIntensity` | `0.35` | Fuerza del halo aditivo (0–1). |
+| `visuals.glowAura` | `true` | Aura: tres billboards aditivos alrededor del núcleo. |
+| `visuals.auraIntensity` | `0.55` | Fuerza del aura (0–1). |
 | `visuals.reducedEffects` | `false` | Reposo sin rayos/cometas/ondas (`idle_calm`). |
 | `visuals.maxRenderDistance` | `32` | Distancia para dibujar la reliquia de otros jugadores. |
 | `visuals.glitchMinSeconds` / `glitchMaxSeconds` | `20` / `60` | Intervalo del glitch aleatorio (solo en reposo). |

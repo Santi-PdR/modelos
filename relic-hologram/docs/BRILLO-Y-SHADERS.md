@@ -66,14 +66,28 @@ jugador y al mundo que se dibujen después en el mismo frame.
 Coste: una pasada más sobre 977 cubos. Por eso se salta en `quality=LITE` y con
 `reducedEffects=true`.
 
-### B. Aura en billboard (siguiente paso natural)
+### B. Aura en billboard (hecho)
 
-Dos quads mirando a cámara con una textura radial (64×64 con degradado alfa),
-escala ~1.4× el núcleo, uno girando lento y otro con pulso. Es geometría normal:
-no depende de shaders, no se rompe con packs y se ve a distancia. Necesita una
-textura nueva (se puede generar con `tools/make_icon.py`, que ya usa Pillow) y un
-`RenderType` aditivo sin `LIGHTMAP`. Es el cambio que más «bloom» aparente da por
-línea de código.
+Tres quads que miran a cámara con una textura radial de 64×64, sumados con el
+mismo blend aditivo: es el «bloom propio» sin post-proceso. `RelicAura` los
+coloca leyendo la traslación y la escala de la matriz del `PoseStack` (que en el
+render de entidades está en coordenadas de mundo), así que no hay que tocar el
+modelo ni sus animaciones y el aura hereda la escala de la config.
+
+Detalles que importan:
+
+* **Tres capas, no una**: diámetros 1.05 / 1.55 / 2.10 bloques con aportes
+  0.55 / 0.32 / 0.18. Una sola capa se ve como una pegatina plana.
+* **Giros opuestos** (0.035 / −0.022 / 0.010 rad por tick): la textura lleva tres
+  arcos, así que el giro se nota como estelas orbitando. Con un degradado
+  perfectamente radial girar no se vería.
+* **Cara a cámara** con los ejes `left`/`up` de `Camera`, no con la orientación
+  del jugador: si no, al mirar la reliquia de lado se vería como un rectángulo.
+* **Escritura de vértice completa**: el RenderType usa el formato de entidades
+  (`NEW_ENTITY`), así que hay que rellenar color, UV, overlay, lightmap y normal
+  aunque solo se use la UV. Olvidar el lightmap deja el quad en negro.
+* La textura se genera con `python3 tools/make_aura.py` (sin Pillow, PNG a mano
+  con `zlib`), para que sea reproducible y revisable en diff.
 
 ### C. Core shader propio (fresnel + scanlines de holograma)
 
@@ -127,11 +141,99 @@ del núcleo. Ajuste fino: subir el brillo de `relic_hologram_glowing.png` (o sub
 
 ## 5. Plan por fases
 
-1. **Hecho**: halo aditivo con `glowHalo` + `haloIntensity`.
-2. Aura en billboard (necesita textura nueva y un pase sin lightmap).
-3. Medir FPS en un portátil con `quality=LITE` y decidir si el halo se queda
-   activo por defecto en LITE (ahora se omite).
-4. Sólo si hace falta: shader propio con detección de pack.
+1. **Hecho (1.0.1)**: halo aditivo con `glowHalo` + `haloIntensity`.
+2. **Hecho (1.0.2)**: aura de tres billboards con `glowAura` + `auraIntensity`.
+3. Medir FPS en un portátil y decidir si el halo del modelo se queda activo por
+   defecto en `LITE` (ahora se omite; el aura sí se dibuja, son tres quads).
+4. Sólo si hace falta: shader propio con detección de pack (apéndice A).
+
+## Apéndice A — el GLSL que sí se podría usar (no está conectado)
+
+Si algún día se quiere fresnel de verdad en el borde y líneas de barrido de
+holograma, esto es lo que haría falta. **No está en el jar**: se deja escrito
+porque el trabajo de averiguar la API ya está hecho y así no se repite.
+
+Tres ficheros en `assets/holocore/shaders/relic/`: `glow.json`, `glow.vsh`,
+`glow.fsh`. El JSON es el mismo formato que los *core shaders* del juego:
+
+```json
+{
+  "blend": { "func": "add", "srcrgb": "srcalpha", "dstrgb": "one" },
+  "vertex": "holocore:shaders/relic/glow",
+  "fragment": "holocore:shaders/relic/glow",
+  "attributes": ["Position", "Color", "UV0"],
+  "samplers": [{ "name": "Sampler0" }],
+  "uniforms": [
+    { "name": "ModelViewMat", "type": "matrix4x4", "count": 16, "values": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1] },
+    { "name": "ProjMat", "type": "matrix4x4", "count": 16, "values": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1] },
+    { "name": "Time", "type": "float", "count": 1, "values": [0.0] },
+    { "name": "ColorModulator", "type": "float", "count": 4, "values": [1,0,0,0] }
+  ]
+}
+```
+
+`glow.vsh`: pasa posición, color y UV, y calcula el fresnel con la normal en
+espacio de vista (para el borde luminoso):
+
+```glsl
+#version 150
+in vec3 Position;
+in vec4 Color;
+in vec2 UV0;
+in vec3 Normal;
+uniform mat4 ModelViewMat;
+uniform mat4 ProjMat;
+out vec2 texCoord;
+out vec4 vertexColor;
+out float fresnel;
+void main() {
+    vec4 viewPos = ModelViewMat * vec4(Position, 1.0);
+    vec3 viewNormal = normalize(mat3(ModelViewMat) * Normal);
+    fresnel = pow(1.0 - abs(normalize(viewPos.xyz).z), 2.5);
+    gl_Position = ProjMat * viewPos;
+    texCoord = UV0;
+    vertexColor = Color;
+}
+```
+
+`glow.fsh`: textura × color + borde + líneas de barrido que suben con el tiempo.
+Es aditivo, así que el alfa no hace falta y todo suma:
+
+```glsl
+#version 150
+uniform sampler2D Sampler0;
+uniform float Time;
+uniform vec4 ColorModulator;
+in vec2 texCoord;
+in vec4 vertexColor;
+in float fresnel;
+out vec4 fragColor;
+void main() {
+    vec4 tex = texture(Sampler0, texCoord);
+    float scan = smoothstep(0.45, 0.5, fract(texCoord.y * 6.0 - Time * 0.25));
+    float alpha = clamp(tex.a * vertexColor.a, 0.0, 1.0);
+    vec3 rgb = tex.rgb * vertexColor.rgb + fresnel * 0.35 + scan * 0.08;
+    fragColor = vec4(rgb * alpha * ColorModulator.rgb, alpha);
+}
+```
+
+Para cargarlo hace falta un `ShaderInstance` construido a mano (el juego solo
+precarga los suyos) y reconstruirlo cuando el jugador cambia de pack de recursos:
+
+```java
+// en un listener de reload del cliente
+ShaderInstance shader = new ShaderInstance(resourceManager, "holocore:shaders/relic/glow",
+        DefaultVertexFormat.NEW_ENTITY);
+// ... y en cada frame:
+shader.safeGetUniform("Time").set((level.getGameTime() + partialTick) / 20.0F);
+```
+
+…y un `RenderType` con `.setShaderState(new ShaderStateShard(() -> shader))`.
+**Aquí está el problema**: con Iris/Oculus/OptiFine activos ese programa no está
+en el pipeline del pack, así que se sustituye por el fallback o desaparece (le
+pasó a Forge con su shader «unlit», Oculus #630). Por eso este camino necesita
+además `ModList.get().isLoaded("oculus")` / `"optifine"` para apagarse solo, y
+por eso hoy no está conectado.
 
 ## 6. Cómo probarlo
 

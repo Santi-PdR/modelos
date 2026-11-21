@@ -1,5 +1,17 @@
 # Historial de cambios
 
+## 1.0.2 — aura
+
+* **Aura de tres billboards aditivos** alrededor del núcleo
+  (`visuals.glowAura`, `visuals.auraIntensity`): textura radial con tres arcos,
+  capas que giran a distinta velocidad y en distinto sentido, con latido lento.
+  Es el resplandor tipo bloom sin post-proceso y funciona igual con o sin
+  shaderpack.
+* Textura nueva `textures/relic/relic_aura.png` (64×64), generada con
+  `tools/make_aura.py` para que sea reproducible y no un binario a mano.
+* Documentado el diseño y las alternativas descartadas (GLSL propio, post-proceso)
+  en `docs/BRILLO-Y-SHADERS.md`.
+
 ## 1.0.1 — halo aditivo
 
 * **Tercer pase de render con blend aditivo**: el núcleo suma luz en vez de

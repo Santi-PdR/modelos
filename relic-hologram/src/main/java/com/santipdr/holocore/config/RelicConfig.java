@@ -25,6 +25,8 @@ public final class RelicConfig {
     public static final ForgeConfigSpec.BooleanValue GLOW_LAYER;
     public static final ForgeConfigSpec.BooleanValue GLOW_HALO;
     public static final ForgeConfigSpec.DoubleValue HALO_INTENSITY;
+    public static final ForgeConfigSpec.BooleanValue GLOW_AURA;
+    public static final ForgeConfigSpec.DoubleValue AURA_INTENSITY;
     public static final ForgeConfigSpec.BooleanValue REDUCED_EFFECTS;
     public static final ForgeConfigSpec.IntValue MAX_RENDER_DISTANCE;
     public static final ForgeConfigSpec.IntValue GLITCH_MIN_SECONDS;
@@ -58,6 +60,11 @@ public final class RelicConfig {
                 .define("glowHalo", true);
         HALO_INTENSITY = b.comment("Intensidad del halo aditivo (0 = nada, 1 = el maximo). 0.35 es lo que se ve bien en el juego.")
                 .defineInRange("haloIntensity", 0.35D, 0.0D, 1.0D);
+        GLOW_AURA = b.comment("Aura de tres quads que miran a camara: es el 'bloom propio' sin post-proceso.",
+                        "Funciona igual con y sin shaderpack, y cuesta tres quads.")
+                .define("glowAura", true);
+        AURA_INTENSITY = b.comment("Intensidad del aura (0 = invisible, 1 = muy marcada).")
+                .defineInRange("auraIntensity", 0.55D, 0.0D, 1.0D);
         REDUCED_EFFECTS = b.comment("Usa idle_calm (sin rayos, cometas ni ondas) cuando el estado es normal.")
                 .define("reducedEffects", false);
         MAX_RENDER_DISTANCE = b.comment("Distancia maxima (bloques) a la que se renderiza la reliquia de OTROS jugadores. El propio jugador siempre se renderiza.")

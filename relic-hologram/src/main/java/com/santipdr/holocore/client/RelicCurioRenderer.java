@@ -84,6 +84,13 @@ public class RelicCurioRenderer implements ICurioRenderer {
         visual.renderer().renderHologram(poseStack, animatable, bufferSource, partialTicks,
                 LightTexture.FULL_BRIGHT);
 
+        // Aura: tres billboards aditivos sobre el mismo anclaje (incluye la
+        // escala de la config, que se lee de la matriz).
+        if (RelicAura.enabled()) {
+            RelicAura.render(poseStack, bufferSource, partialTicks,
+                    RelicConfig.AURA_INTENSITY.get().floatValue());
+        }
+
         poseStack.popPose();
     }
 }
