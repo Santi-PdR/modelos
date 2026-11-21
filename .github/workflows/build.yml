@@ -1043,7 +1043,6 @@ jobs:
           path: ${{ runner.temp }}/forge-v16721
 
       - name: Cargar las tomas del ajuste entregado v1.67.22
-        id: cape-v16722-reference
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && contains(github.event.head_commit.message, '[comparar-v16722]') }}
         uses: actions/download-artifact@v4
         with:
@@ -1140,41 +1139,6 @@ jobs:
             build/fx-smoke-run/fx-shots/hotbar-ciclo.gif
           if-no-files-found: error
           retention-days: 30
-
-      - name: Adjuntar la candidata v1.67.23 verificada en Forge
-        if: >-
-          success() && github.repository == 'Santi-PdR/modelos' && github.ref == 'refs/heads/arena/5a9fa51b-modelos' &&
-          github.event_name == 'push' && contains(github.event.head_commit.message, '[adjuntar-v16723]') &&
-          steps.fx-smoke.outcome == 'success' && steps.cape-v16722-reference.outcome == 'success' &&
-          steps.old-cape-shots.outcome == 'success' && steps.verify-placement.outcome == 'success' &&
-          steps.verify-walk.outcome == 'success' &&
-          steps.verify-postures.outcome == 'success'
-        run: |
-          set -euo pipefail
-          test "$(git branch --show-current)" = "$GITHUB_REF_NAME"
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          grep -qx 'mod_version=1.67.23' gradle.properties
-          jar=capatest-1.67.23.jar
-          jar_dir=build/libs
-          shots=build/fx-smoke-run/fx-shots
-          release=docs/releases/v1.67.23
-          out="entregables/v1.67.23/$jar"
-          (cd "$jar_dir" && sha256sum -c SHA256SUMS.txt)
-          python3 -m zipfile -t "$jar_dir/$jar"
-          test ! -e "$out"
-          install -D -m 0644 "$jar_dir/$jar" "$out"
-          install -D -m 0644 "$jar_dir/SHA256SUMS.txt" "$release/JAR.sha256"
-          for proof in comparacion-alex-forge.jpg comparacion-gestos-forge.jpg holgura-brazos-forge.tsv lectura-frontal-forge.tsv tela-frontal-forge.tsv nuca-forge.tsv continuidad-forge.tsv revision-alex-forge.{jpg,tsv}; do
-            test -s "$shots/$proof"
-            install -m 0644 "$shots/$proof" "$release/"
-          done
-          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16723_colocacion_forge.jpg
-          printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$release/compilacion.txt"
-          git add -- "$release" docs/capa_v16723_colocacion_forge.jpg
-          git add -f -- "$out"
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m 'Adjuntar el JAR exacto y las capturas de v1.67.23 [skip ci]'
-          git push origin "$GITHUB_REF_NAME"
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.

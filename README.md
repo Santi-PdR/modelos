@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.23 — holgura al mirar arriba y en carrera
+
+**[Descargar JAR de prueba v1.67.23](https://github.com/Santi-PdR/modelos/raw/33e7b9a0dc127e08338875f80bda286319323e83/entregables/v1.67.23/capatest-1.67.23.jar)** · [Comparación en Alex](docs/releases/v1.67.23/comparacion-gestos-forge.jpg) · [Steve y Alex en Forge](docs/capa_v16723_colocacion_forge.jpg) · [Medidas y SHA-256](docs/releases/v1.67.23/notas.md).
+
+La capucha cede al mirar muy arriba y los bordes libres del paño se recogen durante la carrera. Se mantienen la nuca y las uniones en los hombros de v1.67.22. Verificado en Forge en pecho y Curios, sin cambiar el arte ni el instalador público.
+
 ### v1.67.22 — ajuste de hombros y nuca
 
 **[Descargar JAR de prueba v1.67.22](https://github.com/Santi-PdR/modelos/raw/061b28ba00e54d94ca79092b3c1c3844fa10143c/entregables/v1.67.22/capatest-1.67.22.jar)** · [Antes y después en Alex](docs/releases/v1.67.22/comparacion-alex-forge.jpg) · [Steve y Alex en Forge](docs/capa_v16722_colocacion_forge.jpg) · [Medidas y SHA-256](docs/releases/v1.67.22/notas.md).
