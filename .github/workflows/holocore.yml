@@ -260,7 +260,7 @@ jobs:
         with:
           gradle-version: '8.8'
 
-      - name: Launch client and wait for the sound engine
+      - name: Launch client (xvfb) and check mod loading
         working-directory: relic-hologram
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
@@ -268,35 +268,45 @@ jobs:
         run: |
           set +e
           command -v xvfb-run || sudo apt-get install -y xvfb
+          # En CI no hay tarjeta de sonido: el cliente apaga el audio y sigue.
+          # Un cliente sano NO termina solo, asi que timeout (124) = exito.
           timeout 480 xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient --no-daemon > client.log 2>&1
-          echo "exit=$?"
-          grep -n "Sound engine started\|Startup took\|Created:" client.log | head -20 || true
+          RC=$?
+          echo "exit=$RC"
+          grep -n "Holographic Core (holocore) cargado" client.log | head -3 || true
           echo '--- ultimas lineas ---'
-          tail -60 client.log
-          if ! grep -q "Sound engine started" client.log; then
-            echo "::error::El cliente no llego a arrancar (sin 'Sound engine started')."
-            # El resumen del job se puede leer por API aunque el CDN de logs no
-            # sea accesible: se deja aqui el diagnostico.
+          tail -40 client.log
+
+          FAIL=0
+          if [ "$RC" -ne 124 ] && [ "$RC" -ne 0 ]; then
+            echo "::error::runClient termino con codigo $RC (se esperaba 124 = seguia vivo)."
+            FAIL=1
+          fi
+          if ! grep -q "Holographic Core (holocore) cargado" client.log; then
+            echo "::error::El mod no registro su arranque (el constructor no se ejecuto)."
+            FAIL=1
+          fi
+          for pattern in "Mod loading error has occurred" "Crash report saved to" \
+                         "Unable to find model" "Error loading model file" "Failed to create display"; do
+            if grep -q "$pattern" client.log; then
+              echo "::error::encontrado en el log: $pattern"
+              FAIL=1
+            fi
+          done
+
+          if [ "$FAIL" -ne 0 ]; then
             {
               echo "### Diagnostico runClient"
               echo ''
               echo '```'
-              grep -nE "Exception|Caused by|ERROR|error|Failed|failed|xvfb|Crash|Could not" client.log | tail -80 || true
+              grep -nE "Exception|Caused by|ERROR|FATAL|Crash|Failed|holocore" client.log | tail -60 || true
               echo '--- tail ---'
-              tail -120 client.log || true
+              tail -100 client.log || true
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
-          if grep -qE "Crash report saved to|A fatal error has been detected|Failed to create display" client.log; then
-            echo "::error::El cliente se cayo durante el arranque."
-            exit 1
-          fi
-          if grep -qE "Unable to find model|Error loading model file|Missing animation" client.log; then
-            echo "::error::Fallo al cargar el modelo o las animaciones."
-            exit 1
-          fi
-          echo "Cliente arrancado sin errores de carga del mod."
+          echo "Cliente arrancado y mod cargado sin errores."
 
       # El CDN de logs de Actions no es accesible desde todos los entornos, asi
       # que el diagnostico se deja versionado en el repo cuando algo falla.

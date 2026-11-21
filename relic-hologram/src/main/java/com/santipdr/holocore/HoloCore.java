@@ -40,6 +40,7 @@ public class HoloCore {
         ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, RelicConfig.SPEC);
 
         RelicNetwork.register();
+        LOGGER.info("Holographic Core (holocore) cargado: GeckoLib 4.8.1 + Curios 5.14.1, Minecraft 1.20.1");
         // Los eventos de servidor (golpes, subidas de nivel, login) viven en
         // RelicServer; se registra la clase entera para no olvidar ninguno.
         MinecraftForge.EVENT_BUS.register(RelicServer.class);

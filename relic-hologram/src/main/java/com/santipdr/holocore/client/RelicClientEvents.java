@@ -43,10 +43,15 @@ public final class RelicClientEvents {
             event.register(RelicKeys.TOGGLE);
         }
 
-        @SubscribeEvent
-        public static void registerCommands(RegisterClientCommandsEvent event) {
-            RelicClientCommands.register(event.getDispatcher());
-        }
+    }
+
+    /**
+     * Los comandos se registran en el bus FORGE (RegisterClientCommandsEvent no
+     * es un IModBusEvent); ponerlo en la clase del bus MOD rompia el arranque.
+     */
+    @SubscribeEvent
+    public static void registerCommands(RegisterClientCommandsEvent event) {
+        RelicClientCommands.register(event.getDispatcher());
     }
 
     @SubscribeEvent
