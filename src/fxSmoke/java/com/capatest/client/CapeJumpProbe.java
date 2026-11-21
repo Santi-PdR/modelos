@@ -1,0 +1,97 @@
+package com.capatest.client;
+
+import com.capatest.item.CapaDeteriorerItem;
+import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.Screenshot;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec3;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+/** Inputs only: a standing jump, a running jump, then a real drop from a ledge. */
+final class CapeJumpProbe {
+    private static final int JUMP = 20, SPRINT = 54, RUN_JUMP = 74, BRAKE = 147, END = 169;
+    private static final int EDGE = 19;
+    private final StringBuilder rows = new StringBuilder("time\ton_ground\theight\tvertical\tspeed\tpace\tleg_pos\tstride\trun\tair\tfall"
+            + "\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\n");
+    private final BlockPos deck;
+    private NativeImage apex, contact;
+    private int start = -1;
+    private boolean rose;
+
+    CapeJumpProbe(BlockPos deck) {
+        this.deck = deck;
+    }
+
+    static BlockPos deck(BlockPos pane) {
+        return pane.offset(-14, 6, -14);
+    }
+
+    static void prepare(ServerPlayer p, BlockPos deck) {
+        var level = p.serverLevel();
+        for (int x = -2; x <= 2; ++x)
+            for (int z = -4; z <= EDGE; ++z)
+                level.setBlock(deck.offset(x, 0, z), (x == 0 ? Blocks.SMOOTH_STONE : Blocks.STONE_BRICKS).defaultBlockState(), 2);
+        p.getAbilities().flying = false;
+        p.onUpdateAbilities();
+        p.stopFallFlying();
+        p.setSprinting(false);
+        p.setDeltaMovement(Vec3.ZERO);
+        p.teleportTo(level, deck.getX() + .5, deck.getY() + 1.001, deck.getZ() + .5, 0, 17);
+    }
+
+    void drive(Minecraft game) {
+        var p = game.player;
+        if (start < 0) {
+            // Don't start from the previous scene while the equip/teleport
+            // packets arrive. The route begins with both feet on the runway.
+            if (!p.onGround() || Math.abs(p.getY() - deck.getY() - 1) > .03
+                    || Math.abs(p.getX() - deck.getX() - .5) > .1 || Math.abs(p.getZ() - deck.getZ() - .5) > .1) return;
+            start = p.tickCount;
+        }
+        int t = p.tickCount - start;
+        boolean run = t >= SPRINT && t < BRAKE;
+        game.options.keyUp.setDown(run);
+        game.options.keySprint.setDown(run);
+        game.options.keyJump.setDown(t >= JUMP && t < JUMP + 2 || t >= RUN_JUMP && t < RUN_JUMP + 2);
+        if (!run) p.setSprinting(false);
+    }
+
+    boolean capture(Minecraft game, float partial, CapeWalkProbe.Draw draw, Path dir, String name) throws IOException {
+        if (start < 0) return false;
+        var p = game.player;
+        if (p.isInWater() || p.isFallFlying() || p.getAbilities().flying)
+            throw new AssertionError(name + ": jumping fixture is not on vanilla physics");
+        double t = (double) p.tickCount - start + partial;
+        double height = Mth.lerp(partial, p.yo, p.getY()) - deck.getY() - 1;
+        var travel = CapaDeteriorerItem.readWearer(p, null); // only velocity, independent of slot
+        var tip = draw.tip();
+        rows.append(t).append('\t').append(p.onGround() ? 1 : 0).append('\t').append(height).append('\t')
+                .append(travel.vertical()).append('\t').append(Math.sqrt(travel.horizontalSquared())).append('\t')
+                .append(draw.pace()).append('\t').append(p.walkAnimation.position(partial)).append('\t').append(draw.stride()).append('\t')
+                .append(draw.run()).append('\t').append(draw.air()).append('\t').append(draw.fall()).append('\t')
+                .append(draw.collarZ()).append('\t').append(draw.top()).append('\t').append(draw.mid()).append('\t')
+                .append(tip.x()).append('\t').append(tip.y()).append('\t').append(tip.z()).append('\n');
+        if (t >= JUMP && t < JUMP + 19) {
+            if (!p.onGround() && height > .7) rose = true;
+            if (rose && apex == null && !p.onGround() && height > 1 && travel.vertical() < .10)
+                apex = Screenshot.takeScreenshot(game.getMainRenderTarget());
+            if (rose && contact == null && p.onGround() && height < .12)
+                contact = Screenshot.takeScreenshot(game.getMainRenderTarget());
+        }
+        if (t < END) return false;
+        if (apex == null || contact == null) throw new AssertionError(name + ": missing apex or touchdown");
+        try (var shotA = apex; var shotB = contact) {
+            shotA.writeToFile(dir.resolve(name + "-apice.png"));
+            shotB.writeToFile(dir.resolve(name + "-contacto.png"));
+        }
+        Files.writeString(dir.resolve(name + ".tsv"), rows);
+        return true;
+    }
+}

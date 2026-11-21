@@ -1122,6 +1122,17 @@ jobs:
             esac
           done
 
+      - name: Registrar los saltos de referencia de v1.67.24 en Forge
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
+        run: |
+          set -o pipefail
+          python3 tools/verify_forge_jumps.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
+            case "$line" in
+              *AssertionError:*|*Error:*) printf '::error title=Saltos en Forge::%s\n' "${line//%/%25}" ;;
+              *) printf '::notice title=Saltos en Forge::%s\n' "${line//%/%25}" ;;
+            esac
+          done
+
       - name: Verificar el icono original en la hotbar de Forge
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |

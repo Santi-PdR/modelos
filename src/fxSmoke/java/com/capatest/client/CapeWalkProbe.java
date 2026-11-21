@@ -105,7 +105,8 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 : motion.weight(CapeState.WALK) > .5 ? CapeState.WALK : CapeState.IDLE;
         requireClock(player, partial, motion);
         return new Draw(mode.name(), motion.stride(), motion.amplitude(), motion.weight(CapeState.WALK), motion.weight(CapeState.SPRINT),
-                motion.weight(CapeState.SWIM), seat.transformPosition(0, 25/16F, 7.4F/16, new Vector3f()).z() * 16,
+                motion.weight(CapeState.SWIM), motion.weight(CapeState.AIR), motion.weight(CapeState.FALL),
+                seat.transformPosition(0, 25/16F, 7.4F/16, new Vector3f()).z() * 16,
                 -Math.toDegrees(renderer.getGeoModel().getBone(TOP).orElseThrow().getRotX()),
                 -Math.toDegrees(renderer.getGeoModel().getBone(MID).orElseThrow().getRotX()),
                 tip.transformPosition(0, 0, .36F, new Vector3f()).mul(16),
@@ -150,8 +151,8 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         return new Vector3f(bone.getRotX(),bone.getRotY(),bone.getRotZ());
     }
 
-    record Draw(String clip, double stride, double pace, double walk, double run, double swim, double collarZ,
-                double top, double mid, Vector3f tip, Vector3f hood) {}
+    record Draw(String clip, double stride, double pace, double walk, double run, double swim, double air, double fall,
+                double collarZ, double top, double mid, Vector3f tip, Vector3f hood) {}
 
     static final class Route {
         private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tclip\tstride\twalk\trun\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\tpace\thood_x\thood_y\thood_z\n");
