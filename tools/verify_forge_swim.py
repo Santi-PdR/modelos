@@ -64,35 +64,41 @@ def report(root, slot, baseline=False):
             *(f'{top[mask].mean():.4f}' for mask in (wade, full, up)), *(f'{v:.4f}' for v in speeds)]
 
 
-def comparison(root, baseline, version):
+def comparison(root, baseline, version, baseline_slots):
     w, h = 308, 205
-    sheet = Image.new('RGB', (w * 3, 58 + 4 * (h + 32)), '#19141f')
+    rows = [(slot, shots, ver) for slot in SLOTS
+            for shots, ver in (([(baseline, '1.67.23')] if slot in baseline_slots else []) + [(root, version)])]
+    sheet = Image.new('RGB', (w * 3, 58 + len(rows) * (h + 32)), '#19141f')
     pen = ImageDraw.Draw(sheet)
     pen.text((12, 10), 'EL PAÑO AL VADEAR Y NADAR / ALEX, F5 EN FORGE', fill='#f8eaf2')
     for i, (_, label) in enumerate(POSES):
         pen.text((i * w + 12, 36), label, fill='#f0bed9')
-    for i, slot in enumerate(SLOTS):
+    for i, (slot, shots, ver) in enumerate(rows):
         suffix = '-curios' if slot == 'curios' else ''
-        for j, (shots, ver) in enumerate(((baseline, '1.67.23'), (root, version))):
-            row = 58 + (i * 2 + j) * (h + 32)
-            pen.text((12, row + 2), f'{slot.upper()} / v{ver}', fill='#f8eaf2')
-            for k, (name, _) in enumerate(POSES):
-                with Image.open(shots / f'{name}{suffix}.png') as img:
-                    crop = ImageOps.fit(img.convert('RGB'), (w - 12, h), Image.Resampling.LANCZOS)
-                sheet.paste(crop, (k * w + 6, row + 21))
+        row = 58 + i * (h + 32)
+        pen.text((12, row + 2), f'{slot.upper()} / v{ver}', fill='#f8eaf2')
+        for k, (name, _) in enumerate(POSES):
+            with Image.open(shots / f'{name}{suffix}.png') as img:
+                crop = ImageOps.fit(img.convert('RGB'), (w - 12, h), Image.Resampling.LANCZOS)
+            sheet.paste(crop, (k * w + 6, row + 21))
     sheet.save(root / 'comparacion-nado-forge.jpg', quality=94, optimize=True)
 
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument('shots', type=Path)
-    ap.add_argument('--baseline-shots', type=Path)
+    ap.add_argument('--baseline-shots', type=Path, help='referencia de pecho, o de ambas ranuras si se grabaron')
     args = ap.parse_args()
     version = next(line.split('=', 1)[1].strip() for line in Path('gradle.properties').read_text().splitlines()
                    if line.startswith('mod_version='))
+    baseline_slots = set()
+    if args.baseline_shots:
+        baseline_slots.add('pecho')
+        if (args.baseline_shots / 'nado-ciclo-curios.tsv').is_file():
+            baseline_slots.add('curios')
     rows = []
     for slot in SLOTS:
-        if args.baseline_shots:
+        if slot in baseline_slots:
             rows.append(report(args.baseline_shots, slot, baseline=True))
         candidate = report(args.shots, slot)
         candidate[0] = 'v' + version
@@ -104,4 +110,4 @@ if __name__ == '__main__':
                       'pico_sup_deg_tick', 'pico_med_deg_tick', 'pico_punta_u_tick'])
         out.writerows(rows)
     if args.baseline_shots:
-        comparison(args.shots, args.baseline_shots, version)
+        comparison(args.shots, args.baseline_shots, version, baseline_slots)

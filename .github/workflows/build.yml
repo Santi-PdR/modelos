@@ -1110,7 +1110,7 @@ jobs:
             esac
           done
 
-      - name: Cargar el ciclo de nado registrado con v1.67.23
+      - name: Cargar el ciclo de nado de referencia (v1.67.23, pecho)
         id: swim-reference
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && contains(github.event.head_commit.message, '[comparar-nado-v16723]') }}
         uses: actions/download-artifact@v4
@@ -1190,8 +1190,8 @@ jobs:
             test -s "$shots/$proof"
             install -m 0644 "$shots/$proof" "$release/"
           done
+          install -m 0644 "$RUNNER_TEMP/forge-nado-v16723/nado-ciclo-pecho.tsv" "$release/nado-ciclo-pecho-v16723.tsv"
           for slot in pecho curios; do
-            install -m 0644 "$RUNNER_TEMP/forge-nado-v16723/nado-ciclo-$slot.tsv" "$release/nado-ciclo-$slot-v16723.tsv"
             install -m 0644 "$shots/nado-ciclo-$slot.tsv" "$release/nado-ciclo-$slot-v16724.tsv"
           done
           install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16724_colocacion_forge.jpg

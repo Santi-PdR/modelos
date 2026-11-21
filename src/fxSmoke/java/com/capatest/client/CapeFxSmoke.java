@@ -185,7 +185,7 @@ public final class CapeFxSmoke {
                         && player != null && player.distanceToSqr(x, y, z) < 9) {
                     double height = y - player.getY();
                     // The old short-hitbox rule would put these under .1 blocks.
-                    if (scene == Scene.WADE ? height < .28 : height > .45) observedBirths++;
+                    if (scene.wade() ? height < .28 : height > .45) observedBirths++;
                 }
                 return provider.createParticle(type, level, x, y, z, dx, dy, dz);
             };
