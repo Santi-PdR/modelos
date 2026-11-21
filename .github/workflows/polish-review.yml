@@ -1,0 +1,110 @@
+name: Comparar las dos tomas de Forge de v1.67.28
+
+on: push
+
+jobs:
+  review:
+    if: github.ref_name == 'arena/5a9fa51b-modelos' && contains(github.event.head_commit.message, '[revisar-v16728]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REFERENCE: 44929858741
+      REFERENCE_SOURCE: 845d526888fea106238d9986da2fb05ce9af5d5e
+      CANDIDATE: 44930868176
+      CANDIDATE_SOURCE: fb91ca29c612c4023a3309038c58afcbb13dd33b
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Vincular las dos capturas con sus builds
+        run: |
+          set -euo pipefail
+          git diff --exit-code "$CANDIDATE_SOURCE" HEAD -- src/main build.gradle gradle.properties settings.gradle
+          gh run view "$REFERENCE" --json headSha,conclusion | jq -e --arg sha "$REFERENCE_SOURCE" \
+            '.headSha == $sha and .conclusion == "success"'
+          gh run view "$CANDIDATE" --json headSha,status,conclusion,jobs > "$RUNNER_TEMP/candidate.json"
+          python3 - <<'PYFORGE'
+          import json, os
+          from pathlib import Path
+          r = json.loads((Path(os.environ['RUNNER_TEMP'])/'candidate.json').read_text())
+          assert r['headSha'] == os.environ['CANDIDATE_SOURCE'] and r['status'] == 'completed', r['headSha']
+          steps = {s['name']:s['conclusion'] for j in r['jobs'] for s in j['steps']}
+          expected = ('Build','Verify jar is reproducible','Verify jar contents (model resources)',
+             'Verify packaged art, idle and crouch clips, and untouched gaits','Probar FX y equipo en Forge (opcional)',
+             'Verificar apoyo, salida y caída de la escalera en Forge','Medir despegue, caída y aterrizaje en Forge',
+             'Comprobar órbita, mirada y hombros en Forge','Medir ciclos y transiciones reales al caminar en F5',
+             'Revisar las posturas de Alex y medir los cruces de malla','Verificar la entrada y salida del nado en pecho y Curios',
+             'Verificar el icono original en la hotbar de Forge','Subir capturas de la prueba en mundo')
+          assert all(steps[n]=='success' for n in expected), steps
+          assert steps['Stage verified release (draft)']=='skipped', steps
+          print(f'Forge y empaquetado: {len(expected)} pasos verdes del JAR candidato.')
+          PYFORGE
+
+      - name: Importar artefactos originales sin reconstruir las tomas
+        run: |
+          set -euo pipefail
+          for ver in 27 28; do
+            base="$RUNNER_TEMP/forge-v167$ver"
+            run="$REFERENCE"
+            if [ "$ver" -eq 28 ]; then run="$CANDIDATE"; fi
+            echo "Importando $run (JAR y capturas)."
+            gh run download "$run" -n capatest-jar -D "$base/jar"
+            (cd "$base/jar" && sha256sum -c SHA256SUMS.txt)
+            gh run download "$run" -n capatest-fx-en-mundo -D "$base/shots"
+          done
+          cmp "$RUNNER_TEMP/forge-v16727/jar/capatest-1.67.27.jar" entregables/v1.67.27/capatest-1.67.27.jar
+          echo '::notice title=Control .27::JAR reproducido, byte por byte igual al entregado.'
+
+      - name: Comparar los tres retoques con la v1.67.27 entregada
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet numpy Pillow
+          now="$RUNNER_TEMP/forge-v16728"
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_placement.py --assets-only --jar "$now/jar/capatest-1.67.28.jar"
+          if ! OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_polish.py "$now/shots" "$RUNNER_TEMP/forge-v16727/shots" > "$RUNNER_TEMP/comparison.log" 2>&1; then
+            grep -E '(AssertionError|Error:)' "$RUNNER_TEMP/comparison.log" | cut -c1-1500 | while IFS= read -r line; do
+              printf '::error title=Diagnóstico de comparación v1.67.28::%s\n' "${line//%/%25}"
+            done
+            cat "$RUNNER_TEMP/comparison.log"
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/comparison.log"
+
+      - name: Adjuntar el JAR de prueba y sus comparaciones a esta rama
+        run: |
+          set -euo pipefail
+          grep -qx 'mod_version=1.67.28' gradle.properties
+          jar=capatest-1.67.28.jar
+          shots="$RUNNER_TEMP/forge-v16728/shots"
+          built="$RUNNER_TEMP/forge-v16728/jar"
+          proof=docs/releases/v1.67.28
+          out="entregables/v1.67.28/$jar"
+          (cd "$built" && sha256sum -c SHA256SUMS.txt)
+          python3 -m zipfile -t "$built/$jar"
+          test ! -e "$out"
+          install -D -m 0644 "$built/$jar" "$out"
+          install -D -m 0644 "$built/SHA256SUMS.txt" "$proof/JAR.sha256"
+          for file in comparacion-giro-forge.jpg comparacion-{calma,freno}-{pecho,curios}-forge.gif \
+              transiciones-forge.tsv reposo-agachado-forge.tsv ritmo-forge.tsv hombrera-forge.tsv hombrera-mirada-forge.tsv \
+              tela-frontal-forge.tsv holgura-brazos-forge.tsv revision-alex-forge.tsv continuidad-forge.tsv \
+              escalera-forge.tsv saltos-forge.tsv costuras-saltos-forge.tsv nado-forge.tsv; do
+            test -s "$shots/$file"
+            install -m 0644 "$shots/$file" "$proof/"
+          done
+          for route in pecho curios steve-pecho steve-curios; do
+            install -m 0644 "$RUNNER_TEMP/forge-v16727/shots/paso-$route.tsv" "$proof/paso-$route-v16727.tsv"
+            install -m 0644 "$shots/paso-$route.tsv" "$proof/paso-$route-v16728.tsv"
+          done
+          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16728_colocacion_forge.jpg
+          printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$CANDIDATE_SOURCE" "$GITHUB_REPOSITORY" "$CANDIDATE" > "$proof/compilacion.txt"
+          printf 'https://github.com/%s/actions/runs/%s\n' "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$proof/comparacion.txt"
+          git add -- "$proof" docs/capa_v16728_colocacion_forge.jpg
+          git add -f -- "$out"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'Adjuntar v1.67.28 verificada y las comparaciones en Forge [skip ci]'
+          git push origin "$GITHUB_REF_NAME"
