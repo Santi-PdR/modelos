@@ -271,6 +271,26 @@ public final class VisualFixtureClient {
                     throw new IllegalStateException("Ender Dragon not released after cancellation");
                 System.out.println("STAIN_DRAGON_RELEASED");
             });
+            case 820 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                var boss = player.serverLevel().getEntity(dragonId);
+                if (!(boss instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon dragon))
+                    throw new IllegalStateException("Dragon missing for multipart range fixture");
+                player.getInventory().setItem(player.getInventory().selected, savedStack);
+                dragon.teleportTo(player.getX(), player.getY() + 3, player.getZ() + 30);
+                var part = dragon.getParts()[0];
+                part.setPos(player.getX(), player.getEyeY() - .4, player.getZ() + 8);
+                if (dragon.getBoundingBox().intersects(player.getBoundingBox().inflate(15)))
+                    throw new IllegalStateException("Multipart parent must be outside the normal search box");
+                player.setYRot(0); player.setXRot(0);
+                player.getPersistentData().getCompound("StainKatanaAbilities").putLong("next2", 0);
+                com.stainkatana.katana.KatanaAbilities.activate(player, 2);
+                if (!com.stainkatana.katana.KatanaAbilities.isCinematicallyBound(dragon))
+                    throw new IllegalStateException("C did not find a dragon part with its parent out of range");
+                // Cancel on the next server tick, then restore the sword in case 825.
+                player.getInventory().setItem(player.getInventory().selected, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK));
+                System.out.println("STAIN_MULTIPART_RANGE_VERIFIED");
+            });
             case 825 -> {
                 mc.getSingleplayerServer().execute(() -> {
                     var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());

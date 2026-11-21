@@ -316,8 +316,17 @@ public final class KatanaAbilities {
     private static LivingEntity ultimateTarget(ServerPlayer player, ServerLevel level) {
         Vec3 eye = player.getEyePosition();
         Vec3 direction = player.getLookAngle();
-        return level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(15.0),
-                target -> {
+        var searchBox = player.getBoundingBox().inflate(15.0);
+        var candidates = new java.util.LinkedHashSet<LivingEntity>(
+                level.getEntitiesOfClass(LivingEntity.class, searchBox));
+        // Forge tracks multipart hitboxes separately. A large modded boss (or
+        // dragon) can have a part in range while its parent box is outside the
+        // query; include its loaded parent without loading additional chunks.
+        for (var part : level.getPartEntities()) {
+            if (part != null && part.isAlive() && part.getBoundingBox().intersects(searchBox)
+                    && part.getParent() instanceof LivingEntity parent) candidates.add(parent);
+        }
+        return candidates.stream().filter(target -> {
                     if (target instanceof Player || BOUND_TARGETS.containsKey(target.getUUID())
                             || !target.isAlive() || target.isSpectator() || player.isAlliedTo(target)) return false;
                     Vec3 closest = nearestPoint(target, eye);
@@ -326,7 +335,7 @@ public final class KatanaAbilities {
                     return level.clip(new net.minecraft.world.level.ClipContext(eye, closest,
                             net.minecraft.world.level.ClipContext.Block.COLLIDER,
                             net.minecraft.world.level.ClipContext.Fluid.NONE, player)).getType() == net.minecraft.world.phys.HitResult.Type.MISS;
-                }).stream().min(Comparator.comparingDouble(target -> nearestPoint(target, eye).distanceToSqr(eye))).orElse(null);
+                }).min(Comparator.comparingDouble(target -> nearestPoint(target, eye).distanceToSqr(eye))).orElse(null);
     }
     private static boolean hitUltimate(ServerPlayer player, LivingEntity target, float amount) {
         if (target.isMultipartEntity() && target.getParts() != null) {
