@@ -980,7 +980,7 @@ jobs:
           sha256sum "capatest-$VER.jar" > SHA256SUMS.txt
           printf '::notice title=SHA-256 del JAR Forge verificado::%s\n' "$(cat SHA256SUMS.txt)"
 
-      - name: Verify packaged art and the two equipped gait clips
+      - name: Verify packaged art, idle and crouch clips, and untouched gaits
         run: |
           ver=$(sed -n 's/^mod_version=//p' gradle.properties)
           OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_placement.py --assets-only --jar "build/libs/capatest-$ver.jar"
@@ -1159,6 +1159,30 @@ jobs:
           hotbar(Path('build/fx-smoke-run/fx-shots'))
           PYICON
 
+      - name: Comparar los tres retoques con la v1.67.27 entregada
+        id: verify-polish
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && github.ref_name == 'arena/5a9fa51b-modelos' && contains(github.event.head_commit.message, '[adjuntar-v16728]') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REFERENCE: 44929858741
+        run: |
+          set -euo pipefail
+          grep -qx 'mod_version=1.67.28' gradle.properties
+          gh run view "$REFERENCE" --json headSha,conclusion | jq -e \
+            '.headSha == "845d526888fea106238d9986da2fb05ce9af5d5e" and .conclusion == "success"'
+          base="$RUNNER_TEMP/forge-v16727"
+          gh run download "$REFERENCE" -n capatest-jar -D "$base/jar"
+          (cd "$base/jar" && sha256sum -c SHA256SUMS.txt)
+          cmp "$base/jar/capatest-1.67.27.jar" entregables/v1.67.27/capatest-1.67.27.jar
+          gh run download "$REFERENCE" -n capatest-fx-en-mundo -D "$base/shots"
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_polish.py build/fx-smoke-run/fx-shots "$base/shots" 2>&1 | while IFS= read -r line; do
+            case "$line" in
+              ::notice*) printf '%s\n' "$line" ;;
+              *AssertionError:*|*Error:*) printf '::error title=Comparación v1.67.28::%s\n' "${line//%/%25}" ;;
+              *) printf '%s\n' "$line" ;;
+            esac
+          done
+
       - name: Recorte del ciclo de la hotbar
         if: always() && steps.fx-smoke.outcome != 'skipped'
         run: |
@@ -1176,9 +1200,42 @@ jobs:
             build/fx-smoke-run/fx-shots/*.png
             build/fx-smoke-run/fx-shots/*.jpg
             build/fx-smoke-run/fx-shots/*.tsv
-            build/fx-smoke-run/fx-shots/hotbar-ciclo.gif
+            build/fx-smoke-run/fx-shots/*.gif
           if-no-files-found: error
           retention-days: 30
+
+      - name: Adjuntar el JAR de prueba y sus comparaciones a esta rama
+        if: ${{ success() && steps.verify-polish.outcome == 'success' && github.ref_name == 'arena/5a9fa51b-modelos' }}
+        run: |
+          set -euo pipefail
+          grep -qx 'mod_version=1.67.28' gradle.properties
+          jar=capatest-1.67.28.jar
+          shots=build/fx-smoke-run/fx-shots
+          proof=docs/releases/v1.67.28
+          out="entregables/v1.67.28/$jar"
+          (cd build/libs && sha256sum -c SHA256SUMS.txt)
+          python3 -m zipfile -t "build/libs/$jar"
+          test ! -e "$out"
+          install -D -m 0644 "build/libs/$jar" "$out"
+          install -D -m 0644 build/libs/SHA256SUMS.txt "$proof/JAR.sha256"
+          for file in comparacion-giro-forge.jpg comparacion-{calma,freno}-{pecho,curios}-forge.gif \
+              transiciones-forge.tsv reposo-agachado-forge.tsv ritmo-forge.tsv hombrera-forge.tsv hombrera-mirada-forge.tsv \
+              tela-frontal-forge.tsv holgura-brazos-forge.tsv revision-alex-forge.tsv continuidad-forge.tsv \
+              escalera-forge.tsv saltos-forge.tsv costuras-saltos-forge.tsv nado-forge.tsv; do
+            test -s "$shots/$file"
+            install -m 0644 "$shots/$file" "$proof/"
+          done
+          for route in pecho curios steve-pecho steve-curios; do
+            install -m 0644 "$RUNNER_TEMP/forge-v16727/shots/paso-$route.tsv" "$proof/paso-$route-v16727.tsv"
+            install -m 0644 "$shots/paso-$route.tsv" "$proof/paso-$route-v16728.tsv"
+          done
+          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16728_colocacion_forge.jpg
+          printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$proof/compilacion.txt"
+          git add -- "$proof" docs/capa_v16728_colocacion_forge.jpg
+          git add -f -- "$out"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'Adjuntar v1.67.28 verificada y las comparaciones en Forge [skip ci]'
+          git push origin "$GITHUB_REF_NAME"
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.

@@ -31,7 +31,9 @@ HINGES = ('cape_top', 'cape_mid')
 def preservation(*, changed=()):
     version = tuple(map(int, P.mod_version().split('.')))
     wide = version >= (1, 67, 6)
-    gait_backup = P.ROOT/'docs/respaldos/v1.67.26' if version >= (1, 67, 27) else None
+    archives = P.ROOT/'docs/respaldos'
+    gait_backup = archives/'v1.67.26' if version >= (1, 67, 27) else None
+    quiet_backup = archives/'v1.67.27' if version >= (1, 67, 28) else None
     from cape_backing import profile as backing_profile
     new_mount = (G.SHOULDERS_BONE, G.UNDER_YOKE_BONE, *backing_profile()['names'])
     mount = (G.SEAT_BONE, G.GUSSET_BONE, *new_mount)
@@ -65,12 +67,15 @@ def preservation(*, changed=()):
         elif name.endswith('.bbmodel'):
             old = json.loads((BASE/name).read_text())
             current = json.loads(B.DOC.read_text())
-            if gait_backup:
-                # This checks the historical rig. The current gait keys and
-                # tangents are compared separately in verify_cape_placement.
-                prior = json.loads((gait_backup/'CAPA_v1.67.26.bbmodel').read_text())
-                gaits = {a['name']:a for a in prior['animations'] if a['name'] in M.GAITS}
-                current['animations'] = [gaits.get(a['name'],a) for a in current['animations']]
+            # Compare the historical rig only; the live keys and tangents
+            # are checked against the delivered predecessor in the art gate.
+            for archive, tag, styles in ((gait_backup, '1.67.26', M.GAITS),
+                                         (quiet_backup, '1.67.27', M.QUIET)):
+                if archive:
+                    prior = json.loads((archive/f'CAPA_v{tag}.bbmodel').read_text())
+                    names = {name for name,style in B.ANIMATION_SPECS if style in styles}
+                    keys = {a['name']:a for a in prior['animations'] if a['name'] in names}
+                    current['animations'] = [keys.get(a['name'],a) for a in current['animations']]
             if wide:
                 old,current = map(omit_mount_edits, (old,current))
             assert current == dict(old, name=current['name']), 'cambiaron piezas del proyecto fuera del asiento/fuelle'
@@ -91,7 +96,7 @@ def preservation(*, changed=()):
     assert json.loads(re.search(r'^const INLINE_STRIDE = (.+);$', html, re.M)[1]) == S.profile()
     skip = ' salvo los sprites de FX' if changed else ''
     scope = ' (asiento, fuelle e icono actualizados)' if wide else ''
-    motion = '; se usa el respaldo para verificar las dos marchas históricas' if gait_backup else ''
+    motion = '; se usan los respaldos para verificar los clips históricos' if gait_backup else ''
     print(f'v1.65.0: resto del GEO, clips, ajuste de cabeza, atlas, partículas y lore intactos{skip}; '
           f'mismo rig de Blockbench{scope}{motion}.', flush=True)
 

@@ -7,9 +7,13 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [JAR anterior v1.67.12](https://github.com/Santi-PdR/modelos/releases/download/v1.67.12/capatest-1.67.12.jar)
 · [JAR anterior v1.67.11](https://github.com/Santi-PdR/modelos/releases/download/v1.67.11/capatest-1.67.11.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench v1.67.27](docs/CAPA_v1.67.27.bbmodel)
+· [Proyecto Blockbench v1.67.28](docs/CAPA_v1.67.28.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+
+### v1.67.28 — dobladillo, reposo y agachado
+
+Candidata en pruebas: transiciones del paño más suaves, nuevos ciclos de reposo y agachado y más espacio junto a la hombrera izquierda al girar. Los ciclos de caminar y correr de v1.67.27 se conservan. [Respaldo de v1.67.27](docs/respaldos/v1.67.27/README.md).
 
 ### v1.67.27 — hombrera izquierda, marcha y carrera
 

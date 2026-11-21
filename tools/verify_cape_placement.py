@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check frozen art, the two reauthored gait clips, and live-fit parity."""
+"""Check frozen art, scoped equipped rotations, and live-fit parity."""
 from __future__ import annotations
 
 import argparse
@@ -20,16 +20,17 @@ import cape_fit as F
 from cape_contact import back_and_sleeves, lap as group_lap, original_dimensions, shoulder_seams
 import cape_tracks as T
 import preview_cloth as P
-from bbmodel_export import DOC, build_animations, uid
+from bbmodel_export import ANIMATION_SPECS, DOC, build_animations, uid
 from verify_cape_backing import lap
 from verify_v1660 import WornModel, contacts
 import cape_stride as S
 
 REFERENCE = P.ROOT/'entregables/v1.67.14/capatest-1.67.14.jar'
+PREVIOUS = P.ROOT/'entregables/v1.67.27/capatest-1.67.27.jar'
 ART = ('geo', 'textures', 'animations', 'particles', 'shaders')
-BACKUP = P.ROOT/'docs/respaldos/v1.67.26'
+BACKUP = P.ROOT/'docs/respaldos/v1.67.27'
 WORN_ANIMATION = A.ANIM.relative_to(P.ASSETS).as_posix()
-GAIT_CLIPS = ('animation.moving', 'animation.sprint')
+QUIET_CLIPS = ('animation.idle', 'animation.sneak')
 
 
 def art_entries(jar):
@@ -37,16 +38,16 @@ def art_entries(jar):
             if n.startswith(tuple(f'assets/capatest/{kind}/' for kind in ART)) and not n.endswith('/')}
 
 
-def gait_assets(reference, worn):
-    # Freeze the backup, and only allow the values at the original rotation
-    # keys of the two cloth gaits to differ (not key times or any other clip).
+def quiet_assets(reference, worn):
+    # Only idle/crouch rotation values can differ from the delivered .27.
+    # In particular, both gait cycles are compared as complete clips.
     assert (BACKUP/WORN_ANIMATION).read_bytes() == reference[WORN_ANIMATION]
     folded = 'animations/item/cape_folded.animation.json'
     assert (BACKUP/folded).read_bytes() == reference[folded]
     before, restored = json.loads(reference[WORN_ANIMATION]), json.loads(worn)
     runtime = json.loads(worn)
     assert runtime == A.build(), 'el JAR y la curva fuente no coinciden'
-    for clip in GAIT_CLIPS:
+    for clip in QUIET_CLIPS:
         old = before['animations'][clip]
         tracks = restored['animations'][clip]['bones']
         changed = 0
@@ -56,25 +57,26 @@ def gait_assets(reference, worn):
                     rotation = tracks[name]['rotation'][t]
                     changed += rotation['vector'] != key['vector']
                     rotation['vector'] = key['vector']
-        assert changed, (clip, 'no se actualizó la marcha')
-    assert restored == before, 'cambiaron pistas fuera de las rotaciones de marcha'
+        assert changed, (clip, 'no se actualizó el clip')
+    assert restored == before, 'cambiaron pistas fuera de las rotaciones de reposo/agachado'
 
     bb = DOC.read_bytes()
-    model, original = json.loads(bb), json.loads((BACKUP/'CAPA_v1.67.26.bbmodel').read_text())
+    backup = (BACKUP/'CAPA_v1.67.27.bbmodel').read_bytes()
+    assert hashlib.sha256(backup).hexdigest() == '016df9f3e3c60e0547aa27c4750a4d93965ecd586971580f9697730feb3c76c1', 'cambió el respaldo Blockbench'
+    model, original = json.loads(bb), json.loads(backup)
     del original['name']
-    digest = hashlib.sha256(json.dumps(original,sort_keys=True,separators=(',',':')).encode()).hexdigest()
-    assert digest == 'e6c8fbf2dd3f4f68e950e1cfee8dfc9db52f177261432d033d1664b22a17c939', 'cambió el respaldo Blockbench'
     names = [b['name'] for b in P.load(P.ARMOR_GEO)['bones'] if A.animated(b['name'])]
     assert model['animations'] == build_animations([(n, uid(n+'/group')) for n in names], runtime)
+    quiet_names = {name for name,style in ANIMATION_SPECS if style in A.M.QUIET}
     for now, old in zip(model['animations'],original['animations'],strict=True):
-        if old['name'] in ('caminar','correr'):
+        if old['name'] in quiet_names:
             for gid, anim in old['animators'].items():
                 keys = now['animators'][gid]['keyframes']
                 for k, previous in zip(keys,anim['keyframes'],strict=True):
                     for field in ('data_points','bezier_left_value','bezier_right_value'):
                         k[field] = previous[field]
     del model['name']
-    assert model == original, 'cambió el modelo o la animación de Blockbench fuera de las dos marchas'
+    assert model == original, 'cambió Blockbench fuera de las rotaciones de reposo/agachado'
 
     html = (P.ROOT/'docs/capa_v1170_visor.html').read_text()
     payload = re.search(r'^const INLINE_ANIMATIONS = (.+);$',html,re.M)
@@ -95,15 +97,18 @@ def asset_contract(candidate=None):
         if name != WORN_ANIMATION:
             assert data == source[name], f'cambió el arte original: {name}'
     assert G.build() == json.loads(P.ARMOR_GEO.read_text()), 'el generador no produce el modelo restaurado'
-    gait_assets(original,source[WORN_ANIMATION])
+    assert hashlib.sha256(PREVIOUS.read_bytes()).hexdigest() == '275e28ccffa3eb704de248be09317635aa27454a3ecece296dd6f02c249cc359'
+    with ZipFile(PREVIOUS) as jar:
+        previous = art_entries(jar)
+    quiet_assets(previous,source[WORN_ANIMATION])
     if candidate is not None:
         with ZipFile(candidate) as jar:
             assert jar.testzip() is None
             assert art_entries(jar) == source, 'el JAR no contiene los recursos verificados'
             assert not any(any(probe in n for probe in ('CapePlacementProbe','CapeFxSmoke','CapeWalkProbe','CapeWaterProbe','CapeJumpProbe','CapeClimbProbe'))
                            for n in jar.namelist()), 'se empaquetó el ensayo de Forge'
-    print(f'{len(original)-1} recursos idénticos al JAR v1.67.14; sólo cambiaron las rotaciones de marcha/carrera. '
-          'Blockbench y visor coinciden.',flush=True)
+    print(f'{len(original)-1} recursos idénticos al JAR v1.67.14; respecto a v1.67.27 sólo se retocó reposo/agachado. '
+          'Marchas, Blockbench y visor verificados.',flush=True)
 
 
 def viewer(**data):

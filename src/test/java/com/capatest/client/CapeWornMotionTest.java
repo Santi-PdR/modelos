@@ -122,6 +122,53 @@ final class CapeWornMotionTest {
         }
     }
 
+    private static void dryTransitions() {
+        var cape = new CapeWornMotion();
+        var slow = new CapeWornMotion();
+        double before = 0, lastRun = 0, maxOpen = 0, maxClose = 0, maxRunRate = 0;
+        for (int t = 1; t <= 90; t++) {
+            boolean sprint = t >= 24 && t < 41;
+            boolean water = t >= 75;
+            var pose = new CapeState.Wearer(false, false, water, false, false, sprint, .09, 0);
+            float speed = t >= 5 && t < 56 || t >= 74 ? 1 : 0;
+            float prior = t == 5 || t == 74 ? 0 : t == 56 ? 1 : speed;
+            for (int i = 0; i <= 16; i++) {
+                float f = i / 16F;
+                cape.sample(pose, t, f, t-1, t, prior, speed, 0, 0);
+                double clearance = cape.clearancePace();
+                double run = cape.weight(CapeState.SPRINT);
+                if (i == 0 && t > 1) {
+                    near(before, clearance, 1e-12, "no break at the hinge blend's tick edge");
+                    near(lastRun, run, 1e-12, "no break at the sprint toggle");
+                } else if (i > 0 && !water) {
+                    maxOpen = Math.max(maxOpen, 16 * (clearance - before));
+                    maxClose = Math.max(maxClose, 16 * (before - clearance));
+                    maxRunRate = Math.max(maxRunRate, 16 * Math.abs(run - lastRun));
+                }
+                if (i == 8) {
+                    slow.sample(pose, t, f, t-1, t, prior, speed, 0, 0);
+                    near(clearance, slow.clearancePace(), 0, "drape independent of frame rate");
+                    cape.sample(pose, t, .24F, t-1, t, prior, speed, 0, 0);
+                    near(clearance, cape.clearancePace(), 0, "repeat pass cannot rewind the drape");
+                }
+                before = clearance;
+                lastRun = run;
+            }
+            if (t == 9 && !(cape.clearancePace() < cape.amplitude())) throw new AssertionError("hem opens with the full impulse");
+            if (t == 61 && !(cape.clearancePace() > cape.amplitude())) throw new AssertionError("hem closes with the full impulse");
+            if (t == 34 || t == 52) near(cape.amplitude(), cape.clearancePace(), 1e-7, "steady gait unchanged");
+            if (t == 43) near(.68359375, lastRun, 1e-12, "still unwinding three ticks after sprint");
+            if (t == 50) near(0, lastRun, 0, "sprint eventually settles to walking");
+            if (t == 84) near(cape.amplitude(), cape.clearancePace(), 0, "no dry damping in the water");
+        }
+        near(.086, maxOpen, 1e-12, "bounded dry opening rate");
+        near(.054, maxClose, 1e-12, "bounded dry closing rate");
+        if (!(maxRunRate > .18 && maxRunRate < .188))
+            throw new AssertionError("sprint has a sharp change of weight: " + maxRunRate);
+        cape.sample(CapeState.Wearer.STILL, 105, 1, 0, 0, 0, 0, 0, 0);
+        near(0, cape.clearancePace(), 0, "discard transition on render gap");
+    }
+
     public static void main(String[] args) {
         for (int tick = 1; tick <= TICKS; ++tick) {
             double goal = tick < 16 || tick >= 80 ? 0 : tick >= 39 && tick < 64 ? 1 : .86;
@@ -203,8 +250,9 @@ final class CapeWornMotionTest {
                 "non-grounded pose keeps actual limb clearance");
         if (CapeStride.groundedEnvelope(55, .2, .20, .70, 1, 1) < eased + 10)
             throw new AssertionError("clearance for additional arm gesture lost");
+        dryTransitions();
         swimCycle();
         climbSupport();
-        System.out.println("CapeWornMotion: marcha, frenado, nado y apoyo en escalera continuos por portador");
+        System.out.println("CapeWornMotion: marcha, dobladillo al frenar, nado y apoyo en escalera continuos por portador");
     }
 }

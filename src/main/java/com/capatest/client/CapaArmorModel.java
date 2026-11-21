@@ -265,8 +265,8 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             arm = CapeStride.walkEnvelope(arm, motion.stride(), motion.limbAmplitude(), motion.ground(), 1);
             leg = CapeStride.walkEnvelope(leg, motion.stride(), motion.limbAmplitude(), motion.ground(), 1.4);
         } else if (motion != null) {
-            arm = CapeStride.groundedEnvelope(arm, motion.stride(), motion.amplitude(), motion.limbAmplitude(), motion.strideSupport(), 1);
-            leg = CapeStride.groundedEnvelope(leg, motion.stride(), motion.amplitude(), motion.limbAmplitude(), motion.strideSupport(), 1.4);
+            arm = CapeStride.groundedEnvelope(arm, motion.stride(), motion.clearancePace(), motion.limbAmplitude(), motion.strideSupport(), 1);
+            leg = CapeStride.groundedEnvelope(leg, motion.stride(), motion.clearancePace(), motion.limbAmplitude(), motion.strideSupport(), 1.4);
         }
         double armGoal = CapeStride.armGoal(arm, bodyPitch, 0);
         double legGoal = CapeStride.legGoal(leg, bodyPitch, 0);

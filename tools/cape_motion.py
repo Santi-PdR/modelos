@@ -24,17 +24,18 @@ class Style:
 
 
 STYLES = {
-    "idle":       Style(3.60, (.35, .65, -.55), (.44, .87, 1.48), (.12, .48, .89), .38, 1.56, .25, 1.04),
+    "idle":       Style(3.60, (.35, .66, -.70), (.27, .76, 1.73), (.09, .39, 1.02), .70, 2.30, .25, 1.12),
     "caminar":    Style(1.00, (7, 4.8, -2.7), (.57, 1.42, 2.85), (.36, .84, 1.78), 2.4, 4.0, -.24, 1.08),
     "correr":     Style(0.72, (26, 12, -7.4), (.44, 1.06, 2.42), (.20, .53, 1.06), -6.0, 4.4, -.37, .78),
     "volar":      Style(1.35, (44, 11, -4.7), (1.42, 2.72, 4.0), (.63, 1.76, 3.5), 10.8, 7.60, 1.46, .83),
     "caer":       Style(0.90, (17, 17, 19), (1.5, 3.1, 5.1), (.79, 1.95, 3.8), 5.1, 7.0, 1.65, 1.08),
-    "agachado":   Style(2.60, (7.5, -3.25, -4.75), (.66, 1.09, 1.5), (.13, .45, .91), -9.5, 1.85, .28, 1.0),
+    "agachado":   Style(2.60, (7.8, -1.8, -7.6), (.38, .74, 1.10), (.09, .28, .74), -8.3, 1.48, .28, 1.18),
     "agua":       Style(3.20, (11.5, 7, -11.8), (1.55, 3.1, 4.7), (.58, 3.28, 7.9), 3.6, 5.4, 2.2, 1.35),
     "deterioro":  Style(3.00, (5.8, 2.15, 8.3), (1.7, 2.68, 4.35), (.69, 2.23, 3.55), 4.3, 6.8, 1.10, 1.12),
 }
 SECTIONS = ("cape_top", "cape_mid", "cape_bottom")
 GAITS = ("caminar", "correr")
+QUIET = ("idle", "agachado")
 RIBBON = re.compile(r"v17_ribbon_(\d+)_seg(\d+)")
 
 
@@ -71,6 +72,26 @@ def gait_ribbon(spec: Style, side: float, q: float, seg: int, t: float, sprint: 
     return pitch, yaw, roll
 
 
+def quiet_hinge(spec: Style, i: int, t: float, crouched: bool) -> tuple[float, float, float]:
+    # Little motion at the seam. A delayed fold carries the breath out to
+    # the hem; in a crouch the last hinge folds down under the middle panel.
+    a = t + spec.phase - spec.lag * i
+    wave = .94 * math.sin(a) + .06 * math.sin(2 * a + .4)
+    yaw = ((.11, .24, .57) if crouched else (.17, .42, .94))[i] * math.sin(a + .86)
+    return spec.pitch[i] + spec.flex[i] * wave, yaw, spec.roll[i] * math.sin(a - .70)
+
+
+def quiet_ribbon(spec: Style, side: float, q: float, seg: int, t: float, crouched: bool) -> tuple[float, float, float]:
+    # The two sides do not breathe in unison. Asymmetric phase, not an
+    # offset at the attachment, lets the edge travel across the folds.
+    a = t + spec.phase - spec.lag * (.40 * seg + .04 * seg**2) + .62 * side
+    amp = spec.ripple * q * (.80 + .20 * abs(side))
+    pitch = .48 * amp * math.sin(a) + q * (-.35 if crouched else .22 * side)
+    yaw = .22 * amp * math.cos(a + .22) - .22 * spec.spread * side * q
+    roll = amp * (.55 * math.sin(a - .72) + .12 * side * math.cos(a)) - .71 * spec.spread * side * q
+    return pitch, yaw, roll
+
+
 def sample(name: str, style: str, f: float) -> tuple[float, float, float]:
     spec = STYLES[style]
     t = 2 * math.pi * (f % 1.0)
@@ -78,6 +99,8 @@ def sample(name: str, style: str, f: float) -> tuple[float, float, float]:
         i = SECTIONS.index(name)
         if style in GAITS:
             return gait_hinge(spec, i, t, style == "correr")
+        if style in QUIET:
+            return quiet_hinge(spec, i, t, style == "agachado")
         phase = t + spec.phase - spec.lag * i
         # La onda se propaga desde la costura sin volver a reposo al cerrar
         # el ciclo. La sección superior es la más contenida.
@@ -111,6 +134,8 @@ def sample(name: str, style: str, f: float) -> tuple[float, float, float]:
         q = tail**1.45
         if style in GAITS:
             pitch, yaw, roll = gait_ribbon(spec, side, q, seg, t, style == "correr")
+        elif style in QUIET:
+            pitch, yaw, roll = quiet_ribbon(spec, side, q, seg, t, style == "agachado")
         else:
             a = t + spec.phase - spec.lag * (.36 * seg + .038 * seg**2)
             wave = math.sin(a + .35 * side) + .14 * math.sin(2 * a + .42)
@@ -175,7 +200,14 @@ def _self_test() -> None:
         edge = [x-y for x, y in zip(*(pitches(f'v17_ribbon_{c}_seg4',style) for c in (2,9)))]
         side_to_side.append(max(edge) - min(edge))
     assert side_to_side[0] > 3 * side_to_side[1]
-    print("8 curvas periódicas; doble apoyo, retardo hacia el dobladillo y balance distinto al andar y correr")
+    for style in QUIET:
+        sections = [pitches(n, style) for n in SECTIONS]
+        arcs = [max(a) - min(a) for a in sections]
+        assert .35 < arcs[0] < .85 and arcs[0] < arcs[1] < arcs[2] < 3.6, (style, arcs)
+        crests = [max(range(len(a)), key=a.__getitem__) for a in sections]
+        assert crests[0] < crests[1] < crests[2], (style, crests)
+    assert max(pitches(SECTIONS[-1], 'agachado')) < -6.
+    print("8 curvas periódicas; doble apoyo, balance de marcha y reposo con retardo hacia el dobladillo")
 
 
 if __name__ == "__main__":

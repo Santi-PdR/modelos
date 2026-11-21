@@ -10,12 +10,19 @@ final class CapeWornMotion {
     static final double STRIDE_RADIANS = .6662F; // HumanoidModel.setupAnim
     private static final double TURN = 2 * Math.PI;
     private static final int SPRINT_FADE = 6;
+    private static final int DRY_SPRINT_FADE = 8;
     private static final int MAX_GAP = 10;
     // Keep the mass of the drape in motion between footfalls. Vanilla's
     // limb amplitude is an input, not a step in the cape's opening angle.
     private static final double OPEN_PER_TICK = .105;
     private static final double CLOSE_PER_TICK = .070;
     private static final double PACE_RATE = .58;
+    // The stride clock and clip weights still respond to the player's feet.
+    // On dry ground, feed the heavy clearance hinges a slower envelope so
+    // the free hem doesn't inherit the full opening/closing impulse.
+    private static final double DRAPE_OPEN = .086;
+    private static final double DRAPE_CLOSE = .054;
+    private static final double DRY_SLEW = .25;
     // Vanilla changes getSwimAmount by .09/tick. Match that blend in the
     // water, but don't jump on a wet/dry boundary (e.g. crawling into water).
     private static final double SWIM_PER_TICK = .10;
@@ -31,12 +38,13 @@ final class CapeWornMotion {
     private final double[] weights = new double[MODES.length];
     private CapeState target;
     private boolean sprint;
-    private int lastTick;
+    private int lastTick, sprintSpan;
     private float partial;
     private double start, span, sprintStart, sprintFrom;
     private double paceFrom, paceTo, swimFrom, swimTo;
+    private double drapeFrom, drapeTo, dryFrom, dryTo, previousDry;
     private double fallFrom, fallTo, previousFall;
-    private double time, stride, amplitude, limbAmplitude, ground, strideSupport;
+    private double time, stride, amplitude, clearancePace, limbAmplitude, ground, strideSupport;
 
     final CapeResponse response = new CapeResponse();
 
@@ -44,6 +52,8 @@ final class CapeWornMotion {
                 float stepFrom, float stepTo, float speedFrom, float speedTo,
                 float vanillaSwimFrom, float vanillaSwimTo) {
         boolean aquatic = wearer.water() && !wearer.elytra();
+        boolean dryGround = !wearer.water() && !wearer.elytra() && !wearer.airborne();
+        double dryGoal = dryGround ? 1 : 0;
         double swimBefore = aquatic && Float.isFinite(vanillaSwimFrom) ? unit(vanillaSwimFrom) : 0;
         double swimNow = aquatic && Float.isFinite(vanillaSwimTo) ? unit(vanillaSwimTo) : 0;
         long gap = (long) tick - lastTick;
@@ -56,7 +66,8 @@ final class CapeWornMotion {
         if (fresh) {
             response.reset();
             target = null;
-            paceTo = unit(speedFrom);
+            drapeTo = paceTo = unit(speedFrom);
+            dryTo = previousDry = dryGoal;
             swimTo = swimBefore;
             fallTo = previousFall = fallGoal(wearer);
         }
@@ -64,14 +75,22 @@ final class CapeWornMotion {
             // Tick input, not render frequency. If a frame was skipped, use
             // the previous inputs for the elapsed ticks we didn't see.
             int missed = fresh ? 0 : (int) gap - 1;
-            paceFrom = approach(paceTo, unit(speedFrom), missed);
-            paceTo = approach(paceFrom, unit(speedTo), 1);
+            double previousSpeed = unit(speedFrom), speed = unit(speedTo);
+            paceFrom = approach(paceTo, previousSpeed, missed, OPEN_PER_TICK, CLOSE_PER_TICK);
+            paceTo = approach(paceFrom, speed, 1, OPEN_PER_TICK, CLOSE_PER_TICK);
+            drapeFrom = approach(drapeTo, previousSpeed, missed, DRAPE_OPEN, DRAPE_CLOSE);
+            drapeTo = approach(drapeFrom, speed, 1, DRAPE_OPEN, DRAPE_CLOSE);
+            // Keep the medium change continuous too. A first rendered tick
+            // in water or air initializes at the unmodified envelope.
+            dryFrom = slew(dryTo, previousDry, DRY_SLEW * missed);
+            previousDry = dryGoal;
+            dryTo = slew(dryFrom, dryGoal, DRY_SLEW);
             swimFrom = slew(swimTo, swimBefore, SWIM_PER_TICK * missed);
             swimTo = slew(swimFrom, swimNow, SWIM_PER_TICK);
             fallFrom = approachFall(fallTo, previousFall, missed);
             previousFall = fallGoal(wearer);
             fallTo = approachFall(fallFrom, previousFall, 1);
-            selectBase(wearer, tick);
+            selectBase(wearer, tick, dryGround);
             lastTick = tick;
         }
         blendFamily(weights, time);
@@ -100,6 +119,8 @@ final class CapeWornMotion {
         }
         stride = (stepFrom + ((double) stepTo - stepFrom) * partial) * STRIDE_RADIANS / TURN;
         amplitude = paceFrom + (paceTo - paceFrom) * partial;
+        double drape = drapeFrom + (drapeTo - drapeFrom) * partial;
+        clearancePace = amplitude + (drape - amplitude) * (dryFrom + (dryTo - dryFrom) * partial);
         limbAmplitude = unit(speedFrom + ((double) speedTo - speedFrom) * partial);
         ground = weights[idle] + weights[blight];
         double step = smooth((amplitude - .04) / .49);
@@ -110,7 +131,7 @@ final class CapeWornMotion {
         weights[CapeState.SPRINT.ordinal()] = ground * step * run;
     }
 
-    private void selectBase(CapeState.Wearer wearer, int tick) {
+    private void selectBase(CapeState.Wearer wearer, int tick, boolean dryGround) {
         CapeState family = wearer.elytra() ? CapeState.AIR : wearer.crouching() ? CapeState.SNEAK
                 : wearer.blight() ? CapeState.BLIGHT : CapeState.IDLE;
         boolean running = !wearer.water() && wearer.sprinting();
@@ -122,6 +143,7 @@ final class CapeWornMotion {
             span = 1;
             sprint = running;
             sprintStart = tick;
+            sprintSpan = SPRINT_FADE;
             sprintFrom = sprint ? 1 : 0;
         } else if (family != target) {
             blendFamily(from, tick);
@@ -132,16 +154,17 @@ final class CapeWornMotion {
         if (sprint != running) {
             sprintFrom = runWeight(tick);
             sprintStart = tick;
+            sprintSpan = dryGround ? DRY_SPRINT_FADE : SPRINT_FADE;
             sprint = running;
         }
     }
 
-    private static double approach(double old, double goal, int ticks) {
+    private static double approach(double old, double goal, int ticks, double open, double close) {
         // Exactly the same one-tick step even when rendering once or many
         // times per tick. The cap also applies through a dropped frame.
         for (int i = 0; i < ticks; ++i) {
             double delta = (goal - old) * PACE_RATE;
-            old += Math.max(-CLOSE_PER_TICK, Math.min(OPEN_PER_TICK, delta));
+            old += Math.max(-close, Math.min(open, delta));
         }
         return old;
     }
@@ -168,6 +191,7 @@ final class CapeWornMotion {
     double ground() { return ground; }
     double strideSupport() { return strideSupport; }
     double amplitude() { return amplitude; }
+    double clearancePace() { return clearancePace; }
     double limbAmplitude() { return limbAmplitude; }
 
     double phase(CapeState mode, double duration) {
@@ -176,7 +200,7 @@ final class CapeWornMotion {
     }
 
     private double runWeight(double at) {
-        return sprintFrom + ((sprint ? 1 : 0) - sprintFrom) * smooth((at - sprintStart) / SPRINT_FADE);
+        return sprintFrom + ((sprint ? 1 : 0) - sprintFrom) * smooth((at - sprintStart) / sprintSpan);
     }
 
     private void blendFamily(double[] into, double at) {

@@ -9,7 +9,7 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.67.27: hombrera izquierda más recogida; nueva flexión del paño al caminar y correr.
+v1.67.28: dobladillo más suave al iniciar y frenar, reposo y agachado retocados; más espacio junto a la hombrera izquierda.
 Se conservan el apoyo en escaleras, el ajuste con élitros, el halo y las brasas.
 El icono de referencia pulsa en la hotbar.
 '''
