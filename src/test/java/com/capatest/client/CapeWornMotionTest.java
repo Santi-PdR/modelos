@@ -1,5 +1,6 @@
 package com.capatest.client;
 
+import com.capatest.item.CapePlayback;
 import com.capatest.item.CapeState;
 
 final class CapeWornMotionTest {
@@ -90,6 +91,37 @@ final class CapeWornMotionTest {
         near(1, motion.weight(CapeState.AIR), 0, "glide remains the active pose");
     }
 
+    private static void climbSupport() {
+        var cloth = new CapeWornMotion();
+        var fallback = new CapePlayback();
+        double last = 0;
+        for (int tick = 1; tick <= 44; tick++) {
+            boolean holding = tick >= 9 && tick < 18;
+            boolean supported = tick < 24 || tick >= 30;
+            double dy = tick < 9 ? .2 : holding ? 0 : supported ? -.15 : -.2 - .08 * (tick - 24);
+            var raw = new CapeState.Wearer(false, false, false, true, holding, false, 0, dy);
+            var pose = supported ? raw.withSupport() : raw;
+            CapeState expected = !supported ? CapeState.FALL : holding ? CapeState.SNEAK : CapeState.IDLE;
+            if (fallback.sample(pose, tick) != expected)
+                throw new AssertionError("fallback doesn't recognize support on a ladder");
+            if (raw.cosmeticState() != (dy < -.08 ? CapeState.FALL : CapeState.AIR))
+                throw new AssertionError("cloth support changed the cosmetic input");
+            near(dy, pose.vertical(), 0, "a handhold is not zero vertical speed");
+            for (int i = 0; i <= 4; i++) {
+                cloth.sample(pose, tick, i / 4F, 0, 0, 0, 0, 0, 0);
+                normalized(cloth);
+                double fall = cloth.weight(CapeState.FALL);
+                if (tick < 24 || tick >= 36) near(0, fall, 0, "no FALL while supported");
+                if (i == 0) near(last, fall, 1e-12, "no snap at release or recapture");
+                else if (fall - last > .14/4 + 1e-12 || last - fall > .16/4 + 1e-12)
+                    throw new AssertionError("ladder support bypassed the fall slew limit");
+                last = fall;
+            }
+            if (tick == 29 && last < .8) throw new AssertionError("letting go did not restore the drop");
+            if (tick == 30 && last < .6) throw new AssertionError("grabbing the ladder killed the drop in one tick");
+        }
+    }
+
     public static void main(String[] args) {
         for (int tick = 1; tick <= TICKS; ++tick) {
             double goal = tick < 16 || tick >= 80 ? 0 : tick >= 39 && tick < 64 ? 1 : .86;
@@ -172,6 +204,7 @@ final class CapeWornMotionTest {
         if (CapeStride.groundedEnvelope(55, .2, .20, .70, 1, 1) < eased + 10)
             throw new AssertionError("clearance for additional arm gesture lost");
         swimCycle();
-        System.out.println("CapeWornMotion: marcha, frenado, pausa, nado y orilla continuos por portador");
+        climbSupport();
+        System.out.println("CapeWornMotion: marcha, frenado, nado y apoyo en escalera continuos por portador");
     }
 }

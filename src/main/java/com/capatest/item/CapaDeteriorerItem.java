@@ -93,7 +93,7 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
             } else {
                 boolean horizontalSwim = entity instanceof LivingEntity living && living.isVisuallySwimming()
                         && !living.isPassenger() && !living.isAutoSpinAttack();
-                CapeState pose = playback.sample(readWearer(entity, state.getData(DataTickets.ITEMSTACK)),
+                CapeState pose = playback.sample(readClothWearer(entity, state.getData(DataTickets.ITEMSTACK)),
                         entity.tickCount, horizontalSwim);
                 state.getController().transitionLength(playback.blendTicks());
                 state.setAnimation(WORN_ANIMATIONS.get(pose));
@@ -104,6 +104,13 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
 
     public static CapeState stateFor(Entity entity, ItemStack equipped) {
         return readWearer(entity, equipped).cosmeticState();
+    }
+
+    /** Keep light/FX selection independent of the cloth's support on climbables. */
+    public static CapeState.Wearer readClothWearer(Entity entity, ItemStack equipped) {
+        CapeState.Wearer state = readWearer(entity, equipped);
+        return state.airborne() && !state.water() && !state.elytra()
+                && entity instanceof LivingEntity wearer && wearer.onClimbable() ? state.withSupport() : state;
     }
 
     public static CapeState.Wearer readWearer(Entity entity, ItemStack equipped) {

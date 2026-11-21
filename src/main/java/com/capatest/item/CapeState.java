@@ -70,6 +70,11 @@ public enum CapeState {
                          boolean crouching, boolean sprinting, double horizontalSquared, double vertical) {
         public static final Wearer STILL = new Wearer(false, false, false, false, false, false, 0, 0);
 
+        /** A handhold supports the cloth without inventing floor contact or zeroing travel. */
+        public Wearer withSupport() {
+            return airborne ? new Wearer(blight, elytra, water, false, crouching, sprinting, horizontalSquared, vertical) : this;
+        }
+
         public CapeState cosmeticState() {
             return select(blight, elytra, water, airborne, crouching, sprinting, horizontalSquared, vertical);
         }

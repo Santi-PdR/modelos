@@ -154,7 +154,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         int limbScale = wearer.isBaby() ? 3 : 1;
         boolean moves = !wearer.isPassenger() && wearer.isAlive();
         boolean swimPose = moves && !wearer.isAutoSpinAttack();
-        motion.sample(CapaDeteriorerItem.readWearer(wearer, state.getData(DataTickets.ITEMSTACK)),
+        motion.sample(CapaDeteriorerItem.readClothWearer(wearer, state.getData(DataTickets.ITEMSTACK)),
                 wearer.tickCount, state.getPartialTick(), walk.position(0) * limbScale, walk.position(1) * limbScale,
                 moves ? walk.speed(0) : 0, moves ? walk.speed(1) : 0,
                 swimPose ? wearer.getSwimAmount(0) : 0, swimPose ? wearer.getSwimAmount(1) : 0);
