@@ -30,6 +30,8 @@ Trazas crudas de Alex:
 
 También pasaron las pruebas en Forge de [posturas](revision-alex-forge.tsv), [escalera](escalera-forge.tsv), [saltos y aterrizaje](saltos-forge.tsv), [nado](nado-forge.tsv), élitros, halo, brasas y hotbar. Se conservan el GEO, los atlas, el icono, los efectos y la animación plegada.
 
+Una [prueba posterior que combina carrera, giro y paso agachado](maniobra/README.md) encontró un tirón breve al iniciar el paso agachado, en ambas ranuras, con la montura fija. El diagnóstico no sustituye este JAR.
+
 ## Instalación y respaldo
 
 - Minecraft Java **1.20.1**, Forge **47.3.0** y GeckoLib **4.8.1**. Curios **5.14.1** es opcional para `back`.
