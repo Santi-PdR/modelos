@@ -11,6 +11,7 @@ public final class KatanaClientConfig {
     public static final ForgeConfigSpec.DoubleValue BAR_FRACTION;
     public static final ForgeConfigSpec.DoubleValue ZOOM_FRACTION;
     public static final ForgeConfigSpec.DoubleValue CAMERA_ROLL;
+    public static final ForgeConfigSpec.DoubleValue BLOOD_HAND_X, BLOOD_HAND_Y, BLOOD_HAND_Z;
     public static final ForgeConfigSpec.BooleanValue SHOW_HUD, HUD_LEFT, BLOOD_FLASH, VANILLA_SWINGS;
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
@@ -23,6 +24,11 @@ public final class KatanaClientConfig {
                 .defineInRange("zoomFraction", 0.04, 0.0, 0.10);
         CAMERA_ROLL = builder.comment("Maximum view-only tilt in degrees on ultimate strokes. Set to zero for motion sensitivity.")
                 .defineInRange("impactRollDegrees", 0.65, 0.0, 2.0);
+        builder.pop();
+        builder.push("blood_gesture");
+        BLOOD_HAND_X = builder.comment("First-person free-hand adjustment in model pixels; mirrored with the animation.").defineInRange("freeHandX", 0.0, -8.0, 8.0);
+        BLOOD_HAND_Y = builder.comment("First-person free-hand vertical adjustment in model pixels.").defineInRange("freeHandY", 0.0, -8.0, 8.0);
+        BLOOD_HAND_Z = builder.comment("First-person free-hand depth adjustment in model pixels.").defineInRange("freeHandZ", 0.0, -8.0, 8.0);
         builder.pop();
         builder.push("interface");
         SHOW_HUD = builder.comment("Show small cooldown panel while holding the katana.").define("showHud", true);
