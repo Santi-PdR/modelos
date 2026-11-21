@@ -1,5 +1,17 @@
 # Historial de cambios
 
+## 1.0.6 — transiciones
+
+* El aura y el anillo **ya no saltan de color**: `RelicGlowState` interpola por
+  portador el color (≈0.30 s), la fuerza y el giro (≈0.22 s) con el tiempo real
+  entre frames, así que el resultado es el mismo a cualquier tasa de refresco.
+* Consecuencias que se notan: el anillo se desvanece al entrar en calma o dormido
+  en vez de desaparecer, y al pasar de alerta a reposo el giro del anillo pasa
+  por cero y se invierte suave.
+* El primer frame de un portador entra directo al estado (sin transición desde el
+  azul por defecto), y un tirón del juego no provoca un salto: el delta está
+  topado a 0.25 s.
+
 ## 1.0.5 — anillo de estado
 
 * **Anillo de estado** (`visuals.glowRing`, `visuals.ringIntensity`): cuarto

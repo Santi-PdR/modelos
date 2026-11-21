@@ -24,13 +24,15 @@ public final class RelicVisuals {
     private RelicVisuals() {
     }
 
-    public record RelicVisual(RelicAnimatable animatable, RelicGeoRenderer renderer) {
+    /** Modelo, renderer y estado de brillo (aura/anillo interpolados) del portador. */
+    public record RelicVisual(RelicAnimatable animatable, RelicGeoRenderer renderer, RelicGlowState glow) {
     }
 
     public static RelicVisual visual(Player player) {
         return VISUALS.computeIfAbsent(player.getUUID(),
                 uuid -> new RelicVisual(new RelicAnimatable(uuid),
-                        new RelicGeoRenderer(new RelicGeoModel())));
+                        new RelicGeoRenderer(new RelicGeoModel()),
+                        new RelicGlowState()));
     }
 
     public static void prune(long gameTime) {

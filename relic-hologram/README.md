@@ -116,6 +116,12 @@ tanto el anillo como el aura cambian de color con el estado:
 | `idle_alert` | rojo | 1.05 | late como un aviso, gira al revés |
 | `idle_dormant` | gris azulado | 0.35 | no sale |
 
+Los cambios **no saltan**: `RelicGlowState` interpola color (≈0.30 s) y
+fuerza/giro (≈0.22 s) por portador y con el tiempo real entre frames, así que se
+ve igual a 30 que a 240 FPS. El giro del anillo pasa por cero al cambiar de
+sentido en vez de invertirse de golpe, y el anillo se desvanece al entrar en
+calma o dormido.
+
 El **shader propio** (`visuals.shaderGlow`) añade un cuarto pase con fresnel en
 el borde y una línea de barrido de holograma, en GLSL de verdad
 (`assets/minecraft/shaders/core/holocore_relic_glow.{json,vsh,fsh}`). Se compila

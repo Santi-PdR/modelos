@@ -27,6 +27,10 @@ import org.joml.Vector3f;
  * en alerta y apagada en dormido. El anillo solo aparece en los estados que
  * importan, y gira en sentidos distintos segun cual sea.</p>
  *
+ * <p>Los valores no se usan en crudo: {@link RelicGlowState} los interpola, asi
+ * que un cambio de estado se ve como una transicion y no como un salto de color
+ * en un frame.</p>
+ *
  * <p>La posicion se toma de la traslacion de la matriz del {@code PoseStack} y la
  * escala de su primera columna; en el render de entidades el {@code PoseStack}
  * esta en coordenadas de mundo, asi que los vertices se emiten sin matriz.</p>
@@ -50,39 +54,21 @@ public final class RelicAura {
     private RelicAura() {
     }
 
-    /**
-     * Aspecto por estado: color, fuerza del aura, fuerza del anillo y giro de
-     * este (radianes por tick; 0 = no se dibuja).
-     */
-    private record Style(float red, float green, float blue, float aura, float ring, float spin) {
-    }
-
-    private static Style styleFor(RelicAnimatable.LoopState state) {
-        return switch (state) {
-            case CALM -> new Style(0.42F, 0.60F, 0.78F, 0.70F, 0.00F, 0.000F);
-            case CHARGED -> new Style(1.00F, 0.72F, 0.30F, 1.15F, 1.10F, 0.075F);
-            case ALERT -> new Style(1.00F, 0.34F, 0.28F, 1.05F, 0.85F, -0.055F);
-            case DORMANT -> new Style(0.34F, 0.44F, 0.60F, 0.35F, 0.00F, 0.000F);
-            case IDLE -> new Style(0.55F, 0.78F, 1.00F, 1.00F, 0.45F, 0.028F);
-        };
-    }
-
     /** Solo se apaga si el jugador apaga las dos cosas: son cuatro quads en total. */
-    public static boolean enabled() {
+    static boolean enabled() {
         return RelicConfig.GLOW_AURA.get() || RelicConfig.GLOW_RING.get();
     }
 
-    public static void render(PoseStack poseStack, MultiBufferSource bufferSource, float partialTick,
-                              RelicAnimatable.LoopState state) {
-        Style style = styleFor(state);
+    static void render(PoseStack poseStack, MultiBufferSource bufferSource, float partialTick,
+                       RelicAnimatable.LoopState state, RelicGlowState glow) {
         float time = time(partialTick);
         Frame frame = frame(poseStack);
 
         if (RelicConfig.GLOW_AURA.get()) {
-            drawAura(bufferSource, frame, time, style);
+            drawAura(bufferSource, frame, time, glow);
         }
-        if (RelicConfig.GLOW_RING.get() && style.ring() > 0.0F) {
-            drawRing(bufferSource, frame, time, state, style);
+        if (RelicConfig.GLOW_RING.get() && glow.ring() > 0.001F) {
+            drawRing(bufferSource, frame, time, state, glow);
         }
     }
 
@@ -90,8 +76,8 @@ public final class RelicAura {
     // Aura: tres capas girando a distinta velocidad
     // ------------------------------------------------------------------
 
-    private static void drawAura(MultiBufferSource bufferSource, Frame frame, float time, Style style) {
-        float intensity = RelicConfig.AURA_INTENSITY.get().floatValue() * style.aura();
+    private static void drawAura(MultiBufferSource bufferSource, Frame frame, float time, RelicGlowState glow) {
+        float intensity = RelicConfig.AURA_INTENSITY.get().floatValue() * glow.aura();
         if (intensity <= 0.001F) {
             return;
         }
@@ -103,7 +89,7 @@ public final class RelicAura {
             float pulse = 0.82F + 0.18F * sin(time * 0.08F + layer * 1.7F);
             float weight = WEIGHT[layer] * pulse * intensity;
             billboard(buffer, frame, DIAMETER[layer], time * SPIN[layer],
-                    style.red() * weight, style.green() * weight, style.blue() * weight);
+                    glow.red() * weight, glow.green() * weight, glow.blue() * weight);
         }
     }
 
@@ -112,8 +98,8 @@ public final class RelicAura {
     // ------------------------------------------------------------------
 
     private static void drawRing(MultiBufferSource bufferSource, Frame frame, float time,
-                                 RelicAnimatable.LoopState state, Style style) {
-        float weight = RelicConfig.RING_INTENSITY.get().floatValue() * style.ring();
+                                 RelicAnimatable.LoopState state, RelicGlowState glow) {
+        float weight = RelicConfig.RING_INTENSITY.get().floatValue() * glow.ring();
         if (weight <= 0.001F) {
             return;
         }
@@ -123,11 +109,11 @@ public final class RelicAura {
         float beatSpeed = alert ? 0.45F : 0.15F;
         float beat = 0.72F + 0.28F * (0.5F + 0.5F * sin(time * beatSpeed));
         float size = RING_DIAMETER * (alert ? 1.0F + 0.03F * sin(time * beatSpeed) : 1.0F);
-        float glow = weight * beat;
+        float amount = weight * beat;
 
         VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(RING_TEXTURE));
-        billboard(buffer, frame, size, time * style.spin(),
-                style.red() * glow, style.green() * glow, style.blue() * glow);
+        billboard(buffer, frame, size, time * glow.spin(),
+                glow.red() * amount, glow.green() * amount, glow.blue() * amount);
     }
 
     // ------------------------------------------------------------------

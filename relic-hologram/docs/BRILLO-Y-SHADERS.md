@@ -110,6 +110,16 @@ El rojo y el ámbar no son arbitrarios: son los mismos tonos que usan los packs 
 UI de Minecraft para «peligro» y «energía», así que se leen sin explicación. Y
 como el anillo late solo en `ALERT`, se distingue de `CHARGED` incluso de reojo.
 
+**Transiciones** (`RelicGlowState`, uno por portador): los valores no se usan en
+crudo. Cada frame se acercan al objetivo con `1 - e^(-dt/tau)`, con `dt` medido en
+tiempo real para ese portador — no ticks ni «un 10% por frame», que se vería
+distinto a 30 y a 240 FPS. Color 0.30 s; fuerzas y giro 0.22 s. El primer frame de
+un portador nuevo entra directo al estado, sin transición desde el azul por
+defecto. Dos detalles que esto arregla sin código extra:
+
+* el anillo **se desvanece** al pasar a `CALM`/`DORMANT` en lugar de desaparecer;
+* al ir de `ALERT` a `IDLE` el giro pasa por cero y se invierte suave, no de golpe.
+
 ### C. Core shader propio (fresnel + scanlines de holograma) — hecho en 1.0.3
 
 `.vsh`/`.fsh` propios cargados con `ShaderInstance` y un

@@ -85,9 +85,12 @@ public class RelicCurioRenderer implements ICurioRenderer {
                 LightTexture.FULL_BRIGHT);
 
         // Aura + anillo de estado: billboards aditivos sobre el mismo anclaje
-        // (incluye la escala de la config, que se lee de la matriz).
+        // (incluye la escala de la config, que se lee de la matriz). El estado se
+        // interpola por portador para que el cambio de color no salte.
         if (RelicAura.enabled()) {
-            RelicAura.render(poseStack, bufferSource, partialTicks, animatable.loopState());
+            RelicAnimatable.LoopState state = animatable.loopState();
+            visual.glow().update(state);
+            RelicAura.render(poseStack, bufferSource, partialTicks, state, visual.glow());
         }
 
         poseStack.popPose();
