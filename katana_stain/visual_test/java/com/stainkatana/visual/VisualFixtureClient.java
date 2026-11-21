@@ -73,6 +73,7 @@ public final class VisualFixtureClient {
             case 147 -> capture = "10b_blood_draw.png";
             case 151 -> capture = "10_paralysis.png";
             case 153 -> capture = "11_blood_feedback.png";
+            case 155 -> capture = "11a_blood_recovery.png";
             case 180 -> {
                 mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
                 if (net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) mc.options.keyAttack.setDown(true);
@@ -112,6 +113,8 @@ public final class VisualFixtureClient {
             case 445 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(0));
             case 449 -> capture = "17a_blood_third_reach.png";
             case 453 -> capture = "17b_blood_third_draw.png";
+            case 457 -> capture = "17c_blood_third_face.png";
+            case 459 -> capture = "17d_blood_third_recovery.png";
             case 460 -> { mc.options.fov().set(70); mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); }
             case 479 -> mc.getSingleplayerServer().execute(() -> {
                 var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
