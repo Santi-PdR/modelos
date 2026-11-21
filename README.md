@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.31 — tira de la nuca en el giro y la frenada
+
+**[Descargar JAR de prueba v1.67.31](https://github.com/Santi-PdR/modelos/raw/7adc4d285ac0e8468219aa062822518f6893352b/entregables/v1.67.31/capatest-1.67.31.jar)** · [PowerShell para test-1](docs/releases/v1.67.31/instalar-test-1.txt) · [Nuca de Alex antes/después](docs/releases/v1.67.31/maniobra/maniobra-nuca.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.31/notas.md).
+
+La tira cosida y el borde expuesto se recogen al girar y frenar agachado. Probado en Forge en pecho y Curios, sin volver a cruzar el techo del pelo ni cambiar la frenada de la .30.
+
 ### v1.67.30 — borde de la capucha en el giro agachado
 
 **[Descargar JAR de prueba v1.67.30](https://github.com/Santi-PdR/modelos/raw/22026f27db7c2e588804495ea16d96c98af2204d/entregables/v1.67.30/capatest-1.67.30.jar)** · [PowerShell para test-1](docs/releases/v1.67.30/instalar-test-1.txt) · [Detalle antes/después](docs/releases/v1.67.30/maniobra/maniobra-corona.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.30/notas.md).
