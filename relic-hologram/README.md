@@ -44,6 +44,13 @@ Para publicar el jar como Release: ejecutar el workflow a mano con
 ## Probar en el juego
 
 `./gradlew runClient` arranca un cliente de desarrollo con GeckoLib y Curios.
+
+> **Nota de dev:** Curios 5.14.1 trae su refmap de Mixin con nombres SRG
+> (`f_19803_` = `Entity.firstTick`); con mappings `official` y en entorno de
+> desarrollo ese refmap no se remapea y el arranque falla en `AccessorEntity`.
+> Por eso los runs de `build.gradle` llevan `mixin.env.disableRefMap=true`. No
+> afecta al jar publicado (ahí el refmap SRG es el correcto).
+
 En el juego:
 
 * `/give @s holocore:holographic_core` o la pestaña creativa **Holographic Core**;

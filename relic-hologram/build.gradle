@@ -30,9 +30,17 @@ minecraft {
         }
         client {
             property 'forge.enabledGameTestNamespaces', mod_id
+            // Curios 5.14.1 publica su refmap de Mixin con nombres SRG
+            // (f_19803_ = Entity.firstTick). En un entorno de desarrollo con
+            // mappings "official" ese refmap no se remapea y el arranque muere
+            // en AccessorEntity. Ignorar el refmap hace que Mixin use los
+            // nombres oficiales del codigo fuente de Curios, que es lo correcto
+            // aqui. En produccion (jar instalado) no hace falta.
+            property 'mixin.env.disableRefMap', 'true'
         }
         server {
             property 'forge.enabledGameTestNamespaces', mod_id
+            property 'mixin.env.disableRefMap', 'true'
             args '--nogui'
         }
         data {
