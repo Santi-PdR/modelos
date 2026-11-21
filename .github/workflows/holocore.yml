@@ -1,0 +1,225 @@
+name: Build Holographic Core (Forge 1.20.1)
+
+on:
+  push:
+    paths:
+      - 'relic-hologram/**'
+      - '.github/workflows/holocore.yml'
+  workflow_dispatch:
+    inputs:
+      publicar:
+        description: 'Publicar el .jar como Release'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build:
+    name: Gradle 8.8 / JDK 17
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle 8.8
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.8'
+
+      # ------------------------------------------------------------------
+      # Los assets del modelo NO se tocan: se compara su SHA-256 con el zip
+      # entregado (reliquia_holografica_para_mod_v19.zip, en la raiz).
+      # ------------------------------------------------------------------
+      - name: Validate assets unchanged
+        run: |
+          python3 - <<'PY'
+          import hashlib, pathlib, zipfile
+
+          archive = pathlib.Path('reliquia_holografica_para_mod_v19.zip')
+          base = pathlib.Path('relic-hologram/src/main/resources/assets/holocore')
+          pairs = {
+              'reliquia_holografica/export/geo/relic_hologram_centered.geo.json':
+                  'geo/relic_hologram_centered.geo.json',
+              'reliquia_holografica/export/geo/relic_hologram_lite_centered.geo.json':
+                  'geo/relic_hologram_lite_centered.geo.json',
+              'reliquia_holografica/export/animations/relic_hologram.animation.json':
+                  'animations/relic_hologram.animation.json',
+              'reliquia_holografica/export/animations/relic_hologram.animation.linear.json':
+                  'animations/relic_hologram.animation.linear.json',
+              'reliquia_holografica/textures/relic_hologram.png':
+                  'textures/relic/relic_hologram.png',
+              'reliquia_holografica/textures/relic_hologram_glowing.png':
+                  'textures/relic/relic_hologram_glowing.png',
+          }
+          with zipfile.ZipFile(archive) as z:
+              for source, target in pairs.items():
+                  expected = hashlib.sha256(z.read(source)).hexdigest()
+                  actual = hashlib.sha256((base / target).read_bytes()).hexdigest()
+                  assert expected == actual, f'ASSET MODIFICADO: {target}'
+                  print(f'OK sin cambios: {target} ({actual[:12]}...)')
+          PY
+
+      # ------------------------------------------------------------------
+      # JSON de recursos válidos, sin nulls (GeckoLib 4.8 deserializa `parent`
+      # con getAsString y un JsonNull lanza UnsupportedOperationException),
+      # y las 20 animaciones presentes con sus huesos.
+      # ------------------------------------------------------------------
+      - name: Validate resources
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, struct
+
+          res = pathlib.Path('relic-hologram/src/main/resources')
+          for path in list(res.rglob('*.json')) + [res / 'pack.mcmeta']:
+              json.loads(path.read_text(encoding='utf-8'))
+
+          def nulls(value, where=''):
+              if value is None:
+                  yield where
+              elif isinstance(value, dict):
+                  for key, item in value.items():
+                      yield from nulls(item, where + '/' + key)
+              elif isinstance(value, list):
+                  for index, item in enumerate(value):
+                      yield from nulls(item, where + '/' + str(index))
+
+          for path in list(res.rglob('*.json')) + [res / 'pack.mcmeta']:
+              offenders = list(nulls(json.loads(path.read_text(encoding='utf-8'))))
+              assert not offenders, (path, offenders[:5])
+
+          base = res / 'assets/holocore'
+          anims = json.loads((base / 'animations/relic_hologram.animation.json').read_text())
+          manifest = json.loads(pathlib.Path('relic-hologram/tools/relic_manifest.json').read_text())
+
+          names = {a['name'] for a in manifest['animations']}
+          assert len(names) == 20, len(names)
+          assert names <= set(anims['animations']), names - set(anims['animations'])
+          loom = json.loads((base / 'animations/relic_hologram.animation.linear.json').read_text())
+          assert set(anims['animations']) == set(loom['animations'])
+
+          geo = json.loads((base / 'geo/relic_hologram_centered.geo.json').read_text())
+          lite = json.loads((base / 'geo/relic_hologram_lite_centered.geo.json').read_text())
+          full_desc = geo['minecraft:geometry'][0]['description']
+          lite_desc = lite['minecraft:geometry'][0]['description']
+          assert full_desc['identifier'] == 'geometry.relic_hologram_centered'
+          assert lite_desc['identifier'] == 'geometry.relic_hologram_lite_centered'
+          full_bones = {b['name'] for b in geo['minecraft:geometry'][0]['bones']}
+          lite_bones = {b['name'] for b in lite['minecraft:geometry'][0]['bones']}
+          assert full_bones == lite_bones, full_bones ^ lite_bones
+          assert {'relic_react', 'relic_root', 'core', 'ring_spin_1', 'flash'} <= full_bones
+
+          # Las capas solo deben tocar relic_react.
+          for layer in ('animation.relic.layer_hit', 'animation.relic.layer_bump',
+                        'animation.relic.layer_shake'):
+              assert list(anims['animations'][layer]['bones']) == ['relic_react'], layer
+
+          for texture in (base / 'textures/relic/relic_hologram.png',
+                          base / 'textures/relic/relic_hologram_glowing.png'):
+              width, height = struct.unpack('>II', texture.read_bytes()[16:24])
+              assert (width, height) == (64, 96), (texture, width, height)
+          icon = base / 'textures/item/holographic_core.png'
+          assert struct.unpack('>II', icon.read_bytes()[16:24]) == (16, 16)
+          print('Recursos OK: 20 animaciones, 98 huesos, 977/751 cubos, texturas 64x96.')
+          PY
+
+      # ------------------------------------------------------------------
+      # RelicAnimations.java se genera desde el manifiesto: si alguien edito a
+      # mano un nombre de animacion, aqui se ve.
+      # ------------------------------------------------------------------
+      - name: Check generated animation constants
+        working-directory: relic-hologram
+        run: python3 tools/gen_relic_constants.py --check
+
+      - name: Build
+        working-directory: relic-hologram
+        run: gradle build --stacktrace --no-daemon
+
+      - name: Show jar
+        working-directory: relic-hologram
+        run: |
+          set -euo pipefail
+          VER="$(sed -n 's/^mod_version=//p' gradle.properties | tr -d '[:space:]')"
+          JAR="build/libs/holocore-$VER.jar"
+          test -f "$JAR"
+          SHA="$(sha256sum "$JAR" | cut -d' ' -f1)"
+          SIZE="$(stat -c%s "$JAR")"
+          echo "JAR: $JAR"
+          echo "sha256: $SHA"
+          echo "bytes: $SIZE"
+          {
+            echo "### Holographic Core $VER"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| jar | \`holocore-$VER.jar\` |"
+            echo "| bytes | $SIZE |"
+            echo "| sha256 | \`$SHA\` |"
+            echo ""
+            echo "Instalacion (PowerShell), mismo patron que el resto de mods:"
+            echo '```powershell'
+            echo "\$d='D:\\Minecraft\\SKLauncher\\sklauncher-data-v4\\instances\\test-1\\mods'"
+            echo "\$n='holocore-$VER.jar'"
+            echo "\$s=$SIZE"
+            echo "\$h='$SHA'"
+            echo "\$u=\"https://github.com/\${env:GITHUB_REPOSITORY}/releases/download/v$VER/\$n\""
+            echo 'Invoke-WebRequest -UseBasicParsing -Uri $u -OutFile "$env:TEMP\$n"'
+            echo 'if ((Get-Item "$env:TEMP\$n").Length -ne $s) { "TAMAÑO MAL" } else { (Get-FileHash "$env:TEMP\$n" -Algorithm SHA256).Hash }'
+            echo 'Remove-Item "$d\holocore-*.jar" -Force -ErrorAction SilentlyContinue'
+            echo 'Move-Item -Force "$env:TEMP\$n" $d'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: holocore-jar
+          path: relic-hologram/build/libs/*.jar
+          if-no-files-found: error
+
+      - name: Publish release
+        if: >-
+          (github.event_name == 'push' && contains(github.event.head_commit.message, '[publicar]')) ||
+          (github.event_name == 'workflow_dispatch' && inputs.publicar == true)
+        working-directory: relic-hologram
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          VER="$(sed -n 's/^mod_version=//p' gradle.properties | tr -d '[:space:]')"
+          JAR="build/libs/holocore-$VER.jar"
+          test -f "$JAR"
+          SHA="$(sha256sum "$JAR" | cut -d' ' -f1)"
+          TAG="v$VER"
+          NOTES="$(mktemp)"
+          cat > "$NOTES" <<MD
+          Reliquia cosmetica **Holographic Core** para Forge 1.20.1.
+
+          Requiere **GeckoLib 4.8.1+** y **Curios API 5.14.1+** (ambos obligatorios).
+
+          - Modelo y animaciones v19 sin modificar (977 cubos; opcion lite de 751).
+          - Slot \`charm\` de Curios, maximo una equipada.
+          - Brillo fullbright con textura emisiva (sin dependencias de shaders).
+          - Tecla **G** para despertar/dormir; \`/relic offset|scale|side|quality\` para ajustar.
+          - Tecla/commands: \`/relic pulse\`, \`/relic release\`.
+
+          SHA-256 del jar: \`$SHA\`
+          MD
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$JAR" --clobber
+          else
+            gh release create "$TAG" "$JAR" \
+              --title "Holographic Core $TAG" \
+              --notes-file "$NOTES" \
+              --target "$GITHUB_SHA"
+          fi
+          echo "Publicado $TAG (sha256:$SHA)"

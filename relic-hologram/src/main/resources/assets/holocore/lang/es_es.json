@@ -1,0 +1,21 @@
+{
+  "itemGroup.holocore": "Núcleo Holográfico",
+  "item.holocore.holographic_core": "Núcleo Holográfico",
+  "tooltip.holocore.state": "Estado: %s",
+  "tooltip.holocore.state.active": "Despierto",
+  "tooltip.holocore.state.dormant": "Dormido",
+  "tooltip.holocore.hint": "Pulsa G o usa /relic para alternar, pulsar o ajustarlo.",
+  "key.categories.holocore": "Núcleo Holográfico",
+  "key.holocore.toggle": "Alternar Núcleo Holográfico",
+  "message.holocore.awake": "El núcleo despierta.",
+  "message.holocore.dormant": "El núcleo se apaga.",
+  "message.holocore.not_equipped": "No llevas ningún Núcleo Holográfico en el slot de amuleto.",
+  "message.holocore.sent": "Enviado: %s",
+  "message.holocore.action.toggle": "alternar",
+  "message.holocore.action.pulse": "pulso de energía",
+  "message.holocore.action.release": "liberación",
+  "message.holocore.info": "offset %s / %s / %s px, escala %s, hombro %s, calidad %s",
+  "message.holocore.bad_side": "Usa left o right.",
+  "message.holocore.bad_quality": "Usa full o lite.",
+  "curios.identifier.charm": "Amuleto"
+}

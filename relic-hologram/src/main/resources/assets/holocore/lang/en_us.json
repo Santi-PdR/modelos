@@ -1,0 +1,21 @@
+{
+  "itemGroup.holocore": "Holographic Core",
+  "item.holocore.holographic_core": "Holographic Core",
+  "tooltip.holocore.state": "State: %s",
+  "tooltip.holocore.state.active": "Awake",
+  "tooltip.holocore.state.dormant": "Dormant",
+  "tooltip.holocore.hint": "Press G or use /relic to toggle, pulse or tune it.",
+  "key.categories.holocore": "Holographic Core",
+  "key.holocore.toggle": "Toggle Holographic Core",
+  "message.holocore.awake": "The core awakens.",
+  "message.holocore.dormant": "The core goes dormant.",
+  "message.holocore.not_equipped": "No Holographic Core equipped in the charm slot.",
+  "message.holocore.sent": "Sent: %s",
+  "message.holocore.action.toggle": "toggle",
+  "message.holocore.action.pulse": "energy pulse",
+  "message.holocore.action.release": "release",
+  "message.holocore.info": "offset %s / %s / %s px, scale %s, shoulder %s, quality %s",
+  "message.holocore.bad_side": "Use left or right.",
+  "message.holocore.bad_quality": "Use full or lite.",
+  "curios.identifier.charm": "Charm"
+}

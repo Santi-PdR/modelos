@@ -1,0 +1,206 @@
+{
+ "name": "relic_hologram",
+ "minecraft": "1.20.1 (Forge, Curios, GeckoLib 4 previstos; verificar versiones)",
+ "cubes": {
+  "full": 977,
+  "lite": 751
+ },
+ "geometry": {
+  "recommended": "export/geo/relic_hologram_centered.geo.json",
+  "identifier": "geometry.relic_hologram_centered",
+  "lite": "export/geo/relic_hologram_lite_centered.geo.json",
+  "lite_identifier": "geometry.relic_hologram_lite_centered",
+  "anchored_preview_only": "export/geo/relic_hologram.geo.json"
+ },
+ "textures": {
+  "main": "textures/relic_hologram.png",
+  "emissive": "textures/relic_hologram_glowing.png",
+  "size_px": [
+   64,
+   96
+  ],
+  "render_type": "translucent + fullbright (los halos son planos con sprites de luz)"
+ },
+ "animations_file": "export/animations/relic_hologram.animation.json",
+ "animations_linear_fallback": "export/animations/relic_hologram.animation.linear.json  (misma animacion solo con interpolacion lineal; usar si el motor no soporta lerp_mode catmullrom)",
+ "default_offset_model_px": {
+  "x": -6,
+  "y_above_shoulder_line": 6,
+  "z_behind_back_face": 6,
+  "note": "punto de partida; mirror X para el otro hombro; verificar ejes del renderer"
+ },
+ "recommended_transition_ticks": [
+  4,
+  8
+ ],
+ "root_bones": {
+  "layer_wrapper": "relic_react",
+  "main": "relic_root"
+ },
+ "effect_bones_hidden_inside_core_at_rest": [
+  "flash",
+  "wave_tilt_a",
+  "wave_tilt_b",
+  "comet_tilt_1",
+  "comet_tilt_2",
+  "ghost_a",
+  "ghost_b",
+  "burst_01",
+  "burst_02",
+  "burst_03",
+  "burst_04",
+  "burst_05",
+  "burst_06",
+  "burst_07",
+  "burst_08",
+  "burst_09",
+  "burst_10",
+  "burst_11",
+  "burst_12",
+  "burst_13",
+  "burst_14",
+  "burst_15",
+  "burst_16",
+  "bolt_01",
+  "bolt_02",
+  "bolt_03",
+  "bolt_04",
+  "bolt_05",
+  "bolt_06",
+  "bolt_07",
+  "bolt_08"
+ ],
+ "animations": [
+  {
+   "name": "animation.relic.idle",
+   "length_s": 48,
+   "loop": true,
+   "kind": "state_loop"
+  },
+  {
+   "name": "animation.relic.idle_calm",
+   "length_s": 12,
+   "loop": true,
+   "kind": "state_loop"
+  },
+  {
+   "name": "animation.relic.idle_charged",
+   "length_s": 12,
+   "loop": true,
+   "kind": "state_loop"
+  },
+  {
+   "name": "animation.relic.idle_alert",
+   "length_s": 8,
+   "loop": true,
+   "kind": "state_loop"
+  },
+  {
+   "name": "animation.relic.idle_dormant",
+   "length_s": 12,
+   "loop": true,
+   "kind": "state_loop"
+  },
+  {
+   "name": "animation.relic.energy_pulse",
+   "length_s": 2.8,
+   "loop": false,
+   "kind": "oneshot_returns_to_current_state"
+  },
+  {
+   "name": "animation.relic.activation",
+   "length_s": 3.6,
+   "loop": false,
+   "kind": "transition",
+   "next_state": "animation.relic.idle"
+  },
+  {
+   "name": "animation.relic.deactivation",
+   "length_s": 2.6,
+   "loop": false,
+   "kind": "transition",
+   "next_state": "animation.relic.idle_dormant"
+  },
+  {
+   "name": "animation.relic.wake",
+   "length_s": 1.512,
+   "loop": false,
+   "kind": "transition",
+   "next_state": "animation.relic.idle"
+  },
+  {
+   "name": "animation.relic.sleep",
+   "length_s": 1.3,
+   "loop": false,
+   "kind": "transition",
+   "next_state": "animation.relic.idle_dormant"
+  },
+  {
+   "name": "animation.relic.glitch",
+   "length_s": 1.0,
+   "loop": false,
+   "kind": "oneshot_returns_to_current_state"
+  },
+  {
+   "name": "animation.relic.charge_up",
+   "length_s": 1.6,
+   "loop": false,
+   "kind": "transition",
+   "next_state": "animation.relic.idle_charged"
+  },
+  {
+   "name": "animation.relic.charge_down",
+   "length_s": 1.8,
+   "loop": false,
+   "kind": "transition",
+   "next_state": "animation.relic.idle"
+  },
+  {
+   "name": "animation.relic.alert_up",
+   "length_s": 1.6,
+   "loop": false,
+   "kind": "transition",
+   "next_state": "animation.relic.idle_alert"
+  },
+  {
+   "name": "animation.relic.alert_down",
+   "length_s": 1.8,
+   "loop": false,
+   "kind": "transition",
+   "next_state": "animation.relic.idle"
+  },
+  {
+   "name": "animation.relic.hit",
+   "length_s": 0.6,
+   "loop": false,
+   "kind": "oneshot_returns_to_current_state"
+  },
+  {
+   "name": "animation.relic.release",
+   "length_s": 3.4,
+   "loop": false,
+   "kind": "oneshot_returns_to_current_state"
+  },
+  {
+   "name": "animation.relic.layer_hit",
+   "length_s": 0.6,
+   "loop": false,
+   "kind": "layer",
+   "animates_only_bone": "relic_react"
+  },
+  {
+   "name": "animation.relic.layer_bump",
+   "length_s": 1.0,
+   "loop": false,
+   "kind": "layer",
+   "animates_only_bone": "relic_react"
+  },
+  {
+   "name": "animation.relic.layer_shake",
+   "length_s": 0.9,
+   "loop": false,
+   "kind": "layer",
+   "animates_only_bone": "relic_react"
+  }
+ ]
+}

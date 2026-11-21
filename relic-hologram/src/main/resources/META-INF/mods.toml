@@ -1,0 +1,48 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="${mod_authors}"
+description='''
+Reliquia cosmetica: un nucleo holografico de luz azul que flota sobre el hombro
+del portador, con estelas orbitales, esfera armilar, cristales y efectos
+intermitentes. Se equipa en el slot "charm" de Curios API y se anima con
+GeckoLib 4. El brillo es fullbright (se ve igual de noche y en cuevas).
+
+- Modelo y animaciones: relic_hologram v19 (sin modificar).
+- 20 animaciones: reposo, cargado, alerta, dormido, activacion/desactivacion
+  rapidas y completas, pulso, glitch, reacciones a golpes y liberacion.
+- Comandos de cliente /relic offset|scale|side|quality|toggle|pulse|release|info.
+'''
+
+[[dependencies.${mod_id}]]
+modId="forge"
+mandatory=true
+versionRange="${forge_version_range}"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="minecraft"
+mandatory=true
+versionRange="${minecraft_version_range}"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="geckolib"
+mandatory=true
+versionRange="[4.8.1,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="curios"
+mandatory=true
+versionRange="[5.14.1,)"
+ordering="AFTER"
+side="BOTH"
