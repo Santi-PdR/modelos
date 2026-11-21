@@ -34,6 +34,18 @@ public final class VisualFixtureClient {
             System.out.println("STAIN_FIXTURE_CLIP=" + (mc.getResourceManager().getResource(id).isPresent() ? "bettercombat" : "fallback"));
         }
         switch (tick) {
+            case 5 -> {
+                mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.LEFT);
+                mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+                mc.options.fov().set(35);
+            }
+            case 18 -> capture = "00a_left_third.png";
+            case 21 -> mc.options.setCameraType(CameraType.FIRST_PERSON);
+            case 26 -> capture = "00b_left_first.png";
+            case 29 -> {
+                mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
+                mc.options.fov().set(70);
+            }
             case 35 -> mc.setScreen(new InventoryScreen(mc.player));
             case 40 -> capture = "01_inventory.png";
             case 48 -> mc.setScreen(null);
