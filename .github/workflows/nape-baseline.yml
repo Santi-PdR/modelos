@@ -1,0 +1,76 @@
+name: Guardar la referencia de Forge de ambos giros
+on: push
+jobs:
+  importar:
+    if: github.ref_name == 'arena/5a9fa51b-modelos' && contains(github.event.head_commit.message, '[base-nuca-v16732]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RUN: '44961551931'
+      SOURCE: a1dacf8dc0405e973026a3cca0de9abb8d781b56
+      OPENBLAS_NUM_THREADS: '1'
+      PYTHONPATH: tools
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verificar procedencia y repetir la comparación de v1.67.31
+        run: |
+          set -euo pipefail
+          gh run view "$RUN" --json status,conclusion,headSha,jobs > "$RUNNER_TEMP/reference.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          r=json.loads((Path(os.environ['RUNNER_TEMP'])/'reference.json').read_text())
+          assert (r['status'],r['conclusion'],r['headSha']) == ('completed','success',os.environ['SOURCE'])
+          steps={s['name']:s['conclusion'] for j in r['jobs'] for s in j['steps']}
+          for name in ('Reproducir ambos JAR entregados y capturar cada sentido','Comparar las capturas registradas del retorno','Conservar cuadros y malla original del retorno'):
+              assert steps[name]=='success', (name,steps[name])
+          PY
+          (cd entregables/v1.67.31 && sha256sum -c ../../docs/releases/v1.67.31/JAR.sha256)
+          gh run download "$RUN" -n retorno-nuca-forge -D "$RUNNER_TEMP/baseline"
+          python3 -m pip install --quiet numpy Pillow
+          python3 tools/verify_forge_nape_return.py "$RUNNER_TEMP/baseline/v1.67.30" "$RUNNER_TEMP/baseline/v1.67.31" \
+            "$RUNNER_TEMP/recheck" "$RUNNER_TEMP/crops"
+          cmp "$RUNNER_TEMP/recheck/retorno.tsv" docs/releases/v1.67.31/maniobra/retorno/retorno.tsv
+      - name: Conservar sólo el recorte registrado y la malla alrededor del cuello
+        run: |
+          set -euo pipefail
+          out=docs/diagnosticos/retorno-v1.67.31/base
+          mkdir -p "$out"
+          export DEST="$out"
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          import numpy as np
+          from verify_forge_nape_return import frames, TRACKS, SLOTS
+          from verify_forge_gaits import table
+          from verify_forge_postures import ACTOR
+          src=Path(os.environ['RUNNER_TEMP'])/'baseline/v1.67.31'
+          out=Path(os.environ['DEST'])
+          for track, direction in TRACKS:
+              for slot in SLOTS:
+                  name=f'{track}-{slot}'
+                  pics=frames(src,out,track,slot,direction)
+                  p=out/f'{name}-capturas.tsv'
+                  plan={int(line.split('\t',1)[0]):line.split('\t')[2:] for line in (src/f'{name}-cabeza.tsv').read_text().splitlines()}
+                  table(p,'ranura tick imagen ancho alto x0 y0 ax ay bx by cx cy dx dy',[
+                      (slot,t,c.path.name,*c.size,*c.origin,*plan[t]) for t,(_, c, _) in pics.items()])
+                  (out/f'{name}.tsv').write_bytes((src/f'{name}.tsv').read_bytes())
+                  kept=[]
+                  for line in (src/f'{name}-cubos.tsv').read_text().splitlines():
+                      t,b,coords=line.split('\t',2)
+                      if b in ACTOR or np.fromstring(coords,sep='\t').reshape(8,3)[:,1].max()>17.5:
+                          kept.append(line)
+                  (out/f'{name}-cubos.tsv').write_text('\n'.join(kept)+'\n')
+          PY
+          printf '%s\nhttps://github.com/%s/actions/runs/%s\nhttps://github.com/%s/actions/runs/%s\n' \
+            "$SOURCE" "$GITHUB_REPOSITORY" "$RUN" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$out/prueba.txt"
+          git add "$out"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'Conservar la malla y las tomas verificadas de la .31 a ambos lados [skip ci]'
+          git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
