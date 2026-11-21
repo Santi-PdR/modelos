@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.29 — frenada y paso agachado
+
+**[Descargar JAR de prueba v1.67.29](https://github.com/Santi-PdR/modelos/raw/309543f8f06f6e2d00c3722d980e8815ed111e31/entregables/v1.67.29/capatest-1.67.29.jar)** · [PowerShell para test-1](docs/releases/v1.67.29/instalar-test-1.txt) · [Maniobra en Forge](docs/releases/v1.67.29/maniobra/maniobra-forge.jpg) · [Medidas y SHA-256](docs/releases/v1.67.29/notas.md).
+
+La bisagra se cierra más gradual al pasar de carrera a paso agachado. Se conservaron las curvas, el arte y el encastre de la .28. Probado en pecho y Curios. [Respaldo de v1.67.28](docs/respaldos/v1.67.28/README.md).
+
 ### v1.67.28 — dobladillo, reposo y agachado
 
 **[Descargar JAR de prueba v1.67.28](https://github.com/Santi-PdR/modelos/raw/5adcba808cff1cbdc59dda6b0c31fc6f76594188/entregables/v1.67.28/capatest-1.67.28.jar)** · [PowerShell para test-1](docs/releases/v1.67.28/instalar-test-1.txt) · [Hombrera de frente y en giro](docs/releases/v1.67.28/comparacion-giro-forge.jpg) · [Reposo y agachado](docs/releases/v1.67.28/comparacion-calma-pecho-forge.gif) · [Medidas y SHA-256](docs/releases/v1.67.28/notas.md).
