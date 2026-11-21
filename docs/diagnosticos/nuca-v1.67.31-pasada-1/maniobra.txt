@@ -1,0 +1,43 @@
+Traceback (most recent call last):
+  File "/home/runner/work/modelos/modelos/tools/verify_forge_combined.py", line 195, in <module>
+    main(args.shots, args.diagnostico, args.reference)
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/modelos/modelos/tools/verify_forge_combined.py", line 141, in main
+    poses, seam, join, back, drift, head, hat, arm, leg = fit(root, data, slot, rig, source)
+                                                          ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/modelos/modelos/tools/verify_forge_combined.py", line 85, in fit
+    assert original_dimensions(groups, source, label) == len(rig.names)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/modelos/modelos/tools/cape_contact.py", line 46, in original_dimensions
+    np.testing.assert_allclose(distances(boxes), distances(target), atol=.004, rtol=0,
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                               err_msg=f'{label}: cambió la forma de {name}')
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/.local/lib/python3.14/site-packages/numpy/testing/_private/utils.py", line 1780, in assert_allclose
+    assert_array_compare(compare, actual, desired, err_msg=str(err_msg),
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                         verbose=verbose, header=header, equal_nan=equal_nan,
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                         strict=strict)
+                         ^^^^^^^^^^^^^^
+  File "/home/runner/.local/lib/python3.14/site-packages/numpy/testing/_private/utils.py", line 988, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Not equal to tolerance rtol=0, atol=0.004
+('pecho', 52): cambió la forma de v18_chain_5
+Mismatched elements: 28 / 28 (100%)
+First 5 mismatches are at indices:
+ [0, 0]: 0.13763343915529985 (ACTUAL), 0.5440000000000017 (DESIRED)
+ [0, 1]: 0.13763345818611436 (ACTUAL), 0.5440000000000017 (DESIRED)
+ [0, 2]: 0.1376335040524659 (ACTUAL), 0.5440000000000017 (DESIRED)
+ [0, 3]: 0.13763358904457193 (ACTUAL), 0.5440000000000017 (DESIRED)
+ [0, 4]: 0.19452529721337938 (ACTUAL), 0.9399999999999992 (DESIRED)
+Max absolute difference among violations: 0.78873627
+Max relative difference among violations: 0.79305819
+ ACTUAL: array([[0.137633, 0.137633, 0.137634, 0.137634, 0.194525, 0.194525,
+        0.297328, 0.297328, 0.297328, 0.297328, 0.42054 , 0.42054 ,
+        1.163115, 1.276438, 1.276438, 1.394145, 1.459338, 1.459338,...
+ DESIRED: array([[0.544   , 0.544   , 0.544   , 0.544   , 0.94    , 0.94    ,
+        0.94    , 0.94    , 1.086064, 1.086064, 1.086064, 1.086064,
+        1.8993  , 1.8993  , 1.8993  , 1.8993  , 1.975671, 1.975671,...
+Salida de maniobra: 1

@@ -1,0 +1,37 @@
+Traceback (most recent call last):
+  File "/home/runner/work/modelos/modelos/tools/verify_forge_nape.py", line 305, in <module>
+    candidate(args.shots,args.baseline,args.out)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/modelos/modelos/tools/verify_forge_nape.py", line 248, in candidate
+    measures = verify_mesh(root,baseline)
+  File "/home/runner/work/modelos/modelos/tools/verify_forge_nape.py", line 221, in verify_mesh
+    np.testing.assert_allclose(ref[n],baseline_chain[n],atol=.005,rtol=0,err_msg=f'{slot}/{t}/{n}')
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/.local/lib/python3.14/site-packages/numpy/testing/_private/utils.py", line 1780, in assert_allclose
+    assert_array_compare(compare, actual, desired, err_msg=str(err_msg),
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                         verbose=verbose, header=header, equal_nan=equal_nan,
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                         strict=strict)
+                         ^^^^^^^^^^^^^^
+  File "/home/runner/.local/lib/python3.14/site-packages/numpy/testing/_private/utils.py", line 988, in assert_array_compare
+    raise AssertionError(msg)
+AssertionError: 
+Not equal to tolerance rtol=0, atol=0.005
+pecho/52/v18_chain_5
+Mismatched elements: 16 / 24 (66.7%)
+First 5 mismatches are at indices:
+ [0, 0, 1]: 22.471043 (ACTUAL), 21.745361 (DESIRED)
+ [0, 0, 2]: 5.511512 (ACTUAL), 4.9560366 (DESIRED)
+ [0, 1, 1]: 22.49054 (ACTUAL), 22.771488 (DESIRED)
+ [0, 1, 2]: 5.489501 (ACTUAL), 4.6738434 (DESIRED)
+ [0, 2, 1]: 22.499197 (ACTUAL), 23.227125 (DESIRED)
+Max absolute difference among violations: 0.8156576
+Max relative difference among violations: 0.17451539
+ ACTUAL: array([[[ 0.98588 , 22.471043,  5.511512],
+        [ 2.55902 , 22.49054 ,  5.489501],
+        [ 2.261817, 22.499197,  5.489501],...
+ DESIRED: array([[[ 0.985884, 21.745361,  4.956037],
+        [ 2.559024, 22.771488,  4.673843],
+        [ 2.261822, 23.227125,  4.673843],...
+Salida de nuca: 1
