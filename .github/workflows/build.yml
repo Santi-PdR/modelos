@@ -1231,21 +1231,3 @@ jobs:
           done
           echo "### Borrador $TAG verificado (publicar después de CI SUCCESS)" >> "$GITHUB_STEP_SUMMARY"
           cat "$SUMS" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Conservar el informe y la lámina de revisión de v1.67.20
-        if: >-
-          success() && github.repository == 'Santi-PdR/modelos' &&
-          github.ref == 'refs/heads/arena/5a9fa51b-modelos' && github.event_name == 'push' &&
-          contains(github.event.head_commit.message, '[revision-v16720]') && steps.verify-postures.outcome == 'success'
-        run: |
-          set -euo pipefail
-          test "$(git branch --show-current)" = 'arena/5a9fa51b-modelos'
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          cmp build/libs/capatest-1.67.20.jar entregables/v1.67.20/capatest-1.67.20.jar
-          shots=build/fx-smoke-run/fx-shots
-          doc=docs/releases/v1.67.20
-          install -m 0644 "$shots/revision-alex-forge.jpg" "$doc/revision-alex-forge.jpg"
-          install -m 0644 "$shots/revision-alex-forge.tsv" "$doc/revision-alex-forge.tsv"
-          git add -- "$doc/revision-alex-forge.jpg" "$doc/revision-alex-forge.tsv"
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com'             commit -m 'Adjuntar la revisión de posturas v1.67.20 en Forge [skip ci]'
-          git push origin arena/5a9fa51b-modelos
