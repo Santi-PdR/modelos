@@ -306,6 +306,9 @@ Qué mirar, en orden:
    baja `auraIntensity` (0.2–0.3) o `haloIntensity`.
 8. **Standby**: sin tocar nada, en reposo, cada 20–60 s debe hacer algo —
    temblor corto, glitch, un pulso. Con `idleVariations=false`, solo glitches.
+9. **Animaciones sueltas**: `/relic anim list` y luego `layer_shake`, `layer_bump`,
+   `layer_hit`, `glitch`, `release`. Las tres `layer_*` son las que estuvieron
+   rotas hasta 1.0.11 (nombre equivocado): si el núcleo tiembla, están bien.
 
 ## Apéndice A — el GLSL que lleva el mod desde 1.0.3 (revisado en 1.0.8)
 

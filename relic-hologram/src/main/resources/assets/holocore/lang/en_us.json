@@ -22,5 +22,11 @@
   "message.holocore.glsl.on": "on",
   "message.holocore.glsl.config": "off (shaderGlow=false)",
   "message.holocore.glsl.pack": "off (shaderpack active)",
-  "message.holocore.glsl.failed": "off (did not compile, see the log)"
+  "message.holocore.glsl.failed": "off (did not compile, see the log)",
+  "message.holocore.glow": "glow: %s · tint %s",
+  "message.holocore.on": "on",
+  "message.holocore.off": "off",
+  "message.holocore.anim": "Playing %s.",
+  "message.holocore.anim_unknown": "No such animation: %s (try /relic anim list).",
+  "message.holocore.anim_list": "Animations: %s"
 }

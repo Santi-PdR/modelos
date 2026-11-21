@@ -3,6 +3,7 @@ package com.santipdr.holocore.client;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.santipdr.holocore.common.RelicAnimations;
 import com.santipdr.holocore.config.RelicConfig;
 import com.santipdr.holocore.network.RelicActionPacket;
 import com.santipdr.holocore.network.RelicNetwork;
@@ -22,6 +23,9 @@ import net.minecraftforge.common.ForgeConfigSpec;
  * los numeros al archivo; los de accion mandan un paquete al servidor.
  */
 public final class RelicClientCommands {
+
+    /** Prefijo de todas las claves de animacion del modelo. */
+    private static final String ANIM_PREFIX = "animation.relic.";
 
     private RelicClientCommands() {
     }
@@ -80,6 +84,13 @@ public final class RelicClientCommands {
                         RelicActionPacket.Action.PULSE)))
                 .then(Commands.literal("release").executes(ctx -> action(ctx.getSource(),
                         RelicActionPacket.Action.RELEASE)))
+                .then(Commands.literal("anim")
+                        .executes(ctx -> animList(ctx.getSource()))
+                        .then(Commands.argument("nombre", StringArgumentType.word())
+                                .suggests((ctx, builder) ->
+                                        SharedSuggestionProvider.suggest(shortNames(), builder))
+                                .executes(ctx -> anim(ctx.getSource(),
+                                        StringArgumentType.getString(ctx, "nombre")))))
                 .then(Commands.literal("info").executes(ctx -> info(ctx.getSource()))));
     }
 
@@ -103,7 +114,23 @@ public final class RelicClientCommands {
                 .withStyle(ChatFormatting.AQUA);
         source.sendSuccess(() -> message, false);
         source.sendSuccess(RelicClientCommands::diag, false);
+        source.sendSuccess(RelicClientCommands::glowLine, false);
         return 1;
+    }
+
+    /**
+     * Tercera linea de {@code /relic info}: las intensidades que estan mandando
+     * ahora mismo. Sirve para afinar sin abrir el archivo de config.
+     */
+    private static Component glowLine() {
+        String valores = String.format(Locale.ROOT, "aura %.2f · halo %.2f · glsl %.2f · anillo %.2f",
+                RelicConfig.AURA_INTENSITY.get(), RelicConfig.HALO_INTENSITY.get(),
+                RelicConfig.SHADER_INTENSITY.get(), RelicConfig.RING_INTENSITY.get());
+        Component tinte = Component.translatable(RelicConfig.AURA_TINT.get()
+                ? "message.holocore.on"
+                : "message.holocore.off");
+        return Component.translatable("message.holocore.glow", valores, tinte)
+                .withStyle(ChatFormatting.DARK_AQUA);
     }
 
     /**
@@ -136,6 +163,50 @@ public final class RelicClientCommands {
             return Component.translatable("message.holocore.glsl.failed");
         }
         return Component.translatable("message.holocore.glsl.on");
+    }
+
+    /**
+     * Nombres cortos (sin {@code animation.relic.}) para las sugerencias: son las
+     * claves del JSON, que es lo que documenta el README.
+     */
+    private static String[] shortNames() {
+        return RelicAnimations.ALL_NAMES.stream()
+                .map(nombre -> nombre.startsWith(ANIM_PREFIX)
+                        ? nombre.substring(ANIM_PREFIX.length())
+                        : nombre)
+                .toArray(String[]::new);
+    }
+
+    private static int anim(CommandSourceStack source, String nombre) {
+        if (nombre.equalsIgnoreCase("list")) {
+            return animList(source);
+        }
+        Player player = Minecraft.getInstance().player;
+        RelicVisuals.RelicVisual visual = player == null ? null : RelicVisuals.existing(player);
+        if (visual == null) {
+            source.sendFailure(Component.translatable("message.holocore.not_equipped"));
+            return 0;
+        }
+        String completo = nombre.startsWith(ANIM_PREFIX) ? nombre : ANIM_PREFIX + nombre;
+        if (!visual.animatable().play(completo)) {
+            source.sendFailure(Component.translatable("message.holocore.anim_unknown", nombre));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("message.holocore.anim", nombre)
+                .withStyle(ChatFormatting.AQUA), false);
+        return 1;
+    }
+
+    private static int animList(CommandSourceStack source) {
+        String[] nombres = shortNames();
+        // Dos lineas de diez: veinte nombres en una sola se cortan mal en el chat.
+        for (int desde = 0; desde < nombres.length; desde += 10) {
+            String trozo = String.join(", ",
+                    java.util.Arrays.copyOfRange(nombres, desde, Math.min(desde + 10, nombres.length)));
+            source.sendSuccess(() -> Component.translatable("message.holocore.anim_list", trozo)
+                    .withStyle(ChatFormatting.DARK_AQUA), false);
+        }
+        return 1;
     }
 
     private static void set(ForgeConfigSpec.DoubleValue value, double newValue) {

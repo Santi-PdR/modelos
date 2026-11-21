@@ -365,6 +365,31 @@ public final class RelicAnimatable implements GeoAnimatable {
         return IDLE_VARIATIONS[0];
     }
 
+    /**
+     * Reproduce una animacion por su nombre exacto. Lo usa {@code /relic anim}
+     * para poder revisar las 20 sin depender de que un mob te pegue o de esperar
+     * a que salga una variacion de reposo.
+     *
+     * @return {@code false} si el nombre no existe, para que el comando avise
+     */
+    public boolean play(String nombre) {
+        if (!RelicAnimations.ALL_NAMES.contains(nombre)) {
+            return false;
+        }
+        if (isLayer(nombre)) {
+            triggerLayer(nombre);
+        } else {
+            request(nombre);
+        }
+        return true;
+    }
+
+    private static boolean isLayer(String nombre) {
+        return nombre.equals(RelicAnimations.LAYER_HIT)
+                || nombre.equals(RelicAnimations.LAYER_BUMP)
+                || nombre.equals(RelicAnimations.LAYER_SHAKE);
+    }
+
     /** Sube el destello, nunca lo baja: dos golpes seguidos no se apagan entre si. */
     private void boostFlash(float strength) {
         if (strength > this.flash) {

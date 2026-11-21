@@ -240,6 +240,25 @@ jobs:
         working-directory: relic-hologram
         run: python3 tools/check_aura_math.py
 
+      # Un texto nuevo en un idioma y no en el otro sale como clave cruda en el
+      # chat. Es barato comprobarlo aqui.
+      - name: Validate lang parity
+        run: |
+          python3 - <<'PY'
+          import json, pathlib
+
+          base = pathlib.Path('relic-hologram/src/main/resources/assets/holocore/lang')
+          idiomas = {p.stem: json.loads(p.read_text(encoding='utf-8')) for p in base.glob('*.json')}
+          assert 'en_us' in idiomas, sorted(idiomas)
+          referencia = set(idiomas['en_us'])
+          for nombre, claves in idiomas.items():
+              faltan = referencia - set(claves)
+              sobran = set(claves) - referencia
+              assert not faltan, f'{nombre} sin traducir: {sorted(faltan)[:5]}'
+              assert not sobran, f'{nombre} con claves que en_us no tiene: {sorted(sobran)[:5]}'
+          print(f'Idiomas OK: {sorted(idiomas)} con {len(referencia)} claves cada uno.')
+          PY
+
       # ------------------------------------------------------------------
       # RelicAnimations.java se genera desde el manifiesto: si alguien edito a
       # mano un nombre de animacion, aqui se ve.

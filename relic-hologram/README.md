@@ -86,14 +86,21 @@ En el juego:
 | Afinar escala | `/relic scale <0.1–4.0>` |
 | Cambiar de hombro | `/relic side left\|right` |
 | Calidad (full/lite) | `/relic quality full\|lite` |
-| Ver valores actuales | `/relic info` (dos líneas: placement y estado en vivo) |
+| Ver valores actuales | `/relic info` (tres líneas: placement, estado en vivo y brillo) |
+| Probar una animación | `/relic anim <nombre>` · `/relic anim list` |
 
 Los comandos de ajuste son de **cliente** y cambian la config en memoria al
 instante (no la guardan): cuando el núcleo quede donde quieres, copia los
 números de `/relic info` a `config/holocore-client.toml`. La segunda línea de
 `info` dice lo que no se puede adivinar mirando: estado del bucle (`charged`,
-`alert`…), destello actual y por qué el pase GLSL está apagado si lo está
-(`shaderGlow=false`, shaderpack activo o no compiló).
+`alert`…), destello actual, por qué el pase GLSL está apagado si lo está
+(`shaderGlow=false`, shaderpack activo o no compiló) y las intensidades que están
+mandando ahora mismo.
+
+`/relic anim` reproduce cualquiera de las 20 animaciones por su nombre corto
+(`/relic anim layer_shake`, `/relic anim release`, `/relic anim idle_calm`…), así
+que se pueden revisar todas sin depender de que un mob te pegue o de esperar a que
+salga una variación de reposo. Las de bucle se reproducen una vez.
 
 `pulse`, `release` y
 `toggle` sí viajan al servidor, para que el resto de jugadores vea lo mismo. El

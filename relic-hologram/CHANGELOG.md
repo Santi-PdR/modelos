@@ -1,5 +1,18 @@
 # Historial de cambios
 
+## 1.0.14 — banco de pruebas en el chat
+
+* **`/relic anim <nombre>`** reproduce cualquiera de las 20 animaciones por su
+  nombre corto, con sugerencias al tabular y **`/relic anim list`** para verlas
+  todas (dos líneas de diez). Sirve para revisar `layer_shake`, `layer_bump` y
+  `layer_hit` —las que estuvieron rotas hasta 1.0.11— sin esperar a que un mob te
+  pegue. Las de bucle se reproducen una vez.
+* **`/relic info` añade una tercera línea** con las intensidades que están
+  mandando ahora (`aura`, `halo`, `glsl`, `anillo`) y si el tinte está activo, para
+  afinar sin abrir el `.toml`.
+* 6 claves nuevas en `en_us` y `es_es`, y el CI comprueba que los dos idiomas
+  tengan exactamente las mismas claves.
+
 ## 1.0.13 — las constantes del aura, medidas
 
 * Las constantes del pase de tinte ya no son a ojo: `tools/check_aura_math.py`
