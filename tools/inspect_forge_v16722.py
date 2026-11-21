@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 from cape_fit import fixed_wearer_pose
 from preview_cloth import ARMOR_GEO, load
-from verify_v1660 import WornModel, contacts
+from verify_v12000 import WornModel, contacts
 from verify_forge_postures import read_boxes, ACTOR
 
 p=argparse.ArgumentParser()
@@ -31,5 +31,5 @@ sample=np.rint(v[frames][:,:,[0,1,3,4]]*512)
 assert np.abs(sample).max()<32767
 packed=b64encode(zlib.compress(sample.astype('<i2').tobytes(),9)).decode('ascii')
 print(f'::notice title=Referencia {a.slot} resumen::'+json.dumps(dict(frames=list(map(int,frames)),parts=len(names),bytes=len(packed)),separators=(',',':')))
-for i in range(0,len(packed),1660):
- print(f'::notice title=Referencia {a.slot} {i//1660:03d}::{packed[i:i+1660]}')
+for i in range(0,len(packed),12000):
+ print(f'::notice title=Referencia {a.slot} {i//12000:03d}::{packed[i:i+12000]}')
