@@ -38,6 +38,8 @@ compilar, valida que:
 * `RelicAnimations.java` coincide con `tools/relic_manifest.json`
   (`python3 tools/gen_relic_constants.py --check`).
 
+Cambios por versión: [CHANGELOG.md](CHANGELOG.md).
+
 Para publicar el jar como Release: ejecutar el workflow a mano con
 `publicar = true`, o un push cuyo mensaje contenga `[publicar]`.
 
