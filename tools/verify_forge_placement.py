@@ -81,29 +81,45 @@ def front_fabric(root, fixture):
     return count
 
 
+def nape_hair(path):
+    pixels = read(path)
+    h, w = pixels.shape[:2]
+    r,g,b = pixels[round(.33*h):round(.59*h), w//2-round(.18*h):w//2+round(.18*h)].transpose(2,0,1)
+    orange = (r >= 115) & (r-g >= 27) & (g-b >= 22)
+    # Restrict to dark interruptions flanked by hair on the same scanline.
+    inside = np.maximum.accumulate(orange,1) & np.maximum.accumulate(orange[:,::-1],1)[:,::-1]
+    return orange, inside & (r < 95)
+
+
 def nape_recovery(root, baseline):
     """Compare dark breaks inside Alex's orange hair in the same vanilla F5 pose."""
-    def hair(path):
-        pixels = read(path)
-        h, w = pixels.shape[:2]
-        r,g,b = pixels[round(.33*h):round(.59*h), w//2-round(.18*h):w//2+round(.18*h)].transpose(2,0,1)
-        orange = (r >= 115) & (r-g >= 27) & (g-b >= 22)
-        # Restrict to dark interruptions flanked by hair on the same scanline.
-        inside = np.maximum.accumulate(orange,1) & np.maximum.accumulate(orange[:,::-1],1)[:,::-1]
-        return orange, inside & (r < 95)
-
     with (root/'nuca-forge.tsv').open('w') as f:
         print('ranura\tpostura\tfranja_oscura_base_px\tdevueltos_al_pelo_px',file=f)
         for slot in ('pecho','curios'):
             for pose in ('cenital','agachado-cenital'):
                 filename = f'revision-alex-{slot}-{pose}-00.png'
-                _, old = hair(baseline/filename)
-                orange, _ = hair(root/filename)
+                _, old = nape_hair(baseline/filename)
+                orange, _ = nape_hair(root/filename)
                 total, recovered = old.sum(), (old & orange).sum()
                 print(slot,pose,total,recovered,sep='\t',file=f)
                 print(f'::notice title=Nuca en Forge::Alex {slot}/{pose}: {recovered}/{total} píxeles de la franja oscura '
                       'vuelven a mostrar pelo en F5.')
                 assert total >= 30 and recovered >= .65*total, (filename,total,recovered)
+
+
+def nape_retention(root, baseline):
+    with (root/'nuca-forge.tsv').open('w') as f:
+        print('ranura\tpostura\tpelo_base_px\tpelo_conservado_px\toscuros_nuevos_px',file=f)
+        for slot in ('pecho','curios'):
+            for pose in ('cenital','agachado-cenital'):
+                filename = f'revision-alex-{slot}-{pose}-00.png'
+                old, _ = nape_hair(baseline/filename)
+                hair, dark = nape_hair(root/filename)
+                count, kept, loss = old.sum(), (old & hair).sum(), (old & dark).sum()
+                print(slot,pose,count,kept,loss,sep='\t',file=f)
+                print(f'::notice title=Nuca en Forge::{slot}/{pose}: {kept}/{count} píxeles de pelo de la .22; '
+                      f'{loss} oscuros nuevos en el interior.')
+                assert count >= 160 and kept >= .90*count and loss <= max(9,.015*count), (filename,count,kept,loss)
 
 
 def report(root, baseline=None, baseline_version='1.67.20'):
@@ -145,6 +161,11 @@ def report(root, baseline=None, baseline_version='1.67.20'):
             # coverage near the last delivered fit, with a separate fabric gate.
             if baseline_version == '1.67.20':
                 minimum = 1.03 if '-alex-' in fixture else .97
+            elif baseline_version == '1.67.22':
+                minimum = .97
+                old_fabric = front_fabric(baseline,fixture)
+                np.testing.assert_allclose(visible[:,0],old[:,0],atol=8,rtol=.025,err_msg=fixture)
+                np.testing.assert_allclose(fabric,old_fabric,atol=8,rtol=.045,err_msg=fixture)
             else:
                 minimum = .85
                 assert min(visible[:,0]/old[:,0]) >= .80, (fixture,'disminuyó demasiado una placa',visible,old)
@@ -165,6 +186,8 @@ def report(root, baseline=None, baseline_version='1.67.20'):
             print(fixture,left,right,*(f'{x:.3f}' for x in seams),sep='\t',file=f)
     if baseline is not None and baseline_version == '1.67.21':
         nape_recovery(root,baseline)
+    if baseline is not None and baseline_version == '1.67.22':
+        nape_retention(root,baseline)
 
 
 def comparison(root, baseline, baseline_version='1.67.20'):

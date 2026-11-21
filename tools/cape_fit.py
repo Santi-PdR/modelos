@@ -298,6 +298,41 @@ def hood_moves(name):
     return name.startswith(('v17_cowl_back_', 'v17_cowl_front_'))
 
 
+def hood_aim(up, yaw, lean):
+    if not all(math.isfinite(v) for v in (up,yaw,lean)):
+        return 0.
+    h = hood_profile()
+    return (h['LOOK_FOLD'] * smooth(h['LOOK_START'],h['LOOK_FULL'],up)
+            * (1-smooth(h['TURN_START'],h['TURN_END'],abs(math.remainder(yaw,360.))))
+            * (1-smooth(h['LEAN_START'],h['LEAN_END'],abs(lean))))
+
+
+@lru_cache(maxsize=1)
+def sprint_edge_profile():
+    code = SOURCE.with_name('CapeSprintEdge.java').read_text()
+    return {key: list(map(float,re.search(r'\b'+key+r' = \{([^}]+)\}',code)[1].split(',')))
+            for key in ('EDGE_WEIGHT','INBOARD','TRAIL')}
+
+
+@lru_cache(maxsize=None)
+def sprint_edge_offset(name, parent):
+    if parent not in ('cape_top','cape_mid','cape_bottom'):
+        return None
+    match = re.fullmatch(r'v17_ribbon_(\d+)_seg([1-4])',name)
+    if match is None:
+        return None
+    rib, seg = map(int,match.groups())
+    e = sprint_edge_profile()
+    half = len(e['EDGE_WEIGHT'])
+    if rib >= 2*half:
+        return None
+    weight = e['EDGE_WEIGHT'][min(rib,2*half-1-rib)]
+    if weight == 0:
+        return None
+    sign = -1 if rib < half else 1
+    return (sign*weight*e['INBOARD'][seg],0,weight*e['TRAIL'][seg])
+
+
 def hood_pose(ticks, stride, pace, turn=0., side=0., seed=0):
     h = hood_profile()
     breathe = math.sin(h['BREATH_RATE']*ticks + h['BREATH_OFFSET']*seed)
@@ -307,7 +342,8 @@ def hood_pose(ticks, stride, pace, turn=0., side=0., seed=0):
             h['SIDE_ROLL']*side - h['TURN_ROLL']*turn + h['ROCK_ROLL']*pace*math.sin(step))
 
 
-def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False, hood=None):
+def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False, hood=None,
+                     look=0., turn=0., sprint_edge=0.):
     f = mount_profile()
     names = {b['name'] for b in geo['bones']}
     fixed = G.FIT_BONE in names and G.GUSSET_BONE in names
@@ -330,6 +366,7 @@ def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False, hoo
     if flex:
         h = hood_profile()
         pitch,yaw,roll = hood if hood is not None else (h['REST_PITCH'],0.,0.)
+        pitch += hood_aim(look,turn,stance*profile()['bodyAngle'])
         bones.append(dict(name='worn_hood',parent=G.FIT_BONE,pivot=[0.,h['PIVOT_Y'],h['PIVOT_Z']],
                           offset=[0.,0.,h['SET_BACK']],rotation=[-pitch,-yaw,roll],cubes=[]))
     for b in geo['bones']:
@@ -337,6 +374,10 @@ def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False, hoo
         piece = dict(b,**changes.get(n,{}))
         if flex and piece.get('parent') == G.FIT_BONE and hood_moves(n):
             piece['parent'] = 'worn_hood'
+        if flex and sprint_edge > 0 and (edge := sprint_edge_offset(n,piece.get('parent'))) is not None:
+            # The bake mirrors X; Offset is defined in the post-bake axes.
+            x,y,z = piece.get('offset',(0.,0.,0.))
+            piece['offset'] = [x-sprint_edge*edge[0],y,z+sprint_edge*edge[2]]
         if (flex and n in B.profile()['names'] and piece.get('parent') == seat and 'LINING_LIP_CUBE' in f
                 and len(piece.get('cubes', ())) == f['LINING_CUBES']):
             piece['cubes'] = [cube for i, cube in enumerate(piece['cubes']) if i != f['LINING_LIP_CUBE']]
@@ -355,6 +396,7 @@ def viewer_profile(*, placed=False):
     if placed:
         fit['mount'] = mount_profile()
         fit['hood'] = hood_profile()
+        fit['sprintEdge'] = sprint_edge_profile()
     return fit
 
 
@@ -362,7 +404,7 @@ def wearer_pose(geo, stance, pitch, yaw, *, legacy=False, elytra=False, arm_back
                 plates=True, arm_effort=None, torso=True, placed=False, slim=False):
     """Bake the worn frame, not keyframes. Historical checks use placed=False."""
     if placed and not legacy:
-        return fixed_wearer_pose(geo,stance,elytra=elytra,plates=plates,slim=slim)
+        return fixed_wearer_pose(geo,stance,elytra=elytra,plates=plates,slim=slim,look=pitch,turn=yaw)
     changes = {'chestplate': dict(rotation=[stance*profile()['bodyAngle'], 0., 0.],
                                   offset=[0., -3.2*stance, 0.])}
     shape = (0.,None,None,None,None,None)

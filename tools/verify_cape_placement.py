@@ -15,7 +15,7 @@ import numpy as np
 import armor_model_pipeline as G
 import cape_animation_pipeline as A
 import cape_fit as F
-from cape_contact import back_and_sleeves, original_dimensions, shoulder_seams
+from cape_contact import back_and_sleeves, lap as group_lap, original_dimensions, shoulder_seams
 import cape_tracks as T
 import preview_cloth as P
 from bbmodel_export import DOC
@@ -80,11 +80,12 @@ def parity(geo, java_samples=None):
             aim = [body,pitch,yaw,wings,arm,arm,slim]
             frame = P.matrices(F.wearer_pose(geo,body,pitch,yaw,elytra=wings,arm_back=arm,placed=True,slim=slim))
             for name in base:
-                np.testing.assert_array_equal(frame[name],base[name],err_msg=f'{name}: {aim}')
+                if wings or (name != 'worn_hood' and not F.hood_moves(name)):
+                    np.testing.assert_array_equal(frame[name],base[name],err_msg=f'{name}: {aim}')
             cases.append(aim)
             expected.append([frame[n].ravel() for n in parts])
     np.testing.assert_allclose(viewer(geo=geo,torsoMatrices=cases,parts=parts),expected,atol=5e-9,rtol=0)
-    print(f'{len(cases)} poses coinciden con el visor y no dependen de la cabeza.'
+    print(f'{len(cases)} poses coinciden con el visor; la mirada sólo mueve el borde alto de la capucha.'
           + (' Perfil fijo de Java verificado.' if java_samples else ''),flush=True)
 
 
@@ -109,6 +110,75 @@ def hood_parity(geo, java_samples=None):
         expected.append([*pose, *[v for n in parts for v in model[n].ravel()]])
     np.testing.assert_allclose(viewer(geo=geo,hoodSamples=case,parts=parts),expected,atol=5e-9,rtol=0)
     print(f'{len(case)} poses de capucha: sólo gira el borde alto, sin mover el asiento ni alterar los élitros.',flush=True)
+
+
+def clearance_parity(geo, java_look=None, java_edge=None):
+    aims = list(product((-79.,21.,39.,64.,89.),(-390.,-55.,0.,55.,90.),(0.,6.,28.65)))
+    offsets = list(product(range(12),range(7)))
+    if java_look:
+        rows = np.loadtxt(java_look)
+        aims = rows[:,:3].tolist()
+        np.testing.assert_allclose(rows[:,3],[F.hood_aim(*a) for a in aims],atol=1e-10,rtol=0)
+
+    def edge(ribbon, segment):
+        return F.sprint_edge_offset(f'v17_ribbon_{ribbon}_seg{segment}','cape_top') or (0.,0.,0.)
+
+    expected = np.array([edge(*a) for a in offsets])
+    if java_edge:
+        rows = np.loadtxt(java_edge)
+        np.testing.assert_array_equal(rows[:,:2],offsets)
+        np.testing.assert_allclose(rows[:,2:],expected[:,[0,2]],atol=1e-10,rtol=0)
+    np.testing.assert_allclose(viewer(lookClearanceSamples=aims),[F.hood_aim(*a) for a in aims],atol=1e-10,rtol=0)
+    np.testing.assert_allclose(viewer(sprintEdgeSamples=offsets),expected,atol=1e-10,rtol=0)
+
+    rig = WornModel(F.fixed_wearer_pose(geo,0.,slim=True))
+    names = np.asarray(rig.names)
+    moving = np.array([F.hood_moves(n) for n in names])
+    collar = np.char.startswith(names,'v17_cowl_') | np.char.startswith(names,'v19_cuellito_')
+    support = (collar & ~moving) | (names == G.SADDLE_BONE) | (names == G.SHOULDERS_BONE)
+    old = rig.place(P.matrices(F.fixed_wearer_pose(geo,0.,slim=True)))
+    new = rig.place(P.matrices(F.fixed_wearer_pose(geo,0.,slim=True,look=64.)))
+    solid = (P.CORNERS*8+[-4,0,-4]) @ P.R('x',64)[:3,:3].T + F.HEAD_PIVOT
+    assert group_lap(new[collar],solid[None]) <= .70 * group_lap(old[collar],solid[None])
+    for look,yaw in product(range(0,91,5),range(-75,76,15)):
+        v = rig.place(P.matrices(F.fixed_wearer_pose(geo,0.,look=look,turn=yaw,slim=True)))
+        for sign in (-1,1):
+            side = old[:,:,0].mean(1)*sign > 0
+            assert group_lap(v[moving & side],v[support]) > .14, (look,yaw,'capucha separada')
+
+    clip = json.loads(A.ANIM.read_text())['animations']['animation.sprint']
+    track = T.prepare_clip(clip)
+    parts = ['cape_top','cape_mid','cape_bottom',G.SHOULDERS_BONE,'v17_cowl_back_3',
+             'v17_ribbon_0_seg0','v17_ribbon_1_seg1','v17_ribbon_3_seg2','v17_ribbon_7_seg2','v17_ribbon_10_seg4']
+    cases, transforms = [], []
+    for i in range(36):
+        phase = i/36
+        frame = P.pose_at(geo,track,phase * clip['animation_length'])
+        by = {b['name']:b for b in frame['bones']}
+        top,mid = (by[n]['rotation'] for n in ('cape_top','cape_mid'))
+        arm,leg = S.demand(0.,*S.gait(phase,1.))
+        # Use the sprint envelope even between footfalls in this synthetic rig.
+        dx,dy = S.lifts(top[0],mid[0],max(arm,52.),max(leg,73.),0.,0.)
+        top[0] += dx
+        mid[0] += dy
+        base = P.matrices(F.fixed_wearer_pose(frame,0.,slim=True))
+        for amount in (.25,.5,1.):
+            posed = P.matrices(F.fixed_wearer_pose(frame,0.,slim=True,sprint_edge=amount))
+            for n in base:
+                if F.sprint_edge_offset(n,by.get(n,{}).get('parent')) is None:
+                    np.testing.assert_array_equal(posed[n],base[n],err_msg=f'el borde sprint desplazó {n}')
+            seam,roots = rig.joins(rig.place(posed))
+            assert seam > .038 and roots > .025, (phase,amount,seam,roots)
+        wing = P.matrices(F.fixed_wearer_pose(frame,0.,elytra=True,slim=True))
+        fitted = P.matrices(F.fixed_wearer_pose(frame,0.,elytra=True,slim=True,look=64.,sprint_edge=1.))
+        for n in wing:
+            np.testing.assert_array_equal(wing[n],fitted[n],err_msg=f'cambió el ajuste de élitros: {n}')
+        if i%9 == 0:
+            cases.append([frame,.0,64.,12.,False,True,.75])
+            result = P.matrices(F.fixed_wearer_pose(frame,0.,slim=True,look=64.,turn=12.,sprint_edge=.75))
+            transforms.append([result[n].ravel() for n in parts])
+    np.testing.assert_allclose(viewer(clearanceMatrices=cases,parts=parts),transforms,atol=5e-9,rtol=0)
+    print(f'Holgura equipada: {len(aims)} miradas, {len(offsets)} tramos y 108 poses de carrera; raíces y élitros intactos.',flush=True)
 
 
 def lining_parity(geo):
@@ -209,6 +279,8 @@ if __name__=='__main__':
     ap.add_argument('--jar',type=Path)
     ap.add_argument('--java-samples',type=Path)
     ap.add_argument('--hood-samples',type=Path)
+    ap.add_argument('--look-samples',type=Path)
+    ap.add_argument('--edge-samples',type=Path)
     ap.add_argument('--assets-only',action='store_true')
     args = ap.parse_args()
     asset_contract(args.jar)
@@ -216,5 +288,6 @@ if __name__=='__main__':
         geo = P.load(P.ARMOR_GEO)
         parity(geo,args.java_samples)
         hood_parity(geo,args.hood_samples)
+        clearance_parity(geo,args.look_samples,args.edge_samples)
         lining_parity(geo)
         exercise(geo)

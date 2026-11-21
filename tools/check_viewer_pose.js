@@ -55,6 +55,18 @@ const matrices = vm.runInContext(`${src}
         return [...pose,...parts.flatMap(n=>m[n])];
       });
     }
+    if (indata.lookClearanceSamples) {
+      return indata.lookClearanceSamples.map(args=>hoodAim(indata.fit.hood,...args));
+    }
+    if (indata.sprintEdgeSamples) {
+      return indata.sprintEdgeSamples.map(([r,s])=>sprintEdgeOffset(indata.fit.sprintEdge,'v17_ribbon_'+r+'_seg'+s,'cape_top') || [0,0,0]);
+    }
+    if (indata.clearanceMatrices) {
+      return indata.clearanceMatrices.map(([geo,stance,look,turn,wings,slim,amount])=>{
+        const m=matrices(wearerPose(geo,indata.fit,stance,look,turn,wings,0,0,slim,undefined,amount));
+        return indata.parts.map(n=>m[n]);
+      });
+    }
     if (indata.torsoMatrices) {
       return indata.torsoMatrices.map(aim => {
         const model=matrices(wearerPose(indata.geo,indata.fit,...aim));

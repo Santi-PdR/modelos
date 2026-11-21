@@ -2,6 +2,7 @@ package com.capatest.client;
 
 import com.capatest.CapaTestMod;
 import com.capatest.item.CapaDeteriorerItem;
+import com.capatest.item.CapeState;
 import com.google.gson.JsonParseException;
 import net.minecraft.client.player.RemotePlayer;
 import net.minecraft.resources.ResourceLocation;
@@ -73,9 +74,11 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     private double bodyPitch;
     private double wingGoal;
     private CapeHood.Pose hood = CapeHood.REST;
+    private double sprintEdge;
     private boolean disabled;
 
     CapeHood.Pose hood() { return hood; }
+    double sprintEdge() { return sprintEdge; }
 
     void setClearancePose(double arm, double leg, double pitch, double wingGoal) {
         this.armBack = arm;
@@ -109,6 +112,8 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
 
     @Override
     public void handleAnimations(CapaDeteriorerItem item, long instanceId, AnimationState<CapaDeteriorerItem> state) {
+        // No fit from a previous wearer if this rig or clip is unsupported.
+        sprintEdge = 0;
         if (!(state.getData(DataTickets.ENTITY) instanceof LivingEntity wearer) || !resolveRig()) {
             super.handleAnimations(item, instanceId, state);
             return;
@@ -164,6 +169,9 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             if (coordinated) hood = CapeHood.pose(motion.time(), motion.stride(), motion.amplitude() * motion.ground(),
                     response.turnAt(.16), response.sideAt(.12), wearer.getId());
             applyClearance(coordinated ? motion : null);
+            // Same continuous blend as the authored sprint, including starts
+            // and stops. Do not push the cloth with each immediate arm swing.
+            if (coordinated) sprintEdge = motion.weight(CapeState.SPRINT);
         } catch (Exception | LinkageError error) {
             disabled = true;
             CapaTestMod.LOGGER.error("Blight Star Mantle: respuesta del paño desactivada; se conservan los clips", error);

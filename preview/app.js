@@ -269,14 +269,32 @@ function hoodPose(h,ticks,stride,pace,turn=0,side=0,seed=0) {
           h.SIDE_ROLL*side-h.TURN_ROLL*turn+h.ROCK_ROLL*pace*Math.sin(step)];
 }
 
-function fixedWearerPose(geo, profile, stance, elytra, slim, hood) {
+function hoodAim(h, up, yaw, lean) {
+  if (!h?.LOOK_FOLD || ![up,yaw,lean].every(Number.isFinite)) return 0;
+  const turn=Math.abs(((yaw%360+540)%360)-180);
+  return h.LOOK_FOLD*smooth(h.LOOK_START,h.LOOK_FULL,up)*
+    (1-smooth(h.TURN_START,h.TURN_END,turn))*(1-smooth(h.LEAN_START,h.LEAN_END,Math.abs(lean)));
+}
+
+function sprintEdgeOffset(e, name, parent) {
+  if (!e || !['cape_top','cape_mid','cape_bottom'].includes(parent)) return null;
+  const hit=/^v17_ribbon_(\d+)_seg([1-4])$/.exec(name);
+  if (!hit) return null;
+  const [,r,seg]=hit, half=e.EDGE_WEIGHT.length;
+  const weight=e.EDGE_WEIGHT[Math.min(+r,2*half-1-r)];
+  if (!weight) return null;
+  return [(r<half ? -1 : 1)*weight*e.INBOARD[seg],0,weight*e.TRAIL[seg]];
+}
+
+function fixedWearerPose(geo, profile, stance, elytra, slim, hood, look=0, turn=0, edgeAmount=0) {
   const f=profile.mount;
   const fixed=geo.bones.some(b=>b.name===profile.bone) && geo.bones.some(b=>b.name===profile.gussetBone);
   const a=profile.backing, h=profile.hood, bones=[];
   if (fixed && !elytra && h) {
     const [pitch,yaw,roll]=hood || [h.REST_PITCH,0,0];
+    const extra=hoodAim(h,look,turn,stance*profile.bodyAngle);
     bones.push({name:'worn_hood',parent:profile.bone,pivot:[0,h.PIVOT_Y,h.PIVOT_Z],
-      offset:[0,0,h.SET_BACK],rotation:[-pitch,-yaw,roll],cubes:[]});
+      offset:[0,0,h.SET_BACK],rotation:[-pitch-extra,-yaw,roll],cubes:[]});
   }
   for (let piece of geo.bones) {
     const name=piece.name, half=a.names.indexOf(name);
@@ -286,6 +304,11 @@ function fixedWearerPose(geo, profile, stance, elytra, slim, hood) {
     if (!elytra && fixed && h && name==='v20_mount_shoulders') piece={...piece,offset:[0,f.SHOULDER_LIFT,-f.SHOULDER_FORWARD]};
     if (!elytra && fixed && h && piece.parent===profile.bone && /^v17_cowl_(back|front)_/.test(name))
       piece={...piece,parent:'worn_hood'};
+    const edge=!elytra && fixed && edgeAmount>0 && sprintEdgeOffset(profile.sprintEdge,name,piece.parent);
+    if (edge) {
+      const [x,y,z]=piece.offset || [0,0,0];
+      piece={...piece,offset:[x-edge[0]*edgeAmount,y,z+edge[2]*edgeAmount]};
+    }
     if (!elytra && fixed && half>=0 && piece.parent===profile.seat.frame &&
         f.LINING_LIP_CUBE!==undefined && piece.cubes?.length===f.LINING_CUBES)
       piece={...piece,cubes:piece.cubes.filter((_,i)=>i!==f.LINING_LIP_CUBE)};
@@ -309,8 +332,8 @@ function fixedWearerPose(geo, profile, stance, elytra, slim, hood) {
   return {...geo,bones};
 }
 
-function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm, slim=false, hood) {
-  if (profile.mount) return fixedWearerPose(geo,profile,stance,elytra,slim,hood);
+function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm, slim=false, hood, edgeAmount=0) {
+  if (profile.mount) return fixedWearerPose(geo,profile,stance,elytra,slim,hood,look,turn,edgeAmount);
   const depth=backset(profile,stance,look,turn);
   const anchor = profile.backing;
   const seat = profile.seat;
@@ -879,6 +902,7 @@ function draw(now) {
   const stridePhase=gait ? elapsed*(.8+.95*amplitude) : clipTime/clip.length;
   const pace=gait ? amplitude : motionState==='animation.sprint' ? 1 : motionState==='animation.moving' ? .7 : 0;
   const hood=FIT.hood && hoodPose(FIT.hood,elapsed*20,stridePhase,pace);
+  const sprintEdge=motionState==='animation.sprint' ? smooth(.04,.53,pace) : 0;
   const backArm=Math.max(...(gait?.arms || [0,0]).map(
     a=>Math.asin(Math.sin(a*Math.PI/180+stance*.4))*180/Math.PI));
   const armEffort=Math.max(backArm,...(gait?.arms || [0,0]).map(a=>Math.abs(a+stance*FIT.bodyAngle)));
@@ -886,7 +910,7 @@ function draw(now) {
   const guide=wingPose ? wingGoal(WINGS,wingPose[0],wingPose[2],FIT.bodyAngle*stance,depth) : 0;
   const fit=(pose, goal)=>{
     if (clearanceGait || goal>0) pose=clearancePose(pose,clearanceGait,stance,depth,goal);
-    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn,!!wingPose,backArm,armEffort,false,hood),hidden);
+    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn,!!wingPose,backArm,armEffort,false,hood,sprintEdge),hidden);
   };
   const drift=demo ? swayPose(base,SWAY,t) : null;
   const current=drift && swayFit.checked ? drift : base;

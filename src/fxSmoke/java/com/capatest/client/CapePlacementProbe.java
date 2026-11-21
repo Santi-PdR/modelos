@@ -17,6 +17,7 @@ import net.minecraftforge.client.event.ViewportEvent;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import software.bernie.geckolib.cache.object.GeoBone;
+import software.bernie.geckolib.cache.object.GeoCube;
 import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 import software.bernie.geckolib.util.RenderUtils;
 
@@ -37,7 +38,8 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     private final Map<String, List<Vector3f>> rigid = new LinkedHashMap<>();
     private final Map<GeoBone, Matrix4f> solid = new LinkedHashMap<>();
     private final List<GeoBone> tracked = new ArrayList<>();
-    private final StringBuilder faces = new StringBuilder(), boxes = new StringBuilder();
+    private final Map<String, Matrix4f> sections = new LinkedHashMap<>();
+    private final StringBuilder faces = new StringBuilder(), boxes = new StringBuilder(), withoutEdge = new StringBuilder();
     private boolean measuringContact;
     private boolean measuringMotion;
     private boolean active;
@@ -90,10 +92,12 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         p.projection = new Matrix4f(RenderSystem.getProjectionMatrix()).mul(RenderSystem.getModelViewMatrix());
         p.rigid.clear();
         p.solid.clear();
+        p.sections.clear();
         p.faces.setLength(0);
         p.boxes.setLength(0);
+        p.withoutEdge.setLength(0);
         for (var registered : renderer.getGeoModel().getAnimationProcessor().getRegisteredBones()) {
-            if (!(registered instanceof GeoBone b) || !tracked(b.getName())) continue;
+            if (!(registered instanceof GeoBone b) || !(tracked(b.getName()) || measureMotion && sprintEdge(b) != null)) continue;
             if (plate(b.getName())) b.setHidden(hidePlates);
             if (CapeFit.SHOULDERS_BONE.equals(b.getName())) b.setHidden(hideShoulderCloth);
             b.setTrackingMatrices(true);
@@ -110,15 +114,35 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             inverseChest = new Matrix4f(pose.last().pose()).invert();
             return;
         }
+        if (measuringMotion && (n.equals("cape_top") || n.equals("cape_mid") || n.equals("cape_bottom"))) {
+            sections.put(n, new Matrix4f(pose.last().pose()));
+            return;
+        }
         boolean rigidPiece = tracked(n);
         boolean sewnRoot = measuringContact && n.startsWith("v17_ribbon_") && n.endsWith("_seg0");
         if ((!rigidPiece && !sewnRoot && !measuringMotion)
                 || (!anchor(n) && (bone.isHidden() || bone.getCubes().isEmpty()))) return;
         require(inverseChest != null, "missing live torso transform");
         List<Vector3f> points = new ArrayList<>();
-        if (rigidPiece) {
+        var edge = measuringMotion ? sprintEdge(bone) : null;
+        if (rigidPiece || edge != null)
             require(solid.put(bone, new Matrix4f(bone.getModelSpaceMatrix())) == null, "cape piece drawn twice: " + n);
-            rigid.put(n, points);
+        if (rigidPiece) rigid.put(n, points);
+        PoseStack control = null;
+        if (edge != null && renderer.sprintEdge() > 0) {
+            // A/B at the same animation time and limb pose: rebuild only this
+            // leaf from its live parent without the render-time edge offset.
+            var parent = sections.get(bone.getParent().getName());
+            require(parent != null, "missing sleeve-control section: " + n);
+            control = new PoseStack();
+            control.last().pose().set(parent);
+            RenderUtils.prepMatrixForBone(control, bone);
+            var expected = new PoseStack();
+            double amount = renderer.sprintEdge();
+            expected.last().pose().set(parent).translate((float) (amount * edge.x() / 16), 0,
+                    (float) (amount * edge.z() / 16));
+            RenderUtils.prepMatrixForBone(expected, bone);
+            require(expected.last().pose().equals(pose.last().pose(), .0001F), "wrong live edge fit: " + n);
         }
         if (anchor(n)) {
             // The basis of each empty attachment bone, before the real animated cloth.
@@ -132,9 +156,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             var cube = bone.getCubes().get(i);
             pose.pushPose();
             try {
-                RenderUtils.translateToPivotPoint(pose, cube);
-                RenderUtils.rotateMatrixAroundCube(pose, cube);
-                RenderUtils.translateAwayFromPivotPoint(pose, cube);
+                cubePose(pose, cube);
                 var model = new Matrix4f(inverseChest).mul(pose.last().pose());
                 var clip = new Matrix4f(projection).mul(pose.last().pose());
                 var lo = new Vector3f(Float.POSITIVE_INFINITY);
@@ -153,13 +175,33 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                         quad(faces, n, clip, verts[0].position(), verts[1].position(), verts[2].position(), verts[3].position());
                 }
                 if (measuringContact) box(boxes, n, model, lo, hi);
+                if (control != null) {
+                    control.pushPose();
+                    try {
+                        cubePose(control, cube);
+                        box(withoutEdge, n, new Matrix4f(inverseChest).mul(control.last().pose()), lo, hi);
+                    } finally {
+                        control.popPose();
+                    }
+                }
             } finally {
                 pose.popPose();
             }
         }
     }
 
-    record Draw(Map<String,List<Vector3f>> rigid, String faces, String boxes, float pitch, float yaw) {}
+    private static CapeSprintEdge.Offset sprintEdge(GeoBone bone) {
+        return bone.getParent() == null ? null : CapeSprintEdge.offset(bone.getName(), bone.getParent().getName());
+    }
+
+    private static void cubePose(PoseStack pose, GeoCube cube) {
+        RenderUtils.translateToPivotPoint(pose, cube);
+        RenderUtils.rotateMatrixAroundCube(pose, cube);
+        RenderUtils.translateAwayFromPivotPoint(pose, cube);
+    }
+
+    record Draw(Map<String,List<Vector3f>> rigid, String faces, String boxes, float pitch, float yaw,
+                double hoodClearance, String withoutEdge) {}
 
     static Draw finish(CapaArmorRenderer renderer, PoseStack armor, PlayerModel<?> player) {
         var p = of(renderer);
@@ -193,7 +235,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             p.playerPart(copy, player.rightLeg, "right_leg", 0, false);
         }
         return new Draw(Map.copyOf(p.rigid), p.faces.toString(), p.boxes.toString(), (float) Math.toDegrees(player.head.xRot),
-                (float) Math.toDegrees(player.head.yRot));
+                (float) Math.toDegrees(player.head.yRot), renderer.hoodClearance(), p.withoutEdge.toString());
     }
 
     private void playerPart(PoseStack stack, ModelPart part, String name, float inflate, boolean sleeve) {
@@ -270,8 +312,8 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 new Phase("agachado-cenital", 79, 22, true, false, true, 8),
                 new Phase("carrera", 0, 0, false, true, false, 24));
         private final StringBuilder trace = new StringBuilder(
-                "sample\tphase\ttick\tpose\tsprint\tspeed\tpitch\tyaw\tvanilla\tcamera_pitch\tcamera_yaw\timage\n");
-        private final StringBuilder boxes = new StringBuilder();
+                "sample\tphase\ttick\tpose\tsprint\tspeed\tpitch\tyaw\tvanilla\tcamera_pitch\tcamera_yaw\tpliegue\timage\n");
+        private final StringBuilder boxes = new StringBuilder(), withoutEdge = new StringBuilder();
         private int phase, frame, sample;
         private int start = -1, lastTick = -1;
 
@@ -337,8 +379,9 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                     .append('\t').append(p.getPose().name()).append('\t').append(p.isSprinting())
                     .append('\t').append(speed).append('\t').append(draw.pitch()).append('\t').append(draw.yaw())
                     .append('\t').append(q.vanillaCamera()).append('\t').append(cam.getXRot())
-                    .append('\t').append(cam.getYRot()).append('\t').append(image).append('\n');
+                    .append('\t').append(cam.getYRot()).append('\t').append(draw.hoodClearance()).append('\t').append(image).append('\n');
             draw.boxes().lines().forEach(box -> boxes.append(sample).append('\t').append(box).append('\n'));
+            draw.withoutEdge().lines().forEach(box -> withoutEdge.append(sample).append('\t').append(box).append('\n'));
             sample++;
             lastTick = p.tickCount;
             if (++frame < q.samples()) return false;
@@ -352,6 +395,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             p.setSprinting(false);
             Files.writeString(root.resolve(name + "-posturas.tsv"), trace);
             Files.writeString(root.resolve(name + "-cubos.tsv"), boxes);
+            Files.writeString(root.resolve(name + "-sin-holgura-brazos.tsv"), withoutEdge);
             return true;
         }
     }

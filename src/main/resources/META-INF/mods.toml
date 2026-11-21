@@ -9,7 +9,7 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.67.22: hombros mejor unidos al cuello y nuca despejada, en pecho y Curios.
+v1.67.23: más holgura al mirar arriba y en carrera, en pecho y Curios.
 El icono de referencia pulsa en la hotbar. Se conservan los ocho clips,
 la holgura con élitros, la inercia del paño, el halo nocturno y las brasas.
 '''

@@ -28,6 +28,10 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private boolean elytra;
     private boolean armorPassSubmitted;
     private boolean sampleFit;
+    private double hoodClearance;
+
+    double hoodClearance() { return hoodClearance; }
+    double sprintEdge() { return mountInChest && !elytra ? capeModel.sprintEdge() : 0; }
 
     public CapaArmorRenderer() {
         this(new CapaArmorModel(new ResourceLocation(CapaTestMod.MOD_ID, "armor/capa_deteriorer_evilsaiyan")));
@@ -107,8 +111,12 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         double arm = backArm(model);
         double leg = Math.max(CapeStride.backDegrees(model.leftLeg.xRot, model.leftLeg.yRot),
                 CapeStride.backDegrees(model.rightLeg.xRot, model.rightLeg.yRot));
-        // Locomotion and wing clearance still work. No camera or head
-        // angles enter the mount, plate positions, or drape clearance.
+        // Only the upper hood uses aim. The mount, plates and paño don't
+        // follow the head, and the separate Elytra fit is not affected.
+        boolean upright = player != null && !player.isFallFlying() && !player.isSwimming() && !player.isPassenger();
+        hoodClearance = mountInChest && !elytra && upright
+                ? CapeHood.lookClearance(-Math.toDegrees(model.head.xRot),
+                        Math.toDegrees(model.head.yRot - model.body.yRot), Math.toDegrees(model.body.xRot)) : 0;
         double wings = elytra ? CapeWingFit.topGoal(Math.toDegrees(player.elytraRotX), Math.toDegrees(player.elytraRotZ),
                 Math.toDegrees(model.body.xRot), 0) : 0;
         capeModel.setClearancePose(arm, leg, model.body.xRot, wings);
@@ -128,9 +136,12 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         boolean saddle = mountInChest && CapeMountPlacement.SADDLE_BONE.equals(name);
         boolean shoulder = (mountInChest || elytra) && CapeFit.SHOULDERS_BONE.equals(name);
         boolean underYoke = elytra && CapeFit.UNDER_YOKE_BONE.equals(name);
+        GeoBone parent = bone.getParent();
         boolean hood = mountInChest && !elytra && CapeHood.moves(name)
-                && bone.getParent() != null && CapeFit.BONE.equals(bone.getParent().getName());
-        boolean fitted = seat || backing || saddle || shoulder || underYoke || hood;
+                && parent != null && CapeFit.BONE.equals(parent.getName());
+        double sprint = sprintEdge();
+        var edge = sprint > 0 && parent != null ? CapeSprintEdge.offset(name, parent.getName()) : null;
+        boolean fitted = seat || backing || saddle || shoulder || underYoke || hood || edge != null;
         if (fitted) poseStack.pushPose();
         try {
             if (seat) {
@@ -147,8 +158,11 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                 poseStack.translate(0, y, z + CapeHood.SET_BACK / 16);
                 poseStack.mulPose(Axis.ZP.rotationDegrees((float) fold.roll()));
                 poseStack.mulPose(Axis.YP.rotationDegrees((float) fold.yaw()));
-                poseStack.mulPose(Axis.XP.rotationDegrees((float) fold.pitch()));
+                poseStack.mulPose(Axis.XP.rotationDegrees((float) (fold.pitch() + hoodClearance)));
                 poseStack.translate(0, -y, -z);
+            } else if (edge != null) {
+                // Render-only offset in the section frame, identical in cutout and glow.
+                poseStack.translate(sprint * edge.x() / 16, 0, sprint * edge.z() / 16);
             } else if (shoulder && !elytra) {
                 poseStack.translate(0, CapeMountPlacement.SHOULDER_LIFT / 16, -CapeMountPlacement.SHOULDER_FORWARD / 16);
             } else if (fitted) {

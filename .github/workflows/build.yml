@@ -27,7 +27,7 @@ jobs:
     # La rama de artefactos (artifacts/vX.Y.Z) SOLO guarda el .jar. Si el
     # workflow corriera tambien sobre ella, cada push re-construiria el
     # mod entero para nada. Aqui se salta ese run.
-    if: ${{ !startsWith(github.ref, 'refs/heads/artifacts/') && !contains(github.event.head_commit.message, '[inspeccionar-v16722]') }}
+    if: ${{ !startsWith(github.ref, 'refs/heads/artifacts/') }}
 
     steps:
       - name: Checkout
@@ -783,12 +783,15 @@ jobs:
           CLASSES="$RUNNER_TEMP/cape-state-test"
           mkdir -p "$CLASSES"
           javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/{CapeState,CapePlayback,CapeSparkFrame}.java \
-            src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeBacking,CapePlateFit,CapeTorsoFit,CapeMountPlacement,CapeStride,CapeTint,CapeEmber,CapeNocturne,CapeWingFit,CapeWornMotion,CapeHood}.java \
+            src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeBacking,CapePlateFit,CapeTorsoFit,CapeMountPlacement,CapeStride,CapeTint,CapeEmber,CapeNocturne,CapeWingFit,CapeWornMotion,CapeHood,CapeSprintEdge}.java \
             src/test/java/com/capatest/item/{CapeStateTest,CapeSparkFrameTest}.java \
-            src/test/java/com/capatest/client/{CapeFitTest,CapeMountPlacementTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeSettleTest,CapeSwayTest,CapeWingFitTest,CapeWornMotionTest,CapeHoodTest}.java
+            src/test/java/com/capatest/client/{CapeFitTest,CapeMountPlacementTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeSettleTest,CapeSwayTest,CapeWingFitTest,CapeWornMotionTest,CapeHoodTest,CapeSprintEdgeTest}.java
           java -cp "$CLASSES" com.capatest.client.CapeMountPlacementTest --samples > "$CLASSES/placement.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeHoodTest --samples > "$CLASSES/hood.tsv"
-          OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_placement.py --java-samples "$CLASSES/placement.tsv" --hood-samples "$CLASSES/hood.tsv"
+          java -cp "$CLASSES" com.capatest.client.CapeHoodTest --aim > "$CLASSES/hood-aim.tsv"
+          java -cp "$CLASSES" com.capatest.client.CapeSprintEdgeTest > "$CLASSES/sprint-edge.tsv"
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_placement.py --java-samples "$CLASSES/placement.tsv" --hood-samples "$CLASSES/hood.tsv" \
+            --look-samples "$CLASSES/hood-aim.tsv" --edge-samples "$CLASSES/sprint-edge.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeWornMotionTest
           java -cp "$CLASSES" com.capatest.client.CapeWingFitTest
           java -cp "$CLASSES" com.capatest.client.CapeWingFitTest --samples > "$CLASSES/wings.tsv"
@@ -1034,6 +1037,16 @@ jobs:
           run-id: 44860549521
           path: ${{ runner.temp }}/forge-v16721
 
+      - name: Cargar las tomas del ajuste entregado v1.67.22
+        id: cape-v16722-reference
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && contains(github.event.head_commit.message, '[comparar-v16722]') }}
+        uses: actions/download-artifact@v4
+        with:
+          name: capatest-fx-en-mundo
+          github-token: ${{ github.token }}
+          run-id: 44865764157
+          path: ${{ runner.temp }}/forge-v16722
+
       - name: Comprobar órbita, mirada y hombros en Forge
         id: verify-placement
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
@@ -1042,6 +1055,7 @@ jobs:
           base=()
           if [ -d "$RUNNER_TEMP/forge-v16720" ]; then base=(--baseline-shots "$RUNNER_TEMP/forge-v16720"); fi
           if [ -d "$RUNNER_TEMP/forge-v16721" ]; then base=(--baseline-shots "$RUNNER_TEMP/forge-v16721" --baseline-version 1.67.21); fi
+          if [ -d "$RUNNER_TEMP/forge-v16722" ]; then base=(--baseline-shots "$RUNNER_TEMP/forge-v16722" --baseline-version 1.67.22); fi
           python3 tools/verify_forge_placement.py build/fx-smoke-run/fx-shots "${base[@]}" 2>&1 | while IFS= read -r line; do
             case "$line" in
               *AssertionError:*|*Error:*) printf '::error title=Colocación en Forge::%s\n' "${line//%/%25}" ;;
@@ -1055,6 +1069,7 @@ jobs:
           base=()
           if [ -d "$RUNNER_TEMP/forge-v16720" ]; then base=(--baseline-shots "$RUNNER_TEMP/forge-v16720"); fi
           if [ -d "$RUNNER_TEMP/forge-v16721" ]; then base=(--baseline-shots "$RUNNER_TEMP/forge-v16721" --baseline-version 1.67.21); fi
+          if [ -d "$RUNNER_TEMP/forge-v16722" ]; then base=(--baseline-shots "$RUNNER_TEMP/forge-v16722" --baseline-version 1.67.22); fi
           python3 tools/verify_forge_placement.py build/fx-smoke-run/fx-shots --gallery-only "${base[@]}"
 
       - name: Medir ciclos y transiciones reales al caminar en F5
@@ -1081,7 +1096,15 @@ jobs:
             cmp "build/libs/capatest-$ver.jar" "$delivered"
             echo '::notice title=Posturas Alex en Forge::El JAR compilado es byte por byte el entregado.'
           fi
-          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_postures.py build/fx-smoke-run/fx-shots
+          set -o pipefail
+          base=()
+          if [ -d "$RUNNER_TEMP/forge-v16722" ]; then base=(--baseline-shots "$RUNNER_TEMP/forge-v16722"); fi
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_postures.py build/fx-smoke-run/fx-shots "${base[@]}" 2>&1 | while IFS= read -r line; do
+            case "$line" in
+              *AssertionError:*|*Error:*) printf '::error title=Posturas Alex en Forge::%s\n' "${line//%/%25}" ;;
+              *) printf '%s\n' "$line" ;;
+            esac
+          done
 
       - name: Verificar el icono original en la hotbar de Forge
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
@@ -1112,6 +1135,41 @@ jobs:
             build/fx-smoke-run/fx-shots/hotbar-ciclo.gif
           if-no-files-found: error
           retention-days: 30
+
+      - name: Adjuntar la candidata v1.67.23 verificada en Forge
+        if: >-
+          success() && github.repository == 'Santi-PdR/modelos' && github.ref == 'refs/heads/arena/5a9fa51b-modelos' &&
+          github.event_name == 'push' && contains(github.event.head_commit.message, '[adjuntar-v16723]') &&
+          steps.fx-smoke.outcome == 'success' && steps.cape-v16722-reference.outcome == 'success' &&
+          steps.old-cape-shots.outcome == 'success' && steps.verify-placement.outcome == 'success' &&
+          steps.verify-walk.outcome == 'success' &&
+          steps.verify-postures.outcome == 'success'
+        run: |
+          set -euo pipefail
+          test "$(git branch --show-current)" = "$GITHUB_REF_NAME"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          grep -qx 'mod_version=1.67.23' gradle.properties
+          jar=capatest-1.67.23.jar
+          jar_dir=build/libs
+          shots=build/fx-smoke-run/fx-shots
+          release=docs/releases/v1.67.23
+          out="entregables/v1.67.23/$jar"
+          (cd "$jar_dir" && sha256sum -c SHA256SUMS.txt)
+          python3 -m zipfile -t "$jar_dir/$jar"
+          test ! -e "$out"
+          install -D -m 0644 "$jar_dir/$jar" "$out"
+          install -D -m 0644 "$jar_dir/SHA256SUMS.txt" "$release/JAR.sha256"
+          for proof in comparacion-alex-forge.jpg comparacion-gestos-forge.jpg holgura-brazos-forge.tsv lectura-frontal-forge.tsv tela-frontal-forge.tsv nuca-forge.tsv continuidad-forge.tsv revision-alex-forge.{jpg,tsv}; do
+            test -s "$shots/$proof"
+            install -m 0644 "$shots/$proof" "$release/"
+          done
+          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16723_colocacion_forge.jpg
+          printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$release/compilacion.txt"
+          git add -- "$release" docs/capa_v16723_colocacion_forge.jpg
+          git add -f -- "$out"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'Adjuntar el JAR exacto y las capturas de v1.67.23 [skip ci]'
+          git push origin "$GITHUB_REF_NAME"
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.
@@ -1260,29 +1318,3 @@ jobs:
           done
           echo "### Borrador $TAG verificado (publicar después de CI SUCCESS)" >> "$GITHUB_STEP_SUMMARY"
           cat "$SUMS" >> "$GITHUB_STEP_SUMMARY"
-
-  inspect-v16722:
-    name: Medir la referencia de Forge v1.67.22
-    if: >-
-      github.repository == 'Santi-PdR/modelos' && github.ref == 'refs/heads/arena/5a9fa51b-modelos' &&
-      github.event_name == 'push' && contains(github.event.head_commit.message, '[inspeccionar-v16722]')
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      actions: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: capatest-fx-en-mundo
-          github-token: ${{ github.token }}
-          run-id: 44865764157
-          path: ${{ runner.temp }}/forge-v16722
-      - run: python3 -m pip install --quiet numpy Pillow
-      - run: OPENBLAS_NUM_THREADS=1 python3 tools/inspect_forge_v16722.py "$RUNNER_TEMP/forge-v16722" pecho 0
-      - run: OPENBLAS_NUM_THREADS=1 python3 tools/inspect_forge_v16722.py "$RUNNER_TEMP/forge-v16722" pecho 1
-      - run: OPENBLAS_NUM_THREADS=1 python3 tools/inspect_forge_v16722.py "$RUNNER_TEMP/forge-v16722" pecho 2
-      - run: OPENBLAS_NUM_THREADS=1 python3 tools/inspect_forge_v16722.py "$RUNNER_TEMP/forge-v16722" curios 0
-      - run: OPENBLAS_NUM_THREADS=1 python3 tools/inspect_forge_v16722.py "$RUNNER_TEMP/forge-v16722" curios 1
-      - run: OPENBLAS_NUM_THREADS=1 python3 tools/inspect_forge_v16722.py "$RUNNER_TEMP/forge-v16722" curios 2
