@@ -179,6 +179,14 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Inspect jar contents
+        working-directory: relic-hologram
+        run: |
+          set -euo pipefail
+          VER="$(sed -n 's/^mod_version=//p' gradle.properties | tr -d '[:space:]')"
+          JAR="build/libs/holocore-$VER.jar"
+          unzip -l "$JAR" | grep -E "META-INF/mods.toml|holocore/geo/|holocore/animations/|holocore/textures/relic/|holocore/lang/|curios/tags|recipes/|holographic_core.json|holographic_core.png"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -223,3 +231,52 @@ jobs:
               --target "$GITHUB_SHA"
           fi
           echo "Publicado $TAG (sha256:$SHA)"
+
+  # --------------------------------------------------------------------
+  # Arranque real del cliente en CI, sin GPU (xvfb + llvmpipe).
+  # Comprueba que el mod carga, que el renderer de Curios se registra y que
+  # GeckoLib encuentra los .geo.json / .animation.json. No sustituye a la
+  # prueba visual en el juego.
+  # --------------------------------------------------------------------
+  client-smoke:
+    name: runClient (xvfb, sin GPU)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle 8.8
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.8'
+
+      - name: Launch client and wait for the sound engine
+        working-directory: relic-hologram
+        run: |
+          set +e
+          timeout 600 xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient --no-daemon > client.log 2>&1
+          echo "exit=$?"
+          grep -n "Sound engine started\|Startup took\|Created:" client.log | head -20 || true
+          echo '--- ultimas lineas ---'
+          tail -60 client.log
+          if ! grep -q "Sound engine started" client.log; then
+            echo "::error::El cliente no llego a arrancar (sin 'Sound engine started')."
+            exit 1
+          fi
+          if grep -qE "Crash report saved to|A fatal error has been detected|Failed to create display" client.log; then
+            echo "::error::El cliente se cayo durante el arranque."
+            exit 1
+          fi
+          if grep -qE "Unable to find model|Error loading model file|Missing animation" client.log; then
+            echo "::error::Fallo al cargar el modelo o las animaciones."
+            exit 1
+          fi
+          echo "Cliente arrancado sin errores de carga del mod."

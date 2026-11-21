@@ -78,11 +78,7 @@ public final class RelicAnimatable implements GeoAnimatable {
         this.stateController = new AnimationController<>(this, "state",
                 RelicAnimations.TRANSITION_TICKS, this::stateHandler);
         this.layerController = new AnimationController<>(this, LAYER_CONTROLLER, 4,
-                state -> PlayState.CONTINUE)
-                .receiveTriggeredAnimations()
-                .triggerableAnim("layer_hit", RelicAnimations.LAYER_HIT_RAW)
-                .triggerableAnim("layer_bump", RelicAnimations.LAYER_BUMP_RAW)
-                .triggerableAnim("layer_shake", RelicAnimations.LAYER_SHAKE_RAW);
+                state -> PlayState.CONTINUE);
     }
 
     // ------------------------------------------------------------------
@@ -144,20 +140,20 @@ public final class RelicAnimatable implements GeoAnimatable {
         if (snapshot.pulse() != this.seenPulse) {
             this.seenPulse = snapshot.pulse();
             if (this.active && isRecent(now, snapshot.pulse())) {
-                request(RelicAnimations.ENERGY_PULSE_RAW);
+                request(RelicAnimations.ENERGY_PULSE);
             }
         }
         if (snapshot.release() != this.seenRelease) {
             this.seenRelease = snapshot.release();
             if (isRecent(now, snapshot.release())) {
-                request(RelicAnimations.RELEASE_RAW);
+                request(RelicAnimations.RELEASE);
             }
         }
         if (snapshot.hit() != this.seenHit) {
             this.seenHit = snapshot.hit();
             if (this.active && isRecent(now, snapshot.hit())) {
                 // Doble capa: la reaccion del modelo y el envoltorio relic_react.
-                request(RelicAnimations.HIT_RAW);
+                request(RelicAnimations.HIT);
                 triggerLayer("layer_hit");
             }
         }
@@ -176,8 +172,10 @@ public final class RelicAnimatable implements GeoAnimatable {
         if (this.firstFrame) {
             this.firstFrame = false;
             if (this.active) {
-                request(RelicAnimations.ACTIVATION_RAW);
+                request(RelicAnimations.ACTIVATION);
             } else {
+                // Si se equipa dormida no hay activacion que reproducir: se
+                // entra directamente en el bucle apagado.
                 this.loop = LoopState.DORMANT;
             }
         }
@@ -203,7 +201,7 @@ public final class RelicAnimatable implements GeoAnimatable {
             this.glitchCountdown = nextGlitchDelay();
         } else if (--this.glitchCountdown <= 0) {
             if (this.active && isRest(this.loop) && !RelicConfig.REDUCED_EFFECTS.get()) {
-                request(RelicAnimations.GLITCH_RAW);
+                request(RelicAnimations.GLITCH);
             }
             this.glitchCountdown = nextGlitchDelay();
         }
@@ -232,30 +230,30 @@ public final class RelicAnimatable implements GeoAnimatable {
         boolean quick = this.toggledAt != Long.MIN_VALUE && now - this.toggledAt < QUICK_TOGGLE_WINDOW;
 
         if (previous == LoopState.DORMANT && next != LoopState.DORMANT) {
-            request(quick ? RelicAnimations.WAKE_RAW : RelicAnimations.ACTIVATION_RAW);
+            request(quick ? RelicAnimations.WAKE : RelicAnimations.ACTIVATION);
         } else if (previous != LoopState.DORMANT && next == LoopState.DORMANT) {
-            request(quick ? RelicAnimations.SLEEP_RAW : RelicAnimations.DEACTIVATION_RAW);
+            request(quick ? RelicAnimations.SLEEP : RelicAnimations.DEACTIVATION);
         }
 
         if (restBefore && next == LoopState.CHARGED) {
-            request(RelicAnimations.CHARGE_UP_RAW);
+            request(RelicAnimations.CHARGE_UP);
         } else if (previous == LoopState.CHARGED && restAfter) {
-            request(RelicAnimations.CHARGE_DOWN_RAW);
+            request(RelicAnimations.CHARGE_DOWN);
         }
 
         if (restBefore && next == LoopState.ALERT) {
-            request(RelicAnimations.ALERT_UP_RAW);
+            request(RelicAnimations.ALERT_UP);
         } else if (previous == LoopState.ALERT && restAfter) {
-            request(RelicAnimations.ALERT_DOWN_RAW);
+            request(RelicAnimations.ALERT_DOWN);
         }
 
         // Saltos directos entre alerta y cargado: bajar uno y subir el otro.
         if (previous == LoopState.ALERT && next == LoopState.CHARGED) {
-            request(RelicAnimations.ALERT_DOWN_RAW);
-            request(RelicAnimations.CHARGE_UP_RAW);
+            request(RelicAnimations.ALERT_DOWN);
+            request(RelicAnimations.CHARGE_UP);
         } else if (previous == LoopState.CHARGED && next == LoopState.ALERT) {
-            request(RelicAnimations.CHARGE_DOWN_RAW);
-            request(RelicAnimations.ALERT_UP_RAW);
+            request(RelicAnimations.CHARGE_DOWN);
+            request(RelicAnimations.ALERT_UP);
         }
 
         this.loop = next;
@@ -292,16 +290,33 @@ public final class RelicAnimatable implements GeoAnimatable {
     // Controladores
     // ------------------------------------------------------------------
 
-    private void request(RawAnimation animation) {
+    /**
+     * Encola una animacion de una sola vez como <b>instancia nueva</b>.
+     *
+     * <p>GeckoLib compara la animacion pedida con la actual por identidad, asi
+     * que reutilizar la constante haria que dos peticiones seguidas de la misma
+     * animacion (dos pulsos, dos golpes) se fundieran en una. Construir el
+     * {@link RawAnimation} en cada peticion las distingue; son eventos raros,
+     * la asignacion no importa.</p>
+     */
+    private void request(String animation) {
         if (this.pending.size() >= 4) {
             this.pending.poll();
         }
-        this.pending.add(animation);
+        this.pending.add(RawAnimation.begin().thenPlay(animation));
     }
 
+    /**
+     * Dispara una capa en su propio controlador, sin tocar el bucle.
+     *
+     * <p>{@code forceAnimationReset()} es necesario porque GeckoLib compara las
+     * {@link RawAnimation} por valor: sin el reset, dos golpes seguidos con la
+     * misma capa se fundirian en uno (la segunda peticion se considera "la misma
+     * animacion ya cargada").</p>
+     */
     private void triggerLayer(String name) {
-        AnimatableManager<RelicAnimatable> manager = this.cache.getManagerForId(INSTANCE_ID);
-        manager.tryTriggerAnimation(LAYER_CONTROLLER, name);
+        this.layerController.forceAnimationReset();
+        this.layerController.setAnimation(RawAnimation.begin().thenPlay(name));
     }
 
     private PlayState stateHandler(AnimationState<RelicAnimatable> state) {
@@ -309,6 +324,10 @@ public final class RelicAnimatable implements GeoAnimatable {
         RawAnimation head = this.pending.peek();
         if (head != null) {
             if (controller.getCurrentRawAnimation() != head) {
+                // Reset explicito: RawAnimation.equals compara por valor, asi que
+                // dos "energy_pulse" seguidos se considerarian la misma animacion
+                // ya cargada y el segundo no se reproduciria.
+                controller.forceAnimationReset();
                 controller.setAnimation(head);
             } else if (controller.hasAnimationFinished()) {
                 this.pending.poll();
