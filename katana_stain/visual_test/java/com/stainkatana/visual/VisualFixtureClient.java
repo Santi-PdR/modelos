@@ -28,6 +28,11 @@ public final class VisualFixtureClient {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null || mc.player.getMainHandItem().isEmpty()) return;
+        // Do not advance the script while a requested frame is still pending.
+        // On a busy software renderer several client ticks can run before the
+        // next render; otherwise later cases overwrite captures or change hands
+        // before the image is actually taken. Also avoid the loading overlay.
+        if (capture != null || (tick == 0 && mc.screen != null)) return;
         tick++;
         if (tick == 1) {
             var id = new net.minecraft.resources.ResourceLocation("bettercombat", "attack_animations/two_handed_slash_vertical_right.json");
