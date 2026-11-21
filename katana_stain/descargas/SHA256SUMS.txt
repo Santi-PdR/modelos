@@ -1,1 +1,1 @@
-ac456bfdcb80e5bc42625e389a195582adecd140ac20631fba20cfe614da68f0  stainkatana-0.18.0-test.jar
+2f861e68bad40cec5f361c82b96ac378f35334de408c7557470574365c8484e4  stainkatana-0.19.0-test.jar
