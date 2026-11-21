@@ -1,5 +1,19 @@
 # Historial de cambios
 
+## 1.0.1 — halo aditivo
+
+* **Tercer pase de render con blend aditivo**: el núcleo suma luz en vez de
+  mezclarla, así que se ve brillo acumulado también sin shaderpack. Se controla
+  con `visuals.glowHalo` (por defecto `true`) y `visuals.haloIntensity`
+  (`0.35`), y se omite en `LITE` y con `reducedEffects` por rendimiento.
+* La intensidad se aplica por color de vértice, no con
+  `RenderSystem.setShaderColor`, para no teñir el resto de la escena.
+* Estudio de las alternativas (aura en billboard, `fsh` propio, post-proceso,
+  integración con Iris/Oculus/OptiFine) en
+  [docs/BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
+* Los pases normal y emisivo siguen con `entityTranslucentEmissive` + lightmap a
+  tope, que es lo que los shaderpacks usan para su bloom.
+
 ## 1.0.0 — primera versión publicada
 
 Reliquia cosmética **Holographic Core** para Minecraft 1.20.1 / Forge 47.4.0,
@@ -35,9 +49,6 @@ con GeckoLib 4.8.1 y Curios API 5.14.1.
 * `/relic pulse` y `/relic release` lanzan las animaciones de una sola vez.
 * Configuración en `config/holocore-client.toml` (estado inicial, efectos
   reducidos, calidad, lado del hombro, halo).
-* Tercer pase de render con blend **aditivo** (`visuals.glowHalo`,
-  `visuals.haloIntensity`): el núcleo suma luz, así que se ve el brillo
-  acumulado incluso sin shaderpack. Se salta en `LITE` y con `reducedEffects`.
 
 ### Verificación de esta entrega
 
