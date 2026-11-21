@@ -73,17 +73,18 @@ assert 'bettercombat", "katana_slash' in ability
 print('OK: encuadre local cancelable y sonido de Better Combat con alternativa')
 visuals=(root/'java/com/stainkatana/katana/client/KatanaVisuals.java').read_text()
 network=(root/'java/com/stainkatana/katana/KatanaNetwork.java').read_text()
-assert 'style == 3' in visuals and '^ leftHanded' in visuals
-assert 'getId() == entityId' in visuals and 'KatanaScene.impact(style == 3, leftHanded, x, y, z)' in visuals
-assert 'private static final String VERSION = "10"' in network
+assert 'KatanaVisualStyle.ULTIMATE_CROSS' in visuals and '^ leftHanded' in visuals
+assert 'getId() == entityId' in visuals and 'KatanaScene.impact(style == KatanaVisualStyle.ULTIMATE_CROSS, leftHanded, x, y, z)' in visuals
+assert 'private static final String VERSION = "11"' in network
 assert 'buf.writeBoolean(msg.leftHanded)' in network and 'buf.readBoolean()' in network
 assert 'impactEnvelope' in scene and 'KatanaClientConfig.ZOOM_FRACTION.get()' in scene
-print('OK: segundo corte, zurdos, impulso local y protocolo visual v10')
+print('OK: segundo corte, zurdos, impulso local y protocolo visual v11')
 
 assert model['firstperson_righthand']['scale'] == [0.56, 0.56, 0.56]
 assert model['firstperson_lefthand']['scale'] == [0.56, 0.56, 0.56]
-assert 'visualYaw, 55, 0' in visuals and 'yaw, 90, leftHanded ? -25 : 25' in visuals
-assert 'yaw, 55, leftHanded ? 30 : -30' in visuals
+assert 'visualYaw, 55, 0' in visuals and 'yaw, 90, sign * 25' in visuals
+assert 'yaw, 55, -sign * 30' in visuals
+assert 'KatanaVisualStyle.BLOOD_BIND' in visuals and 'KatanaVisualStyle.ULTIMATE_FINAL' in visuals
 print('OK: escala de primera persona y planos de efectos de prueba')
 
 assert 'startBackstab(player, state, now)' in ability

@@ -62,7 +62,9 @@ public final class KatanaParticle extends TextureSheetParticle {
         float x = (float)(Mth.lerp(partialTick, this.xo, this.x) - cameraPos.x());
         float y = (float)(Mth.lerp(partialTick, this.yo, this.y) - cameraPos.y());
         float z = (float)(Mth.lerp(partialTick, this.zo, this.z) - cameraPos.z());
-        float size = this.getQuadSize(partialTick);
+        float phase = (this.age + partialTick) / (float)this.lifetime;
+        float size = this.getQuadSize(partialTick) * FxCurve.size(phase);
+        float opacity = this.alpha * FxCurve.opacity(phase);
         Matrix4f rotation = new Matrix4f().rotateY((float)Math.toRadians(-yawAngle))
                 .rotateX((float)Math.toRadians(pitchAngle)).rotateZ((float)Math.toRadians(rollAngle));
         Vector4f[] corners = {new Vector4f(-size, 0, -size, 1), new Vector4f(-size, 0, size, 1),
@@ -74,7 +76,7 @@ public final class KatanaParticle extends TextureSheetParticle {
         for (int i = 0; i < 8; i++) {
             int n = i < 4 ? i : 7 - i;
             out.vertex(corners[n].x(), corners[n].y(), corners[n].z()).uv(u[n], v[n])
-                    .color(rCol, gCol, bCol, alpha).uv2(light).endVertex();
+                    .color(rCol, gCol, bCol, opacity).uv2(light).endVertex();
         }
     }
 

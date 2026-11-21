@@ -48,7 +48,8 @@ public final class KatanaVanillaSwings {
                     var direction = player.getLookAngle().multiply(1, 0, 1).normalize();
                     var point = player.position().add(direction.scale(1.5));
                     KatanaVisuals.spawn(player.getId(), point.x, player.getY() + 1.05, point.z,
-                            player.getYRot(), step % 2 == 0 ? 0 : 3,
+                            player.getYRot(), step % 2 == 0 ? com.stainkatana.katana.KatanaVisualStyle.SWING
+                                    : com.stainkatana.katana.KatanaVisualStyle.ULTIMATE_CROSS,
                             player.getMainArm() == net.minecraft.world.entity.HumanoidArm.LEFT);
                     mc.level.playLocalSound(player.getX(), player.getY(), player.getZ(),
                             net.minecraft.sounds.SoundEvents.PLAYER_ATTACK_SWEEP,

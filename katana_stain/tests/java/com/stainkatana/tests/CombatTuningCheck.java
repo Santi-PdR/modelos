@@ -1,9 +1,17 @@
 package com.stainkatana.tests;
 
 import com.stainkatana.katana.CombatTuning;
+import com.stainkatana.katana.KatanaVisualStyle;
 
 public final class CombatTuningCheck {
     public static void main(String[] args) {
+        int[] styles = {KatanaVisualStyle.SWING, KatanaVisualStyle.ULTIMATE_CUT, KatanaVisualStyle.HIT,
+                KatanaVisualStyle.ULTIMATE_CROSS, KatanaVisualStyle.BLOOD_FLASH, KatanaVisualStyle.DAGGER,
+                KatanaVisualStyle.BLOOD_BIND, KatanaVisualStyle.FINISHER, KatanaVisualStyle.SCENE_FOCUS,
+                KatanaVisualStyle.ULTIMATE_FINAL};
+        for (int i = 0; i < styles.length; i++)
+            if (styles[i] != i || !KatanaVisualStyle.valid(styles[i])) throw new AssertionError("visual style id");
+        if (KatanaVisualStyle.valid(-1) || KatanaVisualStyle.valid(styles.length)) throw new AssertionError("visual style bounds");
         if (CombatTuning.MARK_TICKS != 200 || CombatTuning.cooldown(0) != 120
                 || CombatTuning.cooldown(1) != 60 || CombatTuning.cooldown(2) != 360)
             throw new AssertionError("cooldowns or mark");

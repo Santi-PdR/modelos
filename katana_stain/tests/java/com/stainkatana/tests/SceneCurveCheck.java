@@ -1,6 +1,7 @@
 package com.stainkatana.tests;
 
 import com.stainkatana.katana.client.SceneCurve;
+import com.stainkatana.katana.client.FxCurve;
 
 public final class SceneCurveCheck {
     public static void main(String[] args) {
@@ -27,6 +28,19 @@ public final class SceneCurveCheck {
             double b = SceneCurve.shot((i + 1) / 10.0, shots);
             if (b < a || b - a > 1) throw new AssertionError("unstable shot interpolation");
         }
-        System.out.println("OK: clamped transition and bounded impact envelope");
+        if (FxCurve.size(0) != .82F || FxCurve.size(1) != 1F
+                || FxCurve.opacity(0) != 1F || FxCurve.opacity(1) != 0F)
+            throw new AssertionError("FX curve endpoints");
+        float previousSize = 0, previousOpacity = 1;
+        for (int i = 0; i <= 1000; i++) {
+            float phase = i / 1000F, size = FxCurve.size(phase), opacity = FxCurve.opacity(phase);
+            if (!Float.isFinite(size) || !Float.isFinite(opacity) || size < previousSize
+                    || opacity > previousOpacity || size < .82F || size > 1F || opacity < 0 || opacity > 1)
+                throw new AssertionError("FX envelope must stay bounded and monotonic");
+            previousSize = size; previousOpacity = opacity;
+        }
+        if (!Float.isFinite(FxCurve.size(Float.NaN)) || !Float.isFinite(FxCurve.opacity(Float.NaN)))
+            throw new AssertionError("FX curve nonfinite input");
+        System.out.println("OK: clamped transition, impact envelope and FX envelopes");
     }
 }

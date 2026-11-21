@@ -485,3 +485,14 @@ latencias, jefes ni demuestra que el gesto toque la hoja. En capturas la hoja se
 acerca a la cara, pero la mano libre aún no recorre claramente el filo; el
 encuadre y los sonidos deben juzgarse en una partida real. Cliente y servidor
 necesitan el mismo JAR y se mantienen las dependencias indicadas para 0.18.
+
+### Efectos en desarrollo posteriores a 0.19
+Los estilos visuales se separan de la cámara: el encuadre inicial ya no simula
+un impacto; los golpes normales, la parálisis, el remate y el último corte de C
+reciben señales distintas. Se reutilizan los sprites existentes de Better
+Combat Particle (MIT, atribuidos), con una ráfaga limitada y curvas de aparición
+y desvanecimiento; no se agregan texturas de Darkest Hours ni un atlas nuevo.
+Los cambios son cosméticos y el servidor conserva el control del daño y objetivos.
+La versión de protocolo para estos cambios es 11: cliente y servidor deben usar
+el mismo JAR. Las capturas del fixture aún requieren revisión humana y no son
+una prueba de rendimiento en el modpack real.

@@ -320,9 +320,26 @@ public final class VisualFixtureClient {
             case 855 -> capture = "21_left_hand_back.png";
             case 860 -> { mc.options.fov().set(70); mc.options.setCameraType(CameraType.FIRST_PERSON); }
             case 865 -> capture = "22_left_hand_first.png";
-            case 870 -> { mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT); System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
+            case 870 -> { mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT); mc.options.setCameraType(CameraType.THIRD_PERSON_BACK); }
+            case 880 -> effectSample(com.stainkatana.katana.KatanaVisualStyle.SWING);
+            case 884 -> capture = "23_fx_swing.png";
+            case 892 -> effectSample(com.stainkatana.katana.KatanaVisualStyle.BLOOD_BIND);
+            case 896 -> capture = "24_fx_blood_bind.png";
+            case 904 -> effectSample(com.stainkatana.katana.KatanaVisualStyle.FINISHER);
+            case 908 -> capture = "25_fx_finisher.png";
+            case 916 -> effectSample(com.stainkatana.katana.KatanaVisualStyle.ULTIMATE_FINAL);
+            case 920 -> capture = "26_fx_final.png";
+            case 928 -> { System.out.println("STAIN_EFFECT_SAMPLES_DONE"); System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }
+    }
+    private static void effectSample(int style) {
+        var player = Minecraft.getInstance().player;
+        if (player == null) throw new IllegalStateException("No player for FX sample");
+        var forward = player.getLookAngle().multiply(1, 0, 1).normalize();
+        var point = player.position().add(forward.scale(2)).add(0, 1.1, 0);
+        com.stainkatana.katana.client.KatanaVisuals.spawn(player.getId(), point.x, point.y, point.z,
+                player.getYRot(), style, player.getMainArm() == net.minecraft.world.entity.HumanoidArm.LEFT);
     }
     @SubscribeEvent public static void render(TickEvent.RenderTickEvent event) {
         if (event.phase != TickEvent.Phase.END || capture == null) return;

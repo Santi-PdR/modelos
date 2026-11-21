@@ -190,7 +190,7 @@ public final class KatanaAbilities {
         KatanaNetwork.broadcastAnimation(player, ability);
         if (ability == 2) {
             // Begin framing the server-selected victim during the opening wind-up.
-            KatanaNetwork.broadcastVisual(player, ultimateTarget.getX(), ultimateTarget.getY(.55), ultimateTarget.getZ(), 2);
+            KatanaNetwork.broadcastVisual(player, ultimateTarget.getX(), ultimateTarget.getY(.55), ultimateTarget.getZ(), KatanaVisualStyle.SCENE_FOCUS);
         }
         if (ability == 0) {
             level.playSound(null, player.blockPosition(), SoundEvents.IRON_GOLEM_REPAIR, SoundSource.PLAYERS, .45F, 1.6F);
@@ -271,7 +271,7 @@ public final class KatanaAbilities {
         KatanaNetwork.broadcastAnimation(player, 6);
         // Give the short finisher camera a server-selected focus immediately;
         // otherwise it switches to third person but has nothing to frame.
-        KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.55), target.getZ(), 2);
+        KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.55), target.getZ(), KatanaVisualStyle.SCENE_FOCUS);
     }
     private static void tickBackstab(ServerPlayer player) {
         Backstab stab = BACKSTABS.get(player.getUUID());
@@ -288,7 +288,7 @@ public final class KatanaAbilities {
             // Never execute an otherwise healthy ordinary target in one blow; preserve at least one health.
             float damage = CombatTuning.backstabDamage(target.getHealth(), target.getMaxHealth());
             if (damage > 0) target.hurt(player.damageSources().playerAttack(player), damage);
-            KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.7), target.getZ(), 2);
+            KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.7), target.getZ(), KatanaVisualStyle.FINISHER);
             player.serverLevel().sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.7), target.getZ(), 16, .35, .4, .35, .04);
             player.serverLevel().playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, 1.0F, .75F);
         }
@@ -395,7 +395,8 @@ public final class KatanaAbilities {
                     cast.stack.hurtAndBreak(1, player, p -> p.broadcastBreakEvent(InteractionHand.MAIN_HAND));
                 }
             }
-            KatanaNetwork.broadcastVisual(player, mob.getX(), mob.getY(.55), mob.getZ(), index % 2 == 0 ? 1 : 3);
+            KatanaNetwork.broadcastVisual(player, mob.getX(), mob.getY(.55), mob.getZ(), index == CombatTuning.ultimateStrikeCount() - 1 ? KatanaVisualStyle.ULTIMATE_FINAL
+                    : index % 2 == 0 ? KatanaVisualStyle.ULTIMATE_CUT : KatanaVisualStyle.ULTIMATE_CROSS);
             double spread = Math.min(2.0, Math.max(.35, mob.getBbWidth() * .35));
             player.serverLevel().sendParticles(KatanaParticles.SHARD.get(), mob.getX(), mob.getY(.55), mob.getZ(), 12, spread, Math.min(1.5, mob.getBbHeight() * .25), spread, .03);
             player.serverLevel().playSound(null, mob.blockPosition(), katanaSwingSound(), SoundSource.PLAYERS, .65F, index % 2 == 0 ? .9F : 1.1F);
@@ -460,8 +461,8 @@ public final class KatanaAbilities {
         // The buff is applied only on a successful, server-authoritative paralysis.
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 160, 1, false, false, true));
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 160, 1, false, false, true));
-        KatanaNetwork.broadcastVisual(player, player.getX(), player.getY(0.7), player.getZ(), 4);
-        KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(0.55), target.getZ(), 2);
+        KatanaNetwork.broadcastVisual(player, player.getX(), player.getY(0.7), player.getZ(), KatanaVisualStyle.BLOOD_FLASH);
+        KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(0.55), target.getZ(), KatanaVisualStyle.BLOOD_BIND);
         level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(0.55), target.getZ(), 10, .3, .35, .3, .02);
         Vec3 bloodHand = player.getEyePosition().add(player.getLookAngle().scale(.45)).add(0, -.45, 0);
         level.sendParticles(KatanaParticles.SHARD.get(), bloodHand.x, bloodHand.y, bloodHand.z, 8, .12, .18, .12, .01);
@@ -487,11 +488,11 @@ public final class KatanaAbilities {
             if (hits == 1 && target.isAlive()) StainKatanaItem.markTarget(stack, target, level);
             if (ultimate) {
                 target.addEffect(new MobEffectInstance(KatanaEffects.PARALYSIS.get(), CombatTuning.ultimateStaggerTicks(target instanceof Player), 0, false, false, false));
-                KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.55), target.getZ(), 2);
+                KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.55), target.getZ(), KatanaVisualStyle.HIT);
             }
             level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.55), target.getZ(), 4, .25, .25, .25, 0);
             if (!ultimate) {
-                KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.55), target.getZ(), 2);
+                KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.55), target.getZ(), KatanaVisualStyle.HIT);
                 level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, .7F, 1.15F);
             }
         }
@@ -501,7 +502,7 @@ public final class KatanaAbilities {
             // The extended cut travels in front of the player, even on an empty swing.
             for (double distance : new double[]{3.4, 5.3}) {
                 Vec3 point = player.position().add(facing.scale(distance));
-                KatanaNetwork.broadcastVisual(player, point.x, player.getY() + 1.05, point.z, 0);
+                KatanaNetwork.broadcastVisual(player, point.x, player.getY() + 1.05, point.z, KatanaVisualStyle.SWING);
             }
         }
         level.playSound(null, player.blockPosition(), katanaSwingSound(), SoundSource.PLAYERS, .8F, ultimate ? .85F : 1.0F);
@@ -545,7 +546,8 @@ public final class KatanaAbilities {
         // El renderizador usa un plano orientado según el atacante, no un billboard.
         Vec3 point = player.position().add(forward.scale(1.55));
         Cast cast = CASTS.get(player.getUUID());
-        int style = !ultimate ? 0 : (cast != null && cast.followUpImpacted ? 3 : 1);
+        int style = !ultimate ? KatanaVisualStyle.SWING : (cast != null && cast.followUpImpacted
+                ? KatanaVisualStyle.ULTIMATE_CROSS : KatanaVisualStyle.ULTIMATE_CUT);
         KatanaNetwork.broadcastVisual(player, point.x, player.getY() + 1.05, point.z, style);
     }
 }

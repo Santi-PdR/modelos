@@ -51,7 +51,7 @@ public class StainKatanaItem extends SwordItem implements GeoItem {
                 && target.level() instanceof ServerLevel level) {
             if (target.isAlive()) markTarget(stack, target, level);
             // Normal katana hits also have visible feedback, not only abilities.
-            KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.55), target.getZ(), 2);
+            KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.55), target.getZ(), KatanaVisualStyle.HIT);
             level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.55), target.getZ(),
                     5, .18, .2, .18, .025);
         }

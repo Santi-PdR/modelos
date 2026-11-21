@@ -1,46 +1,67 @@
 package com.stainkatana.katana.client;
 
 import com.stainkatana.katana.KatanaParticles;
+import com.stainkatana.katana.KatanaVisualStyle;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 
-/** Server-authoritative impact location; angles are used by the particle renderer, not as velocity. */
+/** Server-authoritative impact location; particles never decide damage. */
 public final class KatanaVisuals {
     private KatanaVisuals() { }
     public static void spawn(int entityId, double x, double y, double z, float yaw, int style, boolean leftHanded) {
-        var level = Minecraft.getInstance().level;
-        if (level == null || style < 0 || style > 5 || !Double.isFinite(x) || !Double.isFinite(y)
+        var mc = Minecraft.getInstance();
+        var level = mc.level;
+        if (level == null || !KatanaVisualStyle.valid(style) || !Double.isFinite(x) || !Double.isFinite(y)
                 || !Double.isFinite(z) || !Float.isFinite(yaw)) return;
-        if (style == 5) {
+        if (style == KatanaVisualStyle.DAGGER) {
             DaggerVisuals.spawn(entityId, x, y, z);
             return;
         }
-        if (style == 4) {
-            if (Minecraft.getInstance().player != null && Minecraft.getInstance().player.getId() == entityId)
-                KatanaHud.bloodFlash();
+        boolean localCaster = mc.player != null && mc.player.getId() == entityId;
+        if (style == KatanaVisualStyle.BLOOD_FLASH) {
+            if (localCaster) KatanaHud.bloodFlash();
             return;
         }
-        if ((style == 1 || style == 3) && Minecraft.getInstance().player != null
-                && Minecraft.getInstance().player.getId() == entityId) KatanaScene.impact(style == 3, leftHanded, x, y, z);
-        if (style == 0 || style == 3) {
-            // The follow-up is the opposite Better Combat stroke. Turn the textured
-            // plane 180 degrees for that stroke, and invert again for left-handers.
-            float visualYaw = yaw + ((style == 3) ^ leftHanded ? 180F : 0F);
-            // Tilt the world-oriented plane toward the viewer: at zero pitch it
-            // becomes nearly invisible when viewed from behind at eye level.
+        if (localCaster && (style == KatanaVisualStyle.ULTIMATE_CUT || style == KatanaVisualStyle.ULTIMATE_CROSS
+                || style == KatanaVisualStyle.ULTIMATE_FINAL || style == KatanaVisualStyle.FINISHER
+                || style == KatanaVisualStyle.SCENE_FOCUS)) {
+            KatanaScene.impact(style == KatanaVisualStyle.ULTIMATE_CROSS, leftHanded, x, y, z);
+        }
+        // Focus is a camera cue, not a premature hit effect.
+        if (style == KatanaVisualStyle.SCENE_FOCUS) return;
+        float sign = leftHanded ? -1 : 1;
+        if (style == KatanaVisualStyle.SWING || style == KatanaVisualStyle.ULTIMATE_CROSS) {
+            float visualYaw = yaw + ((style == KatanaVisualStyle.ULTIMATE_CROSS) ^ leftHanded ? 180F : 0F);
             level.addParticle(KatanaParticles.SLASH.get(), x, y, z, visualYaw, 55, 0);
-            // A second, crossing slash gives each confirmed cut a readable silhouette.
-            level.addParticle(KatanaParticles.PULSE.get(), x, y, z, visualYaw, 75, leftHanded ? -20 : 20);
-        } else if (style == 1) {
-            // Use the credited Better Combat Particle arc as well as the
-            // blood pulse, so the opening stroke reads as a cut, not just a glyph.
-            level.addParticle(KatanaParticles.SLASH.get(), x, y, z, yaw, 55, leftHanded ? 30 : -30);
-            level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw, 90, leftHanded ? -25 : 25);
-        } else {
-            // Also focuses an active finisher shot; this is a no-op outside a scene.
-            if (Minecraft.getInstance().player != null && Minecraft.getInstance().player.getId() == entityId)
-                KatanaScene.impact(false, leftHanded, x, y, z);
-            // Paralysis feedback around the marked target.
+            level.addParticle(KatanaParticles.PULSE.get(), x, y, z, visualYaw, 75, sign * 20);
+        } else if (style == KatanaVisualStyle.ULTIMATE_CUT || style == KatanaVisualStyle.ULTIMATE_FINAL) {
+            level.addParticle(KatanaParticles.SLASH.get(), x, y, z, yaw, 55, -sign * 30);
+            level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw, 90, sign * 25);
+            if (style == KatanaVisualStyle.ULTIMATE_FINAL) {
+                level.addParticle(KatanaParticles.SLASH.get(), x, y, z, yaw + 180, 70, sign * 35);
+                sparks(level, x, y, z, yaw, 8);
+            }
+        } else if (style == KatanaVisualStyle.BLOOD_BIND) {
+            // Two offset glyph planes and a compact burst make a successful mark
+            // distinct from an ordinary cut without another texture atlas.
             level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw, 90, 0);
+            level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw + 90, 65, 0);
+            sparks(level, x, y, z, yaw, 5);
+        } else if (style == KatanaVisualStyle.FINISHER) {
+            level.addParticle(KatanaParticles.SLASH.get(), x, y, z, yaw, 65, sign * 35);
+            level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw + 180, 80, -sign * 30);
+            sparks(level, x, y, z, yaw, 8);
+        } else if (style == KatanaVisualStyle.HIT) {
+            sparks(level, x, y, z, yaw, 3);
+        }
+    }
+
+    /** Bounded client-only radial burst using the existing credited blood sprite. */
+    private static void sparks(ClientLevel level, double x, double y, double z, float yaw, int count) {
+        for (int i = 0; i < count; i++) {
+            double a = Math.toRadians(yaw) + Math.PI * 2 * i / count;
+            double vx = Math.cos(a) * .065, vz = Math.sin(a) * .065;
+            level.addParticle(KatanaParticles.SHARD.get(), x + vx, y, z + vz, vx, .035 + .012 * (i % 3), vz);
         }
     }
 }
