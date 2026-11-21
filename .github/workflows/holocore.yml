@@ -319,20 +319,19 @@ jobs:
       # Solo se ejecuta si algo fallo. El log de Actions no es legible desde
       # fuera (el CDN esta bloqueado), asi que los errores de javac se reemiten
       # como anotaciones del check, que si se pueden consultar por API.
-      - name: Surface compiler errors
+      - name: Surface build errors
         if: failure()
         working-directory: relic-hologram
         run: |
           set +e
-          OUT="$(gradle compileJava --no-daemon 2>&1)"
-          echo "$OUT" | tail -40
-          ERRORS="$(echo "$OUT" | grep -E 'error:|\.java:[0-9]+' | head -25)"
-          if [ -z "$ERRORS" ]; then
-            ERRORS="$(echo "$OUT" | tail -5)"
-          fi
-          echo "$ERRORS" | while IFS= read -r line; do
-            echo "::error title=javac::${line//'%'/'%25'}"
+          OUT="$(gradle build --no-daemon --stacktrace 2>&1)"
+          echo "$OUT" | tail -80
+          SECTION="$(echo "$OUT" | sed -n '/What went wrong/,/^\* Try/p' | head -9)"
+          [ -z "$SECTION" ] && SECTION="$(echo "$OUT" | grep -E 'error:|\.java:[0-9]+|Caused by|FAILED|Could not' | head -9)"
+          echo "$SECTION" | while IFS= read -r line; do
+            echo "::error title=build::${line//'%'/'%25'}"
           done
+          exit 0
 
       - name: Show jar
         working-directory: relic-hologram
