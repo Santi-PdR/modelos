@@ -27,7 +27,7 @@ jobs:
     # La rama de artefactos (artifacts/vX.Y.Z) SOLO guarda el .jar. Si el
     # workflow corriera tambien sobre ella, cada push re-construiria el
     # mod entero para nada. Aqui se salta ese run.
-    if: ${{ !startsWith(github.ref, 'refs/heads/artifacts/') && !contains(github.event.head_commit.message, '[copiar-v16721]') }}
+    if: ${{ !startsWith(github.ref, 'refs/heads/artifacts/') }}
 
     steps:
       - name: Checkout
@@ -1249,91 +1249,3 @@ jobs:
           done
           echo "### Borrador $TAG verificado (publicar después de CI SUCCESS)" >> "$GITHUB_STEP_SUMMARY"
           cat "$SUMS" >> "$GITHUB_STEP_SUMMARY"
-
-  copy-tested-cape:
-    name: Adjuntar el JAR ya probado en Forge
-    if: >-
-      github.repository == 'Santi-PdR/modelos' && github.ref == 'refs/heads/arena/5a9fa51b-modelos' &&
-      github.event_name == 'push' && contains(github.event.head_commit.message, '[copiar-v16721]')
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      actions: read
-      contents: write
-    env:
-      SOURCE_RUN: '44860549521'
-      SOURCE_SHA: 'c05b98194fd6b46da48e08d089a1690e98c26df5'
-      JAR_HASH: 'a352372ab8bde762318b12d93317cb719d755d0792289eb0a54db8011b8ca40e'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Confirmar la compilación y todos los controles del mismo run
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          git merge-base --is-ancestor "$SOURCE_SHA" HEAD
-          git diff --exit-code "$SOURCE_SHA" HEAD -- . ':(exclude).github/workflows/build.yml'
-          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN" --jq '[.head_sha,.head_branch,.status,.conclusion]|@tsv' > "$RUNNER_TEMP/source.tsv"
-          printf '%s\t%s\tcompleted\tfailure\n' "$SOURCE_SHA" "$GITHUB_REF_NAME" | cmp - "$RUNNER_TEMP/source.tsv"
-          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN/jobs" > "$RUNNER_TEMP/jobs.json"
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          job, = json.loads((Path(os.environ['RUNNER_TEMP'])/'jobs.json').read_text())['jobs']
-          outcomes = {s['name']: s['conclusion'] for s in job['steps']}
-          assert [k for k, v in outcomes.items() if v == 'failure'] == ['Adjuntar el JAR y las mediciones exactas de v1.67.21'], outcomes
-          for name in (
-              'Validate resources', 'Autoevaluacion visual contra la referencia', 'Test worn-state and cosmetic profiles',
-              'Build', 'Verify jar is reproducible', 'Verify jar contents (model resources)',
-              'Compare the packaged art with v1.67.14', 'Upload verified jar as artifact',
-              'Probar FX y equipo en Forge (opcional)', 'Cargar las tomas de referencia de v1.67.20',
-              'Comprobar órbita, mirada y placas sobre las mangas en Forge', 'Lámina con Steve y Alex, pecho y Curios',
-              'Medir ciclos y transiciones reales al caminar en F5', 'Revisar las posturas de Alex y medir los cruces de malla',
-              'Verificar el icono original en la hotbar de Forge', 'Subir capturas de la prueba en mundo',
-          ):
-              assert outcomes.get(name) == 'success', (name, outcomes.get(name))
-          PY
-      - name: Cargar el JAR y la suma verificada
-        uses: actions/download-artifact@v4
-        with:
-          github-token: ${{ github.token }}
-          run-id: '44860549521'
-          name: capatest-jar
-          path: ${{ runner.temp }}/capa-verified
-      - name: Cargar la evidencia de ese JAR
-        uses: actions/download-artifact@v4
-        with:
-          github-token: ${{ github.token }}
-          run-id: '44860549521'
-          name: capatest-fx-en-mundo
-          path: ${{ runner.temp }}/capa-shots
-      - name: Guardar el JAR exacto y las mediciones en la rama de trabajo
-        run: |
-          set -euo pipefail
-          test "$(git branch --show-current)" = "$GITHUB_REF_NAME"
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          grep -qx 'mod_version=1.67.21' gradle.properties
-          jar=capatest-1.67.21.jar
-          files="$RUNNER_TEMP/capa-verified"
-          shots="$RUNNER_TEMP/capa-shots"
-          release=docs/releases/v1.67.21
-          out="entregables/v1.67.21/$jar"
-          printf '%s  %s\n' "$JAR_HASH" "$jar" | cmp - "$files/SHA256SUMS.txt"
-          (cd "$files" && sha256sum -c SHA256SUMS.txt)
-          python3 -m zipfile -t "$files/$jar"
-          test ! -e "$out"
-          install -D -m 0644 "$files/$jar" "$out"
-          install -D -m 0644 "$files/SHA256SUMS.txt" "$release/JAR.sha256"
-          for proof in comparacion-alex-forge.jpg lectura-frontal-forge.tsv continuidad-forge.tsv revision-alex-forge.{jpg,tsv}; do
-            test -s "$shots/$proof"
-            install -m 0644 "$shots/$proof" "$release/"
-          done
-          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16721_colocacion_forge.jpg
-          printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$SOURCE_SHA" "$GITHUB_REPOSITORY" "$SOURCE_RUN" > "$release/compilacion.txt"
-          git add -- "$release" docs/capa_v16721_colocacion_forge.jpg
-          git add -f -- "$out"
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m 'Adjuntar el JAR exacto y la verificación de v1.67.21 en Forge [skip ci]'
-          git push origin "HEAD:$GITHUB_REF_NAME"

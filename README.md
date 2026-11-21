@@ -13,7 +13,9 @@ Se equipa en el pecho o en `back` con Curios opcional.
 
 ### v1.67.21 — continuidad y ajuste equipado
 
-Candidata para probar en Forge: transición más suave al andar, girar y frenar; hombreras un poco más altas, tela más visible de frente y movimiento sólo en el borde alto de la capucha. La descarga verificada anterior se conserva abajo mientras se prueban estos cambios.
+**[Descargar JAR de prueba v1.67.21](https://github.com/Santi-PdR/modelos/raw/4f96e5a8458b5cc1a534bd47a8b3758e24304c5a/entregables/v1.67.21/capatest-1.67.21.jar)** · [Antes y después en Alex](docs/releases/v1.67.21/comparacion-alex-forge.jpg) · [Steve y Alex en Forge](docs/capa_v16721_colocacion_forge.jpg) · [Medidas y SHA-256](docs/releases/v1.67.21/notas.md).
+
+El paño arranca y frena de forma más gradual, las hombreras originales se levantan un poco y el tejido sobre éstas se lee mejor de frente. La capucha tiene movimiento propio sin arrastrar la montura ni cambiar la forma del faldón. Verificado en Forge con pecho y Curios, sin cambiar el icono ni el instalador público.
 
 ### v1.67.20 — forma original, sólo colocación
 
