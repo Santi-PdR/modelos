@@ -42,6 +42,18 @@ public final class KatanaVanillaSwings {
                         ? 0 : alternates.getOrDefault(id, 0);
                 lastAttackTick.put(id, player.tickCount);
                 alternates.put(id, (step + 1) % 4);
+                // Only the fallback path owns these cues; Better Combat already
+                // supplies its own swing audio/visuals. Keep hit damage server-side.
+                if (!KatanaAnimations.isPlaying(player)) {
+                    var direction = player.getLookAngle().multiply(1, 0, 1).normalize();
+                    var point = player.position().add(direction.scale(1.5));
+                    KatanaVisuals.spawn(player.getId(), point.x, player.getY() + 1.05, point.z,
+                            player.getYRot(), step % 2 == 0 ? 0 : 3,
+                            player.getMainArm() == net.minecraft.world.entity.HumanoidArm.LEFT);
+                    mc.level.playLocalSound(player.getX(), player.getY(), player.getZ(),
+                            net.minecraft.sounds.SoundEvents.PLAYER_ATTACK_SWEEP,
+                            net.minecraft.sounds.SoundSource.PLAYERS, .35F, 1.25F, false);
+                }
                 KatanaAnimations.swing(player, step);
             }
             lastSwing.put(id, current);

@@ -38,7 +38,7 @@ public final class KatanaScene {
             mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
         }
         initialYaw = mc.player == null ? 0 : mc.player.getYRot();
-        active = true; age = 0; impactAge = 4; focus = null; cameraPosition = null;
+        active = true; age = 0; impactAge = 4; focus = null; cameraPosition = null; cameraApplied = false;
     }
     public static void stop() {
         Minecraft mc = Minecraft.getInstance();

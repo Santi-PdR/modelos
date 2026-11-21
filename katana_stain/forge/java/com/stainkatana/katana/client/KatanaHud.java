@@ -52,11 +52,13 @@ public final class KatanaHud {
         }
         if (!KatanaClientConfig.SHOW_HUD.get() || !(mc.player.getMainHandItem().getItem() instanceof StainKatanaItem)) return;
         // Compact separated ability plates leave more of the world visible.
-        int w = 104, x = Math.max(5, g.guiWidth() - w - 8), y = Math.max(8, g.guiHeight() / 2 - 34);
+        int w = 104, x = KatanaClientConfig.HUD_LEFT.get() ? 8 : Math.max(5, g.guiWidth() - w - 8);
+        int y = Math.max(8, g.guiHeight() - 82);
         String[] labels = {"stainkatana.hud.paralysis", "stainkatana.hud.slash", "stainkatana.hud.ultimate"};
         for (int i = 0; i < 3; i++) {
             int row = y + i * 23;
-            boolean ready = synced && remaining[i] == 0;
+            boolean finisherReady = i == 0 && synced && charges >= 2;
+            boolean ready = synced && (remaining[i] == 0 || finisherReady);
             int accent = ready ? 0xFFCF5861 : 0xFF74313B;
             g.fill(x + 2, row + 2, x + w, row + 21, 0xB40A080B);
             g.fill(x, row, x + 21, row + 21, 0xDD1C1115);
@@ -66,13 +68,14 @@ public final class KatanaHud {
             String key = KatanaKeys.get(i).getTranslatedKeyMessage().getString();
             key = mc.font.plainSubstrByWidth(key, 16);
             g.drawCenteredString(mc.font, key, x + 11, row + 6, 0xFFF2DFD8);
-            String label = mc.font.plainSubstrByWidth(Component.translatable(labels[i]).getString(), 52);
+            String labelKey = finisherReady ? "stainkatana.hud.finisher" : labels[i];
+            String label = mc.font.plainSubstrByWidth(Component.translatable(labelKey).getString(), 52);
             g.drawString(mc.font, label, x + 26, row + 3, ready ? 0xFFF0D7CF : 0xFFAF9692, false);
-            String time = synced ? (remaining[i] > 0 ? Integer.toString((remaining[i] + 19) / 20) + "s" : "") : "--";
+            String time = synced ? (!finisherReady && remaining[i] > 0 ? Integer.toString((remaining[i] + 19) / 20) + "s" : "") : "--";
             g.drawString(mc.font, time, x + w - 5 - mc.font.width(time), row + 3, 0xFFE6A0A2, false);
             int barX = x + 26, barWidth = w - 32;
             g.fill(barX, row + 15, barX + barWidth, row + 17, 0xFF392329);
-            int fill = synced ? barWidth - (int)Math.ceil((double)remaining[i] * barWidth / CombatTuning.cooldown(i)) : 0;
+            int fill = finisherReady ? barWidth : synced ? barWidth - (int)Math.ceil((double)remaining[i] * barWidth / CombatTuning.cooldown(i)) : 0;
             if (fill > 0) g.fill(barX, row + 15, barX + fill, row + 17, accent);
             if (i == 0) {
                 for (int blood = 0; blood < 2; blood++) {

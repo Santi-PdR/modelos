@@ -19,5 +19,6 @@
   "item.stainkatana.katana_stain.flavour": "«Solo un héroe de verdad puede detenerme.»",
   "stainkatana.hud.paralysis": "PARÁLISIS",
   "stainkatana.hud.slash": "CORTE",
-  "stainkatana.hud.ultimate": "SENTENCIA"
+  "stainkatana.hud.ultimate": "SENTENCIA",
+  "stainkatana.hud.finisher": "REMATE"
 }

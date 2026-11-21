@@ -19,5 +19,6 @@
   "item.stainkatana.katana_stain.flavour": "“Only a true hero can stop me.”",
   "stainkatana.hud.paralysis": "PARALYSIS",
   "stainkatana.hud.slash": "SLASH",
-  "stainkatana.hud.ultimate": "SENTENCE"
+  "stainkatana.hud.ultimate": "SENTENCE",
+  "stainkatana.hud.finisher": "FINISHER"
 }
