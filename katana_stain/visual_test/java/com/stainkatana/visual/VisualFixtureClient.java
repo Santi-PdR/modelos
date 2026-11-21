@@ -48,6 +48,8 @@ public final class VisualFixtureClient {
             case 115 -> capture = "06c_slash_impact.png";
             case 116 -> capture = "06d_slash_impact.png";
             case 140 -> { mc.options.setCameraType(CameraType.FIRST_PERSON); KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(0)); }
+            case 144 -> capture = "10a_blood_reach.png";
+            case 147 -> capture = "10b_blood_draw.png";
             case 151 -> capture = "10_paralysis.png";
             case 153 -> capture = "11_blood_feedback.png";
             case 180 -> {

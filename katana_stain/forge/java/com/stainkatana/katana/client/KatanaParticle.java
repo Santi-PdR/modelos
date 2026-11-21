@@ -32,7 +32,14 @@ public final class KatanaParticle extends TextureSheetParticle {
         this.hasPhysics = false;
         this.lifetime = style == 0 ? 8 : style == 1 ? 7 : 10;
         this.quadSize = style == 0 ? 1.35F : style == 1 ? 0.32F : 1.45F;
-        this.xd = this.yd = this.zd = 0;
+        // The slash planes encode orientation in dx/dy/dz, while shard packets
+        // carry actual velocity. Do not discard the blood particles' motion.
+        if (style == 1) {
+            this.xd = yaw; this.yd = pitch; this.zd = angle;
+            this.gravity = .2F;
+        } else {
+            this.xd = this.yd = this.zd = 0;
+        }
         if (style == 0) this.setColor(1.0F, .65F, .65F);
         else this.setColor(.82F, .13F, .16F);
         this.alpha = style == 0 ? .85F : .80F;

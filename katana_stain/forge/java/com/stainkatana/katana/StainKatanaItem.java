@@ -47,9 +47,13 @@ public class StainKatanaItem extends SwordItem implements GeoItem {
 
     @Override
     public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
-        if (attacker instanceof Player && target.isAlive() && target.level() instanceof ServerLevel level) {
-            markTarget(stack, target, level);
-            level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(0.55), target.getZ(), 1, 0, 0, 0, 0);
+        if (attacker instanceof net.minecraft.server.level.ServerPlayer player
+                && target.level() instanceof ServerLevel level) {
+            if (target.isAlive()) markTarget(stack, target, level);
+            // Normal katana hits also have visible feedback, not only abilities.
+            KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.55), target.getZ(), 2);
+            level.sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.55), target.getZ(),
+                    5, .18, .2, .18, .025);
         }
         return super.hurtEnemy(stack, target, attacker);
     }
