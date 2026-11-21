@@ -58,7 +58,7 @@ final class CapeClimbProbe {
         int t = p.tickCount - start;
         game.options.keyUp.setDown(t >= APPROACH && t < HOLD);
         game.options.keyShift.setDown(t >= HOLD && t < SLIDE);
-        game.options.keyBack.setDown(t >= RELEASE && t < BRAKE);
+        game.options.keyDown.setDown(t >= RELEASE && t < BRAKE);
         p.setSprinting(false);
     }
 

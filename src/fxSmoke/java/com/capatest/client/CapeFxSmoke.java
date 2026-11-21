@@ -475,7 +475,7 @@ public final class CapeFxSmoke {
             game.options.fov().set(70);
         }
         game.options.keyLeft.setDown(false);
-        game.options.keyBack.setDown(false);
+        game.options.keyDown.setDown(false);
         game.options.keyJump.setDown(false);
         game.options.keyShift.setDown(false);
         if (next == Scene.HOTBAR_BARE || next.walk() || next.audit() || next.jump() || next.climb()) {
