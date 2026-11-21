@@ -83,6 +83,7 @@ import java.util.concurrent.TimeUnit;
 @Mod.EventBusSubscriber(modid = CapaTestMod.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class CapeFxSmoke {
     private static final boolean COMBINED_ONLY = "1".equals(System.getenv("CAPA_PRUEBA_COMBINADA"));
+    private static final boolean NAPE_ABLATION = COMBINED_ONLY && "1".equals(System.getenv("CAPA_AISLAR_NUCA"));
     private static final String ATLAS = "assets/capatest/textures/item/armor/capa_deteriorer_evilsaiyan";
     private static final String FRAGMENT = "assets/capatest/shaders/core/cape_bloom.fsh";
     private static final String PACK_ID = "file/fx-probe";
@@ -123,14 +124,20 @@ public final class CapeFxSmoke {
         GLIDE("planeo-real", 6000), WADE("de-pie-en-agua", 6000), SWIM("nado-horizontal", 6000),
         SWIM_EXIT("fin-del-nado", 6000), WADE_BACK("de-pie-en-agua-curios", 6000),
         SWIM_BACK("nado-horizontal-curios", 6000), SWIM_EXIT_BACK("fin-del-nado-curios", 6000),
-        COMBINED_CHEST("maniobra-pecho", 6000), COMBINED_BACK("maniobra-curios", 6000);
+        COMBINED_CHEST("maniobra-pecho", 6000), COMBINED_BACK("maniobra-curios", 6000),
+        NO_CHAIN_CHEST("sin-cadena-pecho", 6000, "v18_chain_"), NO_CHAIN_BACK("sin-cadena-curios", 6000, "v18_chain_"),
+        NO_BAND_CHEST("sin-borde-pecho", 6000, "v17_cowl_back_"), NO_BAND_BACK("sin-borde-curios", 6000, "v17_cowl_back_");
 
         final String file;
         final long dayTime;
+        final String omitted;
 
-        Scene(String file, long dayTime) {
+        Scene(String file, long dayTime) { this(file, dayTime, null); }
+
+        Scene(String file, long dayTime, String omitted) {
             this.file = file;
             this.dayTime = dayTime;
+            this.omitted = omitted;
         }
 
         boolean hotbar() { return this == HOTBAR_BARE || this == HOTBAR; }
@@ -144,7 +151,7 @@ public final class CapeFxSmoke {
         boolean audit() { return this == AUDIT_CHEST || this == AUDIT_BACK; }
         boolean jump() { return this == JUMP_CHEST || this == JUMP_BACK; }
         boolean climb() { return this == CLIMB_CHEST || this == CLIMB_BACK; }
-        boolean combined() { return this == COMBINED_CHEST || this == COMBINED_BACK; }
+        boolean combined() { return this == COMBINED_CHEST || this == COMBINED_BACK || omitted != null; }
         boolean measureMotion() { return walk() || aquatic() || jump() || climb() || combined(); }
         boolean wade() { return this == WADE || this == WADE_BACK; }
         boolean swim() { return this == SWIM || this == SWIM_BACK; }
@@ -329,7 +336,8 @@ public final class CapeFxSmoke {
                     driveScene(game);
                     if (!captured) return;
                     if (COMBINED_ONLY) {
-                        if (scene == Scene.COMBINED_CHEST) equipScene(game, Scene.COMBINED_BACK);
+                        if (scene == Scene.COMBINED_CHEST || NAPE_ABLATION && scene != Scene.NO_BAND_BACK)
+                            equipScene(game, Scene.values()[scene.ordinal() + 1]);
                         else {
                             note("PASS: maniobra combinada, giro y frenada agachada en pecho y Curios");
                             game.stop();
@@ -645,11 +653,13 @@ public final class CapeFxSmoke {
         combinedFit = scene.combined() && combinedRoute.measureFit(event.getEntity().tickCount);
         if (scene.audit() || jumpFit || combinedFit) CapePlacementProbe.arm(renderer, false, false, false, true);
         if (scene.measureMotion()) CapeWalkProbe.arm(renderer);
+        if (scene.omitted != null) combinedRoute.omit(renderer, scene.omitted);
     }
 
     private static void afterArmor(GeoRenderEvent.Armor.Post event) {
         if (scene == null || event.getEntity() != Minecraft.getInstance().player) return;
         if (!(event.getRenderer() instanceof CapaArmorRenderer renderer)) return;
+        if (scene.omitted != null) combinedRoute.restoreCubes();
         framePasses++;
         rendered = renderer.getCurrentStack();
         armorPose = new Matrix4f(event.getPoseStack().last().pose());
@@ -693,7 +703,10 @@ public final class CapeFxSmoke {
         }
         // Also restore the clock if another mod cancelled the player draw.
         restoreAge();
-        if (combinedRoute != null) combinedRoute.restoreAim();
+        if (combinedRoute != null) {
+            combinedRoute.restoreAim();
+            combinedRoute.restoreCubes(); // Also if another handler cancelled the cape draw.
+        }
         if (scene == null || captured && !scene.aquatic() || pending != null) return;
         Minecraft game = Minecraft.getInstance();
         var player = game.player;

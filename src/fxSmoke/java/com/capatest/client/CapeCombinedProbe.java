@@ -13,7 +13,12 @@ import net.minecraftforge.client.event.ViewportEvent;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import software.bernie.geckolib.cache.object.GeoBone;
+import software.bernie.geckolib.cache.object.GeoCube;
 
 /** Diagnostic only: turn the head as sprint gives way to a crouched walk, stop, then stand. */
 final class CapeCombinedProbe {
@@ -23,6 +28,7 @@ final class CapeCombinedProbe {
     private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tstride\tground\tsprinting\tcrouching\t"
             + "walk\trun\tsneak\tair\tfall\tswim\ttop\tmid\ttip_x\ttip_y\ttip_z\tseat_z\tpitch\tyaw\tfit\tcrouch_floor\trear_tuck\timage\n");
     private final StringBuilder boxes = new StringBuilder(), head = new StringBuilder();
+    private final Map<GeoBone, List<GeoCube>> omitted = new LinkedHashMap<>();
     private int start = -1, fitTick = -1, nextShot;
     private LocalPlayer aimed;
     private float originalHead, originalHeadOld, originalPitch, originalPitchOld;
@@ -96,6 +102,31 @@ final class CapeCombinedProbe {
     void camera(ViewportEvent.ComputeCameraAngles event, LocalPlayer p) {
         float yaw = Mth.rotLerp((float) event.getPartialTick(), p.yBodyRotO, p.yBodyRot);
         CapePlacementProbe.orbit(event, p, yaw + 57, 13, 3.3, .97);
+    }
+
+    // Counterfactual only, compiled in the disposable Forge client. Omit
+    // the same cubes in both passes, then restore the shared baked lists.
+    void omit(CapaArmorRenderer renderer, String prefix) {
+        if (!omitted.isEmpty()) throw new AssertionError("nape control was not restored");
+        try {
+            for (var registered : renderer.getGeoModel().getAnimationProcessor().getRegisteredBones()) {
+                if (!(registered instanceof GeoBone bone) || !bone.getName().startsWith(prefix)) continue;
+                var cubes = bone.getCubes();
+                if (cubes.isEmpty()) throw new AssertionError("missing control piece: " + bone.getName());
+                omitted.put(bone, List.copyOf(cubes));
+                cubes.clear();
+            }
+            if (omitted.size() != (prefix.equals("v18_chain_") ? 8 : 5))
+                throw new AssertionError("missing nape control: " + prefix);
+        } catch (RuntimeException | AssertionError e) {
+            restoreCubes();
+            throw e;
+        }
+    }
+
+    void restoreCubes() {
+        omitted.forEach((bone, cubes) -> bone.getCubes().addAll(cubes));
+        omitted.clear();
     }
 
     boolean measureFit(int tick) {

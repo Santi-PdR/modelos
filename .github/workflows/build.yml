@@ -1004,6 +1004,7 @@ jobs:
         if: github.event_name == 'push' && contains(github.event.head_commit.message, '[probar-maniobra]')
         env:
           CAPA_PRUEBA_COMBINADA: '1'
+          CAPA_AISLAR_NUCA: ${{ contains(github.event.head_commit.message, '[aislar-nuca]') && '1' || '0' }}
           LIBGL_ALWAYS_SOFTWARE: '1'
           GALLIUM_DRIVER: llvmpipe
           ALSOFT_DRIVERS: 'null'
@@ -1069,6 +1070,28 @@ jobs:
           path: build/fx-smoke-run/fx-shots/maniobra-*
           if-no-files-found: warn
           retention-days: 30
+
+      - name: Guardar el control de nuca con y sin cada grupo de cubos
+        if: >-
+          github.ref_name == 'arena/5a9fa51b-modelos' && steps.verify-combined.outcome == 'success' &&
+          contains(github.event.head_commit.message, '[aislar-nuca]')
+        run: |
+          set -euo pipefail
+          base=docs/releases/v1.67.30/maniobra/diagnostico-nuca/control
+          jar=capatest-1.67.30.jar
+          cmp "build/libs/$jar" "entregables/v1.67.30/$jar"
+          for set in maniobra sin-cadena sin-borde; do
+            OPENBLAS_NUM_THREADS=1 python3 tools/extract_forge_nape.py build/fx-smoke-run/fx-shots \
+              "$base/$set" --prefix "$set" --stills-only
+            for slot in pecho curios; do
+              install -m 0644 "build/fx-smoke-run/fx-shots/$set-$slot.tsv" "$base/$set/$slot.tsv"
+            done
+          done
+          printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$base/prueba.txt"
+          git add "$base"
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'Registrar la ablación del borde y la cadena de v1.67.30 [skip ci]'
+          git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
 
       # Cliente real en mundo desechable. Se prueba aparte del JAR:
       # el código de diagnóstico y Curios nunca se empaquetan en él.

@@ -12,11 +12,11 @@ from verify_forge_postures import ACTOR
 from verify_forge_walk import read
 
 
-def extract(root, out):
+def extract(root, out, prefix='maniobra', stills_only=False):
     out.mkdir(parents=True, exist_ok=True)
     photos = []
     for slot in SLOTS:
-        stem = f'maniobra-{slot}'
+        stem = f'{prefix}-{slot}'
         trace = read(root/f'{stem}.tsv')
         timeline(trace, slot)
         stills = trace[trace['image'] != '-'][2:4]
@@ -37,7 +37,8 @@ def extract(root, out):
                 name = f'{slot}-{tick}-nuca.png'
                 im.crop((x0,y0,x1,y1)).save(out/name,optimize=True)
             photos.append((slot,tick,name,w,h,x0,y0,*screen[tick]))
-        wanted |= set(range(58,84)) & set(trace[trace['fit']==1]['time'].astype(int))
+        if not stills_only:
+            wanted |= set(range(58,84)) & set(trace[trace['fit']==1]['time'].astype(int))
         rows = []
         for line in (root/f'{stem}-cubos.tsv').read_text().splitlines():
             tick, bone, coords = line.split('\t',2)
@@ -55,5 +56,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('shots',type=Path)
     parser.add_argument('out',type=Path)
+    parser.add_argument('--prefix',default='maniobra')
+    parser.add_argument('--stills-only',action='store_true')
     args = parser.parse_args()
-    extract(args.shots,args.out)
+    extract(args.shots,args.out,args.prefix,args.stills_only)
