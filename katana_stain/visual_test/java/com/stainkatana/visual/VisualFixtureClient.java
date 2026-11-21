@@ -444,8 +444,25 @@ public final class VisualFixtureClient {
             case 1202 -> capture = "43_blood_left_draw.png";
             case 1206 -> capture = "44_blood_left_face.png";
             case 1210 -> capture = "45_blood_left_recovery.png";
-            case 1225 -> {
-                mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
+            // The first-person world-model pass can hide an item outside the
+            // camera. Compare the same clip in third person before diagnosing
+            // that as an item-rendering or mirroring failure.
+            case 1225 -> { mc.options.fov().set(35); mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); bloodSample(0, 0, 0); }
+            case 1229 -> capture = "46_blood_left_third_reach.png";
+            case 1232 -> capture = "47_blood_left_third_draw.png";
+            case 1236 -> capture = "48_blood_left_third_face.png";
+            case 1240 -> capture = "49_blood_left_third_recovery.png";
+            case 1250 -> mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
+            case 1265 -> {
+                if (mc.player.getMainArm() != net.minecraft.world.entity.HumanoidArm.RIGHT)
+                    throw new IllegalStateException("Right-handed blood fixture did not synchronize");
+                bloodSample(0, 0, 0);
+            }
+            case 1269 -> capture = "50_blood_right_third_reach.png";
+            case 1272 -> capture = "51_blood_right_third_draw.png";
+            case 1276 -> capture = "52_blood_right_third_face.png";
+            case 1280 -> capture = "53_blood_right_third_recovery.png";
+            case 1295 -> {
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Y.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Z.set(0.0);
