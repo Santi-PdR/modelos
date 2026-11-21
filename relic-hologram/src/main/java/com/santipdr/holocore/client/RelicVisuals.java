@@ -16,7 +16,12 @@ import net.minecraft.world.entity.player.Player;
  */
 public final class RelicVisuals {
 
-    /** Ticks sin renderizarse antes de liberar el modelo (re-equipar reinicia). */
+    /**
+     * Ticks sin actualizarse antes de liberar el modelo. El jugador local se
+     * actualiza cada tick mientras lleve la reliquia, asi que no se poda; la de
+     * otro portador se poda cuando deja de verse, y al volver a verlo arranca su
+     * activacion (que es lo que documenta el README).
+     */
     private static final int IDLE_EXPIRY_TICKS = 40;
 
     private static final Map<UUID, RelicVisual> VISUALS = new HashMap<>();
@@ -29,10 +34,14 @@ public final class RelicVisuals {
     }
 
     public static RelicVisual visual(Player player) {
-        return VISUALS.computeIfAbsent(player.getUUID(),
-                uuid -> new RelicVisual(new RelicAnimatable(uuid),
-                        new RelicGeoRenderer(new RelicGeoModel()),
-                        new RelicGlowState()));
+        return VISUALS.computeIfAbsent(player.getUUID(), uuid -> {
+            RelicAnimatable animatable = new RelicAnimatable(uuid);
+            // Nace "recien visto": asi la reliquia equipada en primera persona
+            // todavia encola su activation, que se vera al pasar a tercera.
+            animatable.markRendered(player.level().getGameTime());
+            return new RelicVisual(animatable, new RelicGeoRenderer(new RelicGeoModel()),
+                    new RelicGlowState());
+        });
     }
 
     /**
@@ -45,7 +54,7 @@ public final class RelicVisuals {
 
     public static void prune(long gameTime) {
         VISUALS.entrySet().removeIf(entry ->
-                gameTime - entry.getValue().animatable().lastRenderTick() > IDLE_EXPIRY_TICKS);
+                gameTime - entry.getValue().animatable().lastUpdateTick() > IDLE_EXPIRY_TICKS);
     }
 
     public static void clear() {

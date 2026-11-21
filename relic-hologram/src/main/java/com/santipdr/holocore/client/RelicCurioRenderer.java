@@ -65,6 +65,9 @@ public class RelicCurioRenderer implements ICurioRenderer {
         RelicVisuals.RelicVisual visual = RelicVisuals.visual(player);
         RelicAnimatable animatable = visual.animatable();
         animatable.update(player, ClientRelicStates.get(player.getUUID()), partialTicks);
+        // Se esta dibujando: el camino de tick no debe descartar animaciones para
+        // este portador.
+        animatable.markRendered(player.level().getGameTime());
 
         EntityModel<T> parentModel = renderLayerParent.getModel();
 

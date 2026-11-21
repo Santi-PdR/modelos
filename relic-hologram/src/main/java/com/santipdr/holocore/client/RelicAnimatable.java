@@ -64,7 +64,17 @@ public final class RelicAnimatable implements GeoAnimatable {
     private boolean active = true;
     private boolean firstFrame = true;
     private long lastLogicTick = Long.MIN_VALUE;
+    /** Ultimo tick en el que se actualizo (se dibujara o no). */
+    private long lastUpdateTick;
+    /** Ultimo tick en el que se dibujo de verdad. */
     private long lastRenderTick;
+    /**
+     * Si el portador se esta viendo ahora mismo. Cuando no (primera persona),
+     * {@link #update} sigue moviendo el estado pero no encola animaciones: si no,
+     * se acumularian en la cola y al volver a tercera persona se reproducirian de
+     * golpe, como ponerse al dia de lo que paso mientras no mirabas.
+     */
+    private boolean animate = true;
     private long toggledAt = Long.MIN_VALUE;
     private long seenHit;
     private long seenPulse;
@@ -114,8 +124,19 @@ public final class RelicAnimatable implements GeoAnimatable {
         return this.wearer;
     }
 
+    /** Ultimo tick dibujado: lo usa el camino de tick para saber si se ve. */
     public long lastRenderTick() {
         return this.lastRenderTick;
+    }
+
+    /** Ultimo tick actualizado: lo usa el prune para no tirar visuales vivos. */
+    public long lastUpdateTick() {
+        return this.lastUpdateTick;
+    }
+
+    /** Marca que este portador se dibujo en {@code gameTime}. */
+    public void markRendered(long gameTime) {
+        this.lastRenderTick = gameTime;
     }
 
     public LoopState loopState() {
@@ -146,8 +167,24 @@ public final class RelicAnimatable implements GeoAnimatable {
      * servidor solo disparan cuando cambian.
      */
     public void update(Player player, ClientRelicStates.Snapshot snapshot, float partialTick) {
+        update(player, snapshot, partialTick, true);
+    }
+
+    /**
+     * Igual que {@link #update(Player, ClientRelicStates.Snapshot, float)}, pero
+     * diciendo si el portador se esta viendo.
+     *
+     * <p>El camino de tick del cliente llama a esta version para el jugador
+     * local: en primera persona no hay renderer, y sin esto la maquina de estados
+     * se quedaba congelada (ni alerta, ni variaciones de reposo, ni
+     * {@code /relic info} con datos). Con {@code visible = false} el estado sigue
+     * avanzando pero las animaciones que se pedirian no se encolan.</p>
+     */
+    public void update(Player player, ClientRelicStates.Snapshot snapshot, float partialTick,
+                       boolean visible) {
         long now = player.level().getGameTime();
-        this.lastRenderTick = now;
+        this.lastUpdateTick = now;
+        this.animate = visible;
         // El destello se apaga con tiempo real y no con ticks: asi no se queda a
         // medias cuando el juego va a 5 FPS.
         decayFlash();
@@ -376,6 +413,9 @@ public final class RelicAnimatable implements GeoAnimatable {
         if (!RelicAnimations.ALL_NAMES.contains(nombre)) {
             return false;
         }
+        // Pedido a mano: se encola aunque en este momento no se dibuje, para que
+        // se vea en cuanto el jugador pase a tercera persona.
+        this.animate = true;
         if (isLayer(nombre)) {
             triggerLayer(nombre);
         } else {
@@ -436,6 +476,9 @@ public final class RelicAnimatable implements GeoAnimatable {
      * la asignacion no importa.</p>
      */
     private void request(String animation) {
+        if (!this.animate) {
+            return;
+        }
         if (this.pending.size() >= 4) {
             this.pending.poll();
         }
@@ -451,6 +494,9 @@ public final class RelicAnimatable implements GeoAnimatable {
      * animacion ya cargada").</p>
      */
     private void triggerLayer(String name) {
+        if (!this.animate) {
+            return;
+        }
         this.layerController.forceAnimationReset();
         this.layerController.setAnimation(RawAnimation.begin().thenPlay(name));
     }

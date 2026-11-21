@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.santipdr.holocore.common.RelicAnimations;
+import com.santipdr.holocore.common.RelicServer;
 import com.santipdr.holocore.config.RelicConfig;
 import com.santipdr.holocore.network.RelicActionPacket;
 import com.santipdr.holocore.network.RelicNetwork;
@@ -138,15 +139,15 @@ public final class RelicClientCommands {
 
     /**
      * Segunda linea de {@code /relic info}: lo que no se puede adivinar mirando.
-     * El estado en vivo sale del visual ya montado (si no lo hay, no se crea uno
-     * para contestar) y el GLSL dice <b>por que</b> esta apagado cuando lo esta:
-     * config, shaderpack o compilacion fallida.
+     * El estado en vivo sale del visual del jugador local (que existe desde el
+     * primer tick con la reliquia puesta, se dibuje o no) y el GLSL dice <b>por
+     * que</b> esta apagado cuando lo esta: config, shaderpack o compilacion
+     * fallida.
      */
     private static Component diag() {
         String state = "-";
         String flash = "-";
-        Player player = Minecraft.getInstance().player;
-        RelicVisuals.RelicVisual visual = player == null ? null : RelicVisuals.existing(player);
+        RelicVisuals.RelicVisual visual = localVisual();
         if (visual != null) {
             state = visual.animatable().loopState().name().toLowerCase(Locale.ROOT);
             flash = String.format(Locale.ROOT, "%.0f%%", visual.glow().flashScaled() * 100.0F);
@@ -166,6 +167,24 @@ public final class RelicClientCommands {
             return Component.translatable("message.holocore.glsl.failed");
         }
         return Component.translatable("message.holocore.glsl.on");
+    }
+
+    /**
+     * Visual del jugador local. Si no existe pero lleva la reliquia puesta, se
+     * crea: el camino de tick lo hace en el primer tick con la reliquia encima,
+     * asi que esto solo cubre el hueco de ese tick (y evita que {@code info} y
+     * {@code anim} contesten "-" o "no equipada" por una carrera de un tick).
+     */
+    private static RelicVisuals.RelicVisual localVisual() {
+        Player player = Minecraft.getInstance().player;
+        if (player == null) {
+            return null;
+        }
+        RelicVisuals.RelicVisual visual = RelicVisuals.existing(player);
+        if (visual == null && RelicServer.findRelic(player).isPresent()) {
+            visual = RelicVisuals.visual(player);
+        }
+        return visual;
     }
 
     /**
@@ -215,8 +234,7 @@ public final class RelicClientCommands {
         if (nombre.equalsIgnoreCase("list")) {
             return animList(source);
         }
-        Player player = Minecraft.getInstance().player;
-        RelicVisuals.RelicVisual visual = player == null ? null : RelicVisuals.existing(player);
+        RelicVisuals.RelicVisual visual = localVisual();
         if (visual == null) {
             source.sendFailure(Component.translatable("message.holocore.not_equipped"));
             return 0;

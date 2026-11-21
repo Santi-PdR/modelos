@@ -1,5 +1,30 @@
 # Historial de cambios
 
+## 1.0.19 — la reliquia ya no se congela en primera persona
+
+* **Bug de verdad, no cosmético**: la máquina de estados se actualizaba dentro
+  del renderer de Curios, y **en primera persona el jugador local no se dibuja**.
+  Mientras mirabas de frente: el escaneo de alerta no corría (así que no había
+  anillo rojo al acercarse un mob), las variaciones de reposo no salían, el
+  destello no decaía, `/relic info` contestaba `-` y —lo peor— el visual se
+  podaba a los 40 ticks sin dibujarse: al volver a tercera persona la reliquia
+  arrancaba de cero con su `activation`, perdiendo en qué estado estaba.
+* **Arreglo**: el cliente actualiza la reliquia del jugador local en cada tick
+  (`RelicClientEvents.tickLocalRelic`), esté o no en pantalla, preguntando a
+  Curios si la lleva puesta. El estado y el brillo interpolado quedan siempre al
+  día; las animaciones que habrían tocado **no se encolan** mientras el portador
+  no se ve (`RelicAnimatable.update(..., visible)`), para no reproducir de golpe
+  lo que pasó mientras mirabas a otro lado. `/relic anim` sí encola siempre: es
+  un pedido explícito.
+* El prune de `RelicVisuals` ahora mide **ticks sin actualizarse** y no ticks sin
+  dibujarse, que es lo que de verdad significa «este portador ya no está».
+* **Nuevo chequeo de CI** (`Validate local relic tick`): el camino de tick y el
+  `markRendered` del renderer tienen que seguir existiendo y estar conectados; si
+  alguien vuelve a dejar la actualización solo en el renderer, CI lo dice.
+* `README`: aclarado que el reinicio por 2 s fuera de pantalla es cosa de **otros**
+  portadores, y dos puntos nuevos en el checklist (estado en primera persona y
+  que pasar a tercera no reinicie la activación).
+
 ## 1.0.18 — `/relic stats`: el ahorro, en números
 
 * **Nuevo `/relic stats`** (y `/relic stats reset`): dice cuántos **pases por

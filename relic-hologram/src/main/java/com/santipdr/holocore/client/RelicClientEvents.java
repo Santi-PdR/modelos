@@ -2,9 +2,11 @@ package com.santipdr.holocore.client;
 
 import com.santipdr.holocore.HoloCore;
 import com.santipdr.holocore.common.ModItems;
+import com.santipdr.holocore.common.RelicServer;
 import com.santipdr.holocore.network.RelicActionPacket;
 import com.santipdr.holocore.network.RelicNetwork;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RegisterClientCommandsEvent;
@@ -22,6 +24,13 @@ import top.theillusivec4.curios.api.client.CuriosRendererRegistry;
  */
 @Mod.EventBusSubscriber(modid = HoloCore.MOD_ID, value = Dist.CLIENT)
 public final class RelicClientEvents {
+
+    /**
+     * Ticks en los que se considera que el portador se esta viendo. Se cuenta
+     * desde el ultimo dibujo, asi que un portador lejos ({@code fade = 0}) o en
+     * primera persona deja de contar y sus animaciones no se encolan.
+     */
+    private static final long VISIBLE_WINDOW_TICKS = 20L;
 
     private RelicClientEvents() {
     }
@@ -75,10 +84,50 @@ public final class RelicClientEvents {
             return;
         }
         RelicVisuals.prune(minecraft.level.getGameTime());
+        tickLocalRelic(minecraft);
 
         while (RelicKeys.TOGGLE.consumeClick()) {
             RelicNetwork.sendToServer(new RelicActionPacket(RelicActionPacket.Action.TOGGLE));
         }
+    }
+
+    /**
+     * Actualiza la reliquia del jugador local <b>aunque no se dibuje</b>.
+     *
+     * <p>Curios solo llama al renderer cuando la entidad se dibuja, y en primera
+     * persona el jugador local no se dibuja: hasta 1.0.18 la maquina de estados se
+     * quedaba congelada (sin alerta, sin variaciones de reposo, con
+     * {@code /relic info} sin estado) y el visual ademas se podaba a los 40 ticks
+     * sin dibujarse, con lo que al volver a tercera persona la reliquia arrancaba
+     * de cero con su {@code activation}.</p>
+     *
+     * <p>El estado queda vivo; las animaciones que habrian tocado no se encolan
+     * mientras no se ve (ver {@code RelicAnimatable.update(..., visible)}), para no
+     * reproducir de golpe lo que paso mientras mirabas a otro lado.</p>
+     */
+    private static void tickLocalRelic(Minecraft minecraft) {
+        LocalPlayer player = minecraft.player;
+        if (player == null || player.isSpectator() || player.level() == null) {
+            return;
+        }
+        // Curios responde en cliente: es una busqueda en las ranuras del jugador
+        // local, no una pregunta al servidor.
+        if (RelicServer.findRelic(player).isEmpty()) {
+            return;
+        }
+        // existing() primero: computeIfAbsent con un lambda que captura al
+        // jugador reserva un objeto por tick, y esto corre 20 veces por segundo.
+        RelicVisuals.RelicVisual visual = RelicVisuals.existing(player);
+        if (visual == null) {
+            visual = RelicVisuals.visual(player);
+        }
+        RelicAnimatable animatable = visual.animatable();
+        long now = player.level().getGameTime();
+        boolean visible = now - animatable.lastRenderTick() <= VISIBLE_WINDOW_TICKS;
+        animatable.update(player, ClientRelicStates.get(player.getUUID()), 1.0F, visible);
+        // El brillo (color y fuerzas) se interpola con tiempo real: se mantiene al
+        // dia para que al girarse la camara ya este en el estado correcto.
+        visual.glow().update(animatable.loopState(), animatable.flash());
     }
 
     @SubscribeEvent

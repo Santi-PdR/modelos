@@ -239,8 +239,8 @@ hay que sumar la traslación que traía `relic_hologram.geo.json`.
 
 ## Qué hace exactamente
 
-* **Equipar** → `activation` → `idle` (bucle). Al cambiar de calidad o al
-  re-equipar tras 2 s sin renderizarse, vuelve a empezar.
+* **Equipar** → `activation` → `idle` (bucle). Al cambiar de calidad, o al volver
+  a ver a **otro** portador tras 2 s fuera de pantalla, vuelve a empezar.
 * **Desequipar** → deja de renderizarse. La `deactivation` **no** se puede ver al
   desequipar: Curios deja de llamar al renderer en el mismo tick, así que no hay
   dónde dibujarla. Sí se ve al pasar a dormido (`deactivation`, o `sleep` si el
@@ -260,6 +260,13 @@ hay que sumar la traslación que traía `relic_hologram.geo.json`.
 * Transiciones de 6 ticks (el manifiesto recomienda 4–8) y dos
   `AnimationController` simultáneos: `state` (bucles + acciones) y `layer`
   (solo `layer_*`), para que las capas no pisen los giros.
+* **Se actualiza aunque no se dibuje** (1.0.19). En primera persona Curios no
+  llama al renderer, así que la máquina de estados se movía solo en tercera: sin
+  alerta, sin variaciones de reposo, `/relic info` sin estado y el visual podado
+  a los 40 ticks — al volver, la reliquia arrancaba de cero con su `activation`.
+  Ahora el cliente actualiza la reliquia del jugador local en cada tick. El
+  estado queda vivo y las animaciones que habrían tocado **no se encolan**
+  mientras no se ve, para no reproducirlas de golpe al girarse.
 
 ## Notas sobre los assets (sin modificarlos)
 
@@ -301,6 +308,8 @@ hay que sumar la traslación que traía `relic_hologram.geo.json`.
 - [ ] Noche, cueva y agua: sigue luminoso.
 - [ ] Sin shaders y con Iris/Oculus: sin errores en el log y sin desaparición.
 - [ ] `quality=lite` y `glowLayer=false` no rompen las animaciones.
+- [ ] En primera persona `/relic info` muestra el estado (y cambia a `alert` con
+      un mob cerca); pasar a tercera **no** reinicia la `activation`.
 - [ ] `/relic stats` responde con los pases por dibujo (4 con base, emisivo, halo y
       GLSL) y los ms por dibujo; `/relic stats reset` los reinicia.
 - [ ] Distancia > `maxRenderDistance`: deja de renderizarse (sin tirones).
