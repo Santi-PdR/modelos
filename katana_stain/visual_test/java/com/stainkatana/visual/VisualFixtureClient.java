@@ -175,7 +175,14 @@ public final class VisualFixtureClient {
                 if (mobs.isEmpty() || !mobs.get(0).hasEffect(com.stainkatana.katana.KatanaEffects.CINEMATIC_BIND.get()))
                     throw new IllegalStateException("Long range C did not bind mob");
                 savedStack = player.getMainHandItem();
+                if (savedStack.isDamageableItem() || !savedStack.getItem().isEnchantable(savedStack))
+                    throw new IllegalStateException("Katana durability or enchantability is incorrect");
+                float health = player.getHealth();
+                boolean hurt = player.hurt(player.damageSources().mobAttack(mobs.get(0)), 5);
+                if (hurt || player.getHealth() != health)
+                    throw new IllegalStateException("C did not protect the caster against entity damage");
                 player.getInventory().setItem(player.getInventory().selected, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK));
+                System.out.println("STAIN_CASTER_PROTECTION_VERIFIED");
             });
             case 605 -> mc.getSingleplayerServer().execute(() -> {
                 var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());

@@ -4,7 +4,9 @@ import net.minecraftforge.common.ForgeConfigSpec;
 
 /** Client-only visual preferences; no gameplay values are accepted from clients. */
 public final class KatanaClientConfig {
+    public enum HudPosition { RIGHT_MIDDLE, TOP_CENTER }
     public static final ForgeConfigSpec SPEC;
+    public static final ForgeConfigSpec.EnumValue<HudPosition> HUD_POSITION;
     public static final ForgeConfigSpec.BooleanValue ULTIMATE_FRAME;
     public static final ForgeConfigSpec.DoubleValue BAR_FRACTION;
     public static final ForgeConfigSpec.DoubleValue ZOOM_FRACTION;
@@ -24,6 +26,7 @@ public final class KatanaClientConfig {
         builder.pop();
         builder.push("interface");
         SHOW_HUD = builder.comment("Show small cooldown panel while holding the katana.").define("showHud", true);
+        HUD_POSITION = builder.comment("Position of the ability panel: RIGHT_MIDDLE or TOP_CENTER.").defineEnum("hudPosition", HudPosition.RIGHT_MIDDLE);
         HUD_LEFT = builder.comment("Legacy setting; the HUD is now positioned at the middle right.").define("hudLeft", true);
         VANILLA_SWINGS = builder.comment("Animate ordinary katana swings without Better Combat; disable if another animation mod conflicts.").define("vanillaSwings", true);
         BLOOD_FLASH = builder.comment("Show subtle red tint after successful blood paralysis.").define("bloodFlash", true);

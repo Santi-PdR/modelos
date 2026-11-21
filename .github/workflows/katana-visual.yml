@@ -75,6 +75,7 @@ jobs:
           grep -F 'STAIN_FINISHER_DAMAGE_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-client.log
+          grep -F 'STAIN_CASTER_PROTECTION_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_CANCELLATION_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_LONG_RANGE_Z_VERIFIED' /tmp/stain-visual-client.log
           count=$(find run/stain-visual-test -name '*.png' | wc -l)

@@ -50,6 +50,7 @@ public final class KatanaAbilities {
         final AbilityTimeline timeline;
         Vec3 anchor;
         Vec3 casterAnchor;
+        float attackDamage;
         boolean followUpImpacted;
         boolean durabilitySpent;
         int cinematicStroke;
@@ -129,7 +130,8 @@ public final class KatanaAbilities {
         }
     }
     @SubscribeEvent public static void protectCaster(net.minecraftforge.event.entity.living.LivingAttackEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || event.getSource().getEntity() == null) return;
+        if (!(event.getEntity() instanceof ServerPlayer player)
+                || (event.getSource().getEntity() == null && event.getSource().getDirectEntity() == null)) return;
         Cast cast = CASTS.get(player.getUUID());
         if (cast != null && cast.ability == 2 && cast.dimension.equals(player.level().dimension())) event.setCanceled(true);
     }
@@ -196,7 +198,8 @@ public final class KatanaAbilities {
             if (arrival != null) moveTo(player, ultimateTarget, arrival);
         }
         Cast newCast = new Cast(ability, stack, level.dimension(), now, targetId);
-        if (ultimateTarget != null) { newCast.anchor = ultimateTarget.position(); newCast.casterAnchor = player.position(); }
+        if (ultimateTarget != null) { newCast.anchor = ultimateTarget.position(); newCast.casterAnchor = player.position();
+            newCast.attackDamage = (float) player.getAttributeValue(Attributes.ATTACK_DAMAGE); }
         CASTS.put(player.getUUID(), newCast);
         KatanaNetwork.broadcastAnimation(player, ability);
         if (ability == 2) {
@@ -396,7 +399,7 @@ public final class KatanaAbilities {
         if (cast.cinematicStroke < CombatTuning.ultimateStrikeCount()
                 && elapsed >= CombatTuning.ultimateStrikeTick(cast.cinematicStroke)) {
             int index = cast.cinematicStroke++;
-            float damage = CombatTuning.damage(player.getAttributeValue(Attributes.ATTACK_DAMAGE), true);
+            float damage = CombatTuning.damage(cast.attackDamage, true);
             // Reserve the kill for the last cut, but never protect the mob from other damage sources.
             if (index < CombatTuning.ultimateStrikeCount() - 1) damage = Math.min(damage, Math.max(0, mob.getHealth() - 1));
             // Vanilla damage immunity can otherwise swallow consecutive cinematic cuts.

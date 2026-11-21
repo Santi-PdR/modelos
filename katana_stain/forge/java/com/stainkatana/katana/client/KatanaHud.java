@@ -52,19 +52,25 @@ public final class KatanaHud {
         }
         if (!KatanaClientConfig.SHOW_HUD.get() || !(mc.player.getMainHandItem().getItem() instanceof StainKatanaItem)) return;
         // Compact separated ability plates leave more of the world visible.
-        int w = 104, x = Math.max(5, g.guiWidth() - w - 8);
-        int y = Math.max(8, (g.guiHeight() - 69) / 2);
+        int w = 104;
+        boolean top = KatanaClientConfig.HUD_POSITION.get() == KatanaClientConfig.HudPosition.TOP_CENTER;
+        int x = top ? Math.max(5, (g.guiWidth() - w) / 2) : Math.max(5, g.guiWidth() - w - 8);
+        int y = top ? 12 : Math.max(8, (g.guiHeight() - 69) / 2);
         String[] labels = {"stainkatana.hud.paralysis", "stainkatana.hud.slash", "stainkatana.hud.ultimate"};
         for (int i = 0; i < 3; i++) {
             int row = y + i * 23;
             boolean finisherReady = i == 0 && synced && charges >= 2;
             boolean ready = synced && (remaining[i] == 0 || finisherReady);
-            int accent = ready ? 0xFFCF5861 : 0xFF74313B;
-            g.fill(x + 2, row + 2, x + w, row + 21, 0xB40A080B);
+            int accent = ready ? 0xFFE46C73 : 0xFF85454D;
+            g.fill(x + 2, row + 2, x + w, row + 21, 0xD20D0A0E);
             g.fill(x, row, x + 21, row + 21, 0xDD1C1115);
             g.fill(x, row, x + 2, row + 21, accent);
             g.fill(x + 2, row, x + 21, row + 1, 0xFF6C343B);
             g.fill(x + 2, row + 20, x + 21, row + 21, 0xFF452229);
+            // Fine red edge and a clipped corner give each plate definition
+            // without relying on bright color alone to signal availability.
+            g.fill(x + 21, row + 19, x + w - 4, row + 20, 0xFF35252B);
+            g.fill(x + w - 4, row + 17, x + w - 2, row + 18, accent);
             String key = KatanaKeys.get(i).getTranslatedKeyMessage().getString();
             key = mc.font.plainSubstrByWidth(key, 16);
             g.drawCenteredString(mc.font, key, x + 11, row + 6, 0xFFF2DFD8);
