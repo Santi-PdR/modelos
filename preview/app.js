@@ -264,27 +264,39 @@ function wornPlate(f, index, elytra, slim) {
 function fixedWearerPose(geo, profile, stance, elytra, slim) {
   const f=profile.mount;
   const fixed=geo.bones.some(b=>b.name===profile.bone) && geo.bones.some(b=>b.name===profile.gussetBone);
-  const seated=fixed && !elytra;
+  const seated=fixed && !elytra && geo.bones.some(b=>b.name===profile.seat.frame);
   const a=profile.backing;
   const backing=elytra ? [a.tuckY,a.tuckY,a.wingZ] : f.backing;
   const bones=[];
+  function frame(b, prefix, data) {
+    const name=prefix+b.name;
+    bones.push({name,parent:b.parent,cubes:[],...data});
+    return {...b,parent:name};
+  }
   for (let piece of geo.bones) {
     const name=piece.name, half=a.names.indexOf(name);
     if (name==='chestplate') piece={...piece,rotation:[stance*profile.bodyAngle,0,0],offset:[0,-3.2*stance,0]};
     if (half>=0) piece={...piece,scale:[1,backing[half],backing[2]]};
-    if (name==='v20_mount_shoulders' && (elytra || seated)) {
-      piece={...piece,scale:elytra ? shoulderScales(0,0,0,true) : [1,f.SHOULDER_HEIGHT,f.SHOULDER_REACH]};
-    }
-    if (elytra && name==='v20_mount_under_yoke') piece={...piece,scale:yokeScales(0,0,0,true)};
-    if (fixed && name==='v20_mount_saddle') piece={...piece,offset:[0,0,f.SADDLE_DEPTH],scale:[f.SADDLE_WIDTH,1,1]};
+    const carrier=name==='v20_mount_shoulders', under=name==='v20_mount_under_yoke';
+    if (carrier && elytra) piece={...piece,scale:shoulderScales(0,0,0,true)};
+    if (under && elytra) piece={...piece,scale:yokeScales(0,0,0,true)};
+    if (fixed && name==='v20_mount_saddle') piece=seated ? {...piece,
+      offset:[0,-f.SADDLE_DROP,f.SADDLE_DEPTH],scale:[f.SADDLE_WIDTH,f.SADDLE_HEIGHT,f.SADDLE_THICKNESS]} :
+      {...piece,offset:[0,0,f.WING_SADDLE_DEPTH],scale:[f.WING_SADDLE_WIDTH,1,1]};
     if (seated) {
+      const rim=['v17_cowl_','v19_cuellito_','v18_chain_'].some(p=>name.startsWith(p));
+      if (rim || carrier) piece=frame(piece,'snug_',{
+        pivot:[0,f.RIM_Y,f.BACK_PLANE],offset:[0,-f.RIM_DROP,0],scale:[1,f.RIM_HEIGHT,f.RIM_DEPTH]});
       if (name==='v17_cowl_return') piece={...piece,offset:[0,-f.RETURN_DROP,0]};
-      else if (!name.startsWith('v17_cowl_tooth_') &&
-          ['v17_cowl_','v19_cuellito_','v18_chain_'].some(p=>name.startsWith(p))) {
-        const frame={name:'fixed_'+name,parent:piece.parent,pivot:[0,f.TRIM_Y,f.TRIM_Z],
-          offset:[0,-f.TRIM_DROP,0],scale:[f.TRIM_WIDTH,f.TRIM_HEIGHT,1],cubes:[]};
-        bones.push(frame);
-        piece={...piece,parent:frame.name};
+      else if (rim && !name.startsWith('v17_cowl_tooth_')) piece=frame(piece,'trim_',{
+        pivot:[0,f.TRIM_Y,f.TRIM_Z],offset:[0,-f.TRIM_DROP,0],scale:[f.TRIM_WIDTH,f.TRIM_HEIGHT,1]});
+      if (carrier) piece={...piece,offset:[0,f.SHOULDER_RISE,0],scale:[1,f.SHOULDER_HEIGHT,f.SHOULDER_REACH]};
+      if (name===profile.drapeBone) piece={...piece,rotation:[f.DRAPE_PITCH,0,0],offset:[0,-f.DRAPE_DROP,-f.DRAPE_ADVANCE]};
+      if (half>=0) piece=frame(piece,'lip_',{
+        pivot:[0,0,f.LINING_PLANE],offset:[0,-f.LINING_DROP,0],liftYZ:f.LINING_LIFT});
+      if (half>=0 || under || name===profile.gussetBone || name==='v20_mount_seat') {
+        const depth=half>=0 ? f.LINING_DEPTH : name===profile.gussetBone ? f.GUSSET_DEPTH : f.RIM_DEPTH;
+        piece=frame(piece,'back_', {pivot:[0,0,f.BACK_PLANE],scale:[1,1,depth]});
       }
     }
     const plate=profile.plates.names.indexOf(name);
@@ -439,7 +451,7 @@ function matrices(geo) {
     const b = by[n], p = b.pivot || [0,0,0], B = [-p[0], p[1], p[2]];
     const off = b.offset || [0,0,0];
     const scale=b.scale || REST.scale, S=ident();
-    S[0]=scale[0]; S[5]=scale[1]; S[10]=scale[2];
+    S[0]=scale[0]; S[5]=scale[1]; S[10]=scale[2]; S[6]=b.liftYZ || 0;
     const local = mul(T([B[0]-off[0], B[1]+off[1], B[2]+off[2]]),
       mul(mul(rotmat(b.rotation || REST.rotation), S), T([-B[0],-B[1],-B[2]])));
     const P = b.parent ? calc(b.parent) : ident();

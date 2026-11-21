@@ -56,3 +56,60 @@ def seat_contacts(parts, label):
             label, side, 'encastre espalda/forro/cuello/retorno/hombrera/manga', np.round(contacts,3).tolist())
         values.append(contacts)
     return np.min(values, axis=0)
+
+
+def depth_intervals(boxes, xy):
+    """Intersect +Z lines with the *faces* of affine boxes, not their AABBs."""
+    basis = (boxes[:, [1,3,4]] - boxes[:, :1]).transpose(0,2,1)
+    inv = np.linalg.inv(basis)
+    start = np.column_stack((xy, np.zeros(len(xy))))
+    origin = np.einsum('kij,pkj->pki', inv, start[:,None,:] - boxes[None,:,0])
+    direction = inv[:,:,2]
+    parallel = abs(direction) < 1e-9
+    step = 1 / np.where(parallel, 1, direction)
+    near, far = -origin*step, (1-origin)*step
+    enter = np.where(parallel, -np.inf, np.minimum(near,far)).max(-1)
+    leave = np.where(parallel, np.inf, np.maximum(near,far)).min(-1)
+    inside = (~parallel | ((origin >= -1e-6) & (origin <= 1+1e-6))).all(-1)
+    for a,b,hit in zip(enter, leave, inside & (leave > enter), strict=True):
+        yield sorted(zip(a[hit], b[hit], strict=True))
+
+
+def upper_back_fit(parts, label):
+    """Check the visible rim and support above the first ribs, not the waist pin.
+
+    In .18 one small contact was enough for the SAT chain even though a
+    broad hollow ran across the neck. Sweep the bare back face (the jacket
+    may be transparent) and reject a stand-off cavity or an oversized rim.
+    """
+    body, = parts['body']
+    lo, hi = body.min(0), body.max(0)
+    np.testing.assert_allclose(hi-lo, [8,12,4], atol=.006, rtol=0, err_msg=f'{label}: vanilla torso basis')
+    back, top = hi[2], hi[1]
+    center, width = (lo[0]+hi[0])/2, hi[0]-lo[0]
+    rim = np.concatenate([v for n,v in parts.items() if n.startswith(('v17_cowl_back_', 'v17_cowl_front_'))])
+    stand_off = rim[:,:,2].max() - back
+    assert stand_off < 2.75, (label, 'el borde del cuello sigue retrasado (u)', round(stand_off,3))
+    lining = np.concatenate([v for n,v in parts.items() if n.startswith('v20_mount_backing_')])
+    shell = np.concatenate((lining, rim, *[v for n,v in parts.items() if n.startswith(('v17_cowl_tooth_', 'v20_mount_saddle'))]))
+    xy = [(center+width*f, top-drop) for f in np.linspace(-.325,.325,9) for drop in np.linspace(1.02,2.13,7)]
+    max_gap, skin_lap = 0., np.inf
+    for line in depth_intervals(shell, np.array(xy)):
+        support = max((back-a for a,b in line if a <= back and b > back+.12), default=-np.inf)
+        skin_lap = min(skin_lap, support)
+        depth = back
+        for a,b in line:
+            if b <= depth:
+                continue
+            max_gap = max(max_gap, a-depth)
+            depth = b
+    assert skin_lap >= .055 and max_gap <= .30, (
+        label, 'hueco entre piel y cuello (u)', round(skin_lap,3), round(max_gap,3))
+
+    roots = [np.asarray(parts[f'v17_ribbon_{i}_seg0']) for i in range(12)]
+    assert all(len(r) for r in roots), label
+    supports = np.concatenate([v for n,v in parts.items() if n.startswith(
+        ('v17_cowl_', 'v19_cuellito_', 'v18_pad_', 'v18_chain_', 'v20_mount_saddle'))])
+    root_lap = min(lap(root, supports) for root in roots)
+    assert root_lap > .025, (label, 'el paño no nace de la costura (u)', round(root_lap,3))
+    return np.array([stand_off, max_gap, skin_lap, root_lap])

@@ -293,7 +293,7 @@ def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False):
     f = mount_profile()
     names = {b['name'] for b in geo['bones']}
     fixed = G.FIT_BONE in names and G.GUSSET_BONE in names
-    seated = fixed and not elytra
+    seated = fixed and not elytra and seat_profile()['frame'] in names
     back = B.profile()['names']
     l,r,z = B.solve(None,0.,elytra=True) if elytra else f['backing']
     changes = {
@@ -301,21 +301,39 @@ def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False):
         back[0]:dict(scale=[1.,l,z]), back[1]:dict(scale=[1.,r,z]),
     }
     if fixed:
-        changes[G.SADDLE_BONE] = dict(offset=[0.,0.,f['SADDLE_DEPTH']],scale=[f['SADDLE_WIDTH'],1.,1.])
+        changes[G.SADDLE_BONE] = (dict(offset=[0.,-f['SADDLE_DROP'],f['SADDLE_DEPTH']],
+                                       scale=[f['SADDLE_WIDTH'],f['SADDLE_HEIGHT'],f['SADDLE_THICKNESS']]) if seated
+                                  else dict(offset=[0.,0.,f['WING_SADDLE_DEPTH']],scale=[f['WING_SADDLE_WIDTH'],1.,1.]))
     if seated:
-        changes[G.SHOULDERS_BONE] = dict(scale=[1.,f['SHOULDER_HEIGHT'],f['SHOULDER_REACH']])
+        changes[G.SHOULDERS_BONE] = dict(scale=[1.,f['SHOULDER_HEIGHT'],f['SHOULDER_REACH']],offset=[0.,f['SHOULDER_RISE'],0.])
         changes['v17_cowl_return'] = dict(offset=[0.,-f['RETURN_DROP'],0.])
+        changes[G.DRAPE_BONE] = dict(rotation=[f['DRAPE_PITCH'],0.,0.],offset=[0.,-f['DRAPE_DROP'],-f['DRAPE_ADVANCE']])
     if elytra:
         changes[G.SHOULDERS_BONE] = dict(scale=shoulder_scales(0,0,0,elytra=True))
         changes[G.UNDER_YOKE_BONE] = dict(scale=yoke_scales(0,0,0,elytra=True))
     bones = []
+
+    def frame(piece, prefix, **data):
+        n = prefix+piece['name']
+        bones.append(dict(name=n,parent=piece.get('parent'),cubes=[],**data))
+        return dict(piece,parent=n)
+
     for b in geo['bones']:
         n = b['name']
         piece = dict(b,**changes.get(n,{}))
-        if seated and n != 'v17_cowl_return' and not n.startswith('v17_cowl_tooth_') and n.startswith(('v17_cowl_','v19_cuellito_','v18_chain_')):
-            trim = torso_frame(piece,(0.,f['TRIM_Y'],f['TRIM_Z'],0.,-f['TRIM_DROP'],0.,f['TRIM_WIDTH'],f['TRIM_HEIGHT'],1.),'fixed_')
-            bones.append(trim)
-            piece['parent'] = trim['name']
+        if seated:
+            rim = n.startswith(('v17_cowl_','v19_cuellito_','v18_chain_'))
+            if rim or n == G.SHOULDERS_BONE:
+                piece = frame(piece,'snug_',pivot=[0.,f['RIM_Y'], f['BACK_PLANE']],offset=[0.,-f['RIM_DROP'],0.],
+                              scale=[1.,f['RIM_HEIGHT'],f['RIM_DEPTH']])
+            if rim and n != G.COLLAR_RETURN and not n.startswith('v17_cowl_tooth_'):
+                piece = frame(piece,'trim_',pivot=[0.,f['TRIM_Y'],f['TRIM_Z']],offset=[0.,-f['TRIM_DROP'],0.],
+                              scale=[f['TRIM_WIDTH'],f['TRIM_HEIGHT'],1.])
+            if n in back:
+                piece = frame(piece,'lip_',pivot=[0.,0.,f['LINING_PLANE']],offset=[0.,-f['LINING_DROP'],0.],liftYZ=f['LINING_LIFT'])
+            if n in (*back,G.SEAT_BONE,G.GUSSET_BONE,G.UNDER_YOKE_BONE):
+                depth = f['LINING_DEPTH'] if n in back else f['GUSSET_DEPTH'] if n == G.GUSSET_BONE else f['RIM_DEPTH']
+                piece = frame(piece,'back_',pivot=[0.,0.,f['BACK_PLANE']],scale=[1.,1.,depth])
         if fixed and plates and piece.get('parent') == G.FIT_BONE and n in ('v18_pad_0','v18_pad_1'):
             x,y,z,dx,dy,dz,rx,ry,rz,sx,sy,sz = worn_plate(int(n[-1]),elytra,slim)
             pad = dict(name='shoulder_'+n,parent='chestplate',pivot=[x,y,z],offset=[dx,dy,dz],

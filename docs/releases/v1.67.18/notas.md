@@ -1,6 +1,6 @@
 # v1.67.18 · Cuello y hombreras asentados
 
-[JAR de prueba](https://github.com/Santi-PdR/modelos/raw/945bc2d7d7f65765f766a7b59f9746fecc9b07fa/entregables/v1.67.18/capatest-1.67.18.jar) · [SHA-256](JAR.sha256) · [PowerShell para `test-1`](instalar-directo-test-1.txt) · [Capturas de Forge](../../capa_v16718_colocacion_forge.jpg) · [Blockbench](../../CAPA_v1.67.18.bbmodel).
+[JAR de prueba](https://github.com/Santi-PdR/modelos/raw/945bc2d7d7f65765f766a7b59f9746fecc9b07fa/entregables/v1.67.18/capatest-1.67.18.jar) · [SHA-256](JAR.sha256) · [PowerShell para `test-1`](instalar-directo-test-1.txt) · [Capturas de Forge](../../capa_v16718_colocacion_forge.jpg) · [Blockbench](https://github.com/Santi-PdR/modelos/raw/5200616227cd6baa57869567833b3d8f015fbd06/docs/CAPA_v1.67.18.bbmodel).
 
 En [v1.67.17](../../capa_v16717_colocacion_forge.jpg), el cuello había quedado bajo y retrasado, separado de las hombreras. El ajuste nuevo recupera el apoyo en la espalda alta. Los retornos llegan a las dos placas originales y las placas se asientan sobre las mangas. El encastre sigue al torso, no a la cabeza ni a la cámara. Con élitros se conserva el ajuste corto para las alas. No se editan cubos, UV, texturas, clips, brillo ni icono.
 

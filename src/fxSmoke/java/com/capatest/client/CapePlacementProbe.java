@@ -101,11 +101,14 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             inverseChest = new Matrix4f(pose.last().pose()).invert();
             return;
         }
-        if (!tracked(n) || !anchor(n) && (bone.isHidden() || bone.getCubes().isEmpty())) return;
+        boolean sewnRoot = measuringContact && n.startsWith("v17_ribbon_") && n.endsWith("_seg0");
+        if ((!tracked(n) && !sewnRoot) || (!anchor(n) && (bone.isHidden() || bone.getCubes().isEmpty()))) return;
         require(inverseChest != null, "missing live torso transform");
-        require(solid.put(bone, new Matrix4f(bone.getModelSpaceMatrix())) == null, "cape piece drawn twice: " + n);
         List<Vector3f> points = new ArrayList<>();
-        rigid.put(n, points);
+        if (!sewnRoot) {
+            require(solid.put(bone, new Matrix4f(bone.getModelSpaceMatrix())) == null, "cape piece drawn twice: " + n);
+            rigid.put(n, points);
+        }
         if (anchor(n)) {
             // The basis of each empty attachment bone, before the real animated cloth.
             var model = new Matrix4f(inverseChest).mul(pose.last().pose());
@@ -126,7 +129,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                     if (face == null) continue;
                     var verts = face.vertices();
                     for (var vert : verts) {
-                        points.add(model.transformPosition(vert.position(), new Vector3f()).mul(16));
+                        if (!sewnRoot) points.add(model.transformPosition(vert.position(), new Vector3f()).mul(16));
                         if (measuringContact) {
                             lo.min(vert.position());
                             hi.max(vert.position());
@@ -159,20 +162,23 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         require(player != null, "missing live vanilla model");
         var copy = new PoseStack();
         copy.last().pose().set(armor.last().pose());
-        p.playerPart(copy, player.leftSleeve, "left_sleeve", true);
-        p.playerPart(copy, player.rightSleeve, "right_sleeve", true);
-        if (p.measuringContact) p.playerPart(copy, player.jacket, "jacket", false);
+        p.playerPart(copy, player.leftSleeve, "left_sleeve", .25F, true);
+        p.playerPart(copy, player.rightSleeve, "right_sleeve", .25F, true);
+        if (p.measuringContact) {
+            p.playerPart(copy, player.jacket, "jacket", .25F, false);
+            p.playerPart(copy, player.body, "body", 0, false);
+        }
         return new Draw(Map.copyOf(p.rigid), p.faces.toString(), p.boxes.toString(), (float) Math.toDegrees(player.head.xRot),
                 (float) Math.toDegrees(player.head.yRot));
     }
 
-    private void playerPart(PoseStack stack, ModelPart part, String name, boolean sleeve) {
-        // Body/sleeves are in the vanilla render frame. Convert to the same
-        // chest basis as the armor and include the vanilla .25 outer layer.
+    private void playerPart(PoseStack stack, ModelPart part, String name, float inflate, boolean sleeve) {
+        // Use the real torso without its optional jacket as the back plane.
+        // The sleeve coverage gate still uses the vanilla .25 outer layer.
         part.visit(stack, (pose, path, id, cube) -> {
-            float x0 = (cube.minX-.25F)/16, x1 = (cube.maxX+.25F)/16;
-            float y0 = (cube.minY-.25F)/16, y1 = (cube.maxY+.25F)/16;
-            float z0 = (cube.minZ-.25F)/16, z1 = (cube.maxZ+.25F)/16;
+            float x0 = (cube.minX-inflate)/16, x1 = (cube.maxX+inflate)/16;
+            float y0 = (cube.minY-inflate)/16, y1 = (cube.maxY+inflate)/16;
+            float z0 = (cube.minZ-inflate)/16, z1 = (cube.maxZ+inflate)/16;
             if (measuringContact) box(boxes, name, new Matrix4f(inverseChest).mul(pose.pose()),
                     new Vector3f(x0,y0,z0), new Vector3f(x1,y1,z1));
             if (!sleeve) return;

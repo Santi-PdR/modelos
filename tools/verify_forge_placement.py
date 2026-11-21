@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw
 
-from cape_contact import seat_contacts
+from cape_contact import seat_contacts, upper_back_fit
 from verify_forge_mount import emit, read
 
 FIXTURES = tuple(f'posicion-{skin}-{slot}' for skin in ('steve','alex') for slot in ('pecho','curios'))
@@ -35,7 +35,7 @@ def read_contacts(root, fixture):
     for row in (root/f'{fixture}-encastre.tsv').read_text().splitlines():
         bone,*xyz = row.split()
         parts[bone].append(np.asarray(xyz,float).reshape(8,3))
-    return seat_contacts(parts, fixture)
+    return seat_contacts(parts, fixture), upper_back_fit(parts, fixture)
 
 
 def report(root):
@@ -50,7 +50,7 @@ def report(root):
         assert jump['lift'].max()>.65 and abs(jump['lift'][-1])<.01, fixture
         drift = [v['drift'].max() for v in (orbit,aim,jump)]
         assert np.isfinite(drift).all() and max(drift)<.006, (fixture,drift,'cambió la montura en coordenadas del torso')
-        contacts = read_contacts(root,fixture)
+        contacts, depth = read_contacts(root,fixture)
         name = f'{fixture}-frente'
         worn, control = (read(root/f'{name}{suffix}.png') for suffix in ('','-sin-placas'))
         names = ('v18_pad_0','v18_pad_1','left_sleeve','right_sleeve')
@@ -74,7 +74,8 @@ def report(root):
         print(f'::notice title=Montaje fijo en Forge::{fixture}: órbita {drift[0]:.6f}u ({len(orbit)} vistas); '
               f'mirada {drift[1]:.6f}u ({len(aim)} poses); salto {drift[2]:.6f}u, {jump["lift"].max():.2f} bloques. '
               f'Placas sobre las mangas de frente: {" / ".join(coverage)}. '
-              f'Solapes mínimos espalda alta → forro → cuello → retornos → placas → mangas: {contacts.round(3).tolist()}u.')
+              f'Solapes espalda → forro → cuello → retornos → placas → mangas: {contacts.round(3).tolist()}u. '
+              f'Piel sin chaqueta: resalte/hueco/solape/raíces {depth.round(3).tolist()}u.')
 
 
 def gallery(root):
