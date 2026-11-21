@@ -21,7 +21,8 @@ public final class VisualFixtureClient {
     private static net.minecraft.world.item.ItemStack savedStack;
     private static float comboHealth;
     private static float firstComboDamage;
-    private static java.util.UUID dragonId;
+    private static java.util.UUID dragonId, finisherTarget;
+    private static float finisherHealth;
     private static net.minecraft.world.phys.Vec3 dragonAnchor;
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
@@ -105,12 +106,26 @@ public final class VisualFixtureClient {
                 var mobs = player.serverLevel().getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, player.getBoundingBox().inflate(8));
                 if (mobs.isEmpty() || player.getPersistentData().getCompound("StainKatanaAbilities").getInt("daggerCharges") != 2)
                     throw new IllegalStateException("Two successful Zs did not charge the finisher");
+                var victim = mobs.get(0);
+                finisherTarget = victim.getUUID(); finisherHealth = victim.getHealth();
                 com.stainkatana.katana.KatanaAbilities.activate(player, 0);
                 if (player.getPersistentData().getCompound("StainKatanaAbilities").getInt("daggerCharges") != 0)
                     throw new IllegalStateException("Pressing Z did not start the finisher or consume charges");
+                var fromTarget = player.position().subtract(victim.position()).multiply(1, 0, 1);
+                var facing = victim.getLookAngle().multiply(1, 0, 1);
+                if (fromTarget.lengthSqr() > 16 || fromTarget.dot(facing) >= 0)
+                    throw new IllegalStateException("Finisher did not teleport behind its target");
                 System.out.println("STAIN_FINISHER_VERIFIED");
             });
             case 491 -> capture = "18_finisher.png";
+            case 495 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                var target = player.serverLevel().getEntity(finisherTarget);
+                if (!(target instanceof net.minecraft.world.entity.LivingEntity victim) || !victim.isAlive()
+                        || finisherHealth - victim.getHealth() <= player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE))
+                    throw new IllegalStateException("Finisher did not land stronger-than-normal, non-lethal damage");
+                System.out.println("STAIN_FINISHER_DAMAGE_VERIFIED");
+            });
             case 503 -> capture = "19_finisher_end.png";
             case 550 -> mc.getSingleplayerServer().execute(() -> {
                 var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());

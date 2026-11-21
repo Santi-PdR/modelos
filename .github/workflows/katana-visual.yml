@@ -70,6 +70,7 @@ jobs:
           grep -F 'STAIN_VANILLA_COMBO_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_ULTIMATE_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_FINISHER_VERIFIED' /tmp/stain-visual-client.log
+          grep -F 'STAIN_FINISHER_DAMAGE_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_CANCELLATION_VERIFIED' /tmp/stain-visual-client.log
@@ -91,6 +92,7 @@ jobs:
           grep -F 'STAIN_VANILLA_COMBO_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_ULTIMATE_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_FINISHER_VERIFIED' /tmp/stain-visual-fallback.log
+          grep -F 'STAIN_FINISHER_DAMAGE_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_CANCELLATION_VERIFIED' /tmp/stain-visual-fallback.log
@@ -112,6 +114,7 @@ jobs:
           grep -F 'STAIN_CAMERA_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_ULTIMATE_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_FINISHER_VERIFIED' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_FINISHER_DAMAGE_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_CANCELLATION_VERIFIED' /tmp/stain-visual-full-bc.log
