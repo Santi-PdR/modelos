@@ -13,7 +13,7 @@ Se equipa en el pecho o en `back` con Curios opcional.
 
 ### v1.67.19 — manto ceñido a la espalda alta
 
-**[Descargar JAR de prueba v1.67.19](https://github.com/Santi-PdR/modelos/raw/e574c47f7c646bd7869a071a42f3db5b5947fdc4/entregables/v1.67.19/capatest-1.67.19.jar)** · [PowerShell sin respaldos para `test-1`](docs/releases/v1.67.19/instalar-directo-test-1.txt) · [Antes y después en Alex](docs/capa_v16719_encastre_alex.jpg) · [Galería de Forge](docs/capa_v16719_colocacion_forge.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.19/notas.md).
+**[Descargar JAR de prueba v1.67.19](https://github.com/Santi-PdR/modelos/raw/e574c47f7c646bd7869a071a42f3db5b5947fdc4/entregables/v1.67.19/capatest-1.67.19.jar)** · [Antes y después en Alex](docs/capa_v16719_encastre_alex.jpg) · [Galería de Forge](docs/capa_v16719_colocacion_forge.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.19/notas.md).
 
 El borde del cuello y la costura del paño se acercan a la espalda real, no a la cabeza. El ajuste funciona en pecho y Curios, con las texturas, clips, descripción del ítem y efectos originales. Se conserva la variante para élitros. No cambia el instalador público.
 
@@ -50,8 +50,6 @@ La referencia de montaje es v1.28.0, que comparte el GEO equipado con v1.27.0. E
 **[Comparación F5 en Forge](docs/capa_v16713_anclaje_forge.png):** en la diagonal de 48° con −48° de giro, el extremo de la placa ancha pasó de 10,44 a 6,73 unidades desde el centro del torso (6,53 en la referencia histórica; 16 unidades por bloque). A 89,5°, ambas placas quedaron a un píxel o menos de sus mangas en todas las columnas medidas, sin suelo visible entre ellas, tanto en pecho como en Curios. A 76°, el borde visible de la placa ancha avanzó 1 px frente a v1.67.12 en los dos tipos de manga.
 
 **[Prerelease v1.67.13](https://github.com/Santi-PdR/modelos/releases/tag/v1.67.13)** · [Ejecución verificada en Forge](https://github.com/Santi-PdR/modelos/actions/runs/44655102247). El SHA-256 del JAR publicado coincide con el de esa prueba. v1.67.12 queda disponible por separado.
-
-Para **`test-1`**, usá el [PowerShell de la prueba vigente, sin respaldos](docs/releases/v1.67.19/instalar-directo-test-1.txt).
 
 ### v1.67.12 — las placas se asientan sobre las mangas
 

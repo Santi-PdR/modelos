@@ -1,4 +1,4 @@
 v1.67.18 fue descartada. Este bloque viejo se retiro: guardaba copias de las versiones anteriores.
 
-Para test-1, usa v1.67.19, que no crea respaldos y limpia los que dejaron los bloques anteriores:
-https://github.com/Santi-PdR/modelos/blob/arena/5a9fa51b-modelos/docs/releases/v1.67.19/instalar-directo-test-1.txt
+Para test-1, consulta las notas de la prueba v1.67.19:
+https://github.com/Santi-PdR/modelos/blob/arena/5a9fa51b-modelos/docs/releases/v1.67.19/notas.md

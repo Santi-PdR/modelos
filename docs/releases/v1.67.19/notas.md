@@ -1,6 +1,6 @@
 # v1.67.19 · El nacimiento del manto, junto a la espalda
 
-**[JAR directo de prueba](https://github.com/Santi-PdR/modelos/raw/e574c47f7c646bd7869a071a42f3db5b5947fdc4/entregables/v1.67.19/capatest-1.67.19.jar)** · [PowerShell sin respaldos](instalar-directo-test-1.txt) · [SHA-256](JAR.sha256) · [Antes y después en Alex](../../capa_v16719_encastre_alex.jpg) · [Galería completa en Forge](../../capa_v16719_colocacion_forge.jpg) · [Blockbench](../../CAPA_v1.67.19.bbmodel).
+**[JAR directo de prueba](https://github.com/Santi-PdR/modelos/raw/e574c47f7c646bd7869a071a42f3db5b5947fdc4/entregables/v1.67.19/capatest-1.67.19.jar)** · [SHA-256](JAR.sha256) · [Antes y después en Alex](../../capa_v16719_encastre_alex.jpg) · [Galería completa en Forge](../../capa_v16719_colocacion_forge.jpg) · [Blockbench](../../CAPA_v1.67.19.bbmodel).
 
 En v1.67.18 el forro tocaba la camiseta, pero el borde visible del cuello sobresalía hasta 6,73 unidades del modelo desde la piel y quedaba una hueco visible detrás de la nuca. La corrección ciñe el borde y los retornos al torso, lleva el forro hasta ese borde y adelanta el arranque de la tela. Las hombreras originales quedan sobre las mangas. Sólo se ajusta cómo se viste el manto: sin cambios al texto, los atributos, las texturas ni los ocho clips. Con élitros se conserva el ajuste anterior.
 
@@ -11,4 +11,4 @@ En v1.67.18 el forro tocaba la camiseta, pero el borde visible del cuello sobres
 
 [Compilación y prueba de Forge](https://github.com/Santi-PdR/modelos/actions/runs/44842478920) del código `00a8319` · [Copia del JAR y tomas de esos ensayos](https://github.com/Santi-PdR/modelos/actions/runs/44843650173). Minecraft Java 1.20.1, Forge 47.3.0, GeckoLib 4.8.1, Curios opcional.
 
-El JAR pesa 743 681 bytes. El PowerShell valida tamaño y SHA-256 antes de reemplazar la capa en `test-1`; borra las versiones anteriores y sólo los respaldos de `capatest` reconocidos de los scripts anteriores. No crea copias ni toca otros mods o mundos. No hay una nueva Release ni cambios al instalador público.
+El JAR de prueba pesa 743 681 bytes. No hay una nueva Release ni cambios al instalador público.

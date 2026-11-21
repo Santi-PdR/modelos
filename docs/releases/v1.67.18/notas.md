@@ -16,4 +16,4 @@ En [v1.67.17](../../capa_v16717_colocacion_forge.jpg), el cuello había quedado 
 
 [Compilación y Forge](https://github.com/Santi-PdR/modelos/actions/runs/44833876875) · [Copia exacta de los artefactos](https://github.com/Santi-PdR/modelos/actions/runs/44834837336). Código probado: `fa6be8f`. Entorno: Minecraft Java 1.20.1, Forge 47.3.0, GeckoLib 4.8.1, Curios 5.14.1 opcional.
 
-El JAR histórico pesa 742 539 bytes. Las instrucciones viejas para `test-1` se retiraron; el bloque sin respaldos está en la prueba vigente. No se cambió el instalador público.
+El JAR histórico pesa 742 539 bytes. Las instrucciones viejas para `test-1` se retiraron. No se cambió el instalador público.
