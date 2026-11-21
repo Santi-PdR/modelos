@@ -30,8 +30,11 @@ def preservation(geo):
                               for b in geo['bones'] if b['name'] not in (frame,*B.profile()['names'])])
     digest = sha256(json.dumps(control,sort_keys=True,separators=(',',':')).encode()).hexdigest()
     assert digest == '02fedd26c50b04b3f049e5a88101ba217350297c48a9706499b0961d6b548829', 'cambiaron piezas fuera del respaldo'
+    # Freeze the reference for this older fit, not the working gait clips.
+    # verify_cape_placement checks the exact allowed edits to the live clips.
+    reference_anim = P.ROOT/'docs/respaldos/v1.67.26'/A.ANIM.relative_to(P.ASSETS)
     for path,expected in {
-        A.ANIM: '23d1e0bb43123b4b86cea4e5f07e672ae5bd1d89e2cb5d4cc71c52409f968999',
+        reference_anim: '23d1e0bb43123b4b86cea4e5f07e672ae5bd1d89e2cb5d4cc71c52409f968999',
         P.ARMOR_TEX: 'a4cf984ead41c6ac8a0a3b09e86743786ef9c71f3d00fc109934b8bca589e549',
         P.ICON: 'b1ef3f05ee5a18a821987fc5f73734700d6721bbb4aad2456c759506aa285b2b',
         P.ICON.with_suffix('.png.mcmeta'): '332b622d2f3ea535c4ba8c1480bbfcf5d1053b61c44682cfeee918fbeb366d6b',
