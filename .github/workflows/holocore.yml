@@ -191,7 +191,7 @@ jobs:
       - name: Validate shader resources
         run: |
           python3 - <<'PY'
-          import json, pathlib
+          import json, pathlib, re
 
           base = pathlib.Path('relic-hologram/src/main/resources/assets/minecraft/shaders/core')
           for ext in ('.json', '.vsh', '.fsh'):
@@ -219,7 +219,19 @@ jobs:
               assert 'void main()' in text, src
           # UV2 es ivec2 en las shaders de entidad: declararlo vec2 rompe el enlace.
           assert 'in vec2 UV2' not in (base / 'holocore_relic_glow.vsh').read_text()
-          print('Shader OK: aditivo, uniforms y atributos coherentes con NEW_ENTITY.')
+
+          # El apendice A del documento tiene que ser copia literal de estos
+          # ficheros: es la unica forma de que el GLSL explicado no se quede
+          # atras cuando se toca el de verdad (paso en 1.0.7).
+          md = pathlib.Path('relic-hologram/docs/BRILLO-Y-SHADERS.md').read_text(encoding='utf-8')
+          appendix = md[md.index('## Apéndice A'):]
+          blocks = re.findall(r'```(json|glsl)\n(.*?)```', appendix, re.S)
+          assert [lang for lang, _ in blocks[:3]] == ['json', 'glsl', 'glsl'], [b[0] for b in blocks]
+          assert json.loads(blocks[0][1]) == doc, 'el JSON del apendice no coincide: corre python3 tools/sync_shader_doc.py'
+          for (_, text), name in zip(blocks[1:3], ('holocore_relic_glow.vsh', 'holocore_relic_glow.fsh')):
+              esperado = (base / name).read_text(encoding='utf-8').strip('\n')
+              assert text.strip('\n') == esperado, f'el bloque GLSL de {name} no coincide: corre python3 tools/sync_shader_doc.py'
+          print('Shader OK: aditivo, uniforms, atributos y apendice sincronizado.')
           PY
 
       # ------------------------------------------------------------------

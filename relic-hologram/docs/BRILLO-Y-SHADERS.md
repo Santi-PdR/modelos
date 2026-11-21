@@ -138,6 +138,15 @@ en 1.0.2. Esa decisión es la importante: el riesgo de este camino es que con
 shaderpack el programa acaba en el *fallback* del pack o **invisible** (le pasó a
 Forge con su shader «unlit», Oculus #630), y así el fallo no se nota.
 
+Desde 1.0.8 el borde no depende del atributo `Normal`: se calcula con la
+**posición del vértice**, que ya apunta hacia fuera porque la reliquia está
+centrada en el origen del modelo. Motivo: si el modelo rellena `Normal` igual en
+todas las caras, el fresnel deja de seguir la silueta y se convierte en un tinte
+plano; con la posición, el borde aparece siempre. La normal sigue entrando con un
+25% de peso por si viene bien puesta. Además el rim entra también en la **alpha**,
+así que la silueta brilla aunque ahí la textura emisiva sea transparente, y el
+tono del borde se mezcla con el color del estado.
+
 ### D. Post-proceso / bloom real de pantalla
 
 `PostChain` + framebuffer: renderizar la reliquia a un target, desenfocar, sumar.
@@ -220,7 +229,7 @@ Qué mirar, en orden:
    pelear y debe ponerse rojo y latir (`idle_alert`); con `G` (dormida) el aura se
    apaga a gris y no hay anillo.
 
-## Apéndice A — el GLSL que lleva el mod desde 1.0.3
+## Apéndice A — el GLSL que lleva el mod desde 1.0.3 (revisado en 1.0.8)
 
 Esto es exactamente lo que compila el mod (`visuals.shaderGlow`), con el
 razonamiento de por qué cada pieza está donde está. Todo contrastado con las
@@ -250,7 +259,7 @@ nombres planos, sin namespace):
   "blend": { "func": "add", "srcrgb": "srcalpha", "dstrgb": "one" },
   "vertex": "holocore_relic_glow",
   "fragment": "holocore_relic_glow",
-  "attributes": ["Position", "Color", "UV0", "UV2", "Normal"],
+  "attributes": ["Position", "Color", "UV0", "UV1", "UV2", "Normal"],
   "samplers": [{ "name": "Sampler0" }],
   "uniforms": [
     { "name": "ModelViewMat", "type": "matrix4x4", "count": 16, "values": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1] },
@@ -261,10 +270,14 @@ nombres planos, sin namespace):
 }
 ```
 
-`holocore_relic_glow.vsh` — fresnel calculado en espacio de vista:
+`holocore_relic_glow.vsh` — borde a partir de la posición del vértice:
 
 ```glsl
 #version 150
+
+// Atributos de DefaultVertexFormat.NEW_ENTITY que se usan. UV1 (overlay) y UV2
+// (lightmap) se dejan sin declarar a proposito: en las shaders de entidad son
+// ivec2 y declararlos como vec2 rompe el enlace del atributo.
 
 in vec3 Position;
 in vec4 Color;
@@ -276,20 +289,37 @@ uniform mat4 ProjMat;
 
 out vec2 texCoord;
 out vec4 vertexColor;
-out float fresnel;
+out float edge;
 
 void main() {
     vec4 viewPos = ModelViewMat * vec4(Position, 1.0);
-    vec3 viewNormal = normalize(mat3(ModelViewMat) * Normal);
-    float facing = abs(dot(normalize(-viewPos.xyz), viewNormal));
-    fresnel = pow(1.0 - facing, 2.5);
+    vec3 viewDir = normalize(-viewPos.xyz + vec3(0.0, 0.0, 0.0001));
+
+    // Direccion hacia fuera: la reliquia esta centrada en el origen del modelo
+    // (preRender no aplica desplazamiento), asi que la posicion del vertice ya
+    // apunta hacia fuera. Se usa esto y no solo la normal porque el atributo
+    // Normal puede venir igual en todas las caras segun lo rellene el modelo:
+    // entonces el fresnel dejaria de seguir la silueta y seria un tinte plano.
+    vec3 outward = normalize(Position + vec3(0.0, 0.0, 0.0001));
+    vec3 viewOutward = normalize(mat3(ModelViewMat) * outward);
+
+    // Un cuarto de normal (si viene bien puesta) matiza el borde sin depender
+    // de ella. El epsilon va dentro del normalize y no en un ternario: hay
+    // drivers que evaluan las dos ramas y normalize(vec3(0.0)) da NaN.
+    vec3 viewNormal = normalize(mat3(ModelViewMat) * Normal + vec3(0.0, 0.0, 0.0001));
+    vec3 basis = normalize(viewOutward * 0.75 + viewNormal * 0.25);
+
+    // 1 de canto (borde de la silueta), 0 de frente.
+    edge = 1.0 - clamp(abs(dot(viewDir, basis)), 0.0, 1.0);
+
     gl_Position = ProjMat * viewPos;
     texCoord = UV0;
     vertexColor = Color;
 }
 ```
 
-`holocore_relic_glow.fsh` — textura × color, borde y barrido que sube:
+`holocore_relic_glow.fsh` — textura × color, borde por silueta, dos barridos y
+líneas finas:
 
 ```glsl
 #version 150
@@ -300,15 +330,45 @@ uniform float HoloTime;
 
 in vec2 texCoord;
 in vec4 vertexColor;
-in float fresnel;
+in float edge;
 
 out vec4 fragColor;
 
+// Ruido barato y deterministico: rompe el banding que deja el blend aditivo
+// cuando el degradado es muy suave.
+float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
 void main() {
     vec4 tex = texture(Sampler0, texCoord);
-    float alpha = clamp(tex.a * vertexColor.a, 0.0, 1.0);
-    float scan = smoothstep(0.45, 0.5, fract(texCoord.y * 6.0 - HoloTime));
-    vec3 rgb = tex.rgb * vertexColor.rgb + fresnel * 0.35 + scan * 0.08;
+    float texAlpha = tex.a * vertexColor.a;
+
+    // Borde: sale de la posicion del vertice, no de la alpha de la textura, asi
+    // que la silueta brilla aunque ese texel de la textura emisiva sea
+    // transparente. Es lo que hace que se lea como un contorno de holograma y no
+    // como un brillo pegado encima de las caras opacas.
+    float rim = pow(clamp(edge, 0.0, 1.0), 1.6);
+    float alpha = max(texAlpha, rim * 0.55);
+    if (alpha < 0.02) {
+        discard;
+    }
+
+    // Barrido que sube: cuatro ciclos sobre la textura, uno cada 4 s.
+    float sweep = smoothstep(0.42, 0.58, fract(texCoord.y * 4.0 - HoloTime * 0.25));
+    // Barrido cruzado, mas rapido y mas tenue: rompe la simetria del vertical.
+    float cross = smoothstep(0.46, 0.54, fract((texCoord.x + texCoord.y) * 2.0 - HoloTime * 0.41));
+    // Lineas finas de holograma, solo donde ya hay algo opaco.
+    float lines = (0.5 + 0.5 * sin(texCoord.y * 160.0 + HoloTime * 5.0)) * texAlpha;
+
+    vec3 tint = vertexColor.rgb;
+    vec3 rimTint = mix(vec3(0.55, 0.85, 1.0), tint, 0.55);
+
+    vec3 rgb = tex.rgb * tint
+             + rim * rimTint * 0.40
+             + (sweep * 0.06 + cross * 0.045 + lines * 0.02)
+             + (hash(texCoord * 613.0) - 0.5) * 0.03;
+
     fragColor = vec4(rgb * alpha * ColorModulator.rgb, alpha);
 }
 ```
@@ -337,8 +397,11 @@ basta con instanciarlas desde fuera.
 
 * `RelicShaders` registra un `PreparableReloadListener` en
   `RegisterClientReloadListenersEvent`: el shader se compila en cada recarga de
-  recursos y el anterior se cierra con `close()`. Si la compilación falla se
-  registra el error y se sigue sin el pase, no se cae el cliente.
+  recursos. El programa anterior **no** se cierra en el acto: se jubila y se
+  cierra en el primer pase del frame siguiente (`reap()`), porque cerrarlo dentro
+  de la recarga puede liberar el `Program` que todavía referencia un lote de
+  vértices sin volcar. Si la compilación falla se registra el error y se sigue
+  sin el pase, no se cae el cliente.
 * **Matrices y color no hay que subirlos a mano**: `BufferUploader` →
   `VertexBuffer.drawWithShader` rellena `ModelViewMat`, `ProjMat` y
   `ColorModulator` en cada dibujo, y `Sampler0` sale del `TextureStateShard`. El
@@ -350,6 +413,7 @@ basta con instanciarlas desde fuera.
   detección de OptiFine por `ModList` y por la clase `optifine.Installer`.
   Comprobación cacheada 5 s para no reflejar en cada frame.
 * El CI valida el JSON (blend, uniforms con `count` correcto, atributos dentro de
-  `NEW_ENTITY`) y **exige la marca `Shader del aura compilado` en el log del
-  smoke test**: si el GLSL deja de compilar, el build falla aunque el cliente
-  arranque.
+  `NEW_ENTITY`), comprueba que los bloques de este apéndice son **copia literal**
+  de los ficheros del jar, y **exige la marca `Shader del aura compilado` en el
+  log del smoke test**: si el GLSL deja de compilar, el build falla aunque el
+  cliente arranque.

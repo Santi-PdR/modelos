@@ -1,5 +1,28 @@
 # Historial de cambios
 
+## 1.0.8 — shader más limpio y tres arreglos
+
+* **El borde ya no depende de las normales del modelo.** El fresnel se calcula con
+  la posición del vértice (la reliquia está centrada en el origen del modelo), y
+  la normal solo aporta un 25%. Si el modelo trae `Normal` constante, antes el
+  «fresnel» se degradaba a un tinte plano sin que se notara en el log; ahora la
+  silueta brilla siempre.
+* **El rim entra en la alpha**, así que el contorno se ve aunque la textura
+  emisiva sea transparente en ese texel: deja de ser un brillo pegado solo a las
+  caras opacas.
+* Halo y pase GLSL se **tiñen con el color del estado** (mezcla al 50% con el azul
+  frío): cargada tira a ámbar, alerta a rojo, dormida a grisazulado. Antes el aura
+  cambiaba de color y el modelo se quedaba azul.
+* Segundo barrido en diagonal, líneas finas de holograma y un grano mínimo que
+  rompe el banding del blend aditivo.
+* **Arreglo**: el `ShaderInstance` anterior ya no se cierra en el acto al recargar
+  recursos (podía quedar un lote de vértices sin volcar apuntando a un programa
+  liberado); ahora se jubila y se cierra en el primer pase del frame siguiente.
+* **Arreglo**: el apéndice de `docs/BRILLO-Y-SHADERS.md` vuelve a ser copia exacta
+  de los ficheros GLSL. El CI lo comprueba (el JSON del apéndice llevaba desde
+  1.0.3 sin el atributo `UV1`) y `tools/sync_shader_doc.py` lo regenera sin
+  copiar y pegar.
+
 ## 1.0.7 — brillo coherente
 
 * El factor de brillo del estado multiplica también el **halo aditivo y el pase

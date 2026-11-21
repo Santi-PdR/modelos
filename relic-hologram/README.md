@@ -124,13 +124,25 @@ calma o dormido. Ese mismo factor multiplica el halo y el pase GLSL del modelo,
 así que dormida se atenúa **todo** el brillo a la vez y cargada se intensifica,
 en vez de quedar el aura apagada y el modelo a tope.
 
-El **shader propio** (`visuals.shaderGlow`) añade un cuarto pase con fresnel en
-el borde y una línea de barrido de holograma, en GLSL de verdad
+El **shader propio** (`visuals.shaderGlow`) añade un cuarto pase con borde de
+silueta, dos barridos (uno sube, otro cruza en diagonal), líneas finas de
+holograma y un grano mínimo, en GLSL de verdad
 (`assets/minecraft/shaders/core/holocore_relic_glow.{json,vsh,fsh}`). Se compila
-en cada recarga de recursos y **se desactiva solo si hay un shaderpack activo**
+en cada recarga de recursos y **se desactiva solo si hay shaderpack activo**
 (Iris/Oculus/OptiFine): esos packs sustituyen el programa y la reliquia podría
 quedar invisible. Con pack puesto sigues teniendo halo + aura + el bloom del
 propio pack.
+
+Dos detalles que hacen que el borde se vea siempre:
+
+* el borde se calcula con la **posición** del vértice (la reliquia está centrada
+  en el origen del modelo), no solo con la normal, así que no depende de que el
+  modelo traiga normales correctas;
+* el borde entra también en la **alpha**, así que la silueta brilla aunque la
+  textura emisiva sea transparente justo ahí.
+
+El tono del halo, del borde y del pase GLSL se mezcla al 50% con el color del
+estado, así que cargada tira a ámbar y alerta a rojo en vez de quedarse azul.
 
 Lo que **no** hace: post-proceso de pantalla (caro y se pelea con los packs). El
 razonamiento completo, la matriz de compatibilidad y los detalles de la API de

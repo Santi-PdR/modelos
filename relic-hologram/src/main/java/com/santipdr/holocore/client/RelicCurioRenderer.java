@@ -87,7 +87,7 @@ public class RelicCurioRenderer implements ICurioRenderer {
         visual.glow().update(state);
 
         visual.renderer().renderHologram(poseStack, animatable, bufferSource, partialTicks,
-                LightTexture.FULL_BRIGHT, visual.glow().aura());
+                LightTexture.FULL_BRIGHT, visual.glow());
 
         // Aura + anillo: billboards aditivos sobre el mismo anclaje (incluye la
         // escala de la config, que se lee de la matriz).

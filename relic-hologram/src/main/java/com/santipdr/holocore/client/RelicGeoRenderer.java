@@ -56,16 +56,20 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
      *       linea de barrido calculados en GLSL. Ver {@link RelicShaders}.</li>
      * </ol>
      *
-     * <p>{@code glowScale} viene del estado de la reliquia (el mismo factor que
-     * usa {@link RelicAura}), para que el modelo entero responda igual: dormida
-     * brilla menos, cargada brilla mas. Sin esto el aura se apagaba en dormido
-     * mientras el halo y el shader seguian a tope, que es justo lo que canta.</p>
+     * <p>{@code glow} es el estado de brillo interpolado del portador, el mismo
+     * que usa {@link RelicAura}: aporta el factor de intensidad (dormida brilla
+     * menos, cargada mas) y el color, asi que halo y pase GLSL se tiñen con el
+     * estado en vez de quedarse azules fijos mientras el aura se pone roja.</p>
      * Ninguno de los pases vuelve a animar: GeckoLib detecta que es el mismo
      * frame y conserva las matrices de los huesos.
      */
-    public void renderHologram(PoseStack poseStack, RelicAnimatable animatable,
-                               MultiBufferSource bufferSource, float partialTick, int packedLight,
-                               float glowScale) {
+    void renderHologram(PoseStack poseStack, RelicAnimatable animatable,
+                        MultiBufferSource bufferSource, float partialTick, int packedLight,
+                        RelicGlowState glow) {
+        // El programa jubilado por una recarga se cierra aqui: en el primer pase
+        // del frame, con los lotes anteriores ya volcados.
+        RelicShaders.reap();
+
         renderPass(poseStack, animatable, bufferSource, partialTick, packedLight,
                 RenderType.entityTranslucentEmissive(RelicGeoModel.texture()),
                 1.0F, 1.0F, 1.0F, 1.0F);
@@ -76,14 +80,16 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
                     1.0F, 1.0F, 1.0F, 1.0F);
         }
 
-        float glow = Math.max(0.0F, Math.min(1.25F, glowScale));
+        float amount = Math.max(0.0F, Math.min(1.25F, glow.aura()));
 
         if (haloEnabled()) {
-            float i = RelicConfig.HALO_INTENSITY.get().floatValue() * glow;
-            // Ligeramente azulado: la reliquia es un nucleo de luz fria.
+            float i = RelicConfig.HALO_INTENSITY.get().floatValue() * amount;
+            // Nucleo de luz fria por defecto, pero arrastrado a medias hacia el
+            // color del estado: cargada se ve ambarienta, alerta rojiza.
             renderPass(poseStack, animatable, bufferSource, partialTick, packedLight,
                     RelicRenderTypes.ADDITIVE_GLOW.apply(RelicGeoModel.glowTexture()),
-                    0.55F * i, 0.78F * i, 1.0F * i, 1.0F);
+                    tint(0.55F, glow.red()) * i, tint(0.78F, glow.green()) * i,
+                    tint(1.00F, glow.blue()) * i, 1.0F);
         }
 
         // Cuarto pase opcional con GLSL propio: fresnel en el borde y linea de
@@ -92,11 +98,21 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
         ShaderInstance glowShader = RelicShaders.ready() ? RelicShaders.shader() : null;
         if (glowShader != null) {
             glowShader.safeGetUniform("HoloTime").set(RelicShaders.timeSeconds(partialTick));
-            float i = RelicConfig.SHADER_INTENSITY.get().floatValue() * glow;
+            float i = RelicConfig.SHADER_INTENSITY.get().floatValue() * amount;
             renderPass(poseStack, animatable, bufferSource, partialTick, packedLight,
                     RelicRenderTypes.GLOW_SHADER.apply(RelicGeoModel.glowTexture()),
-                    0.65F * i, 0.85F * i, 1.0F * i, 1.0F);
+                    tint(0.65F, glow.red()) * i, tint(0.85F, glow.green()) * i,
+                    tint(1.00F, glow.blue()) * i, 1.0F);
         }
+    }
+
+    /**
+     * Mezcla el tono frio de base con el componente del estado ({@code 0.5} de
+     * peso). Se hace por canal y no con un {@code mix} de vectores porque el
+     * tinte se pasa a GeckoLib como cuatro floats.
+     */
+    private static float tint(float cool, float state) {
+        return cool * 0.5F + state * 0.5F;
     }
 
     /**

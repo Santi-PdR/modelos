@@ -38,6 +38,13 @@ public final class RelicShaders {
     private static final long PACK_CHECK_MS = 5_000L;
 
     private static volatile ShaderInstance shader;
+    /**
+     * Programa que ya nadie usa pero que no se cierra todavia. Cerrarlo en el
+     * mismo instante de la recarga podria tirar por debajo el {@code Program} de
+     * un lote de vertices que aun no se ha volcado a la GPU; se cierra en el
+     * primer pase del frame siguiente.
+     */
+    private static ShaderInstance retired;
     private static boolean shaderPackActive;
     private static long nextPackCheck;
 
@@ -59,6 +66,18 @@ public final class RelicShaders {
      */
     public static boolean ready() {
         return RelicConfig.SHADER_GLOW.get() && shader != null && !shaderPackActive();
+    }
+
+    /**
+     * Cierra el programa jubilado. Se llama al empezar un pase de la reliquia,
+     * o sea en el hilo de render y con los lotes del frame anterior ya volcados.
+     */
+    static void reap() {
+        ShaderInstance old = retired;
+        retired = null;
+        if (old != null) {
+            old.close();
+        }
     }
 
     /** Tiempo en segundos, para el uniform del barrido. */
@@ -121,7 +140,12 @@ public final class RelicShaders {
         ShaderInstance previous = shader;
         shader = loaded;
         if (previous != null) {
-            previous.close();
+            // Si ya habia otro esperando, ese si que es seguro: lleva al menos un
+            // frame sin usarse.
+            if (retired != null && retired != previous) {
+                retired.close();
+            }
+            retired = previous;
         }
         // Marcador que el smoke test del CI busca en el log: si el GLSL no
         // compila, esta linea no aparece y el CI falla.
