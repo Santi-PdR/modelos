@@ -102,8 +102,12 @@ public final class KatanaAnimations {
     public static void swing(AbstractClientPlayer player, int step) {
         var data = PlayerAnimationAccess.getPlayerAssociatedData(player).get(LAYER);
         if (!(data instanceof AbilityLayer animation) || animation.isActive()) return;
-        KeyframeAnimation clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID,
-                new String[]{"combo_1", "combo_2", "combo_3", "sword_attack2"}[Math.floorMod(step, 4)]));
+        int comboStep = Math.floorMod(step, 4);
+        // Prefer the actual Better Combat katana swings when its animation resources
+        // are present, including a vertical fourth cut; keep the offline fallback.
+        KeyframeAnimation clip = loadBetterCombat(new int[]{1, 3, 9, 4}[comboStep]);
+        if (clip == null) clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID,
+                new String[]{"combo_1", "combo_2", "combo_3", "sword_attack2"}[comboStep]));
         if (clip == null) return;
         animation.mirror.setEnabled(player.getMainArm() == HumanoidArm.LEFT);
         KeyframeAnimationPlayer playing = new KeyframeAnimationPlayer(clip, 0)
