@@ -134,8 +134,8 @@ def step_gifs_y_estados(ver: str) -> None:
     print("5) comparativas")
     art_ver = cape_reference.registered_version(ver)
     if ver.startswith('1.67.'):
-        # Reuse the unchanged registered exterior and eight clips, not a
-        # relabelled before/after plate of identical model pixels.
+        # Keep the historical registered exterior plates. New in-game
+        # motion comparisons are published separately from those renders.
         run(sys.executable, "tools/present_v1670.py", "--out", str(D))
     else:
         run(sys.executable, "tools/present_v1600.py", "--out", str(D), "--gif")

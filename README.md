@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.27 — hombrera izquierda, marcha y carrera
+
+**[Descargar JAR de prueba v1.67.27](https://github.com/Santi-PdR/modelos/raw/0b060c0219027453bb497e3a74b3c5286666edfa/entregables/v1.67.27/capatest-1.67.27.jar)** · [PowerShell para test-1](docs/releases/v1.67.27/instalar-test-1.txt) · [Hombrera en Forge](docs/releases/v1.67.27/comparacion-hombrera-forge.jpg) · [Marcha antes/después](docs/releases/v1.67.27/comparacion-marcha-pecho-forge.gif) · [Pruebas y SHA-256](docs/releases/v1.67.27/notas.md).
+
+Se recoge la hombrera izquierda sin mover la otra. El paño alterna al caminar y se mantiene más tendido atrás al correr. Probado en pecho y Curios. [Respaldo de las animaciones de v1.67.26 en Git](docs/respaldos/v1.67.26/README.md).
+
 ### v1.67.26 — apoyo en la escalera
 
 **[Descargar JAR de prueba v1.67.26](https://github.com/Santi-PdR/modelos/raw/0fd30c035b93414591e807be775d030a5bc87ca1/entregables/v1.67.26/capatest-1.67.26.jar)** · [Escalera en Forge](docs/releases/v1.67.26/comparacion-escalera-forge.jpg) · [Medidas y SHA-256](docs/releases/v1.67.26/notas.md).

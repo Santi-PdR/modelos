@@ -1159,30 +1159,6 @@ jobs:
           hotbar(Path('build/fx-smoke-run/fx-shots'))
           PYICON
 
-      - name: Comparar hombrera y marcha con la v1.67.26 entregada
-        id: verify-gaits
-        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && contains(github.event.head_commit.message, '[adjuntar-v16727]') }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REFERENCE: 44922651110
-        run: |
-          set -euo pipefail
-          grep -qx 'mod_version=1.67.27' gradle.properties
-          gh run view "$REFERENCE" --json headSha,conclusion | jq -e \
-            '.headSha == "6d499ed51fa65e4488cf07c0c45ea7dc878279dd" and .conclusion == "success"'
-          base="$RUNNER_TEMP/forge-v16726"
-          gh run download "$REFERENCE" -n capatest-jar -D "$base/jar"
-          (cd "$base/jar" && sha256sum -c SHA256SUMS.txt)
-          cmp "$base/jar/capatest-1.67.26.jar" entregables/v1.67.26/capatest-1.67.26.jar
-          gh run download "$REFERENCE" -n capatest-fx-en-mundo -D "$base/shots"
-          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_gaits.py build/fx-smoke-run/fx-shots "$base/shots" 2>&1 | while IFS= read -r line; do
-            case "$line" in
-              ::notice*) printf '%s\n' "$line" ;;
-              *AssertionError:*|*Error:*) printf '::error title=Comparación v1.67.27::%s\n' "${line//%/%25}" ;;
-              *) printf '%s\n' "$line" ;;
-            esac
-          done
-
       - name: Recorte del ciclo de la hotbar
         if: always() && steps.fx-smoke.outcome != 'skipped'
         run: |
@@ -1200,42 +1176,9 @@ jobs:
             build/fx-smoke-run/fx-shots/*.png
             build/fx-smoke-run/fx-shots/*.jpg
             build/fx-smoke-run/fx-shots/*.tsv
-            build/fx-smoke-run/fx-shots/*.gif
+            build/fx-smoke-run/fx-shots/hotbar-ciclo.gif
           if-no-files-found: error
           retention-days: 30
-
-      - name: Adjuntar el JAR de prueba y las comparaciones a esta rama
-        if: ${{ success() && steps.verify-gaits.outcome == 'success' }}
-        run: |
-          set -euo pipefail
-          grep -qx 'mod_version=1.67.27' gradle.properties
-          jar=capatest-1.67.27.jar
-          shots=build/fx-smoke-run/fx-shots
-          proof=docs/releases/v1.67.27
-          out="entregables/v1.67.27/$jar"
-          (cd build/libs && sha256sum -c SHA256SUMS.txt)
-          python3 -m zipfile -t "build/libs/$jar"
-          test ! -e "$out"
-          install -D -m 0644 "build/libs/$jar" "$out"
-          install -D -m 0644 build/libs/SHA256SUMS.txt "$proof/JAR.sha256"
-          for file in comparacion-hombrera-forge.jpg comparacion-marcha-{pecho,curios}-forge.gif \
-              hombrera-forge.tsv hombrera-mirada-forge.tsv ritmo-forge.tsv tela-frontal-forge.tsv \
-              holgura-brazos-forge.tsv revision-alex-forge.tsv continuidad-forge.tsv \
-              escalera-forge.tsv saltos-forge.tsv costuras-saltos-forge.tsv nado-forge.tsv; do
-            test -s "$shots/$file"
-            install -m 0644 "$shots/$file" "$proof/"
-          done
-          for slot in pecho curios; do
-            install -m 0644 "$RUNNER_TEMP/forge-v16726/shots/paso-$slot.tsv" "$proof/paso-$slot-v16726.tsv"
-            install -m 0644 "$shots/paso-$slot.tsv" "$proof/paso-$slot-v16727.tsv"
-          done
-          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16727_colocacion_forge.jpg
-          printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$proof/compilacion.txt"
-          git add -- "$proof" docs/capa_v16727_colocacion_forge.jpg
-          git add -f -- "$out"
-          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m 'Adjuntar v1.67.27 verificada y las comparaciones en Forge [skip ci]'
-          git push origin "$GITHUB_REF_NAME"
 
       # [publicar] prepara una release verificable sin escribir a otras
       # ramas. Hacerla pública sólo después de que el run esté en SUCCESS.
