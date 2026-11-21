@@ -188,6 +188,10 @@ public final class KatanaAbilities {
         if (ultimateTarget != null) newCast.anchor = ultimateTarget.position();
         CASTS.put(player.getUUID(), newCast);
         KatanaNetwork.broadcastAnimation(player, ability);
+        if (ability == 2) {
+            // Begin framing the server-selected victim during the opening wind-up.
+            KatanaNetwork.broadcastVisual(player, ultimateTarget.getX(), ultimateTarget.getY(.55), ultimateTarget.getZ(), 2);
+        }
         if (ability == 0) {
             level.playSound(null, player.blockPosition(), SoundEvents.IRON_GOLEM_REPAIR, SoundSource.PLAYERS, .45F, 1.6F);
         }
@@ -359,18 +363,22 @@ public final class KatanaAbilities {
         Vec3 velocity = mob.getDeltaMovement();
         mob.setDeltaMovement(0, Math.min(velocity.y, 0), 0);
         mob.hurtMarked = true;
-        // Two alternating library clips, sent before each impact. No client selects the target or damage.
-        if (cast.cinematicAnimation < 9 && elapsed >= 24L + cast.cinematicAnimation * 20L) {
+        // Relocate before the wind-up, so a viewer sees the strike instead of
+        // a teleport and an impact on the same frame. The server owns the schedule.
+        int nextStroke = cast.cinematicAnimation + 1;
+        if (nextStroke < CombatTuning.ultimateStrikeCount()
+                && elapsed >= CombatTuning.ultimateWindupTick(nextStroke)) {
+            Vec3 next = safePosition(player, mob, nextStroke + 1);
+            if (next != null) moveTo(player, mob, next);
             KatanaNetwork.broadcastAnimation(player, 7 + cast.cinematicAnimation);
             cast.cinematicAnimation++;
         }
-        if (cast.cinematicStroke < 10 && elapsed >= 10L + cast.cinematicStroke * 20L) {
+        if (cast.cinematicStroke < CombatTuning.ultimateStrikeCount()
+                && elapsed >= CombatTuning.ultimateStrikeTick(cast.cinematicStroke)) {
             int index = cast.cinematicStroke++;
-            Vec3 next = safePosition(player, mob, index + 1);
-            if (next != null) moveTo(player, mob, next);
             float damage = CombatTuning.damage(player.getAttributeValue(Attributes.ATTACK_DAMAGE), true);
             // Reserve the kill for the last cut, but never protect the mob from other damage sources.
-            if (index < 9) damage = Math.min(damage, Math.max(0, mob.getHealth() - 1));
+            if (index < CombatTuning.ultimateStrikeCount() - 1) damage = Math.min(damage, Math.max(0, mob.getHealth() - 1));
             if (damage > 0 && hitUltimate(player, mob, damage)) {
                 if (mob.isAlive()) StainKatanaItem.markTarget(cast.stack, mob, player.serverLevel());
                 if (!cast.durabilitySpent) {

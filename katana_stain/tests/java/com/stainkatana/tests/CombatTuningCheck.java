@@ -23,6 +23,14 @@ public final class CombatTuningCheck {
             }
             if (CombatTuning.damage(Double.NaN, ultimate) != 8) throw new AssertionError("nonfinite damage");
         }
+        if (CombatTuning.ultimateStrikeCount() != 10 || CombatTuning.ultimateStrikeTick(0) != 10
+                || CombatTuning.ultimateStrikeTick(9) >= 196) throw new AssertionError("ultimate schedule endpoints");
+        for (int i = 1; i < CombatTuning.ultimateStrikeCount(); i++) {
+            int windup = CombatTuning.ultimateWindupTick(i);
+            if (windup <= CombatTuning.ultimateStrikeTick(i - 1)
+                    || windup >= CombatTuning.ultimateStrikeTick(i))
+                throw new AssertionError("windup must follow the previous impact and precede its own");
+        }
         if (CombatTuning.backstabDamage(20, 20) != 18 || CombatTuning.backstabDamage(5, 20) != 4
                 || CombatTuning.backstabDamage(1, 20) != 0 || CombatTuning.backstabDamage(1000, 1000) != 60)
             throw new AssertionError("backstab cap");

@@ -441,3 +441,11 @@ El HUD de prueba se coloca abajo a la izquierda para no tapar el arma en primera
 persona; `interface.hudLeft=false` lo cambia a la derecha y `showHud=false` lo
 oculta. Una vez cargadas las dos marcas, Z muestra «REMATE» aunque el cooldown
 anterior siga contando, porque el servidor permite ese uso de la habilidad.
+
+### Prototipo de coreografía posterior a 0.18
+C conserva la selección y el daño autoritativos del servidor, pero el ritmo de
+sus diez impactos ya no es uniforme. Los desplazamientos seguros se intentan
+antes de la preparación del golpe, no en el mismo tick del impacto; si no hay
+posición válida se permanece en el sitio. La cámara recibe el objetivo desde
+el inicio. El gesto Z y sus ajustes de primera persona siguen siendo prototipos
+para revisión visual; las capturas no demuestran contacto exacto con la hoja.

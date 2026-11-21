@@ -4,6 +4,11 @@ package com.stainkatana.katana;
 public final class CombatTuning {
     public static final int MARK_TICKS = 200;
     private static final int[] COOLDOWN = {120, 60, 360};
+    // An accelerating opening, a short pause and a deliberate final stroke.
+    private static final int[] ULTIMATE_STRIKES = {10, 26, 40, 58, 77, 99, 119, 138, 158, 185};
+    public static int ultimateStrikeCount() { return ULTIMATE_STRIKES.length; }
+    public static int ultimateStrikeTick(int index) { return ULTIMATE_STRIKES[index]; }
+    public static int ultimateWindupTick(int index) { return ultimateStrikeTick(index) - 6; }
     private CombatTuning() { }
     public static int cooldown(int ability) { return COOLDOWN[ability]; }
     public static int paralysisTicks(boolean playerTarget) { return playerTarget ? 40 : 80; }
