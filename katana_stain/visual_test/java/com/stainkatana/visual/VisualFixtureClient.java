@@ -284,6 +284,9 @@ public final class VisualFixtureClient {
                     throw new IllegalStateException("Multipart parent must be outside the normal search box");
                 player.setYRot(0); player.setXRot(0);
                 player.getPersistentData().getCompound("StainKatanaAbilities").putLong("next2", 0);
+                // Client fixture ticks and server ticks can drift under software rendering.
+                // Reset the anti-spam timestamp so this tests hitbox selection, not timing.
+                player.getPersistentData().getCompound("StainKatanaAbilities").remove("last");
                 System.out.println("STAIN_MULTIPART_DIAG registered=" + player.serverLevel().getPartEntities().contains(part)
                         + " partAlive=" + part.isAlive() + " partBox=" + part.getBoundingBox()
                         + " eye=" + player.getEyePosition() + " look=" + player.getLookAngle()
