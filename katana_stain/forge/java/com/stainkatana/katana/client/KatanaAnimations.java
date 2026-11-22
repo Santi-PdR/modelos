@@ -107,14 +107,18 @@ public final class KatanaAnimations {
                 // The mirrored world-model pass is not a simple screen-space
                 // reflection, so both handedness settings need separate framing.
                 boolean leftHanded = player.getMainArm() == HumanoidArm.LEFT;
+                // The offset is for the contact phase, not the whole gesture.
+                // Ease it back out before recovery so the free arm does not
+                // remain displaced after it leaves the blade.
+                float contact = free ? gestureContactBlend(playing.getTick()) : 0;
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                         dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
                         new dev.kosmx.playerAnim.core.util.Vec3f(
-                                (leftHanded ? 16 : -8) + (free ? (leftHanded ? -8 : 4)
-                                        + KatanaClientConfig.BLOOD_HAND_X.get().floatValue() : 0),
-                                -6 + (free ? (leftHanded ? -6 : -8)
-                                        + KatanaClientConfig.BLOOD_HAND_Y.get().floatValue() : 0),
-                                -14 + (free ? KatanaClientConfig.BLOOD_HAND_Z.get().floatValue() : 0))));
+                                (leftHanded ? 16 : -8) + contact * ((leftHanded ? -8 : 4)
+                                        + KatanaClientConfig.BLOOD_HAND_X.get().floatValue()),
+                                -6 + contact * ((leftHanded ? -6 : -8)
+                                        + KatanaClientConfig.BLOOD_HAND_Y.get().floatValue()),
+                                -14 + contact * KatanaClientConfig.BLOOD_HAND_Z.get().floatValue())));
             }) {
                 // Inspect begins at tick zero; the library's default fade divides
                 // by beginTick. The enclosing layer already performs the fade.
@@ -137,6 +141,13 @@ public final class KatanaAnimations {
         }
         timedClip.addModifierBefore(new SpeedModifier(ability == 0 ? 3F : (ability == 1 ? 1F : 1.4F)));
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
+    }
+
+    private static float gestureContactBlend(int clipTick) {
+        float in = net.minecraft.util.Mth.clamp((clipTick - 3F) / 9F, 0F, 1F);
+        float out = net.minecraft.util.Mth.clamp((52F - clipTick) / 14F, 0F, 1F);
+        float amount = Math.min(in, out);
+        return amount * amount * (3F - 2F * amount);
     }
 
     public static boolean isPlaying(AbstractClientPlayer player) {
