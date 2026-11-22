@@ -15,9 +15,9 @@
         "easing": "EASEINOUTSINE",
         "turn": 0,
         "rightArm": {
-          "pitch": -0.4,
-          "yaw": 0,
-          "roll": 1.0,
+          "pitch": -0.15,
+          "yaw": 0.25,
+          "roll": 0.15,
           "x": 0,
           "y": 0,
           "z": 0
@@ -28,9 +28,9 @@
         "easing": "EASEINOUTSINE",
         "turn": 0,
         "rightArm": {
-          "pitch": -0.4,
-          "yaw": 0,
-          "roll": 1.0,
+          "pitch": -0.15,
+          "yaw": 0.25,
+          "roll": 0.15,
           "x": 0,
           "y": 0,
           "z": 0
