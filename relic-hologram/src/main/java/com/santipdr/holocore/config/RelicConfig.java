@@ -33,6 +33,7 @@ public final class RelicConfig {
     public static final ForgeConfigSpec.DoubleValue FLASH_INTENSITY;
     public static final ForgeConfigSpec.BooleanValue SHADER_GLOW;
     public static final ForgeConfigSpec.DoubleValue SHADER_INTENSITY;
+    public static final ForgeConfigSpec.DoubleValue SPARK_SPEED_SCALE;
     public static final ForgeConfigSpec.DoubleValue ANIM_SPEED;
     public static final ForgeConfigSpec.BooleanValue REDUCED_EFFECTS;
     public static final ForgeConfigSpec.BooleanValue IDLE_VARIATIONS;
@@ -95,6 +96,10 @@ public final class RelicConfig {
         SHADER_INTENSITY = b.comment("Intensidad del pase GLSL (borde + barridos). Separada del halo",
                         "para poder bajar el borde sin apagar el brillo.")
                 .defineInRange("shaderIntensity", 0.35D, 0.0D, 1.0D);
+        SPARK_SPEED_SCALE = b.comment("Multiplicador de la orbita de chispas. 1.0 es 1,6 s por vuelta",
+                        "(se leen las cinco chispas); 3.0 es la velocidad de hasta 1.0.45, que",
+                        "se veia como un aro temblando; 0 las deja quietas en su sitio.")
+                .defineInRange("sparkSpeed", 1.0D, 0.0D, 3.0D);
         ANIM_SPEED = b.comment("Ritmo del bucle de animacion. 1.0 es el de las animaciones tal cual",
                         "estan hechas en el modelo (idle 48 s); 0.65 lo deja flotando, que es como",
                         "estaba pensado. El estado de brillo lo multiplica encima (herido 0.72,",

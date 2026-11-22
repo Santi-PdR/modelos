@@ -346,6 +346,7 @@ cambiar de look:
 | `visuals.flashIntensity` | `1.0` | Destello al ocurrir algo (pulso, liberación, golpe, nivel, despertar). `0` lo apaga. |
 | `visuals.shaderGlow` | `true` | Pase GLSL propio (dos bordes de silueta + línea de lectura + rejilla). Se apaga solo con shaderpack activo. |
 | `visuals.shaderIntensity` | `0.35` | Fuerza del pase GLSL, independiente del halo. |
+| `visuals.sparkSpeed` | `1.0` | Multiplicador de la órbita de chispas (0–3). `1.0` es 1,6 s por vuelta; `3.0` recupera la velocidad de hasta 1.0.45 (2,8 vueltas/s, se veía como un aro temblando); `0` las deja quietas. |
 | `visuals.animSpeed` | `0.65` | Ritmo del bucle de animación (0.25–2). `1.0` = el de las animaciones tal cual están hechas (idle 48 s); `0.65` lo deja flotando. El estado de brillo lo multiplica encima. |
 | `visuals.reducedEffects` | `false` | Reposo sin rayos/cometas/ondas (`idle_calm`). |
 | `visuals.maxRenderDistance` | `32` | Distancia para dibujar la reliquia de otros jugadores (se apaga en los últimos 8 bloques). |

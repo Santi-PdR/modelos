@@ -237,6 +237,13 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.46, unidades en el aura.** Convenio: `time()` son ticks y todas las constantes de
+frecuencia del aura están en **radianes por tick** (`SPIN` 0.035 = 1 vuelta / 9 s,
+`pulseAt` 0.08 = 3,9 s, latido del anillo 0.15 = 2,1 s). La órbita de chispas estaba en
+0.75: 2,8 vueltas por segundo, sin continuidad entre fotogramas. Baja a 0.20 (1,6 s / vuelta)
+y se multiplica por `visuals.sparkSpeed` (0–3). Lo que se añada después: o va en rad/tick,
+o pasa por `seconds()`.
+
 **1.0.45, undécimo estado con VFX propio.** `FREEZING` sale de `Entity.getTicksFrozen() > 0`:
 el contador solo sube cuando el juego ya decidió que te estás helando, así que no hay que
 mirar biomas ni bloques (y en cliente el dato llega sincronizado). Paleta `0.62 / 0.88 / 1.00`

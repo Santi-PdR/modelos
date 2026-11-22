@@ -480,6 +480,14 @@ jobs:
           assert 'float t = 1.0F - Math.min(1.0F, flash);' in aura, \
               'la onda no usa el destello como reloj (necesitaria estado propio)'
           # Estela de las chispas: solo con el portador en movimiento.
+          # La orbita de chispas va en radianes por tick y se lee: 0.75 daba 2,8
+          # vueltas por segundo y se veia un aro temblando, no cinco chispas.
+          assert 'private static final float SPARK_SPEED = 0.20F;' in aura, \
+              'la orbita de chispas volvio a ir a 2,8 vueltas por segundo'
+          assert 'RelicConfig.SPARK_SPEED_SCALE.get()' in aura, \
+              'la orbita de chispas no se puede ajustar'
+          assert '.defineInRange("sparkSpeed", 1.0D, 0.0D, 3.0D)' in configuracion, \
+              'sparkSpeed no esta declarado con su rango'
           assert 'if (motion > 0.35F) {' in aura, 'las chispas no dejan estela'
           # Unidades: time() son ticks (20 por segundo) y los efectos de 1.0.38-1.0.42
           # estaban escritos en "por segundo". Sin el divisor salian 20x rapidos: las
@@ -817,7 +825,7 @@ jobs:
               eleccion = re.search(r'\.defineEnum\("(\w+)",\s*[\w.]+\.(\w+)\)', linea)
               if eleccion:
                   defectos[f'{seccion}.{eleccion.group(1)}'] = eleccion.group(2)
-          assert len(defectos) == 27, f'esperaba 27 defectos, hay {len(defectos)}'
+          assert len(defectos) == 28, f'esperaba 28 defectos, hay {len(defectos)}'
 
           # --- tabla de configuracion del README (solo esa seccion) ---
           inicio = readme.index('## Configuración')
@@ -906,7 +914,7 @@ jobs:
                   clave = re.search(r'\.defineEnum\("(\w+)"', linea).group(1)
                   declaradas[f'{seccion}.{clave}'] = ('enum', 0.0, 0.0)
 
-          assert len(declaradas) == 27, f'esperaba 27 claves en RelicConfig, hay {len(declaradas)}'
+          assert len(declaradas) == 28, f'esperaba 28 claves en RelicConfig, hay {len(declaradas)}'
 
           # --- comando: Tweak.<tipo>("clave", RelicConfig.CAMPO, [min, max,] defecto) ---
           tabla, defecto_tabla = {}, {}

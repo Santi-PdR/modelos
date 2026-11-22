@@ -105,7 +105,14 @@ public final class RelicAura {
     private static final float SHOCK_SIZE = 0.060F;
     private static final float SPARK_RADIUS = 0.42F;
     private static final float SPARK_SIZE = 0.075F;
-    private static final float SPARK_SPEED = 0.75F;
+    /**
+     * Velocidad de la orbita de chispas, en <b>radianes por tick</b> (como
+     * {@code SPIN}): 0.20 son 1,6 s por vuelta, que es lo que deja leer cinco
+     * chispas orbitando. Con los 0.75 de hasta 1.0.45 daba 2,8 vueltas por segundo
+     * y no se veian chispas, se veia un aro temblando. {@code visuals.sparkSpeed}
+     * lo escala (0 = quietas, 3 = la velocidad vieja).
+     */
+    private static final float SPARK_SPEED = 0.20F;
     private static final float TWO_PI = 6.2831855F;
 
     private RelicAura() {
@@ -317,7 +324,8 @@ public final class RelicAura {
         boolean portal = mood == RelicAnimatable.Mood.PORTAL;
         // Correr acelera la orbita: con el portador esprintando las chispas barren
         // mas rapido y el aura parece viva sin cambiar un solo pixel de textura.
-        float orbit = time * SPARK_SPEED * (1.0F + 6.0F * Math.abs(glow.spin()))
+        float orbit = time * SPARK_SPEED * RelicConfig.SPARK_SPEED_SCALE.get().floatValue()
+                * (1.0F + 6.0F * Math.abs(glow.spin()))
                 * (night ? 0.45F : portal ? 1.5F : 1.0F) * (1.0F + 0.45F * motion);
         // Con tormenta las chispas tiran a azul electrico: el color del estado es
         // casi blanco y sin esto se perderia el "hay truenos" en el aura.

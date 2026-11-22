@@ -1,5 +1,21 @@
 # Historial de cambios
 
+## 1.0.46 — las chispas orbitan de verdad
+
+La órbita de chispas iba a **0.75 rad/tick**, o sea **2,8 vueltas por segundo**: no se
+veían cinco chispas, se veía un aro temblando. Era lo último que quedaba «nervioso» del
+aura, y es de la misma familia que el fallo de unidades de 1.0.43 (nadie había escrito
+en qué unidad estaba).
+
+* **0.20 rad/tick**: 1,6 s por vuelta, que es lo que deja leer las cinco chispas, con su
+  tamaño variable y la estela cuando te mueves.
+* **`visuals.sparkSpeed`** (0–3, defecto 1.0) lo escala sin recompilar: `3` recupera
+  exactamente la velocidad vieja, `0` las deja quietas en su sitio.
+* La constante lleva escrito **en radianes por tick** en el comentario, con el mismo
+  convenio que `SPIN`; es lo que faltaba para que no se mezclaran unidades otra vez.
+* 28 claves de config. CI: 4 comprobaciones nuevas, con 3 negativos en rojo (velocidad
+  vieja, órbita sin mando y rango de `sparkSpeed` cambiado).
+
 ## 1.0.45 — undécimo estado: congelándose, con copos
 
 * **Estado nuevo `freezing`**: cuando `getTicksFrozen()` sube (nieve en polvo, agua
