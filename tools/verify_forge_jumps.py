@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Measure cape motion through real jumps and a ledge drop in the torso frame."""
 import argparse
+import base64
 import csv
 import io
 from collections import defaultdict
@@ -259,8 +260,11 @@ def motion_gallery(root):
         quality = max(24, quality - 7)
     if payload is None:
         raise AssertionError('no se pudo comprimir la lámina de saltos para Actions')
-    from verify_forge_mount import emit
-    emit('Saltos Forge galeria jpg', payload)
+    encoded = base64.b64encode(payload).decode('ascii')
+    chunk_size = 8_000
+    for offset in range(0, len(encoded), chunk_size):
+        index = offset // chunk_size
+        print(f'::notice title=Saltos Forge galeria jpg {index:02}::{encoded[offset:offset+chunk_size]}')
 
 
 def save(root, reports, fit_rows=()):
