@@ -97,6 +97,7 @@ public final class RelicClientCommands {
                                         SharedSuggestionProvider.suggest(shortNames(), builder))
                                 .executes(ctx -> anim(ctx.getSource(),
                                         StringArgumentType.getString(ctx, "nombre")))))
+                .then(Commands.literal("reset").executes(ctx -> reset(ctx.getSource())))
                 .then(Commands.literal("preview")
                         .executes(ctx -> preview(ctx.getSource(), null))
                         .then(Commands.argument("distancia", DoubleArgumentType.doubleArg(0.5D, 6.0D))
@@ -216,20 +217,26 @@ public final class RelicClientCommands {
      * ni una clave olvidada ni un rango desincronizado pasan el build.</p>
      */
     private record Tweak(String key, Kind kind, ForgeConfigSpec.ConfigValue<?> value,
-                         double min, double max) {
+                         double min, double max, String defecto) {
 
         enum Kind { NUMBER, WHOLE, FLAG }
 
-        static Tweak number(String key, ForgeConfigSpec.DoubleValue value, double min, double max) {
-            return new Tweak(key, Kind.NUMBER, value, min, max);
+        static Tweak number(String key, ForgeConfigSpec.DoubleValue value, double min, double max,
+                            double defecto) {
+            return new Tweak(key, Kind.NUMBER, value, min, max, String.valueOf(defecto));
         }
 
-        static Tweak whole(String key, ForgeConfigSpec.IntValue value, int min, int max) {
-            return new Tweak(key, Kind.WHOLE, value, min, max);
+        static Tweak whole(String key, ForgeConfigSpec.IntValue value, int min, int max, int defecto) {
+            return new Tweak(key, Kind.WHOLE, value, min, max, String.valueOf(defecto));
         }
 
-        static Tweak flag(String key, ForgeConfigSpec.BooleanValue value) {
-            return new Tweak(key, Kind.FLAG, value, 0.0D, 0.0D);
+        static Tweak flag(String key, ForgeConfigSpec.BooleanValue value, boolean defecto) {
+            return new Tweak(key, Kind.FLAG, value, 0.0D, 0.0D, String.valueOf(defecto));
+        }
+
+        /** Vuelve al valor de fabrica (el que trae {@code RelicConfig}). */
+        void restoreDefault() {
+            apply(defecto);
         }
 
         String current() {
@@ -283,28 +290,28 @@ public final class RelicClientCommands {
      * side} y {@code /relic quality}), que ademas valida el texto.
      */
     private static final List<Tweak> TWEAKS = List.of(
-            Tweak.number("placement.offsetX", RelicConfig.OFFSET_X, -32.0D, 32.0D),
-            Tweak.number("placement.offsetY", RelicConfig.OFFSET_Y, -48.0D, 48.0D),
-            Tweak.number("placement.offsetZ", RelicConfig.OFFSET_Z, -24.0D, 48.0D),
-            Tweak.number("placement.scale", RelicConfig.SCALE, 0.1D, 4.0D),
-            Tweak.flag("visuals.glowLayer", RelicConfig.GLOW_LAYER),
-            Tweak.flag("visuals.glowHalo", RelicConfig.GLOW_HALO),
-            Tweak.number("visuals.haloIntensity", RelicConfig.HALO_INTENSITY, 0.0D, 1.0D),
-            Tweak.flag("visuals.glowAura", RelicConfig.GLOW_AURA),
-            Tweak.number("visuals.auraIntensity", RelicConfig.AURA_INTENSITY, 0.0D, 1.0D),
-            Tweak.flag("visuals.auraTint", RelicConfig.AURA_TINT),
-            Tweak.flag("visuals.glowRing", RelicConfig.GLOW_RING),
-            Tweak.number("visuals.ringIntensity", RelicConfig.RING_INTENSITY, 0.0D, 1.0D),
-            Tweak.number("visuals.flashIntensity", RelicConfig.FLASH_INTENSITY, 0.0D, 2.0D),
-            Tweak.flag("visuals.shaderGlow", RelicConfig.SHADER_GLOW),
-            Tweak.number("visuals.shaderIntensity", RelicConfig.SHADER_INTENSITY, 0.0D, 1.0D),
-            Tweak.flag("visuals.reducedEffects", RelicConfig.REDUCED_EFFECTS),
-            Tweak.flag("visuals.idleVariations", RelicConfig.IDLE_VARIATIONS),
-            Tweak.whole("visuals.maxRenderDistance", RelicConfig.MAX_RENDER_DISTANCE, 4, 128),
-            Tweak.whole("visuals.glitchMinSeconds", RelicConfig.GLITCH_MIN_SECONDS, 2, 600),
-            Tweak.whole("visuals.glitchMaxSeconds", RelicConfig.GLITCH_MAX_SECONDS, 2, 900),
-            Tweak.whole("visuals.alertRadius", RelicConfig.ALERT_RADIUS, 2, 48),
-            Tweak.whole("visuals.combatHoldTicks", RelicConfig.COMBAT_HOLD_TICKS, 10, 600));
+            Tweak.number("placement.offsetX", RelicConfig.OFFSET_X, -32.0D, 32.0D, 6.0D),
+            Tweak.number("placement.offsetY", RelicConfig.OFFSET_Y, -48.0D, 48.0D, -6.0D),
+            Tweak.number("placement.offsetZ", RelicConfig.OFFSET_Z, -24.0D, 48.0D, 8.0D),
+            Tweak.number("placement.scale", RelicConfig.SCALE, 0.1D, 4.0D, 1.0D),
+            Tweak.flag("visuals.glowLayer", RelicConfig.GLOW_LAYER, true),
+            Tweak.flag("visuals.glowHalo", RelicConfig.GLOW_HALO, true),
+            Tweak.number("visuals.haloIntensity", RelicConfig.HALO_INTENSITY, 0.0D, 1.0D, 0.25D),
+            Tweak.flag("visuals.glowAura", RelicConfig.GLOW_AURA, true),
+            Tweak.number("visuals.auraIntensity", RelicConfig.AURA_INTENSITY, 0.0D, 1.0D, 0.32D),
+            Tweak.flag("visuals.auraTint", RelicConfig.AURA_TINT, true),
+            Tweak.flag("visuals.glowRing", RelicConfig.GLOW_RING, true),
+            Tweak.number("visuals.ringIntensity", RelicConfig.RING_INTENSITY, 0.0D, 1.0D, 0.60D),
+            Tweak.number("visuals.flashIntensity", RelicConfig.FLASH_INTENSITY, 0.0D, 2.0D, 1.0D),
+            Tweak.flag("visuals.shaderGlow", RelicConfig.SHADER_GLOW, true),
+            Tweak.number("visuals.shaderIntensity", RelicConfig.SHADER_INTENSITY, 0.0D, 1.0D, 0.35D),
+            Tweak.flag("visuals.reducedEffects", RelicConfig.REDUCED_EFFECTS, false),
+            Tweak.flag("visuals.idleVariations", RelicConfig.IDLE_VARIATIONS, true),
+            Tweak.whole("visuals.maxRenderDistance", RelicConfig.MAX_RENDER_DISTANCE, 4, 128, 32),
+            Tweak.whole("visuals.glitchMinSeconds", RelicConfig.GLITCH_MIN_SECONDS, 2, 600, 20),
+            Tweak.whole("visuals.glitchMaxSeconds", RelicConfig.GLITCH_MAX_SECONDS, 2, 900, 60),
+            Tweak.whole("visuals.alertRadius", RelicConfig.ALERT_RADIUS, 2, 48, 12),
+            Tweak.whole("visuals.combatHoldTicks", RelicConfig.COMBAT_HOLD_TICKS, 10, 600, 80));
 
     private static String[] tweakKeys() {
         return TWEAKS.stream().map(Tweak::key).toArray(String[]::new);
@@ -498,6 +505,28 @@ public final class RelicClientCommands {
     private static void set(ForgeConfigSpec.DoubleValue value, String clave, double newValue) {
         value.set(newValue);
         markUnsaved(clave);
+    }
+
+    /**
+     * {@code /relic reset}: vuelve a los valores de fabrica <b>en memoria</b>
+     * (despues, {@code /relic save} los escribe). Se apoya en la misma tabla que
+     * {@code /relic set}, asi que lo que se restaura es exactamente lo que la
+     * config trae por defecto; el CI comprueba que coinciden.
+     */
+    private static int reset(CommandSourceStack source) {
+        for (Tweak tweak : TWEAKS) {
+            tweak.restoreDefault();
+            markUnsaved(tweak.key());
+        }
+        // Las dos que no pasan por /relic set tambien se restauran.
+        RelicConfig.SHOULDER.set(RelicConfig.Shoulder.RIGHT);
+        RelicConfig.QUALITY.set(RelicConfig.Quality.FULL);
+        markUnsaved("placement.shoulder");
+        markUnsaved("visuals.quality");
+        int cambios = UNSAVED.size();
+        source.sendSuccess(() -> Component.translatable("message.holocore.reset", cambios)
+                .withStyle(ChatFormatting.AQUA), false);
+        return cambios;
     }
 
     /**

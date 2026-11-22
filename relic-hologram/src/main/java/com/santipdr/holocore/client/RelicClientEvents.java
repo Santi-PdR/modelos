@@ -38,6 +38,11 @@ public final class RelicClientEvents {
      */
     private static final long VISIBLE_WINDOW_TICKS = 20L;
 
+    /** Cada cuantos ticks se tiran los estados de jugadores que ya no estan. */
+    private static final int STATE_PRUNE_TICKS = 200;
+
+    private static int pruneCountdown;
+
     /** Distancia por defecto (bloques) de la vista previa delante de la camara. */
     public static final float PREVIEW_DEFAULT_DISTANCE = 2.5F;
 
@@ -96,11 +101,29 @@ public final class RelicClientEvents {
             return;
         }
         RelicVisuals.prune(minecraft.level.getGameTime());
+        pruneRemoteStates(minecraft);
         tickLocalRelic(minecraft);
 
         while (RelicKeys.TOGGLE.consumeClick()) {
             RelicNetwork.sendToServer(new RelicActionPacket(RelicActionPacket.Action.TOGGLE));
         }
+    }
+
+    /**
+     * Tira los estados de jugadores que ya no estan en el mundo (salieron del
+     * servidor o cambiaron de dimension). Al volver a verlos, el servidor reenvia
+     * su estado en {@code StartTracking} o al entrar, asi que no se pierde nada.
+     */
+    private static void pruneRemoteStates(Minecraft minecraft) {
+        if (--pruneCountdown > 0) {
+            return;
+        }
+        pruneCountdown = STATE_PRUNE_TICKS;
+        java.util.Set<java.util.UUID> vivos = new java.util.HashSet<>();
+        for (var player : minecraft.level.players()) {
+            vivos.add(player.getUUID());
+        }
+        ClientRelicStates.retain(vivos);
     }
 
     /**
@@ -125,6 +148,9 @@ public final class RelicClientEvents {
         // Curios responde en cliente: es una busqueda en las ranuras del jugador
         // local, no una pregunta al servidor.
         if (RelicServer.findRelic(player).isEmpty()) {
+            // Sin reliquia no hay nada que vigilar, y la vista previa dejaria de
+            // tener sentido (dibujaria un visual a punto de podarse).
+            preview = false;
             return;
         }
         // existing() primero: computeIfAbsent con un lambda que captura al

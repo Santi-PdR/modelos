@@ -1,5 +1,27 @@
 # Historial de cambios
 
+## 1.0.23 — `/relic reset`, y que las descripciones no mientan
+
+* **Nuevo `/relic reset`**: devuelve las **24** claves a los valores de fábrica en
+  memoria (después, `/relic save` si quieres quedártelos). Se apoya en la misma
+  tabla que `/relic set`, así que lo que restaura es exactamente lo que trae
+  `RelicConfig`.
+* **La descripción del mod en la lista de mods estaba congelada en 1.0.x**:
+  enumeraba `/relic offset|scale|side|quality|toggle|pulse|release|info` y no
+  mencionaba `anim`, ni `stats`, ni `set`, ni `save`, ni `preview`. Ahora está al
+  día y el CI compara los dos sitios donde se documentan los comandos (README y
+  `mods.toml`).
+* **Fuga pequeña pero real**: `ClientRelicStates` guardaba una entrada por cada
+  jugador del que se hubiera recibido estado y no borraba ninguna al irse. Ahora
+  se poda cada ~10 s contra la lista de jugadores del mundo (al volver a verlos,
+  el servidor reenvía su estado).
+* La vista previa se apaga sola si te quitas la reliquia: antes podía seguir
+  dibujando un visual a punto de podarse durante un par de segundos.
+* El chequeo `Validate config tweaks` comprueba ahora también el **valor por
+  defecto** de las 22 claves: la tabla del comando, `RelicConfig` y el README
+  quedan atados entre sí.
+* 1 clave nueva por idioma (45 en cada uno).
+
 ## 1.0.22 — `/relic preview`: mirar la reliquia de cerca y siempre igual
 
 * **Nuevo `/relic preview`**: dibuja la reliquia del jugador delante de la cámara

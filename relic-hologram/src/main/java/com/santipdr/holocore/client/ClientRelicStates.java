@@ -34,6 +34,16 @@ public final class ClientRelicStates {
         return STATES.getOrDefault(player, Snapshot.DEFAULT);
     }
 
+    /**
+     * Se queda solo con los jugadores que siguen en el mundo. Sin esto el mapa
+     * crece con cada jugador que pasa por el servidor: cada entrada son ~60 bytes,
+     * pero en un servidor con gente entrando y saliendo durante horas es basura
+     * que nunca se libera. Se llama cada ~10 s desde el tick del cliente.
+     */
+    public static void retain(java.util.Set<UUID> vivos) {
+        STATES.keySet().retainAll(vivos);
+    }
+
     public static void clear() {
         STATES.clear();
     }

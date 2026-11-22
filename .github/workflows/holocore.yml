@@ -336,12 +336,20 @@ jobs:
           assert 'relic' in literales, f'sin raiz /relic: {literales}'
           subcomandos = [n for n in literales if n != 'relic']
 
-          readme = pathlib.Path('relic-hologram/README.md').read_text(encoding='utf-8')
-          filas = [linea for linea in readme.splitlines() if '/relic' in linea]
-          faltan = [n for n in subcomandos
-                    if not any(re.search(r'\b' + n + r'\b', fila) for fila in filas)]
-          assert not faltan, f'comandos sin documentar en README.md: {faltan}'
-          print(f'Comandos OK: {len(subcomandos)} documentados -> {", ".join(subcomandos)}')
+          # Dos sitios donde se documentan los comandos: el README y la
+          # descripcion que sale en la lista de mods del juego.
+          sitios = {
+              'README.md': pathlib.Path('relic-hologram/README.md').read_text(encoding='utf-8'),
+              'mods.toml': pathlib.Path(
+                  'relic-hologram/src/main/resources/META-INF/mods.toml').read_text(encoding='utf-8'),
+          }
+          for nombre, texto in sitios.items():
+              filas = [linea for linea in texto.splitlines() if '/relic' in linea]
+              faltan = [n for n in subcomandos
+                        if not any(re.search(r'\b' + n + r'\b', fila) for fila in filas)]
+              assert not faltan, f'comandos sin documentar en {nombre}: {faltan}'
+          print(f'Comandos OK: {len(subcomandos)} documentados en README.md y mods.toml'
+                f' -> {", ".join(subcomandos)}')
           PY
 
       # La columna "Defecto" del README se creia a si misma: nadie comparaba esos
@@ -471,19 +479,21 @@ jobs:
 
           assert len(declaradas) == 24, f'esperaba 24 claves en RelicConfig, hay {len(declaradas)}'
 
-          # --- comando: Tweak.<tipo>("clave", RelicConfig.CAMPO, min, max) ---
-          tabla = {}
+          # --- comando: Tweak.<tipo>("clave", RelicConfig.CAMPO, [min, max,] defecto) ---
+          tabla, defecto_tabla = {}, {}
           for linea in comandos.splitlines():
-              m = re.search(r'Tweak\.(number|whole|flag)\("([\w.]+)",\s*RelicConfig\.(\w+)'
-                              r'(?:,\s*(-?[\d.]+)D?,\s*(-?[\d.]+)D?)?\)', linea)
-              if not m:
-                  continue
-              tipo, clave, campo, minimo, maximo = m.groups()
-              if tipo == 'flag':
-                  tabla[clave] = ('flag', campo, 0.0, 0.0)
-              else:
-                  assert minimo and maximo, f'{clave} sin rango explicito'
+              m = re.search(r'Tweak\.(number|whole)\("([\w.]+)",\s*RelicConfig\.(\w+)'
+                              r',\s*(-?[\d.]+)D?,\s*(-?[\d.]+)D?,\s*(-?[\d.]+)D?\)', linea)
+              if m:
+                  tipo, clave, campo, minimo, maximo, defecto = m.groups()
                   tabla[clave] = (tipo, campo, float(minimo), float(maximo))
+                  defecto_tabla[clave] = float(defecto)
+                  continue
+              m = re.search(r'Tweak\.flag\("([\w.]+)",\s*RelicConfig\.(\w+),\s*(true|false)\)', linea)
+              if m:
+                  clave, campo, defecto = m.groups()
+                  tabla[clave] = ('flag', campo, 0.0, 0.0)
+                  defecto_tabla[clave] = defecto
 
           assert tabla, 'no se encontro ninguna clave en /relic set'
 
@@ -502,13 +512,41 @@ jobs:
               assert (minimo, maximo) == (esperado[1], esperado[2]), \
                   f'{clave}: rango {minimo}..{maximo} pero la config dice {esperado[1]}..{esperado[2]}'
 
+          # Defectos de la config, para comparar con la tercera copia (la tabla).
+          seccion, defectos = '', {}
+          for linea in config.splitlines():
+              push = re.search(r'\.push\("(\w+)"\)', linea)
+              if push:
+                  seccion = push.group(1)
+                  continue
+              if re.search(r'\.pop\(\)', linea):
+                  seccion = ''
+                  continue
+              rango = re.search(r'\.defineInRange\("(\w+)",\s*(-?[\d.]+)D?,', linea)
+              if rango:
+                  defectos[f'{seccion}.{rango.group(1)}'] = float(rango.group(2))
+                  continue
+              bandera = re.search(r'\.define\("(\w+)",\s*(true|false)\)', linea)
+              if bandera:
+                  defectos[f'{seccion}.{bandera.group(1)}'] = bandera.group(2)
+
+          for clave, defecto in sorted(defecto_tabla.items()):
+              esperado = defectos.get(clave)
+              assert esperado is not None, f'{clave} no tiene defecto en RelicConfig'
+              if isinstance(defecto, str):
+                  iguales = defecto == esperado
+              else:
+                  iguales = abs(defecto - float(esperado)) < 1e-9
+              assert iguales, f'{clave}: /relic reset volveria a {defecto}, la config dice {esperado}'
+
           # /relic set acepta el nombre corto (auraIntensity). Si dos claves
           # compartieran nombre corto, esa forma dejaria de funcionar en silencio.
           cortos = [clave.split('.')[-1] for clave in tabla]
           repetidos = sorted({c for c in cortos if cortos.count(c) > 1})
           assert not repetidos, f'nombres cortos ambiguos en /relic set: {repetidos}'
 
-          print(f'Config tweaks OK: {len(tabla)} claves ajustables, {len(exentas)} con comando propio,'
+          print(f'Config tweaks OK: {len(tabla)} claves ajustables con rango y defecto iguales a la config,'
+                f' {len(exentas)} con comando propio,'
                 f' tipos y rangos iguales a RelicConfig.')
           PY
 
