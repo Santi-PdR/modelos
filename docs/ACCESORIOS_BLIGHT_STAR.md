@@ -10,6 +10,8 @@ El manto ya hace de silueta principal por detrás. Las próximas piezas debería
 
 ## Primer prototipo: Brazalete Ascua
 
+**Prototipo aislado v0:** [Blockbench](prototypes/brazalete_ascua/Brazalete_Ascua_fit_v0.bbmodel) · [ajuste, límites y pruebas pendientes](prototypes/brazalete_ascua/README.md). No está integrado en el JAR ni en Curios.
+
 - **Volumen:** ~2,5 unidades de altura del brazo (16 unidades = 1 bloque). Envolver sólo lo necesario para leer una pieza cerrada de frente. Una bisagra oscura por dentro y la grieta por fuera; reservar el lado hacia el torso para evitar enganches al balancear el brazo.
 - **Atlas:** 32×32 como punto de partida. Grieta de 3–5 texeles con núcleo emisivo y sin halo en la primera versión. Reutilizar los tonos del manto, no su atlas. La estrella y el paño deben seguir dominando al ver las dos piezas juntas.
 - **Movimiento:** rígido con el brazo; sin chispas propias ni giro independiente. Si el desgaste del manto cambia el color, que el brazalete sólo enfríe el núcleo hacia violeta. La primera prueba necesita tres cuartos frontal, dorso y perfil con y sin manga exterior. La vista de primera persona sería un paso aparte: no se da por hecha con el renderer de Curios.

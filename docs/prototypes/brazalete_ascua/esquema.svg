@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="470" viewBox="0 0 960 470" role="img" aria-labelledby="title desc">
+<title id="title">Brazalete Ascua, prototipo v0</title>
+<desc id="desc">Esquema a escala ortográfica de un brazalete de dos segmentos de carbón unidos por un puente granate con una grieta rosa corta. No es una captura de Minecraft.</desc>
+<defs>
+  <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" stroke="#292531" stroke-width="1"/></pattern>
+  <linearGradient id="shell" x2="0" y2="1"><stop stop-color="#514650"/><stop offset=".2" stop-color="#29262e"/><stop offset=".85" stop-color="#211f26"/><stop offset="1" stop-color="#15141a"/></linearGradient>
+  <linearGradient id="garnet" x2="0" y2="1"><stop stop-color="#ae2b52"/><stop offset=".25" stop-color="#711735"/><stop offset="1" stop-color="#4a142b"/></linearGradient>
+  <marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#b6a8b8"/></marker>
+</defs>
+<rect width="960" height="470" rx="22" fill="#141119"/>
+<rect x="20" y="20" width="920" height="430" rx="16" fill="url(#grid)" stroke="#403644"/>
+<text x="54" y="62" fill="#f5eaf1" font-family="system-ui,sans-serif" font-size="26" font-weight="700">BRAZALETE ASCUA · AJUSTE V0</text>
+<text x="55" y="88" fill="#bcaebb" font-family="system-ui,sans-serif" font-size="14">Esquema ortográfico a escala · no es captura de juego ni aprobación final</text>
+<!-- Both views use the same scale: 56.5 SVG px per model unit. -->
+<text x="145" y="133" fill="#f3dce7" font-family="system-ui,sans-serif" font-size="16" font-weight="650">COSTADO EXTERIOR</text>
+<text x="145" y="153" fill="#a99eaf" font-family="system-ui,sans-serif" font-size="12">mirando desde +X · largo del antebrazo en vertical</text>
+<!-- Reference forearm envelope, 4×4 cross-section; bracelet surfaces are 0.3u proud. -->
+<rect x="166" y="200" width="226" height="141" rx="15" fill="#827c87" fill-opacity=".12" stroke="#77717c" stroke-opacity=".45" stroke-dasharray="5 5"/>
+<!-- lower shell segment: y 0–0.72 -->
+<rect x="155" y="300" width="260" height="41" rx="5" fill="url(#shell)" stroke="#746776" stroke-width="2"/>
+<path d="M164 306h242M164 335h242" stroke="#15141a" stroke-width="2"/>
+<!-- upper shell segment: y 1.78–2.5 -->
+<rect x="155" y="200" width="260" height="41" rx="5" fill="url(#shell)" stroke="#746776" stroke-width="2"/>
+<path d="M164 206h242M164 235h242" stroke="#15141a" stroke-width="2"/>
+<!-- outer bridge spans the gap; garnet inlay and four-step crack stay on its outside face. -->
+<rect x="245" y="238" width="70" height="65" rx="4" fill="url(#shell)" stroke="#8a7282" stroke-width="2"/>
+<rect x="273" y="248" width="25" height="44" rx="2" fill="url(#garnet)"/>
+<path d="M294 251l-5 6 4 4-6 7 4 4-6 7 4 4-5 7" fill="none" stroke="#ff89cf" stroke-width="3.5" stroke-linecap="square" stroke-linejoin="bevel"/>
+<path d="M155 355h260" stroke="#a99eaf" stroke-width="1"/>
+<path d="M155 350v10M415 350v10" stroke="#a99eaf"/>
+<text x="242" y="377" fill="#e1d4e0" font-family="system-ui,sans-serif" font-size="13">4,6 u exterior</text>
+<text x="437" y="218" fill="#cbb7c5" font-family="system-ui,sans-serif" font-size="13">dos segmentos</text>
+<text x="437" y="237" fill="#a99eaf" font-family="system-ui,sans-serif" font-size="12">carbón mate</text>
+<path d="M428 222h-17" stroke="#ad9cae"/>
+<text x="437" y="275" fill="#d885a7" font-family="system-ui,sans-serif" font-size="13">puente granate</text>
+<path d="M428 271h-118" stroke="#ad9cae"/>
+<text x="437" y="298" fill="#ff9dd3" font-family="system-ui,sans-serif" font-size="13">grieta corta, sin emisión</text>
+<path d="M428 294h-126" stroke="#ad9cae"/>
+<!-- Front view; same dimensions and scale as the outside view. -->
+<text x="650" y="133" fill="#f3dce7" font-family="system-ui,sans-serif" font-size="16" font-weight="650">VISTA FRONTAL</text>
+<text x="650" y="153" fill="#a99eaf" font-family="system-ui,sans-serif" font-size="12">mirando desde +Z · +X hacia el exterior</text>
+<rect x="666" y="200" width="226" height="141" rx="15" fill="#827c87" fill-opacity=".12" stroke="#77717c" stroke-opacity=".45" stroke-dasharray="5 5"/>
+<rect x="655" y="300" width="260" height="41" rx="5" fill="url(#shell)" stroke="#746776" stroke-width="2"/>
+<path d="M664 306h242M664 335h242" stroke="#15141a" stroke-width="2"/>
+<rect x="655" y="200" width="260" height="41" rx="5" fill="url(#shell)" stroke="#746776" stroke-width="2"/>
+<path d="M664 206h242M664 235h242" stroke="#15141a" stroke-width="2"/>
+<rect x="905" y="238" width="10" height="65" rx="2" fill="url(#shell)" stroke="#8a7282" stroke-width="1.5"/>
+<path d="M927 213v114" stroke="#b6a8b8" stroke-width="2" marker-end="url(#arrow)"/>
+<text x="938" y="286" fill="#d5c7d3" font-family="system-ui,sans-serif" font-size="11" transform="rotate(90 938 286)">+X exterior</text>
+<path d="M655 355h260" stroke="#a99eaf" stroke-width="1"/>
+<path d="M655 350v10M915 350v10" stroke="#a99eaf"/>
+<text x="750" y="377" fill="#e1d4e0" font-family="system-ui,sans-serif" font-size="13">4,6 u</text>
+<text x="55" y="425" fill="#a99eaf" font-family="system-ui,sans-serif" font-size="12">2,5 u de alto · antebrazo de referencia 4×4 · atlas RGB opaco 32×32</text>
+<text x="55" y="443" fill="#a99eaf" font-family="system-ui,sans-serif" font-size="12">Modelo aislado: todavía fuera del JAR, del registro de ítems y de Curios.</text>
+</svg>
