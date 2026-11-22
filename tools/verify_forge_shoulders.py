@@ -46,6 +46,21 @@ def rigid_travel(base, live, label):
     return travel
 
 
+def plate_support(base, live, groups, label):
+    shift = rigid_travel(base, live, label)
+    side = np.sign(base[0, :, 0].mean())
+    strips = np.asarray(groups['v20_mount_shoulders'])
+    strip = strips[np.sign(strips[:, :, 0].mean(axis=1)) == side]
+    assert len(strip) == 1, (label, 'falta la tira sobre la manga')
+    seam = lap(live, strip)
+    assert seam > .22, (label, 'abrió la costura', seam)
+    for cover in ('head', 'hat'):
+        head = np.asarray(groups[cover])
+        prior, after = max(0., lap(base, head)), max(0., lap(live, head))
+        assert after <= prior + .08, (label, cover, 'nuevo cruce', prior, after)
+    return shift, seam
+
+
 def verify(root):
     rig_data = fixed_wearer_pose(load(ARMOR_GEO), 0., slim=True)
     rig = WornModel(rig_data)
@@ -64,7 +79,6 @@ def verify(root):
         assert len(candidates) == 5, slot
         pictures = []
         for name, side, arm in PLATES:
-            signs = np.sign(original[name][0, :, 0].mean())
             score = []
             for i, entry in enumerate(trace):
                 key = slot, side, i
@@ -73,17 +87,9 @@ def verify(root):
                 # Control must still be exactly the previous plate transform.
                 gap = np.linalg.norm(a[:, :, None] - original[name][:, None, :], axis=3).min(2).max()
                 assert gap < .007, (key, 'proyección fija distinta de .37', gap)
-                shift = rigid_travel(a, b, key)
+                shift, seam = plate_support(a, b, live[i], key)
                 if i not in fast:
                     assert shift < .006, (key, 'cambió una placa en una pose quieta', shift)
-                strip = np.asarray(live[i]['v20_mount_shoulders'])
-                strip = strip[np.sign(strip[:, :, 0].mean(axis=1)) == signs]
-                seam = lap(b, strip)
-                assert len(strip) == 1 and seam > .22, (key, 'abrió la costura', seam)
-                for cover in ('head', 'hat'):
-                    head = np.asarray(live[i][cover])
-                    prior, after = max(0., lap(a, head)), max(0., lap(b, head))
-                    assert after <= prior + .08, (key, cover, 'nuevo cruce', prior, after)
                 sleeve, = live[i][arm]
                 np.testing.assert_allclose(np.linalg.norm(sleeve[[1, 3, 4]]-sleeve[0], axis=1),
                                            (3.5, 12.5, 4.5), atol=.01, rtol=0)

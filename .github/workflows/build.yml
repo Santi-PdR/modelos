@@ -1061,7 +1061,7 @@ jobs:
         run: |
           set -euo pipefail
           args=()
-          if grep -Eq '^mod_version=1\.67\.(29|30|31|32|33|34|35|36|37)$' gradle.properties; then
+          if grep -Eq '^mod_version=1\.67\.(29|30|31|32|33|34|35|36|37|38)$' gradle.properties; then
             args=(--reference docs/releases/v1.67.28/maniobra/maniobra-forge.tsv)
           fi
           if [[ -f build/fx-smoke-run/fx-shots/giro-inverso-pecho.tsv ]]; then args+=(--extended); fi
@@ -1386,6 +1386,7 @@ jobs:
           install -m 0644 "$shots"/maniobra-retorno/{retorno.tsv,retorno-malla.tsv,retorno-pecho.jpg,retorno-curios.jpg} "$proof/maniobra/retorno/"
           install -m 0644 "$shots"/{continuidad-forge,saltos-forge,costuras-saltos-forge,escalera-forge,nado-forge,halo-continuidad-forge,traspaso-forge,pausa-render-forge,secuencia-brasa-forge,revision-alex-forge,holgura-brazos-forge}.tsv "$proof/"
           install -m 0644 "$shots"/nacimiento-agachado-{pecho,curios,resumen}.tsv "$proof/"
+          install -m 0644 "$shots"/{hombreras-movimiento.tsv,hombreras-resumen.tsv,hombreras-en-carrera.jpg,remate-giro-forge.tsv} "$proof/"
           install -m 0644 "$shots"/bote-{pecho.tsv,curios.tsv,resumen.tsv,forge.jpg} "$proof/"
           install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16738_colocacion_forge.jpg
           printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$proof/compilacion.txt"

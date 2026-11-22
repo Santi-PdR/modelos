@@ -12,11 +12,11 @@ public final class CapeShoulderTest {
                 var left = CapeShoulder.pose(true, y, z, rise, fore);
                 check(right.x() == -left.x() && right.roll() == -left.roll() && right.y() == left.y()
                         && right.z() == left.z() && right.pitch() == left.pitch(), "el lado cambia la respuesta");
-                check(right.x() >= 0 && right.x() <= .16 && right.y() >= 0 && right.y() <= .368
-                        && Math.abs(right.z()) <= .51 && Math.abs(right.pitch()) <= 17 && right.roll() <= 13,
+                check(right.x() >= 0 && right.x() <= .50 && right.y() >= 0 && right.y() <= .06
+                        && Math.abs(right.z()) <= .43 && Math.abs(right.pitch()) <= 10 && right.roll() <= 13,
                         "placa fuera del recorrido");
                 if (Math.abs(angle) <= 10) check(right == CapeShoulder.REST && left == CapeShoulder.REST, "vibra en reposo");
-                if (Math.abs(angle) == 45) check(right.y() > .22 && right.roll() > 12 && right.pitch() * angle < 0,
+                if (Math.abs(angle) == 45) check(right.x() > .45 && right.roll() > 12 && right.pitch() * angle < 0,
                         "la placa no sigue el giro de su manga");
                 if (samples && angle % 5 == 0) {
                     print(0, y, z, rise, fore, right);

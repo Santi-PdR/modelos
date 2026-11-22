@@ -2,10 +2,12 @@ package com.capatest.client;
 
 /** Small rigid hinge above each sleeve, in the baked torso's model-pixel axes. */
 final class CapeShoulder {
-    static final double HINGE_X = 5.50, HINGE_Y = 24.25, HINGE_Z = .53;
+    static final double HINGE_X = 5.60, HINGE_Y = 24.25, HINGE_Z = .53;
     private static final double START = .020, FULL = .235;
-    private static final double PITCH = 17, ROLL = 13;
-    private static final double OUT = .16, LIFT = .24, FOLLOW_UP = .17, FOLLOW_Z = .38, SWEEP = .30;
+    private static final double PITCH = 10, ROLL = 13;
+    // Most of the clearance comes from rolling and moving out half a
+    // model pixel, not lifting the inside edge into the head during a turn.
+    private static final double OUT = .49, LIFT = .04, FOLLOW_UP = .025, FOLLOW_Z = .24, SWEEP = .29;
     private static final double UP_LIMIT = .75, Z_LIMIT = .55;
 
     record Pose(double x, double y, double z, double pitch, double roll) {}

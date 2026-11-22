@@ -13,6 +13,7 @@ from cape_fit import fixed_wearer_pose, hood_moves
 from preview_cloth import ARMOR_GEO, load, matrices, mod_version
 from verify_forge_gaits import crop, table, text
 from verify_forge_postures import ACTOR, read_boxes
+from verify_forge_shoulders import PLATES, plate_support
 from verify_forge_walk import pairs, points, read
 from verify_v1660 import WornModel, contacts
 
@@ -89,6 +90,9 @@ def fit(root, data, slot, rig, source, *, direction=1):
     # the contact checks still requires the unscaled box for every link.
     trim = tuple(map(int, mod_version().split('.'))) >= (1, 67, 31)
     flex_plates = tuple(map(int, mod_version().split('.'))) >= (1, 67, 38)
+    if flex_plates:
+        shoulder_base = read_boxes(root/f'{stem}-placas-fijas.tsv')
+        assert set(shoulder_base) == set(mesh), (stem, 'faltan controles al mismo tick')
     fixed = rig.rigid & ~np.array([hood_moves(name) or trim and name.startswith('v18_chain_')
                                  or flex_plates and name.startswith('v18_pad_') for name in rig.names])
     plate = np.array([name == 'v18_pad_1' for name in rig.names])
@@ -101,6 +105,9 @@ def fit(root, data, slot, rig, source, *, direction=1):
         assert set(groups) == set(source) | set(ACTOR), (label, 'cubos incompletos')
         assert original_dimensions(groups, source, label) == len(rig.names)
         assert all(len(groups[name]) == 1 for name in ACTOR), label
+        if flex_plates:
+            for name, side, _ in PLATES:
+                plate_support(np.asarray(shoulder_base[tick][name]), np.asarray(groups[name]), groups, (stem, tick, side))
         actors = {name: np.asarray(groups[name]) for name in ACTOR}
         live = np.array([groups[name].pop(0) for name in rig.names])
         if reference is None:
