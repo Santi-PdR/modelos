@@ -1,5 +1,7 @@
 # v1.67.32 · Retorno de la capucha y continuidad del halo
 
+La prueba más reciente es [v1.67.33](../v1.67.33/notas.md). Este JAR sigue disponible para volver atrás.
+
 **[Descargar JAR de prueba](https://raw.githubusercontent.com/Santi-PdR/modelos/35ec91a169424ff08b86108703ccaf7b2ef7f49b/entregables/v1.67.32/capatest-1.67.32.jar)** · [PowerShell para `test-1`](instalar-test-1.txt) · [SHA-256](JAR.sha256) · [Volver a v1.67.31](../v1.67.31/notas.md).
 
 - Al frenar agachado, cada sentido del giro recoge el borde que lo necesita. Cerca del centro, la capucha se mantiene recogida aunque el borde alto ya se haya relajado. La tira acompaña ese movimiento y el ajuste se libera con la mezcla de Shift al volver a ponerse de pie.

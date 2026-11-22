@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.33 — salto agachado y brasas más suaves
+
+**[Descargar JAR de prueba v1.67.33](https://raw.githubusercontent.com/Santi-PdR/modelos/da2c83305c0fbe550a8f4c9a95561531afd9fc61/entregables/v1.67.33/capatest-1.67.33.jar)** · [PowerShell para test-1](docs/releases/v1.67.33/instalar-test-1.txt) · [Pruebas y SHA-256](docs/releases/v1.67.33/notas.md).
+
+La nuca conserva el ajuste al despegar y al aterrizar con Shift. Las brasas se enfrían y se apagan entre ticks. Forge comprobó el cambio real de render entre pecho y Curios sin duplicar la tela ni reiniciar su fundido. Mismo modelo, atlas y clips.
+
 ### v1.67.32 — retorno de la capucha y continuidad del halo
 
 **[Descargar JAR de prueba v1.67.32](https://raw.githubusercontent.com/Santi-PdR/modelos/35ec91a169424ff08b86108703ccaf7b2ef7f49b/entregables/v1.67.32/capatest-1.67.32.jar)** · [PowerShell para test-1](docs/releases/v1.67.32/instalar-test-1.txt) · Comparativa [pecho](docs/releases/v1.67.32/maniobra/retorno/retorno-pecho.jpg) / [Curios](docs/releases/v1.67.32/maniobra/retorno/retorno-curios.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.32/notas.md).
