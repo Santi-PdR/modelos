@@ -159,6 +159,7 @@ jobs:
           grep -F 'STAIN_DRAGON_RELEASED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_MULTIPART_RANGE_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_BC_ATTACK_FX_VERIFIED' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_BC_IMPORTED_COMBO_RESOLVED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_EFFECT_SAMPLES_DONE' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-full-bc.log
           test "$(find run/stain-visual-test -name '*.png' | wc -l)" -ge 10

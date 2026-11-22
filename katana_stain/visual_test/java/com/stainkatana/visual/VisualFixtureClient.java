@@ -27,6 +27,30 @@ public final class VisualFixtureClient {
     private static java.util.UUID dragonId, finisherTarget;
     private static float finisherHealth, finisherSwordAttack;
     private static net.minecraft.world.phys.Vec3 dragonAnchor;
+    /** Verify BC really resolved our four imported animation IDs, not merely that
+     * the JSON files exist. Reflection keeps the fixture loadable without BC. */
+    private static void verifyBetterCombatAnimations(Minecraft mc) {
+        try {
+            Class<?> registry = Class.forName("net.bettercombat.logic.WeaponRegistry");
+            Object attrs = registry.getMethod("getAttributes", net.minecraft.world.item.ItemStack.class)
+                    .invoke(null, mc.player.getMainHandItem());
+            if (attrs == null) throw new IllegalStateException("No Better Combat katana attributes");
+            Object[] attacks = (Object[]) attrs.getClass().getMethod("attacks").invoke(attrs);
+            String[] expected = {"stainkatana:stain_serious_1", "stainkatana:stain_serious_2",
+                    "stainkatana:stain_improved_3", "stainkatana:stain_improved_4"};
+            if (attacks.length != expected.length) throw new IllegalStateException("Unexpected katana combo length");
+            var animations = (java.util.Map<?, ?>) Class.forName("net.bettercombat.client.animation.AnimationRegistry")
+                    .getField("animations").get(null);
+            for (int i = 0; i < expected.length; i++) {
+                Object id = attacks[i].getClass().getMethod("animation").invoke(attacks[i]);
+                if (!expected[i].equals(id) || !animations.containsKey(id))
+                    throw new IllegalStateException("Better Combat did not resolve imported attack " + i + ": " + id);
+            }
+            System.out.println("STAIN_BC_IMPORTED_COMBO_RESOLVED");
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Cannot inspect Better Combat animation registry", e);
+        }
+    }
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
@@ -109,6 +133,7 @@ public final class VisualFixtureClient {
                 if (net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) {
                     if (com.stainkatana.katana.client.KatanaBetterCombatFx.cueCount() == 0)
                         throw new IllegalStateException("Better Combat attack did not trigger a katana cue");
+                    verifyBetterCombatAnimations(mc);
                     System.out.println("STAIN_BC_ATTACK_FX_VERIFIED");
                 }
             }
