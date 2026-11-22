@@ -46,5 +46,6 @@
   "message.holocore.reset": "Factory defaults restored in memory (%s keys) — /relic save to keep them.",
   "message.holocore.reset_none": "Everything was already at its factory default.",
   "message.holocore.reset_one_none": "%s was already at its factory default.",
-  "message.holocore.set_list_unsaved": "Keys marked * are not saved yet (/relic save): %s."
+  "message.holocore.set_list_unsaved": "Keys marked * are not saved yet (/relic save): %s.",
+  "message.holocore.preview_info": "Preview on at %s blocks (/relic preview to turn it off)."
 }

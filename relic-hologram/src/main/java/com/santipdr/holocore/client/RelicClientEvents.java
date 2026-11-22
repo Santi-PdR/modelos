@@ -142,7 +142,15 @@ public final class RelicClientEvents {
      */
     private static void tickLocalRelic(Minecraft minecraft) {
         LocalPlayer player = minecraft.player;
-        if (player == null || player.isSpectator() || player.level() == null) {
+        if (player == null || player.level() == null) {
+            return;
+        }
+        if (player.isSpectator()) {
+            // En espectador no hay hombro donde colgar nada, pero la vista previa
+            // se dibuja igual (no depende de estar en el mundo "normal"): si no se
+            // apaga aqui, se queda una reliquia flotando delante de la camara que
+            // ademas nunca se poda, porque markRendered la mantiene viva.
+            preview = false;
             return;
         }
         // Curios responde en cliente: es una busqueda en las ranuras del jugador

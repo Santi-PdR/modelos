@@ -1,5 +1,16 @@
 # Historial de cambios
 
+## 1.0.26 — la vista previa deja de ser invisible
+
+* **`/relic info` avisa de que la vista previa está encendida** y a qué distancia.
+  Una reliquia flotando delante de la cámara sin más contexto parece un fallo del
+  mod; ahora la propia información lo explica y recuerda cómo quitarla.
+* **La vista previa se apaga al pasar a espectador.** El tick del jugador local
+  salía antes de comprobar nada en modo espectador, así que la vista previa seguía
+  dibujándose y, como `markRendered` la mantenía viva, tampoco se podaba nunca: una
+  reliquia fantasma delante de la cámara hasta salir del mundo.
+* 1 clave nueva por idioma (49 en cada uno).
+
 ## 1.0.25 — deshacer un solo ajuste, y ver qué está sin guardar
 
 * **`/relic reset <clave>`**: vuelve al defecto una sola clave. Es el deshacer de un

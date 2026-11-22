@@ -363,6 +363,8 @@ hay que sumar la traslación que traía `relic_hologram.geo.json`.
       estaba todo de fábrica.
 - [ ] `/relic reset scale` vuelve solo esa clave y `/relic set` deja de marcarla
       con `*`.
+- [ ] Con la vista previa encendida, `/relic info` lo dice y a qué distancia; al
+      pasar a espectador se apaga sola.
 - [ ] Distancia > `maxRenderDistance`: deja de renderizarse (sin tirones).
 - [ ] `/relic offset 6 -6 8`, `/relic scale 1.0`, `/relic side left|right` mueven
       el núcleo en caliente y `/relic info` muestra los valores para la config.

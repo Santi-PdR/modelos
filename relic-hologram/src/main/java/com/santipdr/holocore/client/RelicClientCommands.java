@@ -151,6 +151,14 @@ public final class RelicClientCommands {
         source.sendSuccess(() -> message, false);
         source.sendSuccess(RelicClientCommands::diag, false);
         source.sendSuccess(RelicClientCommands::glowLine, false);
+        if (RelicClientEvents.previewEnabled()) {
+            // Sin esto, la reliquia flotando delante de la camara parece un fallo
+            // del mod hasta que uno se acuerda de que dejo /relic preview puesto.
+            String distancia = String.format(Locale.ROOT, "%.2f",
+                    RelicClientEvents.previewDistance());
+            source.sendSuccess(() -> Component.translatable("message.holocore.preview_info",
+                    distancia).withStyle(ChatFormatting.LIGHT_PURPLE), false);
+        }
         if (!UNSAVED.isEmpty()) {
             int cambios = UNSAVED.size();
             source.sendSuccess(() -> Component.translatable("message.holocore.unsaved", cambios)

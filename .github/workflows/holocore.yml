@@ -650,8 +650,23 @@ jobs:
           assert 'RelicAura.render(poseStack' in eventos, 'la vista previa no dibuja el aura'
           assert 'endBatch()' in eventos, 'la vista previa no vuelca el lote'
           assert 'preview = false' in eventos, 'la vista previa tiene que apagarse al salir del mundo'
+          # En espectador el tick salia antes de nada: la preview se quedaba
+          # dibujando una reliquia fantasma (markRendered la mantiene viva).
+          assert eventos.count('preview = false') >= 2, \
+              'la vista previa tiene que apagarse tambien al pasar a espectador y al quedarse sin reliquia'
+          rama_espectador = eventos.split('isSpectator()', 1)[1].split('return;', 1)[0]
+          assert 'preview = false' in rama_espectador, \
+              'la rama de espectador del tick local no apaga la vista previa'
 
-          print('Tick local OK: estado vivo fuera de pantalla, prune por actualizacion y preview cableada.')
+          # /relic info tiene que decir que la vista previa esta puesta.
+          comandos = pathlib.Path(
+              'relic-hologram/src/main/java/com/santipdr/holocore/client/RelicClientCommands.java'
+          ).read_text(encoding='utf-8')
+          assert 'previewEnabled()' in comandos and 'preview_info' in comandos, \
+              '/relic info no avisa de que la vista previa esta activa'
+
+          print('Tick local OK: estado vivo fuera de pantalla, prune por actualizacion y preview cableada.'
+                ' Preview que se apaga en espectador y se anuncia en /relic info.')
           PY
 
       # 1.0.16 quitaba tres de las cuatro evaluaciones de animacion por frame. Es

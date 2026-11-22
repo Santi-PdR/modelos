@@ -46,5 +46,6 @@
   "message.holocore.reset": "Valores de fábrica restaurados en memoria (%s claves) — /relic save para conservarlos.",
   "message.holocore.reset_none": "Ya estaba todo en los valores de fábrica.",
   "message.holocore.reset_one_none": "%s ya estaba en su valor de fábrica.",
-  "message.holocore.set_list_unsaved": "Las claves con * no están guardadas todavía (/relic save): %s."
+  "message.holocore.set_list_unsaved": "Las claves con * no están guardadas todavía (/relic save): %s.",
+  "message.holocore.preview_info": "Vista previa activa a %s bloques (/relic preview para quitarla)."
 }
