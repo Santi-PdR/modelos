@@ -79,6 +79,10 @@ public final class RelicAura {
 
     /** Chispas en orbita alrededor del nucleo. */
     private static final int SPARK_COUNT = 5;
+    /** Burbujas del estado bajo el agua: cuantas, tamano y lo rapido que suben. */
+    private static final int BUBBLE_COUNT = 7;
+    private static final float BUBBLE_SIZE = 0.055F;
+    private static final float BUBBLE_SPEED = 0.28F;
     private static final float SPARK_RADIUS = 0.42F;
     private static final float SPARK_SIZE = 0.075F;
     private static final float SPARK_SPEED = 0.75F;
@@ -214,6 +218,11 @@ public final class RelicAura {
         if (amount <= 0.01F) {
             return;
         }
+        if (mood == RelicAnimatable.Mood.SUBMERGED) {
+            // Bajo el agua no hay chispas en orbita: hay burbujas subiendo.
+            drawBubbles(bufferSource, frame, time, glow, amount);
+            return;
+        }
         VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
         boolean storm = mood == RelicAnimatable.Mood.STORM;
         // De noche las brasas flotan: la mitad de velocidad, la mitad de densidad
@@ -254,6 +263,42 @@ public final class RelicAura {
             billboardAt(buffer, frame, cx, cy, cz, SPARK_SIZE,
                     phase * 2.0F, redTint * weight, greenTint * weight, blueTint * weight, 1.0F);
         }
+    }
+
+    /**
+     * Burbujas: suben desde debajo de la reliquia, se hinchan un poco y se apagan
+     * al llegar arriba. Es el unico estado con VFX propio; el resto reutiliza la
+     * orbita de chispas cambiando color y densidad, porque una orbita que sube en
+     * vertical dejaria de leerse como orbita.
+     */
+    private static void drawBubbles(MultiBufferSource bufferSource, Frame frame, float time,
+                                    RelicGlowState glow, float amount) {
+        VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
+        // Verde azulado de fondo de rio, mezclado con el color del estado.
+        float redTint = glow.red() * 0.35F + 0.45F * 0.65F;
+        float greenTint = glow.green() * 0.45F + 0.92F * 0.55F;
+        float blueTint = glow.blue() * 0.55F + 1.00F * 0.45F;
+        for (int i = 0; i < BUBBLE_COUNT; i++) {
+            // rise va de 0 (abajo) a 1 (arriba) y vuelve a empezar: es el ciclo de
+            // una burbuja, desfasado por indice para que no suban en bloque.
+            float rise = fract(time * BUBBLE_SPEED + i * (1.0F / BUBBLE_COUNT));
+            float offset = sin(time * 1.3F + i * 2.1F) * 0.10F;
+            float height = -0.32F + rise * 0.72F;
+            float cx = frame.originX + frame.leftX * offset + frame.upX * height;
+            float cy = frame.originY + frame.leftY * offset + frame.upY * height;
+            float cz = frame.originZ + frame.leftZ * offset + frame.upZ * height;
+            // Se apagan al final del recorrido y crecen un poco: asi se leen como
+            // burbujas que se van y no como puntos que se caen.
+            float weight = amount * (1.0F - rise) * 0.55F;
+            float size = BUBBLE_SIZE * (0.6F + 0.6F * rise);
+            billboardAt(buffer, frame, cx, cy, cz, size, time * 0.6F + i,
+                    redTint * weight, greenTint * weight, blueTint * weight, 1.0F);
+        }
+    }
+
+    /** Parte decimal de un numero, sin asignar nada (Math.floor devuelve double). */
+    private static float fract(float value) {
+        return value - (float) Math.floor(value);
     }
 
     /** Las chispas se saltan en LITE y con los efectos reducidos, como el halo. */
@@ -424,6 +469,8 @@ public final class RelicAura {
             case WOUNDED -> 0.6F;
             // De noche flota poco y muy despacio: el estado es "quieta y palida".
             case NIGHT -> 0.75F;
+            // Bajo el agua el vaiven es el mas corto: el agua frena todo.
+            case SUBMERGED -> 0.50F;
             case NEUTRAL -> 1.0F;
         };
         float lift = 0.022F * energy * sin(time * 1.7F);

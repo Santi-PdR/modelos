@@ -90,6 +90,10 @@ final class RelicGlowState {
     private static final float NIGHT_RED = 0.38F;
     private static final float NIGHT_GREEN = 0.72F;
     private static final float NIGHT_BLUE = 1.00F;
+    /** Bajo el agua: verdoso de fondo de rio, con el anillo casi apagado. */
+    private static final float SUBMERGED_RED = 0.30F;
+    private static final float SUBMERGED_GREEN = 0.88F;
+    private static final float SUBMERGED_BLUE = 0.86F;
 
     /**
      * Acerca los valores al estado indicado, con el matiz del {@code mood}, y
@@ -148,6 +152,16 @@ final class RelicGlowState {
                 blue = lerp(blue, RAIN_BLUE, 0.45F);
                 aura += 0.05F;
                 ring -= 0.15F;
+            }
+            case SUBMERGED -> {
+                // El agua se come el rojo: la reliquia tira a verde azulado y el
+                // anillo se queda casi apagado, que es lo que pasa bajo el agua.
+                red = lerp(red, SUBMERGED_RED, 0.45F);
+                green = lerp(green, SUBMERGED_GREEN, 0.45F);
+                blue = lerp(blue, SUBMERGED_BLUE, 0.45F);
+                aura += 0.02F;
+                ring -= 0.20F;
+                spin -= 0.020F;
             }
             case NIGHT -> {
                 // Noche despejada: casi el reposo, un punto mas frio y con el aura

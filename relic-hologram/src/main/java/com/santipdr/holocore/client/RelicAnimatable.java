@@ -6,6 +6,7 @@ import com.santipdr.holocore.config.RelicConfig;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.UUID;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.entity.monster.Monster;
@@ -82,7 +83,12 @@ public final class RelicAnimatable implements GeoAnimatable {
          * llueve. Antes esto contaba como "oscuridad", pero una reliquia al aire
          * libre bajo las estrellas no esta encerrada: se queda quieta y palida.
          */
-        NIGHT
+        NIGHT,
+        /**
+         * El portador tiene los ojos dentro del agua: la reliquia se hunde en el
+         * ritmo (velocidad 0.66), flota menos y cambia las chispas por burbujas.
+         */
+        SUBMERGED
     }
 
     private final UUID wearer;
@@ -463,6 +469,8 @@ public final class RelicAnimatable implements GeoAnimatable {
             case DARK -> 1.06D;
             case RAIN -> 0.92D;
             case NIGHT -> 0.85D;
+            // La mas lenta de todas: bajo el agua todo pesa.
+            case SUBMERGED -> 0.66D;
             case RESONANT -> 1.18D;
             case NEUTRAL -> 1.0D;
         };
@@ -482,6 +490,10 @@ public final class RelicAnimatable implements GeoAnimatable {
         }
         if (player.level().isThundering()) {
             return Mood.STORM;
+        }
+        // Bajo el agua manda sobre la luz y el tiempo: es la escena que se ve.
+        if (player.isEyeInFluid(FluidTags.WATER)) {
+            return Mood.SUBMERGED;
         }
         int bloque = player.level().getBrightness(LightLayer.BLOCK, player.blockPosition());
         if (bloque < DARK_LIGHT

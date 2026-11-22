@@ -1,5 +1,23 @@
 # Historial de cambios
 
+## 1.0.33 — octavo estado: bajo el agua, y burbujas
+
+* **Estado nuevo `submerged`**: con los ojos dentro del agua la reliquia tira a verde
+  azulado, el anillo se queda casi apagado, el bucle de animación baja a 0.66× (el más
+  lento de los ocho) y el flotado a la mitad. Se detecta con
+  `isEyeInFluid(FluidTags.WATER)`, que es vanilla: no hace falta estar entero dentro,
+  basta con la cabeza. Manda sobre la luz y el tiempo; solo pierden con él herido y
+  tormenta.
+* **VFX propio: burbujas.** Primera vez que un estado cambia *qué* se dibuja y no solo
+  el color: siete burbujas suben desde debajo de la reliquia, se mecen, crecen y se
+  apagan al llegar arriba. Usan el mismo lote aditivo y la misma textura que las
+  chispas, así que no hay pases nuevos ni draws extra; el ciclo sale de
+  `fract(tiempo × 0.28 + i/7)` sin asignar nada.
+* **El tinte del shader** tiene su rama (0.74): el borde se apaga porque el agua se
+  lleva la luz. El comentario del `.fsh` y el apéndice del `BRILLO-Y-SHADERS.md` van
+  sincronizados con `tools/sync_shader_doc.py`, como exige el CI.
+* 1 clave nueva por idioma (62 en cada uno).
+
 ## 1.0.32 — séptimo estado: la noche despejada
 
 * **Estado nuevo `night`**: con cielo encima, de noche y sin lluvia la reliquia se

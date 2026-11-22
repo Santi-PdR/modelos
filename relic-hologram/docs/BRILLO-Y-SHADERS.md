@@ -237,6 +237,23 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.33, octavo estado: bajo el agua, con VFX propio.** Primera vez que un estado
+cambia *qué* se dibuja y no solo de qué color.
+
+* **`submerged`** se detecta con `isEyeInFluid(FluidTags.WATER)`, que es vanilla y no
+depende de que el jugador esté entero dentro: basta con los ojos. Manda sobre la luz
+y el tiempo (solo pierde con herido y tormenta): bajo el agua la escena es el agua.
+En el shader es una rama más del `HoloTint` (0.74, el borde se apaga) y en
+`RelicGlowState` una paleta verde azulada con el anillo a −0.20.
+* **Burbujas (`RelicAura.drawBubbles`)** en vez de chispas: siete quads que suben de
+−0.32 a +0.40 en el eje `up` de la cámara, con un vaivén lateral de ±0.10,
+creciendo de 0.6× a 1.2× y apagándose (`1 − rise`) para que se lean como burbujas
+que se van. `rise` sale de `fract(tiempo × 0.28 + i/7)`, sin asignar nada
+(`Math.floor` devuelve `double`). Se reutiliza el mismo lote aditivo y la misma
+textura del aura: cero estados de render nuevos, y por tanto cero draws extra.
+* **Ritmo**: el bucle de animación baja a 0.66× (el más lento de los ocho) y el
+flotado a energía 0.50, que es el agua frenándolo todo.
+
 **1.0.32, séptimo estado y glitch al cambiar de estado.** Sin tocar el GLSL: el
 estado nuevo (`night`) y el glitch del cambio reutilizan lo que ya había.
 
@@ -544,9 +561,9 @@ void main() {
     float breath = 0.85 + 0.15 * sin(HoloTime * 1.6);
 
     vec3 tint = vertexColor.rgb;
-    // HoloTint lo pone el renderer por estado de brillo (0.62 en lluvia, 0.84 de
-    // noche, 1.08 en la oscuridad): el tinte del borde lo respeta, si no todos los
-    // estados acababan con el mismo azul en la silueta.
+    // HoloTint lo pone el renderer por estado de brillo (0.62 en lluvia, 0.74 bajo
+    // el agua, 0.84 de noche, 1.08 en la oscuridad): el tinte del borde lo respeta,
+    // si no todos los estados acababan con el mismo azul en la silueta.
     vec3 rimTint = mix(vec3(0.55, 0.85, 1.0), tint, 0.55) * HoloTint.rgb;
     // Al raspar, el borde se va al violeta: dos tonos en la misma silueta.
     rimTint = mix(rimTint, vec3(0.78, 0.62, 1.0), rimTight * 0.35);

@@ -156,6 +156,8 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
                 // De noche el borde se queda por debajo del reposo: es la unica
                 // forma de que se lea "mas apagada" sin cambiar el color del cuerpo.
                 case NIGHT -> 0.84F;
+                // Bajo el agua el borde se apaga: el agua se lleva la luz.
+                case SUBMERGED -> 0.74F;
                 case NEUTRAL -> 1.0F;
             };
             glowShader.safeGetUniform("HoloTint").set(gain, gain, gain, 1.0F);

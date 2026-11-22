@@ -365,7 +365,8 @@ jobs:
 
           enum = animatable.split('enum Mood {', 1)[1].split('}', 1)[0]
           moods = re.findall(r'^\s*([A-Z][A-Z_]*)\s*,?$', enum, re.M)
-          esperados = ['NEUTRAL', 'RESONANT', 'STORM', 'WOUNDED', 'DARK', 'RAIN', 'NIGHT']
+          esperados = ['NEUTRAL', 'RESONANT', 'STORM', 'WOUNDED', 'DARK', 'RAIN', 'NIGHT',
+                       'SUBMERGED']
           assert moods == esperados, moods
           assert 'public Mood mood()' in animatable, 'falta el accessor de Mood'
           assert 'isThundering()' in animatable, 'la tormenta no alimenta ningun estado'
@@ -376,6 +377,9 @@ jobs:
           assert 'DARK_SKY' in animatable and 'LightLayer.SKY' in animatable, \
               'la oscuridad no mira la luz del cielo'
           assert 'isNight()' in animatable, 'la noche despejada no se detecta'
+          assert 'isEyeInFluid(FluidTags.WATER)' in animatable, 'el agua no es un estado'
+          assert 'import net.minecraft.tags.FluidTags;' in animatable, \
+              'falta el import de FluidTags para el estado sumergido'
           assert 'case NIGHT ->' in animatable, 'el estado de noche no tiene velocidad'
           assert 'anotherBearerNear(' in animatable, 'no hay deteccion de otro portador cerca'
           assert 'RelicServer.findRelic(other).isPresent()' in animatable, \
@@ -396,6 +400,13 @@ jobs:
               'las chispas perdieron el azul de la tormenta'
           assert 'boolean night = mood == RelicAnimatable.Mood.NIGHT' in aura, \
               'la noche despejada no cambia las chispas'
+          # Bajo el agua las chispas se cambian por burbujas que suben.
+          assert 'private static void drawBubbles(' in aura, 'el agua no tiene burbujas'
+          assert 'drawBubbles(bufferSource, frame, time, glow, amount)' in aura, \
+              'las burbujas no se dibujan nunca'
+          assert 'private static float fract(' in aura, 'las burbujas no tienen ciclo'
+          assert 'BUBBLE_COUNT' in aura and 'BUBBLE_SPEED' in aura, \
+              'faltan las constantes de las burbujas'
 
           assert 'message.holocore.mood' in comandos, '/relic info no dice el estado de brillo'
           assert 'Commands.literal("mood")' in comandos, 'falta /relic mood'
@@ -450,7 +461,7 @@ jobs:
                   f'relic-hologram/src/main/resources/assets/holocore/lang/{idioma}.json'
               ).read_text(encoding='utf-8'))
               for mood in ('wounded', 'storm', 'resonant', 'dark', 'rain',
-                           'neutral', 'night'):
+                           'neutral', 'night', 'submerged'):
                   clave = f'message.holocore.state.{mood}'
                   assert clave in lang, f'{idioma} sin {clave}'
 
