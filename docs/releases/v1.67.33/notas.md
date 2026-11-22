@@ -1,5 +1,7 @@
 # v1.67.33 · Salto agachado y brasas entre ticks
 
+La prueba más reciente es [v1.67.34](../v1.67.34/notas.md). Este JAR queda disponible para volver atrás.
+
 **[JAR de prueba](https://raw.githubusercontent.com/Santi-PdR/modelos/da2c83305c0fbe550a8f4c9a95561531afd9fc61/entregables/v1.67.33/capatest-1.67.33.jar)** · [PowerShell para `test-1`](instalar-test-1.txt) · [SHA-256](JAR.sha256) · [Volver a v1.67.32](../v1.67.32/notas.md).
 
 - La nuca y la tira cosida siguen la postura de cabeza y torso en un salto agachado normal. Ya no pierden el ajuste por dejar de tocar el suelo. Se conservan las exclusiones para nado, escalera y élitros.

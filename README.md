@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.34 — continuidad tras una pausa de renderizado
+
+**[Descargar JAR de prueba v1.67.34](https://raw.githubusercontent.com/Santi-PdR/modelos/e6fde0d3db23264c105b9f88beacf404bdda1931/entregables/v1.67.34/capatest-1.67.34.jar)** · [PowerShell para test-1](docs/releases/v1.67.34/instalar-test-1.txt) · [Comparación contra la .33 y SHA-256](docs/releases/v1.67.34/notas.md).
+
+Tras un tirón breve, la tela no invierte de golpe y el halo no adelanta su fundido como si el cambio hubiera ocurrido durante toda la pausa. Verificado en Forge; mismo modelo, texturas y clips. La .33 queda disponible para volver atrás.
+
 ### v1.67.33 — salto agachado y brasas más suaves
 
 **[Descargar JAR de prueba v1.67.33](https://raw.githubusercontent.com/Santi-PdR/modelos/da2c83305c0fbe550a8f4c9a95561531afd9fc61/entregables/v1.67.33/capatest-1.67.33.jar)** · [PowerShell para test-1](docs/releases/v1.67.33/instalar-test-1.txt) · [Pruebas y SHA-256](docs/releases/v1.67.33/notas.md).
