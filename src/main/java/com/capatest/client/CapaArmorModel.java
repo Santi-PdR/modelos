@@ -76,6 +76,9 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     private CapeHood.Pose hood = CapeHood.REST;
     private double sprintEdge;
     private CapeResponse.SpeedWake speedWake = CapeResponse.SpeedWake.NONE;
+    private CapeChain.Motion chain = CapeChain.REST;
+
+    CapeChain.Motion chain() { return chain; }
     private boolean disabled;
 
     CapeHood.Pose hood() { return hood; }
@@ -117,6 +120,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         // No fit from a previous wearer if this rig or clip is unsupported.
         sprintEdge = 0;
         speedWake = CapeResponse.SpeedWake.NONE;
+        chain = CapeChain.REST;
         if (!(state.getData(DataTickets.ENTITY) instanceof LivingEntity wearer) || !resolveRig()) {
             super.handleAnimations(item, instanceId, state);
             return;
@@ -180,6 +184,8 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             // Snapshot the same draw's motion for the light layer. An
             // unsupported rig never lends one wearer's wake to another.
             speedWake = response.speedWake();
+            if (coordinated)
+                chain = CapeChain.pose(motion.stride(), motion.amplitude(), motion.chainSupport(), response.braking());
         } catch (Exception | LinkageError error) {
             disabled = true;
             CapaTestMod.LOGGER.error("Blight Star Mantle: respuesta del paño desactivada; se conservan los clips", error);

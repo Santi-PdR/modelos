@@ -48,7 +48,7 @@ final class CapeWornMotion {
     private double paceFrom, paceTo, swimFrom, swimTo;
     private double drapeFrom, drapeTo, dryFrom, dryTo, previousDry;
     private double fallFrom, fallTo, previousFall;
-    private double time, stride, amplitude, clearancePace, limbAmplitude, ground, strideSupport;
+    private double time, stride, amplitude, clearancePace, limbAmplitude, ground, strideSupport, chainSupport;
 
     final CapeResponse response = new CapeResponse();
 
@@ -130,6 +130,8 @@ final class CapeWornMotion {
         crouchRetained = wearer.elytra() ? 0 : dry * crouchReleaseAt(time);
         limbAmplitude = unit(speedFrom + ((double) speedTo - speedFrom) * partial);
         ground = weights[idle] + weights[blight];
+        // Fade through takeoff, landing and crouch using the existing pose envelopes.
+        chainSupport = ground * dry;
         double step = smooth((amplitude - .04) / .49);
         double run = runWeight(time);
         weights[idle] *= 1 - step;
@@ -208,6 +210,7 @@ final class CapeWornMotion {
     double stride() { return stride; }
     double ground() { return ground; }
     double strideSupport() { return strideSupport; }
+    double chainSupport() { return chainSupport; }
     double crouchTopFloor() { return crouchTop * crouchRetained; }
     double crouchLegFloor() { return crouchLeg * crouchRetained; }
     double amplitude() { return amplitude; }

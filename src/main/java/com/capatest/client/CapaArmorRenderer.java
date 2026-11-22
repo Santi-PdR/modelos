@@ -43,6 +43,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     double hoodClearance() { return hoodClearance; }
     double rearTuck() { return rearTuck; }
     double sprintEdge() { return mountInChest && !elytra ? capeModel.sprintEdge() : 0; }
+    CapeChain.Motion chain() { return dryHood ? capeModel.chain() : CapeChain.REST; }
+    CapeHood.Shift napeFor(String name) { return nape.forBone(name); }
 
     public CapaArmorRenderer() {
         this(new CapaArmorModel(new ResourceLocation(CapaTestMod.MOD_ID, "armor/capa_deteriorer_evilsaiyan")));
@@ -189,15 +191,20 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         boolean collarPart = mountInChest && !elytra && parent != null && CapeFit.BONE.equals(parent.getName());
         boolean hood = collarPart && CapeHood.moves(name);
         var trim = collarPart ? nape.forBone(name) : CapeHood.FIXED;
+        var chain = collarPart ? chain() : CapeChain.REST;
+        double chainWeight = chain != CapeChain.REST ? CapeChain.weight(name) : 0;
         double sprint = sprintEdge();
         var edge = sprint > 0 && parent != null ? CapeSprintEdge.offset(name, parent.getName()) : null;
         boolean wingFit = elytra && (backing || saddle || shoulder || underYoke);
-        boolean fitted = seat || saddle || shoulder || wingFit || hood || trim != CapeHood.FIXED || edge != null;
+        boolean fitted = seat || saddle || shoulder || wingFit || hood || trim != CapeHood.FIXED || chainWeight > 0 || edge != null;
         if (fitted) poseStack.pushPose();
         try {
             // Shared by cutout and bloom. Part of the return stroke follows
             // through on the chain so it remains connected to the cowl.
             if (trim != CapeHood.FIXED) poseStack.translate(trim.x() / 16, trim.y() / 16, trim.z() / 16);
+            // Translate the loose links in their parent frame. Match both
+            // passes without editing baked bones or moving the two anchors.
+            if (chainWeight > 0) poseStack.translate(0, -chainWeight * chain.drop() / 16, chainWeight * chain.away() / 16);
             if (seat) {
                 // One rigid displacement in chest space, shared by the
                 // solid and glow passes. Never rescale the worn mantle.

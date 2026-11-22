@@ -796,9 +796,9 @@ jobs:
           CLASSES="$RUNNER_TEMP/cape-state-test"
           mkdir -p "$CLASSES"
           javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/{CapeState,CapePlayback,CapeSparkFrame}.java \
-            src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeBacking,CapePlateFit,CapeTorsoFit,CapeMountPlacement,CapeStride,CapeTint,CapeWornLight,CapeEmber,CapeNocturne,CapeWingFit,CapeWornMotion,CapeHood,CapeSprintEdge,CapeShoulder}.java \
+            src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeBacking,CapePlateFit,CapeTorsoFit,CapeMountPlacement,CapeStride,CapeTint,CapeWornLight,CapeEmber,CapeNocturne,CapeWingFit,CapeWornMotion,CapeHood,CapeSprintEdge,CapeShoulder,CapeChain}.java \
             src/test/java/com/capatest/item/{CapeStateTest,CapeSparkFrameTest}.java \
-            src/test/java/com/capatest/client/{CapeFitTest,CapeMountPlacementTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeHaloWakeTest,CapeWornLightTest,CapeFrameGapTest,CapeSettleTest,CapeSwayTest,CapeWingFitTest,CapeWornMotionTest,CapeJumpMotionTest,CapeHoodTest,CapeSprintEdgeTest,CapeShoulderTest}.java
+            src/test/java/com/capatest/client/{CapeFitTest,CapeMountPlacementTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeHaloWakeTest,CapeWornLightTest,CapeFrameGapTest,CapeSettleTest,CapeSwayTest,CapeWingFitTest,CapeWornMotionTest,CapeJumpMotionTest,CapeHoodTest,CapeSprintEdgeTest,CapeShoulderTest,CapeChainTest}.java
           java -cp "$CLASSES" com.capatest.client.CapeMountPlacementTest --samples > "$CLASSES/placement.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeHoodTest --samples > "$CLASSES/hood.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeHoodTest --aim > "$CLASSES/hood-aim.tsv"
@@ -810,6 +810,14 @@ jobs:
           OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_placement.py --java-samples "$CLASSES/placement.tsv" --hood-samples "$CLASSES/hood.tsv" \
             --look-samples "$CLASSES/hood-aim.tsv" --edge-samples "$CLASSES/sprint-edge.tsv" --rear-samples "$CLASSES/hood-rear.tsv" \
             --nape-samples "$CLASSES/hood-nape.tsv" --shoulder-samples "$CLASSES/articulacion-hombros.tsv"
+          java -cp "$CLASSES" com.capatest.client.CapeChainTest
+          java -cp "$CLASSES" com.capatest.client.CapeChainTest --samples > "$CLASSES/chain.tsv"
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_chain.py "$CLASSES/chain.tsv"
+          (cd entregables/v1.67.40 && sha256sum -c ../../docs/releases/v1.67.40/JAR.sha256)
+          chain_base="entregables/v1.67.40/capatest-1.67.40.jar:$CLASSES"
+          java -cp "$CLASSES" com.capatest.client.CapeHaloWakeTest --samples .60 3.20 6 .352 > "$CLASSES/halo-wake.tsv"
+          java -cp "$chain_base" com.capatest.client.CapeHaloWakeTest --samples .60 3.20 6 .352 | cmp - "$CLASSES/halo-wake.tsv"
+          java -cp "$chain_base" com.capatest.client.CapeShoulderTest --samples | cmp - "$CLASSES/articulacion-hombros.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeWornMotionTest
           java -cp "$CLASSES" com.capatest.client.CapeJumpMotionTest
           java -cp "$CLASSES" com.capatest.client.CapeWingFitTest
@@ -1075,7 +1083,7 @@ jobs:
         run: |
           set -euo pipefail
           args=()
-          if grep -Eq '^mod_version=1\.67\.(29|30|31|32|33|34|35|36|37|38|39|40)$' gradle.properties; then
+          if grep -Eq '^mod_version=1\.67\.(29|30|31|32|33|34|35|36|37|38|39|40|41)$' gradle.properties; then
             args=(--reference docs/releases/v1.67.28/maniobra/maniobra-forge.tsv)
           fi
           if [[ -f build/fx-smoke-run/fx-shots/giro-inverso-pecho.tsv ]]; then args+=(--extended); fi
@@ -1344,6 +1352,24 @@ jobs:
             esac
           done
 
+      - name: Verificar eslabones y arrastre de la cadena en Forge
+        id: verify-chain
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && steps.combined-smoke.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          shots=build/fx-smoke-run/fx-shots
+          export OPENBLAS_NUM_THREADS=1
+          {
+            python3 tools/verify_forge_chain.py "$shots" --combined
+            python3 tools/verify_forge_chain.py "$shots"
+          } 2>&1 | while IFS= read -r line; do
+            case "$line" in
+              *AssertionError:*|*Error:*) printf '::error title=Cadena en Forge::%s\n' "${line//%/%25}" ;;
+              *' draws; step '*|*' active poses, '*) printf '::notice title=Cadena en Forge::%s\n' "${line//%/%25}" ;;
+              *) printf '%s\n' "$line" ;;
+            esac
+          done
+
       - name: Verificar el icono original en la hotbar de Forge
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
@@ -1374,12 +1400,12 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Adjuntar el JAR de prueba v1.67.40 después de ambas pruebas Forge
+      - name: Adjuntar el JAR de prueba v1.67.41 después de ambas pruebas Forge
         if: >-
           success() && github.ref_name == 'arena/5a9fa51b-modelos' &&
-          contains(github.event.head_commit.message, '[adjuntar-v16740]') &&
+          contains(github.event.head_commit.message, '[adjuntar-v16741]') &&
           steps.verify-combined.outcome == 'success' && steps.verify-crown.outcome == 'success' &&
-          steps.verify-return.outcome == 'success' &&
+          steps.verify-return.outcome == 'success' && steps.verify-chain.outcome == 'success' &&
           steps.fx-smoke.outcome == 'success' &&
           steps.verify-climb.outcome == 'success' && steps.verify-jumps.outcome == 'success' &&
           steps.verify-placement.outcome == 'success' && steps.verify-walk.outcome == 'success' &&
@@ -1387,23 +1413,23 @@ jobs:
           steps.verify-ride.outcome == 'success' && steps.verify-crouch-sparks.outcome == 'success' && steps.verify-postures.outcome == 'success' && steps.verify-swim.outcome == 'success'
         run: |
           set -euo pipefail
-          grep -qx 'mod_version=1.67.40' gradle.properties
-          test ! -e entregables/v1.67.40/capatest-1.67.40.jar
-          jar=capatest-1.67.40.jar
+          grep -qx 'mod_version=1.67.41' gradle.properties
+          test ! -e entregables/v1.67.41/capatest-1.67.41.jar
+          jar=capatest-1.67.41.jar
           (cd build/libs && sha256sum -c SHA256SUMS.txt)
-          proof=docs/releases/v1.67.40
-          out="entregables/v1.67.40/$jar"
+          proof=docs/releases/v1.67.41
+          out="entregables/v1.67.41/$jar"
           install -m 0644 -D "build/libs/$jar" "$out"
           install -m 0644 -D build/libs/SHA256SUMS.txt "$proof/JAR.sha256"
           shots=build/fx-smoke-run/fx-shots
           # Keep the new evidence and the key motion regressions with the pin.
           # The full galleries and traces are retained by Actions above.
-          install -m 0644 "$shots"/{pulso-halo-forge,pulso-halo-gpu,traspaso-forge,pausa-render-forge,hombreras-resumen,inclinacion-brasas-forge}.tsv "$proof/"
+          install -m 0644 "$shots"/{pulso-halo-forge,pulso-halo-gpu,traspaso-forge,pausa-render-forge,hombreras-resumen,inclinacion-brasas-forge,cadena-geometria-forge,cadena-maniobra-forge,cadena-zancada-forge}.tsv "$proof/"
           printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$proof/compilacion.txt"
           git add "$proof"
           git add -f "$out"
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m 'Adjuntar v1.67.40 probada en Forge, sólo para test-1 [skip ci]'
+            commit -m 'Adjuntar v1.67.41 probada en Forge, sólo para test-1 [skip ci]'
           git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
 
       # [publicar] prepara una release verificable sin escribir a otras

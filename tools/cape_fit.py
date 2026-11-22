@@ -479,6 +479,8 @@ def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False, hoo
 def viewer_profile(*, placed=False):
     fit = dict(profile(),backing=B.profile(),seat=seat_profile(),plates=plate_profile(),torso=torso_profile())
     if placed:
+        from cape_chain import profile as chain_profile
+        fit['chainMotion'] = chain_profile()
         fit['mount'] = mount_profile()
         fit['shoulderMotion'] = shoulder_motion_profile()
         fit['hood'] = hood_profile()

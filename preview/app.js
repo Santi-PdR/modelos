@@ -325,7 +325,7 @@ function shoulderMotion(p, i, downY, downZ, rise, jointZ) {
     (p.FOLLOW_Z*cap(jointZ,-p.Z_LIMIT,p.Z_LIMIT)-p.SWEEP*s)*w,-p.PITCH*s*w,side*p.ROLL*w];
 }
 
-function fixedWearerPose(geo, profile, stance, elytra, slim, hood, look=0, turn=0, edgeAmount=0, gait=null) {
+function fixedWearerPose(geo, profile, stance, elytra, slim, hood, look=0, turn=0, edgeAmount=0, gait=null, chain=null) {
   const f=profile.mount;
   const fixed=geo.bones.some(b=>b.name===profile.bone) && geo.bones.some(b=>b.name===profile.gussetBone);
   const a=profile.backing, h=profile.hood, bones=[];
@@ -358,9 +358,12 @@ function fixedWearerPose(geo, profile, stance, elytra, slim, hood, look=0, turn=
         const hinge=tuck && name.startsWith('v17_cowl_back_') ? 'worn_hood_rear' : 'worn_hood';
         const k=NAPE_LIP.includes(name) ? 1 : NAPE_OPPOSITE.includes(name) ? 2 : 3;
         piece={...piece,parent:hinge+(trim[k].some(Boolean) ? `_nape${k}` : '')};
-      } else if (name.startsWith('v18_chain_') && trim[0].some(Boolean)) {
-        const [x,y,z]=piece.offset || [0,0,0], [dx,dy,dz]=trim[0];
-        piece={...piece,offset:[x-dx,y+dy,z+dz]};
+      } else if (/^v18_chain_[0-7]$/.test(name)) {
+        const w=chain ? profile.chainMotion.weights[+name.at(-1)] : 0;
+        if (trim[0].some(Boolean) || w) {
+          const [x,y,z]=piece.offset || [0,0,0], [dx,dy,dz]=trim[0];
+          piece={...piece,offset:[x-dx,y+dy-(w ? w*chain[0] : 0),z+dz+(w ? w*chain[1] : 0)]};
+        }
       }
     }
     const edge=!elytra && fixed && edgeAmount>0 && sprintEdgeOffset(profile.sprintEdge,name,piece.parent);
@@ -406,8 +409,8 @@ function fixedWearerPose(geo, profile, stance, elytra, slim, hood, look=0, turn=
   return {...geo,bones};
 }
 
-function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm, slim=false, hood, edgeAmount=0, gait=null) {
-  if (profile.mount) return fixedWearerPose(geo,profile,stance,elytra,slim,hood,look,turn,edgeAmount,gait);
+function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm, slim=false, hood, edgeAmount=0, gait=null, chain=null) {
+  if (profile.mount) return fixedWearerPose(geo,profile,stance,elytra,slim,hood,look,turn,edgeAmount,gait,chain);
   const depth=backset(profile,stance,look,turn);
   const anchor = profile.backing;
   const seat = profile.seat;
@@ -650,14 +653,29 @@ function smooth(lo, hi, x) {
   const t=Math.max(0, Math.min(1, (x-lo)/(hi-lo)));
   return t*t*(3-2*t);
 }
+function chainPose(p, stride, pace, support, brake) {
+  const gait=smooth(p.GAIT_START,p.GAIT_FULL,pace), lag=smooth(p.BRAKE_START,p.BRAKE_FULL,brake);
+  const step=4*Math.PI*(stride-p.STEP_DELAY);
+  const wave=x=>.5+.5*Math.cos(x);
+  const drop=gait*(.12+.72*wave(step)), away=gait*(.23+.73*wave(step-p.AWAY_DELAY));
+  return [p.DROP*support*(drop+(1-drop)*p.BRAKE_DROP*lag), p.AWAY*support*(away+(1-away)*p.BRAKE_AWAY*lag)];
+}
+function demoSpeed(p, time, rate) {
+  const rise=start=>-Math.expm1(-rate*Math.max(0,time-start));
+  return p.DEMO_SPEED*(rise(p.DEMO_START)-rise(p.DEMO_STOP));
+}
+function chainDemoInputs(p, time) {
+  const stride=1.65*Math.max(0,time-p.DEMO_START);
+  const pace=.68*smooth(p.DEMO_START,p.DEMO_START+.28,time)*(1-smooth(p.DEMO_STOP,p.DEMO_STOP+.30,time));
+  return [stride,pace,Math.max(0,demoSpeed(p,time,p.HEM_SPEED_RATE)-demoSpeed(p,time,p.SPEED_RATE))];
+}
 function haloDusk(p, light) {
   return 1-smooth(p.DARK_LEVEL,p.LIGHT_LEVEL,light);
 }
 // A seekable light demo. Reuse the three live filter rates, but feed a
 // known start/stop signal so scrubbing doesn't need to replay game ticks.
 function haloDemoWake(p, time, water=0) {
-  const rise=(rate,start)=>-Math.expm1(-rate*Math.max(0,time-start));
-  const speed=rate=>p.DEMO_SPEED*(rise(rate,p.DEMO_START)-rise(rate,p.DEMO_STOP));
+  const speed=rate=>demoSpeed(p,time,rate);
   const hem=speed(p.HEM_SPEED_RATE);
   return [Math.abs(hem-speed(p.RIM_SPEED_RATE)),Math.abs(speed(p.SPEED_RATE)-hem),water];
 }
@@ -913,7 +931,7 @@ function drawRuntimeParticles(seconds, size, stance, pix, depth) {
 
 let yaw=25, pitch=10, zoom=1.0, playing=true, t=0, elapsed=0;
 let lastFrame=null, dirty=true, hidden=null, frameBounds=null, gaitBounds=null;
-let showPlayer=true, showFx=false, referenceView=false, haloDemo=false;
+let showPlayer=true, showFx=false, referenceView=false, haloDemo=false, chainDemo=false;
 const stanceControl=document.getElementById('fitStance'), lookControl=document.getElementById('fitLook');
 const turnControl=document.getElementById('fitTurn'), fitValue=document.getElementById('fitValue');
 const stridePlayer=document.getElementById('stridePlayer'), strideFit=document.getElementById('strideFit');
@@ -925,6 +943,7 @@ const wingMode=document.getElementById('wingMode'), wingFit=document.getElementB
 const fitReset=document.getElementById('fitReset'), fxControl=document.getElementById('l_particles');
 const glowControl=document.getElementById('l_glow'), haloControl=document.getElementById('l_halo');
 const wakeControl=document.getElementById('haloWake'), haloMoment=document.getElementById('haloMoment');
+const chainControl=document.getElementById('chainFit'), chainMoment=document.getElementById('chainMoment');
 const seek=document.getElementById('seek'), play=document.getElementById('play');
 const ambientControl=document.getElementById('ambient');
 const lightPresets=[['lightCave',.18],['lightTorch',.88],['lightDay',1]]
@@ -963,6 +982,11 @@ function refreshHaloControl() {
   haloMoment.setAttribute('aria-pressed', String(haloDemo && !referenceView));
   wakeControl.disabled=haloControl.disabled || !haloControl.checked || !haloDemo;
 }
+function refreshChainControl() {
+  chainMoment.disabled=referenceView || !FIT?.chainMotion;
+  chainMoment.setAttribute('aria-pressed',String(chainDemo && !referenceView));
+  chainControl.disabled=chainMoment.disabled || !chainDemo || wingMode.value!=='none' || stanceControl.checked;
+}
 function refreshSwayControls() {
   swayDemo.disabled=referenceView;
   swayFit.disabled=referenceView || !swayDemo.checked;
@@ -978,7 +1002,7 @@ function setReference(value) {
   for (const control of [stanceControl, lookControl, turnControl, fitReset, fxControl, glowControl, ambientControl, zoomControl])
     control.disabled=value;
   for (const [button] of lightPresets) button.disabled=value;
-  refreshStrideControls(); refreshHaloControl(); refreshSwayControls(); refreshWingControls();
+  refreshStrideControls(); refreshHaloControl(); refreshChainControl(); refreshSwayControls(); refreshWingControls();
   dirty=true;
 }
 function setPlaying(value) {
@@ -1005,7 +1029,7 @@ function updateBounds() {
   gaitBounds=CORNERS.map(k=>k.map((v,i)=>v?hi[i]:lo[i]));
 }
 function viewDuration(clip) {
-  if (!referenceView && haloDemo) return NOCTURNE.DEMO_SECONDS;
+  if (!referenceView && (haloDemo || chainDemo)) return NOCTURNE.DEMO_SECONDS;
   if (!referenceView && swayDemo.checked) return SWAY.DEMO_SECONDS;
   return clip.length;
 }
@@ -1014,6 +1038,7 @@ function draw(now) {
   const clip=CLIPS[motionState];
   const demo=!referenceView && swayDemo.checked;
   const lightDemo=!referenceView && haloDemo;
+  const chainStudy=!referenceView && chainDemo;
   const duration=viewDuration(clip);
   if (playing && lastFrame!==null) {
     const step=Math.min(.05,(now-lastFrame)/1000);
@@ -1026,13 +1051,14 @@ function draw(now) {
   const turn=referenceView ? 0 : +turnControl.value;
   // A synthetic stride has its own clock. Pausing freezes both it and the clip.
   const amplitude=+strideAmount.value;
-  const gait=!referenceView && stridePlayer.checked ? strideGait(elapsed*(.8+.95*amplitude),amplitude) : null;
-  const clipTime=demo || lightDemo ? elapsed%clip.length : t;
+  const step=chainStudy ? chainDemoInputs(NOCTURNE,t) : null;
+  const gait=step ? strideGait(step[0],step[1]) : !referenceView && stridePlayer.checked ? strideGait(elapsed*(.8+.95*amplitude),amplitude) : null;
+  const clipTime=demo || lightDemo || chainStudy ? elapsed%clip.length : t;
   const base=referenceView ? GEO : poseAt(GEO,clip,clipTime);
   const wingPose=referenceView ? null : WINGS[wingMode.value === 'folded' && stance ? 'crouched' : wingMode.value];
   const clearanceGait=strideFit.checked ? gait : null;
-  const stridePhase=gait ? elapsed*(.8+.95*amplitude) : clipTime/clip.length;
-  const pace=gait ? amplitude : motionState==='animation.sprint' ? 1 : motionState==='animation.moving' ? .7 : 0;
+  const stridePhase=step ? step[0] : gait ? elapsed*(.8+.95*amplitude) : clipTime/clip.length;
+  const pace=step ? step[1] : gait ? amplitude : motionState==='animation.sprint' ? 1 : motionState==='animation.moving' ? .7 : 0;
   const hood=FIT.hood && hoodPose(FIT.hood,elapsed*20,stridePhase,pace);
   const sprintEdge=motionState==='animation.sprint' ? smooth(.04,.53,pace) : 0;
   const backArm=Math.max(...(gait?.arms || [0,0]).map(
@@ -1040,9 +1066,15 @@ function draw(now) {
   const armEffort=Math.max(backArm,...(gait?.arms || [0,0]).map(a=>Math.abs(a+stance*FIT.bodyAngle)));
   const depth=FIT.mount ? 0 : backset(FIT,stance,look,turn);
   const guide=wingPose ? wingGoal(WINGS,wingPose[0],wingPose[2],FIT.bodyAngle*stance,depth) : 0;
+  // Leave the existing two A/B studies untouched. With the demo off,
+  // ordinary walk/run clips and synthetic steps can also preview the swing.
+  const eligible=FIT.chainMotion && !referenceView && !stance && !wingPose && !demo && !lightDemo
+    && !['animation.air','animation.fall','animation.swim'].includes(motionState);
+  const chain=eligible && (!chainStudy || chainControl.checked)
+    ? chainPose(FIT.chainMotion,stridePhase,pace,1,step?.[2] || 0) : null;
   const fit=(pose, goal)=>{
     if (clearanceGait || goal>0) pose=clearancePose(pose,clearanceGait,stance,depth,goal);
-    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn,!!wingPose,backArm,armEffort,false,hood,sprintEdge,gait),hidden);
+    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn,!!wingPose,backArm,armEffort,false,hood,sprintEdge,gait,chain),hidden);
   };
   const drift=demo ? swayPose(base,SWAY,t) : null;
   const current=drift && swayFit.checked ? drift : base;
@@ -1064,9 +1096,10 @@ function draw(now) {
   // so a paused frame can be compared at identical pose and pulse phase.
   const wake=bloom && lightDemo && wakeControl.checked ? haloDemoWake(NOCTURNE,t) : null;
   const gains=bloom ? haloGains(NOCTURNE,haloDusk(NOCTURNE,15*(ambient-.18)/.82),elapsed,0,wake) : null;
+  const closeup=chainStudy ? [...apply(mul(R('x',pitch),R('y',yaw)),[0,23,4.9]).slice(0,2),SIZE*zoom/20] : null;
   render(faces,yaw,pitch,zoom,SIZE,gait ? gaitBounds : frameBounds,
          glowControl.checked&&!referenceView ? simulatedTint(clipTime,clip.length) : null,
-         ambient, referenceView ? referenceFrame(SIZE) : null,
+         ambient, referenceView ? referenceFrame(SIZE) : closeup,
          fx ? (pixels,z)=>drawRuntimeParticles(elapsed,SIZE,stance,pixels,z) : null,
          bloom, gains, comparison);
   if (referenceView) drawOriginal(SIZE);
@@ -1104,7 +1137,7 @@ async function boot() {
   if ([glow,halo].some(im=>im.width!==atlas.width || im.height!==atlas.height))
     throw new Error('Los mapas de luz no coinciden con el atlas opaco');
   ATLAS=pixels(atlas); GLOW=pixels(glow); HALO=pixels(halo); AURA=aura; NOCTURNE=nocturne;
-  refreshHaloControl(); refreshWingControls();
+  refreshHaloControl(); refreshChainControl(); refreshWingControls();
   SPARKS=sparks.map(pixels); ATLAS_W=atlas.width; ATLAS_H=atlas.height;
   updateBounds();
   document.getElementById('bones').textContent=GEO.bones.length;
@@ -1140,7 +1173,7 @@ seek.oninput=e=>{
   elapsed=t; dirty=true;
 };
 function setMotion(state) {
-  haloDemo=false;
+  haloDemo=chainDemo=false;
   stateControl.value=motionState=state;
   stanceControl.checked=state==='animation.sneak';
   t=elapsed=0;
@@ -1164,6 +1197,25 @@ haloMoment.onclick=()=>{
   ambientControl.value=.18;
   ambientControl.oninput();
 };
+chainMoment.onclick=()=>{
+  if (!FIT?.chainMotion || !NOCTURNE) return;
+  if (chainDemo) {
+    chainDemo=false;
+    t=elapsed=0;
+    refreshChainControl(); dirty=true;
+    return;
+  }
+  swayDemo.checked=false;
+  setMotion('animation.moving');
+  chainDemo=chainControl.checked=true;
+  wingMode.value='none';
+  lookControl.value=turnControl.value=0;
+  setPlaying(false);
+  refreshChainControl(); refreshWingControls();
+  t=elapsed=NOCTURNE.DEMO_STOP+.20;
+  yaw=12; pitch=9; zoom=1; zoomControl.value=1;
+};
+chainControl.onchange=()=>{ dirty=true; };
 swayDemo.onchange=()=>{
   if (swayDemo.checked) setMotion('animation.moving');
   else t=elapsed=0;
@@ -1178,18 +1230,18 @@ swayMoment.onclick=()=>{
   yaw=0; pitch=9;
 };
 swayFit.onchange=wingFit.onchange=()=>{ dirty=true; };
-wingMode.onchange=()=>{ refreshWingControls(); dirty=true; };
+wingMode.onchange=()=>{ refreshWingControls(); refreshChainControl(); dirty=true; };
 stateControl.onchange=e=>{
   swayDemo.checked=false;
   setMotion(e.target.value);
 };
 for (const control of [stanceControl,lookControl,turnControl]) {
-  control.oninput=()=>{ if (!referenceView) dirty=true; };
+  control.oninput=()=>{ if (!referenceView) { refreshChainControl(); dirty=true; } };
 }
 stridePlayer.onchange=()=>{ refreshStrideControls(); dirty=true; };
 strideFit.onchange=strideAmount.oninput=()=>{ dirty=true; };
 fitReset.onclick=()=>{
-  stanceControl.checked=false; lookControl.value=turnControl.value=0; dirty=true;
+  stanceControl.checked=false; lookControl.value=turnControl.value=0; refreshChainControl(); dirty=true;
 };
 zoomControl.oninput=e=>{ zoom=+e.target.value; dirty=true; };
 document.getElementById('l_player').onchange=e=>{ showPlayer=e.target.checked; dirty=true; };

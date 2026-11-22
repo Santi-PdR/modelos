@@ -32,15 +32,23 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     static final int CROUCH_IN = 310, CROUCH_OUT = 382, QUIET_END = 401;
     private final Matrix4f[] matrices = new Matrix4f[5];
     private Vector3f crown;
+    private Matrix4f mount;
+    private CapeChain.Motion chain;
+    private final CapaArmorRenderer renderer;
     private boolean active;
     private boolean testedRepeat;
 
-    private CapeWalkProbe(CapaArmorRenderer renderer) { super(renderer); }
+    private CapeWalkProbe(CapaArmorRenderer renderer) {
+        super(renderer);
+        this.renderer = renderer;
+    }
 
     static void arm(CapaArmorRenderer renderer) {
         CapeWalkProbe probe = get(renderer);
         java.util.Arrays.fill(probe.matrices, null);
         probe.crown = null;
+        probe.mount = null;
+        probe.chain = CapeChain.REST;
         probe.active = true;
     }
 
@@ -66,6 +74,18 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             default -> -1;
         };
         if (i >= 0) matrices[i] = new Matrix4f(stack.last().pose());
+        if (CapeFit.BONE.equals(bone.getName())) mount = new Matrix4f(stack.last().pose());
+        if (bone.getName().equals("v18_chain_4") && !bone.getCubes().isEmpty() && !bone.isHidden()) {
+            var fixed = CapePlacementProbe.chainControl(renderer, mount, bone);
+            var basis = new Matrix4f(mount).invert();
+            var live = new Matrix4f(basis).mul(stack.last().pose());
+            var rest = basis.mul(fixed.last().pose());
+            var shift = live.getTranslation(new Vector3f()).sub(rest.getTranslation(new Vector3f())).mul(16);
+            var expected = renderer.chain();
+            if (!shift.equals(new Vector3f(0, (float)-expected.drop(), (float)expected.away()), .0002F))
+                throw new AssertionError("walk chain shift did not reach the rendered link: " + shift + " / " + expected);
+            chain = expected == CapeChain.REST ? CapeChain.REST : new CapeChain.Motion(-shift.y(), shift.z());
+        }
         if (HOOD.equals(bone.getName()) && !bone.getCubes().isEmpty()) {
             // These vertices are in GEO space, not offsets from this bone.
             // Measure a real crown corner, not a point below the mannequin.
@@ -114,7 +134,7 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 tip.transformPosition(0, 0, .36F, new Vector3f()).mul(16), hood,
                 loosePitch(renderer, 2), loosePitch(renderer, 9), motion.weight(CapeState.SNEAK),
                 -Math.toDegrees(renderer.getGeoModel().getBone(BOTTOM).orElseThrow().getRotX()), motion.clearancePace(),
-                motion.response.turnWake(1));
+                motion.response.turnWake(1), probe.chain, motion.response.braking(), motion.chainSupport());
     }
 
     private static double loosePitch(CapaArmorRenderer renderer, int ribbon) {
@@ -134,18 +154,23 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         var bones = new GeoBone[] {model.getBone(TOP).orElseThrow(), model.getBone(MID).orElseThrow(), model.getBone(TIP).orElseThrow()};
         var original = java.util.Arrays.stream(bones).map(CapeWalkProbe::rotation).toList();
         var hood = ((CapaArmorModel) model).hood();
+        var chain = ((CapaArmorModel) model).chain();
         // Exercise a second wearer on the same actual baked rig, at the
         // same partial tick, then replay the visible wearer in the same frame.
         var still = new ArmorStand(walker.level(), walker.getX(), walker.getY(), walker.getZ());
         model.handleAnimations(item, Long.MIN_VALUE, state(item, still, stack, partial));
         if (rotation(bones[2]).distance(original.get(2)) < .0002F)
             throw new AssertionError("another wearer inherited the walk pose");
+        if (((CapaArmorModel) model).chain() != CapeChain.REST)
+            throw new AssertionError("another wearer inherited the chain swing");
         model.handleAnimations(item, renderer.getInstanceId(item), state(item, walker, stack, partial));
         for (int i = 0; i < bones.length; ++i)
             if (!original.get(i).equals(rotation(bones[i]), .000002F))
                 throw new AssertionError("repeated same-frame animation changed " + bones[i].getName());
         if (!hood.equals(((CapaArmorModel) model).hood()))
             throw new AssertionError("repeated same-frame animation changed hood");
+        if (!chain.equals(((CapaArmorModel) model).chain()))
+            throw new AssertionError("repeated same-frame animation changed chain");
     }
 
     private static AnimationState<CapaDeteriorerItem> state(CapaDeteriorerItem item, LivingEntity wearer,
@@ -162,10 +187,11 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
 
     record Draw(String clip, double stride, double pace, double walk, double run, double swim, double air, double fall,
                 double collarZ, double top, double mid, Vector3f tip, Vector3f hood, double edge2, double edge9,
-                double sneak, double bottom, double clearancePace, double turnWake) {}
+                double sneak, double bottom, double clearancePace, double turnWake, CapeChain.Motion chain,
+                double braking, double chainSupport) {}
 
     static final class Route {
-        private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tclip\tstride\twalk\trun\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\tpace\thood_x\thood_y\thood_z\tedge2\tedge9\tsneak\tbottom\tage\tcrouching\tclearance_pace\tgiro_punta_deg\n");
+        private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tclip\tstride\twalk\trun\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\tpace\thood_x\thood_y\thood_z\tedge2\tedge9\tsneak\tbottom\tage\tcrouching\tclearance_pace\tgiro_punta_deg\tcadena_caida_u\tcadena_salida_u\tfreno_lento\tapoyo_cadena\n");
         private final boolean quietStudy;
         private int start = -1;
         private int shot;
@@ -203,7 +229,9 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                     .append('\t').append(draw.edge2()).append('\t').append(draw.edge9())
                     .append('\t').append(draw.sneak()).append('\t').append(draw.bottom())
                     .append('\t').append((double) p.tickCount + partial).append('\t').append(p.isCrouching() ? 1 : 0)
-                    .append('\t').append(draw.clearancePace()).append('\t').append(draw.turnWake()).append('\n');
+                    .append('\t').append(draw.clearancePace()).append('\t').append(draw.turnWake())
+                    .append('\t').append(draw.chain().drop()).append('\t').append(draw.chain().away())
+                    .append('\t').append(draw.braking()).append('\t').append(draw.chainSupport()).append('\n');
             count++;
             if (shot < landmarks.length && t >= landmarks[shot]) {
                 try (var image = Screenshot.takeScreenshot(game.getMainRenderTarget())) {

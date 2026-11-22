@@ -20,7 +20,7 @@ final class CapeJumpProbe {
     private static final int EDGE = 19;
     private final StringBuilder rows = new StringBuilder("time\ton_ground\theight\tvertical\tspeed\tpace\tleg_pos\tstride\trun\tair\tfall"
             + "\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\n");
-    private final StringBuilder boxes = new StringBuilder();
+    private final StringBuilder boxes = new StringBuilder(), fixedChain = new StringBuilder();
     private final BlockPos deck;
     private NativeImage apex, contact;
     private int start = -1, fitTick = -1;
@@ -91,6 +91,7 @@ final class CapeJumpProbe {
             fitTick = p.tickCount;
             int elapsed = fitTick - start;
             fit.boxes().lines().forEach(box -> boxes.append(elapsed).append('\t').append(box).append('\n'));
+            fit.fixedChain().lines().forEach(box -> fixedChain.append(elapsed).append('\t').append(box).append('\n'));
         }
         if (t >= JUMP && t < JUMP + 19) {
             if (!p.onGround() && height > .7) rose = true;
@@ -107,6 +108,7 @@ final class CapeJumpProbe {
         }
         Files.writeString(dir.resolve(name + ".tsv"), rows);
         Files.writeString(dir.resolve(name + "-cubos.tsv"), boxes);
+        Files.writeString(dir.resolve(name + "-cadena-fija.tsv"), fixedChain);
         return true;
     }
 }

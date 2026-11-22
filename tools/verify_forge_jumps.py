@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
+from cape_chain import LINKS
 from cape_contact import lap, original_dimensions
 from cape_fit import fixed_wearer_pose, hood_moves
 from preview_cloth import ARMOR_GEO, load, matrices, mod_version
@@ -116,6 +117,11 @@ def verdict(data, spans, now, before, slot):
 
 def fit(root, slot, data, spans, rig, source):
     boxes = read_boxes(root / f'saltos-{slot}-cubos.tsv')
+    chain_path = root/f'saltos-{slot}-cadena-fija.tsv'
+    chain_base = read_boxes(chain_path) if chain_path.is_file() else None
+    if chain_base is not None:
+        assert set(chain_base) == set(boxes) and all(set(g) == set(LINKS) for g in chain_base.values()), slot
+    chain_indices = [rig.names.index(n) for n in LINKS]
     ticks = np.array(sorted(boxes))
     for event in spans:
         a, b = (int(data['time'][i]) for i in (event.start, event.land))
@@ -133,9 +139,12 @@ def fit(root, slot, data, spans, rig, source):
         assert original_dimensions(group, source, label) == len(rig.names)
         assert all(len(group[name]) == 1 for name in ACTOR), label
         live = np.array([group[name].pop(0) for name in rig.names])
+        static = live.copy()
+        if chain_base is not None:
+            static[chain_indices] = np.concatenate([chain_base[tick][n] for n in LINKS])
         if first is None:
-            first = live[fixed]
-        drift = max(drift, np.linalg.norm(live[fixed] - first, axis=2).max())
+            first = static[fixed]
+        drift = max(drift, np.linalg.norm(static[fixed] - first, axis=2).max())
         torso = np.array(group['body'])
         limbs = np.array([group[name][0] for name in ('left_arm', 'right_arm', 'left_leg', 'right_leg')])
         hit = contacts(live[None, rig.cloth], limbs[None])[0]

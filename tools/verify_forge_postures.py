@@ -14,6 +14,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw
 
+from cape_chain import LINKS
 from cape_contact import lap, original_dimensions
 from cape_fit import fixed_wearer_pose, hood_aim, hood_moves, nape_piece, nape_shifts, profile, sprint_edge_offset
 from preview_cloth import ARMOR_GEO, load, matrices, mod_version
@@ -51,7 +52,11 @@ def report(root, slot, rig, source, *, nape=False):
     control_path = root/f'{fixture}-sin-holgura-brazos.tsv'
     paired = control_path.is_file()
     control = read_boxes(control_path) if paired else {}
+    chain_path = root/f'{fixture}-cadena-fija.tsv'
+    chain_base = read_boxes(chain_path) if chain_path.is_file() else None
     n = sum(phase[1] for phase in PHASES)
+    if chain_base is not None:
+        assert sorted(chain_base) == list(range(n)) and all(set(g) == set(LINKS) for g in chain_base.values()), fixture
     assert len(trace) == n and sorted(boxes) == list(range(n)), fixture
     if paired:
         assert sorted(control) == list(range(n-PHASES[-1][1],n)), (fixture,'muestras A/B de carrera ausentes')
@@ -70,6 +75,7 @@ def report(root, slot, rig, source, *, nape=False):
     rows, images, arms = [], [], []
     i = 0
     baseline = None
+    chain_indices = [np.flatnonzero(names == name)[0] for name in LINKS]
     for phase, count, pitch, yaw, vanilla, label in PHASES:
         motion = []
         photos = []
@@ -101,11 +107,15 @@ def report(root, slot, rig, source, *, nape=False):
             # Prevent an armour model or fat sleeve placeholder from passing as Alex.
             for k, dims in ((0,(8,12,4)), (2,(8,8,8)), (3,(9,9,9)), (4,(3,12,4)), (5,(3,12,4))):
                 np.testing.assert_allclose(np.linalg.norm(actors[k,[1,3,4]]-actors[k,0],axis=1), dims, atol=.01, rtol=0)
+            # Keep the rigid-body gate on the .40 controls. The new motion
+            # itself is checked on the actual mesh by verify_forge_chain.
+            center = local.copy()
+            if chain_base is not None:
+                center[chain_indices] = np.concatenate([chain_base[i][name] for name in LINKS])
             if baseline is None:
-                baseline = local.copy()
-            # Subtract the declared translation only. A stretched/detached
-            # link or any moved plate still fails the original checks.
-            center = local-stroke_fit[:,None,:] if nape else local
+                baseline = center.copy()
+            if nape:
+                center -= stroke_fit[:,None,:]
             stroke = np.linalg.norm(center-baseline,axis=2)
             drift = stroke[unmoving].max()
             assert drift < .006, (label_sample, 'la montura cambió en coordenadas del torso', drift)

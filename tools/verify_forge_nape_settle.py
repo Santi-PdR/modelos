@@ -8,6 +8,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw
 
+from cape_chain import LINKS
 from cape_fit import fixed_wearer_pose, nape_piece, nape_shifts, profile
 from preview_cloth import ARMOR_GEO, load, matrices, mod_version
 from verify_forge_combined import SLOTS, fit, timeline
@@ -51,6 +52,10 @@ def draw_metrics(root, reference, slot, direction, stem, rig, source, faults):
     assert peak < 3.75 and min(seam-.038, join-.025, back-.018) > 0 and drift < .006 and leg <= .05, (stem,peak,seam,join,back,drift,leg)
     print(f'{stem}: {poses} poses con dimensiones originales; pico de punta {peak:.3f}u/tick, costura {seam:.3f}u, raíz {join:.3f}u, deriva {drift:.6f}u.', flush=True)
     model = read_boxes(root/f'{stem}-cubos.tsv')
+    chain_path = root/f'{stem}-cadena-fija.tsv'
+    chain_base = read_boxes(chain_path) if chain_path.is_file() else None
+    if chain_base is not None:
+        assert set(chain_base) == set(model) and all(set(g) == set(LINKS) for g in chain_base.values()), stem
     anchor = read_boxes(reference/f'{stem}-cubos.tsv')
     first = anchor[min(anchor)]
     data = {int(p['time']):p for p in trace[trace['fit'] == 1]}
@@ -66,8 +71,9 @@ def draw_metrics(root, reference, slot, direction, stem, rig, source, faults):
         old = np.asarray(nape_shifts(*aim,legacy=True))
         # Isolate just the rigid stroke in this exact live pose. This is a
         # geometric counterfactual, not a claimed screenshot of .31.
-        control = {n: np.asarray(g) - current[k] + old[k] if (k := nape_piece(n)) is not None else g for n,g in groups.items()}
-        for n,g in groups.items():
+        rigid = groups if chain_base is None else {**groups, **chain_base[tick]}
+        control = {n: np.asarray(g) - current[k] + old[k] if (k := nape_piece(n)) is not None else g for n,g in rigid.items()}
+        for n,g in rigid.items():
             if n.startswith(CHAIN):
                 np.testing.assert_allclose(g-current[0],first[n],atol=.005,rtol=0,err_msg=f'{stem}/{tick}/{n}: cambio ajeno al ajuste')
         cut0, cut1 = cut(control,TRIM), cut(groups,TRIM)

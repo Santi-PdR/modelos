@@ -102,6 +102,9 @@ public final class CapeResponse {
         return new SpeedWake(Math.abs(hemSpeed - rimSpeed), Math.abs(values[0] - hemSpeed), values[4]);
     }
 
+    /** The slow filter leads the fast one only when braking. No new clock for the chain. */
+    double braking() { return Math.max(0, hemSpeed - values[0]); }
+
     /** Degrees in the baked rig's X convention (negative opens the drape). */
     public double pitchAt(double weight) {
         double bias = pitchBase - pitchLag * weight;
