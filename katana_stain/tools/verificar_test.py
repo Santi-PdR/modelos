@@ -35,7 +35,7 @@ assert 'IMPACT_TICK = {9, 7, 10}' in timeline and 'FINISH_TICK = {21, 16, 200}' 
 assert 'PlayerLoggedOutEvent' in ability and 'ServerStoppedEvent' in ability
 assert 'player.getMainHandItem() != cast.stack' in ability
 anim = (root/'java/com/stainkatana/katana/client/KatanaAnimations.java').read_text()
-assert 'bettercombat' in anim and 'attack_animations/' in anim
+assert 'loadBetterCombat' not in anim and 'sword_attack2' in anim and 'stain_c_overhead' in anim
 assert 'THIRD_PERSON_MODEL' in anim and 'ability == -1' in anim
 print('OK: secuencia de impacto, cancelación, recurso externo opcional y primera persona configurada')
 
@@ -46,10 +46,11 @@ assert bc['parent'] == 'bettercombat:katana'
 attacks = bc['attributes']['attacks']
 assert len(attacks) == 4 and len({a['animation'] for a in attacks}) == 4
 assert attacks[3]['damage_multiplier'] > max(a['damage_multiplier'] for a in attacks[:3])
-assert attacks[3]['animation'] == 'stainkatana:stain_fourth_cut'
-heavy = json.loads((a/'attack_animations/stain_fourth_cut.json').read_text())['emote']
-assert heavy['beginTick'] > 0 and heavy['stopTick'] > heavy['endTick']
-assert all(set(move) <= {'tick', 'turn', 'easing', 'rightArm', 'leftArm'} for move in heavy['moves'])
+for attack in attacks:
+    assert attack['animation'].startswith('stainkatana:stain_')
+    clip = json.loads((a/'attack_animations'/ (attack['animation'].split(':')[1] + '.json')).read_text())['emote']
+    assert clip['beginTick'] > 0 and clip['stopTick'] > clip['endTick']
+    assert all(set(move) <= {'tick', 'turn', 'easing', 'rightArm', 'leftArm', 'torso'} for move in clip['moves'])
 print('OK: preset de katana Better Combat, prioridad, zurdos y segundo golpe')
 
 # Model transforms are syntax-checked here; hand alignment requires actual client captures.

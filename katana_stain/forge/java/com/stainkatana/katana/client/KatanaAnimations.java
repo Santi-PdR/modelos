@@ -5,10 +5,8 @@ import com.stainkatana.katana.KatanaClientConfig;
 import dev.kosmx.playerAnim.api.firstPerson.FirstPersonMode;
 import dev.kosmx.playerAnim.api.firstPerson.FirstPersonConfiguration;
 import dev.kosmx.playerAnim.core.data.KeyframeAnimation;
-import dev.kosmx.playerAnim.core.data.gson.AnimationSerializing;
 import dev.kosmx.playerAnim.api.layered.IAnimation;
 import com.mojang.logging.LogUtils;
-import java.io.InputStream;
 import org.slf4j.Logger;
 import dev.kosmx.playerAnim.api.layered.KeyframeAnimationPlayer;
 import dev.kosmx.playerAnim.api.layered.ModifierLayer;
@@ -33,16 +31,6 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 public final class KatanaAnimations {
     private static final ResourceLocation LAYER = new ResourceLocation(StainKatanaMod.MOD_ID, "abilities");
     private static final Logger LOGGER = LogUtils.getLogger();
-    // Official Better Combat katana moves; loaded from the user's installed mod/resource pack,
-    // not redistributed by this mod. Z uses a credited Emotecraft item-inspection gesture.
-    private static final String[] BETTER_COMBAT = {
-        null, "two_handed_slash_horizontal_right", "two_handed_slash_vertical_right",
-        "two_handed_slash_horizontal_left", "two_handed_slash_vertical_right",
-        "two_handed_slash_horizontal_left", "one_handed_slash_switch_blade_right",
-        "two_handed_slash_horizontal_right", "two_handed_slash_horizontal_left",
-        "two_handed_slash_vertical_left", "two_handed_stab_right", "two_handed_stab_left",
-        "two_handed_slam", "two_handed_spin", "one_handed_slash_switch_blade_left", "two_handed_slam_heavy"
-    };
     private static final String[] CLIPS = {
         "inspect", "stain_x_cut", "scene_01", "sword_attack", "sword_attack2", "sword_attack", "combo_heavy",
         "scene_02", "scene_03", "scene_04", "scene_05", "scene_06", "scene_07", "scene_08", "scene_09", "scene_10"
@@ -75,19 +63,17 @@ public final class KatanaAnimations {
             animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(3, Ease.INOUTSINE), null);
             return;
         }
-        // X uses a timed adaptation of Improved Animations' sword motion.
-        // For overhead C strokes, prefer the installed Better Combat sword
-        // clip; without that optional resource use our credited fallback.
+        // Use credited motions from other mods regardless of whether Better Combat
+        // is installed. It remains authoritative for ordinary weapon hits.
         boolean overhead = ability == 2 || ability == 9 || ability == 12 || ability == 15;
-        KeyframeAnimation clip = ability == 1 ? null : loadBetterCombat(overhead ? 2 : ability);
-        boolean external = clip != null;
-        if (!external) clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID,
-                overhead ? "stain_c_overhead" : CLIPS[ability]));
+        String clipName = ability == 0 ? "inspect" : ability == 1 ? "stain_x_cut"
+                : overhead ? "stain_c_overhead"
+                : ((ability & 1) == 0 ? "sword_attack" : "sword_attack2");
+        KeyframeAnimation clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID, clipName));
         if (clip == null) {
             LOGGER.warn("Missing katana animation for ability {}", ability);
             return;
         }
-        // Better Combat 1.9.0 starts at tick zero; beginTick is its wind-up, not a seek offset.
         animation.mirror.setEnabled(player.getMainArm() == HumanoidArm.LEFT);
         KeyframeAnimationPlayer playing = new KeyframeAnimationPlayer(clip, 0)
                 .setFirstPersonMode(FirstPersonMode.THIRD_PERSON_MODEL)
@@ -151,13 +137,10 @@ public final class KatanaAnimations {
                 @Override protected float getFadeIn(float delta) { return 1F; }
             });
         }
-        // Align the contact pose with the server's ten-tick opening or
-        // six-tick later wind-up: source tick 14 for the installed Better
-        // Combat sword clip, 8.75 for the Improved Animations fallback.
-        // Damage remains server-timed; these speeds affect presentation only.
+        // Contact estimates in source clips are 8.75 ticks (Improved Animations)
+        // and 7.5 ticks (Serious Player Animations). Damage remains server-timed.
         float speed = ability == 0 ? 3F : ability == 1 ? 1F
-                : overhead ? (external ? (ability == 2 ? 1.4F : 14F / 6F)
-                        : (ability == 2 ? .875F : 8.75F / 6F)) : 1.4F;
+                : overhead ? (ability == 2 ? .875F : 8.75F / 6F) : 7.5F / 6F;
         timedClip.addModifierBefore(new SpeedModifier(speed));
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
     }
@@ -172,11 +155,9 @@ public final class KatanaAnimations {
         var data = PlayerAnimationAccess.getPlayerAssociatedData(player).get(LAYER);
         if (!(data instanceof AbilityLayer animation) || animation.isActive()) return;
         int comboStep = Math.floorMod(step, 4);
-        // Prefer the actual Better Combat katana swings when its animation resources
-        // are present, including a vertical fourth cut; keep the offline fallback.
-        KeyframeAnimation clip = comboStep == 3 ? loadFourthCut() : loadBetterCombat(new int[]{1, 3, 9, 4}[comboStep]);
-        if (clip == null) clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID,
-                new String[]{"combo_1", "combo_2", "combo_3", "combo_heavy"}[comboStep]));
+        // Only used without Better Combat; motions are adapted from other mods.
+        KeyframeAnimation clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID,
+                new String[]{"sword_attack", "sword_attack2", "stain_c_overhead", "stain_c_overhead"}[comboStep]));
         if (clip == null) return;
         animation.mirror.setEnabled(player.getMainArm() == HumanoidArm.LEFT);
         KeyframeAnimationPlayer playing = new KeyframeAnimationPlayer(clip, 0)
@@ -187,31 +168,4 @@ public final class KatanaAnimations {
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timed, true);
     }
 
-    private static KeyframeAnimation loadFourthCut() {
-        ResourceLocation id = new ResourceLocation(StainKatanaMod.MOD_ID, "attack_animations/stain_fourth_cut.json");
-        var resource = Minecraft.getInstance().getResourceManager().getResource(id);
-        if (resource.isEmpty()) return null;
-        try (InputStream input = resource.get().open()) {
-            var clips = AnimationSerializing.deserializeAnimation(input);
-            return clips.isEmpty() ? null : clips.get(0);
-        } catch (Exception e) {
-            LOGGER.warn("Cannot load the fourth cut; using fallback", e);
-            return null;
-        }
-    }
-
-    private static KeyframeAnimation loadBetterCombat(int ability) {
-        String name = BETTER_COMBAT[ability];
-        if (name == null) return null;
-        ResourceLocation id = new ResourceLocation("bettercombat", "attack_animations/" + name + ".json");
-        var resource = Minecraft.getInstance().getResourceManager().getResource(id);
-        if (resource.isEmpty()) return null;
-        try (InputStream input = resource.get().open()) {
-            var clips = AnimationSerializing.deserializeAnimation(input);
-            return clips.isEmpty() ? null : clips.get(0);
-        } catch (Exception e) {
-            LOGGER.warn("Cannot load Better Combat animation {}; using fallback", id, e);
-            return null;
-        }
-    }
 }

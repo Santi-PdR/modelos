@@ -6,8 +6,8 @@
         "hitbox": "HORIZONTAL_PLANE",
         "damage_multiplier": 0.85,
         "angle": 110,
-        "upswing": 0.45,
-        "animation": "bettercombat:two_handed_slash_horizontal_right",
+        "upswing": 0.5,
+        "animation": "stainkatana:stain_serious_1",
         "swing_sound": {
           "id": "bettercombat:katana_slash"
         }
@@ -16,8 +16,8 @@
         "hitbox": "HORIZONTAL_PLANE",
         "damage_multiplier": 0.9,
         "angle": 110,
-        "upswing": 0.45,
-        "animation": "bettercombat:two_handed_slash_horizontal_left",
+        "upswing": 0.5,
+        "animation": "stainkatana:stain_serious_2",
         "swing_sound": {
           "id": "bettercombat:katana_slash"
         }
@@ -27,7 +27,7 @@
         "damage_multiplier": 1.0,
         "angle": 110,
         "upswing": 0.5,
-        "animation": "bettercombat:two_handed_slash_vertical_left",
+        "animation": "stainkatana:stain_improved_3",
         "swing_sound": {
           "id": "bettercombat:katana_slash"
         }
@@ -36,8 +36,8 @@
         "hitbox": "VERTICAL_PLANE",
         "damage_multiplier": 1.6,
         "angle": 120,
-        "upswing": 0.65,
-        "animation": "stainkatana:stain_fourth_cut",
+        "upswing": 0.5,
+        "animation": "stainkatana:stain_improved_4",
         "swing_sound": {
           "id": "bettercombat:katana_slash"
         }

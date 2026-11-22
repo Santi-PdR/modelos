@@ -1,0 +1,145 @@
+{
+  "name": "stain_serious_1",
+  "author": "Adapted from Serious Player Animations",
+  "description": "Experimental rotation-only retarget; check grip and timing in game.",
+  "emote": {
+    "isLoop": "false",
+    "returnTick": 2,
+    "beginTick": 3,
+    "endTick": 24,
+    "stopTick": 30,
+    "degrees": false,
+    "moves": [
+      {
+        "tick": 0,
+        "easing": "LINEAR",
+        "turn": 0,
+        "leftArm": {
+          "pitch": -0.523599,
+          "yaw": 0.0,
+          "roll": -0.349066
+        }
+      },
+      {
+        "tick": 0,
+        "easing": "LINEAR",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -3.817626,
+          "yaw": 0.113281,
+          "roll": -1.043469
+        }
+      },
+      {
+        "tick": 0,
+        "easing": "LINEAR",
+        "turn": 0,
+        "torso": {
+          "pitch": -0.369536,
+          "yaw": 0.327201,
+          "roll": -0.158755
+        }
+      },
+      {
+        "tick": 4,
+        "easing": "LINEAR",
+        "turn": 0,
+        "leftArm": {
+          "pitch": -0.523599,
+          "yaw": 0.0,
+          "roll": -0.349066
+        }
+      },
+      {
+        "tick": 4,
+        "easing": "LINEAR",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -3.817626,
+          "yaw": 0.113281,
+          "roll": -1.043469
+        }
+      },
+      {
+        "tick": 4,
+        "easing": "LINEAR",
+        "turn": 0,
+        "torso": {
+          "pitch": -0.369536,
+          "yaw": 0.327201,
+          "roll": -0.158755
+        }
+      },
+      {
+        "tick": 6,
+        "easing": "LINEAR",
+        "turn": 0,
+        "torso": {
+          "pitch": -0.3114,
+          "yaw": 0.064519,
+          "roll": -0.081244
+        }
+      },
+      {
+        "tick": 8,
+        "easing": "LINEAR",
+        "turn": 0,
+        "torso": {
+          "pitch": 0.008536,
+          "yaw": -0.198163,
+          "roll": -0.003733
+        }
+      },
+      {
+        "tick": 12,
+        "easing": "LINEAR",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -0.386412,
+          "yaw": -0.016856,
+          "roll": -1.367981
+        }
+      },
+      {
+        "tick": 12,
+        "easing": "LINEAR",
+        "turn": 0,
+        "torso": {
+          "pitch": 0.456033,
+          "yaw": -0.714465,
+          "roll": -0.344109
+        }
+      },
+      {
+        "tick": 14,
+        "easing": "LINEAR",
+        "turn": 0,
+        "leftArm": {
+          "pitch": 0.658238,
+          "yaw": -0.437791,
+          "roll": -0.530204
+        }
+      },
+      {
+        "tick": 18,
+        "easing": "LINEAR",
+        "turn": 0,
+        "leftArm": {
+          "pitch": 0.745504,
+          "yaw": -0.437791,
+          "roll": -0.530204
+        }
+      },
+      {
+        "tick": 18,
+        "easing": "LINEAR",
+        "turn": 0,
+        "rightArm": {
+          "pitch": 0.006287,
+          "yaw": -0.016856,
+          "roll": -1.367981
+        }
+      }
+    ]
+  }
+}

@@ -52,6 +52,14 @@ public class AnimationAssetCheck {
             if (clips.size() != 1 || clips.get(0).beginTick < 1 || clips.get(0).endTick <= clips.get(0).beginTick || clips.get(0).stopTick <= clips.get(0).endTick)
                 throw new AssertionError("Invalid Better Combat fourth cut timeline");
         }
+        for (String name : new String[]{"stain_serious_1", "stain_serious_2", "stain_improved_3", "stain_improved_4"}) {
+            try (InputStream in = AnimationAssetCheck.class.getResourceAsStream("/assets/stainkatana/attack_animations/" + name + ".json")) {
+                if (in == null) throw new AssertionError("Missing " + name);
+                var clips = AnimationSerializing.deserializeAnimation(in);
+                if (clips.size() != 1 || clips.get(0).beginTick < 1 || clips.get(0).endTick != 24 || clips.get(0).stopTick <= 24)
+                    throw new AssertionError("Invalid Better Combat timeline: " + name);
+            }
+        }
         String external = System.getenv("STAIN_BC_TEST_DIR");
         if (external == null) throw new AssertionError("STAIN_BC_TEST_DIR must contain upstream Better Combat samples");
         for (String name : new String[]{"two_handed_slash_horizontal_right", "two_handed_slash_vertical_right", "two_handed_slash_horizontal_left"}) {
