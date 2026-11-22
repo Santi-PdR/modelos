@@ -246,16 +246,17 @@ def motion_gallery(root):
             sheet.paste(crop, (margin + col*(cw+gap), y + 22))
     sheet.save(root / 'saltos-forge.jpg', quality=90, optimize=True)
     payload = None
-    for width in (560, 500, 440, 380, 320):
+    width, quality = 560, 68
+    while width >= 96 and payload is None:
         preview = sheet.resize((width, round(width * sheet.height / sheet.width)), Image.Resampling.LANCZOS)
-        for quality in (68, 58, 48):
+        for candidate_quality in (quality, max(12, quality - 12), max(8, quality - 24)):
             data = io.BytesIO()
-            preview.save(data, 'JPEG', quality=quality, optimize=True)
+            preview.save(data, 'JPEG', quality=candidate_quality, optimize=True)
             if len(data.getvalue()) <= 12_600:
                 payload = data.getvalue()
                 break
-        if payload is not None:
-            break
+        width = round(width * .78)
+        quality = max(24, quality - 7)
     if payload is None:
         raise AssertionError('no se pudo comprimir la lámina de saltos para Actions')
     from verify_forge_mount import emit
