@@ -1,5 +1,21 @@
 # Historial de cambios
 
+## 1.0.40 — onda de choque en los eventos y estela en las chispas
+
+* **Onda de choque**: en cada evento (pulso, golpe, liberación, subida de nivel) salen
+  ocho partículas del núcleo, se abren de 0.16 a 0.62, giran mientras se abren y se
+  apagan. **Sin estado propio**: el reloj es el propio destello (`t = 1 − flash`), así
+  que no hay lista de partículas que mantener ni objetos que crear en el render — y en
+  reposo, con el destello a cero, no cuesta ni un quad.
+* **Estela de las chispas**: con el portador en movimiento (`motion > 0.35`) cada chispa
+  deja una copia un poco atrás en su órbita, más apagada (42%) y más pequeña (72%).
+  Parado no se dibuja: el coste aparece solo cuando hay movimiento que estelas.
+* Las dos cosas son aditivas sobre el mismo lote del aura: el pase pasa de ~10 quads a
+  ~18 en el peor caso (evento + corriendo + chispas), y a 0 en reposo quieto.
+* El CI comprueba las tres que se pueden romper sin que se note: que la onda se dibuja,
+  que su reloj es el destello (y no una variable a medias) y que la estela va detrás de
+  la chispa y solo con movimiento. Probado en rojo las tres.
+
 ## 1.0.39 — décimo estado: ardiendo, con brasas
 
 * **Estado nuevo `burning`**: si el portador está en llamas (fuego, lava, flechas de

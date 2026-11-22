@@ -225,6 +225,12 @@ se reproduce» de «un objeto que está ahí». El movimiento se aplica al `Pose
 antes del modelo y del aura, así que los dos se mueven juntos; se rota la matriz en
 el sitio para no crear un cuaternión por reliquia y frame.
 
+En cada evento (pulso, golpe, liberación, subida de nivel) el destello abre además una
+**onda de choque**: ocho partículas que salen del núcleo, se abren de 0.16 a 0.62 y se
+apagan mientras giran. Sale del propio destello, así que **no guarda estado ni crea
+objetos** en el render, y en reposo no cuesta ni un quad. Con el portador en movimiento
+las chispas dejan además una **estela** de dos quads por chispa, más apagada y pequeña.
+
 Al cambiar de estado de brillo la reliquia da un destello corto y un **glitch** de
 una sola vez (la misma animación y el mismo uniform `HoloGlitch` que el pulso), para
 que se note que ha reaccionado a algo, y **cambia la velocidad del bucle** (agua 0.66×, herido

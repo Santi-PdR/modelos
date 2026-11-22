@@ -237,6 +237,15 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.40, onda de choque sin estado y estela de chispas.** La onda (`drawShockwave`)
+reutiliza el destello como línea de tiempo: `t = 1 − flash`, radio `0.16 + 0.46 × t`,
+brillo `flash × 0.55`, ocho quads en elipse (eje `up` × 0.8) que giran a 0.35 rad/s y
+encogen un 45% al abrirse. Cero estado: ni listas, ni iteradores, ni `new` en el render;
+cuando `flash < 0.02` no se llama. La estela es la misma idea con la órbita de las
+chispas: cada chispa repite su posición con la fase retrasada `0.22 × motion` y 42% de
+brillo, solo si `motion > 0.35`. El techo de quads del aura pasa de ~10 a ~18 y el suelo
+sigue en 10 (o 4 con la calidad en LITE).
+
 **1.0.39, décimo estado: ardiendo.** `BURNING` sale de `Entity.isOnFire()`, que es
 vanilla y ya cubre fuego, lava y flechas de Fuego. Paleta cálida (`1.00 / 0.42 / 0.16`,
 mezclada al 60%: el único estado que tira a naranja) y `HoloTint` a **1.05**, el único

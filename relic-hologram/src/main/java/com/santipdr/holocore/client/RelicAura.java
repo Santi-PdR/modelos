@@ -91,6 +91,14 @@ public final class RelicAura {
     private static final int EMBER_COUNT = 6;
     private static final float EMBER_SIZE = 0.050F;
     private static final float EMBER_SPEED = 0.65F;
+    /**
+     * Onda de choque de los eventos: cuantas particulas, radio de salida y de
+     * llegada, y tamano. Sale del destello, asi que no guarda estado.
+     */
+    private static final int SHOCK_COUNT = 8;
+    private static final float SHOCK_MIN = 0.16F;
+    private static final float SHOCK_MAX = 0.62F;
+    private static final float SHOCK_SIZE = 0.060F;
     private static final float SPARK_RADIUS = 0.42F;
     private static final float SPARK_SIZE = 0.075F;
     private static final float SPARK_SPEED = 0.75F;
@@ -118,6 +126,11 @@ public final class RelicAura {
         }
         if (RelicConfig.GLOW_RING.get() && glow.ring() + flash * 0.8F > 0.01F) {
             drawRing(bufferSource, frame, time, state, glow, flash, fade, motion);
+        }
+        // Onda de choque: solo mientras dura el destello, o sea que en reposo no
+        // cuesta ni un quad. Va detras del anillo para que el eco quede debajo.
+        if (RelicConfig.GLOW_AURA.get() && sparksEnabled() && flash > 0.02F) {
+            drawShockwave(bufferSource, frame, time, glow, flash, fade);
         }
         if (RelicConfig.GLOW_AURA.get() && sparksEnabled()) {
             // El estado forzado manda: con /relic mood storm las chispas se ponen
@@ -163,6 +176,42 @@ public final class RelicAura {
             float weight = WEIGHT[layer] * pulseAt(time, layer) * intensity;
             billboard(buffer, frame, DIAMETER[layer] * spread, time * SPIN[layer],
                     glow.red() * weight, glow.green() * weight, glow.blue() * weight, AURA_ALPHA);
+        }
+    }
+
+    /**
+     * Onda de choque de un evento (pulso, golpe, liberacion, subida de nivel).
+     *
+     * <p><b>Sin estado</b>: el reloj es el propio destello, que ya existe y se apaga
+     * solo. {@code flash} alto = radio minimo y brillo alto; segun baja, la onda se
+     * abre y se apaga. Con eso el mismo codigo sirve para cualquier evento y no hay
+     * lista de particulas que mantener, ni objetos que crear en el render.</p>
+     */
+    private static void drawShockwave(MultiBufferSource bufferSource, Frame frame, float time,
+                                      RelicGlowState glow, float flash, float fade) {
+        float t = 1.0F - Math.min(1.0F, flash);
+        float radius = SHOCK_MIN + (SHOCK_MAX - SHOCK_MIN) * t;
+        float weight = flash * 0.55F * fade;
+        if (weight <= 0.01F) {
+            return;
+        }
+        VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
+        float red = glow.red();
+        float green = glow.green();
+        float blue = glow.blue();
+        // Gira un poco mientras se abre: una onda perfectamente radial parece un
+        // anillo estatico que solo escala.
+        float turn = time * 0.35F;
+        float size = SHOCK_SIZE * (1.0F - 0.45F * t);
+        for (int i = 0; i < SHOCK_COUNT; i++) {
+            float angle = turn + i * (TWO_PI / SHOCK_COUNT);
+            float left = cos(angle) * radius;
+            float up = sin(angle) * radius * 0.8F;
+            float cx = frame.originX + frame.leftX * left + frame.upX * up;
+            float cy = frame.originY + frame.leftY * left + frame.upY * up;
+            float cz = frame.originZ + frame.leftZ * left + frame.upZ * up;
+            billboardAt(buffer, frame, cx, cy, cz, size, angle * 1.5F,
+                    red * weight, green * weight, blue * weight, 1.0F);
         }
     }
 
@@ -296,6 +345,22 @@ public final class RelicAura {
             float weight = amount * (0.35F + 0.25F * sin(phase * 4.0F + i));
             billboardAt(buffer, frame, cx, cy, cz, SPARK_SIZE,
                     phase * 2.0F, redTint * weight, greenTint * weight, blueTint * weight, 1.0F);
+            // Estela: si el portador se mueve, cada chispa deja una copia un poco
+            // atras en su orbita, mas apagada y mas pequena. Dos quads por chispa y
+            // solo con motion alto: parado no cuesta nada.
+            if (motion > 0.35F) {
+                float tail = phase - 0.22F * motion;
+                float tailRadius = SPARK_RADIUS * (0.72F + 0.28F * sin(tail * 2.0F + i));
+                float tailOffset = cos(tail) * tailRadius;
+                float tailHeight = sin(tail) * tailRadius * 0.8F
+                        + sin(tail * 3.0F + i * 1.7F) * (portal ? 0.30F : 0.16F);
+                float tx = frame.originX + frame.leftX * tailOffset + frame.upX * tailHeight;
+                float ty = frame.originY + frame.leftY * tailOffset + frame.upY * tailHeight;
+                float tz = frame.originZ + frame.leftZ * tailOffset + frame.upZ * tailHeight;
+                float tailWeight = weight * 0.42F * motion;
+                billboardAt(buffer, frame, tx, ty, tz, SPARK_SIZE * 0.72F, tail * 2.0F,
+                        redTint * tailWeight, greenTint * tailWeight, blueTint * tailWeight, 1.0F);
+            }
         }
     }
 

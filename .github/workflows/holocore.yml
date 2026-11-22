@@ -442,6 +442,19 @@ jobs:
               'faltan las constantes de las brasas'
           assert 'float flicker = 0.55F + 0.45F * sin(time * 9.0F + i * 2.7F);' in aura, \
               'las brasas no parpadean (parecen burbujas naranjas)'
+          # Onda de choque: sale del destello, sin estado propio ni listas que
+          # mantener. Si alguien la cambia por una lista de particulas, esto falla.
+          assert 'private static void drawShockwave(' in aura, 'los eventos no tienen onda'
+          assert 'drawShockwave(bufferSource, frame, time, glow, flash, fade)' in aura, \
+              'la onda de choque no se dibuja nunca'
+          assert 'SHOCK_COUNT' in aura and 'SHOCK_MAX' in aura, \
+              'faltan las constantes de la onda'
+          assert 'float t = 1.0F - Math.min(1.0F, flash);' in aura, \
+              'la onda no usa el destello como reloj (necesitaria estado propio)'
+          # Estela de las chispas: solo con el portador en movimiento.
+          assert 'if (motion > 0.35F) {' in aura, 'las chispas no dejan estela'
+          assert 'float tail = phase - 0.22F * motion;' in aura, \
+              'la estela no va detras de la chispa'
 
           assert 'message.holocore.mood' in comandos, '/relic info no dice el estado de brillo'
           assert 'Commands.literal("mood")' in comandos, 'falta /relic mood'
