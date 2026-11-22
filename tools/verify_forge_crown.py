@@ -13,6 +13,7 @@ from preview_cloth import mod_version
 from verify_forge_combined import SLOTS, landmarks
 from verify_forge_gaits import crop, table, text
 from verify_forge_postures import read_boxes
+from verify_forge_shoulders import PLATES, rigid_travel
 from verify_forge_walk import read
 
 EDGES = ((0,1),(1,2),(2,3),(3,0),(4,5),(5,6),(6,7),(7,4),(0,4),(1,5),(2,6),(3,7))
@@ -95,6 +96,11 @@ def report(root, baseline, *, extended=False):
         trace = read(root/f'{stem}.tsv')
         mesh = read_boxes(root/f'{stem}-cubos.tsv')
         old = read_boxes(old_dir/f'{slot}-cubos.tsv')
+        fixed_path = root/f'{stem}-placas-fijas.tsv'
+        fixed = read_boxes(fixed_path) if fixed_path.is_file() else None
+        if fixed is not None:
+            assert set(fixed) == set(mesh) and all(set(parts) == {p[0] for p in PLATES} for parts in fixed.values()), (
+                stem, 'faltan controles al mismo tick')
         quads = {}
         for line in (root/f'{stem}-cabeza.tsv').read_text().splitlines():
             tick,label,*xy = line.split('\t')
@@ -123,8 +129,16 @@ def report(root, baseline, *, extended=False):
             a1, parts1 = head_roof(groups)
             assert sum(parts0.values()) > 2.5 and parts0['v17_cowl_back_1'] > 1.5, (slot,expected_at,parts0)
             assert a1 <= -.04 and sum(parts1.values()) <= .05, (slot,tick,a1,parts1)
-            for name in ('v18_pad_0','v18_pad_1','v20_mount_seat','v17_cowl_return'):
-                np.testing.assert_allclose(groups[name],control[name],atol=.005,rtol=0,err_msg=f'{slot}/{tick}: {name}')
+            for name in ('v20_mount_seat','v17_cowl_return',*(name for name, _, _ in PLATES)):
+                label = f'{slot}/{tick}: {name}'
+                # Compare the previous shoulder projection without ignoring
+                # actual geometry or changing the crown/pixel tolerances.
+                measured = groups[name]
+                base = fixed[tick].get(name) if fixed is not None else None
+                if base is not None:
+                    rigid_travel(np.asarray(base), np.asarray(measured), label)
+                drift = np.max(np.abs(np.asarray(measured if base is None else base)-control[name]))
+                assert drift < .005, (label, 'cambió el encastre base', drift)
             path = root/str(at['image'])
             count,hair,maroon = hair_pixels(path,quads[tick])
             seam = sewn(groups)

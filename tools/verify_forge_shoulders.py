@@ -36,6 +36,16 @@ def burial(plate, sleeve):
     return np.maximum(0, depth.min(axis=1))
 
 
+def rigid_travel(base, live, label):
+    assert base.shape == live.shape and np.isfinite([base, live]).all(), label
+    np.testing.assert_allclose(np.linalg.norm(base[:, :, None]-base[:, None, :], axis=3),
+                               np.linalg.norm(live[:, :, None]-live[:, None, :], axis=3),
+                               atol=.004, rtol=0, err_msg=str(label))
+    travel = np.linalg.norm(base-live, axis=2).max()
+    assert travel < 2.65, (label, 'demasiado recorrido', travel)
+    return travel
+
+
 def verify(root):
     rig_data = fixed_wearer_pose(load(ARMOR_GEO), 0., slim=True)
     rig = WornModel(rig_data)
@@ -63,12 +73,9 @@ def verify(root):
                 # Control must still be exactly the previous plate transform.
                 gap = np.linalg.norm(a[:, :, None] - original[name][:, None, :], axis=3).min(2).max()
                 assert gap < .007, (key, 'proyección fija distinta de .37', gap)
-                np.testing.assert_allclose(np.linalg.norm(a[:, :, None]-a[:, None, :], axis=3),
-                                           np.linalg.norm(b[:, :, None]-b[:, None, :], axis=3), atol=.004, rtol=0)
-                shift = np.linalg.norm(a-b, axis=2).max()
+                shift = rigid_travel(a, b, key)
                 if i not in fast:
                     assert shift < .006, (key, 'cambió una placa en una pose quieta', shift)
-                assert shift < 2.65, (key, 'demasiado recorrido', shift)
                 strip = np.asarray(live[i]['v20_mount_shoulders'])
                 strip = strip[np.sign(strip[:, :, 0].mean(axis=1)) == signs]
                 seam = lap(b, strip)

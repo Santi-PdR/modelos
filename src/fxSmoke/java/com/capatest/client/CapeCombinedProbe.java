@@ -34,7 +34,7 @@ final class CapeCombinedProbe {
     private final List<Grab> deferred = new ArrayList<>(14);
     private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tstride\tground\tsprinting\tcrouching\t"
             + "walk\trun\tsneak\tair\tfall\tswim\ttop\tmid\ttip_x\ttip_y\ttip_z\tseat_z\tpitch\tyaw\tfit\tcrouch_floor\trear_tuck\timage\n");
-    private final StringBuilder boxes = new StringBuilder(), head = new StringBuilder();
+    private final StringBuilder boxes = new StringBuilder(), head = new StringBuilder(), fixedPlates = new StringBuilder();
     private final Map<GeoBone, List<GeoCube>> omitted = new LinkedHashMap<>();
     private int start = -1, fitTick = -1, nextShot;
     private LocalPlayer aimed;
@@ -174,6 +174,7 @@ final class CapeCombinedProbe {
         if (fit != null) {
             fitTick = p.tickCount;
             fit.boxes().lines().forEach(box -> boxes.append(tick).append('\t').append(box).append('\n'));
+            fit.fixedPlates().lines().forEach(box -> fixedPlates.append(tick).append('\t').append(box).append('\n'));
         }
         var tip = pose.tip();
         rows.append(t).append('\t').append(p.walkAnimation.position(partial)).append('\t')
@@ -197,6 +198,7 @@ final class CapeCombinedProbe {
         Files.writeString(root.resolve(name + ".tsv"), rows);
         Files.writeString(root.resolve(name + "-cubos.tsv"), boxes);
         Files.writeString(root.resolve(name + "-cabeza.tsv"), head);
+        Files.writeString(root.resolve(name + "-placas-fijas.tsv"), fixedPlates);
         return true;
     }
 }

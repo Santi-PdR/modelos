@@ -718,7 +718,8 @@ public final class CapeFxSmoke {
                 placementRoute.calibration(), false, false);
         jumpFit = scene.jump() && jumpRoute.measureFit(event.getEntity().tickCount);
         combinedFit = scene.combined() && combinedRoute.measureFit(event.getEntity().tickCount);
-        if (scene.audit() || jumpFit || combinedFit) CapePlacementProbe.arm(renderer, false, false, false, true, scene.audit());
+        if (scene.audit() || jumpFit || combinedFit)
+            CapePlacementProbe.arm(renderer, false, false, false, true, scene.audit() || combinedFit);
         if (scene.measureMotion()) CapeWalkProbe.arm(renderer);
         if (crouchSparks != null && !captured && pending == null)
             crouchSparks.arm(renderer, Minecraft.getInstance().player, playerPose, playerRenderOffset);
