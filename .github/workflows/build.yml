@@ -827,15 +827,20 @@ jobs:
           java -cp "$CLASSES" com.capatest.item.CapeSparkFrameTest
           java -cp "$CLASSES" com.capatest.item.CapeSparkFrameTest --samples > "$CLASSES/spark-frames.tsv"
           java -cp "$CLASSES" com.capatest.item.CapeSparkFrameTest --crouch-samples > "$CLASSES/spark-crouch.tsv"
-          if grep -qx 'mod_version=1.67.36' gradle.properties; then
-            (cd entregables/v1.67.35 && sha256sum -c ../../docs/releases/v1.67.35/JAR.sha256)
-            java -cp "entregables/v1.67.35/capatest-1.67.35.jar:$CLASSES" com.capatest.item.CapeSparkFrameTest --samples > "$CLASSES/spark-frames-35.tsv"
-            cmp "$CLASSES/spark-frames-35.tsv" "$CLASSES/spark-frames.tsv"
-          fi
           OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_cape_spark_fit.py "$CLASSES/spark-frames.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeEmberTest
           java -cp "$CLASSES" com.capatest.client.CapeEmberTest --samples > "$CLASSES/embers.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeEmberTest --blend-samples > "$CLASSES/ember-blends.tsv"
+          if grep -qx 'mod_version=1.67.36' gradle.properties; then
+            (cd entregables/v1.67.35 && sha256sum -c ../../docs/releases/v1.67.35/JAR.sha256)
+            base="entregables/v1.67.35/capatest-1.67.35.jar:$CLASSES"
+            java -cp "$base" com.capatest.item.CapeSparkFrameTest --samples > "$CLASSES/spark-frames-35.tsv"
+            java -cp "$base" com.capatest.client.CapeEmberTest --samples > "$CLASSES/embers-35.tsv"
+            java -cp "$base" com.capatest.client.CapeEmberTest --blend-samples > "$CLASSES/ember-blends-35.tsv"
+            for profile in spark-frames embers ember-blends; do
+              cmp "$CLASSES/$profile-35.tsv" "$CLASSES/$profile.tsv"
+            done
+          fi
           OPENBLAS_NUM_THREADS=1 python3 tools/verify_ember_sprites.py "$CLASSES/ember-blends.tsv" "$CLASSES/saltos-rgb-brasas.tsv"
           java -cp "$CLASSES" com.capatest.item.CapeStateTest
           java -cp "$CLASSES" com.capatest.client.CapeFitTest
@@ -1256,7 +1261,7 @@ jobs:
 
       - name: Medir el nacimiento de las brasas al agacharse en Forge
         id: verify-crouch-sparks
-        if: ${{ steps.fx-smoke.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
           set -euo pipefail
           OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_crouch_sparks.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
