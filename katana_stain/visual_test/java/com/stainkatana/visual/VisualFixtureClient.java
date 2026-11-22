@@ -498,7 +498,32 @@ public final class VisualFixtureClient {
             case 1272 -> capture = "51_blood_right_third_draw.png";
             case 1276 -> capture = "52_blood_right_third_face.png";
             case 1280 -> capture = "53_blood_right_third_recovery.png";
-            case 1295 -> {
+            // Sample the whole X and opening C clips in first and third person.
+            // Local visual playback only: these frames do not verify server timing.
+            case 1295 -> { mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
+                mc.options.setCameraType(CameraType.FIRST_PERSON); mc.options.fov().set(70); }
+            case 1310 -> com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 1);
+            case 1312 -> capture = "86_x_first_prepare.png";
+            case 1315 -> capture = "87_x_first_windup.png";
+            case 1317 -> capture = "88_x_first_impact.png";
+            case 1320 -> capture = "89_x_first_follow.png";
+            case 1323 -> capture = "90_x_first_recover.png";
+            case 1340 -> com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 2);
+            case 1342 -> capture = "91_c_first_prepare.png";
+            case 1345 -> capture = "92_c_first_windup.png";
+            case 1350 -> capture = "93_c_first_impact.png";
+            case 1353 -> capture = "94_c_first_follow.png";
+            case 1357 -> capture = "95_c_first_recover.png";
+            case 1370 -> { com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), -1);
+                mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); mc.options.fov().set(35); }
+            case 1380 -> com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 2);
+            case 1382 -> capture = "96_c_third_prepare.png";
+            case 1385 -> capture = "97_c_third_windup.png";
+            case 1390 -> capture = "98_c_third_impact.png";
+            case 1393 -> capture = "99_c_third_follow.png";
+            case 1397 -> capture = "100_c_third_recover.png";
+            case 1415 -> {
+                com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), -1);
                 mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Y.set(0.0);
