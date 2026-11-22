@@ -322,9 +322,11 @@ public final class KatanaAbilities {
             boolean landed = damage > 0 && hitUltimate(player, target, damage);
             if (!landed) target.invulnerableTime = Math.max(target.invulnerableTime, previousImmunity);
             player.serverLevel().playSound(null, player.blockPosition(), betterCombatSound("rapier_stab", SoundEvents.PLAYER_ATTACK_SWEEP), SoundSource.PLAYERS, .65F, 1.1F);
-            KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.7), target.getZ(), KatanaVisualStyle.FINISHER);
-            player.serverLevel().sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.7), target.getZ(), 16, .35, .4, .35, .04);
-            if (landed) player.serverLevel().playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, .75F, .8F);
+            if (landed) {
+                KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.7), target.getZ(), KatanaVisualStyle.FINISHER);
+                player.serverLevel().sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.7), target.getZ(), 16, .35, .4, .35, .04);
+                player.serverLevel().playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, .75F, .8F);
+            }
         }
     }
 
@@ -426,8 +428,11 @@ public final class KatanaAbilities {
                     CombatTuning.damage(cast.attackDamage, true), mob.getHealth(), index);
             // Vanilla damage immunity can otherwise swallow consecutive cinematic cuts.
             // Clear it only immediately before a scheduled hit, never every tick.
+            int previousImmunity = mob.invulnerableTime;
             if (damage > 0) mob.invulnerableTime = 0;
-            if (damage > 0 && hitUltimate(player, mob, damage)) {
+            boolean landed = damage > 0 && hitUltimate(player, mob, damage);
+            if (!landed) mob.invulnerableTime = Math.max(mob.invulnerableTime, previousImmunity);
+            if (landed) {
                 // Contact has its own transient, separate from the blade's whoosh.
                 player.serverLevel().playSound(null, mob.blockPosition(),
                         index == CombatTuning.ultimateStrikeCount() - 1 ? SoundEvents.PLAYER_ATTACK_CRIT : SoundEvents.PLAYER_ATTACK_STRONG,
@@ -438,11 +443,13 @@ public final class KatanaAbilities {
                     cast.durabilitySpent = true;
                     cast.stack.hurtAndBreak(1, player, p -> p.broadcastBreakEvent(InteractionHand.MAIN_HAND));
                 }
+                // Contact particles and camera impulses represent accepted hits,
+                // not a damage request rejected by immunity or another mod.
+                KatanaNetwork.broadcastVisual(player, mob.getX(), mob.getY(.55), mob.getZ(), index == CombatTuning.ultimateStrikeCount() - 1 ? KatanaVisualStyle.ULTIMATE_FINAL
+                        : index % 2 == 0 ? KatanaVisualStyle.ULTIMATE_CUT : KatanaVisualStyle.ULTIMATE_CROSS);
+                double spread = Math.min(2.0, Math.max(.35, mob.getBbWidth() * .35));
+                player.serverLevel().sendParticles(KatanaParticles.SHARD.get(), mob.getX(), mob.getY(.55), mob.getZ(), 12, spread, Math.min(1.5, mob.getBbHeight() * .25), spread, .03);
             }
-            KatanaNetwork.broadcastVisual(player, mob.getX(), mob.getY(.55), mob.getZ(), index == CombatTuning.ultimateStrikeCount() - 1 ? KatanaVisualStyle.ULTIMATE_FINAL
-                    : index % 2 == 0 ? KatanaVisualStyle.ULTIMATE_CUT : KatanaVisualStyle.ULTIMATE_CROSS);
-            double spread = Math.min(2.0, Math.max(.35, mob.getBbWidth() * .35));
-            player.serverLevel().sendParticles(KatanaParticles.SHARD.get(), mob.getX(), mob.getY(.55), mob.getZ(), 12, spread, Math.min(1.5, mob.getBbHeight() * .25), spread, .03);
             player.serverLevel().playSound(null, mob.blockPosition(), katanaSwingSound(), SoundSource.PLAYERS, .65F, index % 2 == 0 ? .9F : 1.1F);
         }
         if ((events & AbilityTimeline.FADE) != 0) KatanaNetwork.broadcastAnimation(player, -1);
