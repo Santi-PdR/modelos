@@ -137,10 +137,13 @@ public final class KatanaAnimations {
                 @Override protected float getFadeIn(float delta) { return 1F; }
             });
         }
-        // Contact estimates in source clips are 8.75 ticks (Improved Animations)
-        // and 7.5 ticks (Serious Player Animations). Damage remains server-timed.
+        // sword_attack crosses its arc before the final follow-through at tick
+        // 7.5. Test contact around source tick 5 rather than after the blade
+        // has passed the target. sword_attack2 keeps its own tick 7.5 timing.
+        // Damage remains server-timed and may not match the next rendered frame.
         float speed = ability == 0 ? 3F : ability == 1 ? 1F
-                : overhead ? (ability == 2 ? .875F : 8.75F / 6F) : 7.5F / 6F;
+                : overhead ? (ability == 2 ? .875F : 8.75F / 6F)
+                : (clipName.equals("sword_attack") ? 5F / 6F : 7.5F / 6F);
         timedClip.addModifierBefore(new SpeedModifier(speed));
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
     }
