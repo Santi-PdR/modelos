@@ -76,6 +76,7 @@ jobs:
           grep -F 'STAIN_FINISHER_ITEM_SWITCH_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_FINISHER_DAMAGE_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-client.log
+          grep -F 'STAIN_X_SOUND_DISPATCH_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_CASTER_MOVEMENT_LOCK_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_CASTER_PROTECTION_VERIFIED' /tmp/stain-visual-client.log
@@ -103,6 +104,7 @@ jobs:
           grep -F 'STAIN_FINISHER_ITEM_SWITCH_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_FINISHER_DAMAGE_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-fallback.log
+          grep -F 'STAIN_X_SOUND_DISPATCH_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_CASTER_MOVEMENT_LOCK_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_CASTER_PROTECTION_VERIFIED' /tmp/stain-visual-fallback.log
@@ -131,6 +133,7 @@ jobs:
           grep -F 'STAIN_FINISHER_ITEM_SWITCH_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_FINISHER_DAMAGE_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_X_SOUND_DISPATCH_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_CASTER_MOVEMENT_LOCK_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_CASTER_PROTECTION_VERIFIED' /tmp/stain-visual-full-bc.log

@@ -23,6 +23,21 @@ public final class VisualFixtureServer {
     private static boolean boundSeen, boundChecked;
     private static net.minecraft.world.phys.Vec3 casterPosition;
     private static boolean casterMoved, casterLockVerified;
+    private static boolean xSoundVerified;
+
+    @SubscribeEvent public static void observeAbilitySound(net.minecraftforge.event.PlayLevelSoundEvent.AtPosition event) {
+        if (xSoundVerified || !(event.getLevel() instanceof ServerLevel) || event.getSound() == null
+                || event.getSource() != net.minecraft.sounds.SoundSource.PLAYERS
+                || event.getOriginalVolume() != .8F || event.getOriginalPitch() != 1F) return;
+        var sound = event.getSound().value();
+        var expected = net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")
+                ? net.minecraftforge.registries.ForgeRegistries.SOUND_EVENTS.getValue(
+                        new net.minecraft.resources.ResourceLocation("bettercombat", "katana_slash"))
+                : net.minecraft.sounds.SoundEvents.PLAYER_ATTACK_SWEEP;
+        if (sound != expected) throw new IllegalStateException("X sent the wrong swing sound: " + sound);
+        xSoundVerified = true;
+        System.out.println("STAIN_X_SOUND_DISPATCH_VERIFIED");
+    }
     @SubscribeEvent public static void verifyCasterLock(net.minecraftforge.event.TickEvent.LevelTickEvent event) {
         if (event.phase != net.minecraftforge.event.TickEvent.Phase.END || !(event.level instanceof ServerLevel level)
                 || casterLockVerified || boundTicks == 0 || boundTicks > 5 || level.players().isEmpty()) return;
