@@ -21,10 +21,10 @@ for name, target in [('rightArm','rightArm'), ('leftArm','leftArm'), ('body','to
 # These angles are authored for this mod, not copied from Better Combat.
 bones['rightItem'] = {'rotation': {
     '0.0000': {'vector': [0, 0, 0], 'easing': 'linear'},
-    '0.1750': {'vector': [20, 0, 0], 'easing': 'linear'},
-    '0.3500': {'vector': [-35, 0, 0], 'easing': 'linear'},
-    '0.4375': {'vector': [-45, 0, 0], 'easing': 'linear'},
-    '0.6125': {'vector': [-20, 0, 0], 'easing': 'linear'},
+    '0.1750': {'vector': [0, 0, 15], 'easing': 'linear'},
+    '0.3500': {'vector': [0, 0, -55], 'easing': 'linear'},
+    '0.4375': {'vector': [0, 0, -75], 'easing': 'linear'},
+    '0.6125': {'vector': [0, 0, -30], 'easing': 'linear'},
     '0.8750': {'vector': [0, 0, 0], 'easing': 'linear'},
 }}
 out = root/'forge/resources/assets/stainkatana/player_animation/stain_c_overhead.json'
