@@ -1,0 +1,55 @@
+name: Diagnóstico de la captura de cadena en Forge
+on:
+  push:
+    branches: [arena/5a9fa51b-modelos]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  cadena:
+    if: contains(github.event.head_commit.message, '[diagnosticar-cadena-v16741]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Material de la ejecución original, sin reconstruir el JAR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh run download 44996958250 -n capatest-maniobra-forge -D "$RUNNER_TEMP/maniobra"
+          gh run download 44996958250 -n capatest-fx-en-mundo -D "$RUNNER_TEMP/fx"
+          python3 -m pip install --quiet numpy Pillow
+      - name: Aislar cada escena del control original
+        env:
+          OPENBLAS_NUM_THREADS: '1'
+          PYTHONPATH: tools
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          import numpy as np
+          from cape_chain import pose, profile
+          from verify_forge_chain import meshes, SLOTS
+          from verify_forge_walk import read
+          root=Path(os.environ['RUNNER_TEMP'])
+          p=profile()
+          def note(text):
+              print('::notice title=Fila de cadena::'+str(text).replace('%','%25').replace('\n','%0A'),flush=True)
+          for kind, names in [('maniobra',('maniobra','giro-inverso')), ('fx',('revision-alex','saltos'))]:
+              for name in names:
+                  for slot in SLOTS:
+                      try:
+                          note(meshes(root/kind, f'{name}-{slot}', p))
+                      except Exception as e:
+                          print('::error title=Malla original::'+str(e).replace('%','%25').replace('\n','%0A'),flush=True)
+          for shape in ('','steve-'):
+              for slot in SLOTS:
+                  stem=f'paso-{shape}{slot}'
+                  a=read(root/'fx'/f'{stem}.tsv'); t=a['time']
+                  inputs=np.column_stack([a[k] for k in ('stride','pace','apoyo_cadena','freno_lento')])
+                  xyz=np.column_stack([a[k] for k in ('cadena_caida_u','cadena_salida_u')]); e=np.array([pose(p,*row) for row in inputs]); err=np.abs(e-xyz)
+                  i,j=np.unravel_index(np.argmax(err), err.shape)
+                  m=[(35<t)&(t<69),(108<t)&(t<129),(130<t)&(t<146)&(inputs[:,1]<.10),(t<17)|((t>151)&(t<156))|((t>241)&(t<370))]
+                  v=[np.ptp(xyz[m[0],0]), xyz[m[1],1].max(), xyz[m[2],1].max() if m[2].any() else None, np.abs(xyz[m[3]]).max()]
+                  note(f'{stem}: counts {[int(x.sum()) for x in m]}, metrics {v}; parity {err[i,j]:.8f} at {t[i]}, inputs {inputs[i]}, measured {xyz[i]}, expected {e[i]}')
+          PY
