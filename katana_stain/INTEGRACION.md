@@ -519,3 +519,21 @@ hacia la hoja durante el gesto de Z. Se compararon ajustes en el mismo tick del
 clip y se comprobó el resultado en tres configuraciones del cliente. Sigue
 siendo una aproximación: las capturas no demuestran contacto tridimensional
 exacto ni calidad del movimiento durante una partida.
+
+## 0.20.0-test — guardia y encuadre
+
+La instalación de esta prueba se dirige a la carpeta de la instancia, no a
+`.minecraft/mods` por defecto. El número de versión y el nombre del JAR se
+incrementaron para diferenciarla de las pruebas anteriores.
+
+- Con Better Combat la katana usa una guardia propia más alta; se ajustó también
+  el giro de la hoja zurda. Sin Better Combat no se impone esa guardia.
+- Se reajustó el encuadre de X en primera persona para que el arma no quede
+  oculta durante el impacto; se revisaron ambas manos en capturas.
+- La apertura de C usa una velocidad distinta para acercar su golpe visual al
+  tick de impacto del servidor. El resto de cortes conserva su velocidad.
+- Z conserva el gesto e interpolación de la prueba anterior; no es un rediseño
+  completo. Siguen pendientes una revisión en movimiento y del audio en juego.
+
+Las capturas y las pruebas automáticas no garantizan contacto perfecto, estética
+final, ni sincronización exacta bajo latencia. No se usan efectos de Darkest Hours.
