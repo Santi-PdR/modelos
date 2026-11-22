@@ -25,11 +25,16 @@ final class CapeEmberBankProbe {
         var eye = new ArmorStand(game.level, pane.getX() - 2, pane.getY(), pane.getZ());
         Camera[] views = new Camera[3];
         for (int i = 0; i < views.length; i++) {
-            eye.setYRot(i * 90); eye.yRotO = i * 90;
+            float yaw = i * 90;
+            eye.setYRot(yaw); eye.yRotO = yaw;
+            // Camera reads the view (head), not the armor stand's body yaw.
+            eye.setYHeadRot(yaw); eye.yHeadRotO = yaw;
             eye.setXRot(18); eye.xRotO = 18;
             views[i] = new Camera();
             views[i].setup(game.level, eye, false, false, 1);
         }
+        double r0 = basis(views[0], 1, 0).x, r1 = basis(views[1], 1, 0).x, r2 = basis(views[2], 1, 0).x;
+        require(Math.abs(r0) > .999 && Math.abs(r1) < .001 && Math.abs(r0 + r2) < .001, "invalid camera setup");
         double x = pane.getX() + .12, y = pane.getY() + .36;
         var rows = new StringBuilder("vuelo\tvista\tfase\tedad_ticks\tvida_ticks\tinclinacion_deg\tavance_x_b_tick\tlado_cuadro_b\terror_centro_b\n");
         for (String mode : new String[]{"libre", "panel", "vertical"}) {
