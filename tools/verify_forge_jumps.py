@@ -192,9 +192,16 @@ def fit(root, slot, data, spans, rig, source):
             leg_hit = current_leg_hit
             limb_index, cloth_index = worst
             garment_index = int(cloth_indices[cloth_index])
-            leg_detail = (int(tick), limb_names[limb_index + 2],
-                          f'{cloth_names[cloth_index]}[{garment_index}]',
-                          float(leg_contacts[worst]))
+            garment_name = str(cloth_names[cloth_index])
+            local_cube = int(np.count_nonzero(np.asarray(rig.names)[:garment_index] == garment_name))
+            leg_detail = {
+                'tick': int(tick),
+                'limb': limb_names[limb_index + 2],
+                'cape_bone': garment_name,
+                'cube_in_bone': local_cube,
+                'rig_cube_index': garment_index,
+                'signed_sat_gap_u': float(leg_contacts[worst]),
+            }
         min_fit = np.minimum(min_fit, [*rig.joins(live), lap(live[roots], torso)])
     assert (min_fit > [.038, .025, .018]).all() and drift < .006, (slot, 'deriva o costura en salto', min_fit, drift)
     # Keep the measured row even when leg contact exceeds the gate. The main
