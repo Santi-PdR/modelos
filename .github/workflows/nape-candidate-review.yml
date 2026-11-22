@@ -27,8 +27,13 @@ jobs:
             rc=0
             python3 tools/verify_forge_nape_settle.py "$out/capatest-maniobra-forge" docs/diagnosticos/retorno-v1.67.31/base \
               "$out/evidence" "$out/crops" > "$out/return.log" 2>&1 || rc=$?
-            grep -E 'sección media|pelo recuperado|AssertionError|ValueError|FileNotFoundError' "$out/return.log" | tail -n 9 | cut -c1-450 | \
-              while IFS= read -r line; do printf '::notice title=Forge %s (retorno %s)::%s\n' "$run" "$rc" "${line//%/%25}"; done
+            if [ "$rc" -eq 0 ]; then
+              grep -E 'sección media|pelo recuperado' "$out/return.log" | tail -4
+            else
+              tail -6 "$out/return.log"
+            fi | cut -c1-450 | while IFS= read -r line; do
+              printf '::notice title=Forge %s (retorno %s)::%s\n' "$run" "$rc" "${line//%/%25}"
+            done
           done
           cmp "$RUNNER_TEMP"/{44964845138,44965004447}/capatest-jar/capatest-1.67.32.jar
       - name: Repetir los límites de postura sobre el primer cliente
