@@ -365,12 +365,18 @@ jobs:
 
           enum = animatable.split('enum Mood {', 1)[1].split('}', 1)[0]
           moods = re.findall(r'^\s*([A-Z][A-Z_]*)\s*,?$', enum, re.M)
-          esperados = ['NEUTRAL', 'RESONANT', 'STORM', 'WOUNDED', 'DARK', 'RAIN']
+          esperados = ['NEUTRAL', 'RESONANT', 'STORM', 'WOUNDED', 'DARK', 'RAIN', 'NIGHT']
           assert moods == esperados, moods
           assert 'public Mood mood()' in animatable, 'falta el accessor de Mood'
           assert 'isThundering()' in animatable, 'la tormenta no alimenta ningun estado'
           assert 'WOUNDED_HEALTH' in animatable and 'getMaxHealth()' in animatable, \
               'la vida del portador no alimenta ningun estado'
+          # La oscuridad exige cielo tapado: a cielo abierto de noche no es una cueva,
+          # es el estado NIGHT (si no, NIGHT no se alcanzaria nunca).
+          assert 'DARK_SKY' in animatable and 'LightLayer.SKY' in animatable, \
+              'la oscuridad no mira la luz del cielo'
+          assert 'isNight()' in animatable, 'la noche despejada no se detecta'
+          assert 'case NIGHT ->' in animatable, 'el estado de noche no tiene velocidad'
           assert 'anotherBearerNear(' in animatable, 'no hay deteccion de otro portador cerca'
           assert 'RelicServer.findRelic(other).isPresent()' in animatable, \
               'la resonancia no consulta la reliquia del otro jugador'
@@ -384,14 +390,28 @@ jobs:
           assert 'echoSize' in aura, 'el anillo no tiene eco en los eventos'
           assert 'sparksEnabled()' in aura, 'las chispas no tienen interruptor'
           assert 'Quality.FULL' in aura, 'las chispas no miran la calidad'
+          assert 'float fade, RelicAnimatable.Mood mood)' in aura, \
+              'las chispas no reciben el estado de brillo'
+          assert 'boolean storm = mood == RelicAnimatable.Mood.STORM' in aura, \
+              'las chispas perdieron el azul de la tormenta'
+          assert 'boolean night = mood == RelicAnimatable.Mood.NIGHT' in aura, \
+              'la noche despejada no cambia las chispas'
 
           assert 'message.holocore.mood' in comandos, '/relic info no dice el estado de brillo'
           assert 'Commands.literal("mood")' in comandos, 'falta /relic mood'
           assert 'forceMood(null)' in comandos, '/relic mood no se puede volver a automatico'
+          assert 'forceMood(null)' in eventos, \
+              'el estado forzado con /relic mood sobrevive a salir del mundo'
 
           # El estado de brillo tambien cambia la velocidad del bucle de animacion,
           # no solo el color: es lo que pidio "mejorar la animacion".
           assert 'setAnimationSpeed(' in animatable, 'el estado de brillo no toca la animacion'
+          bloque_mood = animatable.split('if (nextMood != this.mood) {', 1)[1]\
+              .split('this.mood = nextMood;', 1)[0]
+          assert 'request(RelicAnimations.GLITCH)' in bloque_mood, \
+              'el cambio de estado de brillo no dispara ninguna animacion'
+          assert 'MOOD_GLITCH_TICKS' in bloque_mood, \
+              'el glitch del cambio de estado no tiene espera (tiritaria al caminar)'
           assert 'speedFor(' in animatable, 'no hay velocidades por estado'
           assert 'if (speed != this.animSpeed)' in animatable, \
               'la velocidad se fija en cada tick (setAnimationSpeed crea un lambda)'
@@ -405,7 +425,8 @@ jobs:
               lang = json.loads(pathlib.Path(
                   f'relic-hologram/src/main/resources/assets/holocore/lang/{idioma}.json'
               ).read_text(encoding='utf-8'))
-              for mood in ('wounded', 'storm', 'resonant', 'dark', 'rain'):
+              for mood in ('wounded', 'storm', 'resonant', 'dark', 'rain',
+                           'neutral', 'night'):
                   clave = f'message.holocore.state.{mood}'
                   assert clave in lang, f'{idioma} sin {clave}'
 

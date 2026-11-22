@@ -108,9 +108,11 @@ public final class RelicAura {
             drawRing(bufferSource, frame, time, state, glow, flash, fade);
         }
         if (RelicConfig.GLOW_AURA.get() && sparksEnabled()) {
-            drawSparks(bufferSource, frame, time, glow, fade,
-                    RelicAnimatable.forcedMood() == RelicAnimatable.Mood.STORM
-                            || RelicAnimatable.Mood.STORM == mood);
+            // El estado forzado manda: con /relic mood storm las chispas se ponen
+            // azules aunque el cielo este limpio, que es para lo que se fuerza.
+            RelicAnimatable.Mood sparkMood = RelicAnimatable.forcedMood() != null
+                    ? RelicAnimatable.forcedMood() : mood;
+            drawSparks(bufferSource, frame, time, glow, fade, sparkMood);
         }
     }
 
@@ -207,13 +209,19 @@ public final class RelicAura {
      * al reves que en calma.
      */
     private static void drawSparks(MultiBufferSource bufferSource, Frame frame, float time,
-                                   RelicGlowState glow, float fade, boolean storm) {
+                                   RelicGlowState glow, float fade, RelicAnimatable.Mood mood) {
         float amount = fade * (0.55F + 0.45F * glow.aura()) * (1.0F + 0.6F * glow.flashScaled());
         if (amount <= 0.01F) {
             return;
         }
         VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
-        float orbit = time * SPARK_SPEED * (1.0F + 6.0F * Math.abs(glow.spin()));
+        boolean storm = mood == RelicAnimatable.Mood.STORM;
+        // De noche las brasas flotan: la mitad de velocidad, la mitad de densidad
+        // y mas frias. Es lo que distingue "noche despejada" de "no pasa nada"
+        // sin tocar el color del aura ni el del modelo.
+        boolean night = mood == RelicAnimatable.Mood.NIGHT;
+        float orbit = time * SPARK_SPEED * (1.0F + 6.0F * Math.abs(glow.spin()))
+                * (night ? 0.45F : 1.0F);
         // Con tormenta las chispas tiran a azul electrico: el color del estado es
         // casi blanco y sin esto se perderia el "hay truenos" en el aura.
         float redTint = glow.red();
@@ -223,9 +231,18 @@ public final class RelicAura {
             redTint = redTint * 0.55F + 0.35F * 0.45F;
             greenTint = greenTint * 0.55F + 0.85F * 0.45F;
             blueTint = blueTint * 0.55F + 1.00F * 0.45F;
+        } else if (night) {
+            // Palido y frio, como el hielo: menos rojo, el verde y el azul intactos.
+            redTint = redTint * 0.65F + 0.45F * 0.35F;
+            greenTint = greenTint * 0.85F + 0.70F * 0.15F;
+            blueTint = blueTint * 0.95F + 1.00F * 0.05F;
         }
         for (int i = 0; i < SPARK_COUNT; i++) {
             float phase = orbit + i * (TWO_PI / SPARK_COUNT);
+            if (night && (i & 1) == 1) {
+                // En la noche la mitad de las chispas se apagan: menos densidad.
+                continue;
+            }
             float radius = SPARK_RADIUS * (0.72F + 0.28F * sin(phase * 2.0F + i));
             float lift = sin(phase * 3.0F + i * 1.7F) * 0.16F;
             float offset = cos(phase) * radius;

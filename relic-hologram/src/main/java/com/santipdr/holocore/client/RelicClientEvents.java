@@ -272,6 +272,9 @@ public final class RelicClientEvents {
     @SubscribeEvent
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         preview = false;
+        // El estado de brillo forzado con /relic mood tambien se suelta: si no, el
+        // siguiente mundo arrancaba con una tormenta falsa puesta.
+        RelicAnimatable.forceMood(null);
         RelicVisuals.clear();
         ClientRelicStates.clear();
     }

@@ -237,6 +237,27 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.32, séptimo estado y glitch al cambiar de estado.** Sin tocar el GLSL: el
+estado nuevo (`night`) y el glitch del cambio reutilizan lo que ya había.
+
+* **`night`** (cielo encima, de noche, sin lluvia) no introduce color nuevo en el
+shader: el tinte del estado en `RelicGlowState` sale de la paleta del bucle, así que
+la noche se ve como el reposo pero más pálida. Lo que sí cambia son las **chispas**
+de `RelicAura.drawSparks`, que ahora reciben el `Mood` en vez de un booleano de
+tormenta: a 0.45× de velocidad orbital, con una de cada dos apagada y teñidas hacia
+el hielo (rojo ×0.65, verde y azul casi intactos). Menos chispas y más lentas se lee
+como polvo en suspensión, no como chispas de soldadura.
+* **La oscuridad pide cielo tapado.** `Mood.DARK` exigía solo luz de bloque < 4, y a
+cielo abierto de noche la luz de bloque es 0: la reliquia se ponía «en la oscuridad»
+mirando las estrellas. Ahora pide además luz de cielo < 8, que es lo que distingue una
+cueva de un campo abierto. Sin ese corte `night` no se alcanzaba nunca.
+* **Glitch al cambiar de estado.** El bloque que detecta el cambio de `Mood` ahora
+encola `GLITCH` en el controlador `state` además de subir el destello. El destello ya
+alimenta `HoloGlitch` (`min(1, flash × 1.5)`), así que la parte del shader sale gratis:
+es exactamente el mismo camino que el pulso de 1.0.29. Se reutiliza la animación en vez
+de añadir una capa nueva porque los `.json` exportados están bloqueados por CI contra el
+zip del modelo (`Validate assets unchanged`); una animación nueva se hace en Blockbench.
+
 **1.0.30, tinte por estado de brillo.** Uniform `HoloTint` (vec4, blanco por
 defecto) que el renderer rellena según el `Mood`: 1.08 en la oscuridad (el borde se
 marca más, que es donde más se nota), 1.05 en tormenta, 0.62 bajo la lluvia y 0.88–0.92

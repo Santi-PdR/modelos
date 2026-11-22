@@ -1,5 +1,29 @@
 # Historial de cambios
 
+## 1.0.32 — séptimo estado: la noche despejada
+
+* **Estado nuevo `night`**: con cielo encima, de noche y sin lluvia la reliquia se
+  queda pálida y fría, gira a 0.85× y las chispas pasan a **flotar** a media
+  velocidad, con la mitad de densidad y un tono de hielo. La detección usa
+  `Level.isNight()`, que ya devuelve `false` en dimensiones con hora fija (Nether y
+  End), así que allí no aparece nunca.
+* **La oscuridad ahora exige estar encerrado**: antes bastaba con poca luz de bloque,
+  y a cielo abierto de noche (luz de bloque 0) la reliquia se ponía en «oscuridad»
+  aunque estuvieras viendo las estrellas. Ahora pide también menos de luz de cielo 8.
+  Es lo que deja el hueco para `night`; en una cueva o bajo techo no cambia nada.
+* **Al cambiar de estado la reliquia hace un glitch**, no solo un destello: reutiliza
+  la animación y el uniform `HoloGlitch` del pulso. **Como mucho uno cada 6 s**: sin esa
+  espera, caminar por el borde de una cueva o el paso de día a noche encadenaba
+  animaciones de una sola vez y la reliquia parecía tiritar. No se añaden animaciones
+  nuevas a propósito: los `.json` exportados están bloqueados por CI contra el zip del
+  modelo (`Validate assets unchanged`), y una animación nueva se hace en Blockbench,
+  no escribiendo keyframes a ciegas.
+* **`/relic mood` no sobrevive a salir del mundo**: el estado forzado se suelta al
+  desconectar, así que el siguiente mundo arranca en automático.
+* **Dos claves de idioma que faltaban** (`neutral` y `night`): `/relic mood` con la
+  reliquia en calma enseñaba `message.holocore.state.neutral` en crudo. 61 claves por
+  idioma.
+
 ## 1.0.31 — la reliquia flota, se asienta y tiene tecla de pulso
 
 * **Movimiento propio** (`RelicAura.applyAliveMotion`): el conjunto **flota** con un

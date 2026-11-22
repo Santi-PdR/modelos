@@ -76,7 +76,13 @@ public final class RelicAnimatable implements GeoAnimatable {
         /** Poca luz donde esta el portador: la reliquia es su propia luz. */
         DARK,
         /** Cae lluvia (sin tormenta) encima del portador. */
-        RAIN
+        RAIN,
+        /**
+         * Noche despejada: hay cielo (no es el Nether ni el End), es de noche y no
+         * llueve. Antes esto contaba como "oscuridad", pero una reliquia al aire
+         * libre bajo las estrellas no esta encerrada: se queda quieta y palida.
+         */
+        NIGHT
     }
 
     private final UUID wearer;
@@ -124,8 +130,23 @@ public final class RelicAnimatable implements GeoAnimatable {
     private static final float WOUNDED_HEALTH = 0.35F;
     /** Por debajo de esta luz de bloque (0-15) el brillo pasa a "en la oscuridad". */
     private static final int DARK_LIGHT = 4;
+    /**
+     * Y por debajo de esta luz de cielo, tambien: a cielo abierto de noche no hay
+     * luz de bloque pero si cielo, y aquello no es una cueva. Sin este corte, la
+     * noche al aire libre se comia el estado nuevo.
+     */
+    private static final int DARK_SKY = 8;
+
+    /**
+     * Ticks minimos entre dos glitch de cambio de estado. Sin esto, caminar por el
+     * borde de una cueva o el paso de dia a noche encadenaba animaciones de una
+     * sola vez y la reliquia parecia tiritar en vez de reaccionar.
+     */
+    private static final int MOOD_GLITCH_TICKS = 120;
 
     private Mood mood = Mood.NEUTRAL;
+    /** Ultimo tick en el que el cambio de estado encolo su glitch. */
+    private long moodGlitchedAt = Long.MIN_VALUE;
     /**
      * Estado forzado con {@code /relic mood}: sirve para ver tormenta, herido o
      * resonancia sin montar la escena (una tormenta de verdad, dos jugadores...).
@@ -344,6 +365,17 @@ public final class RelicAnimatable implements GeoAnimatable {
             if (nextMood != Mood.NEUTRAL) {
                 boostFlash(0.25F);
             }
+            // El primer cambio estrena el glitch: con el centinela, la resta daria
+            // la vuelta (Long.MIN_VALUE) y el primero no sonaria nunca.
+            if (this.active && (this.moodGlitchedAt == Long.MIN_VALUE
+                    || this.lastLogicTick - this.moodGlitchedAt >= MOOD_GLITCH_TICKS)) {
+                // Glitch de una sola vez: es el mismo lenguaje que el shader (que
+                // abre su glitch con el destello), y no hay que inventar keyframes:
+                // los .json exportados estan bloqueados por CI contra el zip del
+                // modelo, y una animacion nueva se hace en Blockbench, no a ciegas.
+                request(RelicAnimations.GLITCH);
+                this.moodGlitchedAt = this.lastLogicTick;
+            }
             this.mood = nextMood;
         }
 
@@ -430,6 +462,7 @@ public final class RelicAnimatable implements GeoAnimatable {
             case STORM -> 1.32D;
             case DARK -> 1.06D;
             case RAIN -> 0.92D;
+            case NIGHT -> 0.85D;
             case RESONANT -> 1.18D;
             case NEUTRAL -> 1.0D;
         };
@@ -450,11 +483,16 @@ public final class RelicAnimatable implements GeoAnimatable {
         if (player.level().isThundering()) {
             return Mood.STORM;
         }
-        if (player.level().getBrightness(LightLayer.BLOCK, player.blockPosition()) < DARK_LIGHT) {
+        int bloque = player.level().getBrightness(LightLayer.BLOCK, player.blockPosition());
+        if (bloque < DARK_LIGHT
+                && player.level().getBrightness(LightLayer.SKY, player.blockPosition()) < DARK_SKY) {
             return Mood.DARK;
         }
         if (player.level().isRainingAt(player.blockPosition())) {
             return Mood.RAIN;
+        }
+        if (player.level().isNight()) {
+            return Mood.NIGHT;
         }
         return this.resonanceNear ? Mood.RESONANT : Mood.NEUTRAL;
     }
