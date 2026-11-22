@@ -4,6 +4,8 @@ import com.capatest.CapaTestMod;
 import com.capatest.compat.CuriosCompat;
 import com.capatest.item.CapaDeteriorerItem;
 import com.capatest.item.CapeSparkPath;
+import com.capatest.item.CapeSparkFrame;
+import com.capatest.item.CapeState;
 import com.capatest.particle.CapaParticles;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 import com.mojang.blaze3d.pipeline.TextureTarget;
@@ -183,6 +185,7 @@ public final class CapeFxSmoke {
     private static CapePlacementProbe.Draw placementDraw;
     private static PlayerModel<?> placementModel;
     private static CapeWalkProbe.Route walkRoute;
+    private static CapeSparkCrouchProbe.Route crouchSparks;
     private static CapeJumpProbe jumpRoute;
     private static CapeClimbProbe climbRoute;
     private static CapeCombinedProbe combinedRoute;
@@ -192,6 +195,7 @@ public final class CapeFxSmoke {
     private static CapeWaterProbe waterRoute;
     private static ItemStack rendered;
     private static Matrix4f playerPose, armorPose;
+    private static Vec3 playerRenderOffset;
     private static Entity stillPlayer;
     private static int liveAge;
     private static int stableFrames;
@@ -442,7 +446,16 @@ public final class CapeFxSmoke {
         check(!CapeSparkPath.clearBirth(level, wearer, high), "high birth skipped the top of the wall");
         wearer.setPos(wearer.getX(), wearer.getY(), wearer.getZ() + 1);
         check(CapeSparkPath.clearBirth(level, wearer, high.add(0, 0, 1)), "high birth in open air was rejected");
-        note("nacimiento libre y rechazo de panel o muro, también por encima de la hitbox");
+        // The bent hem is farther back than the old vertical estimate. A
+        // wall there must still block the projected source, not teleport it.
+        wearer.setPos(wall.getX() + .5, wall.getY() - .1, wall.getZ() + 1.82);
+        var low = CapeState.SNEAK.spark(2, 0, true, .5, .5, .5);
+        var offset = CapeSparkFrame.crouch(0).birth(low);
+        Vec3 bent = wearer.position().add(offset.x(), offset.y(), offset.z());
+        check(!CapeSparkPath.clearBirth(level, wearer, bent), "crouched hem birth entered a wall");
+        wearer.setPos(wearer.getX() + 1, wearer.getY(), wearer.getZ());
+        check(CapeSparkPath.clearBirth(level, wearer, bent.add(1, 0, 0)), "crouched hem birth rejected in open air");
+        note("nacimiento libre y rechazo de panel o muro, también agachado o por encima de la hitbox");
         return panel;
     }
 
@@ -522,6 +535,7 @@ public final class CapeFxSmoke {
                 ? new CapeCombinedProbe(CapeCombinedProbe.runway(pane), next.reverse() ? -1 : 1, NAPE_RETURN) : null;
         if (next.placement() || next.audit() || next.jump() || next.combined()) game.options.fov().set(42);
         walkRoute = next.walk() ? new CapeWalkProbe.Route(next.studyQuietCloth()) : null;
+        crouchSparks = next.studyQuietCloth() ? new CapeSparkCrouchProbe.Route() : null;
         jumpRoute = next.jump() ? new CapeJumpProbe(CapeJumpProbe.deck(pane)) : null;
         climbRoute = next.climb() ? new CapeClimbProbe(CapeClimbProbe.column(pane)) : null;
         if (next.climb()) game.options.fov().set(50);
@@ -662,8 +676,11 @@ public final class CapeFxSmoke {
     }
 
     private static void beforePlayer(RenderPlayerEvent.Pre event) {
-        if (scene != null && event.getEntity() == Minecraft.getInstance().player) {
+        var player = Minecraft.getInstance().player;
+        if (scene != null && player != null && event.getEntity() == player) {
             playerPose = new Matrix4f(event.getPoseStack().last().pose());
+            if (crouchSparks != null)
+                playerRenderOffset = event.getRenderer().getRenderOffset(player, event.getPartialTick());
             if (scene.placement() || scene.audit() || scene.jump() || scene.combined()) placementModel = event.getRenderer().getModel();
             if (scene.placement() && placementRoute.standing() && !captured && pending == null && stillPlayer == null) {
                 // Keep the sleeves registered between with/without plates.
@@ -696,6 +713,8 @@ public final class CapeFxSmoke {
         combinedFit = scene.combined() && combinedRoute.measureFit(event.getEntity().tickCount);
         if (scene.audit() || jumpFit || combinedFit) CapePlacementProbe.arm(renderer, false, false, false, true);
         if (scene.measureMotion()) CapeWalkProbe.arm(renderer);
+        if (crouchSparks != null && !captured && pending == null)
+            crouchSparks.arm(renderer, Minecraft.getInstance().player, playerPose, playerRenderOffset);
         if (scene.transfer() && !captured) transferRoute.arm(renderer);
         if (scene.omitted != null) combinedRoute.omit(renderer, scene.omitted);
     }
@@ -739,6 +758,8 @@ public final class CapeFxSmoke {
             jumpFit = combinedFit = false;
             rendered = ItemStack.EMPTY;
             playerPose = armorPose = null;
+            playerRenderOffset = null;
+            if (crouchSparks != null) crouchSparks.beginFrame();
             if (transferRoute != null) transferRoute.beginFrame();
             var player = Minecraft.getInstance().player;
             if (player != null && placementRoute != null) placementRoute.aim(player);
@@ -829,7 +850,10 @@ public final class CapeFxSmoke {
                 boolean slim = scene == Scene.WALK_ALEX_CHEST || scene == Scene.WALK_ALEX_BACK;
                 check(player.getModelName().equals(slim ? "slim" : "default")
                         && player.getSkinTextureLocation().equals(slim ? ALEX : STEVE), "wrong walk skin");
+                if (crouchSparks != null) crouchSparks.record(player, walkDraw);
                 captured = walkRoute.capture(game, framePartialTick, walkDraw, shots(game), scene.file);
+                if (captured && crouchSparks != null)
+                    crouchSparks.save(shots(game), scene.usesBack() ? "curios" : "pecho");
                 return;
             }
             if (scene.combined()) {

@@ -826,14 +826,15 @@ jobs:
           OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_cape_settle.py "$CLASSES/settle.tsv"
           java -cp "$CLASSES" com.capatest.item.CapeSparkFrameTest
           java -cp "$CLASSES" com.capatest.item.CapeSparkFrameTest --samples > "$CLASSES/spark-frames.tsv"
+          java -cp "$CLASSES" com.capatest.item.CapeSparkFrameTest --crouch-samples > "$CLASSES/spark-crouch.tsv"
+          if grep -qx 'mod_version=1.67.36' gradle.properties; then
+            (cd entregables/v1.67.35 && sha256sum -c ../../docs/releases/v1.67.35/JAR.sha256)
+            java -cp "entregables/v1.67.35/capatest-1.67.35.jar:$CLASSES" com.capatest.item.CapeSparkFrameTest --samples > "$CLASSES/spark-frames-35.tsv"
+            cmp "$CLASSES/spark-frames-35.tsv" "$CLASSES/spark-frames.tsv"
+          fi
           OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_cape_spark_fit.py "$CLASSES/spark-frames.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeEmberTest
           java -cp "$CLASSES" com.capatest.client.CapeEmberTest --samples > "$CLASSES/embers.tsv"
-          if grep -qx 'mod_version=1.67.35' gradle.properties; then
-            (cd entregables/v1.67.34 && sha256sum -c ../../docs/releases/v1.67.34/JAR.sha256)
-            java -cp "entregables/v1.67.34/capatest-1.67.34.jar:$CLASSES" com.capatest.client.CapeEmberTest --samples > "$CLASSES/embers-34.tsv"
-            cmp "$CLASSES/embers-34.tsv" "$CLASSES/embers.tsv"
-          fi
           java -cp "$CLASSES" com.capatest.client.CapeEmberTest --blend-samples > "$CLASSES/ember-blends.tsv"
           OPENBLAS_NUM_THREADS=1 python3 tools/verify_ember_sprites.py "$CLASSES/ember-blends.tsv" "$CLASSES/saltos-rgb-brasas.tsv"
           java -cp "$CLASSES" com.capatest.item.CapeStateTest
@@ -851,7 +852,7 @@ jobs:
           OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/check_cape_fit.py "$CLASSES/fit.tsv" "$CLASSES/shoulders.tsv" "$CLASSES/backing.tsv" "$CLASSES/seating.tsv" "$CLASSES/plates.tsv"
           java -cp "$CLASSES" com.capatest.item.CapeStateTest --spark-samples > "$CLASSES/sparks.tsv"
           PYTHONPATH=tools python3 -c 'import cape_aura as a,json; print(json.dumps(a.profile()))' | \
-            node tools/check_viewer_embers.js "$CLASSES/sparks.tsv" "$CLASSES/embers.tsv" "$CLASSES/ember-blends.tsv"
+            node tools/check_viewer_embers.js "$CLASSES/sparks.tsv" "$CLASSES/embers.tsv" "$CLASSES/ember-blends.tsv" "$CLASSES/spark-crouch.tsv"
 
       - name: Build
         id: build
@@ -1054,7 +1055,7 @@ jobs:
         run: |
           set -euo pipefail
           args=()
-          if grep -Eq '^mod_version=1\.67\.(29|30|31|32|33|34|35)$' gradle.properties; then
+          if grep -Eq '^mod_version=1\.67\.(29|30|31|32|33|34|35|36)$' gradle.properties; then
             args=(--reference docs/releases/v1.67.28/maniobra/maniobra-forge.tsv)
           fi
           if [[ -f build/fx-smoke-run/fx-shots/giro-inverso-pecho.tsv ]]; then args+=(--extended); fi
@@ -1253,6 +1254,15 @@ jobs:
             esac
           done
 
+      - name: Medir el nacimiento de las brasas al agacharse en Forge
+        id: verify-crouch-sparks
+        if: ${{ steps.fx-smoke.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_crouch_sparks.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
+            printf '::notice title=Brasas al agacharse::%s\n' "$line"
+          done
+
       - name: Revisar las posturas de Alex y medir los cruces de malla
         id: verify-postures
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
@@ -1315,24 +1325,24 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Adjuntar el JAR de prueba v1.67.35 después de ambas pruebas Forge
+      - name: Adjuntar el JAR de prueba v1.67.36 después de ambas pruebas Forge
         if: >-
           success() && github.ref_name == 'arena/5a9fa51b-modelos' &&
-          contains(github.event.head_commit.message, '[adjuntar-v16735]') &&
+          contains(github.event.head_commit.message, '[adjuntar-v16736]') &&
           steps.verify-combined.outcome == 'success' && steps.verify-crown.outcome == 'success' &&
           steps.verify-return.outcome == 'success' &&
           steps.fx-smoke.outcome == 'success' &&
           steps.verify-climb.outcome == 'success' && steps.verify-jumps.outcome == 'success' &&
           steps.verify-placement.outcome == 'success' && steps.verify-walk.outcome == 'success' &&
-          steps.verify-postures.outcome == 'success' && steps.verify-swim.outcome == 'success'
+          steps.verify-crouch-sparks.outcome == 'success' && steps.verify-postures.outcome == 'success' && steps.verify-swim.outcome == 'success'
         run: |
           set -euo pipefail
-          grep -qx 'mod_version=1.67.35' gradle.properties
-          test ! -e entregables/v1.67.35/capatest-1.67.35.jar
-          jar=capatest-1.67.35.jar
+          grep -qx 'mod_version=1.67.36' gradle.properties
+          test ! -e entregables/v1.67.36/capatest-1.67.36.jar
+          jar=capatest-1.67.36.jar
           (cd build/libs && sha256sum -c SHA256SUMS.txt)
-          proof=docs/releases/v1.67.35
-          out="entregables/v1.67.35/$jar"
+          proof=docs/releases/v1.67.36
+          out="entregables/v1.67.36/$jar"
           install -m 0644 -D "build/libs/$jar" "$out"
           install -m 0644 -D build/libs/SHA256SUMS.txt "$proof/JAR.sha256"
           mkdir -p "$proof/maniobra"
@@ -1342,13 +1352,13 @@ jobs:
           mkdir -p "$proof/maniobra/retorno"
           install -m 0644 "$shots"/maniobra-retorno/{retorno.tsv,retorno-malla.tsv,retorno-pecho.jpg,retorno-curios.jpg} "$proof/maniobra/retorno/"
           install -m 0644 "$shots"/{continuidad-forge,saltos-forge,costuras-saltos-forge,escalera-forge,nado-forge,halo-continuidad-forge,traspaso-forge,pausa-render-forge,secuencia-brasa-forge,revision-alex-forge,holgura-brazos-forge}.tsv "$proof/"
-          install -m 0644 "$RUNNER_TEMP/cape-state-test/saltos-rgb-brasas.tsv" "$proof/"
-          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16735_colocacion_forge.jpg
+          install -m 0644 "$shots"/nacimiento-agachado-{pecho,curios,resumen}.tsv "$proof/"
+          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16736_colocacion_forge.jpg
           printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$proof/compilacion.txt"
-          git add "$proof" docs/capa_v16735_colocacion_forge.jpg
+          git add "$proof" docs/capa_v16736_colocacion_forge.jpg
           git add -f "$out"
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m 'Adjuntar v1.67.35 probada en Forge, sólo para test-1 [skip ci]'
+            commit -m 'Adjuntar v1.67.36 probada en Forge, sólo para test-1 [skip ci]'
           git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
 
       # [publicar] prepara una release verificable sin escribir a otras

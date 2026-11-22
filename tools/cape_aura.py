@@ -30,6 +30,11 @@ def profile():
         return int(re.search(rf'\b{name}\s*=\s*(\d+)\s*;', runtime)[1])
     cap = constant('MAX_SPARKS_PER_TICK')
     assert len(modes) == 8 and all(len(values)==4 and 0<values[0]<=cap for values in modes.values())
-    return dict(origins=origins, spread=spread, modes=modes,
+    frame = (ITEM/'CapeSparkFrame.java').read_text()
+    def scalar(name):
+        return float(re.search(rf'\b{name}\s*=\s*([.\d]+)[DF]?\s*;', frame)[1])
+    crouch = dict(pitch=scalar('CROUCH_PITCH'), pivot=scalar('BODY_PIVOT'), bodyY=scalar('CROUCH_BODY_Y'),
+                  scale=scalar('PLAYER_SCALE'), renderDrop=scalar('CROUCH_RENDER_DROP'))
+    return dict(origins=origins, spread=spread, modes=modes, crouch=crouch,
                 pulseTicks=constant('SPARK_INTERVAL_TICKS'),
                 ember=dict(cape_ember_sprites.profile(), images=[name+'.png' for name in cape_ember_sprites.names()]))

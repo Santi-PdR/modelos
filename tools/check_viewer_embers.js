@@ -8,8 +8,9 @@ const assert = require('node:assert/strict');
 const aura = JSON.parse(fs.readFileSync(0, 'utf8'));
 const rows = file => file ? fs.readFileSync(file, 'utf8').trim().split('\n') : [];
 const samples = rows(process.argv[2]), looks = rows(process.argv[3]), blends = rows(process.argv[4]);
+const crouch = rows(process.argv[5]);
 const target = () => ({ getContext: () => ({}), addEventListener() {} });
-const context = vm.createContext({ document: { getElementById: target }, aura, samples, looks, blends, assert });
+const context = vm.createContext({ document: { getElementById: target }, aura, samples, looks, blends, crouch, assert });
 const source = fs.readFileSync(path.join(__dirname, '../preview/app.js'), 'utf8').split('\nboot().catch')[0];
 vm.runInContext(`${source}
 {
@@ -32,6 +33,14 @@ vm.runInContext(`${source}
     const [,,,life,p,,index] = line.trim().split('\\t').map(Number);
     assert.equal(emberSpriteIndex(p,life,AURA.ember),index,line);
   }
+  for (const line of crouch) {
+    const [side,height,back,...expected] = line.trim().split('\\t').map(Number);
+    const [x,y,z]=crouchSparkPoint([side,height,back],AURA.crouch);
+    const {scale,renderDrop}=AURA.crouch;
+    const feet=(Math.fround(1.501)-1.5)*scale-renderDrop;
+    const actual=[-x*scale,y*scale+feet,z*scale]; // yaw 180°, same axes as the GEO
+    assert(actual.every((v,i)=>Math.abs(v-expected[i])<2e-15),line);
+  }
   // One half of the billboard is behind the wearer and one half is visible.
   const side=24, image=new Uint8ClampedArray(side*side*4).fill(32);
   const depth=new Float32Array(side*side).fill(-Infinity);
@@ -48,4 +57,4 @@ vm.runInContext(`${source}
   assert.equal(image[(12*side+8)*4],144,'no se respetó el corte de alfa vanilla al apagarse');
 }
 `, context, { filename: 'preview/app.js' });
-console.log(`Chispas visor: ${samples.length} posiciones, ${looks.length} apariencias y ${blends.length} índices contrastados con Java; profundidad y corte alfa intactos.`);
+console.log(`Chispas visor: ${samples.length} orígenes, ${looks.length} apariencias, ${blends.length} índices y ${crouch.length} nacimientos agachados contrastados con Java; profundidad y corte alfa intactos.`);

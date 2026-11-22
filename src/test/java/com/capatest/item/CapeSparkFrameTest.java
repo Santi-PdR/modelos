@@ -10,10 +10,15 @@ public final class CapeSparkFrameTest {
             samples();
             return;
         }
+        if (args.length == 1 && args[0].equals("--crouch-samples")) {
+            crouchSamples();
+            return;
+        }
         upright();
+        crouch();
         glide();
         swim();
-        System.out.println("CapeSparkFrame: anclaje vertical intacto, inclinación, giro, nado y salida del agua verificados");
+        System.out.println("CapeSparkFrame: anclaje vertical intacto, pivote agachado, giro, nado y salida del agua verificados");
     }
 
     private static void upright() {
@@ -33,6 +38,38 @@ public final class CapeSparkFrameTest {
                     }
                 }
                 expect(f.impulse(-.029, .017, .011), baseline(yaw, -.029, .017, .011));
+            }
+        }
+    }
+
+    private static void crouch() {
+        double pivot = 1.5, feet = FEET - .125, lowered = pivot - 3.2F / 16.0;
+        for (double yaw : new double[]{0, 45, 90, -90, 180, 779}) {
+            var f = CapeSparkFrame.crouch(yaw);
+            if (f.posed()) throw new AssertionError("the crouched torso disabled collar births");
+            // Pivot, one block down along the torso, and one block behind it.
+            expect(f.point(0, pivot, 0), baseline(yaw, 0, lowered * SCALE + feet, 0));
+            expect(f.point(0, pivot - 1, 0), baseline(yaw, 0,
+                    (lowered - Math.cos(.5)) * SCALE + feet, Math.sin(.5) * SCALE));
+            expect(f.point(.2, pivot, 1), baseline(yaw, .2 * SCALE,
+                    (lowered + Math.sin(.5)) * SCALE + feet, Math.cos(.5) * SCALE));
+            expect(f.impulse(-.029, .017, .011), baseline(yaw, -.029, .017, .011));
+        }
+    }
+
+    private static void crouchSamples() {
+        var frame = CapeSparkFrame.crouch(180);
+        // The three permitted grounded SNEAK origins, including all jitter directions.
+        for (int pulse : new int[]{0, 2, 6}) {
+            for (double a : new double[]{0, .5, 1}) {
+                for (double b : new double[]{0, .5, 1}) {
+                    for (double c : new double[]{0, .5, 1}) {
+                        var s = CapeState.SNEAK.spark(pulse, 0, true, a, b, c);
+                        var p = frame.birth(s);
+                        System.out.println(s.side() + "\t" + s.height() + "\t" + s.depth() + "\t"
+                                + p.x() + "\t" + p.y() + "\t" + p.z());
+                    }
+                }
             }
         }
     }

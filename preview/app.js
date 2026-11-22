@@ -813,6 +813,12 @@ function emberSpriteIndex(progress, life, {steps, halfTicks, changes}) {
   return steps*pair+Math.round(steps*(t*t*(3-2*t)));
 }
 
+function crouchSparkPoint([side,height,back], {pitch,pivot,bodyY}) {
+  // Body space, before the game-only scale and crouched render offset.
+  const y=height-pivot, c=Math.cos(pitch), s=Math.sin(pitch);
+  return [side,pivot-Math.fround(bodyY)/16+y*c+back*s,back*c-y*s];
+}
+
 function drawRuntimeParticles(seconds, size, stance, pix, depth) {
   const [count, outward, trail, rise]=AURA.modes[motionState];
   const sneak=motionState==='animation.sneak';
@@ -826,7 +832,8 @@ function drawRuntimeParticles(seconds, size, stance, pix, depth) {
     for (let i=0;i<count;i++) {
       const noise=[0,1,2].map(k=>random(shot,i,k));
       const {point,collar}=sparkOrigin(motionState,sneak ? shot*2 : shot,i,grounded,noise);
-      const [x0,y0,z0]=point;
+      const [side,y0,z0]=stance ? crouchSparkPoint(point,AURA.crouch) : point;
+      const x0=-side; // GEO X, with back on positive Z (same as body yaw 180° in-game)
       const dx=Math.sign(x0)*outward*(.75+.35*noise[0]);
       const dz=collar ? .005 : trail*(.75+.35*noise[2]);
       const streak=Math.min(1,Math.hypot(dx,dz)/.035);
@@ -837,7 +844,7 @@ function drawRuntimeParticles(seconds, size, stance, pix, depth) {
       if (look.alpha<.1) continue;
       const fly=(1-Math.pow(.94,tick))/(1-.94);
       const clamp=Math.min(1,.04/Math.max(1e-9,Math.hypot(dx,dz)));
-      const pos=apply(lastView,[16*(x0+fly*dx*clamp),16*(y0*(stance ? 1.5/1.8 : 1)+fly*rise),16*(z0+fly*dz*clamp)]);
+      const pos=apply(lastView,[16*(x0+fly*dx*clamp),16*(y0+fly*rise),16*(z0+fly*dz*clamp)]);
       const x=size/2+(pos[0]-lastCx)*lastScale,y=size/2-(pos[1]-lastCy)*lastScale;
       const quad=(.1+.1*noise[0])*(.28+.10*streak+.15*noise[2]);
       const width=32*quad*look.scale*lastScale;

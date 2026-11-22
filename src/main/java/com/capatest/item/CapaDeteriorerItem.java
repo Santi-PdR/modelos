@@ -197,6 +197,7 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
                         || player.isInFluidType((type, height) -> player.canSwimInFluidType(type));
                 return CapeSparkFrame.swim(yaw, player.getXRot(), swim, immersed, player.isVisuallySwimming());
             }
+            if (player.isCrouching()) return CapeSparkFrame.crouch(yaw);
         }
         return CapeSparkFrame.upright(yaw, player.getBbHeight());
     }

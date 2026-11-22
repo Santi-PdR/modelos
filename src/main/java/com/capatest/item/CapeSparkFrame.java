@@ -7,6 +7,13 @@ public final class CapeSparkFrame {
     private static final double PLAYER_SCALE = 0.9375D;
     // LivingEntityRenderer's -1.501 plus GeckoLib's 24/16 armor origin, with Y flipped.
     private static final double FEET_Y = (1.501F - 1.5F) * PLAYER_SCALE;
+    // Vanilla HumanoidModel crouches around body (24 model units up), then
+    // PlayerRenderer lowers the entire draw by another eighth of a block.
+    private static final double CROUCH_PITCH = .5;
+    private static final double BODY_PIVOT = 1.5;
+    private static final float CROUCH_BODY_Y = 3.2F; // model units, downward
+    private static final double CROUCH_RENDER_DROP = .125;
+    private static final double CROUCH_COS = Math.cos(CROUCH_PITCH), CROUCH_SIN = Math.sin(CROUCH_PITCH);
     // Measured against the lower ribbons of the authored AIR/SWIM clips. The
     // server does not know the animated bones or a client's cloth response.
     private static final double GLIDE_HEM_UP = .77D;
@@ -16,10 +23,10 @@ public final class CapeSparkFrame {
 
     private final double yawCos, yawSin, pitchCos, pitchSin, turnCos, turnSin;
     private final double heightScale, hemUp, hemBack;
-    private final boolean posed, swimShift;
+    private final boolean posed, swimShift, crouching;
 
     private CapeSparkFrame(double yaw, double pitch, double turn, double heightScale,
-                           boolean posed, boolean swimShift, double hemUp, double hemBack) {
+                           boolean posed, boolean swimShift, boolean crouching, double hemUp, double hemBack) {
         double radians = Math.toRadians(yaw);
         yawCos = Math.cos(radians);
         yawSin = Math.sin(radians);
@@ -31,13 +38,20 @@ public final class CapeSparkFrame {
         this.heightScale = heightScale;
         this.posed = posed;
         this.swimShift = swimShift;
+        this.crouching = crouching;
         this.hemUp = hemUp;
         this.hemBack = hemBack;
     }
 
     public static CapeSparkFrame upright(double yaw, double hitboxHeight) {
         return new CapeSparkFrame(yaw, 0, 0, Math.max(.36D, Math.min(1, hitboxHeight / 1.80D)),
-                false, false, 0, 0);
+                false, false, false, 0, 0);
+    }
+
+    public static CapeSparkFrame crouch(double yaw) {
+        // Still the upright family for collar eligibility. Only the birth
+        // point follows the bent torso; impulses remain in world-up axes.
+        return new CapeSparkFrame(yaw, 0, 0, PLAYER_SCALE, false, false, true, 0, 0);
     }
 
     public static CapeSparkFrame glide(double yaw, double viewPitch, double flightTicks,
@@ -52,7 +66,7 @@ public final class CapeSparkFrame {
         }
         double cloth = Math.min(1, flightTicks / CapePlayback.FIRST_BLEND);
         return new CapeSparkFrame(yaw, tilt * (-90 - viewPitch), turn, PLAYER_SCALE,
-                true, false, cloth * GLIDE_HEM_UP, cloth * GLIDE_HEM_BACK);
+                true, false, false, cloth * GLIDE_HEM_UP, cloth * GLIDE_HEM_BACK);
     }
 
     /** Use the visual blend, not just isInWater; wading with no blend is upright. */
@@ -60,9 +74,10 @@ public final class CapeSparkFrame {
                                       boolean immersed, boolean visuallySwimming) {
         double cloth = immersed ? amount : 0;
         return new CapeSparkFrame(yaw, amount * (immersed ? -90 - viewPitch : -90), 0, PLAYER_SCALE,
-                true, visuallySwimming, cloth * SWIM_HEM_UP, cloth * SWIM_HEM_BACK);
+                true, visuallySwimming, false, cloth * SWIM_HEM_UP, cloth * SWIM_HEM_BACK);
     }
 
+    /** True only for the root rotations of glide or swim, not a crouched torso. */
     public boolean posed() { return posed; }
 
     public Offset birth(CapeState.Spark spark) {
@@ -71,6 +86,12 @@ public final class CapeSparkFrame {
 
     /** Project a virtual point on the relaxed rig, in blocks and with the legacy side sign. */
     public Offset point(double side, double height, double back) {
+        if (crouching) {
+            double y = height - BODY_PIVOT;
+            double up = BODY_PIVOT - CROUCH_BODY_Y / 16.0 + y * CROUCH_COS + back * CROUCH_SIN;
+            double depth = back * CROUCH_COS - y * CROUCH_SIN;
+            return yaw(side * PLAYER_SCALE, up * PLAYER_SCALE + FEET_Y - CROUCH_RENDER_DROP, depth * PLAYER_SCALE);
+        }
         if (!posed) return yaw(side, height * heightScale, back);
 
         // Ry(180-bodyYaw) · Rx(pitch) · Ry(turn) · T(swim) · S(player).
