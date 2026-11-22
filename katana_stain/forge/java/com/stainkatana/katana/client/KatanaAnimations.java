@@ -108,9 +108,9 @@ public final class KatanaAnimations {
                 // The animation's free hand is leftArm before the outer mirror
                 // modifier swaps it for left-handed players.
                 boolean free = part.equals("leftArm");
-                // The mirrored world-model pass is not a simple screen-space
-                // reflection, so both handedness settings need separate framing.
-                boolean leftHanded = player.getMainArm() == HumanoidArm.LEFT;
+                // This adjustment lives inside the outer MirrorModifier. Its
+                // offsets must be expressed in the original right-handed clip
+                // coordinates; the modifier swaps arms and negates X for us.
                 // The offset is for the contact phase, not the whole gesture.
                 // Ease it back out before recovery so the free arm does not
                 // remain displaced after it leaves the blade.
@@ -118,12 +118,9 @@ public final class KatanaAnimations {
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                         dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
                         new dev.kosmx.playerAnim.core.util.Vec3f(
-                                (leftHanded ? 16 : -8) + contact * ((leftHanded ? -8 : 4)
-                                        + KatanaClientConfig.BLOOD_HAND_X.get().floatValue()),
-                                -3 + contact * ((leftHanded ? -12 : -8)
-                                        + KatanaClientConfig.BLOOD_HAND_Y.get().floatValue()),
-                                -16 + contact * ((leftHanded ? -3 : 0)
-                                        + KatanaClientConfig.BLOOD_HAND_Z.get().floatValue()))));
+                                -8 + contact * (4 + KatanaClientConfig.BLOOD_HAND_X.get().floatValue()),
+                                -3 + contact * (-8 + KatanaClientConfig.BLOOD_HAND_Y.get().floatValue()),
+                                -16 + contact * KatanaClientConfig.BLOOD_HAND_Z.get().floatValue())));
             }) {
                 @Override public dev.kosmx.playerAnim.core.util.Vec3f get3DTransform(
                         String part, dev.kosmx.playerAnim.api.TransformType type, float tickDelta,
