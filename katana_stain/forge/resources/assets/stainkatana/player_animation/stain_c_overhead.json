@@ -279,58 +279,6 @@
               "easing": "linear"
             }
           }
-        },
-        "rightItem": {
-          "rotation": {
-            "0.0000": {
-              "vector": [
-                0,
-                0,
-                0
-              ],
-              "easing": "linear"
-            },
-            "0.1750": {
-              "vector": [
-                0,
-                0,
-                15
-              ],
-              "easing": "linear"
-            },
-            "0.3500": {
-              "vector": [
-                0,
-                0,
-                -55
-              ],
-              "easing": "linear"
-            },
-            "0.4375": {
-              "vector": [
-                0,
-                0,
-                -75
-              ],
-              "easing": "linear"
-            },
-            "0.6125": {
-              "vector": [
-                0,
-                0,
-                -30
-              ],
-              "easing": "linear"
-            },
-            "0.8750": {
-              "vector": [
-                0,
-                0,
-                0
-              ],
-              "easing": "linear"
-            }
-          }
         }
       }
     }
