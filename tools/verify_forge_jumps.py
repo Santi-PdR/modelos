@@ -164,6 +164,10 @@ def fit(root, slot, data, spans, rig, source):
     fixed = rig.rigid & ~np.array([hood_moves(name) or flex_plates and name.startswith('v18_pad_') for name in rig.names])
     min_fit = np.full(3, np.inf)
     leg_hit, arm_hit, drift = 0., 0., 0.
+    leg_detail = None
+    cloth_indices = np.flatnonzero(rig.cloth)
+    cloth_names = np.asarray(rig.names)[cloth_indices]
+    limb_names = ('left_arm', 'right_arm', 'left_leg', 'right_leg')
     first = None
     for tick, group in boxes.items():
         label = (slot, tick)
@@ -178,10 +182,19 @@ def fit(root, slot, data, spans, rig, source):
             first = static[fixed]
         drift = max(drift, np.linalg.norm(static[fixed] - first, axis=2).max())
         torso = np.array(group['body'])
-        limbs = np.array([group[name][0] for name in ('left_arm', 'right_arm', 'left_leg', 'right_leg')])
+        limbs = np.array([group[name][0] for name in limb_names])
         hit = contacts(live[None, rig.cloth], limbs[None])[0]
         arm_hit = max(arm_hit, -hit[:2].min())
-        leg_hit = max(leg_hit, -hit[2:].min())
+        leg_contacts = hit[2:]
+        worst = np.unravel_index(int(np.argmin(leg_contacts)), leg_contacts.shape)
+        current_leg_hit = max(0., -float(leg_contacts[worst]))
+        if current_leg_hit > leg_hit:
+            leg_hit = current_leg_hit
+            limb_index, cloth_index = worst
+            garment_index = int(cloth_indices[cloth_index])
+            leg_detail = (int(tick), limb_names[limb_index + 2],
+                          f'{cloth_names[cloth_index]}[{garment_index}]',
+                          float(leg_contacts[worst]))
         min_fit = np.minimum(min_fit, [*rig.joins(live), lap(live[roots], torso)])
     assert (min_fit > [.038, .025, .018]).all() and drift < .006, (slot, 'deriva o costura en salto', min_fit, drift)
     # Keep the measured row even when leg contact exceeds the gate. The main
@@ -190,7 +203,7 @@ def fit(root, slot, data, spans, rig, source):
     print(f'{slot}: {len(boxes)} poses de vuelo y suelo; costura/raíz/apoyo {min_fit[0]:.3f}/{min_fit[1]:.3f}/{min_fit[2]:.3f}u; '
           f'deriva {drift:.6f}u; cruces máximos en brazos/piernas {arm_hit:.4f}/{leg_hit:.4f}u.', flush=True)
     row = [slot, len(boxes), *(f'{v:.6f}' for v in (*min_fit, drift, arm_hit, leg_hit))]
-    return row, leg_hit
+    return row, leg_hit, leg_detail
 
 
 def landing_geometry(root, slot, data, spans):
@@ -346,9 +359,9 @@ if __name__ == '__main__':
         data, spans, result = report(args.shots, slot)
         verdict(data, spans, result, before, slot)
         summary[version, slot] = result
-        fit_row, leg_hit = fit(args.shots, slot, data, spans, rig, source)
+        fit_row, leg_hit, leg_detail = fit(args.shots, slot, data, spans, rig, source)
         fit_rows.append(fit_row)
-        leg_hits.append((slot, leg_hit))
+        leg_hits.append((slot, leg_hit, leg_detail))
         landing_geometry(args.shots, slot, data, spans)
         if args.baseline_shots:
             curves[slot] = ((ref, old_events[0]), (data, spans[0]))
@@ -356,6 +369,7 @@ if __name__ == '__main__':
     motion_gallery(args.shots)
     if args.baseline_shots:
         gallery(args.shots, args.baseline_shots, curves, version)
-    failures = [(slot, hit) for slot, hit in leg_hits if hit >= .05]
+    failures = [(slot, round(hit, 6), detail) for slot, hit, detail in leg_hits if hit >= .05]
     if failures:
-        raise AssertionError(('el nuevo recorrido del paño alcanza las piernas; máximo por ranura (u)', failures))
+        raise AssertionError(('el nuevo recorrido del paño alcanza las piernas; máximo por ranura '
+                              '(u, tick, pierna, cubo de manto y separación firmada)', failures))
