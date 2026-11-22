@@ -7,9 +7,13 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [JAR anterior v1.67.12](https://github.com/Santi-PdR/modelos/releases/download/v1.67.12/capatest-1.67.12.jar)
 · [JAR anterior v1.67.11](https://github.com/Santi-PdR/modelos/releases/download/v1.67.11/capatest-1.67.11.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench v1.67.41](docs/CAPA_v1.67.41.bbmodel)
+· [Proyecto Blockbench v1.67.42](docs/CAPA_v1.67.42.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+
+### v1.67.42 — prototipo de aterrizaje (en validación)
+
+Esta revisión mide una respuesta breve del dobladillo tras un contacto seco. **Aún no hay JAR .42 verificado ni instalador**; v1.67.41 sigue siendo el build de prueba disponible. La versión pública v1.67.13 no cambia.
 
 ### v1.67.41 — balanceo de la cadena equipada
 
