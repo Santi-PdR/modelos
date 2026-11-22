@@ -67,7 +67,10 @@ final class CapeJumpProbe {
     boolean measureFit(int tick) {
         int t = tick - start;
         if (start < 0 || fitTick == tick || (t & 1) != 0) return false;
-        return t >= JUMP - 2 && t <= JUMP + 36 || t >= RUN_JUMP - 4 && t <= RUN_JUMP + 36
+        // The standing-jump capture must not include sprint startup at t=54.
+        // The verifier caps valid flight at <23 ticks, so JUMP+30 keeps the
+        // entire flight and seven recovery ticks without mixing in the run.
+        return t >= JUMP - 2 && t <= JUMP + 30 || t >= RUN_JUMP - 4 && t <= RUN_JUMP + 36
                 || t >= 102 && t <= BRAKE + 6;
     }
 

@@ -194,8 +194,15 @@ def fit(root, slot, data, spans, rig, source):
             garment_index = int(cloth_indices[cloth_index])
             garment_name = str(cloth_names[cloth_index])
             local_cube = int(np.count_nonzero(np.asarray(rig.names)[:garment_index] == garment_name))
+            sample_index = int(np.argmin(np.abs(data['time'] - tick)))
             leg_detail = {
                 'tick': int(tick),
+                'sample_time': round(float(data['time'][sample_index]), 3),
+                'on_ground': bool(data['on_ground'][sample_index]),
+                'height': round(float(data['height'][sample_index]), 3),
+                'speed': round(float(data['speed'][sample_index]), 3),
+                'vertical_speed': round(float(data['vertical'][sample_index]), 3),
+                'run': bool(data['run'][sample_index]),
                 'limb': limb_names[limb_index + 2],
                 'cape_bone': garment_name,
                 'cube_in_bone': local_cube,
