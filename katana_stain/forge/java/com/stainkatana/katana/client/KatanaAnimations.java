@@ -98,6 +98,10 @@ public final class KatanaAnimations {
             // PlayerAnimator renders world-model arms in first person. Lift those
             // arms only in that render pass so the blood-draw stays in view;
             // the third-person animation and gameplay positions are unchanged.
+            // SpeedModifier passes the clip-relative fractional tick to the
+            // adjustment; using only getTick() visibly steps at render rates
+            // above the animation tick rate.
+            final float[] contactDelta = {0F};
             timedClip.addModifierBefore(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier(part -> {
                 if (!FirstPersonMode.isFirstPersonPass() || !(part.equals("leftArm") || part.equals("rightArm")))
                     return java.util.Optional.empty();
@@ -110,7 +114,7 @@ public final class KatanaAnimations {
                 // The offset is for the contact phase, not the whole gesture.
                 // Ease it back out before recovery so the free arm does not
                 // remain displaced after it leaves the blade.
-                float contact = free ? GestureCurve.contact(playing.getTick()) : 0;
+                float contact = free ? GestureCurve.contact(playing.getTick() + contactDelta[0]) : 0;
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                         dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
                         new dev.kosmx.playerAnim.core.util.Vec3f(
@@ -120,6 +124,12 @@ public final class KatanaAnimations {
                                         + KatanaClientConfig.BLOOD_HAND_Y.get().floatValue()),
                                 -10 + contact * KatanaClientConfig.BLOOD_HAND_Z.get().floatValue())));
             }) {
+                @Override public dev.kosmx.playerAnim.core.util.Vec3f get3DTransform(
+                        String part, dev.kosmx.playerAnim.api.TransformType type, float tickDelta,
+                        dev.kosmx.playerAnim.core.util.Vec3f value) {
+                    contactDelta[0] = tickDelta;
+                    return super.get3DTransform(part, type, tickDelta, value);
+                }
                 // Inspect begins at tick zero; the library's default fade divides
                 // by beginTick. The enclosing layer already performs the fade.
                 @Override protected float getFadeIn(float delta) { return 1F; }

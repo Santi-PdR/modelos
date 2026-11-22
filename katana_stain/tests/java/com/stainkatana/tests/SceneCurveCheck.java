@@ -54,6 +54,20 @@ public final class SceneCurveCheck {
                 throw new AssertionError("Blood gesture contact envelope");
             previousContact = value;
         }
+        if (GestureCurve.contact(Float.NaN) != 0F || GestureCurve.contact(Float.POSITIVE_INFINITY) != 0F)
+            throw new AssertionError("Blood gesture nonfinite input");
+        previousContact = 0F;
+        for (int i = 0; i <= 6000; i++) {
+            float t = i / 100F, value = GestureCurve.contact(t);
+            if (!Float.isFinite(value) || value < 0F || value > 1F
+                    || (t <= 12F && value < previousContact) || (t >= 38F && value > previousContact)
+                    || Math.abs(value - previousContact) > .01F)
+                throw new AssertionError("Blood gesture fractional interpolation");
+            previousContact = value;
+        }
+        if (!(GestureCurve.contact(5.5F) > GestureCurve.contact(5F)
+                && GestureCurve.contact(5.5F) < GestureCurve.contact(6F)))
+            throw new AssertionError("Blood gesture must interpolate between ticks");
         System.out.println("OK: clamped transition, impact, FX and blood gesture envelopes");
     }
 }

@@ -4,7 +4,8 @@ package com.stainkatana.katana.client;
 public final class GestureCurve {
     private GestureCurve() { }
 
-    public static float contact(int clipTick) {
+    public static float contact(float clipTick) {
+        if (!Float.isFinite(clipTick)) return 0F;
         float in = Math.max(0F, Math.min(1F, (clipTick - 3F) / 9F));
         float out = Math.max(0F, Math.min(1F, (52F - clipTick) / 14F));
         float amount = Math.min(in, out);
