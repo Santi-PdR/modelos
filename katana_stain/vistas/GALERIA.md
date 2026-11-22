@@ -4,7 +4,9 @@ Estas imágenes son capturas automáticas de un cliente Forge de prueba, **no un
 
 **Estado de revisión:** la guardia y la primera persona siguen rechazadas: la espada cruza la cara y hay brazos separados o agarres incorrectos. Los cortes de C tampoco están aprobados: en los impactos 4 y 7 la hoja todavía parece una guardia levantada. Las capturas no son una versión final.
 
-**Último ensayo visual:** workflow `45072706666`, compilación `45072706618`, ambos con resultado exitoso. El preset de ataques normales ahora referencia adaptaciones de Serious Player Animations e Improved Animations; C usa esos recursos en lugar de los clips predeterminados de Better Combat. Eso no demuestra que se vean bien ni que estén sincronizados en todos los casos. Las imágenes se tomaron después del evento de daño, no necesariamente en el mismo fotograma.
+**Último ensayo visual:** workflow `45076866783`, sobre la versión con las pruebas de selección de animaciones. Las tres ejecuciones del cliente, incluida la verificación de que Better Combat resolvió los cuatro clips externos, terminaron correctamente; el paso final de guardar imágenes terminó con error, aunque las capturas se publicaron en el commit `698e9926`. La compilación `45076866765` pasó. Estos resultados no aprueban visualmente las poses ni prueban el movimiento completo.
+
+La prueba anterior (`45075610731`) abrió más el brazo de la guardia y adelantó el contacto de C: la hoja terminó atravesando la cara y otros golpes se veían de canto. Ambos cambios se revirtieron antes del ensayo más reciente.
 
 ## Con Better Combat instalado
 
