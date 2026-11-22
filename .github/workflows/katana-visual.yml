@@ -126,6 +126,7 @@ jobs:
           export LIBGL_ALWAYS_SOFTWARE=1
           timeout 420s xvfb-run -a -s '-screen 0 1280x720x24' gradle runClient -PkatanaOnly -PkatanaVisual -PkatanaBetterCombat --no-daemon > /tmp/stain-visual-full-bc.log 2>&1 || { tail -160 /tmp/stain-visual-full-bc.log; exit 1; }
           grep -F 'STAIN_FIXTURE_BETTERCOMBAT=true' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_BC_GUARD_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_ABILITY_SOUND_SELECTION_VERIFIED=bettercombat' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_CAMERA_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_ULTIMATE_VERIFIED' /tmp/stain-visual-full-bc.log

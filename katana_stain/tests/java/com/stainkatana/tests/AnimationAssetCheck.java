@@ -46,6 +46,18 @@ public class AnimationAssetCheck {
                 System.out.println(name + ": parsed, stopTick=" + clip.stopTick + ", rightArmMoves=" + moved);
             }
         }
+        try (InputStream in = AnimationAssetCheck.class.getResourceAsStream("/assets/stainkatana/attack_animations/stain_guard.json")) {
+            if (in == null) throw new AssertionError("Missing two-handed guard");
+            var clips = AnimationSerializing.deserializeAnimation(in);
+            if (clips.size() != 1 || !clips.get(0).isInfinite)
+                throw new AssertionError("Two-handed guard must loop");
+            var guard = new KeyframeAnimationPlayer(clips.get(0));
+            guard.tick(); guard.setupAnim(0);
+            var right = guard.get3DTransform("rightArm", TransformType.ROTATION, 0, Vec3f.ZERO);
+            var left = guard.get3DTransform("leftArm", TransformType.ROTATION, 0, Vec3f.ZERO);
+            if (Math.abs(right.getX()) < .5 || Math.abs(left.getX()) < .5)
+                throw new AssertionError("Two-handed guard did not raise both arms");
+        }
         try (InputStream in = AnimationAssetCheck.class.getResourceAsStream("/assets/stainkatana/attack_animations/stain_fourth_cut.json")) {
             if (in == null) throw new AssertionError("Missing custom fourth cut");
             var clips = AnimationSerializing.deserializeAnimation(in);

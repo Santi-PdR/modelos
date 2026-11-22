@@ -40,6 +40,7 @@ public final class VisualFixtureClient {
             System.out.println("STAIN_FIXTURE_BETTERCOMBAT=" + net.minecraftforge.fml.ModList.get().isLoaded("bettercombat"));
             System.out.println("STAIN_FIXTURE_CLIP=" + (mc.getResourceManager().getResource(id).isPresent() ? "bettercombat" : "fallback"));
             verifyAbilitySoundSelection(mc);
+            verifyBetterCombatGuard(mc);
         }
         switch (tick) {
             case 5 -> {
@@ -507,6 +508,23 @@ public final class VisualFixtureClient {
             default -> { }
         }
     }
+    /** Confirm BC actually resolves this item's own guard, not the inherited preset. */
+    private static void verifyBetterCombatGuard(Minecraft mc) {
+        if (!net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) return;
+        try {
+            var registry = Class.forName("net.bettercombat.logic.WeaponRegistry");
+            var attributes = registry.getMethod("getAttributes", net.minecraft.world.item.ItemStack.class)
+                    .invoke(null, mc.player.getMainHandItem());
+            if (attributes == null || !"stainkatana:stain_guard".equals(attributes.getClass().getMethod("pose").invoke(attributes)))
+                throw new IllegalStateException("Better Combat did not select the Stain guard");
+            var animations = (java.util.Map<?, ?>) Class.forName("net.bettercombat.client.animation.AnimationRegistry")
+                    .getField("animations").get(null);
+            if (!animations.containsKey("stainkatana:stain_guard"))
+                throw new IllegalStateException("Better Combat did not load the Stain guard");
+            System.out.println("STAIN_BC_GUARD_VERIFIED");
+        } catch (ReflectiveOperationException e) { throw new IllegalStateException("Cannot inspect Better Combat guard", e); }
+    }
+
     /** Verify actual registry selection, not whether an audio device produced sound. */
     private static void verifyAbilitySoundSelection(Minecraft mc) {
         boolean betterCombat = net.minecraftforge.fml.ModList.get().isLoaded("bettercombat");

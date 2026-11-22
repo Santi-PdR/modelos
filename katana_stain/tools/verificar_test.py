@@ -43,6 +43,8 @@ assert 'LAYER, 2500' in anim and 'MirrorModifier' in anim
 assert 'followUpImpacted' in ability and 'broadcastAnimation(player, 3)' in ability
 bc = json.loads((root/'resources/data/stainkatana/weapon_attributes/katana_stain.json').read_text())
 assert bc['parent'] == 'bettercombat:katana'
+assert bc['attributes']['pose'] == 'stainkatana:stain_guard'
+assert json.loads((a/'attack_animations/stain_guard.json').read_text())['emote']['isLoop'] == 'true'
 attacks = bc['attributes']['attacks']
 assert len(attacks) == 4 and len({a['animation'] for a in attacks}) == 4
 assert attacks[3]['damage_multiplier'] > max(a['damage_multiplier'] for a in attacks[:3])
