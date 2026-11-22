@@ -1,5 +1,7 @@
 # v1.67.35 · Fundido de los dos cambios de las brasas
 
+La prueba más reciente es [v1.67.36](../v1.67.36/notas.md). Este JAR queda disponible para volver atrás.
+
 **[JAR de prueba](https://raw.githubusercontent.com/Santi-PdR/modelos/8039d835ccd2b620c31f69a668b594628b64d44d/entregables/v1.67.35/capatest-1.67.35.jar)** · [PowerShell para `test-1`](instalar-test-1.txt) · [SHA-256](JAR.sha256) · [Volver a v1.67.34](../v1.67.34/notas.md).
 
 La brasa conserva sus tres dibujos originales. En cada cambio se muestran cuadros intermedios a lo largo de cinco ticks, con el mismo tiempo interpolado que usa su movimiento. Se añadieron 22 texturas de 16×16, sin agregar partículas, pasadas de dibujo ni shaders. La cantidad, el vuelo y el fundido de opacidad, tamaño y tinte no cambian. Tampoco se modifican la geometría, las texturas del paño, el halo ni los ocho clips.

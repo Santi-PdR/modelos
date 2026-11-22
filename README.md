@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.36 — nacimiento de las brasas al agacharse
+
+**[Descargar JAR de prueba v1.67.36](https://raw.githubusercontent.com/Santi-PdR/modelos/bc9b8efe70abf8fda72a554eaf207899525d7716/entregables/v1.67.36/capatest-1.67.36.jar)** · [PowerShell para test-1](docs/releases/v1.67.36/instalar-test-1.txt) · [Medidas y SHA-256](docs/releases/v1.67.36/notas.md).
+
+Al agacharse, las brasas nacen siguiendo el torso inclinado. No cambia su vuelo ni el ritmo de emisión. Probado con la malla real en pecho y Curios; la .35 sigue disponible para volver atrás.
+
 ### v1.67.35 — fundido de las brasas
 
 **[Descargar JAR de prueba v1.67.35](https://raw.githubusercontent.com/Santi-PdR/modelos/8039d835ccd2b620c31f69a668b594628b64d44d/entregables/v1.67.35/capatest-1.67.35.jar)** · [PowerShell para test-1](docs/releases/v1.67.35/instalar-test-1.txt) · [Medidas y SHA-256](docs/releases/v1.67.35/notas.md).
