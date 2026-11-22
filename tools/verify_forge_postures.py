@@ -15,7 +15,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from cape_contact import lap, original_dimensions
-from cape_fit import fixed_wearer_pose, hood_aim, hood_moves, sprint_edge_offset
+from cape_fit import fixed_wearer_pose, hood_aim, hood_moves, nape_piece, nape_shifts, profile, sprint_edge_offset
 from preview_cloth import ARMOR_GEO, load, matrices, mod_version
 from verify_v1660 import WornModel, contacts
 
@@ -43,7 +43,7 @@ def read_boxes(path):
     return out
 
 
-def report(root, slot, rig, source):
+def report(root, slot, rig, source, *, nape=False):
     fixture = f'revision-alex-{slot}'
     with (root/f'{fixture}-posturas.tsv').open() as f:
         trace = list(csv.DictReader(f, delimiter='\t'))
@@ -71,6 +71,10 @@ def report(root, slot, rig, source):
     for phase, count, pitch, yaw, vanilla, label in PHASES:
         motion = []
         photos = []
+        # The audit waits at least seven ticks. Here the neutral crouch is
+        # settled; when sprint is measured (15 ticks later) it has released.
+        shifts = nape_shifts(-pitch,yaw,profile()['bodyAngle'] if phase.startswith('agachado') else 0.)
+        stroke_fit = np.array([shifts[k] if (k := nape_piece(n)) is not None else (0,0,0) for n in names]) if nape else 0.
         for frame in range(count):
             label_sample = (fixture, phase, frame)
             r = trace[i]
@@ -97,7 +101,10 @@ def report(root, slot, rig, source):
                 np.testing.assert_allclose(np.linalg.norm(actors[k,[1,3,4]]-actors[k,0],axis=1), dims, atol=.01, rtol=0)
             if baseline is None:
                 baseline = local.copy()
-            stroke = np.linalg.norm(local-baseline,axis=2)
+            # Subtract the declared translation only. A stretched/detached
+            # link or any moved plate still fails the original checks.
+            center = local-stroke_fit[:,None,:] if nape else local
+            stroke = np.linalg.norm(center-baseline,axis=2)
             drift = stroke[unmoving].max()
             assert drift < .006, (label_sample, 'la montura cambió en coordenadas del torso', drift)
             contact = contacts(local[None],actors[None])[0]
@@ -120,7 +127,8 @@ def report(root, slot, rig, source):
                              max(0.,-a[:,free].min()),max(0.,-contact[4:6,free].min())))
             seam, root_join = rig.joins(local)
             back = lap(local[roots], actors[:1])
-            motion.append([drift,seam,root_join,back,stroke[hood].max(),*hit])
+            hood_motion = np.linalg.norm(local[hood]-baseline[hood],axis=2).max()
+            motion.append([drift,seam,root_join,back,stroke[hood].max(),hood_motion,*hit])
             if r['image'] != '-':
                 assert r['image'] == f'{fixture}-{phase}-{frame:02d}.png', label_sample
                 path = root/r['image']
@@ -132,23 +140,24 @@ def report(root, slot, rig, source):
         # Show the largest measured arm overlap among the saved race frames.
         images.append((label,max(photos, key=lambda item:item[0])[1]))
         a = np.array(motion)
-        hits = [f'{np.count_nonzero(col > .05)}/{count} ({col.max():.3f}u)' for col in a[:,5:].T]
+        hits = [f'{np.count_nonzero(col > .05)}/{count} ({col.max():.3f}u)' for col in a[:,6:].T]
         crown = a[:,4].max()
-        row = [slot,phase,count,f'{a[:,0].max():.6f}',*[f'{v:.3f}' for v in a[:,1:4].min(0)],f'{crown:.3f}',*hits]
+        raw_crown = a[:,5].max()
+        row = [slot,phase,count,f'{a[:,0].max():.6f}',*[f'{v:.3f}' for v in a[:,1:4].min(0)],f'{raw_crown:.3f}',*hits]
         rows.append(row)
         print(f'::notice title=Posturas Alex en Forge::{slot}/{phase}: unión mínima de raíz {row[5]}u; '
-              f'contacto paño/torso {row[6]}u; recorrido capucha {crown:.3f}u; cuello/cabeza {hits[0]}, '
+              f'contacto paño/torso {row[6]}u; recorrido capucha {raw_crown:.3f}u; cuello/cabeza {hits[0]}, '
               f'placas/cabeza {hits[1]}, paño/brazos {hits[4]}, paño/piernas {hits[6]}.', flush=True)
         assert (a[:,1:4].min(0) > [.038,.025,.018]).all(), (fixture,phase,'se abrió el paño',row)
         limit = {'mirada-alta':5.7,'giro':1.35}.get(phase,.80) if paired else .80
         assert crown < limit and (phase != 'carrera' or crown > .13), (fixture,phase,'recorrido capucha',crown)
         if paired and phase == 'mirada-alta':
-            assert 2. < crown and (a[:,[5,7]].max(0) < [2.40,2.92]).all(), (fixture,phase,'cruce de cuello',row)
+            assert 2. < crown and (a[:,[6,8]].max(0) < [2.40,2.92]).all(), (fixture,phase,'cruce de cuello',row)
         assert a[:,-1].max() < .05, (fixture,phase,'intersección nueva con pierna',row)
         if phase in ('cenital','agachado-cenital'):
-            assert a[:,6].max() <= .05, (fixture,phase,'placa en la nuca',row)
+            assert a[:,7].max() <= .05, (fixture,phase,'placa en la nuca',row)
         elif phase == 'giro':
-            assert a[:,6].max() <= 1.06, (fixture,phase,'creció el cruce de la placa',row)
+            assert a[:,7].max() <= 1.06, (fixture,phase,'creció el cruce de la placa',row)
     return rows, images, np.asarray(arms)
 
 
@@ -219,7 +228,7 @@ def run(root, reference=None):
         source[name].append(cube)
     rows, pictures, base_pictures, pairs = [], {}, {}, []
     for slot in ('pecho','curios'):
-        measured, images, arms = report(root,slot,rig,source)
+        measured, images, arms = report(root,slot,rig,source,nape=mod_version() == '1.67.32')
         pairs.append(sleeves(slot,arms))
         rows.extend(measured)
         pictures[slot] = images
