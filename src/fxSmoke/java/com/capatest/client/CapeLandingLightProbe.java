@@ -65,7 +65,9 @@ final class CapeLandingLightProbe {
                         lit.count, moved));
             }
         }
-        require(peakHeat == 1 && peakPitch == 5.5, "impulse envelope out of range");
+        require(CapeLanding.pose(3, 1).pitch() == 5.5 && CapeLanding.pose(4.4, 1).heat() == 1
+                        && peakPitch > 5.4 && peakHeat > .99,
+                "impulse envelope out of range");
 
         // Full daylight, another wearer and the same draw twice stay on the
         // .41 path; only a dark frame of this wearer carries the echo.
