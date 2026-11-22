@@ -118,7 +118,7 @@ public final class KatanaAnimations {
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                         dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
                         new dev.kosmx.playerAnim.core.util.Vec3f(
-                                (leftHanded ? 16 : -8) + contact * ((leftHanded ? -8 : 4)
+                                (leftHanded ? 24 : -8) + contact * ((leftHanded ? -8 : 4)
                                         + KatanaClientConfig.BLOOD_HAND_X.get().floatValue()),
                                 -3 + contact * ((leftHanded ? -12 : -8)
                                         + KatanaClientConfig.BLOOD_HAND_Y.get().floatValue()),
