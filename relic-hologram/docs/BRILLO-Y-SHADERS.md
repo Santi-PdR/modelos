@@ -237,6 +237,14 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.37, la energía de movimiento.** Un eje más, ortogonal a los estados de brillo:
+`RelicAnimatable.motion()` (0–1) sale de `isSprinting`, `isSwimming`, `isCrouching` y la
+velocidad horizontal, suavizado con tiempo real (τ 0,30 s). Entra por `RelicAura.render`
+y multiplica tres ritmos que ya existían: `beatSpeed` del anillo ×1.7, la velocidad
+orbital de las chispas ×1.45, la subida de las burbujas ×1.50 y la amplitud del vaivén
+de `applyAliveMotion` ×1.6. Ningún draw ni pase nuevo: el aura ya estaba ahí, esto solo
+le cambia la frecuencia con la que respira.
+
 **1.0.35, noveno estado: portal.** `PORTAL` es el único estado que mira **bloques** y no
 el cielo o el jugador: busca `NETHER_PORTAL`, `END_PORTAL` o `END_GATEWAY` en una caja de
 9×6×9 alrededor de los pies. Para que eso no cueste, el escaneo se hace cada 20 ticks y

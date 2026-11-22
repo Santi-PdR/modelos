@@ -279,14 +279,14 @@ public final class RelicClientEvents {
 
         // Mismo flotar/asentarse que en el hombro, pero aqui la Y es la del mundo.
         RelicAura.applyAliveMotion(poseStack, partialTick, visual.glow().flashScaled(),
-                animatable.mood(), false);
+                animatable.mood(), false, animatable.motion());
 
         MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
         visual.renderer().renderHologram(poseStack, animatable, buffers, partialTick,
                 LightTexture.FULL_BRIGHT, visual.glow(), 1.0F);
         if (RelicAura.enabled()) {
             RelicAura.render(poseStack, buffers, partialTick, animatable.loopState(), visual.glow(),
-                    1.0F, animatable.mood());
+                    1.0F, animatable.mood(), animatable.motion());
         }
         buffers.endBatch();
         poseStack.popPose();

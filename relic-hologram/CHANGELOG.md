@@ -1,5 +1,21 @@
 # Historial de cambios
 
+## 1.0.37 — la reliquia reacciona a cómo te mueves
+
+* **Energía de movimiento (0–1)**, un eje **aparte** de los nueve estados de brillo: el
+  brillo dice *dónde* estás (tormenta, cueva, agua, portal) y esto dice *qué estás
+  haciendo*. Se pueden dar a la vez, cosa que un estado nuevo no permitía: con tormenta
+  y corriendo, el aura va azul **y** acelerada.
+* **Qué mueve**: el anillo late ×1.7 (es lo que se ve de frente), las chispas barren
+  ×1.45, el vaivén de flotado sube un 60% y nadando las burbujas suben ×1.5.
+  **Agacharse** la lleva a 0.1: la reliquia se queda casi quieta contigo, que es el
+  contraste que faltaba.
+* **Suavizado con tiempo real** (τ 0,30 s, como el destello): correr y parar se ve como
+  una transición y no como un salto por tick, y va igual a 30 que a 240 FPS.
+* Se calcula en el tick del portador (`isSprinting`, `isSwimming`, `isCrouching` y la
+  velocidad horizontal), no por frame, y no añade ni un draw: son multiplicadores sobre
+  el aura que ya se dibujaba.
+
 ## 1.0.36 — la reliquia suena
 
 * **Sonido propio**: al despertar, dormir y pulsar la reliquia del jugador local suena

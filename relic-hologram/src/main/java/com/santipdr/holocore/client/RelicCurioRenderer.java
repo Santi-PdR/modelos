@@ -100,7 +100,7 @@ public class RelicCurioRenderer implements ICurioRenderer {
         // y del aura para que los dos se muevan juntos. Aqui la Y del cuerpo del
         // jugador apunta hacia abajo.
         RelicAura.applyAliveMotion(poseStack, partialTicks, visual.glow().flashScaled(),
-                animatable.mood(), true);
+                animatable.mood(), true, animatable.motion());
 
         visual.renderer().renderHologram(poseStack, animatable, bufferSource, partialTicks,
                 LightTexture.FULL_BRIGHT, visual.glow(), fade);
@@ -112,7 +112,7 @@ public class RelicCurioRenderer implements ICurioRenderer {
             // cuanto aura: son dos palancas distintas (pases vs billboards).
             long began = System.nanoTime();
             RelicAura.render(poseStack, bufferSource, partialTicks, state, visual.glow(), fade,
-                    animatable.mood());
+                    animatable.mood(), animatable.motion());
             RelicRenderStats.aura(System.nanoTime() - began);
         }
 

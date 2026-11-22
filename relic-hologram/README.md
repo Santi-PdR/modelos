@@ -216,8 +216,8 @@ mandan: herido > tormenta > agua > portal > oscuridad > lluvia > noche > resonan
 | portal (`portal`) | un portal del Nether, del End o de salida a menos de 4 bloques (desde 1.0.35) | violeta de obsidiana, el giro más rápido de todos (1.22×) y las chispas estiradas hacia arriba, como el borde del portal |
 
 El conjunto además se mueve solo: **flota** con un vaivén lento de 0.022 bloques
-(la amplitud sube con la tormenta y baja cuando está herido) y **se asienta** en cada
-evento, achatándose un 4% y ensanchándose un 5%. Es lo que separa «una animación que
+(la amplitud sube con la tormenta y baja cuando está herido, y **+60% si corres**) y
+**se asienta** en cada evento, achatándose un 4% y ensanchándose un 5%. Es lo que separa «una animación que
 se reproduce» de «un objeto que está ahí». El movimiento se aplica al `PoseStack`
 antes del modelo y del aura, así que los dos se mueven juntos; se rota la matriz en
 el sitio para no crear un cuaternión por reliquia y frame.
@@ -342,6 +342,11 @@ pulso sería un coro sin forma de saber de dónde viene. Se apaga con
 
 ## Qué hace exactamente
 
+* **Energía de movimiento** (desde 1.0.37): correr o nadar acelera el anillo (late
+  ×1.7), las chispas (barrido ×1.45) y el vaivén (+60%); nadando las burbujas suben
+  ×1.5. Agacharse la deja a 0.1, así que la reliquia se queda casi quieta contigo. Se
+  suaviza con **tiempo real** (τ 0,30 s) para que no se note el tick, y es un eje
+  **aparte** del estado de brillo: una tormenta no quita que vayas corriendo.
 * **Equipar** → `activation` → `idle` (bucle). Al cambiar de calidad, o al volver
   a ver a **otro** portador tras 2 s fuera de pantalla, vuelve a empezar.
 * **Desequipar** → deja de renderizarse. La `deactivation` **no** se puede ver al

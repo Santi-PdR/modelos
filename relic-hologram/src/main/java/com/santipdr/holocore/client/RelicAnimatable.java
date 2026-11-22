@@ -47,6 +47,8 @@ public final class RelicAnimatable implements GeoAnimatable {
     private static final int EVENT_WINDOW_TICKS = 40;
     /** Constante de tiempo del destello de un evento, en segundos. */
     private static final float FLASH_TAU = 0.42F;
+    /** Constante de tiempo de la energia de movimiento, en segundos. */
+    private static final float MOTION_TAU = 0.30F;
     /** Ticks durante los que se usa wake/sleep en vez de activation/deactivation. */
     private static final int QUICK_TOGGLE_WINDOW = 400;
     private static final String LAYER_CONTROLLER = "layer";
@@ -138,6 +140,15 @@ public final class RelicAnimatable implements GeoAnimatable {
      */
     private float flash;
     private long flashNanos;
+
+    /**
+     * Energia de movimiento (0..1): correr o nadar la sube, quedarse quieto o
+     * agachado la baja. Es un eje aparte del estado de brillo: el brillo dice
+     * <b>donde</b> estas (tormenta, cueva, agua) y esto dice <b>que estas haciendo</b>,
+     * y se pueden dar a la vez. El aura la usa para girar y latir mas rapido.
+     */
+    private float motion;
+    private long motionNanos;
 
     /** Radio (bloques) al que se nota otro portador. */
     private static final double RESONANCE_RADIUS = 12.0D;
@@ -246,6 +257,11 @@ public final class RelicAnimatable implements GeoAnimatable {
         return this.flash;
     }
 
+    /** Energia de movimiento de ahora mismo, 0 (quieto) .. 1 (corriendo o nadando). */
+    public float motion() {
+        return this.motion;
+    }
+
     /** Estado de brillo de ahora mismo (ver {@link Mood}). */
     public Mood mood() {
         return this.mood;
@@ -306,6 +322,7 @@ public final class RelicAnimatable implements GeoAnimatable {
         // El destello se apaga con tiempo real y no con ticks: asi no se queda a
         // medias cuando el juego va a 5 FPS.
         decayFlash();
+        updateMotion(player);
 
         boolean wasActive = this.active;
         this.active = snapshot.active();
@@ -696,6 +713,40 @@ public final class RelicAnimatable implements GeoAnimatable {
     private void boostFlash(float strength) {
         if (strength > this.flash) {
             this.flash = strength;
+        }
+    }
+
+    /**
+     * Energia de movimiento, suavizada con tiempo real (como el destello, para que
+     * no se note el tick): correr o nadar la lleva a 1, agacharse a 0.1 y andar la
+     * deja a media con la velocidad horizontal. Se mide por tick y no por frame
+     * porque el estado del jugador solo cambia por tick.
+     */
+    private void updateMotion(Player player) {
+        long now = System.nanoTime();
+        float target;
+        if (player.isCrouching()) {
+            target = 0.1F;
+        } else if (player.isSprinting() || player.isSwimming()) {
+            target = 1.0F;
+        } else {
+            // andar es ~0.1 bloques/tick al cuadrado => ~0.01; correr, ~0.04.
+            double rapidez = player.getDeltaMovement().horizontalDistanceSqr();
+            target = (float) Math.min(0.6D, rapidez * 12.0D);
+        }
+        if (this.motionNanos == 0L) {
+            this.motionNanos = now;
+            this.motion = target;
+            return;
+        }
+        float delta = (now - this.motionNanos) / 1_000_000_000.0F;
+        this.motionNanos = now;
+        if (delta <= 0.0F) {
+            return;
+        }
+        this.motion += (target - this.motion) * (1.0F - (float) Math.exp(-Math.min(delta, 0.25F) / MOTION_TAU));
+        if (Math.abs(target - this.motion) < 0.01F) {
+            this.motion = target;
         }
     }
 

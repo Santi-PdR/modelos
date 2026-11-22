@@ -406,7 +406,7 @@ jobs:
           assert 'echoSize' in aura, 'el anillo no tiene eco en los eventos'
           assert 'sparksEnabled()' in aura, 'las chispas no tienen interruptor'
           assert 'Quality.FULL' in aura, 'las chispas no miran la calidad'
-          assert 'float fade, RelicAnimatable.Mood mood)' in aura, \
+          assert 'float fade, RelicAnimatable.Mood mood,' in aura, \
               'las chispas no reciben el estado de brillo'
           assert 'boolean storm = mood == RelicAnimatable.Mood.STORM' in aura, \
               'las chispas perdieron el azul de la tormenta'
@@ -414,7 +414,7 @@ jobs:
               'la noche despejada no cambia las chispas'
           # Bajo el agua las chispas se cambian por burbujas que suben.
           assert 'private static void drawBubbles(' in aura, 'el agua no tiene burbujas'
-          assert 'drawBubbles(bufferSource, frame, time, glow, amount)' in aura, \
+          assert 'drawBubbles(bufferSource, frame, time, glow, amount, motion)' in aura, \
               'las burbujas no se dibujan nunca'
           assert 'private static float fract(' in aura, 'las burbujas no tienen ciclo'
           assert 'BUBBLE_COUNT' in aura and 'BUBBLE_SPEED' in aura, \
@@ -502,6 +502,25 @@ jobs:
           # Movimiento propio: flotar y asentarse en los eventos, aplicado antes del
           # modelo y del aura (si se aplicara solo al modelo, el aura se quedaria
           # clavada mientras el nucleo se mueve).
+          # Energia de movimiento: correr/nadar/agacharse modula el aura. Es un eje
+          # distinto del estado de brillo, y tiene que llegar a las dos vistas.
+          assert 'public float motion()' in animatable, 'la energia de movimiento no sale del tick'
+          assert 'updateMotion(player)' in animatable, 'la energia de movimiento no se actualiza'
+          assert 'isSprinting()' in animatable and 'isSwimming()' in animatable, \
+              'correr o nadar no alimentan la energia'
+          assert 'isCrouching()' in animatable, 'agacharse no frena la energia'
+          assert 'RelicAnimatable.Mood mood, float motion)' in aura, \
+              'el aura no recibe la energia de movimiento'
+          assert '(1.0F + 0.70F * motion)' in aura, 'el anillo no late mas rapido al correr'
+          assert '(1.0F + 0.45F * motion)' in aura, 'las chispas no barren mas rapido al correr'
+          assert '(1.0F + 0.50F * motion)' in aura, 'las burbujas no suben mas rapido al nadar'
+          assert 'energy *= 1.0F + 0.60F * motion;' in aura, \
+              'el vaiven no crece al correr'
+          # Las dos vistas tienen que pasarla al aura (no solo al movimiento propio).
+          assert 'animatable.mood(), animatable.motion());' in curio, \
+              'el hombro no pasa la energia de movimiento al aura'
+          assert '1.0F, animatable.mood(), animatable.motion());' in eventos, \
+              'la vista previa no pasa la energia de movimiento al aura'
           assert 'static void applyAliveMotion(' in aura, 'la reliquia no tiene movimiento propio'
           assert 'RelicAura.applyAliveMotion(' in curio, 'el hombro no usa el movimiento propio'
           assert 'RelicAura.applyAliveMotion(' in eventos, 'la vista previa no usa el movimiento propio'

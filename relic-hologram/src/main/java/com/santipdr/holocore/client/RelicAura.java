@@ -98,7 +98,7 @@ public final class RelicAura {
 
     static void render(PoseStack poseStack, MultiBufferSource bufferSource, float partialTick,
                        RelicAnimatable.LoopState state, RelicGlowState glow, float fade,
-                       RelicAnimatable.Mood mood) {
+                       RelicAnimatable.Mood mood, float motion) {
         float time = time(partialTick);
         Frame frame = frame(poseStack);
         // Destello de evento: el anillo se enciende aunque el estado no lo tenga,
@@ -109,14 +109,14 @@ public final class RelicAura {
             drawAura(bufferSource, frame, time, glow, flash, fade);
         }
         if (RelicConfig.GLOW_RING.get() && glow.ring() + flash * 0.8F > 0.01F) {
-            drawRing(bufferSource, frame, time, state, glow, flash, fade);
+            drawRing(bufferSource, frame, time, state, glow, flash, fade, motion);
         }
         if (RelicConfig.GLOW_AURA.get() && sparksEnabled()) {
             // El estado forzado manda: con /relic mood storm las chispas se ponen
             // azules aunque el cielo este limpio, que es para lo que se fuerza.
             RelicAnimatable.Mood sparkMood = RelicAnimatable.forcedMood() != null
                     ? RelicAnimatable.forcedMood() : mood;
-            drawSparks(bufferSource, frame, time, glow, fade, sparkMood);
+            drawSparks(bufferSource, frame, time, glow, fade, sparkMood, motion);
         }
     }
 
@@ -164,16 +164,18 @@ public final class RelicAura {
 
     private static void drawRing(MultiBufferSource bufferSource, Frame frame, float time,
                                  RelicAnimatable.LoopState state, RelicGlowState glow, float flash,
-                                 float fade) {
+                                 float fade, float motion) {
         float weight = RelicConfig.RING_INTENSITY.get().floatValue()
                 * (glow.ring() + 0.7F * flash) * fade;
         if (weight <= 0.001F) {
             return;
         }
 
-        // En alerta el anillo late como un aviso; en los demas estados, respira.
+        // En alerta el anillo late como un aviso; en los demas estados, respira. Y
+        // late mas rapido si el portador va corriendo: el anillo es lo unico que se
+        // ve de frente, asi que ahi es donde se nota el ritmo.
         boolean alert = state == RelicAnimatable.LoopState.ALERT;
-        float beatSpeed = alert ? 0.45F : 0.15F;
+        float beatSpeed = (alert ? 0.45F : 0.15F) * (1.0F + 0.70F * motion);
         float beat = 0.72F + 0.28F * (0.5F + 0.5F * sin(time * beatSpeed));
         float size = RING_DIAMETER * (1.0F + 0.25F * flash)
                 * (alert ? 1.0F + 0.03F * sin(time * beatSpeed) : 1.0F);
@@ -213,14 +215,15 @@ public final class RelicAura {
      * al reves que en calma.
      */
     private static void drawSparks(MultiBufferSource bufferSource, Frame frame, float time,
-                                   RelicGlowState glow, float fade, RelicAnimatable.Mood mood) {
+                                   RelicGlowState glow, float fade, RelicAnimatable.Mood mood,
+                                   float motion) {
         float amount = fade * (0.55F + 0.45F * glow.aura()) * (1.0F + 0.6F * glow.flashScaled());
         if (amount <= 0.01F) {
             return;
         }
         if (mood == RelicAnimatable.Mood.SUBMERGED) {
             // Bajo el agua no hay chispas en orbita: hay burbujas subiendo.
-            drawBubbles(bufferSource, frame, time, glow, amount);
+            drawBubbles(bufferSource, frame, time, glow, amount, motion);
             return;
         }
         VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
@@ -232,8 +235,10 @@ public final class RelicAura {
         // Con un portal cerca las chispas se estiran hacia arriba y giran mas rapido:
         // es lo que hace el borde de un portal del Nether con las particulas.
         boolean portal = mood == RelicAnimatable.Mood.PORTAL;
+        // Correr acelera la orbita: con el portador esprintando las chispas barren
+        // mas rapido y el aura parece viva sin cambiar un solo pixel de textura.
         float orbit = time * SPARK_SPEED * (1.0F + 6.0F * Math.abs(glow.spin()))
-                * (night ? 0.45F : portal ? 1.5F : 1.0F);
+                * (night ? 0.45F : portal ? 1.5F : 1.0F) * (1.0F + 0.45F * motion);
         // Con tormenta las chispas tiran a azul electrico: el color del estado es
         // casi blanco y sin esto se perderia el "hay truenos" en el aura.
         float redTint = glow.red();
@@ -280,7 +285,7 @@ public final class RelicAura {
      * vertical dejaria de leerse como orbita.
      */
     private static void drawBubbles(MultiBufferSource bufferSource, Frame frame, float time,
-                                    RelicGlowState glow, float amount) {
+                                    RelicGlowState glow, float amount, float motion) {
         VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
         // Verde azulado de fondo de rio, mezclado con el color del estado.
         float redTint = glow.red() * 0.35F + 0.45F * 0.65F;
@@ -289,7 +294,9 @@ public final class RelicAura {
         for (int i = 0; i < BUBBLE_COUNT; i++) {
             // rise va de 0 (abajo) a 1 (arriba) y vuelve a empezar: es el ciclo de
             // una burbuja, desfasado por indice para que no suban en bloque.
-            float rise = fract(time * BUBBLE_SPEED + i * (1.0F / BUBBLE_COUNT));
+            // Nadar acelera las burbujas: es lo que se ve al cruzar un rio a nado.
+            float rise = fract(time * BUBBLE_SPEED * (1.0F + 0.50F * motion)
+                    + i * (1.0F / BUBBLE_COUNT));
             float offset = sin(time * 1.3F + i * 2.1F) * 0.10F;
             float height = -0.32F + rise * 0.72F;
             float cx = frame.originX + frame.leftX * offset + frame.upX * height;
@@ -467,7 +474,7 @@ public final class RelicAura {
      * coordenadas de mundo (Y+ hacia arriba): el vaiven tiene que ir al reves.</p>
      */
     static void applyAliveMotion(PoseStack poseStack, float partialTick, float flash,
-                                 RelicAnimatable.Mood mood, boolean yDown) {
+                                 RelicAnimatable.Mood mood, boolean yDown, float motion) {
         float time = time(partialTick);
         float energy = switch (mood) {
             case STORM -> 1.5F;
@@ -483,6 +490,9 @@ public final class RelicAura {
             case PORTAL -> 1.10F;
             case NEUTRAL -> 1.0F;
         };
+        // Correr suma un 60% de vaiven y agacharse lo recorta: es la diferencia
+        // entre una reliquia que te sigue y una que se queda quieta contigo.
+        energy *= 1.0F + 0.60F * motion;
         float lift = 0.022F * energy * sin(time * 1.7F);
         poseStack.translate(0.0D, yDown ? -lift : lift, 0.0D);
         // Un grado escaso de ladeo, desfasado del vaiven: si no, parece un pez.
