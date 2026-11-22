@@ -418,6 +418,10 @@ jobs:
 
           # El tinte del shader se mueve con el estado: lluvia lo baja, oscuridad lo sube.
           assert 'safeGetUniform("HoloTint")' in geo, 'el pase GLSL no manda el tinte por estado'
+          # Un Mood nuevo sin rama en el switch no compila; esto lo caza antes de
+          # gastar un build entero (paso en 1.0.32: NIGHT sin tinte).
+          for mood in moods:
+              assert f'case {mood} -> ' in geo, f'el estado {mood} no tiene tinte de shader'
 
           # Cada Mood tiene su nombre en los dos idiomas: un enum nuevo sin texto
           # saldria como clave cruda en el chat.
