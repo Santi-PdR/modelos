@@ -110,7 +110,7 @@ public final class KatanaAnimations {
                 // The offset is for the contact phase, not the whole gesture.
                 // Ease it back out before recovery so the free arm does not
                 // remain displaced after it leaves the blade.
-                float contact = free ? gestureContactBlend(playing.getTick()) : 0;
+                float contact = free ? GestureCurve.contact(playing.getTick()) : 0;
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                         dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
                         new dev.kosmx.playerAnim.core.util.Vec3f(
@@ -141,13 +141,6 @@ public final class KatanaAnimations {
         }
         timedClip.addModifierBefore(new SpeedModifier(ability == 0 ? 3F : (ability == 1 ? 1F : 1.4F)));
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
-    }
-
-    private static float gestureContactBlend(int clipTick) {
-        float in = net.minecraft.util.Mth.clamp((clipTick - 3F) / 9F, 0F, 1F);
-        float out = net.minecraft.util.Mth.clamp((52F - clipTick) / 14F, 0F, 1F);
-        float amount = Math.min(in, out);
-        return amount * amount * (3F - 2F * amount);
     }
 
     public static boolean isPlaying(AbstractClientPlayer player) {

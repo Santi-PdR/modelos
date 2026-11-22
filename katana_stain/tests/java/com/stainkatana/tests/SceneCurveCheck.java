@@ -2,6 +2,7 @@ package com.stainkatana.tests;
 
 import com.stainkatana.katana.client.SceneCurve;
 import com.stainkatana.katana.client.FxCurve;
+import com.stainkatana.katana.client.GestureCurve;
 
 public final class SceneCurveCheck {
     public static void main(String[] args) {
@@ -41,6 +42,18 @@ public final class SceneCurveCheck {
         }
         if (!Float.isFinite(FxCurve.size(Float.NaN)) || !Float.isFinite(FxCurve.opacity(Float.NaN)))
             throw new AssertionError("FX curve nonfinite input");
-        System.out.println("OK: clamped transition, impact envelope and FX envelopes");
+        if (GestureCurve.contact(-1) != 0F || GestureCurve.contact(3) != 0F
+                || GestureCurve.contact(12) != 1F || GestureCurve.contact(38) != 1F
+                || GestureCurve.contact(52) != 0F || GestureCurve.contact(100) != 0F)
+            throw new AssertionError("Blood gesture contact boundaries");
+        float previousContact = 0F;
+        for (int t = 0; t <= 60; t++) {
+            float value = GestureCurve.contact(t);
+            if (value < 0F || value > 1F || (t <= 12 && value < previousContact)
+                    || (t >= 38 && value > previousContact))
+                throw new AssertionError("Blood gesture contact envelope");
+            previousContact = value;
+        }
+        System.out.println("OK: clamped transition, impact, FX and blood gesture envelopes");
     }
 }
