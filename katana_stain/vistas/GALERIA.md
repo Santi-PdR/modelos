@@ -2,9 +2,9 @@
 
 Estas imágenes son capturas automáticas de un cliente Forge de prueba, **no un video ni un playtest**. Los fotogramas aislados no garantizan continuidad de la animación, calidad del agarre, sonido ni compatibilidad con todos los mods. Las carpetas se actualizan cuando termina el workflow visual; pueden reflejar una prueba experimental posteriormente descartada y no necesariamente el código actual.
 
-**Estado de revisión:** las posturas de esta galería fueron rechazadas: la guardia cruza la cara y en primera persona hay brazos separados y agarres incorrectos. Además, las habilidades C aquí todavía pueden usar las animaciones predeterminadas de Better Combat, que no cumplen la petición de usar las de otro mod. Ninguna imagen debe tomarse como aprobación final.
+**Estado de revisión:** la guardia y la primera persona siguen rechazadas: la espada cruza la cara y hay brazos separados o agarres incorrectos. Los cortes de C tampoco están aprobados: en los impactos 4 y 7 la hoja todavía parece una guardia levantada. Las capturas no son una versión final.
 
-**Último ensayo visual:** el workflow `45065244473` produjo capturas del experimento original de C sin Better Combat, pero terminó con estado de error y el experimento fue revertido. Las capturas de C sin Better Combat no representan el código actual. La compilación asociada terminó correctamente; no equivale a validación visual.
+**Último ensayo visual:** workflow `45072706666`, compilación `45072706618`, ambos con resultado exitoso. El preset de ataques normales ahora referencia adaptaciones de Serious Player Animations e Improved Animations; C usa esos recursos en lugar de los clips predeterminados de Better Combat. Eso no demuestra que se vean bien ni que estén sincronizados en todos los casos. Las imágenes se tomaron después del evento de daño, no necesariamente en el mismo fotograma.
 
 ## Con Better Combat instalado
 
@@ -30,9 +30,9 @@ Cada captura se solicita después de un evento de daño confirmado; la sincroniz
 
 [Ver todas las capturas](client-vanilla/) · [Tiempos de captura](client-vanilla/capture-timing.tsv)
 
-**C en estas capturas corresponde al ensayo descartado indicado arriba.**
+**C sigue en desarrollo: las poses de impacto aún no están aprobadas.**
 
-![C sin Better Combat, ensayo descartado](client-vanilla/confirmed_c_impact_07.png)
+![C sin Better Combat, postura pendiente](client-vanilla/confirmed_c_impact_07.png)
 
 ## Recursos de animación de Better Combat sin el mod completo
 
