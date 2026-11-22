@@ -149,12 +149,8 @@ def static_checks() -> None:
         assert hashlib.sha256(bp.read_bytes()).hexdigest() == ICON_BACKUP_SHA, backup
     assert (ROOT / "tools/restore_icon.py").is_file()
     particles = ROOT / "src/main/resources/assets/capatest"
-    spark = json.loads((particles / "particles/capa_spark.json").read_text())
-    assert spark["textures"] == ["capatest:capa_spark_0",
-                                 "capatest:capa_spark_1",
-                                 "capatest:capa_spark_2"]
-    for i in range(3):
-        assert (particles / f"textures/particle/capa_spark_{i}.png").is_file()
+    from cape_ember_sprites import bake as verify_spark_sprites
+    verify_spark_sprites(particles, check=True)
     # Chispa a PIXEL: barra vertical ESTRECHA con centro rosa y halo débil.
     _sp = np.asarray(Image.open(
         particles / "textures/particle/capa_spark_1.png").convert("RGBA"))

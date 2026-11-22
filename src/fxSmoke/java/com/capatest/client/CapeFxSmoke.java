@@ -338,6 +338,8 @@ public final class CapeFxSmoke {
                     CapeFrameGapProbe.verify(game, mantle(), shots(game));
                     note("pausa de render: punta y UV2 coinciden con el control continuo en ambos cambios; repetición y corte verificados");
                     testFlight(game);
+                    CapeEmberBlendProbe.verify(game, pane, shots(game));
+                    note("secuencia de brasa: intermedios reales del atlas, cuatro vértices por cuadro y respaldo de tres sprites");
                     equipScene(game, Scene.CHEST);
                 }
                 case 9 -> {

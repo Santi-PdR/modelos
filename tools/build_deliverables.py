@@ -94,11 +94,12 @@ def step_recursos_visor() -> None:
         "textures/item/cape_folded.png": "folded.png",
         "textures/item/cape_folded_glowmask.png": "folded_glowmask.png",
     }
-    copy.update({f"textures/particle/capa_spark_{i}.png": f"capa_spark_{i}.png" for i in range(3)})
+    aura = cape_aura.profile()
+    copy.update({f"textures/particle/{name}": name for name in aura['ember']['images']})
     for src, dst in copy.items():
         shutil.copy(RES / src, A / dst)
     first_frame().save(A / "icon.png", optimize=True)
-    (A / 'aura.json').write_text(json.dumps(cape_aura.profile(), separators=(',', ':')) + '\n')
+    (A / 'aura.json').write_text(json.dumps(aura, separators=(',', ':')) + '\n')
     (A / 'nocturne.json').write_text(json.dumps(cape_nocturne.profile(), separators=(',', ':')) + '\n')
     (A / 'fit.json').write_text(json.dumps(cape_fit.viewer_profile(placed=True), separators=(',', ':')) + '\n')
     (A / 'stride.json').write_text(json.dumps(cape_stride.profile(), separators=(',', ':')) + '\n')

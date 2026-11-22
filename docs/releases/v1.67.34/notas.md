@@ -4,7 +4,7 @@
 
 Cuando vuelve el dibujo después de una pausa breve (hasta 0,5 s de tiempo del juego), el último giro o cambio de luz ya no se aplica retroactivamente a todo el intervalo sin cuadros. La tela mantiene su inercia y el halo continúa el fundido anterior, con hasta un tick de respuesta al dato nuevo en el cuadro de regreso. No intenta adivinar el instante del cambio ni aumentar los FPS. Se mantienen los reinicios tras ausencias largas, los cortes de posición del paño y la protección contra pasadas repetidas.
 
-El modelo, las texturas, los shaders y las curvas de los ocho clips son **idénticos byte por byte**. El [proyecto Blockbench](../../CAPA_v1.67.34.bbmodel) sólo cambia el nombre de versión. Se mantienen el fundido de tinte, las brasas y los ajustes de la .33.
+El modelo, las texturas, los shaders y las curvas de los ocho clips son **idénticos byte por byte**. El [proyecto Blockbench](https://raw.githubusercontent.com/Santi-PdR/modelos/e6fde0d3db23264c105b9f88beacf404bdda1931/docs/CAPA_v1.67.34.bbmodel) sólo cambia el nombre de versión. Se mantienen el fundido de tinte, las brasas y los ajustes de la .33.
 
 ## Comparación controlada contra el JAR anterior
 

@@ -6,6 +6,10 @@ public final class CapeEmberTest {
     private CapeEmberTest() {}
 
     public static void main(String[] args) {
+        if (args.length == 1 && args[0].equals("--blend-samples")) {
+            blendSamples();
+            return;
+        }
         boolean samples = args.length == 1 && args[0].equals("--samples");
         int count = 0;
         for (int life : new int[] {26, 31, 39, 47}) {
@@ -35,6 +39,51 @@ public final class CapeEmberTest {
         if (!samples) {
             System.out.println("Brasas: " + count + " muestras de color, cobertura y tamaño");
             checkRenderClock();
+            checkSpriteTimeline();
+        }
+    }
+
+    private static void checkSpriteTimeline() {
+        int steps = CapeEmber.LAST_SPRITE / 2;
+        for (int life = 26; life <= 47; ++life) {
+            int visited = 0, previous = 0;
+            for (int sample = 0; sample <= life * 64; ++sample) {
+                int index = CapeEmber.spriteIndex(sample / (64.0 * life), life);
+                check(index >= previous && index <= 2 * steps, "spark frame regressed or overshot");
+                visited |= 1 << index;
+                previous = index;
+            }
+            check(visited == (1 << (2 * steps + 1)) - 1, "unreachable intermediate sprite");
+            for (double p : new double[]{.05,.42,.91})
+                check(CapeEmber.spriteIndex(p, life) == CapeEmber.look(p, 0, 0).frame() * steps,
+                        "key sprite changed outside the transition");
+        }
+        System.out.println("Brasas: secuencia completa con los tres fotogramas clave intactos.");
+    }
+
+    private static void blendSamples() {
+        int route = 0;
+        for (int life = 26; life <= 47; ++life) {
+            for (int fps : new int[]{30,60,144}) {
+                double interval = 20.0/fps;
+                for (int pair = 0; pair < 2; ++pair) {
+                    double center = (pair == 0 ? .25 : .63) * life;
+                    for (double offset : new double[]{0,.43,.83}) {
+                        for (double phase : new double[]{.05,.82,1.91,3.13}) {
+                            ++route;
+                            double streak = life < 35 ? 1 : 0;
+                            for (double at = center - 2.5 + (offset-1)*interval; at <= center + 2.5 + 2*interval; at += interval) {
+                                int tick = (int) at;
+                                double p = CapeEmber.renderProgress(tick + 1, life, (float) (at - tick));
+                                var look = CapeEmber.look(p, streak, phase);
+                                System.out.printf(Locale.ROOT, "%d\t%d\t%d\t%d\t%s\t%d\t%d\t%s\t%s\t%s\t%s%n",
+                                        route, fps, pair, life, p, look.frame(), CapeEmber.spriteIndex(p, life),
+                                        look.alpha(), look.red(), look.green(), look.blue());
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

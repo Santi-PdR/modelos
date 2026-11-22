@@ -805,6 +805,14 @@ function emberLook(progress, streak, phase) {
           tint:[1-.39*cool,.98-.18*cool,.93+.07*cool]};
 }
 
+function emberSpriteIndex(progress, life, {steps, halfTicks, changes}) {
+  const width=halfTicks/life;
+  const pair=progress<changes[0]+width ? 0 : 1;
+  const lo=changes[pair]-width, hi=changes[pair]+width;
+  const t=Math.max(0,Math.min(1,(progress-lo)/(hi-lo)));
+  return steps*pair+Math.round(steps*(t*t*(3-2*t)));
+}
+
 function drawRuntimeParticles(seconds, size, stance, pix, depth) {
   const [count, outward, trail, rise]=AURA.modes[motionState];
   const sneak=motionState==='animation.sneak';
@@ -833,7 +841,7 @@ function drawRuntimeParticles(seconds, size, stance, pix, depth) {
       const x=size/2+(pos[0]-lastCx)*lastScale,y=size/2-(pos[1]-lastCy)*lastScale;
       const quad=(.1+.1*noise[0])*(.28+.10*streak+.15*noise[2]);
       const width=32*quad*look.scale*lastScale;
-      embers.push({x,y,z:pos[2],width,...look});
+      embers.push({x,y,z:pos[2],width,...look,frame:emberSpriteIndex(tick/life,life,AURA.ember)});
     }
   }
   for (const e of embers.sort((a,b)=>a.z-b.z))
@@ -1007,12 +1015,13 @@ function pixels(im) {
   return ctx.getImageData(0,0,im.width,im.height).data;
 }
 async function boot() {
+  const auraData=loadJson('aura.json');
   const [geo,clips,fit,stride,sway,wings,atlas,glow,halo,aura,nocturne,reference,original,sparks]=await Promise.all([
     loadJson('armor.geo.json'), loadJson('armor.animation.json'), loadJson('fit.json'), loadJson('stride.json'),
     loadJson('sway.json'), loadJson('wings.json'), image('armor.png'),
-    image('armor_glowmask.png'), image('armor_halo.png'), loadJson('aura.json'), loadJson('nocturne.json'),
+    image('armor_glowmask.png'), image('armor_halo.png'), auraData, loadJson('nocturne.json'),
     loadJson('reference-frame.json'), image('reference-crop.png'),
-    Promise.all([0,1,2].map(i=>image(`capa_spark_${i}.png`)))]);
+    auraData.then(data=>Promise.all(data.ember.images.map(image)))]);
   if (original.width!==reference.cropSize[0] || original.height!==reference.cropSize[1])
     throw new Error('La imagen no coincide con el encuadre de referencia');
   REF=reference; ORIGINAL=original;

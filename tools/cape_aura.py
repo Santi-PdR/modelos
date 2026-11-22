@@ -6,6 +6,8 @@ import json
 import re
 from pathlib import Path
 
+import cape_ember_sprites
+
 ROOT = Path(__file__).resolve().parents[1]
 ITEM = ROOT/'src/main/java/com/capatest/item'
 JAVA = ITEM/'CapeState.java'
@@ -29,4 +31,5 @@ def profile():
     cap = constant('MAX_SPARKS_PER_TICK')
     assert len(modes) == 8 and all(len(values)==4 and 0<values[0]<=cap for values in modes.values())
     return dict(origins=origins, spread=spread, modes=modes,
-                pulseTicks=constant('SPARK_INTERVAL_TICKS'))
+                pulseTicks=constant('SPARK_INTERVAL_TICKS'),
+                ember=dict(cape_ember_sprites.profile(), images=[name+'.png' for name in cape_ember_sprites.names()]))

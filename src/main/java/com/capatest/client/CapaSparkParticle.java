@@ -14,6 +14,7 @@ import net.minecraft.core.particles.SimpleParticleType;
 /** Chispa rosa vertical que conserva la velocidad enviada por el servidor. */
 public class CapaSparkParticle extends TextureSheetParticle {
     private final SpriteSet sprites;
+    private final int spriteEnd;
     private final float baseSize;
     private final float streak;
     private final float phase;
@@ -24,6 +25,10 @@ public class CapaSparkParticle extends TextureSheetParticle {
                                 SpriteSet sprites) {
         super(level, x, y, z);
         this.sprites = sprites;
+        // Older resource packs may still list only the three key sprites.
+        // SpriteSet scales its index to the list, so they repeat at 0 and 1.
+        this.spriteEnd = sprites.get(0, CapeEmber.LAST_SPRITE) == sprites.get(1, CapeEmber.LAST_SPRITE)
+                ? 2 : CapeEmber.LAST_SPRITE;
         double horizontal = Math.hypot(dx, dz);
         this.streak = (float) Math.min(1.0D, horizontal / 0.035D);
         double clamp = horizontal > 0.04D ? 0.04D / horizontal : 1.0D;
@@ -38,7 +43,7 @@ public class CapaSparkParticle extends TextureSheetParticle {
         this.phase = this.random.nextFloat() * 3.14F;
         this.scale(0.28F + 0.10F * this.streak + 0.15F * this.random.nextFloat());
         this.baseSize = this.quadSize;
-        this.setSprite(sprites.get(0, 2));
+        this.setSprite(sprites.get(0, spriteEnd));
     }
 
     @Override
@@ -51,7 +56,8 @@ public class CapaSparkParticle extends TextureSheetParticle {
         this.rCol = (float) look.red();
         this.gCol = (float) look.green();
         this.bCol = (float) look.blue();
-        this.setSprite(this.sprites.get(look.frame(), 2));
+        int frame = spriteEnd == 2 ? look.frame() : CapeEmber.spriteIndex(progress, this.lifetime);
+        this.setSprite(this.sprites.get(frame, spriteEnd));
         super.render(vertices, camera, partialTick);
     }
 

@@ -1033,10 +1033,9 @@ def main() -> None:
     for index, sprite in enumerate(sparks):
         assert sprite.size == (16, 16), sprite.size
         sprite.save(particle_dir / f"capa_spark_{index}.png")
-    (ASSETS / "particles/capa_spark.json").write_text(json.dumps({
-        "textures": [f"capatest:capa_spark_{i}" for i in range(3)]
-    }, indent=2) + "\n")
-    print(f"spark sprites: {len(sparks)} x 16x16 (brasa, destello, ceniza)")
+    from cape_ember_sprites import bake
+    bake(ASSETS)
+    print(f"spark sprites: {len(sparks)} claves de 16x16 y sus transiciones")
 
     # A separate map: leave the approved opaque atlas and crack cores untouched.
     from cape_bloom import write as write_halo

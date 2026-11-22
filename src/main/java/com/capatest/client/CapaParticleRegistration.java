@@ -11,7 +11,7 @@ import net.minecraftforge.fml.common.Mod;
  * v1.23.0: un ÚNICO SpriteSet, el de la chispa exclusiva de la capa.
  *
  * `registerSpriteSet` es obligatorio para PARTICLE_SHEET_TRANSLUCENT:
- * sin él Minecraft no carga `capatest:capa_spark_0..2`. Ya no se registran
+ * sin él Minecraft no carga la secuencia de `capatest:capa_spark`. Ya no se registran
  * brasas, motas frías ni esquirlas, y no se usa ningún tipo vanilla.
  */
 @Mod.EventBusSubscriber(modid = CapaTestMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)

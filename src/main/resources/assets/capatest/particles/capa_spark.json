@@ -1,7 +1,29 @@
 {
   "textures": [
     "capatest:capa_spark_0",
+    "capatest:capa_spark_mix_01_01",
+    "capatest:capa_spark_mix_01_02",
+    "capatest:capa_spark_mix_01_03",
+    "capatest:capa_spark_mix_01_04",
+    "capatest:capa_spark_mix_01_05",
+    "capatest:capa_spark_mix_01_06",
+    "capatest:capa_spark_mix_01_07",
+    "capatest:capa_spark_mix_01_08",
+    "capatest:capa_spark_mix_01_09",
+    "capatest:capa_spark_mix_01_10",
+    "capatest:capa_spark_mix_01_11",
     "capatest:capa_spark_1",
+    "capatest:capa_spark_mix_12_01",
+    "capatest:capa_spark_mix_12_02",
+    "capatest:capa_spark_mix_12_03",
+    "capatest:capa_spark_mix_12_04",
+    "capatest:capa_spark_mix_12_05",
+    "capatest:capa_spark_mix_12_06",
+    "capatest:capa_spark_mix_12_07",
+    "capatest:capa_spark_mix_12_08",
+    "capatest:capa_spark_mix_12_09",
+    "capatest:capa_spark_mix_12_10",
+    "capatest:capa_spark_mix_12_11",
     "capatest:capa_spark_2"
   ]
 }

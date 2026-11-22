@@ -17,6 +17,8 @@ import numpy as np
 import armor_model_pipeline as G
 import cape_animation_pipeline as A
 import cape_fit as F
+import cape_ember_sprites as E
+import cape_aura
 from cape_contact import back_and_sleeves, lap as group_lap, original_dimensions, shoulder_seams
 import cape_tracks as T
 import preview_cloth as P
@@ -86,6 +88,13 @@ def quiet_assets(reference, worn):
     assert payload and json.loads(payload[1]) == runtime, 'visor con animaciones antiguas'
     assert fit and json.loads(fit[1]) == F.viewer_profile(placed=True), 'visor con montaje antiguo'
     assert project and base64.b64decode(project[1],validate=True) == bb, 'visor con proyecto antiguo'
+    aura = cape_aura.profile()
+    assert json.loads(re.search(r'^const INLINE_AURA = (.+);$',html,re.M)[1]) == aura, 'perfil de brasa del visor antiguo'
+    images = json.loads(re.search(r'^const INLINE_IMAGES = (.+);$',html,re.M)[1])
+    for name in aura['ember']['images']:
+        assert base64.b64decode(images[name].split(',',1)[1],validate=True) == (P.ASSETS/E.SPRITES/name).read_bytes(), name
+    app = (P.ROOT/'preview/app.js').read_text()
+    assert app[app.index('function emberLook('):app.index('let yaw=25, pitch=10')] in html, 'muestreo de brasas distinto en visor offline'
 
 
 def asset_contract(candidate=None):
@@ -93,10 +102,17 @@ def asset_contract(candidate=None):
         original = art_entries(jar)
     source = {p.relative_to(P.ASSETS).as_posix():p.read_bytes() for kind in ART
               for p in (P.ASSETS/kind).rglob('*') if p.is_file()}
-    assert source.keys() == original.keys(), original.keys() ^ source.keys()
+    # The only new art bytes are generated spark in-betweens. Check the
+    # precise atlas order and pixels before comparing all frozen resources.
+    E.bake(check=True)
+    expected = original.keys() | E.extras()
+    assert source.keys() == expected, expected ^ source.keys()
+    assert json.loads(original[E.MANIFEST]) == {'textures': ['capatest:'+n for n in E.KEYS]}
+    frozen = {n:source[n] for n in original}
+    frozen[E.MANIFEST] = original[E.MANIFEST]
     for name,data in original.items():
         if name != WORN_ANIMATION:
-            assert data == source[name], f'cambió el arte original: {name}'
+            assert data == frozen[name], f'cambió el arte original: {name}'
     assert G.build() == json.loads(P.ARMOR_GEO.read_text()), 'el generador no produce el modelo restaurado'
     assert hashlib.sha256(PREVIOUS.read_bytes()).hexdigest() == '275e28ccffa3eb704de248be09317635aa27454a3ecece296dd6f02c249cc359'
     with ZipFile(PREVIOUS) as jar:
@@ -105,24 +121,25 @@ def asset_contract(candidate=None):
     if tuple(map(int, P.mod_version().split('.'))) >= (1, 67, 29):
         assert hashlib.sha256(DELIVERED_28.read_bytes()).hexdigest() == 'b2ee2c448715501053611cd4e95a923a9b26e8d4990e080fb721711a74a6d78b'
         with ZipFile(DELIVERED_28) as jar:
-            assert art_entries(jar) == source, 'el freno agachado debe conservar todo el arte y las curvas de .28'
+            assert art_entries(jar) == frozen, 'se tocó arte o curvas de .28 fuera de la secuencia de brasas'
         archive = P.ROOT/'docs/respaldos/v1.67.28'
         for line in (archive/'SHA256SUMS.txt').read_text().splitlines():
             sha, key = line.split('  ', 1)
             assert hashlib.sha256((archive/key).read_bytes()).hexdigest() == sha, key
-            if key in source:
-                assert (archive/key).read_bytes() == source[key], key
+            if key in frozen:
+                assert (archive/key).read_bytes() == frozen[key], key
         bb = (archive/'CAPA_v1.67.28.bbmodel').read_bytes()
         versioned_name = 'capa_deteriorer_evilsaiyan_v' + P.mod_version().replace('.', '_')
         assert bb.replace(b'"name":"capa_deteriorer_evilsaiyan_v1_67_28"', f'"name":"{versioned_name}"'.encode()) == DOC.read_bytes()
-        print(f'{len(source)} recursos de arte/animación y el contenido editable de .28 se conservan.', flush=True)
+        print(f'{len(frozen)-1} recursos de arte/animación y el editable de .28 se conservan; '
+              f'sólo se amplía la secuencia de brasas ({len(E.extras())} intermedios verificados).', flush=True)
     if candidate is not None:
         with ZipFile(candidate) as jar:
             assert jar.testzip() is None
             assert art_entries(jar) == source, 'el JAR no contiene los recursos verificados'
             assert not any(any(probe in n for probe in ('CapePlacementProbe','CapeFxSmoke','CapeWalkProbe','CapeWaterProbe','CapeJumpProbe','CapeClimbProbe','CapeCombinedProbe','CapeTransferProbe','CapeVertexProbe','CapeFrameGapProbe'))
                            for n in jar.namelist()), 'se empaquetó el ensayo de Forge'
-    print(f'{len(original)-1} recursos idénticos al JAR v1.67.14; respecto a v1.67.27 sólo se retocó reposo/agachado. '
+    print(f'{len(original)-2} recursos idénticos al JAR v1.67.14; las únicas curvas distintas de v1.67.27 son reposo/agachado. '
           'Marchas, Blockbench y visor verificados.',flush=True)
 
 

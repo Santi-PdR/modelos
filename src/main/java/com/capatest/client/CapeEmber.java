@@ -2,6 +2,11 @@ package com.capatest.client;
 
 /** Appearance only: the server still sends the same impulses and number of sparks. */
 public final class CapeEmber {
+    private static final int SPRITE_STEPS = 12;
+    static final int LAST_SPRITE = 2 * SPRITE_STEPS;
+    private static final double SPRITE_HALF_TICKS = 2.5;
+    private static final double FIRST_CHANGE = .25, SECOND_CHANGE = .63;
+
     private CapeEmber() {}
 
     public record Look(int frame, double alpha, double scale, double red, double green, double blue) {}
@@ -14,12 +19,21 @@ public final class CapeEmber {
         return Math.min(1, (age - 1 + fraction) / lifetime);
     }
 
+    /** Nearest preblended sprite at the same interpolated time as the particle position. */
+    static int spriteIndex(double progress, int lifetime) {
+        // Each change spans five ticks of life, regardless of streak or FPS.
+        double width = SPRITE_HALF_TICKS / lifetime;
+        if (progress < FIRST_CHANGE + width)
+            return (int) Math.round(SPRITE_STEPS * ease(FIRST_CHANGE - width, FIRST_CHANGE + width, progress));
+        return SPRITE_STEPS + (int) Math.round(SPRITE_STEPS * ease(SECOND_CHANGE - width, SECOND_CHANGE + width, progress));
+    }
+
     public static Look look(double progress, double streak, double phase) {
         double p = Math.max(0, Math.min(1, progress));
         double glint = .5 + .5 * Math.sin(phase + p * 7.5);
         double fade = ease(0, .16, p) * (1 - ease(.36, 1, p));
         double cool = ease(.22, .93, p);
-        int frame = p < .25 ? 0 : p < .63 ? 1 : 2;
+        int frame = p < FIRST_CHANGE ? 0 : p < SECOND_CHANGE ? 1 : 2;
         return new Look(frame, (.79 + .06 * glint + .07 * streak) * fade,
                 1 - .43 * p + .05 * glint, 1 - .39 * cool, .98 - .18 * cool, .93 + .07 * cool);
     }

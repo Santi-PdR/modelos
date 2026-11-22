@@ -7,9 +7,9 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const aura = JSON.parse(fs.readFileSync(0, 'utf8'));
 const rows = file => file ? fs.readFileSync(file, 'utf8').trim().split('\n') : [];
-const samples = rows(process.argv[2]), looks = rows(process.argv[3]);
+const samples = rows(process.argv[2]), looks = rows(process.argv[3]), blends = rows(process.argv[4]);
 const target = () => ({ getContext: () => ({}), addEventListener() {} });
-const context = vm.createContext({ document: { getElementById: target }, aura, samples, looks, assert });
+const context = vm.createContext({ document: { getElementById: target }, aura, samples, looks, blends, assert });
 const source = fs.readFileSync(path.join(__dirname, '../preview/app.js'), 'utf8').split('\nboot().catch')[0];
 vm.runInContext(`${source}
 {
@@ -28,6 +28,10 @@ vm.runInContext(`${source}
       assert(Math.abs(v-expected[i])<2e-15,line);
     });
   }
+  for (const line of blends) {
+    const [,,,life,p,,index] = line.trim().split('\\t').map(Number);
+    assert.equal(emberSpriteIndex(p,life,AURA.ember),index,line);
+  }
   // One half of the billboard is behind the wearer and one half is visible.
   const side=24, image=new Uint8ClampedArray(side*side*4).fill(32);
   const depth=new Float32Array(side*side).fill(-Infinity);
@@ -44,4 +48,4 @@ vm.runInContext(`${source}
   assert.equal(image[(12*side+8)*4],144,'no se respetó el corte de alfa vanilla al apagarse');
 }
 `, context, { filename: 'preview/app.js' });
-console.log(`Chispas visor: profundidad y corte de alfa; ${samples.length} posiciones y ${looks.length} apariencias contrastadas con Java`);
+console.log(`Chispas visor: ${samples.length} posiciones, ${looks.length} apariencias y ${blends.length} índices contrastados con Java; profundidad y corte alfa intactos.`);

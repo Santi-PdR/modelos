@@ -9,8 +9,8 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.67.34: la tela y el halo retoman su transición tras una pausa breve de renderizado.
-Se conservan el modelo, las texturas, el halo y los ocho clips.
+v1.67.35: las brasas cambian de aspecto gradualmente, con un solo cuadrilátero por partícula.
+Se conservan el modelo, las texturas del paño, el halo y los ocho clips.
 El icono de referencia pulsa en la hotbar.
 '''
 
