@@ -1,5 +1,19 @@
 # Historial de cambios
 
+## 1.0.39 — décimo estado: ardiendo, con brasas
+
+* **Estado nuevo `burning`**: si el portador está en llamas (fuego, lava, flechas de
+  Fuego) la reliquia se pone **naranja de brasa** —el único estado cálido de los diez—,
+  gira a **1.40×** (el más rápido), el vaivén es el más amplio después de la tormenta y
+  el borde del shader sube a 1.05 (el único que pasa de 1).
+* **Manda sobre todo**, herido incluido: es lo único de la lista de detección que te está
+  haciendo daño mientras lo miras. El CI comprueba que `isOnFire()` va **antes** que el
+  chequeo de vida, para que un refactor no lo devuelva abajo.
+* **Brasas** en vez de chispas: seis que suben, se mecen poco y **parpadean** (cada una con
+  su fase), encogiéndose y apagándose arriba. Sin el parpadeo suben como burbujas naranjas;
+  con él, se lee fuego. Correr las aviva (×1.45). Mismo lote aditivo: cero draws nuevos.
+* 1 clave nueva por idioma (68 en cada uno).
+
 ## 1.0.38 — la lluvia tiene gotas y los estados pueden pasar solos
 
 * **VFX propio para la lluvia**: seis gotas cayendo alrededor de la reliquia, con viento

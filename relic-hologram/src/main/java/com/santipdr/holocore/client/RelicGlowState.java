@@ -90,6 +90,10 @@ final class RelicGlowState {
     private static final float NIGHT_RED = 0.38F;
     private static final float NIGHT_GREEN = 0.72F;
     private static final float NIGHT_BLUE = 1.00F;
+    /** Ardiendo: naranja de brasa, el unico estado calido de los diez. */
+    private static final float BURNING_RED = 1.00F;
+    private static final float BURNING_GREEN = 0.42F;
+    private static final float BURNING_BLUE = 0.16F;
     /** Portal cerca: violeta de obsidiana encantada, el color mas "magico" de todos. */
     private static final float PORTAL_RED = 0.78F;
     private static final float PORTAL_GREEN = 0.42F;
@@ -156,6 +160,16 @@ final class RelicGlowState {
                 blue = lerp(blue, RAIN_BLUE, 0.45F);
                 aura += 0.05F;
                 ring -= 0.15F;
+            }
+            case BURNING -> {
+                // Naranja de brasa y el aura arriba: si te estas quemando, la
+                // reliquia lo dice con el color mas calido que hay en el mod.
+                red = lerp(red, BURNING_RED, 0.60F);
+                green = lerp(green, BURNING_GREEN, 0.60F);
+                blue = lerp(blue, BURNING_BLUE, 0.60F);
+                aura += 0.18F;
+                ring += 0.30F;
+                spin += 0.060F;
             }
             case PORTAL -> {
                 // Un portal tira del color y del giro: es el unico estado "de sitio"

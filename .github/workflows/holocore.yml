@@ -366,7 +366,7 @@ jobs:
           enum = animatable.split('enum Mood {', 1)[1].split('}', 1)[0]
           moods = re.findall(r'^\s*([A-Z][A-Z_]*)\s*,?$', enum, re.M)
           esperados = ['NEUTRAL', 'RESONANT', 'STORM', 'WOUNDED', 'DARK', 'RAIN', 'NIGHT',
-                       'SUBMERGED', 'PORTAL']
+                       'SUBMERGED', 'PORTAL', 'BURNING']
           assert moods == esperados, moods
           assert 'public Mood mood()' in animatable, 'falta el accessor de Mood'
           assert 'isThundering()' in animatable, 'la tormenta no alimenta ningun estado'
@@ -392,6 +392,13 @@ jobs:
               'el escaneo de portal no esta cacheado'
           assert 'if (portalNear(player)) {' in animatable, \
               'el escaneo de portal existe pero no alimenta ningun estado'
+          # Ardiendo va el primero de la deteccion: es lo unico de la lista que hace
+          # dano mientras lo miras.
+          assert 'if (player.isOnFire()) {' in animatable, 'estar ardiendo no es un estado'
+          deteccion = animatable.split('private Mood detectMood(Player player) {', 1)[1] \
+              .split('private static double speedFor', 1)[0]
+          assert deteccion.index('isOnFire()') < deteccion.index('getHealth()'), \
+              'estar ardiendo tiene que mandar sobre el herido'
           assert 'case NIGHT ->' in animatable, 'el estado de noche no tiene velocidad'
           assert 'anotherBearerNear(' in animatable, 'no hay deteccion de otro portador cerca'
           assert 'RelicServer.findRelic(other).isPresent()' in animatable, \
@@ -427,6 +434,14 @@ jobs:
               'las gotas no se dibujan nunca'
           assert 'DROP_COUNT' in aura and 'DROP_SPEED' in aura, \
               'faltan las constantes de las gotas'
+          # Brasas: suben, parpadean y avivan al correr.
+          assert 'private static void drawEmbers(' in aura, 'estar ardiendo no tiene brasas'
+          assert 'drawEmbers(bufferSource, frame, time, glow, amount, motion)' in aura, \
+              'las brasas no se dibujan nunca'
+          assert 'EMBER_COUNT' in aura and 'EMBER_SPEED' in aura, \
+              'faltan las constantes de las brasas'
+          assert 'float flicker = 0.55F + 0.45F * sin(time * 9.0F + i * 2.7F);' in aura, \
+              'las brasas no parpadean (parecen burbujas naranjas)'
 
           assert 'message.holocore.mood' in comandos, '/relic info no dice el estado de brillo'
           assert 'Commands.literal("mood")' in comandos, 'falta /relic mood'
@@ -521,7 +536,7 @@ jobs:
                   f'{idioma} sin el aviso de parar la ronda'
               assert 'message.holocore.mood_list' in lang, f'{idioma} sin la lista de estados'
               for mood in ('wounded', 'storm', 'resonant', 'dark', 'rain',
-                           'neutral', 'night', 'submerged', 'portal'):
+                           'neutral', 'night', 'submerged', 'portal', 'burning'):
                   clave = f'message.holocore.state.{mood}'
                   assert clave in lang, f'{idioma} sin {clave}'
 

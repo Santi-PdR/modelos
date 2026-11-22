@@ -237,6 +237,14 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.39, décimo estado: ardiendo.** `BURNING` sale de `Entity.isOnFire()`, que es
+vanilla y ya cubre fuego, lava y flechas de Fuego. Paleta cálida (`1.00 / 0.42 / 0.16`,
+mezclada al 60%: el único estado que tira a naranja) y `HoloTint` a **1.05**, el único
+que pasa de 1, porque el borde tiene que encenderse y no apagarse. El VFX es `drawEmbers`:
+seis brasas que suben de −0.30 a +0.40 en el eje `up`, se mecen ±0.06, se encogen al 65% y
+parpadean con `0.55 + 0.45 × sin(tiempo × 9 + i × 2.7)`. Ese parpadeo a 9 rad/s es lo que
+distingue una brasa de una burbuja naranja: sin él, el movimiento es idéntico al del agua.
+
 **1.0.38, gotas para la lluvia y ronda temporizada.** La lluvia era el único estado que
 parecía reposo: cambiaba de color y bajaba el anillo, pero las chispas seguían en órbita.
 Ahora `RelicAura.drawDrops` dibuja seis gotas que caen de +0.40 a −0.32 en el eje `up` de

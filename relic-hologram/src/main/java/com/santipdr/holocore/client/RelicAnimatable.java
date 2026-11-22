@@ -99,7 +99,13 @@ public final class RelicAnimatable implements GeoAnimatable {
          * reliquia se pone violeta y nerviosa. Se mira una vez por segundo, no en
          * cada tick, y con una posicion reutilizable: esto corre por portador.
          */
-        PORTAL
+        PORTAL,
+        /**
+         * El portador esta ardiendo (fuego, lava, flechas de Fuego): naranja, el
+         * giro mas rapido de los diez y brasas subiendo. Es el estado mas urgente:
+         * manda sobre todo lo demas, herida incluida.
+         */
+        BURNING
     }
 
     private final UUID wearer;
@@ -563,6 +569,7 @@ public final class RelicAnimatable implements GeoAnimatable {
             case SUBMERGED -> 0.66D;
             // Un portal tira de la reliquia: es el estado mas nervioso.
             case PORTAL -> 1.22D;
+            case BURNING -> 1.40D;
             case RESONANT -> 1.18D;
             case NEUTRAL -> 1.0D;
         };
@@ -576,6 +583,11 @@ public final class RelicAnimatable implements GeoAnimatable {
     private Mood detectMood(Player player) {
         if (!this.active) {
             return Mood.NEUTRAL;
+        }
+        // Ardiendo manda sobre todo: es lo unico de esta lista que te esta haciendo
+        // dano mientras lo miras.
+        if (player.isOnFire()) {
+            return Mood.BURNING;
         }
         if (player.getHealth() < player.getMaxHealth() * WOUNDED_HEALTH) {
             return Mood.WOUNDED;

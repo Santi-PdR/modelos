@@ -87,6 +87,10 @@ public final class RelicAura {
     private static final int DROP_COUNT = 6;
     private static final float DROP_SIZE = 0.045F;
     private static final float DROP_SPEED = 1.10F;
+    /** Brasas del estado ardiendo: suben como las burbujas, pero rapido y calientes. */
+    private static final int EMBER_COUNT = 6;
+    private static final float EMBER_SIZE = 0.050F;
+    private static final float EMBER_SPEED = 0.65F;
     private static final float SPARK_RADIUS = 0.42F;
     private static final float SPARK_SIZE = 0.075F;
     private static final float SPARK_SPEED = 0.75F;
@@ -230,6 +234,12 @@ public final class RelicAura {
             drawBubbles(bufferSource, frame, time, glow, amount, motion);
             return;
         }
+        if (mood == RelicAnimatable.Mood.BURNING) {
+            // Ardiendo: brasas subiendo, con parpadeo. Se ve aunque el jugador este
+            // quieto, que es justo cuando mas falta hace saber que sigues en fuego.
+            drawEmbers(bufferSource, frame, time, glow, amount, motion);
+            return;
+        }
         if (mood == RelicAnimatable.Mood.RAIN) {
             // Con lluvia, gotas cayendo alrededor: el mismo truco que las burbujas,
             // al reves. Es el estado que mas tiempo se pasa encendido, y con chispas
@@ -349,6 +359,36 @@ public final class RelicAura {
             // parpadea en el sitio se lee como un pixel roto, no como lluvia.
             float weight = amount * (0.25F + 0.75F * fall) * 0.60F;
             billboardAt(buffer, frame, cx, cy, cz, DROP_SIZE, time * 0.8F + i,
+                    redTint * weight, greenTint * weight, blueTint * weight, 1.0F);
+        }
+    }
+
+    /**
+     * Brasas: suben, se mecen poco y <b>parpadean</b> (cada una con su fase), que es
+     * lo que separa una brasa de una burbuja caliente. Naranja casi puro encima del
+     * color del estado, y correr las aviva: es el mismo truco de lotes que las
+     * burbujas y las gotas, sin draws nuevos.
+     */
+    private static void drawEmbers(MultiBufferSource bufferSource, Frame frame, float time,
+                                   RelicGlowState glow, float amount, float motion) {
+        VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
+        float redTint = glow.red() * 0.70F + 1.00F * 0.30F;
+        float greenTint = glow.green() * 0.55F + 0.55F * 0.45F;
+        float blueTint = glow.blue() * 0.25F + 0.18F * 0.75F;
+        float speed = EMBER_SPEED * (1.0F + 0.45F * motion);
+        for (int i = 0; i < EMBER_COUNT; i++) {
+            float rise = fract(time * speed + i * (1.0F / EMBER_COUNT));
+            float sway = sin(time * 1.7F + i * 2.3F) * 0.06F;
+            float height = -0.30F + rise * 0.70F;
+            float cx = frame.originX + frame.leftX * sway + frame.upX * height;
+            float cy = frame.originY + frame.leftY * sway + frame.upY * height;
+            float cz = frame.originZ + frame.leftZ * sway + frame.upZ * height;
+            // Parpadeo: la brasa se enciende y se apaga dos veces por ciclo. Sin esto
+            // sube como una burbuja naranja y no se lee como fuego.
+            float flicker = 0.55F + 0.45F * sin(time * 9.0F + i * 2.7F);
+            float weight = amount * flicker * (1.0F - 0.45F * rise) * 0.75F;
+            float size = EMBER_SIZE * (1.0F - 0.35F * rise);
+            billboardAt(buffer, frame, cx, cy, cz, size, time * 0.9F + i,
                     redTint * weight, greenTint * weight, blueTint * weight, 1.0F);
         }
     }
@@ -530,6 +570,8 @@ public final class RelicAura {
             case SUBMERGED -> 0.50F;
             // Un portal tira de ella: flota un poco mas que en reposo.
             case PORTAL -> 1.10F;
+            // Ardiendo vibra: el vaiven mas amplio despues de la tormenta.
+            case BURNING -> 1.35F;
             case NEUTRAL -> 1.0F;
         };
         // Correr suma un 60% de vaiven y agacharse lo recorta: es la diferencia
