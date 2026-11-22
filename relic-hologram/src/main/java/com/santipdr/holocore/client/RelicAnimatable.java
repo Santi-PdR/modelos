@@ -154,9 +154,9 @@ public final class RelicAnimatable implements GeoAnimatable {
     /** Ultimo tick en el que el cambio de estado encolo su glitch. */
     private long moodGlitchedAt = Long.MIN_VALUE;
     /**
-     * Estado forzado con {@code /relic mood}: sirve para ver tormenta, herido o
-     * resonancia sin montar la escena (una tormenta de verdad, dos jugadores...).
-     * {@code null} = automatico.
+     * Estado forzado con {@code /relic mood} o la tecla M: sirve para ver tormenta,
+     * herido o resonancia sin montar la escena (una tormenta de verdad, dos
+     * jugadores...). {@code null} = automatico.
      */
     private static Mood forced;
     /** Velocidad aplicada al controlador de estado (1.0 = la de la animacion). */
@@ -241,6 +241,20 @@ public final class RelicAnimatable implements GeoAnimatable {
 
     /** Estado forzado, o {@code null} si manda la deteccion automatica. */
     public static Mood forcedMood() {
+        return forced;
+    }
+
+    /**
+     * Siguiente estado de la ronda: automatico -> neutral -> ... -> sumergido ->
+     * automatico. La comparten la tecla M y {@code /relic mood next}, para que la
+     * ronda sea una sola y no dos ordenes distintos que se pisen.
+     *
+     * @return el estado que queda forzado, o {@code null} si ha vuelto a automatico
+     */
+    public static Mood cycleForcedMood() {
+        Mood[] valores = Mood.values();
+        int siguiente = forced == null ? 0 : forced.ordinal() + 1;
+        forced = siguiente >= valores.length ? null : valores[siguiente];
         return forced;
     }
 

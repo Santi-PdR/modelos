@@ -60,5 +60,7 @@
   "message.holocore.mood_show": "Estado de brillo: %s.",
   "message.holocore.mood_forced": "Estado de brillo forzado: %s (/relic mood auto para soltarlo).",
   "message.holocore.mood_auto": "Estado de brillo otra vez automático.",
-  "key.holocore.pulse": "Pulso de la reliquia"
+  "message.holocore.mood_list": "Estados de brillo: %s",
+  "key.holocore.pulse": "Pulso de la reliquia",
+  "key.holocore.mood": "Cambiar estado de brillo"
 }

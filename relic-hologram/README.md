@@ -81,6 +81,7 @@ En el juego:
 |---|---|
 | Despertar / dormir | tecla **G** o `/relic toggle` |
 | Pulso manual | tecla **P** o `/relic pulse` |
+| Pasar de un estado de brillo al siguiente | tecla **M** o `/relic mood next` |
 | Pulso de energía | `/relic pulse` |
 | Liberación total | `/relic release` |
 | Afinar posición | `/relic offset <x> <y> <z>` (píxeles de modelo) |
@@ -93,6 +94,7 @@ En el juego:
 | Guardar los ajustes | `/relic save` |
 | Volver a los valores de fábrica | `/relic reset` · `/relic reset <clave>` (una sola) |
 | Ver o forzar el estado de brillo | `/relic mood` · `/relic mood <auto\|dark\|rain\|storm\|wounded\|resonant\|night\|submerged>` |
+| Recorrer los estados o ver la lista | `/relic mood next` (ronda, igual que la tecla M) · `/relic mood list` (los ocho, con el que manda marcado) |
 | Ver la reliquia de cerca | `/relic preview` · `/relic preview <0.5–6>` (bloques) |
 | Medir el coste | `/relic stats` · `/relic stats reset` |
 
@@ -225,8 +227,11 @@ que se note que ha reaccionado a algo, y **cambia la velocidad del bucle** (agua
 0.72×, noche 0.85×, tormenta 1.32×, resonancia 1.18×): no es solo color. `/relic info` lo dice en una línea
 aparte, así que si el aura se pone roja no hay que adivinar por qué.
 
-Para verlos sin montar la escena está `/relic mood <estado>`, que fuerza uno de ellos
-y `/relic mood auto` para volver a la detección normal. Es la forma de mirar la
+Para verlos sin montar la escena está `/relic mood <estado>`, que fuerza uno de ellos,
+`/relic mood auto` para volver a la detección normal, `/relic mood next` para pasarlos
+de uno en uno (lo mismo que la **tecla M**, con el aviso en la barra de acción en vez
+del chat) y `/relic mood list` para ver los ocho nombres con el activo marcado: en
+oro si está forzado, en azul si lo ha elegido la escena. Es la forma de mirar la
 tormenta o el herido con un solo jugador y sin comandos raros.
 
 Los cambios **no saltan**: `RelicGlowState` interpola color (≈0.30 s) y

@@ -11,6 +11,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
@@ -22,6 +23,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import java.util.Locale;
 import top.theillusivec4.curios.api.client.CuriosRendererRegistry;
 
 /**
@@ -83,6 +85,7 @@ public final class RelicClientEvents {
         public static void registerKeys(RegisterKeyMappingsEvent event) {
             event.register(RelicKeys.TOGGLE);
             event.register(RelicKeys.PULSE);
+            event.register(RelicKeys.MOOD);
         }
 
         /**
@@ -124,6 +127,26 @@ public final class RelicClientEvents {
         }
         while (RelicKeys.PULSE.consumeClick()) {
             RelicNetwork.sendToServer(new RelicActionPacket(RelicActionPacket.Action.PULSE));
+        }
+        while (RelicKeys.MOOD.consumeClick()) {
+            announceForcedMood(minecraft);
+        }
+    }
+
+    /**
+     * Cicla el estado de brillo y lo dice en la **barra de accion**, no en el chat:
+     * con la tecla M se pasan los ocho estados en unos segundos y nueve lineas de
+     * chat taparian justo lo que se esta mirando.
+     */
+    private static void announceForcedMood(Minecraft minecraft) {
+        RelicAnimatable.Mood mood = RelicAnimatable.cycleForcedMood();
+        Component aviso = mood == null
+                ? Component.translatable("message.holocore.mood_auto")
+                : Component.translatable("message.holocore.mood_forced",
+                        Component.translatable("message.holocore.state."
+                                + mood.name().toLowerCase(Locale.ROOT)));
+        if (minecraft.player != null) {
+            minecraft.player.displayClientMessage(aviso, true);
         }
     }
 

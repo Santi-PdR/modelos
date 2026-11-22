@@ -237,6 +237,16 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.34, ver los ocho estados de un tirón.** Sin tocar shaders: la tecla M cicla el
+estado forzado (`RelicAnimatable.cycleForcedMood`, la misma ronda que
+`/relic mood next`) y avisa por la barra de acción. Para comparar dos estados sin
+soltar la reliquia basta con pulsar M con `/relic preview 2` abierto: el tinte del
+borde (`HoloTint` 0.62–1.08), el color del aura y las chispas cambian con la misma
+interpolación de ≈0.30 s de siempre, así que se ve la transición y no un salto.
+`/relic mood list` es la otra mitad: dice cuál manda y si es forzado (oro) o de la
+escena (azul). De paso, las sugerencias del comando ya salen del enum: se habían
+quedado sin `night` ni `submerged` durante dos versiones.
+
 **1.0.33, octavo estado: bajo el agua, con VFX propio.** Primera vez que un estado
 cambia *qué* se dibuja y no solo de qué color.
 

@@ -411,6 +411,22 @@ jobs:
           assert 'message.holocore.mood' in comandos, '/relic info no dice el estado de brillo'
           assert 'Commands.literal("mood")' in comandos, 'falta /relic mood'
           assert 'forceMood(null)' in comandos, '/relic mood no se puede volver a automatico'
+          # La ronda (tecla M y /relic mood next) recorre el enum entero.
+          assert 'public static Mood cycleForcedMood()' in animatable, \
+              'no hay ronda de estados de brillo'
+          assert 'int siguiente = forced == null ? 0 : forced.ordinal() + 1;' in animatable, \
+              'la ronda no avanza por el enum'
+          assert 'RelicAnimatable.cycleForcedMood()' in comandos, \
+              '/relic mood next no usa la misma ronda que la tecla M'
+          assert 'Commands.literal("next")' in comandos, 'falta /relic mood next'
+          assert 'Commands.literal("list")' in comandos, 'falta /relic mood list'
+          assert 'message.holocore.mood_list' in comandos, 'la lista de estados no se anuncia'
+          # Las sugerencias del comando salen de Mood.values(): escritas a mano se
+          # quedaron sin night ni submerged durante dos versiones.
+          assert 'MOOD_NAMES = moodNames()' in comandos, \
+              'las sugerencias de /relic mood no se generan del enum'
+          assert 'MOOD_NAMES = {' not in comandos, \
+              'las sugerencias de /relic mood vuelven a estar escritas a mano'
           assert 'forceMood(null)' in eventos, \
               'el estado forzado con /relic mood sobrevive a salir del mundo'
 
@@ -460,6 +476,8 @@ jobs:
               lang = json.loads(pathlib.Path(
                   f'relic-hologram/src/main/resources/assets/holocore/lang/{idioma}.json'
               ).read_text(encoding='utf-8'))
+              assert 'key.holocore.mood' in lang, f'{idioma} sin el nombre de la tecla M'
+              assert 'message.holocore.mood_list' in lang, f'{idioma} sin la lista de estados'
               for mood in ('wounded', 'storm', 'resonant', 'dark', 'rain',
                            'neutral', 'night', 'submerged'):
                   clave = f'message.holocore.state.{mood}'
@@ -482,6 +500,11 @@ jobs:
           # registrada y consumida, o el jugador la configura y no pasa nada.
           teclas = (base / 'RelicKeys.java').read_text(encoding='utf-8')
           assert 'KeyMapping PULSE' in teclas, 'falta la tecla del pulso'
+          assert 'KeyMapping MOOD' in teclas, 'falta la tecla de los estados de brillo'
+          assert 'event.register(RelicKeys.MOOD)' in eventos, 'la tecla M no se registra'
+          assert 'RelicKeys.MOOD.consumeClick()' in eventos, 'la tecla M no se consume'
+          assert 'displayClientMessage(aviso, true)' in eventos, \
+              'el aviso de la tecla M no va a la barra de accion'
           assert 'event.register(RelicKeys.PULSE)' in eventos, 'la tecla del pulso no se registra'
           assert 'RelicKeys.PULSE.consumeClick()' in eventos, 'la tecla del pulso no se consume'
           for idioma in ('en_us', 'es_es'):

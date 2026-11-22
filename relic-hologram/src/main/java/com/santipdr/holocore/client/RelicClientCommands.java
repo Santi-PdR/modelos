@@ -18,6 +18,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.ForgeConfigSpec;
 
@@ -112,6 +113,8 @@ public final class RelicClientCommands {
                 .then(Commands.literal("save").executes(ctx -> save(ctx.getSource())))
                 .then(Commands.literal("mood")
                         .executes(ctx -> moodShow(ctx.getSource()))
+                        .then(Commands.literal("next").executes(ctx -> moodNext(ctx.getSource())))
+                        .then(Commands.literal("list").executes(ctx -> moodList(ctx.getSource())))
                         .then(Commands.argument("estado", StringArgumentType.word())
                                 .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
                                         MOOD_NAMES, builder))
@@ -459,9 +462,79 @@ public final class RelicClientCommands {
         return 1;
     }
 
-    /** Nombres aceptados por {@code /relic mood}. {@code auto} = deteccion. */
-    private static final String[] MOOD_NAMES = {"auto", "neutral", "dark", "rain", "storm",
-            "wounded", "resonant"};
+    /**
+     * Nombres aceptados por {@code /relic mood}. Se generan del enum y no a mano: la
+     * lista escrita a mano se quedo sin {@code night} ni {@code submerged} en 1.0.32
+     * y 1.0.33, y los estados nuevos eran invisibles en las sugerencias.
+     */
+    private static final String[] MOOD_NAMES = moodNames();
+
+    private static String[] moodNames() {
+        RelicAnimatable.Mood[] valores = RelicAnimatable.Mood.values();
+        String[] nombres = new String[valores.length + 1];
+        nombres[0] = "auto";
+        for (int i = 0; i < valores.length; i++) {
+            nombres[i + 1] = valores[i].name().toLowerCase(Locale.ROOT);
+        }
+        return nombres;
+    }
+
+    /**
+     * {@code /relic mood next}: el siguiente de la ronda, igual que la tecla M.
+     * Volver a automatico se dice en gris y no en aqua, para que se distinga de
+     * mirar que un estado esta forzado.
+     */
+    private static int moodNext(CommandSourceStack source) {
+        RelicAnimatable.Mood mood = RelicAnimatable.cycleForcedMood();
+        if (mood == null) {
+            source.sendSuccess(() -> Component.translatable("message.holocore.mood_auto")
+                    .withStyle(ChatFormatting.GRAY), false);
+            return 1;
+        }
+        Component nombre = Component.translatable("message.holocore.state."
+                + mood.name().toLowerCase(Locale.ROOT));
+        source.sendSuccess(() -> Component.translatable("message.holocore.mood_forced", nombre)
+                .withStyle(ChatFormatting.AQUA), false);
+        return 1;
+    }
+
+    /**
+     * {@code /relic mood list}: los ocho estados en una linea, con el que manda
+     * marcado. Sirve para saber que nombres acepta el comando sin adivinar.
+     */
+    private static int moodList(CommandSourceStack source) {
+        RelicAnimatable.Mood forzado = RelicAnimatable.forcedMood();
+        RelicAnimatable.Mood actual = forzado;
+        if (actual == null) {
+            RelicVisuals.RelicVisual visual = localVisual();
+            if (visual == null) {
+                source.sendFailure(Component.translatable("message.holocore.not_equipped"));
+                return 0;
+            }
+            actual = visual.animatable().mood();
+        }
+        MutableComponent lista = Component.empty();
+        boolean primero = true;
+        for (RelicAnimatable.Mood mood : RelicAnimatable.Mood.values()) {
+            if (!primero) {
+                lista.append(Component.literal(" · ").withStyle(ChatFormatting.DARK_GRAY));
+            }
+            primero = false;
+            MutableComponent nombre = Component.translatable("message.holocore.state."
+                    + mood.name().toLowerCase(Locale.ROOT));
+            if (mood == actual) {
+                // El forzado en oro y el que manda por escena en aqua: con /relic mood
+                // list se ve de un golpe si lo que estas viendo es lo que pide el mundo.
+                nombre = nombre.copy().withStyle(forzado == null
+                        ? ChatFormatting.AQUA : ChatFormatting.GOLD, ChatFormatting.BOLD);
+            }
+            lista.append(nombre);
+        }
+        MutableComponent linea = lista;
+        source.sendSuccess(() -> Component.translatable("message.holocore.mood_list", linea),
+                false);
+        return 1;
+    }
 
     /**
      * {@code /relic mood}: enseña el estado de brillo que manda ahora mismo (y si

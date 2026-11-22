@@ -1,5 +1,22 @@
 # Historial de cambios
 
+## 1.0.34 — la tecla M recorre los estados y `/relic mood list` los enseña
+
+* **Tecla M** (`key.holocore.mood`, remapeable como la G y la P): pasa al siguiente
+  estado de brillo —auto → neutral → oscuridad → lluvia → tormenta → herido →
+  resonancia → noche → agua → auto— y lo dice en la **barra de acción**, no en el
+  chat: con la tecla se pasan los ocho estados en unos segundos y nueve líneas de
+  chat taparían justo lo que estás mirando.
+* **`/relic mood next`** hace la misma ronda (comparten `cycleForcedMood`, para que no
+  haya dos órdenes que se pisen) y **`/relic mood list`** saca los ocho nombres en una
+  línea con el que manda marcado: en **oro** si está forzado, en **azul** si lo ha
+  elegido la escena. Así se ve de un golpe si lo que miras es lo que pide el mundo.
+* **Arreglo**: las sugerencias de `/relic mood` estaban escritas a mano y se habían
+  quedado sin `night` ni `submerged` justo en las dos versiones que los añadieron. Ahora
+  salen de `Mood.values()`, así que no se pueden quedar cortas otra vez; el CI exige
+  que se generen del enum y falla si vuelven a ser una lista literal.
+* 2 claves nuevas por idioma (64 en cada uno).
+
 ## 1.0.33 — octavo estado: bajo el agua, y burbujas
 
 * **Estado nuevo `submerged`**: con los ojos dentro del agua la reliquia tira a verde
