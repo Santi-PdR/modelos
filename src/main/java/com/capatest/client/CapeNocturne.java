@@ -117,6 +117,11 @@ public final class CapeNocturne {
     }
 
     private static double wave(double phase) {
+        if (!Double.isFinite(phase)) return .5;
+        // Ordinary render times retain the original arithmetic exactly. A
+        // corrupt but finite clock can overflow 2π*phase; reduce only that
+        // out-of-domain input before asking cos() for its periodic phase.
+        if (Math.abs(phase) > 1.0e12) phase = Math.IEEEremainder(phase, 1.0);
         return .5 + .5 * Math.cos(2 * Math.PI * phase);
     }
 
