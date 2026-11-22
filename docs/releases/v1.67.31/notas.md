@@ -24,4 +24,4 @@ La parte superior del pelo sigue limpia en el giro sostenido y la frenada. En el
 - Minecraft Java **1.20.1**, Forge **47.3.0**, GeckoLib **4.8.1**; Curios **5.14.1** opcional.
 - Cerrá Minecraft y pegá todo el [bloque de PowerShell](instalar-test-1.txt). Verifica **755.125 bytes** y el SHA-256 antes de retirar JAR anteriores de `capatest`. Se verificaron el script y los bytes descargables; no se ejecutó en tu Windows.
 - Para volver a la .30, quitá primero `capatest-1.67.31.jar` de `test-1/mods` y usá el [PowerShell fijado de la .30](../v1.67.30/instalar-test-1.txt). No se cambiaron las descargas anteriores ni se creó una Release pública.
-- [Blockbench](../../CAPA_v1.67.31.bbmodel) · [Visor offline](../../capa_v1170_visor.html). El ajuste se aplica al render equipado, no a las curvas editables.
+- [Blockbench](https://github.com/Santi-PdR/modelos/blob/5a978956ab3444de525fdd277930f9d0a805417b/docs/CAPA_v1.67.31.bbmodel) · [Visor offline](https://github.com/Santi-PdR/modelos/blob/5a978956ab3444de525fdd277930f9d0a805417b/docs/capa_v1170_visor.html). El ajuste se aplica al render equipado, no a las curvas editables.

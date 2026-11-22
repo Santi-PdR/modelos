@@ -1,0 +1,41 @@
+# Cerrá Minecraft y pegá todo este bloque en PowerShell.
+& {
+    $ErrorActionPreference = 'Stop'
+    $mods = 'D:\Minecraft\SKLauncher\sklauncher-data-v4\instances\test-1\mods'
+    $jar = 'capatest-1.67.32.jar'
+    $version = [version]'1.67.32'
+    $bytes = 757310
+    $sha = '3af2074a92951c242db16aab24ee60a3826d09ec0ca6bba87d09916e15d29d2e'
+    $url = 'https://raw.githubusercontent.com/Santi-PdR/modelos/35ec91a169424ff08b86108703ccaf7b2ef7f49b/entregables/v1.67.32/capatest-1.67.32.jar'
+    if (-not (Test-Path -LiteralPath $mods -PathType Container)) {
+        throw "No se encontró la carpeta mods de test-1: $mods"
+    }
+
+    $id = [guid]::NewGuid().ToString('N')
+    $tmp = Join-Path ([IO.Path]::GetTempPath()) "capatest-$id.jar"
+    $stage = Join-Path $mods ".capatest-$id.tmp"
+    $target = Join-Path $mods $jar
+    function Confirmar-Jar([string]$archivo) {
+        if ((Get-Item -LiteralPath $archivo).Length -ne $bytes -or
+            (Get-FileHash -LiteralPath $archivo -Algorithm SHA256).Hash -ne $sha) {
+            throw 'Tamaño o SHA-256 inválido. No se retiró el JAR anterior.'
+        }
+    }
+    try {
+        Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $tmp
+        Confirmar-Jar $tmp
+        Copy-Item -LiteralPath $tmp -Destination $stage
+        Confirmar-Jar $stage
+        if (Test-Path -LiteralPath $target -PathType Container) {
+            throw "Ya hay una carpeta llamada $jar en mods."
+        }
+        Move-Item -LiteralPath $stage -Destination $target -Force
+        Confirmar-Jar $target
+        Get-ChildItem -LiteralPath $mods -Filter 'capatest-*.jar' -File | Where-Object {
+            $_.Name -match '^capatest-([0-9]+\.[0-9]+\.[0-9]+)\.jar$' -and ([version]($Matches[1])) -lt $version
+        } | Remove-Item -Force
+        Write-Host "Instalado y verificado: $target"
+    } finally {
+        Remove-Item -LiteralPath $tmp, $stage -Force -ErrorAction SilentlyContinue
+    }
+}

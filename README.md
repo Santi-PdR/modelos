@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.32 — retorno de la capucha y continuidad del halo
+
+**[Descargar JAR de prueba v1.67.32](https://raw.githubusercontent.com/Santi-PdR/modelos/35ec91a169424ff08b86108703ccaf7b2ef7f49b/entregables/v1.67.32/capatest-1.67.32.jar)** · [PowerShell para test-1](docs/releases/v1.67.32/instalar-test-1.txt) · Comparativa [pecho](docs/releases/v1.67.32/maniobra/retorno/retorno-pecho.jpg) / [Curios](docs/releases/v1.67.32/maniobra/retorno/retorno-curios.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.32/notas.md).
+
+La capucha acompaña el giro a ambos lados, la vuelta al centro y el fin de Shift. El halo conserva su fundido entre pecho y Curios. Modelo, texturas y clips intactos.
+
 ### v1.67.31 — tira de la nuca en el giro y la frenada
 
 **[Descargar JAR de prueba v1.67.31](https://github.com/Santi-PdR/modelos/raw/7adc4d285ac0e8468219aa062822518f6893352b/entregables/v1.67.31/capatest-1.67.31.jar)** · [PowerShell para test-1](docs/releases/v1.67.31/instalar-test-1.txt) · [Nuca de Alex antes/después](docs/releases/v1.67.31/maniobra/maniobra-nuca.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.31/notas.md).
