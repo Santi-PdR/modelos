@@ -312,9 +312,15 @@ public final class KatanaAbilities {
             player.connection.teleport(stab.anchor().x, stab.anchor().y, stab.anchor().z, player.getYRot(), player.getXRot());
         if (age >= 10 && !stab.impacted()) {
             BACKSTABS.put(player.getUUID(), new Backstab(stab.target(), stab.stack(), stab.dimension(), stab.start(), true, stab.anchor()));
-            // Never execute an otherwise healthy ordinary target in one blow; preserve at least one health.
+            // Full-health targets survive the raw cap; weakened targets can still take damage.
             float damage = CombatTuning.backstabDamage(target.getHealth(), target.getMaxHealth());
-            boolean landed = damage > 0 && target.hurt(player.damageSources().playerAttack(player), damage);
+            // The previous sword hit may still have vanilla hurt cooldown. Reset it
+            // only for this scheduled strike; restore it if another rule rejects
+            // the hit so a failed finisher does not erase unrelated protection.
+            int previousImmunity = target.invulnerableTime;
+            if (damage > 0) target.invulnerableTime = 0;
+            boolean landed = damage > 0 && hitUltimate(player, target, damage);
+            if (!landed) target.invulnerableTime = Math.max(target.invulnerableTime, previousImmunity);
             player.serverLevel().playSound(null, player.blockPosition(), betterCombatSound("rapier_stab", SoundEvents.PLAYER_ATTACK_SWEEP), SoundSource.PLAYERS, .65F, 1.1F);
             KatanaNetwork.broadcastVisual(player, target.getX(), target.getY(.7), target.getZ(), KatanaVisualStyle.FINISHER);
             player.serverLevel().sendParticles(KatanaParticles.SHARD.get(), target.getX(), target.getY(.7), target.getZ(), 16, .35, .4, .35, .04);

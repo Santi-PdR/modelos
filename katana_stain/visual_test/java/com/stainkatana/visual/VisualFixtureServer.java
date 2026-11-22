@@ -60,6 +60,33 @@ public final class VisualFixtureServer {
         System.out.println("STAIN_WEAK_C_TEN_DAMAGE_EVENTS_VERIFIED");
     }
 
+    private static Zombie weakFinisherTarget;
+    public static void startWeakFinisher(ServerPlayer player) {
+        var level = player.serverLevel();
+        var victim = EntityType.HUSK.create(level);
+        if (victim == null) throw new IllegalStateException("Cannot create weak finisher target");
+        victim.setNoAi(true); victim.setPersistenceRequired();
+        victim.moveTo(player.getX(), player.getY(), player.getZ() + 3, 180, 0);
+        level.addFreshEntity(victim);
+        victim.setHealth(1F);
+        // Simulate a recent hit still covered by vanilla's hurt cooldown.
+        victim.invulnerableTime = 30;
+        weakFinisherTarget = victim;
+        var state = player.getPersistentData().getCompound("StainKatanaAbilities");
+        state.putInt("daggerCharges", 2);
+        state.putUUID("lastBloodTarget", victim.getUUID());
+        state.remove("last"); state.putLong("next0", 0);
+        player.getPersistentData().put("StainKatanaAbilities", state);
+        com.stainkatana.katana.KatanaAbilities.activate(player, 0);
+        if (state.getInt("daggerCharges") != 0)
+            throw new IllegalStateException("Weak finisher did not activate");
+    }
+    public static void verifyWeakFinisher() {
+        if (weakFinisherTarget == null || weakFinisherTarget.getHealth() > 0F)
+            throw new IllegalStateException("Z finisher did not damage a one-health target with hurt cooldown");
+        System.out.println("STAIN_WEAK_FINISHER_DAMAGE_VERIFIED");
+    }
+
     @SubscribeEvent public static void observeAbilitySound(net.minecraftforge.event.PlayLevelSoundEvent.AtPosition event) {
         if (xSoundVerified || !(event.getLevel() instanceof ServerLevel) || event.getSound() == null
                 || event.getSource() != net.minecraft.sounds.SoundSource.PLAYERS

@@ -39,14 +39,14 @@ public final class CombatTuningCheck {
                     || windup >= CombatTuning.ultimateStrikeTick(i))
                 throw new AssertionError("windup must follow the previous impact and precede its own");
         }
-        if (CombatTuning.backstabDamage(20, 20) != 18 || CombatTuning.backstabDamage(5, 20) != 4
-                || CombatTuning.backstabDamage(1, 20) != 0 || CombatTuning.backstabDamage(1000, 1000) != 60)
+        if (CombatTuning.backstabDamage(20, 20) != 18 || CombatTuning.backstabDamage(5, 20) != 5
+                || CombatTuning.backstabDamage(1, 20) != 1 || CombatTuning.backstabDamage(1000, 1000) != 60)
             throw new AssertionError("backstab cap");
         for (int maximum = 1; maximum <= 1000; maximum++) {
             for (int health = 1; health <= maximum; health += Math.max(1, maximum / 25)) {
                 float hit = CombatTuning.backstabDamage(health, maximum);
-                if (!Float.isFinite(hit) || hit < 0 || hit > 60 || hit > health - 1)
-                    throw new AssertionError("backstab must remain finite, capped and non-lethal");
+                if (!Float.isFinite(hit) || hit < 0 || hit > 60 || hit > health)
+                    throw new AssertionError("backstab must remain finite and capped");
             }
         }
         if (CombatTuning.backstabDamage(Float.NaN, 20) != 0

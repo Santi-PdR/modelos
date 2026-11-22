@@ -556,6 +556,13 @@ public final class VisualFixtureClient {
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Y.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Z.set(0.0);
+                mc.getSingleplayerServer().execute(() -> {
+                    var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                    VisualFixtureServer.startWeakFinisher(player);
+                });
+            }
+            case 1740 -> mc.getSingleplayerServer().execute(VisualFixtureServer::verifyWeakFinisher);
+            case 1760 -> {
                 System.out.println("STAIN_EFFECT_SAMPLES_DONE"); System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop();
             }
             default -> { }

@@ -13,10 +13,10 @@ public final class CombatTuning {
     public static int cooldown(int ability) { return COOLDOWN[ability]; }
     public static int paralysisTicks(boolean playerTarget) { return playerTarget ? 40 : 80; }
     public static int ultimateStaggerTicks(boolean playerTarget) { return playerTarget ? 12 : 20; }
-    /** Cap raw strike to prevent one-shotting a full-health target or finishing a weakened one. */
+    /** Cap the raw strike at 90% of maximum health, while allowing a weakened target to be finished. */
     public static float backstabDamage(float health, float maximumHealth) {
         if (!Float.isFinite(health) || !Float.isFinite(maximumHealth)) return 0;
-        return Math.max(0F, Math.min(60F, Math.min(maximumHealth * .90F, health - 1F)));
+        return Math.max(0F, Math.min(60F, Math.min(maximumHealth * .90F, health)));
     }
     /** Distribute remaining health over remaining cuts without killing before the finale.
      * This limits raw damage only; armor, absorption, immunity and other mods remain authoritative. */
