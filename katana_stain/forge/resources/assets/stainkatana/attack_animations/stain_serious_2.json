@@ -71,7 +71,7 @@
         }
       },
       {
-        "tick": 12,
+        "tick": 11,
         "easing": "LINEAR",
         "turn": 0,
         "leftArm": {
@@ -81,7 +81,7 @@
         }
       },
       {
-        "tick": 12,
+        "tick": 11,
         "easing": "LINEAR",
         "turn": 0,
         "rightArm": {
@@ -91,7 +91,7 @@
         }
       },
       {
-        "tick": 12,
+        "tick": 11,
         "easing": "LINEAR",
         "turn": 0,
         "torso": {
@@ -101,7 +101,7 @@
         }
       },
       {
-        "tick": 18,
+        "tick": 16,
         "easing": "LINEAR",
         "turn": 0,
         "rightArm": {
@@ -111,7 +111,7 @@
         }
       },
       {
-        "tick": 20,
+        "tick": 18,
         "easing": "LINEAR",
         "turn": 0,
         "leftArm": {

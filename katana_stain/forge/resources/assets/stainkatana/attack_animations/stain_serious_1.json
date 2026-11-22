@@ -71,7 +71,7 @@
         }
       },
       {
-        "tick": 6,
+        "tick": 5,
         "easing": "LINEAR",
         "turn": 0,
         "torso": {
@@ -81,7 +81,7 @@
         }
       },
       {
-        "tick": 8,
+        "tick": 7,
         "easing": "LINEAR",
         "turn": 0,
         "torso": {
@@ -91,7 +91,7 @@
         }
       },
       {
-        "tick": 12,
+        "tick": 11,
         "easing": "LINEAR",
         "turn": 0,
         "rightArm": {
@@ -101,7 +101,7 @@
         }
       },
       {
-        "tick": 12,
+        "tick": 11,
         "easing": "LINEAR",
         "turn": 0,
         "torso": {
@@ -111,7 +111,7 @@
         }
       },
       {
-        "tick": 14,
+        "tick": 13,
         "easing": "LINEAR",
         "turn": 0,
         "leftArm": {
@@ -121,7 +121,7 @@
         }
       },
       {
-        "tick": 18,
+        "tick": 16,
         "easing": "LINEAR",
         "turn": 0,
         "leftArm": {
@@ -131,7 +131,7 @@
         }
       },
       {
-        "tick": 18,
+        "tick": 16,
         "easing": "LINEAR",
         "turn": 0,
         "rightArm": {

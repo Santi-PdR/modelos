@@ -3,7 +3,7 @@
 
 Uses only torso and arm rotations from the included PlayerAnimator clips. World
 position, head and leg channels are deliberately omitted: they are authored for
-other renderers. Contact keyframes are rescaled to tick 12 of a 24-tick attack;
+other renderers. Contact keyframes are rescaled to each original upswing of a 24-tick attack;
 Better Combat still controls attack cooldown, hitbox and damage. This is an
 experimental retarget and must be reviewed in the actual client, both hands.
 """
@@ -12,11 +12,11 @@ import math
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1] / 'forge/resources/assets/stainkatana'
-clips = [('stain_serious_1', 'sword_attack', .375, False),
-         ('stain_serious_2', 'sword_attack2', .375, False),
-         ('stain_improved_3', 'stain_c_overhead', .4375, False),
-         ('stain_improved_4', 'stain_c_overhead', .4375, True)]
-for name, source, contact, mirrored in clips:
+clips = [('stain_serious_1', 'sword_attack', .375, False, 10.8),
+         ('stain_serious_2', 'sword_attack2', .375, False, 10.8),
+         ('stain_improved_3', 'stain_c_overhead', .4375, False, 12),
+         ('stain_improved_4', 'stain_c_overhead', .4375, True, 15.6)]
+for name, source, contact, mirrored, hit_tick in clips:
     original = json.loads((root / 'player_animation' / (source + '.json')).read_text())['animations'][source]
     moves = []
     for bone in ('rightArm', 'leftArm', 'torso'):
@@ -24,7 +24,7 @@ for name, source, contact, mirrored in clips:
         for time, frame in track.items():
             # BC evaluates positions in integer ticks, collision pairs are
             # deliberately coalesced by using a consistent time scale.
-            tick = round(float(time) * 12 / contact)
+            tick = round(float(time) * hit_tick / contact)
             if tick > 24:
                 continue
             pitch, yaw, roll = frame['vector']
