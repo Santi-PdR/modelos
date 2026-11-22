@@ -68,8 +68,11 @@ def walks(root, config):
             run = (108 < t) & (t < 129)
             brake = (130 < t) & (t < 146) & (inputs[:,1] < .10)
             tail = (t > 151) & (t < 156)
-            rest = (t < 17) | ((t > 241) & (t < 370))
-            assert step.sum() > 20 and run.sum() > 12 and brake.sum() > 3 and tail.sum() > 4 and rest.sum() > 12, stem
+            # At the start of this route the same wearer has just equipped
+            # or teleported from another active fixture. Measure rest after
+            # that input settles, before the first step at tick 20.
+            rest = ((14 < t) & (t < 19)) | ((247 < t) & (t < 370))
+            assert step.sum() > 20 and run.sum() > 12 and brake.sum() > 3 and tail.sum() > 4 and rest.sum() > 8, stem
             walk = np.ptp(measured[step,0]); sprint = measured[run,1].max(); carry = measured[brake,1].max()
             quiet = np.abs(measured[rest]).max()
             residual = np.abs(measured[tail]).max()
