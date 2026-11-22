@@ -182,10 +182,13 @@ def fit(root, slot, data, spans, rig, source):
         leg_hit = max(leg_hit, -hit[2:].min())
         min_fit = np.minimum(min_fit, [*rig.joins(live), lap(live[roots], torso)])
     assert (min_fit > [.038, .025, .018]).all() and drift < .006, (slot, 'deriva o costura en salto', min_fit, drift)
-    assert leg_hit < .05, (slot, 'el nuevo recorrido del paño alcanza las piernas', leg_hit)
+    # Keep the measured row even when leg contact exceeds the gate. The main
+    # routine checks the limit only after both equipment slots are audited and
+    # the TSV/gallery artifacts have been written.
     print(f'{slot}: {len(boxes)} poses de vuelo y suelo; costura/raíz/apoyo {min_fit[0]:.3f}/{min_fit[1]:.3f}/{min_fit[2]:.3f}u; '
           f'deriva {drift:.6f}u; cruces máximos en brazos/piernas {arm_hit:.4f}/{leg_hit:.4f}u.', flush=True)
-    return [slot, len(boxes), *(f'{v:.6f}' for v in (*min_fit, drift, arm_hit, leg_hit))]
+    row = [slot, len(boxes), *(f'{v:.6f}' for v in (*min_fit, drift, arm_hit, leg_hit))]
+    return row, leg_hit
 
 
 def landing_geometry(root, slot, data, spans):
@@ -283,7 +286,7 @@ if __name__ == '__main__':
     ap.add_argument('shots', type=Path)
     ap.add_argument('--baseline-shots', type=Path)
     args = ap.parse_args()
-    summary, curves, fit_rows = {}, {}, []
+    summary, curves, fit_rows, leg_hits = {}, {}, [], []
     version = 'v' + mod_version()
     geo = load(ARMOR_GEO)
     rig = WornModel(fixed_wearer_pose(geo, 0., slim=True))
@@ -298,10 +301,15 @@ if __name__ == '__main__':
         data, spans, result = report(args.shots, slot)
         verdict(data, spans, result, before, slot)
         summary[version, slot] = result
-        fit_rows.append(fit(args.shots, slot, data, spans, rig, source))
+        fit_row, leg_hit = fit(args.shots, slot, data, spans, rig, source)
+        fit_rows.append(fit_row)
+        leg_hits.append((slot, leg_hit))
         landing_geometry(args.shots, slot, data, spans)
         if args.baseline_shots:
             curves[slot] = ((ref, old_events[0]), (data, spans[0]))
     save(args.shots, summary, fit_rows)
     if args.baseline_shots:
         gallery(args.shots, args.baseline_shots, curves, version)
+    failures = [(slot, hit) for slot, hit in leg_hits if hit >= .05]
+    if failures:
+        raise AssertionError(('el nuevo recorrido del paño alcanza las piernas; máximo por ranura (u)', failures))
