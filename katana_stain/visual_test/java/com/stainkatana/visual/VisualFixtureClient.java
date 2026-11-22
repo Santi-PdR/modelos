@@ -476,7 +476,29 @@ public final class VisualFixtureClient {
             case 1272 -> capture = "51_blood_right_third_draw.png";
             case 1276 -> capture = "52_blood_right_third_face.png";
             case 1280 -> capture = "53_blood_right_third_recovery.png";
-            case 1295 -> {
+            case 1295 -> { mc.options.setCameraType(CameraType.FIRST_PERSON); mc.options.fov().set(70); bloodSample(4, -8, 0); }
+            case 1299 -> capture = "54_contact_a_right_reach.png";
+            case 1302 -> capture = "55_contact_a_right_draw.png";
+            case 1306 -> capture = "56_contact_a_right_face.png";
+            case 1310 -> capture = "57_contact_a_right_recover.png";
+            case 1320 -> mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.LEFT);
+            case 1335 -> bloodSample(4, -8, 0);
+            case 1339 -> capture = "58_contact_a_left_reach.png";
+            case 1342 -> capture = "59_contact_a_left_draw.png";
+            case 1346 -> capture = "60_contact_a_left_face.png";
+            case 1350 -> capture = "61_contact_a_left_recover.png";
+            case 1365 -> bloodSample(6, -6, 4);
+            case 1369 -> capture = "62_contact_b_left_reach.png";
+            case 1372 -> capture = "63_contact_b_left_draw.png";
+            case 1376 -> capture = "64_contact_b_left_face.png";
+            case 1380 -> capture = "65_contact_b_left_recover.png";
+            case 1390 -> mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
+            case 1405 -> bloodSample(6, -6, 4);
+            case 1409 -> capture = "66_contact_b_right_reach.png";
+            case 1412 -> capture = "67_contact_b_right_draw.png";
+            case 1416 -> capture = "68_contact_b_right_face.png";
+            case 1420 -> capture = "69_contact_b_right_recover.png";
+            case 1435 -> {
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Y.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Z.set(0.0);
