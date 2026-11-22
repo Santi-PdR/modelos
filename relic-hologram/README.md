@@ -130,7 +130,8 @@ cuentan como cambios sin guardar.
 
 `/relic reset` devuelve las **24** claves a lo que trae la config de fábrica, también
 en memoria: si el resultado te gusta, `/relic save`; si no, cierra sin guardar y el
-archivo sigue como estaba.
+archivo sigue como estaba. Solo cuenta —y solo marca como sin guardar— las claves que
+de verdad estaban en otro valor; si ya estaba todo de fábrica, lo dice y no toca nada.
 
 `/relic preview` dibuja **tu** reliquia delante de la cámara, a una distancia fija
 (2.5 bloques por defecto; `/relic preview 1.5` la acerca), con los mismos cuatro

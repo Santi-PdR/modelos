@@ -43,5 +43,6 @@
   "message.holocore.unsaved": "%s valor(es) solo en memoria — /relic save para conservarlos.",
   "message.holocore.preview_on": "Vista previa activada: la reliquia delante de la cámara a %s bloques (/relic preview para quitarla).",
   "message.holocore.preview_off": "Vista previa desactivada.",
-  "message.holocore.reset": "Valores de fábrica restaurados en memoria (%s claves) — /relic save para conservarlos."
+  "message.holocore.reset": "Valores de fábrica restaurados en memoria (%s claves) — /relic save para conservarlos.",
+  "message.holocore.reset_none": "Ya estaba todo en los valores de fábrica."
 }

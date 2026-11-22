@@ -132,11 +132,14 @@ public final class RelicClientCommands {
     private static int info(CommandSourceStack source) {
         String shoulder = RelicConfig.SHOULDER.get() == RelicConfig.Shoulder.LEFT ? "left" : "right";
         String quality = RelicConfig.QUALITY.get() == RelicConfig.Quality.LITE ? "lite" : "full";
+        // Locale.ROOT: con el idioma del juego en español String.format daria
+        // "6,00" y esos numeros se copian al holocore-client.toml, donde la coma
+        // rompe el valor. El resto de lineas ya lo hacia asi.
         Component message = Component.translatable("message.holocore.info",
-                        String.format("%.2f", RelicConfig.OFFSET_X.get()),
-                        String.format("%.2f", RelicConfig.OFFSET_Y.get()),
-                        String.format("%.2f", RelicConfig.OFFSET_Z.get()),
-                        String.format("%.2f", RelicConfig.SCALE.get()),
+                        String.format(Locale.ROOT, "%.2f", RelicConfig.OFFSET_X.get()),
+                        String.format(Locale.ROOT, "%.2f", RelicConfig.OFFSET_Y.get()),
+                        String.format(Locale.ROOT, "%.2f", RelicConfig.OFFSET_Z.get()),
+                        String.format(Locale.ROOT, "%.2f", RelicConfig.SCALE.get()),
                         shoulder, quality)
                 .withStyle(ChatFormatting.AQUA);
         source.sendSuccess(() -> message, false);
@@ -234,9 +237,16 @@ public final class RelicClientCommands {
             return new Tweak(key, Kind.FLAG, value, 0.0D, 0.0D, String.valueOf(defecto));
         }
 
-        /** Vuelve al valor de fabrica (el que trae {@code RelicConfig}). */
-        void restoreDefault() {
-            apply(defecto);
+        /**
+         * Vuelve al valor de fabrica (el que trae {@code RelicConfig}).
+         *
+         * @return {@code true} si el valor en memoria era otro y se ha cambiado.
+         *         Se compara con {@link #current()}, o sea con lo que acaba de
+         *         contestar el comando: si no cambia lo que se lee, no cambia nada.
+         */
+        boolean restoreDefault() {
+            String antes = current();
+            return apply(defecto) && !current().equals(antes);
         }
 
         String current() {
@@ -514,19 +524,36 @@ public final class RelicClientCommands {
      * config trae por defecto; el CI comprueba que coinciden.
      */
     private static int reset(CommandSourceStack source) {
+        int cambios = 0;
         for (Tweak tweak : TWEAKS) {
-            tweak.restoreDefault();
-            markUnsaved(tweak.key());
+            if (tweak.restoreDefault()) {
+                markUnsaved(tweak.key());
+                cambios++;
+            }
         }
-        // Las dos que no pasan por /relic set tambien se restauran.
-        RelicConfig.SHOULDER.set(RelicConfig.Shoulder.RIGHT);
-        RelicConfig.QUALITY.set(RelicConfig.Quality.FULL);
-        markUnsaved("placement.shoulder");
-        markUnsaved("visuals.quality");
-        int cambios = UNSAVED.size();
-        source.sendSuccess(() -> Component.translatable("message.holocore.reset", cambios)
+        // Las dos que no pasan por /relic set tambien se restauran, y solo se
+        // marcan si de verdad estaban en otro valor: si no, un /relic reset sin
+        // nada que deshacer dejaba 24 claves "sin guardar" que no habian cambiado
+        // y el /relic save siguiente escribia el archivo para nada.
+        if (RelicConfig.SHOULDER.get() != RelicConfig.Shoulder.RIGHT) {
+            RelicConfig.SHOULDER.set(RelicConfig.Shoulder.RIGHT);
+            markUnsaved("placement.shoulder");
+            cambios++;
+        }
+        if (RelicConfig.QUALITY.get() != RelicConfig.Quality.FULL) {
+            RelicConfig.QUALITY.set(RelicConfig.Quality.FULL);
+            markUnsaved("visuals.quality");
+            cambios++;
+        }
+        if (cambios == 0) {
+            source.sendSuccess(() -> Component.translatable("message.holocore.reset_none")
+                    .withStyle(ChatFormatting.GRAY), false);
+            return 0;
+        }
+        int total = cambios;
+        source.sendSuccess(() -> Component.translatable("message.holocore.reset", total)
                 .withStyle(ChatFormatting.AQUA), false);
-        return cambios;
+        return total;
     }
 
     /**

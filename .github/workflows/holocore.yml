@@ -267,6 +267,39 @@ jobs:
           print(f'Idiomas OK: {sorted(idiomas)} con {len(referencia)} claves cada uno.')
           PY
 
+      # String.format sin Locale coge el idioma del sistema: con el juego en
+      # espanol, "%.2f" da 6,00 y esos numeros se copian al toml, donde la coma
+      # rompe el valor. Ya paso en /relic info hasta 1.0.24.
+      - name: Validate number formatting and reset
+        run: |
+          python3 - <<'PY'
+          import pathlib, re
+
+          malas, total = [], 0
+          for ruta in sorted(pathlib.Path('relic-hologram/src/main/java').rglob('*.java')):
+              for numero, linea in enumerate(ruta.read_text(encoding='utf-8').splitlines(), 1):
+                  if 'String.format(' not in linea:
+                      continue
+                  total += 1
+                  if 'Locale.' not in linea:
+                      malas.append(f'{ruta}:{numero}')
+          assert not malas, (
+              'String.format sin Locale explicito (en espanol daria "6,00"): ' + ', '.join(malas))
+
+          comandos = pathlib.Path(
+              'relic-hologram/src/main/java/com/santipdr/holocore/client/RelicClientCommands.java'
+          ).read_text(encoding='utf-8')
+          assert 'String.format(Locale.ROOT, "%.2f", RelicConfig.OFFSET_X.get())' in comandos, (
+              'la primera linea de /relic info vuelve a usar el locale del sistema')
+          # El aviso "sin guardar" tiene que ir dentro del if: si vuelve a marcarse
+          # siempre, /relic reset deja 24 cambios fantasma.
+          assert re.search(r'if \(tweak\.restoreDefault\(\)\) \{\s*'
+                           r'markUnsaved\(tweak\.key\(\)\);\s*cambios\+\+;', comandos), (
+              '/relic reset cuenta y marca como sin guardar claves que no cambian')
+          print(f'Formato OK: {total} String.format, todos con Locale explicito;'
+                ' /relic info con punto decimal y /relic reset contando solo cambios reales.')
+          PY
+
       # ------------------------------------------------------------------
       # RelicAnimations.java se genera desde el manifiesto: si alguien edito a
       # mano un nombre de animacion, aqui se ve.

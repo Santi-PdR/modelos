@@ -1,5 +1,22 @@
 # Historial de cambios
 
+## 1.0.24 — dos fallos que salen con el juego en español
+
+* **`/relic info` enseñaba `6,00` en vez de `6.00`.** Los cuatro números de la
+  primera línea (offset x/y/z y escala) se formateaban con el locale del sistema
+  y no con `Locale.ROOT` como el resto. Con el juego en español salía coma
+  decimal, y esos números son justo los que se copian al `holocore-client.toml`,
+  donde la coma rompe el valor.
+* **`/relic reset` contaba de más.** Marcaba como «sin guardar» las 24 claves
+  aunque estuvieran ya en su defecto, así que un `/relic reset` sin nada que
+  deshacer dejaba 24 cambios fantasma y el `/relic save` siguiente reescribía el
+  archivo para nada. Ahora solo cuenta y marca las que cambian de verdad; si ya
+  estaba todo de fábrica lo dice y no toca nada.
+* CI: paso nuevo `Validate number formatting and reset`, que rechaza cualquier
+  `String.format` sin `Locale` explícito y comprueba los dos arreglos anteriores
+  sobre el código fuente.
+* 1 clave nueva por idioma (46 en cada uno).
+
 ## 1.0.23 — `/relic reset`, y que las descripciones no mientan
 
 * **Nuevo `/relic reset`**: devuelve las **24** claves a los valores de fábrica en
