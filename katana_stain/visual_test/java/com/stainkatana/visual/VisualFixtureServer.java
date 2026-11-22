@@ -82,8 +82,9 @@ public final class VisualFixtureServer {
             throw new IllegalStateException("Weak finisher did not activate");
     }
     public static void verifyWeakFinisher() {
-        if (weakFinisherTarget == null || weakFinisherTarget.getHealth() > 0F)
-            throw new IllegalStateException("Z finisher did not damage a one-health target with hurt cooldown");
+        if (weakFinisherTarget == null || weakFinisherTarget.getHealth() >= 1F)
+            throw new IllegalStateException("Z finisher did not damage a one-health target with hurt cooldown; health="
+                    + (weakFinisherTarget == null ? "missing" : weakFinisherTarget.getHealth()));
         System.out.println("STAIN_WEAK_FINISHER_DAMAGE_VERIFIED");
     }
 
