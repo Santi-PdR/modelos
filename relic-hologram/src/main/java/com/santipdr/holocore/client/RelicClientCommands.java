@@ -201,6 +201,15 @@ public final class RelicClientCommands {
         String valores = String.format(Locale.ROOT, "aura %.2f · halo %.2f · glsl %.2f · anillo %.2f",
                 RelicConfig.AURA_INTENSITY.get(), RelicConfig.HALO_INTENSITY.get(),
                 RelicConfig.SHADER_INTENSITY.get(), RelicConfig.RING_INTENSITY.get());
+        // Bucle y ritmo: sin esto, "va muy rapido" no se puede comprobar. El bucle
+        // dice que animacion suena (idle 48 s, calm 12 s, alert 8 s) y el ritmo,
+        // cuanto la aceleran el estado y la config.
+        RelicVisuals.RelicVisual local = localVisual();
+        if (local != null) {
+            valores += String.format(Locale.ROOT, " · bucle %s %.2fx",
+                    local.animatable().loopState().name().toLowerCase(Locale.ROOT),
+                    local.animatable().currentAnimSpeed());
+        }
         Component tinte = Component.translatable(RelicConfig.AURA_TINT.get()
                 ? "message.holocore.on"
                 : "message.holocore.off");
@@ -355,6 +364,7 @@ public final class RelicClientCommands {
             Tweak.number("visuals.flashIntensity", RelicConfig.FLASH_INTENSITY, 0.0D, 2.0D, 1.0D),
             Tweak.flag("visuals.shaderGlow", RelicConfig.SHADER_GLOW, true),
             Tweak.number("visuals.shaderIntensity", RelicConfig.SHADER_INTENSITY, 0.0D, 1.0D, 0.35D),
+            Tweak.number("visuals.animSpeed", RelicConfig.ANIM_SPEED, 0.25D, 2.0D, 0.65D),
             Tweak.flag("visuals.reducedEffects", RelicConfig.REDUCED_EFFECTS, false),
             Tweak.flag("visuals.idleVariations", RelicConfig.IDLE_VARIATIONS, true),
             Tweak.whole("visuals.maxRenderDistance", RelicConfig.MAX_RENDER_DISTANCE, 4, 128, 32),

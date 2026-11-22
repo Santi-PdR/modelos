@@ -33,6 +33,7 @@ public final class RelicConfig {
     public static final ForgeConfigSpec.DoubleValue FLASH_INTENSITY;
     public static final ForgeConfigSpec.BooleanValue SHADER_GLOW;
     public static final ForgeConfigSpec.DoubleValue SHADER_INTENSITY;
+    public static final ForgeConfigSpec.DoubleValue ANIM_SPEED;
     public static final ForgeConfigSpec.BooleanValue REDUCED_EFFECTS;
     public static final ForgeConfigSpec.BooleanValue IDLE_VARIATIONS;
     public static final ForgeConfigSpec.IntValue MAX_RENDER_DISTANCE;
@@ -94,6 +95,12 @@ public final class RelicConfig {
         SHADER_INTENSITY = b.comment("Intensidad del pase GLSL (borde + barridos). Separada del halo",
                         "para poder bajar el borde sin apagar el brillo.")
                 .defineInRange("shaderIntensity", 0.35D, 0.0D, 1.0D);
+        ANIM_SPEED = b.comment("Ritmo del bucle de animacion. 1.0 es el de las animaciones tal cual",
+                        "estan hechas en el modelo (idle 48 s); 0.65 lo deja flotando, que es como",
+                        "estaba pensado. El estado de brillo lo multiplica encima (herido 0.72,",
+                        "tormenta 1.32, ardiendo 1.40): esto no cambia que animacion suena, solo",
+                        "a que velocidad. Con 0.25 va a camara lenta y con 2.0 parece un tic.")
+                .defineInRange("animSpeed", 0.65D, 0.25D, 2.0D);
         REDUCED_EFFECTS = b.comment("Usa idle_calm (sin rayos, cometas ni ondas) cuando el estado es normal.")
                 .define("reducedEffects", false);
         IDLE_VARIATIONS = b.comment("La reliquia hace variaciones propias cada cierto tiempo en reposo",

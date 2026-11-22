@@ -1,5 +1,37 @@
 # Historial de cambios
 
+## 1.0.41 — el flotado vuelve a ser lento y el shader deja de ser un aro
+
+Dos fallos de percepción, contados con lo que se veía:
+
+* **El reposo iba acelerado.** `idle` son 48 s de animación, pero el ritmo salía
+  solo del estado de brillo y valía 1.0 para lo normal. Ahora la velocidad base la
+  pone la config, `visuals.animSpeed`, por defecto **0.65**: la reliquia vuelve a
+  flotar en vez de ir a saltos. El estado sigue multiplicando encima (herido 0.72,
+  tormenta 1.32, ardiendo 1.40), y con `1.0` se recupera exactamente el ritmo de
+  antes. Rango 0.25–2.0.
+* **`/relic info` dice qué bucle suena y a qué ritmo** (`bucle idle 0.65x`). "Va muy
+  rápido" no se podía comprobar: `idle` son 48 s, `idle_calm` 12 s e `idle_alert` 8 s,
+  o sea que la alerta de un monstruo cercano cambia el bucle por uno seis veces más
+  corto. Ahora se ve en una palabra.
+* **Fuera el aro del shader.** El "barrido" era una banda de `smoothstep(0.40, 0.62)`:
+  más de 20 cm de alto cruzando el modelo de lado a lado, que se leía como el anillo
+  de un planeta. Ahora es una **línea de lectura** de 0.02 de ancho con un halo suave,
+  y las dos se pesan por el alpha de la textura: existen sobre el cuerpo, no en el aire
+  de la silueta.
+* **Brillo corregido de raíz.** El rgb salía premultiplicado por alpha y el blend es
+  `(srcalpha, one)`: o sea alpha², un borde débil compensado con ganancias altas, que
+  es lo que hacía que brillara de más por el centro. Ahora el rgb va sin premultiplicar
+  y las ganancias bajan a 0.16/0.24 y la silueta a 0.42/0.20: el borde se lee como
+  contorno en vez de comerse el modelo.
+* **Dither de suma.** `(hash − 0.5) * 0.03` restaba luz, y en aditivo el negativo lo
+  recorta el framebuffer: no ditherizaba, solo moteaba. Ahora es `hash * 0.015`.
+* **Rejilla más lenta** (60 rad/bloque y 0.010 de peso, antes 90 y 0.02): al caminar
+  el patrón se corría 6 rad por tick y hervía.
+* CI: 5 comprobaciones nuevas entre ritmo y shader, con 4 negativos probados en rojo
+  (quitarlo del `speedFor`, devolver la banda ancha, volver a premultiplicar y volver
+  al dither que resta). 27 claves de config.
+
 ## 1.0.40 — onda de choque en los eventos y estela en las chispas
 
 * **Onda de choque**: en cada evento (pulso, golpe, liberación, subida de nivel) salen

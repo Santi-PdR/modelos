@@ -237,6 +237,22 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.41, el barrido era un aro y el ritmo no se podía bajar.** El barrido de 1.0.8–1.0.40
+era `smoothstep(0.40, 0.62, fract(viewY * 0.9 - HoloTime * 0.25))`: como `viewY` recorre
+medio bloque, esa ventana de 0.22 de fase son ~0.22 bloques de alto, o sea una faja que
+cruza el modelo entero y que el ojo lee como un anillo planetario. La línea de lectura es
+`readNear = min(readPos, 1 - readPos)` con `readLine` a 0.020 y `readHalo` a 0.110, y las
+dos se multiplican por `texAlpha`: el halo ya no existe fuera del cuerpo, que era la otra
+mitad del aro (la silueta tiene alpha por el borde). El brillo: el blend es
+`(srcrgb: srcalpha, dstrgb: one)`, así que el rgb va **sin** premultiplicar; premultiplicarlo
+daba alpha² y obligaba a ganancias de 0.28/0.45 para que se viera, que es lo que quemaba el
+centro. Ahora 0.16/0.24 y alpha de silueta 0.42/0.20. El dither pasa de `(hash − 0.5) × 0.03`
+a `hash × 0.015`: en aditivo el negativo lo recorta el framebuffer.
+
+El ritmo del bucle: `speedFor` devuelve la base del estado por `visuals.animSpeed`
+(0.65 por defecto). `idle` son 48 s y `idle_alert` 8 s, así que sin multiplicador global no
+había forma de recuperar el flotado lento.
+
 **1.0.40, onda de choque sin estado y estela de chispas.** La onda (`drawShockwave`)
 reutiliza el destello como línea de tiempo: `t = 1 − flash`, radio `0.16 + 0.46 × t`,
 brillo `flash × 0.55`, ocho quads en elipse (eje `up` × 0.8) que giran a 0.35 rad/s y
@@ -601,16 +617,25 @@ void main() {
     // El borde entra tambien en la alpha: la silueta brilla aunque ahi la
     // textura emisiva sea transparente. Es lo que lo hace leer como contorno de
     // holograma y no como un brillo pegado encima de las caras opacas.
-    float alpha = max(texAlpha, rimSoft * 0.55 + rimTight * 0.30);
+    // 1.0.41: menos peso que antes (0.55/0.30). El borde se comia el modelo.
+    float alpha = max(texAlpha, rimSoft * 0.42 + rimTight * 0.20);
     if (alpha < 0.02) {
         discard;
     }
 
-    // Barrido: una banda que sube por la reliquia entera, un ciclo cada 4 s.
-    float sweep = smoothstep(0.40, 0.62, fract(viewY * 0.9 - HoloTime * 0.25));
-    // Rejilla fina, anclada al espacio de vista: las lineas siguen de una cara a
-    // otra y no se pelean entre caras al girar la camara.
-    float grid = 0.5 + 0.5 * sin(viewY * 90.0 + HoloTime * 3.0);
+    // Linea de lectura: UNA linea fina que baja por la reliquia, con un halo suave
+    // alrededor. Hasta 1.0.40 esto era una banda ancha (smoothstep entre 0.40 y
+    // 0.62): en un modelo de medio bloque son mas de 20 cm de alto cruzando de lado
+    // a lado, y se leia como el anillo de un planeta, no como un holograma.
+    float readPos = fract(viewY * 0.9 - HoloTime * 0.25);
+    float readNear = min(readPos, 1.0 - readPos);
+    float readLine = 1.0 - smoothstep(0.0, 0.020, readNear);
+    float readHalo = 1.0 - smoothstep(0.0, 0.110, readNear);
+    // Rejilla fina y lenta, anclada al espacio de vista: las lineas siguen de una
+    // cara a otra y no se pelean entre caras al girar la camara. A 90 rad/bloque y
+    // 0.02 de peso hervia al caminar (el patron se corre 6 rad por tick): ahora son
+    // 60 y la mitad de peso, o sea textura y no interferencia.
+    float grid = 0.5 + 0.5 * sin(viewY * 60.0 - HoloTime * 1.4);
     // Latido lento del borde. No toca el nucleo: eso es la textura por el tinte.
     float breath = 0.85 + 0.15 * sin(HoloTime * 1.6);
 
@@ -622,14 +647,23 @@ void main() {
     // Al raspar, el borde se va al violeta: dos tonos en la misma silueta.
     rimTint = mix(rimTint, vec3(0.78, 0.62, 1.0), rimTight * 0.35);
 
+    // La linea y el halo se pesan por texAlpha: existen sobre el cuerpo, no en el
+    // aire de la silueta, y por eso ya no dibujan un aro alrededor de la reliquia.
     vec3 rgb = texRgb * tint
-             + rimSoft * rimTint * 0.28 * breath
-             + rimTight * rimTint * 0.45
-             + sweep * 0.07
-             + grid * texAlpha * 0.02
-             + (hash(texCoord * 613.0) - 0.5) * 0.03;
+             + rimSoft * rimTint * 0.16 * breath
+             + rimTight * rimTint * 0.24
+             + (readLine * 0.05 + readHalo * 0.03) * texAlpha * rimTint
+             + grid * texAlpha * 0.010
+             // Dither para el banding del aditivo. Solo suma: con -0.5 el negativo
+             // lo recorta el framebuffer, o sea que no ditherizaba nada, solo
+             // ensuciaba (el "moteado" de 1.0.40).
+             + hash(texCoord * 613.0) * 0.015;
 
-    fragColor = vec4(rgb * alpha * ColorModulator.rgb, alpha);
+    // El blend es (srcalpha, one): la alpha entra una vez, por el blend. El rgb va
+    // SIN premultiplicar. Hasta 1.0.40 se multiplicaba aqui tambien y el resultado
+    // era alpha^2: el borde perdia fuerza y, para compensarlo, estaba subido de
+    // ganancia, que es lo que hacia que brillara de mas por el centro.
+    fragColor = vec4(rgb * ColorModulator.rgb, alpha);
 }
 ```
 

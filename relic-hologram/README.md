@@ -101,7 +101,11 @@ En el juego:
 
 Los comandos de ajuste son de **cliente** y cambian la config en memoria al
 instante (no la guardan): cuando el núcleo quede donde quieres, copia los
-números de `/relic info` a `config/holocore-client.toml`. La segunda línea de
+números de `/relic info` a `config/holocore-client.toml`. Desde 1.0.41 esa línea
+de brillo termina con **el bucle y el ritmo** (`bucle idle 0.65x`): es la forma de
+comprobar sin mirar qué animación está sonando y cuánto la está acelerando la
+config, que era justo lo que no se podía ver cuando "iba demasiado rápido". La
+segunda línea de
 `info` dice lo que no se puede adivinar mirando: estado del bucle (`charged`,
 `alert`…), destello actual, por qué el pase GLSL está apagado si lo está
 (`shaderGlow=false`, shaderpack activo o no compiló) y las intensidades que están
@@ -317,8 +321,9 @@ shaders de 1.20.1 están en [BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
 | `visuals.glowRing` | `true` | Anillo de estado (gira y se tiñe según la reliquia). |
 | `visuals.ringIntensity` | `0.60` | Fuerza del anillo (0–1). |
 | `visuals.flashIntensity` | `1.0` | Destello al ocurrir algo (pulso, liberación, golpe, nivel, despertar). `0` lo apaga. |
-| `visuals.shaderGlow` | `true` | Pase GLSL propio (dos bordes de silueta + banda de barrido + rejilla). Se apaga solo con shaderpack activo. |
+| `visuals.shaderGlow` | `true` | Pase GLSL propio (dos bordes de silueta + línea de lectura + rejilla). Se apaga solo con shaderpack activo. |
 | `visuals.shaderIntensity` | `0.35` | Fuerza del pase GLSL, independiente del halo. |
+| `visuals.animSpeed` | `0.65` | Ritmo del bucle de animación (0.25–2). `1.0` = el de las animaciones tal cual están hechas (idle 48 s); `0.65` lo deja flotando. El estado de brillo lo multiplica encima. |
 | `visuals.reducedEffects` | `false` | Reposo sin rayos/cometas/ondas (`idle_calm`). |
 | `visuals.maxRenderDistance` | `32` | Distancia para dibujar la reliquia de otros jugadores (se apaga en los últimos 8 bloques). |
 | `visuals.idleVariations` | `true` | Variaciones propias en reposo (temblor, glitch, pulso). `false` = solo glitch. |

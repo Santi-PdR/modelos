@@ -240,6 +240,20 @@ jobs:
           # El glitch se paga solo cuando hay evento: rama sobre el uniform.
           assert 'HoloGlitch > 0.01' in fsh, 'el glitch del shader no esta condicionado'
           assert 'HoloTint.rgb' in fsh, 'el tinte por estado no llega al borde del shader'
+          # 1.0.41: el barrido ancho se leia como el anillo de un planeta. Ahora es
+          # una linea fina con halo, pesada por texAlpha (solo sobre el cuerpo).
+          assert 'smoothstep(0.40, 0.62' not in fsh, 'volvio la banda ancha del barrido'
+          assert 'readLine' in fsh and 'readHalo' in fsh, 'falta la linea de lectura'
+          assert 'float readNear = min(readPos, 1.0 - readPos);' in fsh, \
+              'la linea de lectura no esta centrada en su fase'
+          assert '(readLine * 0.05 + readHalo * 0.03) * texAlpha' in fsh, \
+              'la linea no se pesa por texAlpha: vuelve a dibujar un aro en la silueta'
+          # Alpha una sola vez: el blend es (srcalpha, one) y el rgb se premultiplicaba.
+          assert 'fragColor = vec4(rgb * ColorModulator.rgb, alpha);' in fsh, \
+              'el rgb vuelve a premultiplicarse: alpha^2 y borde debil'
+          # Dither solo de suma: la mitad negativa la recortaba el framebuffer.
+          assert '(hash(texCoord * 613.0) - 0.5)' not in fsh, 'el dither vuelve a restar luz'
+          assert 'hash(texCoord * 613.0) * 0.015' in fsh, 'falta el dither de suma'
 
           # El apendice A del documento tiene que ser copia literal de estos
           # ficheros: es la unica forma de que el GLSL explicado no se quede
@@ -362,6 +376,7 @@ jobs:
           geo = (base / 'RelicGeoRenderer.java').read_text(encoding='utf-8')
           curio = (base / 'RelicCurioRenderer.java').read_text(encoding='utf-8')
           eventos = (base / 'RelicClientEvents.java').read_text(encoding='utf-8')
+          configuracion = (base.parent / 'config' / 'RelicConfig.java').read_text(encoding='utf-8')
 
           enum = animatable.split('enum Mood {', 1)[1].split('}', 1)[0]
           moods = re.findall(r'^\s*([A-Z][A-Z_]*)\s*,?$', enum, re.M)
@@ -500,6 +515,14 @@ jobs:
           # El estado de brillo tambien cambia la velocidad del bucle de animacion,
           # no solo el color: es lo que pidio "mejorar la animacion".
           assert 'setAnimationSpeed(' in animatable, 'el estado de brillo no toca la animacion'
+          # 1.0.41: el ritmo base sale de la config. Sin esto volveria a estar fijo en
+          # el numero de cada estado y "va muy rapido" no se podria bajar sin compilar.
+          assert 'return base * RelicConfig.ANIM_SPEED.get();' in animatable, \
+              'el ritmo del bucle no pasa por animSpeed de la config'
+          assert '.defineInRange("animSpeed", 0.65D, 0.25D, 2.0D)' in configuracion, \
+              'animSpeed no esta declarado con su rango'
+          assert 'public double currentAnimSpeed()' in animatable, \
+              'el ritmo aplicado no se puede leer (sin eso /relic info no lo puede ensenar)'
           bloque_mood = animatable.split('if (nextMood != this.mood) {', 1)[1]\
               .split('this.mood = nextMood;', 1)[0]
           assert 'request(RelicAnimations.GLITCH)' in bloque_mood, \
@@ -740,7 +763,7 @@ jobs:
               eleccion = re.search(r'\.defineEnum\("(\w+)",\s*[\w.]+\.(\w+)\)', linea)
               if eleccion:
                   defectos[f'{seccion}.{eleccion.group(1)}'] = eleccion.group(2)
-          assert len(defectos) == 26, f'esperaba 26 defectos, hay {len(defectos)}'
+          assert len(defectos) == 27, f'esperaba 27 defectos, hay {len(defectos)}'
 
           # --- tabla de configuracion del README (solo esa seccion) ---
           inicio = readme.index('## Configuración')
@@ -829,7 +852,7 @@ jobs:
                   clave = re.search(r'\.defineEnum\("(\w+)"', linea).group(1)
                   declaradas[f'{seccion}.{clave}'] = ('enum', 0.0, 0.0)
 
-          assert len(declaradas) == 26, f'esperaba 26 claves en RelicConfig, hay {len(declaradas)}'
+          assert len(declaradas) == 27, f'esperaba 27 claves en RelicConfig, hay {len(declaradas)}'
 
           # --- comando: Tweak.<tipo>("clave", RelicConfig.CAMPO, [min, max,] defecto) ---
           tabla, defecto_tabla = {}, {}

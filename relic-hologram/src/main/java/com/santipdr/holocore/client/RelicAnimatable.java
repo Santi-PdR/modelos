@@ -245,6 +245,11 @@ public final class RelicAnimatable implements GeoAnimatable {
         this.lastRenderTick = gameTime;
     }
 
+    /** Ritmo que se esta aplicando ahora mismo ({@code animSpeed} de la config × estado). */
+    public double currentAnimSpeed() {
+        return this.animSpeed;
+    }
+
     public LoopState loopState() {
         return this.loop;
     }
@@ -557,9 +562,12 @@ public final class RelicAnimatable implements GeoAnimatable {
         return state == LoopState.IDLE || state == LoopState.CALM;
     }
 
-    /** Velocidad del bucle de animacion segun el estado de brillo. */
+    /**
+     * Velocidad del bucle de animacion: el ritmo de la config ({@code animSpeed})
+     * por lo que pida el estado de brillo.
+     */
     private static double speedFor(Mood mood) {
-        return switch (mood) {
+        double base = switch (mood) {
             case WOUNDED -> 0.72D;
             case STORM -> 1.32D;
             case DARK -> 1.06D;
@@ -573,6 +581,7 @@ public final class RelicAnimatable implements GeoAnimatable {
             case RESONANT -> 1.18D;
             case NEUTRAL -> 1.0D;
         };
+        return base * RelicConfig.ANIM_SPEED.get();
     }
 
     /**
