@@ -2,6 +2,7 @@
 """Measure cape motion through real jumps and a ledge drop in the torso frame."""
 import argparse
 import csv
+import io
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -223,6 +224,44 @@ def landing_geometry(root, slot, data, spans):
               f'residuo tardío {late.max():.5f}u.', flush=True)
 
 
+def motion_gallery(root):
+    """Expose a compact Forge contact-sheet in Actions annotations as well as artifacts."""
+    cw, ch = 288, 330
+    margin, gap, heading = 12, 8, 42
+    sheet = Image.new('RGB', (margin*2 + 2*cw + gap, heading + 2*(ch + 32)), '#17121d')
+    pen = ImageDraw.Draw(sheet)
+    pen.text((margin, 10), 'ALEX / SALTOS REALES EN FORGE · VISTA Y CONTACTO', fill='#f8eaf2')
+    for col, title in enumerate(('ÁPICE', 'PRIMER CONTACTO')):
+        pen.text((margin + col*(cw+gap), 28), title, fill='#e8c9e1')
+    for row, slot in enumerate(SLOTS):
+        y = heading + row*(ch + 32)
+        pen.text((margin, y + 2), slot.upper(), fill='#f8eaf2')
+        for col, phase in enumerate(('apice', 'contacto')):
+            path = root / f'saltos-{slot}-{phase}.png'
+            with Image.open(path) as photo:
+                w, h = photo.size
+                width = min(w, round(h * .62))
+                crop = photo.crop(((w-width)//2, 0, (w+width)//2, h)).convert('RGB')
+                crop = ImageOps.fit(crop, (cw, ch), Image.Resampling.LANCZOS)
+            sheet.paste(crop, (margin + col*(cw+gap), y + 22))
+    sheet.save(root / 'saltos-forge.jpg', quality=90, optimize=True)
+    payload = None
+    for width in (560, 500, 440, 380, 320):
+        preview = sheet.resize((width, round(width * sheet.height / sheet.width)), Image.Resampling.LANCZOS)
+        for quality in (68, 58, 48):
+            data = io.BytesIO()
+            preview.save(data, 'JPEG', quality=quality, optimize=True)
+            if len(data.getvalue()) <= 12_600:
+                payload = data.getvalue()
+                break
+        if payload is not None:
+            break
+    if payload is None:
+        raise AssertionError('no se pudo comprimir la lámina de saltos para Actions')
+    from verify_forge_mount import emit
+    emit('Saltos Forge galeria jpg', payload)
+
+
 def save(root, reports, fit_rows=()):
     fields = ('frames', 'airtime', 'air', 'fall', 'top', 'hinge', 'middle', 'hem', 'landing')
     with (root / 'saltos-forge.tsv').open('w', newline='') as f:
@@ -308,6 +347,7 @@ if __name__ == '__main__':
         if args.baseline_shots:
             curves[slot] = ((ref, old_events[0]), (data, spans[0]))
     save(args.shots, summary, fit_rows)
+    motion_gallery(args.shots)
     if args.baseline_shots:
         gallery(args.shots, args.baseline_shots, curves, version)
     failures = [(slot, hit) for slot, hit in leg_hits if hit >= .05]
