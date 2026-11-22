@@ -64,6 +64,34 @@ def metrics(data, event, slot):
                 hem=(hem[sample] / dt[sample]).max(), landing=(hem[settling] / dt[settling]).max())
 
 
+def landing_response(data, spans, slot):
+    names = data.dtype.names
+    assert 'aterrizaje_deg' in names and 'aterrizaje_eco' in names, (slot, 'faltan columnas de aterrizaje')
+    pitch, heat, time = data['aterrizaje_deg'], data['aterrizaje_eco'], data['time']
+    assert np.isfinite(pitch).all() and np.isfinite(heat).all(), (slot, 'impulso inválido')
+    assert pitch.min() >= 0 and pitch.max() <= 5.5 + 1e-6 and heat.min() >= 0 and heat.max() <= 1 + 1e-6, (
+        slot, 'envolvente del aterrizaje excedida', pitch.min(), pitch.max(), heat.min(), heat.max())
+    for event in spans:
+        touchdown = time[event.land]
+        window = (time >= touchdown) & (time <= touchdown + 12)
+        active = np.flatnonzero(window & (pitch > .05))
+        lit = np.flatnonzero(window & (heat > .01))
+        assert len(active) and len(lit), (slot, event.name, 'no se detectó un aterrizaje medible')
+        pitch_age, light_age = time[active[0]] - touchdown, time[lit[0]] - touchdown
+        assert pitch_age <= .8 and light_age - pitch_age >= 1.2, (
+            slot, event.name, 'la luz no siguió al movimiento', pitch_age, light_age)
+        assert pitch[window].max() > 1.0 and heat[window].max() > .15, (
+            slot, event.name, 'respuesta de contacto demasiado débil', pitch[window].max(), heat[window].max())
+        airborne = (time >= time[event.start]) & (time < touchdown)
+        assert np.max(np.abs(pitch[airborne])) < 1e-7 and np.max(np.abs(heat[airborne])) < 1e-7, (
+            slot, event.name, 'el eco apareció antes del contacto')
+        rest = (time >= touchdown + 11) & (time <= touchdown + 13)
+        assert rest.any() and np.max(np.abs(pitch[rest])) < .01 and np.max(np.abs(heat[rest])) < .01, (
+            slot, event.name, 'el dobladillo no regresó a reposo')
+        print(f'{slot} / {event.name}: aterrizaje {pitch_age:.2f} tics; luz +{light_age-pitch_age:.2f}; '
+              f'picos {pitch[window].max():.2f}°/{heat[window].max():.2f}.', flush=True)
+
+
 def report(root, slot, reference=False):
     data = read(root / f'saltos-{slot}.tsv')
     assert all(np.isfinite(data[c]).all() for c in data.dtype.names), (slot, 'muestra inválida')
@@ -71,6 +99,8 @@ def report(root, slot, reference=False):
     expected = data['leg_pos'] * np.float32(.6662) / (2 * np.pi)
     assert np.max(np.abs(data['stride'] - expected)) < 1e-5, (slot, 'reinicio de fase')
     spans = events(data, slot)
+    if not reference:
+        landing_response(data, spans, slot)
     result = {}
     for span in spans:
         row = metrics(data, span, slot)
@@ -158,6 +188,38 @@ def fit(root, slot, data, spans, rig, source):
     return [slot, len(boxes), *(f'{v:.6f}' for v in (*min_fit, drift, arm_hit, leg_hit))]
 
 
+def landing_geometry(root, slot, data, spans):
+    live = read_boxes(root / f'saltos-{slot}-cubos.tsv')
+    control_path = root / f'saltos-{slot}-dobladillo-fijo.tsv'
+    assert control_path.is_file(), (slot, 'falta el control de bisagra inferior')
+    control = read_boxes(control_path)
+    assert control and all(tick in live for tick in control), (slot, 'control de dobladillo sin pose viva')
+    expected_parts = set(control[next(iter(control))])
+    assert all(set(parts) == expected_parts for parts in control.values()), (slot, 'control incompleto')
+    differences = {}
+    for tick, parts in control.items():
+        assert set(parts) <= set(live[tick]), (slot, tick, 'control contiene huesos ajenos')
+        rows = []
+        for name, boxes in parts.items():
+            actual = live[tick][name]
+            assert len(actual) == len(boxes), (slot, tick, name, 'el control perdió cubos')
+            rows.extend(np.max(np.abs(a - b)) for a, b in zip(actual, boxes, strict=True))
+        differences[tick] = max(rows, default=0.)
+    for event in spans:
+        touchdown_time = float(data['time'][event.land])
+        touchdown_tick = int(np.floor(touchdown_time + 1e-6))
+        before = [difference for tick, difference in differences.items() if touchdown_tick - 3 <= tick < touchdown_tick]
+        assert before and max(before) < .002, (slot, event.name, 'la bisagra movió el paño antes del contacto', before)
+        ticks = np.array(sorted(t for t in differences if touchdown_tick <= t <= touchdown_tick + 13))
+        assert len(ticks) >= 3, (slot, event.name, 'faltan poses de la bisagra')
+        values = np.array([differences[int(t)] for t in ticks])
+        assert values.max() > .08, (slot, event.name, 'la bisagra no movió la geometría del dobladillo', values)
+        late = values[ticks >= touchdown_tick + 10]
+        assert len(late) and late.max() < .015, (slot, event.name, 'el control de dobladillo no cerró', ticks, values)
+        print(f'{slot} / {event.name}: A/B de bisagra en {len(ticks)} poses; máximo {values.max():.3f}u; '
+              f'residuo tardío {late.max():.5f}u.', flush=True)
+
+
 def save(root, reports, fit_rows=()):
     fields = ('frames', 'airtime', 'air', 'fall', 'top', 'hinge', 'middle', 'hem', 'landing')
     with (root / 'saltos-forge.tsv').open('w', newline='') as f:
@@ -237,6 +299,7 @@ if __name__ == '__main__':
         verdict(data, spans, result, before, slot)
         summary[version, slot] = result
         fit_rows.append(fit(args.shots, slot, data, spans, rig, source))
+        landing_geometry(args.shots, slot, data, spans)
         if args.baseline_shots:
             curves[slot] = ((ref, old_events[0]), (data, spans[0]))
     save(args.shots, summary, fit_rows)

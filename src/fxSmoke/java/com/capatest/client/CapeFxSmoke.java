@@ -344,6 +344,8 @@ public final class CapeFxSmoke {
                     checkLightHandoff(game);
                     var pulse = CapeHaloWakeProbe.verify(game, mantle(), shots(game));
                     checkHaloWakeBatch(game, pulse);
+                    var hem = CapeLandingLightProbe.verify(game, mantle(), shots(game));
+                    checkLandingBatch(game, hem);
                     CapeFrameGapProbe.verify(game, mantle(), shots(game));
                     note("pausa de render: punta y UV2 coinciden con el control continuo en ambos cambios; repetición y corte verificados");
                     testFlight(game);
@@ -718,11 +720,11 @@ public final class CapeFxSmoke {
         if (scene == null || event.getEntity() != Minecraft.getInstance().player) return;
         if (!(event.getRenderer() instanceof CapaArmorRenderer renderer)) return;
         if (scene.placement()) CapePlacementProbe.arm(renderer, placementRoute.control(), placementRoute.shoulderClothControl(),
-                placementRoute.calibration(), false, false);
+                placementRoute.calibration(), false, false, false);
         jumpFit = scene.jump() && jumpRoute.measureFit(event.getEntity().tickCount);
         combinedFit = scene.combined() && combinedRoute.measureFit(event.getEntity().tickCount);
         if (scene.audit() || jumpFit || combinedFit)
-            CapePlacementProbe.arm(renderer, false, false, false, true, scene.audit() || combinedFit);
+            CapePlacementProbe.arm(renderer, false, false, false, true, scene.audit() || combinedFit, jumpFit);
         if (scene.measureMotion()) CapeWalkProbe.arm(renderer);
         if (crouchSparks != null && !captured && pending == null)
             crouchSparks.arm(renderer, Minecraft.getInstance().player, playerPose, playerRenderOffset);
@@ -1043,6 +1045,28 @@ public final class CapeFxSmoke {
         Files.writeString(shots(game).resolve("pulso-halo-gpu.tsv"), rows);
         note("pulso del halo: interior +" + lip + "/255 al arrancar, borde +" + edge
                 + "/255 al frenar en texels de prueba; UV2 de la malla, mismo alfa y oclusión");
+    }
+
+    private static void checkLandingBatch(Minecraft game, int[] gains) throws IOException {
+        // These UV cards are actually drawn below cape_bottom. Only the
+        // gains differ between the paired texels, not the pose or the mask.
+        int[] pixels = readHaloBatch(game, new HaloTexel(158, 145, gains[0]), new HaloTexel(158, 145, gains[1]),
+                new HaloTexel(62, 312, gains[0]), new HaloTexel(62, 312, gains[1]),
+                new HaloTexel(158, 145, gains[1]), new HaloTexel(0, 0, gains[1]));
+        int inner = (pixels[1] & 255) - (pixels[0] & 255), edge = (pixels[3] & 255) - (pixels[2] & 255);
+        check(inner >= 32 && edge >= 3, "hem echo not visible in the existing shader: " + inner + "/" + edge);
+        check(pixels[4] == 0x801c1016 && pixels[5] == pixels[4], "landing halo touched occluded or matte texels");
+        StringBuilder rows = new StringBuilder("muestra\tr\tg\tb\ta\n");
+        String[] labels = {"interior-base", "interior-eco", "borde-base", "borde-eco", "ocluido", "mate"};
+        for (int i = 0; i < pixels.length; ++i) {
+            int rgba = pixels[i];
+            check((rgba >>> 24) == 128, "hem echo changed alpha");
+            rows.append(labels[i]).append('\t').append(rgba & 255).append('\t').append((rgba >>> 8) & 255)
+                    .append('\t').append((rgba >>> 16) & 255).append("\t128\n");
+        }
+        Files.writeString(shots(game).resolve("aterrizaje-eco-gpu.tsv"), rows);
+        note("aterrizaje: interior +" + inner + "/255 y borde +" + edge
+                + "/255 en texels del dobladillo; sólo UV2, con alfa y profundidad intactos");
     }
 
     private record HaloTexel(int x, int y, int light) {}

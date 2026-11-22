@@ -51,6 +51,7 @@ final class CapeWornMotion {
     private double time, stride, amplitude, clearancePace, limbAmplitude, ground, strideSupport, chainSupport;
 
     final CapeResponse response = new CapeResponse();
+    final CapeLanding landing = new CapeLanding();
 
     void sample(CapeState.Wearer wearer, int tick, float fraction,
                 float stepFrom, float stepTo, float speedFrom, float speedTo,

@@ -25,6 +25,10 @@ public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
     private static final Map<Entity, CapeWornLight> LIGHTS = new WeakHashMap<>();
     private int resourceGeneration = -1;
     private CapeBloom.Mode ceiling = CapeBloom.Mode.HALO;
+    // Payload for the cape_bottom subtree, only during this halo re-render.
+    private int hemLight;
+
+    int hemLight(int base) { return hemLight == 0 ? base : hemLight; }
 
     public CapaGlowLayer(GeoArmorRenderer<CapaDeteriorerItem> renderer) {
         super(renderer);
@@ -84,23 +88,32 @@ public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
         CapeState mode = CapaDeteriorerItem.stateFor(wearer, armor.getCurrentStack());
         CapeState.Glow glow;
         CapeNocturne.Gains halo;
+        int hem = 0;
         if (wearer == null) {
             glow = mode.glow(0);
             halo = CapeNocturne.gains(0, 0, 0);
         } else {
             float sky = wearer.level() instanceof ClientLevel world ? world.getSkyDarken(partialTick) : 1.0F;
             var wake = armor.getGeoModel() instanceof CapaArmorModel model ? model.speedWake() : CapeResponse.SpeedWake.NONE;
+            double heat = pass == CapeBloom.Mode.HALO && armor instanceof CapaArmorRenderer worn
+                    ? worn.landing().heat() : 0;
             var light = LIGHTS.computeIfAbsent(wearer, key -> new CapeWornLight());
             var frame = light.sample(mode, LightTexture.block(packedLight), LightTexture.sky(packedLight),
-                    sky, wearer.tickCount, partialTick, wearer.getId(), wake);
+                    sky, wearer.tickCount, partialTick, wearer.getId(), wake, heat);
             glow = frame.glow();
             halo = frame.halo();
+            if (heat > 0 && !frame.hem().equals(halo)) hem = frame.hem().packed();
         }
         // Packed per vertex for batching. The vanilla fallback still gets
         // ordinary fullbright lightmap coordinates, not the halo payload.
         int vertexLight = pass == CapeBloom.Mode.HALO ? halo.packed() : LightTexture.FULL_BRIGHT;
-        getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, emissive,
-                bufferSource.getBuffer(emissive), partialTick,
-                vertexLight, OverlayTexture.NO_OVERLAY, glow.red(), glow.green(), glow.blue(), 1.0F);
+        hemLight = hem;
+        try {
+            getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, emissive,
+                    bufferSource.getBuffer(emissive), partialTick,
+                    vertexLight, OverlayTexture.NO_OVERLAY, glow.red(), glow.green(), glow.blue(), 1.0F);
+        } finally {
+            hemLight = 0;
+        }
     }
 }

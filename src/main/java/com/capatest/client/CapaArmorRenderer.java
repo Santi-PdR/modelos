@@ -27,6 +27,7 @@ import software.bernie.geckolib.util.RenderUtils;
 
 public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private final CapaArmorModel capeModel;
+    private final CapaGlowLayer glowLayer;
     private static final CapeFit.YokeShape WING_LINING = CapeFit.yokeShape(0, 0, 0, true);
     private boolean mountInChest;
     private boolean slimSleeves;
@@ -44,6 +45,13 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     double rearTuck() { return rearTuck; }
     double sprintEdge() { return mountInChest && !elytra ? capeModel.sprintEdge() : 0; }
     CapeChain.Motion chain() { return dryHood ? capeModel.chain() : CapeChain.REST; }
+    private CapeLanding.Motion probeLanding; // fxSmoke fixture; flying and wet still cancel a real landing
+
+    CapeLanding.Motion landing() {
+        return probeLanding != null ? probeLanding : dryHood ? capeModel.landing() : CapeLanding.REST;
+    }
+
+    void probeLanding(CapeLanding.Motion motion) { probeLanding = motion; }
     CapeHood.Shift napeFor(String name) { return nape.forBone(name); }
 
     public CapaArmorRenderer() {
@@ -53,7 +61,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private CapaArmorRenderer(CapaArmorModel model) {
         super(model);
         this.capeModel = model;
-        addRenderLayer(new CapaGlowLayer(this));
+        glowLayer = new CapaGlowLayer(this);
+        addRenderLayer(glowLayer);
     }
 
     /**
@@ -195,8 +204,13 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         double chainWeight = chain != CapeChain.REST ? CapeChain.weight(name) : 0;
         double sprint = sprintEdge();
         var edge = sprint > 0 && parent != null ? CapeSprintEdge.offset(name, parent.getName()) : null;
+        boolean hem = mountInChest && !elytra && CapeLanding.HEM.equals(name)
+                && parent != null && "cape_mid".equals(parent.getName());
+        double hemPitch = hem ? landing().pitch() : 0;
+        if (hem && isReRender) light = glowLayer.hemLight(light);
         boolean wingFit = elytra && (backing || saddle || shoulder || underYoke);
-        boolean fitted = seat || saddle || shoulder || wingFit || hood || trim != CapeHood.FIXED || chainWeight > 0 || edge != null;
+        boolean fitted = seat || saddle || shoulder || wingFit || hood || trim != CapeHood.FIXED
+                || chainWeight > 0 || edge != null || hemPitch != 0;
         if (fitted) poseStack.pushPose();
         try {
             // Shared by cutout and bloom. Part of the return stroke follows
@@ -205,7 +219,16 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
             // Translate the loose links in their parent frame. Match both
             // passes without editing baked bones or moving the two anchors.
             if (chainWeight > 0) poseStack.translate(0, -chainWeight * chain.drop() / 16, chainWeight * chain.away() / 16);
-            if (seat) {
+            if (hemPitch != 0) {
+                // A rotation about the animated bottom pivot in cape_mid
+                // space. No baked-bone writes or changes above this hinge.
+                float x = (bone.getPivotX() - bone.getPosX()) / 16F;
+                float y = (bone.getPivotY() + bone.getPosY()) / 16F;
+                float z = (bone.getPivotZ() + bone.getPosZ()) / 16F;
+                poseStack.translate(x, y, z);
+                poseStack.mulPose(Axis.XP.rotationDegrees((float) -hemPitch));
+                poseStack.translate(-x, -y, -z);
+            } else if (seat) {
                 // One rigid displacement in chest space, shared by the
                 // solid and glow passes. Never rescale the worn mantle.
                 poseStack.translate(0, -CapeMountPlacement.BACK_DROP / 16, -CapeMountPlacement.BACK_FORWARD / 16);

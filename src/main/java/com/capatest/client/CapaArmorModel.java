@@ -8,7 +8,11 @@ import net.minecraft.client.player.RemotePlayer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.constant.DataTickets;
@@ -79,6 +83,9 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     private CapeChain.Motion chain = CapeChain.REST;
 
     CapeChain.Motion chain() { return chain; }
+
+    private CapeLanding.Motion landing = CapeLanding.REST;
+    CapeLanding.Motion landing() { return landing; }
     private boolean disabled;
 
     CapeHood.Pose hood() { return hood; }
@@ -121,6 +128,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         sprintEdge = 0;
         speedWake = CapeResponse.SpeedWake.NONE;
         chain = CapeChain.REST;
+        landing = CapeLanding.REST;
         if (!(state.getData(DataTickets.ENTITY) instanceof LivingEntity wearer) || !resolveRig()) {
             super.handleAnimations(item, instanceId, state);
             return;
@@ -173,7 +181,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         hood = CapeHood.REST;
         if (disabled) return;
         try {
-            applyClothResponse(wearer, motion.partial(), motion);
+            applyClothResponse(wearer, motion.partial(), motion, coordinated);
             var response = motion.response;
             if (coordinated) hood = CapeHood.pose(motion.time(), motion.stride(), motion.amplitude() * motion.ground(),
                     response.turnAt(.16), response.sideAt(.12), wearer.getId());
@@ -303,7 +311,7 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             clothMid.setRotX(clothMid.getRotX() - (float) Math.toRadians(midLift));
     }
 
-    private void applyClothResponse(LivingEntity wearer, float partial, CapeWornMotion motion) {
+    private void applyClothResponse(LivingEntity wearer, float partial, CapeWornMotion motion, boolean coordinated) {
         boolean passenger = wearer.isPassenger();
         Vec3 velocity = wearer.getDeltaMovement();
         // rideTick can zero the rider's own velocity before the vehicle
@@ -311,6 +319,11 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
         CapeTravel.Motion travel = CapeTravel.measure(new CapeTravel.Step(velocity.x, velocity.y, velocity.z),
                 new CapeTravel.Step(wearer.getX() - wearer.xo, wearer.getY() - wearer.yo, wearer.getZ() - wearer.zo),
                 passenger || wearer instanceof RemotePlayer, Mth.rotLerp(partial, wearer.yBodyRotO, wearer.yBodyRot));
+        // Keep the dry, unsupported descent detector separate from the old
+        // FALL blend and from the horizontal response. A handhold is not a
+        // touchdown; neither is folding back from swim or Elytra.
+        if (coordinated) landing = motion.landing.sample(wearer.tickCount, motion.time(),
+                canLand(wearer), wearer.onGround(), travel);
         double time = motion.time() / 20.0D;
         double turnTarget = travel.cut() ? 0
                 : Mth.clamp(Mth.wrapDegrees(wearer.yBodyRot - wearer.yBodyRotO) / 14.0F, -1.0F, 1.0F);
@@ -350,5 +363,14 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             b.setRotY(b.getRotY() + (float) Math.toRadians(CapeResponse.sideYaw(offY, side, weight)));
             b.setRotZ(b.getRotZ() + (float) Math.toRadians(CapeResponse.sideRoll(offZ, side, weight)));
         }
+    }
+
+    private static boolean canLand(LivingEntity wearer) {
+        return wearer instanceof Player player && wearer.isAlive()
+                && (wearer.getPose() == Pose.STANDING || wearer.getPose() == Pose.CROUCHING)
+                && !player.getAbilities().flying && !wearer.isPassenger() && !wearer.isFallFlying()
+                && !wearer.isSwimming() && !wearer.isAutoSpinAttack()
+                && !wearer.isInWaterOrBubble() && !wearer.isInLava() && !wearer.onClimbable()
+                && !wearer.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA);
     }
 }

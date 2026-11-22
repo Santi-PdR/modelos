@@ -17,6 +17,8 @@ public final class CapeNocturne {
     private static final double INNER_WAKE_SCALE = 12.0;
     private static final double EDGE_WAKE_SCALE = 20.0;
     private static final double WAKE_WATER_DAMPING = .80;
+    private static final double LAND_EDGE_SHARE = .72;
+    private static final double LAND_INNER_SHARE = .90;
     private static final int GAIN_UNITS = 4096;
     private static final double TICK_SECONDS = 1 / 20.0;
 
@@ -73,6 +75,19 @@ public final class CapeNocturne {
         double contrast = dusk * dusk * (1 - WAKE_WATER_DAMPING * wake.water());
         return new Gains(DAY_GAIN + dusk * (edge - DAY_GAIN) + contrast * boost(wake.edge(), EDGE_WAKE_SCALE),
                 DAY_GAIN + dusk * (inner - DAY_GAIN) + contrast * boost(wake.inner(), INNER_WAKE_SCALE));
+    }
+
+    double dusk() { return dusk; }
+
+    static Gains hemGains(double dusk, Gains moving, double seconds, int wearerId, double heat) {
+        if (!(heat > 0) || dusk == 0) return moving;
+        var still = gains(dusk, seconds, wearerId);
+        // Fill part of the unused .40 gain budget. Landing and braking can
+        // coincide without doubling the flash. Daylight leaves UV2 intact.
+        double room = WAKE_LIMIT * dusk * dusk;
+        double mix = Math.min(1, heat);
+        return new Gains(moving.edge + LAND_EDGE_SHARE * mix * Math.max(0, still.edge + room - moving.edge),
+                moving.inner + LAND_INNER_SHARE * mix * Math.max(0, still.inner + room - moving.inner));
     }
 
     private static double boost(double wake, double scale) {

@@ -19,8 +19,8 @@ final class CapeJumpProbe {
     private static final int JUMP = 20, SPRINT = 54, RUN_JUMP = 74, BRAKE = 147, END = 169;
     private static final int EDGE = 19;
     private final StringBuilder rows = new StringBuilder("time\ton_ground\theight\tvertical\tspeed\tpace\tleg_pos\tstride\trun\tair\tfall"
-            + "\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\n");
-    private final StringBuilder boxes = new StringBuilder(), fixedChain = new StringBuilder();
+            + "\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\tvy\taterrizaje_deg\taterrizaje_eco\n");
+    private final StringBuilder boxes = new StringBuilder(), fixedChain = new StringBuilder(), fixedHem = new StringBuilder();
     private final BlockPos deck;
     private NativeImage apex, contact;
     private int start = -1, fitTick = -1;
@@ -67,7 +67,7 @@ final class CapeJumpProbe {
     boolean measureFit(int tick) {
         int t = tick - start;
         if (start < 0 || fitTick == tick || (t & 1) != 0) return false;
-        return t >= JUMP - 2 && t <= JUMP + 20 || t >= RUN_JUMP - 4 && t <= RUN_JUMP + 20
+        return t >= JUMP - 2 && t <= JUMP + 36 || t >= RUN_JUMP - 4 && t <= RUN_JUMP + 36
                 || t >= 102 && t <= BRAKE + 6;
     }
 
@@ -86,12 +86,15 @@ final class CapeJumpProbe {
                 .append(draw.pace()).append('\t').append(p.walkAnimation.position(partial)).append('\t').append(draw.stride()).append('\t')
                 .append(draw.run()).append('\t').append(draw.air()).append('\t').append(draw.fall()).append('\t')
                 .append(draw.collarZ()).append('\t').append(draw.top()).append('\t').append(draw.mid()).append('\t')
-                .append(tip.x()).append('\t').append(tip.y()).append('\t').append(tip.z()).append('\n');
+                .append(tip.x()).append('\t').append(tip.y()).append('\t').append(tip.z()).append('\t')
+                .append(p.getDeltaMovement().y).append('\t').append(draw.landing().pitch()).append('\t')
+                .append(draw.landing().heat()).append('\n');
         if (fit != null) {
             fitTick = p.tickCount;
             int elapsed = fitTick - start;
             fit.boxes().lines().forEach(box -> boxes.append(elapsed).append('\t').append(box).append('\n'));
             fit.fixedChain().lines().forEach(box -> fixedChain.append(elapsed).append('\t').append(box).append('\n'));
+            fit.fixedHem().lines().forEach(box -> fixedHem.append(elapsed).append('\t').append(box).append('\n'));
         }
         if (t >= JUMP && t < JUMP + 19) {
             if (!p.onGround() && height > .7) rose = true;
@@ -109,6 +112,7 @@ final class CapeJumpProbe {
         Files.writeString(dir.resolve(name + ".tsv"), rows);
         Files.writeString(dir.resolve(name + "-cubos.tsv"), boxes);
         Files.writeString(dir.resolve(name + "-cadena-fija.tsv"), fixedChain);
+        Files.writeString(dir.resolve(name + "-dobladillo-fijo.tsv"), fixedHem);
         return true;
     }
 }
