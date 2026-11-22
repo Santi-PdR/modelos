@@ -31,7 +31,6 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 /** Client-only animation layer, fed only by successful server activations. */
 @Mod.EventBusSubscriber(modid = StainKatanaMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public final class KatanaAnimations {
-    public static float framingYTest, framingZTest;
     private static final ResourceLocation LAYER = new ResourceLocation(StainKatanaMod.MOD_ID, "abilities");
     private static final Logger LOGGER = LogUtils.getLogger();
     // Official Better Combat katana moves; loaded from the user's installed mod/resource pack,
@@ -117,9 +116,9 @@ public final class KatanaAnimations {
                         new dev.kosmx.playerAnim.core.util.Vec3f(
                                 (leftHanded ? 16 : -8) + contact * ((leftHanded ? -8 : 4)
                                         + KatanaClientConfig.BLOOD_HAND_X.get().floatValue()),
-                                -6 + framingYTest + contact * ((leftHanded ? -6 : -8)
+                                -3 + contact * ((leftHanded ? -6 : -8)
                                         + KatanaClientConfig.BLOOD_HAND_Y.get().floatValue()),
-                                -14 + framingZTest + contact * KatanaClientConfig.BLOOD_HAND_Z.get().floatValue())));
+                                -10 + contact * KatanaClientConfig.BLOOD_HAND_Z.get().floatValue())));
             }) {
                 // Inspect begins at tick zero; the library's default fade divides
                 // by beginTick. The enclosing layer already performs the fade.
