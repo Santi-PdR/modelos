@@ -346,7 +346,8 @@ public final class CapeFxSmoke {
                     note("pausa de render: punta y UV2 coinciden con el control continuo en ambos cambios; repetición y corte verificados");
                     testFlight(game);
                     CapeEmberBlendProbe.verify(game, pane, shots(game));
-                    note("secuencia de brasa: intermedios reales del atlas, cuatro vértices por cuadro y respaldo de tres sprites");
+                    CapeEmberBankProbe.verify(game, pane, shots(game));
+                    note("secuencia de brasa: intermedios del atlas y cuatro vértices; inclinación comprobada en vuelo libre y ante un panel");
                     equipScene(game, Scene.CHEST);
                 }
                 case 9 -> {

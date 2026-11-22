@@ -11,9 +11,28 @@ public final class CapeEmber {
 
     public record Look(int frame, double alpha, double scale, double red, double green, double blue) {}
 
+    private static final double BANK_LIMIT = .44;
+    private static final double BANK_DEAD = .0035, BANK_FULL = .024;
+    private static final double BANK_IN_START = .02, BANK_IN_END = .14;
+    private static final double BANK_OUT_START = .38, BANK_OUT_END = .78;
+
+    static float renderFraction(float partialTick) {
+        return Float.isFinite(partialTick) ? Math.max(0, Math.min(1, partialTick)) : 0;
+    }
+
+    // Positive drift on the screen leans the top of the sprite to the right.
+    // Side travel, not an angle atan2 across the view axis, keeps it calm
+    // when the ember moves directly towards or away from the camera.
+    static double bank(double progress, double screenSide) {
+        if (!Double.isFinite(progress) || !Double.isFinite(screenSide)) return 0;
+        double motion = ease(BANK_DEAD, BANK_FULL, Math.abs(screenSide));
+        double life = ease(BANK_IN_START, BANK_IN_END, progress) * (1 - ease(BANK_OUT_START, BANK_OUT_END, progress));
+        return Math.copySign(BANK_LIMIT * motion * life, -screenSide);
+    }
+
     static double renderProgress(int age, int lifetime, float partialTick) {
         if (age <= 0 || lifetime <= 0) return 0;
-        double fraction = Float.isFinite(partialTick) ? Math.max(0, Math.min(1, partialTick)) : 0;
+        double fraction = renderFraction(partialTick);
         // TextureSheetParticle draws between its previous and current
         // positions; sample the same interval of the appearance curve.
         return Math.min(1, (age - 1 + fraction) / lifetime);

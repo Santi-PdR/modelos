@@ -35,6 +35,8 @@ def profile():
         return float(re.search(rf'\b{name}\s*=\s*([.\d]+)[DF]?\s*;', frame)[1])
     crouch = dict(pitch=scalar('CROUCH_PITCH'), pivot=scalar('BODY_PIVOT'), bodyY=scalar('CROUCH_BODY_Y'),
                   scale=scalar('PLAYER_SCALE'), renderDrop=scalar('CROUCH_RENDER_DROP'))
-    return dict(origins=origins, spread=spread, modes=modes, crouch=crouch,
+    ember = cape_ember_sprites.JAVA.read_text()
+    bank = {name: float(value) for name, value in re.findall(r'\bBANK_(\w+)\s*=\s*([.\d]+)', ember)}
+    return dict(origins=origins, spread=spread, modes=modes, crouch=crouch, bank=bank,
                 pulseTicks=constant('SPARK_INTERVAL_TICKS'),
                 ember=dict(cape_ember_sprites.profile(), images=[name+'.png' for name in cape_ember_sprites.names()]))

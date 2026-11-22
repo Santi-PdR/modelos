@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw, ImageOps
 
 from cape_contact import lap
 from cape_fit import fixed_wearer_pose
-from preview_cloth import ARMOR_GEO, load, matrices
+from preview_cloth import ARMOR_GEO, load, matrices, mod_version
 from verify_forge_gaits import table, text
 from verify_forge_postures import read_boxes
 from verify_v1660 import WornModel
@@ -109,10 +109,11 @@ def verify(root):
                   f'{old:.3f} → {new:.3f}u; muestras hundidas >.22u {hidden0:.1%} → {hidden1:.1%}; '
                   f'contacto mínimo con la costura {seam:.3f}u.', flush=True)
         images[slot] = pictures
-    table(root/'hombreras-movimiento.tsv', 'ranura lado muestra fase profundidad_37_u profundidad_38_u '
-          'enterrado_37 enterrado_38 costura_u movimiento_u', rows)
-    table(root/'hombreras-resumen.tsv', 'ranura lado cuadros profundidad_37_u profundidad_38_u '
-          'enterrado_37 enterrado_38 costura_min_u', summary)
+    patch = mod_version().rsplit('.', 1)[-1]
+    table(root/'hombreras-movimiento.tsv', f'ranura lado muestra fase profundidad_37_u profundidad_{patch}_u '
+          f'enterrado_37 enterrado_{patch} costura_u movimiento_u', rows)
+    table(root/'hombreras-resumen.tsv', f'ranura lado cuadros profundidad_37_u profundidad_{patch}_u '
+          f'enterrado_37 enterrado_{patch} costura_min_u', summary)
     return images
 
 
@@ -120,7 +121,7 @@ def gallery(root, images):
     sheet = Image.new('RGB', (1100, 782), '#17121d')
     pen = ImageDraw.Draw(sheet)
     text(pen, (18, 12), 'Las hombreras durante la carrera', 27, bold=True)
-    text(pen, (18, 50), 'Alex en Forge · capturas de la v1.67.38, no del control de malla .37.', 16, '#edc4db')
+    text(pen, (18, 50), f'Alex en Forge · capturas de la v{mod_version()}, no del control de malla .37.', 16, '#edc4db')
     for row, (slot, pairs) in enumerate(images.items()):
         y = 110 + 332 * row
         for col, (path, shift) in enumerate(pairs):

@@ -10,6 +10,10 @@ public final class CapeEmberTest {
             blendSamples();
             return;
         }
+        if (args.length == 1 && args[0].equals("--bank-samples")) {
+            checkBank(true);
+            return;
+        }
         boolean samples = args.length == 1 && args[0].equals("--samples");
         int count = 0;
         for (int life : new int[] {26, 31, 39, 47}) {
@@ -40,11 +44,33 @@ public final class CapeEmberTest {
             System.out.println("Brasas: " + count + " muestras de color, cobertura y tamaño");
             checkRenderClock();
             checkSpriteTimeline();
+            checkBank(false);
             var hot = CapeEmber.look(.16, .43, .82);
             var cool = CapeEmber.look(.55, .43, .82);
             check(hot.alpha() > .79 && hot.red() - hot.blue() > .25 && cool.blue() > cool.red(),
                     "no se ve la transición de rosa cálido a violeta");
         }
+    }
+
+    private static void checkBank(boolean samples) {
+        double[] drifts = {-.04, -.027, -.019, -.010, -.003, 0, .003, .010, .019, .027, .04};
+        for (double drift : drifts) {
+            double prev = 0;
+            for (int i = 0; i <= 200; i++) {
+                double p = i / 200.0, bank = CapeEmber.bank(p, drift);
+                check(Math.abs(bank) <= .44 && bank == -CapeEmber.bank(p, -drift), "bank no longer mirrors");
+                check(bank * drift <= 0 && Math.abs(bank-prev) < .031, "wrong turn or sudden tilt");
+                if (Math.abs(drift) <= .003 || p <= .02 || p >= .78)
+                    check(bank == 0, "a still, unborn or cold ember leans");
+                if (samples) System.out.printf(Locale.ROOT, "%s\t%s\t%s%n", p, drift, bank);
+                prev = bank;
+            }
+        }
+        check(CapeEmber.bank(.2, .04) < -.42 && Math.abs(CapeEmber.bank(.2, .01)) < .12,
+                "tilt no longer reads with lateral speed");
+        check(CapeEmber.bank(.2, Double.NaN) == 0 && CapeEmber.bank(Double.POSITIVE_INFINITY, .04) == 0,
+                "non-finite drift or clock tilted the billboard");
+        if (!samples) System.out.println("Brasas: inclinación simétrica y acotada, neutra de frente o al apagarse.");
     }
 
     private static void checkSpriteTimeline() {

@@ -10,14 +10,17 @@ import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.particle.TextureSheetParticle;
 import net.minecraft.core.particles.SimpleParticleType;
+import net.minecraft.util.Mth;
+import org.joml.Vector3f;
 
-/** Chispa rosa vertical que conserva la velocidad enviada por el servidor. */
+/** Chispa rosa que conserva la velocidad enviada por el servidor. */
 public class CapaSparkParticle extends TextureSheetParticle {
     private final SpriteSet sprites;
     private final int spriteEnd;
     private final float baseSize;
     private final float streak;
     private final float phase;
+    private double previousDriftX, previousDriftZ, driftX, driftZ;
 
     protected CapaSparkParticle(ClientLevel level,
                                 double x, double y, double z,
@@ -47,8 +50,20 @@ public class CapaSparkParticle extends TextureSheetParticle {
     }
 
     @Override
+    public void tick() {
+        previousDriftX = driftX;
+        previousDriftZ = driftZ;
+        super.tick();
+        // Use movement actually allowed by collision, not a launch vector
+        // that would keep the sprite banked after it stops at a pane.
+        driftX = this.x - this.xo;
+        driftZ = this.z - this.zo;
+    }
+
+    @Override
     public void render(VertexConsumer vertices, Camera camera, float partialTick) {
-        double progress = CapeEmber.renderProgress(this.age, this.lifetime, partialTick);
+        float partial = CapeEmber.renderFraction(partialTick);
+        double progress = CapeEmber.renderProgress(this.age, this.lifetime, partial);
         if (progress <= 0 || progress >= 1) return;
         CapeEmber.Look look = CapeEmber.look(progress, this.streak, this.phase);
         this.alpha = (float) look.alpha();
@@ -58,7 +73,21 @@ public class CapaSparkParticle extends TextureSheetParticle {
         this.bCol = (float) look.blue();
         int frame = spriteEnd == 2 ? look.frame() : CapeEmber.spriteIndex(progress, this.lifetime);
         this.setSprite(this.sprites.get(frame, spriteEnd));
-        super.render(vertices, camera, partialTick);
+        double dx = Mth.lerp((double) partial, previousDriftX, driftX);
+        double dz = Mth.lerp((double) partial, previousDriftZ, driftZ);
+        // Camera-local X in world space. Do not mutate the camera's quaternion.
+        var right = camera.rotation().transform(new Vector3f(1, 0, 0));
+        float bank = (float) CapeEmber.bank(progress, dx * right.x() + dz * right.z());
+        // Vanilla's one fullbright quad: same UV, scale, centre and depth test.
+        // This value belongs only to this view, never to the simulation tick.
+        float savedRoll = this.roll, savedPreviousRoll = this.oRoll;
+        this.roll = this.oRoll = bank;
+        try {
+            super.render(vertices, camera, partial);
+        } finally {
+            this.roll = savedRoll;
+            this.oRoll = savedPreviousRoll;
+        }
     }
 
     @Override

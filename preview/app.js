@@ -800,14 +800,17 @@ function sparkOrigin(state,pulse,index,grounded,noise) {
   return {point,collar};
 }
 
-function overEmber(pix,depth,size,sprite,x,y,z,width,opacity,tint) {
-  const x0=x-width/2,y0=y-width/2,s=16/width;
-  for (let yy=Math.max(0,Math.ceil(y0)); yy<Math.min(size,y0+width); yy++) {
-    const row=Math.min(15,Math.floor((yy-y0)*s));
-    for (let xx=Math.max(0,Math.ceil(x0)); xx<Math.min(size,x0+width); xx++) {
+function overEmber(pix,depth,size,sprite,x,y,z,width,opacity,tint,bank=0) {
+  const c=Math.cos(bank),s=Math.sin(bank),half=width/2,reach=half*(Math.abs(c)+Math.abs(s));
+  for (let yy=Math.max(0,Math.ceil(y-reach)); yy<Math.min(size,y+reach); yy++) {
+    const dy=yy-y;
+    for (let xx=Math.max(0,Math.ceil(x-reach)); xx<Math.min(size,x+reach); xx++) {
       const dst=yy*size+xx;
       if (z<=depth[dst]) continue; // native particles also test depth against the body/cloth
-      const ti=(row*16+Math.min(15,Math.floor((xx-x0)*s)))*4;
+      // Undo the billboard roll before the stock nearest texel sample.
+      const dx=xx-x,u=(dx*c-dy*s+half)/width,v=(dx*s+dy*c+half)/width;
+      if (u<0||v<0||u>=1||v>=1) continue;
+      const ti=(Math.floor(v*16)*16+Math.floor(u*16))*4;
       const a=opacity*sprite[ti+3]/255;
       if (a<.1) continue; // vanilla particle shader's alpha test
       for (let j=0;j<3;j++) pix[dst*4+j]=pix[dst*4+j]*(1-a)+sprite[ti+j]*tint[j]*a;
@@ -828,6 +831,12 @@ function emberLook(progress, streak, phase) {
   return {frame:p<.25 ? 0 : p<.63 ? 1 : 2,
           alpha:(.79+.06*glint+.07*streak)*fade, scale:1-.43*p+.05*glint,
           tint:[1-.39*cool,.98-.18*cool-.055*heat,.93+.07*cool-.20*heat]};
+}
+
+function emberBank(progress, side, p) {
+  if (!Number.isFinite(progress)||!Number.isFinite(side)) return 0;
+  return -Math.sign(side)*p.LIMIT*smooth(p.DEAD,p.FULL,Math.abs(side))*
+    smooth(p.IN_START,p.IN_END,progress)*(1-smooth(p.OUT_START,p.OUT_END,progress));
 }
 
 function emberSpriteIndex(progress, life, {steps, halfTicks, changes}) {
@@ -873,11 +882,15 @@ function drawRuntimeParticles(seconds, size, stance, pix, depth) {
       const x=size/2+(pos[0]-lastCx)*lastScale,y=size/2-(pos[1]-lastCy)*lastScale;
       const quad=(.1+.1*noise[0])*(.28+.10*streak+.15*noise[2]);
       const width=32*quad*look.scale*lastScale;
-      embers.push({x,y,z:pos[2],width,...look,frame:emberSpriteIndex(tick/life,life,AURA.ember)});
+      const whole=Math.floor(tick), fraction=tick-whole;
+      const drift=(whole ? (1-fraction)*Math.pow(.94,whole-1) : 0)+fraction*Math.pow(.94,whole);
+      const sideTravel=apply(lastView,[dx*clamp*drift,0,dz*clamp*drift])[0];
+      const bank=emberBank(tick/life,sideTravel,AURA.bank);
+      embers.push({x,y,z:pos[2],width,bank,...look,frame:emberSpriteIndex(tick/life,life,AURA.ember)});
     }
   }
   for (const e of embers.sort((a,b)=>a.z-b.z))
-    overEmber(pix,depth,size,SPARKS[e.frame],e.x,e.y,e.z,e.width,e.alpha,e.tint);
+    overEmber(pix,depth,size,SPARKS[e.frame],e.x,e.y,e.z,e.width,e.alpha,e.tint,e.bank);
 }
 
 let yaw=25, pitch=10, zoom=1.0, playing=true, t=0, elapsed=0;

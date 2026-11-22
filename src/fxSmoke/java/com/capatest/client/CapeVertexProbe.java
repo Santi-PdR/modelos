@@ -5,12 +5,18 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 /** Read-only sink for the actual submitted color and light coordinates. */
 final class CapeVertexProbe implements VertexConsumer {
     int count, light, rgba;
+    final double[] xyz = new double[12]; // First quad only; armor probes still count every vertex.
+    final float[] uv = new float[8];
     float minU = Float.POSITIVE_INFINITY, maxU = Float.NEGATIVE_INFINITY;
     float minV = Float.POSITIVE_INFINITY, maxV = Float.NEGATIVE_INFINITY;
 
-    @Override public VertexConsumer vertex(double x, double y, double z) { return this; }
+    @Override public VertexConsumer vertex(double x, double y, double z) {
+        if (count < 4) { xyz[3*count] = x; xyz[3*count+1] = y; xyz[3*count+2] = z; }
+        return this;
+    }
     @Override public VertexConsumer color(int r, int g, int b, int a) { rgba = r << 24 | g << 16 | b << 8 | a; return this; }
     @Override public VertexConsumer uv(float u, float v) {
+        if (count < 4) { uv[2*count] = u; uv[2*count+1] = v; }
         minU = Math.min(minU, u); maxU = Math.max(maxU, u);
         minV = Math.min(minV, v); maxV = Math.max(maxV, v);
         return this;
