@@ -1,5 +1,7 @@
 # v1.67.37 · El paño al viajar sentado
 
+**Versión de prueba más reciente: [v1.67.38](../v1.67.38/notas.md).**
+
 **[JAR de prueba](https://raw.githubusercontent.com/Santi-PdR/modelos/f989619869e686a09362d17dfeb6d155cc7db0b0/entregables/v1.67.37/capatest-1.67.37.jar)** · [PowerShell para `test-1`](instalar-test-1.txt) · [SHA-256](JAR.sha256) · [Volver a v1.67.36](../v1.67.36/notas.md).
 
 El vehículo sostiene al portador aunque sus pies no toquen el suelo. La .36 interpretaba esa falta de suelo como caída y le daba peso al clip `FALL`. Ahora el paño conserva el reposo al ir sentado y responde al **desplazamiento del vehículo**, sin activar la zancada. Al bajar, se vuelve al comportamiento normal con los fundidos existentes. No cambia el movimiento del jugador o del bote, el encastre del manto, el brillo, las brasas ni los ocho clips.

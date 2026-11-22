@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.38 — hombreras, giro del paño y brasas
+
+**[Descargar JAR de prueba v1.67.38](https://raw.githubusercontent.com/Santi-PdR/modelos/7e1e20752281197140e9f1cfc290b084ee572691/entregables/v1.67.38/capatest-1.67.38.jar)** · [PowerShell para test-1](docs/releases/v1.67.38/instalar-test-1.txt) · [Hombreras en Forge](docs/releases/v1.67.38/hombreras-en-carrera.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.38/notas.md).
+
+Las hombreras acompañan las mangas sin cambiar en reposo, los jirones rematan el giro y las brasas cambian de rosa cálido a violeta. Verificado en pecho y Curios; la .37 queda para volver atrás.
+
 ### v1.67.37 — el paño al viajar sentado
 
 **[Descargar JAR de prueba v1.67.37](https://raw.githubusercontent.com/Santi-PdR/modelos/f989619869e686a09362d17dfeb6d155cc7db0b0/entregables/v1.67.37/capatest-1.67.37.jar)** · [PowerShell para test-1](docs/releases/v1.67.37/instalar-test-1.txt) · [Pruebas y SHA-256](docs/releases/v1.67.37/notas.md).
