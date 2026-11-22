@@ -201,7 +201,7 @@ public final class RelicAura {
         float blue = glow.blue();
         // Gira un poco mientras se abre: una onda perfectamente radial parece un
         // anillo estatico que solo escala.
-        float turn = time * 0.35F;
+        float turn = seconds(time) * 0.35F;
         float size = SHOCK_SIZE * (1.0F - 0.45F * t);
         for (int i = 0; i < SHOCK_COUNT; i++) {
             float angle = turn + i * (TWO_PI / SHOCK_COUNT);
@@ -381,9 +381,9 @@ public final class RelicAura {
             // rise va de 0 (abajo) a 1 (arriba) y vuelve a empezar: es el ciclo de
             // una burbuja, desfasado por indice para que no suban en bloque.
             // Nadar acelera las burbujas: es lo que se ve al cruzar un rio a nado.
-            float rise = fract(time * BUBBLE_SPEED * (1.0F + 0.50F * motion)
+            float rise = fract(seconds(time) * BUBBLE_SPEED * (1.0F + 0.50F * motion)
                     + i * (1.0F / BUBBLE_COUNT));
-            float offset = sin(time * 1.3F + i * 2.1F) * 0.10F;
+            float offset = sin(seconds(time) * 1.3F + i * 2.1F) * 0.10F;
             float height = -0.32F + rise * 0.72F;
             float cx = frame.originX + frame.leftX * offset + frame.upX * height;
             float cy = frame.originY + frame.leftY * offset + frame.upY * height;
@@ -392,7 +392,7 @@ public final class RelicAura {
             // burbujas que se van y no como puntos que se caen.
             float weight = amount * (1.0F - rise) * 0.55F;
             float size = BUBBLE_SIZE * (0.6F + 0.6F * rise);
-            billboardAt(buffer, frame, cx, cy, cz, size, time * 0.6F + i,
+            billboardAt(buffer, frame, cx, cy, cz, size, seconds(time) * 0.6F + i,
                     redTint * weight, greenTint * weight, blueTint * weight, 1.0F);
         }
     }
@@ -413,8 +413,8 @@ public final class RelicAura {
         float speed = DROP_SPEED * (1.0F + 0.40F * motion);
         for (int i = 0; i < DROP_COUNT; i++) {
             // fall va de 0 (arriba) a 1 (abajo), desfasado por indice.
-            float fall = fract(time * speed + i * (1.0F / DROP_COUNT));
-            float wind = sin(time * 0.9F + i * 1.9F) * 0.07F;
+            float fall = fract(seconds(time) * speed + i * (1.0F / DROP_COUNT));
+            float wind = sin(seconds(time) * 0.9F + i * 1.9F) * 0.07F;
             float offset = wind;
             float height = 0.40F - fall * 0.72F;
             float cx = frame.originX + frame.leftX * offset + frame.upX * height;
@@ -423,7 +423,7 @@ public final class RelicAura {
             // Se ven al entrar arriba y se apagan al llegar abajo: una gota que
             // parpadea en el sitio se lee como un pixel roto, no como lluvia.
             float weight = amount * (0.25F + 0.75F * fall) * 0.60F;
-            billboardAt(buffer, frame, cx, cy, cz, DROP_SIZE, time * 0.8F + i,
+            billboardAt(buffer, frame, cx, cy, cz, DROP_SIZE, seconds(time) * 0.8F + i,
                     redTint * weight, greenTint * weight, blueTint * weight, 1.0F);
         }
     }
@@ -442,18 +442,18 @@ public final class RelicAura {
         float blueTint = glow.blue() * 0.25F + 0.18F * 0.75F;
         float speed = EMBER_SPEED * (1.0F + 0.45F * motion);
         for (int i = 0; i < EMBER_COUNT; i++) {
-            float rise = fract(time * speed + i * (1.0F / EMBER_COUNT));
-            float sway = sin(time * 1.7F + i * 2.3F) * 0.06F;
+            float rise = fract(seconds(time) * speed + i * (1.0F / EMBER_COUNT));
+            float sway = sin(seconds(time) * 1.7F + i * 2.3F) * 0.06F;
             float height = -0.30F + rise * 0.70F;
             float cx = frame.originX + frame.leftX * sway + frame.upX * height;
             float cy = frame.originY + frame.leftY * sway + frame.upY * height;
             float cz = frame.originZ + frame.leftZ * sway + frame.upZ * height;
             // Parpadeo: la brasa se enciende y se apaga dos veces por ciclo. Sin esto
             // sube como una burbuja naranja y no se lee como fuego.
-            float flicker = 0.55F + 0.45F * sin(time * 9.0F + i * 2.7F);
+            float flicker = 0.55F + 0.45F * sin(seconds(time) * 9.0F + i * 2.7F);
             float weight = amount * flicker * (1.0F - 0.45F * rise) * 0.75F;
             float size = EMBER_SIZE * (1.0F - 0.35F * rise);
-            billboardAt(buffer, frame, cx, cy, cz, size, time * 0.9F + i,
+            billboardAt(buffer, frame, cx, cy, cz, size, seconds(time) * 0.9F + i,
                     redTint * weight, greenTint * weight, blueTint * weight, 1.0F);
         }
     }
@@ -642,12 +642,15 @@ public final class RelicAura {
         // Correr suma un 60% de vaiven y agacharse lo recorta: es la diferencia
         // entre una reliquia que te sigue y una que se queda quieta contigo.
         energy *= 1.0F + 0.60F * motion;
-        float lift = 0.022F * energy * sin(time * 1.7F);
+        // En segundos, no en ticks: con ticks esto daba 5,4 Hz, o sea un temblor
+        // de cinco veces por segundo con el que la reliquia "saltaba" en el sitio.
+        float elapsed = seconds(time);
+        float lift = 0.022F * energy * sin(elapsed * 1.7F);
         poseStack.translate(0.0D, yDown ? -lift : lift, 0.0D);
         // Un grado escaso de ladeo, desfasado del vaiven: si no, parece un pez.
         // Se rota la matriz en el sitio: pasar un eje a mulPose crea un Quaternionf
         // por reliquia y frame, y el camino de render no asigna nada.
-        poseStack.last().pose().rotateY((float) Math.toRadians(1.1F * sin(time * 0.7F)));
+        poseStack.last().pose().rotateY((float) Math.toRadians(1.1F * sin(elapsed * 0.7F)));
         if (flash > 0.01F) {
             float squeeze = Math.min(1.0F, flash);
             poseStack.scale(1.0F + 0.05F * squeeze, 1.0F - 0.04F * squeeze, 1.0F + 0.05F * squeeze);
@@ -660,6 +663,20 @@ public final class RelicAura {
 
     private static float cos(float value) {
         return (float) Math.cos(value);
+    }
+
+    /**
+     * Segundos de juego a partir de los ticks de {@link #time(float)}.
+     *
+     * <p>Todos estos efectos estan pensados en "por segundo" (una gota tarda ~1 s
+     * en caer, una brasa parpadea ~1,4 veces por segundo), pero el reloj de la
+     * reliquia son ticks: 20 por segundo. Hasta 1.0.42 las gotas, las brasas y el
+     * vaiven usaban el numero tal cual y salian <b>veinte veces</b> mas rapidos —
+     * las gotas cambiaban de sitio 22 veces por segundo y el vaiven era un
+     * temblor de 5 Hz. Esto es lo que separa "flota" de "salta".</p>
+     */
+    private static float seconds(float ticks) {
+        return ticks / 20.0F;
     }
 
     private static float time(float partialTick) {

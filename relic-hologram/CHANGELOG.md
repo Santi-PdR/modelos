@@ -1,5 +1,28 @@
 # Historial de cambios
 
+## 1.0.43 — el fallo de unidades: es esto lo que hacía que saltara
+
+El reloj de la reliquia son **ticks** (20 por segundo) y los efectos de 1.0.38–1.0.42
+estaban escritos en «por segundo»: el número se usaba tal cual, así que todo salía
+**veinte veces más rápido**. No era un tema de gusto, era un factor 20:
+
+* **El vaivén del modelo** (1.0.31) era `sin(ticks × 1.7)`, o sea **5,4 Hz**: la
+  reliquia temblaba cinco veces por segundo en el sitio. Eso es exactamente «salta en
+  vez de flotar». Ahora flota con un ciclo de 3,7 s y se ladea cada 9 s.
+* **Las gotas de lluvia** (1.0.38) cambiaban de sitio **22 veces por segundo**: no
+  caían, parpadeaban. Ahora tardan ~0,9 s en cruzar.
+* **Las brasas** (1.0.39) parpadeaban a **35 Hz** (invisible, se promediaba a gris) y
+  subían en 1,5 s. Ahora parpadean a ~1,4 veces por segundo y suben en 1,5 s.
+* **La onda de choque** (1.0.40) giraba a 7 rad/s; ahora a 0,35 rad/s.
+* **Las burbujas** (1.0.33) subían 5,5 veces por segundo; ahora una cada 3,6 s, que es
+  lo que hace una burbuja.
+* Arreglado en un sitio: `seconds(ticks)` en `RelicAura`, y los efectos lo usan. CI
+  comprueba el divisor y cada uso, con 4 negativos probados en rojo (vaivén, divisor,
+  brasas y onda volviendo a los ticks).
+
+Si con esto el reposo te sigue pareciendo rápido, el culpable ya no es el aura: es
+`visuals.animSpeed` (o un monstruo cerca, que cambia el bucle a `idle_alert`).
+
 ## 1.0.42 — la tormenta relampaguea y `/relic vfx shock`
 
 * **Relámpago de tormenta**: cada 5–11 s el estado `storm` pega un destello de 0.55,

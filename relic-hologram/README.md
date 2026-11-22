@@ -230,6 +230,11 @@ se reproduce» de «un objeto que está ahí». El movimiento se aplica al `Pose
 antes del modelo y del aura, así que los dos se mueven juntos; se rota la matriz en
 el sitio para no crear un cuaternión por reliquia y frame.
 
+**Unidades**: el reloj interno de la reliquia son ticks y todo efecto nuevo pasa por
+`seconds()` (`ticks / 20`). Los primeros VFX de estado se escribieron en «por segundo» sin
+convertir y salían 20× rápidos — de ahí el vaivén de 5,4 Hz que hacía que la reliquia
+pareciera saltar en el sitio (corregido en 1.0.43).
+
 En cada evento (pulso, golpe, liberación, subida de nivel) el destello abre además una
 **onda de choque**: ocho partículas que salen del núcleo, se abren de 0.16 a 0.62 y se
 apagan mientras giran. Sale del propio destello, así que **no guarda estado ni crea

@@ -455,7 +455,7 @@ jobs:
               'las brasas no se dibujan nunca'
           assert 'EMBER_COUNT' in aura and 'EMBER_SPEED' in aura, \
               'faltan las constantes de las brasas'
-          assert 'float flicker = 0.55F + 0.45F * sin(time * 9.0F + i * 2.7F);' in aura, \
+          assert 'float flicker = 0.55F + 0.45F * sin(seconds(time) * 9.0F + i * 2.7F);' in aura, \
               'las brasas no parpadean (parecen burbujas naranjas)'
           # Onda de choque: sale del destello, sin estado propio ni listas que
           # mantener. Si alguien la cambia por una lista de particulas, esto falla.
@@ -468,6 +468,18 @@ jobs:
               'la onda no usa el destello como reloj (necesitaria estado propio)'
           # Estela de las chispas: solo con el portador en movimiento.
           assert 'if (motion > 0.35F) {' in aura, 'las chispas no dejan estela'
+          # Unidades: time() son ticks (20 por segundo) y los efectos de 1.0.38-1.0.42
+          # estaban escritos en "por segundo". Sin el divisor salian 20x rapidos: las
+          # gotas cambiaban de sitio 22 veces por segundo y el vaiven era un temblor
+          # de 5,4 Hz (la reliquia "saltaba" en el sitio en vez de flotar).
+          assert 'private static float seconds(float ticks)' in aura, 'falta el paso de ticks a segundos'
+          assert 'return ticks / 20.0F;' in aura, 'el paso a segundos no divide por 20'
+          assert 'float elapsed = seconds(time);' in aura, \
+              'el vaiven del modelo vuelve a medirse en ticks'
+          assert 'sin(elapsed * 1.7F)' in aura, 'el vaiven no usa el reloj en segundos'
+          assert 'fract(seconds(time) * speed' in aura, 'las gotas o las brasas volvieron a los ticks'
+          assert 'sin(seconds(time) * 9.0F' in aura, 'el parpadeo de las brasas volvio a los ticks'
+          assert 'float turn = seconds(time) * 0.35F;' in aura, 'el giro de la onda volvio a los ticks'
           assert 'float tail = phase - 0.22F * motion;' in aura, \
               'la estela no va detras de la chispa'
 

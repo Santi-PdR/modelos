@@ -237,6 +237,14 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.43, el factor 20.** `time()` devuelve `level.getGameTime() + partialTick`, o sea
+ticks, y así se pensaron el anillo (`beatSpeed` 0.15 rad/tick = 2 s) y las chispas
+(`SPARK_SPEED` 0.75 rad/tick). Los efectos que se añadieron después venían de cabecera en
+unidades de «por segundo»: gotas 1.10, brasas 0.65, parpadeo 9.0 y el vaivén 1.7. Usados
+sobre ticks, eso es 20× (el parpadeo, 35 Hz, por debajo del refresco: se promedia a gris).
+`seconds(ticks) = ticks / 20` y los seis usos pasan por ahí. El vaivén queda en
+`sin(segundos × 1.7)`: 3,7 s por ciclo, 2,2% de amplitud; el ladeo, 9 s por grado.
+
 **1.0.42, el destello como interfaz de prueba.** El relámpago de tormenta no inventa
 ningún efecto nuevo: llama a `boostFlash(0.55)` cada 100–220 ticks con el RNG del propio
 portador (`RandomSource`), y el destello ya alimenta la onda de choque, el eco del anillo,
