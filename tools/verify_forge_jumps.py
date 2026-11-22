@@ -261,7 +261,8 @@ def motion_gallery(root):
     if payload is None:
         raise AssertionError('no se pudo comprimir la lámina de saltos para Actions')
     encoded = base64.b64encode(payload).decode('ascii')
-    chunk_size = 8_000
+    # GitHub truncates annotation messages at 4096 chars; leave room for framing.
+    chunk_size = 3_500
     for offset in range(0, len(encoded), chunk_size):
         index = offset // chunk_size
         print(f'::notice title=Saltos Forge galeria jpg {index:02}::{encoded[offset:offset+chunk_size]}')
