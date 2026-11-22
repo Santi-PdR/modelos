@@ -712,6 +712,15 @@ jobs:
           assert 'spawnAura(Level level, Player player, ItemStack equipped)' in java
           assert 'spawnAura(player.level(), player, displayed.stack())' in (root / 'src/main/java/com/capatest/compat/CuriosCompat.java').read_text()
           assert 'CuriosCompat.visibleBack(wearer)' in curio
+          # Curios remains a true soft dependency: the entrypoint must not
+          # resolve Curios API types before the explicit mod-presence guard.
+          _entry = (root / 'src/main/java/com/capatest/CapaTestMod.java').read_text()
+          assert 'import top.theillusivec4.curios.' not in _entry
+          assert 'if (!ModList.get().isLoaded("curios"))' in _entry
+          assert 'Class.forName("com.capatest.compat.CuriosCompat")' in _entry
+          _gradle = (root / 'build.gradle').read_text()
+          assert 'compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}:api")' in _gradle
+          assert 'if (fxSmokeRun)' in _gradle and 'runtimeOnly fg.deobf("top.theillusivec4.curios:curios-forge:${curios_version}")' in _gradle
           assert 'CapeSparkPath.clearBirth(server, player, birth)' in java
           assert (root / 'tools/audit_model.py').is_file()
           assert '--check' in (root / 'tools/audit_model.py').read_text()
@@ -1198,6 +1207,7 @@ jobs:
           test -s build/fx-smoke-run/fx-shots/pulso-halo-gpu.tsv
           test -s build/fx-smoke-run/fx-shots/aterrizaje-halo-forge.tsv
           test -s build/fx-smoke-run/fx-shots/aterrizaje-eco-gpu.tsv
+          test -s build/fx-smoke-run/fx-shots/armadura-pecho-curios.png
 
       - name: Verificar eslabones y arrastre de la cadena en Forge
         id: verify-chain

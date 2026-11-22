@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Build the isolated first-pass Blockbench model for Brazalete Ascua.
+"""Build isolated geometry and animation/effect studies for Brazalete Ascua.
 
-This deliberately does not add the accessory to the cape's GeckoLib geometry,
-item registry, Curios slots, or runtime render path. The output is for fit review.
+These assets deliberately do not add the accessory to the cape's GeckoLib
+geometry, item registry, Curios slots, shaders, or runtime render path.
 """
 from __future__ import annotations
 
@@ -47,6 +47,31 @@ def png_rgb(width: int, height: int, pixels: list[tuple[int, int, int]]) -> byte
         + chunk(b"IDAT", zlib.compress(bytes(rows), 9))
         + chunk(b"IEND", b"")
     )
+
+
+def png_rgba(width: int, height: int, pixels: list[tuple[int, int, int, int]]) -> bytes:
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        payload = kind + data
+        return struct.pack(">I", len(data)) + payload + struct.pack(">I", zlib.crc32(payload) & 0xFFFFFFFF)
+
+    rows = bytearray()
+    for y in range(height):
+        rows.append(0)
+        for rgba in pixels[y * width : (y + 1) * width]:
+            rows.extend(rgba)
+    return (b"\x89PNG\r\n\x1a\n"
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(bytes(rows), 9))
+            + chunk(b"IEND", b""))
+
+
+def glowmask() -> bytes:
+    pixels = [(0, 0, 0, 0)] * (32 * 32)
+    # UV tile shared by the four crack plates; this is only a shader study.
+    for y in range(8, 16):
+        for x in range(8):
+            pixels[y * 32 + x] = (255, 255, 255, 255)
+    return png_rgba(32, 32, pixels)
 
 
 def texture() -> bytes:
@@ -110,7 +135,9 @@ def face_uv(u: int, v: int, width: int = 8, height: int = 8) -> dict:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     tex = texture()
+    mask = glowmask()
     (OUT / "brazalete_ascua.png").write_bytes(tex)
+    (OUT / "brazalete_ascua_glowmask.png").write_bytes(mask)
 
     group_id = stable_id("left_forearm")
     # Local coordinate convention for the fit prototype: +X is the character's
@@ -208,6 +235,76 @@ def main() -> None:
     assert base64.b64decode(model["textures"][0]["source"].split(",", 1)[1]) == tex
     (OUT / "Brazalete_Ascua_fit_v0.bbmodel").write_text(
         json.dumps(model, ensure_ascii=False, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+
+    # The v1 remains a separate fit/effect study: animate only the crack core,
+    # never the whole cuff or the cape. Geometry and atlas stay identical.
+    names = ("shell", "outer_bridge", "crack_core", "inner_clasp")
+    ids = {name: stable_id("v1_" + name) for name in names}
+    members = {name: [] for name in names}
+    for element in elements:
+        name = element["name"]
+        parent = ("crack_core" if name.startswith("crack_") or name == "garnet_bridge"
+                  else "outer_bridge" if name == "outer_bridge"
+                  else "inner_clasp" if name == "inner_clasp" else "shell")
+        members[parent].append(element["uuid"])
+    root_v1 = dict(group, children=list(ids.values()))
+    child_origins = {"shell": [0, 1.25, 0], "outer_bridge": [2.25, 1.25, 0],
+                     "crack_core": [2.45, 1.27, -.03], "inner_clasp": [-2.3, 1.25, 0]}
+    children_v1 = [{
+        "name": name, "uuid": ids[name], "origin": child_origins[name],
+        "rotation": [0, 0, 0], "visibility": True,
+        "isOpen": name == "crack_core", "shade": True, "export": True,
+        "locked": False, "autouv": 0, "children": members[name],
+    } for name in names]
+
+    def pulse_clip(name: str, length: float, samples: tuple[tuple[float, float], ...], loop: str) -> dict:
+        return {
+            "uuid": stable_id("clip_" + name), "name": name, "loop": loop,
+            "override": False, "length": length, "snapping": 24,
+            "selected": False, "anim_time_update": "", "blend_weight": "",
+            "start_delay": "", "loop_delay": "",
+            "animators": {ids["crack_core"]: {
+                "name": "crack_core", "type": "bone", "keyframes": [{
+                    "channel": "scale",
+                    "data_points": [{"x": str(v), "y": str(v), "z": str(v)}],
+                    "uuid": stable_id(f"{name}_{time}"), "time": time,
+                    "color": -1, "interpolation": "catmullrom",
+                } for time, v in samples],
+            }},
+        }
+
+    idle_pulse = pulse_clip("grieta_pulso_sutil", 1.8,
+                            ((0.0, 1.0), (.45, 1.018), (.90, 1.0),
+                             (1.35, .982), (1.8, 1.0)), "loop")
+    impact_echo = pulse_clip("resonancia_corta", .36,
+                             ((0.0, 1.0), (.10, 1.045), (.22, 1.015), (.36, 1.0)), "once")
+    model_v1 = dict(model)
+    model_v1.update({
+        "name": "brazalete_ascua_fit_prototype_v1",
+        "groups": [root_v1, *children_v1],
+        "outliner": [{"uuid": group_id, "isOpen": True, "children": [
+            {"uuid": ids[name], "isOpen": name == "crack_core", "children": members[name]}
+            for name in names
+        ]}],
+        "textures": [*model["textures"], {
+            "path": "brazalete_ascua_glowmask.png",
+            "name": "brazalete_ascua_glowmask.png", "folder": "", "namespace": "",
+            "id": "1", "width": 32, "height": 32, "uv_scale": [1, 1],
+            "particle": False, "render_mode": "default", "visible": True,
+            "enabled": True, "saved": True, "internal": True,
+            "source": "data:image/png;base64," + base64.b64encode(mask).decode("ascii"),
+        }],
+        "animations": [idle_pulse, impact_echo],
+    })
+    assert len(model_v1["animations"]) == 2 and len(members["crack_core"]) == 5
+    assert set().union(*members.values()) == {element["uuid"] for element in elements}
+    assert {key for animation in model_v1["animations"]
+            for key in animation["animators"]} == {ids["crack_core"]}
+    assert base64.b64decode(model_v1["textures"][1]["source"].split(",", 1)[1]) == mask
+    (OUT / "Brazalete_Ascua_fit_v1.bbmodel").write_text(
+        json.dumps(model_v1, ensure_ascii=False, separators=(",", ":")) + "\n",
         encoding="utf-8",
     )
 

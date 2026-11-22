@@ -10,6 +10,7 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Proyecto Blockbench v1.67.42](docs/CAPA_v1.67.42.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
+· [Revisión general del mod](docs/CALIDAD_GENERAL.md)
 
 ### v1.67.42 — eco del dobladillo al aterrizar (verificada para test-1)
 

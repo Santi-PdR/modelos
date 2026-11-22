@@ -123,7 +123,7 @@ public final class CapeFxSmoke {
         CLIMB_CHEST("escalera-pecho", 6000), CLIMB_BACK("escalera-curios", 6000),
         HOTBAR_BARE("hotbar-vacia", 6000), HOTBAR("hotbar", 6000),
         STRAFE_LEFT("traslacion-izquierda", 18000), STRAFE_RIGHT("traslacion-derecha", 18000),
-        WINGS("espalda-con-elitros", 18000),
+        WINGS("espalda-con-elitros", 18000), ARMOR_BACK("armadura-pecho-curios", 6000),
         GLIDE("planeo-real", 6000), WADE("de-pie-en-agua", 6000), SWIM("nado-horizontal", 6000),
         SWIM_EXIT("fin-del-nado", 6000), WADE_BACK("de-pie-en-agua-curios", 6000),
         SWIM_BACK("nado-horizontal-curios", 6000), SWIM_EXIT_BACK("fin-del-nado-curios", 6000),
@@ -148,7 +148,8 @@ public final class CapeFxSmoke {
         boolean hotbar() { return this == HOTBAR_BARE || this == HOTBAR; }
         boolean elytra() { return this == WINGS || this == GLIDE; }
         boolean usesBack() { return this == WALK_STEVE_BACK || this == WALK_ALEX_BACK || this == AUDIT_BACK
-                || (placement() || aquatic() || jump() || climb() || ride() || combined()) && file.endsWith("-curios") || elytra(); }
+                || this == ARMOR_BACK || (placement() || aquatic() || jump() || climb() || ride() || combined())
+                && file.endsWith("-curios") || elytra(); }
         boolean hasBack() { return this == BOTH || usesBack(); }
         boolean placement() { return ordinal() >= PLACE_STEVE_CHEST.ordinal() && ordinal() <= PLACE_ALEX_BACK.ordinal(); }
         boolean walk() { return ordinal() >= WALK_STEVE_CHEST.ordinal() && ordinal() <= WALK_ALEX_BACK.ordinal(); }
@@ -429,7 +430,19 @@ public final class CapeFxSmoke {
         back.getRenders().set(0, true);
         back.getStacks().setStackInSlot(0, ItemStack.EMPTY);
         player.setItemSlot(EquipmentSlot.CHEST, ItemStack.EMPTY);
-        note("Curios 5.14.1: visible, oculto, reemplazado, cosmético y prioridad de pecho");
+
+        // A normal chestplate or Elytra must not mask the Curios winner; only
+        // the cape itself has chest-slot priority. Exercise actual item stacks.
+        back.getStacks().setStackInSlot(0, functional);
+        for (var torso : new ItemStack[]{new ItemStack(Items.IRON_CHESTPLATE), new ItemStack(Items.ELYTRA)}) {
+            player.setItemSlot(EquipmentSlot.CHEST, torso);
+            var visible = CuriosCompat.visibleBack(player);
+            check(visible != null && visible.stack() == functional,
+                    "ordinary chest gear suppressed the Curios cape: " + torso);
+        }
+        player.setItemSlot(EquipmentSlot.CHEST, ItemStack.EMPTY);
+        back.getStacks().setStackInSlot(0, ItemStack.EMPTY);
+        note("Curios 5.14.1: visible/oculto/reemplazado/cosmético, pecho prioritario y pechera/élitros compatibles");
     }
 
     private static BlockPos testBirth(ServerPlayer player) {
@@ -601,10 +614,17 @@ public final class CapeFxSmoke {
             // Keep the same displayed item, camera and unenchanted material
             // for the three lighting captures.
             if (next == Scene.NIGHT || next == Scene.LAMP) return;
-            ItemStack chest = next.elytra() ? new ItemStack(Items.ELYTRA)
+            ItemStack chest = next == Scene.ARMOR_BACK ? new ItemStack(Items.IRON_CHESTPLATE)
+                    : next.elytra() ? new ItemStack(Items.ELYTRA)
                     : next.usesBack() || next.hotbar() ? ItemStack.EMPTY : mantle();
             if (next == Scene.BOTH) chest.enchant(Enchantments.UNBREAKING, 1);
             player.setItemSlot(EquipmentSlot.CHEST, chest);
+            player.setItemSlot(EquipmentSlot.HEAD, next == Scene.ARMOR_BACK
+                    ? new ItemStack(Items.IRON_HELMET) : ItemStack.EMPTY);
+            player.setItemSlot(EquipmentSlot.LEGS, next == Scene.ARMOR_BACK
+                    ? new ItemStack(Items.IRON_LEGGINGS) : ItemStack.EMPTY);
+            player.setItemSlot(EquipmentSlot.FEET, next == Scene.ARMOR_BACK
+                    ? new ItemStack(Items.IRON_BOOTS) : ItemStack.EMPTY);
             ItemStack back = next.hasBack() || next.transfer() ? mantle() : ItemStack.EMPTY;
             if (next.transfer()) back.setDamageValue(back.getMaxDamage() * 3 / 4);
             backOf(player).getStacks().setStackInSlot(0, back);
@@ -801,7 +821,8 @@ public final class CapeFxSmoke {
         }
         ItemStack chest = player.getItemBySlot(EquipmentSlot.CHEST);
         ItemStack back = backOf(player).getStacks().getStackInSlot(0);
-        boolean chestReady = scene.elytra() ? chest.is(Items.ELYTRA)
+        boolean chestReady = scene == Scene.ARMOR_BACK ? chest.is(Items.IRON_CHESTPLATE)
+                : scene.elytra() ? chest.is(Items.ELYTRA)
                 : scene.usesBack() || scene.hotbar() ? chest.isEmpty() : chest.is(CapaTestMod.CAPA_DETERIORER.get());
         if (back.isEmpty() == scene.hasBack() || (scene == Scene.BOTH && !chest.hasFoil()) || !chestReady) return;
         if (scene.hotbar()) {

@@ -31,6 +31,9 @@ public final class CapeNocturne {
     }
 
     Gains sample(int block, int sky, float skyIntensity, double seconds, int wearerId, CapeResponse.SpeedWake wake) {
+        // A malformed partial-tick/time from a renderer must not poison this
+        // persistent clock. Reuse the last finite sample, or epoch zero initially.
+        if (!Double.isFinite(seconds)) seconds = Double.isFinite(last) ? last : 0;
         // Raw skylight still reads 15 outside at midnight. Use the sky
         // brightness that feeds the vanilla lightmap, not raw sky alone.
         double target = darkness(Math.max(block, sky * (double) skyIntensity));
@@ -58,6 +61,9 @@ public final class CapeNocturne {
     }
 
     public static double darkness(double light) {
+        // Bad light-map inputs must fail closed (no extra glow), not poison the
+        // per-wearer exposure clock with NaN and keep the cape lit indefinitely.
+        if (!Double.isFinite(light)) return 0;
         double t = Math.max(0, Math.min(1, (light - DARK_LEVEL) / (LIGHT_LEVEL - DARK_LEVEL)));
         return 1 - t * t * (3 - 2 * t);
     }
@@ -67,20 +73,32 @@ public final class CapeNocturne {
     }
 
     static Gains gains(double dusk, double seconds, int wearerId, CapeResponse.SpeedWake wake) {
+        dusk = Double.isFinite(dusk) ? Math.max(0, Math.min(1, dusk)) : 0;
+        seconds = Double.isFinite(seconds) ? seconds : 0;
+        if (wake == null) wake = CapeResponse.SpeedWake.NONE;
+        double edgeWake = finiteNonNegative(wake.edge());
+        double innerWake = finiteNonNegative(wake.inner());
+        double water = Double.isFinite(wake.water()) ? Math.max(0, Math.min(1, wake.water())) : 0;
         double phase = seconds / PERIOD + wearerId * SEED_SHIFT;
         double inner = INNER_BASE + INNER_PULSE * wave(phase);
         double edge = EDGE_BASE + EDGE_PULSE * wave(phase - EDGE_DELAY);
         // The extra light is subtle in mixed lighting and zero at full day.
         // Limit the strength smoothly even when a wearer moves very fast.
-        double contrast = dusk * dusk * (1 - WAKE_WATER_DAMPING * wake.water());
-        return new Gains(DAY_GAIN + dusk * (edge - DAY_GAIN) + contrast * boost(wake.edge(), EDGE_WAKE_SCALE),
-                DAY_GAIN + dusk * (inner - DAY_GAIN) + contrast * boost(wake.inner(), INNER_WAKE_SCALE));
+        double contrast = dusk * dusk * (1 - WAKE_WATER_DAMPING * water);
+        return new Gains(DAY_GAIN + dusk * (edge - DAY_GAIN) + contrast * boost(edgeWake, EDGE_WAKE_SCALE),
+                DAY_GAIN + dusk * (inner - DAY_GAIN) + contrast * boost(innerWake, INNER_WAKE_SCALE));
+    }
+
+    private static double finiteNonNegative(double value) {
+        return Double.isFinite(value) ? Math.max(0, value) : 0;
     }
 
     double dusk() { return dusk; }
 
     static Gains hemGains(double dusk, Gains moving, double seconds, int wearerId, double heat) {
-        if (!(heat > 0) || dusk == 0) return moving;
+        if (moving == null) moving = gains(0, seconds, wearerId);
+        dusk = Double.isFinite(dusk) ? Math.max(0, Math.min(1, dusk)) : 0;
+        if (!(heat > 0) || !Double.isFinite(heat) || dusk == 0) return moving;
         var still = gains(dusk, seconds, wearerId);
         // Fill part of the unused .40 gain budget. Landing and braking can
         // coincide without doubling the flash. Daylight leaves UV2 intact.
@@ -91,8 +109,11 @@ public final class CapeNocturne {
     }
 
     private static double boost(double wake, double scale) {
-        double strength = Math.max(0, wake - WAKE_DEAD_ZONE) * scale;
-        return WAKE_LIMIT * strength / (1 + strength);
+        double strength = Math.max(0, finiteNonNegative(wake) - WAKE_DEAD_ZONE) * scale;
+        if (!(strength > 0)) return 0;
+        // Avoid infinity/infinity if a finite but corrupt speed sample overflows
+        // while scaled; high impulses simply saturate at the visual budget.
+        return WAKE_LIMIT * (Double.isInfinite(strength) ? 1 : strength / (1 + strength));
     }
 
     private static double wave(double phase) {
