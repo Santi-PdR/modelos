@@ -212,7 +212,7 @@ jobs:
           assert (blend['func'], blend['srcrgb'], blend['dstrgb']) == ('add', 'srcalpha', 'one'), blend
 
           uniforms = {u['name']: u for u in doc['uniforms']}
-          for name in ('ModelViewMat', 'ProjMat', 'ColorModulator', 'HoloTime', 'HoloGlitch'):
+          for name in ('ModelViewMat', 'ProjMat', 'ColorModulator', 'HoloTime', 'HoloGlitch', 'HoloTint'):
               assert name in uniforms, name
           for uniform in uniforms.values():
               assert len(uniform['values']) == uniform['count'], uniform['name']
@@ -239,6 +239,7 @@ jobs:
               'el fragment shader volvio a usar pow para los dos bordes'
           # El glitch se paga solo cuando hay evento: rama sobre el uniform.
           assert 'HoloGlitch > 0.01' in fsh, 'el glitch del shader no esta condicionado'
+          assert 'HoloTint.rgb' in fsh, 'el tinte por estado no llega al borde del shader'
 
           # El apendice A del documento tiene que ser copia literal de estos
           # ficheros: es la unica forma de que el GLSL explicado no se quede
@@ -361,8 +362,9 @@ jobs:
           geo = (base / 'RelicGeoRenderer.java').read_text(encoding='utf-8')
 
           enum = animatable.split('enum Mood {', 1)[1].split('}', 1)[0]
-          moods = re.findall(r'^\s*(NEUTRAL|RESONANT|STORM|WOUNDED),?', enum, re.M)
-          assert moods == ['NEUTRAL', 'RESONANT', 'STORM', 'WOUNDED'], moods
+          moods = re.findall(r'^\s*([A-Z][A-Z_]*)\s*,?$', enum, re.M)
+          esperados = ['NEUTRAL', 'RESONANT', 'STORM', 'WOUNDED', 'DARK', 'RAIN']
+          assert moods == esperados, moods
           assert 'public Mood mood()' in animatable, 'falta el accessor de Mood'
           assert 'isThundering()' in animatable, 'la tormenta no alimenta ningun estado'
           assert 'WOUNDED_HEALTH' in animatable and 'getMaxHealth()' in animatable, \
@@ -382,6 +384,18 @@ jobs:
           assert 'Quality.FULL' in aura, 'las chispas no miran la calidad'
 
           assert 'message.holocore.mood' in comandos, '/relic info no dice el estado de brillo'
+          assert 'Commands.literal("mood")' in comandos, 'falta /relic mood'
+          assert 'forceMood(null)' in comandos, '/relic mood no se puede volver a automatico'
+
+          # El estado de brillo tambien cambia la velocidad del bucle de animacion,
+          # no solo el color: es lo que pidio "mejorar la animacion".
+          assert 'setAnimationSpeed(' in animatable, 'el estado de brillo no toca la animacion'
+          assert 'speedFor(' in animatable, 'no hay velocidades por estado'
+          assert 'if (speed != this.animSpeed)' in animatable, \
+              'la velocidad se fija en cada tick (setAnimationSpeed crea un lambda)'
+
+          # El tinte del shader se mueve con el estado: lluvia lo baja, oscuridad lo sube.
+          assert 'safeGetUniform("HoloTint")' in geo, 'el pase GLSL no manda el tinte por estado'
 
           # Cada Mood tiene su nombre en los dos idiomas: un enum nuevo sin texto
           # saldria como clave cruda en el chat.
@@ -389,7 +403,7 @@ jobs:
               lang = json.loads(pathlib.Path(
                   f'relic-hologram/src/main/resources/assets/holocore/lang/{idioma}.json'
               ).read_text(encoding='utf-8'))
-              for mood in ('wounded', 'storm', 'resonant'):
+              for mood in ('wounded', 'storm', 'resonant', 'dark', 'rain'):
                   clave = f'message.holocore.state.{mood}'
                   assert clave in lang, f'{idioma} sin {clave}'
 

@@ -80,6 +80,12 @@ final class RelicGlowState {
     private static final float RESONANT_RED = 0.85F;
     private static final float RESONANT_GREEN = 0.62F;
     private static final float RESONANT_BLUE = 1.00F;
+    private static final float DARK_RED = 0.80F;
+    private static final float DARK_GREEN = 0.95F;
+    private static final float DARK_BLUE = 1.00F;
+    private static final float RAIN_RED = 0.45F;
+    private static final float RAIN_GREEN = 0.68F;
+    private static final float RAIN_BLUE = 0.95F;
 
     /**
      * Acerca los valores al estado indicado, con el matiz del {@code mood}, y
@@ -122,6 +128,22 @@ final class RelicGlowState {
                 aura += 0.12F;
                 ring += 0.35F;
                 spin += 0.060F;
+            }
+            case DARK -> {
+                // En la oscuridad la reliquia es la unica luz: se pone casi blanca
+                // y sube bastante. Es el estado que mas se nota en una cueva.
+                red = lerp(red, DARK_RED, 0.50F);
+                green = lerp(green, DARK_GREEN, 0.50F);
+                blue = lerp(blue, DARK_BLUE, 0.50F);
+                aura += 0.20F;
+                ring += 0.10F;
+            }
+            case RAIN -> {
+                red = lerp(red, RAIN_RED, 0.45F);
+                green = lerp(green, RAIN_GREEN, 0.45F);
+                blue = lerp(blue, RAIN_BLUE, 0.45F);
+                aura += 0.05F;
+                ring -= 0.15F;
             }
             default -> {
                 // NEUTRAL: el estado tal cual.

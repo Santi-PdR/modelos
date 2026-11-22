@@ -20,7 +20,9 @@ GeckoLib 4. El brillo es fullbright (se ve igual de noche y en cuevas).
   <clave> <valor>, /relic reset para volver a los valores de fabrica y
   /relic save para escribirlos en holocore-client.toml.
 - Comandos de cliente: /relic offset|scale|side|quality|toggle|pulse|release
-  y /relic anim|info|stats|set|reset|save|preview.
+  y /relic anim|info|stats|set|reset|save|preview|mood.
+- Cinco estados de brillo (herido, tormenta, oscuridad, lluvia, resonancia) que
+  cambian color, intensidad y velocidad de la animacion; /relic mood los fuerza.
 '''
 
 [[dependencies.${mod_id}]]

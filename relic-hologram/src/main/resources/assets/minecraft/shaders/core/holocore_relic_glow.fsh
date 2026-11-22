@@ -4,6 +4,7 @@ uniform sampler2D Sampler0;
 uniform vec4 ColorModulator;
 uniform float HoloTime;
 uniform float HoloGlitch;
+uniform vec4 HoloTint;
 
 in vec2 texCoord;
 in vec4 vertexColor;
@@ -65,7 +66,10 @@ void main() {
     float breath = 0.85 + 0.15 * sin(HoloTime * 1.6);
 
     vec3 tint = vertexColor.rgb;
-    vec3 rimTint = mix(vec3(0.55, 0.85, 1.0), tint, 0.55);
+    // HoloTint lo pone el renderer por estado de brillo (0.62 en lluvia, 1.08 en la
+    // oscuridad): el tinte del borde lo respeta, si no todos los estados acababan
+    // con el mismo azul en la silueta.
+    vec3 rimTint = mix(vec3(0.55, 0.85, 1.0), tint, 0.55) * HoloTint.rgb;
     // Al raspar, el borde se va al violeta: dos tonos en la misma silueta.
     rimTint = mix(rimTint, vec3(0.78, 0.62, 1.0), rimTight * 0.35);
 

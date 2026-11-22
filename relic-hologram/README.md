@@ -91,6 +91,7 @@ En el juego:
 | Ajustar cualquier clave | `/relic set` (lista) · `/relic set <clave> <valor>` |
 | Guardar los ajustes | `/relic save` |
 | Volver a los valores de fábrica | `/relic reset` · `/relic reset <clave>` (una sola) |
+| Ver o forzar el estado de brillo | `/relic mood` · `/relic mood <auto\|dark\|rain\|storm\|wounded\|resonant>` |
 | Ver la reliquia de cerca | `/relic preview` · `/relic preview <0.5–6>` (bloques) |
 | Medir el coste | `/relic stats` · `/relic stats reset` |
 
@@ -205,10 +206,17 @@ mandan: herido > tormenta > resonancia.
 | herido (`wounded`) | al portador le queda menos del 35% de vida | tira el color a rojo, sube el aura y enciende el anillo aunque esté en reposo |
 | tormenta (`storm`) | truena donde está el portador | azul casi blanco, más aura y el giro más rápido |
 | resonancia (`resonant`) | otro portador a menos de 12 bloques | violeta, anillo más marcado y giro rápido: las dos reliquias se «oyen» |
+| oscuridad (`dark`) | menos de luz de bloque 4 donde está | casi blanca y bastante más aura: en una cueva es la única luz que hay |
+| lluvia (`rain`) | llueve encima del portador (sin tormenta) | azul profundo, anillo más tenue |
 
 Al cambiar de estado de brillo la reliquia da un destello corto para que se note
-que ha reaccionado a algo. `/relic info` lo dice en una línea aparte, así que si el
-aura se pone roja no hay que adivinar por qué.
+que ha reaccionado a algo, y **cambia la velocidad del bucle** (herido 0.72×, tormenta
+1.32×, resonancia 1.18×): no es solo color. `/relic info` lo dice en una línea
+aparte, así que si el aura se pone roja no hay que adivinar por qué.
+
+Para verlos sin montar la escena está `/relic mood <estado>`, que fuerza uno de ellos
+y `/relic mood auto` para volver a la detección normal. Es la forma de mirar la
+tormenta o el herido con un solo jugador y sin comandos raros.
 
 Los cambios **no saltan**: `RelicGlowState` interpola color (≈0.30 s) y
 fuerza/giro (≈0.22 s) por portador y con el tiempo real entre frames, así que se
@@ -388,6 +396,9 @@ hay que sumar la traslación que traía `relic_hologram.geo.json`.
       estaba todo de fábrica.
 - [ ] `/relic reset scale` vuelve solo esa clave y `/relic set` deja de marcarla
       con `*`.
+- [ ] `/relic mood storm` pone el aura casi blanca con las chispas azules y el bucle
+      más rápido; `/relic mood wounded` la pone roja y lenta; `/relic mood auto`
+      vuelve a lo normal.
 - [ ] Con la vista previa encendida, `/relic info` lo dice y a qué distancia; al
       pasar a espectador se apaga sola.
 - [ ] Distancia > `maxRenderDistance`: deja de renderizarse (sin tirones).

@@ -237,6 +237,13 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.30, tinte por estado de brillo.** Uniform `HoloTint` (vec4, blanco por
+defecto) que el renderer rellena según el `Mood`: 1.08 en la oscuridad (el borde se
+marca más, que es donde más se nota), 1.05 en tormenta, 0.62 bajo la lluvia y 0.88–0.92
+en resonancia/herido. Se aplica al `rimTint` del borde, que hasta 1.0.29 se quedaba
+siempre con el mismo azul claro y desentonaba cuando el resto del aura cambiaba de
+color.
+
 **1.0.29, glitch de evento en el shader.** Uniform nuevo `HoloGlitch` (0–1) que el
 renderer rellena con `min(1, flash × 1.5)`: el mismo destello que ya sube el halo y
 el aura. Con `HoloGlitch > 0.01` la UV se parte por bandas horizontales
@@ -383,7 +390,8 @@ nombres planos, sin namespace):
     { "name": "ProjMat", "type": "matrix4x4", "count": 16, "values": [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1] },
     { "name": "ColorModulator", "type": "float", "count": 4, "values": [1,1,1,1] },
     { "name": "HoloTime", "type": "float", "count": 1, "values": [0.0] },
-    { "name": "HoloGlitch", "type": "float", "count": 1, "values": [0.0] }
+    { "name": "HoloGlitch", "type": "float", "count": 1, "values": [0.0] },
+    { "name": "HoloTint", "type": "float", "count": 4, "values": [1,1,1,1] }
   ]
 }
 ```
@@ -453,6 +461,7 @@ uniform sampler2D Sampler0;
 uniform vec4 ColorModulator;
 uniform float HoloTime;
 uniform float HoloGlitch;
+uniform vec4 HoloTint;
 
 in vec2 texCoord;
 in vec4 vertexColor;
@@ -514,7 +523,10 @@ void main() {
     float breath = 0.85 + 0.15 * sin(HoloTime * 1.6);
 
     vec3 tint = vertexColor.rgb;
-    vec3 rimTint = mix(vec3(0.55, 0.85, 1.0), tint, 0.55);
+    // HoloTint lo pone el renderer por estado de brillo (0.62 en lluvia, 1.08 en la
+    // oscuridad): el tinte del borde lo respeta, si no todos los estados acababan
+    // con el mismo azul en la silueta.
+    vec3 rimTint = mix(vec3(0.55, 0.85, 1.0), tint, 0.55) * HoloTint.rgb;
     // Al raspar, el borde se va al violeta: dos tonos en la misma silueta.
     rimTint = mix(rimTint, vec3(0.78, 0.62, 1.0), rimTight * 0.35);
 

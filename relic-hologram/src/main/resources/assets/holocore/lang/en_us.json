@@ -51,5 +51,10 @@
   "message.holocore.mood": "Extra: %s.",
   "message.holocore.state.wounded": "wounded",
   "message.holocore.state.storm": "storm",
-  "message.holocore.state.resonant": "resonant"
+  "message.holocore.state.resonant": "resonant",
+  "message.holocore.state.dark": "in the dark",
+  "message.holocore.state.rain": "rain",
+  "message.holocore.mood_show": "Glow state: %s.",
+  "message.holocore.mood_forced": "Glow state forced: %s (/relic mood auto to release).",
+  "message.holocore.mood_auto": "Glow state back to automatic."
 }

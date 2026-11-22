@@ -93,7 +93,8 @@ public final class RelicAura {
     }
 
     static void render(PoseStack poseStack, MultiBufferSource bufferSource, float partialTick,
-                       RelicAnimatable.LoopState state, RelicGlowState glow, float fade) {
+                       RelicAnimatable.LoopState state, RelicGlowState glow, float fade,
+                       RelicAnimatable.Mood mood) {
         float time = time(partialTick);
         Frame frame = frame(poseStack);
         // Destello de evento: el anillo se enciende aunque el estado no lo tenga,
@@ -107,7 +108,9 @@ public final class RelicAura {
             drawRing(bufferSource, frame, time, state, glow, flash, fade);
         }
         if (RelicConfig.GLOW_AURA.get() && sparksEnabled()) {
-            drawSparks(bufferSource, frame, time, glow, fade);
+            drawSparks(bufferSource, frame, time, glow, fade,
+                    RelicAnimatable.forcedMood() == RelicAnimatable.Mood.STORM
+                            || RelicAnimatable.Mood.STORM == mood);
         }
     }
 
@@ -204,13 +207,23 @@ public final class RelicAura {
      * al reves que en calma.
      */
     private static void drawSparks(MultiBufferSource bufferSource, Frame frame, float time,
-                                   RelicGlowState glow, float fade) {
+                                   RelicGlowState glow, float fade, boolean storm) {
         float amount = fade * (0.55F + 0.45F * glow.aura()) * (1.0F + 0.6F * glow.flashScaled());
         if (amount <= 0.01F) {
             return;
         }
         VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
         float orbit = time * SPARK_SPEED * (1.0F + 6.0F * Math.abs(glow.spin()));
+        // Con tormenta las chispas tiran a azul electrico: el color del estado es
+        // casi blanco y sin esto se perderia el "hay truenos" en el aura.
+        float redTint = glow.red();
+        float greenTint = glow.green();
+        float blueTint = glow.blue();
+        if (storm) {
+            redTint = redTint * 0.55F + 0.35F * 0.45F;
+            greenTint = greenTint * 0.55F + 0.85F * 0.45F;
+            blueTint = blueTint * 0.55F + 1.00F * 0.45F;
+        }
         for (int i = 0; i < SPARK_COUNT; i++) {
             float phase = orbit + i * (TWO_PI / SPARK_COUNT);
             float radius = SPARK_RADIUS * (0.72F + 0.28F * sin(phase * 2.0F + i));
@@ -222,7 +235,7 @@ public final class RelicAura {
             float cz = frame.originZ + frame.leftZ * offset + frame.upZ * height;
             float weight = amount * (0.35F + 0.25F * sin(phase * 4.0F + i));
             billboardAt(buffer, frame, cx, cy, cz, SPARK_SIZE,
-                    phase * 2.0F, glow.red() * weight, glow.green() * weight, glow.blue() * weight, 1.0F);
+                    phase * 2.0F, redTint * weight, greenTint * weight, blueTint * weight, 1.0F);
         }
     }
 

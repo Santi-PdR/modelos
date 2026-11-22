@@ -7,6 +7,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.UUID;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import software.bernie.geckolib.core.animatable.GeoAnimatable;
@@ -71,7 +72,11 @@ public final class RelicAnimatable implements GeoAnimatable {
         /** Tormenta encima del portador. */
         STORM,
         /** Portador con poca vida. */
-        WOUNDED
+        WOUNDED,
+        /** Poca luz donde esta el portador: la reliquia es su propia luz. */
+        DARK,
+        /** Cae lluvia (sin tormenta) encima del portador. */
+        RAIN
     }
 
     private final UUID wearer;
@@ -117,8 +122,18 @@ public final class RelicAnimatable implements GeoAnimatable {
     private static final double RESONANCE_RADIUS = 12.0D;
     /** Por debajo de esta fraccion de vida el brillo pasa a herido. */
     private static final float WOUNDED_HEALTH = 0.35F;
+    /** Por debajo de esta luz de bloque (0-15) el brillo pasa a "en la oscuridad". */
+    private static final int DARK_LIGHT = 4;
 
     private Mood mood = Mood.NEUTRAL;
+    /**
+     * Estado forzado con {@code /relic mood}: sirve para ver tormenta, herido o
+     * resonancia sin montar la escena (una tormenta de verdad, dos jugadores...).
+     * {@code null} = automatico.
+     */
+    private static Mood forced;
+    /** Velocidad aplicada al controlador de estado (1.0 = la de la animacion). */
+    private double animSpeed = 1.0D;
     private int resonanceCooldown;
     private boolean resonanceNear;
 
@@ -190,6 +205,16 @@ public final class RelicAnimatable implements GeoAnimatable {
     /** Estado de brillo de ahora mismo (ver {@link Mood}). */
     public Mood mood() {
         return this.mood;
+    }
+
+    /** Fuerza un estado de brillo, o {@code null} para volver a automatico. */
+    public static void forceMood(Mood mood) {
+        forced = mood;
+    }
+
+    /** Estado forzado, o {@code null} si manda la deteccion automatica. */
+    public static Mood forcedMood() {
+        return forced;
     }
 
     // ------------------------------------------------------------------
@@ -302,11 +327,17 @@ public final class RelicAnimatable implements GeoAnimatable {
             this.resonanceCooldown = 20;
             this.resonanceNear = anotherBearerNear(player);
         }
-        Mood nextMood = !this.active ? Mood.NEUTRAL
-                : player.getHealth() < player.getMaxHealth() * WOUNDED_HEALTH ? Mood.WOUNDED
-                : player.level().isThundering() ? Mood.STORM
-                : this.resonanceNear ? Mood.RESONANT
-                : Mood.NEUTRAL;
+        Mood nextMood = forced != null ? forced : detectMood(player);
+        // La velocidad del bucle tambien cuenta: herido va lento (le cuesta), la
+        // tormenta acelera y la resonancia se pone nerviosa. Solo se llama al
+        // cambiar: setAnimationSpeed crea un lambda que captura la velocidad, y
+        // esto corre 20 veces por segundo y portador.
+        double speed = speedFor(nextMood);
+        if (speed != this.animSpeed) {
+            this.animSpeed = speed;
+            this.stateController.setAnimationSpeed(speed);
+        }
+
         if (nextMood != this.mood) {
             // Un toque de luz al cambiar, para que se note que la reliquia ha
             // reaccionado a algo y no que se ha recoloreado sola.
@@ -390,6 +421,42 @@ public final class RelicAnimatable implements GeoAnimatable {
 
     private static boolean isRest(LoopState state) {
         return state == LoopState.IDLE || state == LoopState.CALM;
+    }
+
+    /** Velocidad del bucle de animacion segun el estado de brillo. */
+    private static double speedFor(Mood mood) {
+        return switch (mood) {
+            case WOUNDED -> 0.72D;
+            case STORM -> 1.32D;
+            case DARK -> 1.06D;
+            case RAIN -> 0.92D;
+            case RESONANT -> 1.18D;
+            case NEUTRAL -> 1.0D;
+        };
+    }
+
+    /**
+     * Estado que pide la escena, sin contar el forzado. El orden es el de
+     * importancia: primero lo que le pasa al portador, despues el tiempo, luego
+     * la luz y al final la compania.
+     */
+    private Mood detectMood(Player player) {
+        if (!this.active) {
+            return Mood.NEUTRAL;
+        }
+        if (player.getHealth() < player.getMaxHealth() * WOUNDED_HEALTH) {
+            return Mood.WOUNDED;
+        }
+        if (player.level().isThundering()) {
+            return Mood.STORM;
+        }
+        if (player.level().getBrightness(LightLayer.BLOCK, player.blockPosition()) < DARK_LIGHT) {
+            return Mood.DARK;
+        }
+        if (player.level().isRainingAt(player.blockPosition())) {
+            return Mood.RAIN;
+        }
+        return this.resonanceNear ? Mood.RESONANT : Mood.NEUTRAL;
     }
 
     /**

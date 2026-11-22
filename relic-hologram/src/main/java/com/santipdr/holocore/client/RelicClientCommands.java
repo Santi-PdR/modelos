@@ -110,6 +110,13 @@ public final class RelicClientCommands {
                                 .executes(ctx -> preview(ctx.getSource(),
                                         ctx.getArgument("distancia", Double.class)))))
                 .then(Commands.literal("save").executes(ctx -> save(ctx.getSource())))
+                .then(Commands.literal("mood")
+                        .executes(ctx -> moodShow(ctx.getSource()))
+                        .then(Commands.argument("estado", StringArgumentType.word())
+                                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
+                                        MOOD_NAMES, builder))
+                                .executes(ctx -> moodSet(ctx.getSource(),
+                                        StringArgumentType.getString(ctx, "estado")))))
                 .then(Commands.literal("set")
                         .executes(ctx -> setList(ctx.getSource()))
                         .then(Commands.argument("clave", StringArgumentType.word())
@@ -450,6 +457,63 @@ public final class RelicClientCommands {
         source.sendSuccess(() -> Component.translatable("message.holocore.set_value",
                 tweak.key(), tweak.current()).withStyle(ChatFormatting.AQUA), false);
         return 1;
+    }
+
+    /** Nombres aceptados por {@code /relic mood}. {@code auto} = deteccion. */
+    private static final String[] MOOD_NAMES = {"auto", "neutral", "dark", "rain", "storm",
+            "wounded", "resonant"};
+
+    /**
+     * {@code /relic mood}: enseña el estado de brillo que manda ahora mismo (y si
+     * esta forzado). Es lo que hay que mirar si el aura se ha puesto de un color
+     * raro.
+     */
+    private static int moodShow(CommandSourceStack source) {
+        RelicVisuals.RelicVisual actual = localVisual();
+        RelicAnimatable.Mood forzado = RelicAnimatable.forcedMood();
+        if (forzado != null) {
+            Component nombre = Component.translatable("message.holocore.state."
+                    + forzado.name().toLowerCase(Locale.ROOT));
+            source.sendSuccess(() -> Component.translatable("message.holocore.mood_forced", nombre)
+                    .withStyle(ChatFormatting.GOLD), false);
+            return 1;
+        }
+        if (actual == null) {
+            source.sendFailure(Component.translatable("message.holocore.not_equipped"));
+            return 0;
+        }
+        Component nombre = Component.translatable("message.holocore.state."
+                + actual.animatable().mood().name().toLowerCase(Locale.ROOT));
+        source.sendSuccess(() -> Component.translatable("message.holocore.mood_show", nombre)
+                .withStyle(ChatFormatting.AQUA), false);
+        return 1;
+    }
+
+    /**
+     * {@code /relic mood <estado>}: fuerza el estado de brillo, o vuelve a
+     * automatico con {@code auto}. Sirve para ver tormenta, herido o resonancia sin
+     * montar la escena — una tormenta de verdad, dos jugadores, poca vida.
+     */
+    private static int moodSet(CommandSourceStack source, String estado) {
+        String buscado = estado.toLowerCase(Locale.ROOT);
+        if (buscado.equals("auto")) {
+            RelicAnimatable.forceMood(null);
+            source.sendSuccess(() -> Component.translatable("message.holocore.mood_auto")
+                    .withStyle(ChatFormatting.GRAY), false);
+            return 1;
+        }
+        for (RelicAnimatable.Mood mood : RelicAnimatable.Mood.values()) {
+            if (!mood.name().equalsIgnoreCase(buscado)) {
+                continue;
+            }
+            RelicAnimatable.forceMood(mood);
+            Component nombre = Component.translatable("message.holocore.state." + buscado);
+            source.sendSuccess(() -> Component.translatable("message.holocore.mood_forced", nombre)
+                    .withStyle(ChatFormatting.AQUA), false);
+            return 1;
+        }
+        source.sendFailure(Component.translatable("message.holocore.set_unknown", estado));
+        return 0;
     }
 
     /**

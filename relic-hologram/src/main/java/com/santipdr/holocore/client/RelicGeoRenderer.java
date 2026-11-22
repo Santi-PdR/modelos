@@ -145,6 +145,17 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
             // una sola rama para todo el dibujo: sin eventos no cuesta muestras.
             glowShader.safeGetUniform("HoloGlitch")
                     .set(Math.min(1.0F, glow.flashScaled() * 1.5F));
+            // Brillo del borde por estado de brillo: en la oscuridad sube, bajo la
+            // lluvia baja. Es lo que hace que el contorno cambie con la escena.
+            float gain = switch (animatable.mood()) {
+                case DARK -> 1.08F;
+                case STORM -> 1.05F;
+                case RAIN -> 0.62F;
+                case WOUNDED -> 0.92F;
+                case RESONANT -> 0.88F;
+                case NEUTRAL -> 1.0F;
+            };
+            glowShader.safeGetUniform("HoloTint").set(gain, gain, gain, 1.0F);
             float i = RelicConfig.SHADER_INTENSITY.get().floatValue() * amount;
             renderExtra(model, poseStack, animatable, bufferSource, partialTick, packedLight,
                     RelicRenderTypes.GLOW_SHADER.apply(RelicGeoModel.glowTexture()),

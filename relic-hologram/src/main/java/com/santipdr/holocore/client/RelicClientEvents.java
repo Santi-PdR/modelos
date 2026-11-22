@@ -254,7 +254,8 @@ public final class RelicClientEvents {
         visual.renderer().renderHologram(poseStack, animatable, buffers, partialTick,
                 LightTexture.FULL_BRIGHT, visual.glow(), 1.0F);
         if (RelicAura.enabled()) {
-            RelicAura.render(poseStack, buffers, partialTick, animatable.loopState(), visual.glow(), 1.0F);
+            RelicAura.render(poseStack, buffers, partialTick, animatable.loopState(), visual.glow(),
+                    1.0F, animatable.mood());
         }
         buffers.endBatch();
         poseStack.popPose();

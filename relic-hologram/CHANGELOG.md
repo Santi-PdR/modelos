@@ -1,5 +1,27 @@
 # Historial de cambios
 
+## 1.0.30 — dos estados más, animación que cambia de ritmo y `/relic mood`
+
+* **Dos estados de brillo nuevos**: `dark` (menos de luz de bloque 4: casi blanca y
+  con bastante más aura, que en una cueva es la única luz que hay) y `rain` (llueve
+  encima del portador sin tormenta: azul profundo y anillo más tenue). Ya son cinco,
+  con prioridad herido > tormenta > oscuridad > lluvia > resonancia.
+* **La animación cambia de ritmo con el estado**, no solo de color:
+  `AnimationController.setAnimationSpeed` a 0.72× herido, 0.93× lluvia, 1.06×
+  oscuridad, 1.18× resonancia y 1.32× tormenta. Se llama **solo al cambiar** de
+  velocidad: ese método crea un lambda que captura el valor, y fijarlo cada tick
+  serían 20 objetos por segundo y portador.
+* **`/relic mood [estado]`**: enseña el estado de brillo que manda ahora y permite
+  forzar uno (`storm`, `wounded`, `dark`, `rain`, `resonant`, `neutral`) o volver a
+  automático con `auto`. Es la forma de ver la tormenta o el herido con un solo
+  jugador y sin montar la escena.
+* **Shader**: uniform `HoloTint`, que mueve el brillo del borde con el estado (1.08 en
+  la oscuridad, 0.62 en lluvia). Antes el contorno se quedaba siempre con el mismo
+  azul claro aunque el aura cambiara de color.
+* **Chispas más eléctricas con tormenta**: tiran a azul en vez de heredar el blanco
+  del estado, que se perdía sobre el aura.
+* 5 claves nuevas por idioma (58 en cada uno).
+
 ## 1.0.29 — tres estados de brillo, chispas, eco de anillo y glitch en el shader
 
 **Estados nuevos** (`RelicAnimatable.Mood`, aparte del ciclo de animación a
