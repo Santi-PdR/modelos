@@ -1,0 +1,41 @@
+{
+  "name": "stain_lateral_guard",
+  "author": "Stain Katana",
+  "description": "Experimental lateral guard.",
+  "emote": {
+    "isLoop": "true",
+    "returnTick": 1,
+    "beginTick": 0,
+    "endTick": 1,
+    "stopTick": 11,
+    "degrees": false,
+    "moves": [
+      {
+        "tick": 1,
+        "easing": "EASEINOUTSINE",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -0.65,
+          "yaw": -0.25,
+          "roll": -0.42,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      },
+      {
+        "tick": 10,
+        "easing": "EASEINOUTSINE",
+        "turn": 0,
+        "rightArm": {
+          "pitch": -0.65,
+          "yaw": -0.25,
+          "roll": -0.42,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        }
+      }
+    ]
+  }
+}
