@@ -11,6 +11,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Vector3f;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
@@ -136,7 +137,9 @@ final class CapeTransferProbe {
         }
         double hoodStep = 0, controlStep = 0;
         if (stage < 2 && t >= 19 && t < STAND) {
-            require(player.isCrouching() && pose.sneak() > .99, "did not hold Shift through the jump");
+            // FALL can contribute during the hop; the vanilla torso, not
+            // a full-weight SNEAK clip, defines the tested clearance.
+            require(player.getPose() == Pose.CROUCHING && pose.sneak() > 0, "did not hold Shift through the jump");
             require(Math.abs(player.getXRot()) < .05 && Math.abs(player.getYHeadRot() - player.yBodyRot) < .1,
                     "jump control needs a centered head");
             var hood = pose.hood();
@@ -171,10 +174,14 @@ final class CapeTransferProbe {
                 .append('\t').append(tipStep).append('\n');
         if (stage != 2 || t < 10) return false;
         require(blight < .001 && colorError(sample.rgba, CapeState.IDLE.glow(now / 20)) <= 1, "healthy chest did not finish its fade");
-        Files.writeString(dir.resolve("traspaso-forge.tsv"), trace);
+        save(dir, "traspaso-forge.tsv");
         restore(chest);
         restore(back);
         return true;
+    }
+
+    void save(Path dir, String file) throws IOException {
+        Files.writeString(dir.resolve(file), trace);
     }
 
     private void restore(CapaArmorRenderer renderer) {

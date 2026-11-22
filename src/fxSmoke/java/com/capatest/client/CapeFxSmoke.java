@@ -523,7 +523,7 @@ public final class CapeFxSmoke {
         if (next.climb()) game.options.fov().set(50);
         if (next.walk() || next.wade() || next.jump() || next.climb() || next.combined() || next.transfer()) game.options.framerateLimit().set(60);
         if (next.wade()) waterRoute = new CapeWaterProbe();
-        if (next == Scene.HOTBAR_BARE) game.options.framerateLimit().set(30);
+        if (next == Scene.HOTBAR_BARE || next == Scene.PLACE_STEVE_CHEST) game.options.framerateLimit().set(30);
         stableFrames = observedBirths = 0;
         captured = false;
         if (next == Scene.HOTBAR_BARE || next.placement() || next.audit() || next.walk() || next.wade() || next.jump() || next.climb() || next.combined() || next.transfer()) {
@@ -1053,6 +1053,13 @@ public final class CapeFxSmoke {
 
     private static void fail(Minecraft game, Throwable error) {
         CapaTestMod.LOGGER.error("FX smoke: FAIL at step " + step + ", scene " + scene + ": " + error.getMessage(), error);
+        if (transferRoute != null) {
+            try {
+                transferRoute.save(shots(game), "traspaso-incompleto.tsv");
+            } catch (IOException captureError) {
+                CapaTestMod.LOGGER.warn("FX smoke: no se pudo guardar la traza parcial de equipo", captureError);
+            }
+        }
         step = -1;
         scene = null;
         game.stop();
