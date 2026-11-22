@@ -61,7 +61,9 @@ def report(root, slot, rig, source, *, nape=False):
     plates = np.char.startswith(names, 'v18_pad_')
     roots = np.char.endswith(names, '_seg0')
     hood = np.array([hood_moves(n) for n in names])
-    unmoving = rig.rigid & ~hood
+    # The sleeve hinge is checked against the old pose in verify_forge_shoulders.
+    flex_plates = (root/f'{fixture}-placas-fijas.tsv').is_file()
+    unmoving = rig.rigid & ~hood & ~(plates if flex_plates else np.zeros_like(plates))
     expected = set(source) | set(ACTOR)
     offsets = {n for n in source if sprint_edge_offset(n,rig.by[n].get('parent')) is not None}
     free = rig.cloth & ~roots

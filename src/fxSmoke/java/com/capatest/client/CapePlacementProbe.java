@@ -34,13 +34,14 @@ import java.util.Map;
 /** Actual equipped mesh and vanilla sleeves, with independent camera and aim controls. */
 final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     private static final Method POSITION = positionMethod();
-    private Matrix4f projection, inverseChest;
+    private Matrix4f projection, chest, inverseChest;
     private final Map<String, List<Vector3f>> rigid = new LinkedHashMap<>();
     private final Map<GeoBone, Matrix4f> solid = new LinkedHashMap<>();
     private final List<GeoBone> tracked = new ArrayList<>();
     private final Map<String, Matrix4f> sections = new LinkedHashMap<>();
     private final StringBuilder faces = new StringBuilder(), boxes = new StringBuilder(), withoutEdge = new StringBuilder();
-    private final StringBuilder headTop = new StringBuilder();
+    private final StringBuilder headTop = new StringBuilder(), fixedPlates = new StringBuilder();
+    private boolean measuringShoulders;
     private boolean measuringContact;
     private boolean measuringMotion;
     private boolean active;
@@ -84,9 +85,10 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     }
 
     static void arm(CapaArmorRenderer renderer, boolean hidePlates, boolean hideShoulderCloth,
-                    boolean measureContact, boolean measureMotion) {
+                    boolean measureContact, boolean measureMotion, boolean measureShoulders) {
         var p = of(renderer);
         p.active = true;
+        p.measuringShoulders = measureShoulders;
         p.measuringMotion = measureMotion;
         p.measuringContact = measureContact || measureMotion;
         p.inverseChest = null;
@@ -98,6 +100,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         p.boxes.setLength(0);
         p.withoutEdge.setLength(0);
         p.headTop.setLength(0);
+        p.fixedPlates.setLength(0);
         for (var registered : renderer.getGeoModel().getAnimationProcessor().getRegisteredBones()) {
             if (!(registered instanceof GeoBone b) || !(tracked(b.getName()) || measureMotion && sprintEdge(b) != null)) continue;
             if (plate(b.getName())) b.setHidden(hidePlates);
@@ -113,7 +116,8 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         if (!active) return;
         String n = bone.getName();
         if (n.equals("chestplate")) {
-            inverseChest = new Matrix4f(pose.last().pose()).invert();
+            chest = new Matrix4f(pose.last().pose());
+            inverseChest = new Matrix4f(chest).invert();
             return;
         }
         if (measuringMotion && (n.equals("cape_top") || n.equals("cape_mid") || n.equals("cape_bottom"))) {
@@ -152,6 +156,15 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             for (var point : new Vector3f[]{new Vector3f(), new Vector3f(1,0,0), new Vector3f(0,1,0), new Vector3f(0,0,1)})
                 points.add(model.transformPosition(point).mul(16));
         }
+        PoseStack fixedPlate = null;
+        if (measuringShoulders && plate(n)) {
+            // Same pose, with just the sleeve hinge disabled: the .37
+            // projection. This is a mesh control, not another live JAR.
+            fixedPlate = new PoseStack();
+            fixedPlate.last().pose().set(chest);
+            renderer.placeShoulderRest(fixedPlate, CapeMountPlacement.plate(false, CapePlateFit.WIDE.equals(n)));
+            RenderUtils.prepMatrixForBone(fixedPlate, bone);
+        }
         boolean omitLip = renderer.hidesInteriorLip(bone);
         for (int i = 0; i < bone.getCubes().size(); ++i) {
             if (omitLip && i == CapeMountPlacement.LINING_LIP_CUBE) continue;
@@ -177,18 +190,21 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                         quad(faces, n, clip, verts[0].position(), verts[1].position(), verts[2].position(), verts[3].position());
                 }
                 if (measuringContact) box(boxes, n, model, lo, hi);
-                if (control != null) {
-                    control.pushPose();
-                    try {
-                        cubePose(control, cube);
-                        box(withoutEdge, n, new Matrix4f(inverseChest).mul(control.last().pose()), lo, hi);
-                    } finally {
-                        control.popPose();
-                    }
-                }
+                if (control != null) controlBox(withoutEdge, n, control, cube, lo, hi);
+                if (fixedPlate != null) controlBox(fixedPlates, n, fixedPlate, cube, lo, hi);
             } finally {
                 pose.popPose();
             }
+        }
+    }
+
+    private void controlBox(StringBuilder out, String name, PoseStack control, GeoCube cube, Vector3f lo, Vector3f hi) {
+        control.pushPose();
+        try {
+            cubePose(control, cube);
+            box(out, name, new Matrix4f(inverseChest).mul(control.last().pose()), lo, hi);
+        } finally {
+            control.popPose();
         }
     }
 
@@ -203,7 +219,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
     }
 
     record Draw(Map<String,List<Vector3f>> rigid, String faces, String boxes, float pitch, float yaw,
-                double hoodClearance, String withoutEdge, String headTop, double rearTuck) {}
+                double hoodClearance, String withoutEdge, String headTop, double rearTuck, String fixedPlates) {}
 
     static Draw finish(CapaArmorRenderer renderer, PoseStack armor, PlayerModel<?> player) {
         var p = of(renderer);
@@ -238,7 +254,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
         }
         return new Draw(Map.copyOf(p.rigid), p.faces.toString(), p.boxes.toString(), (float) Math.toDegrees(player.head.xRot),
                 (float) Math.toDegrees(player.head.yRot), renderer.hoodClearance(), p.withoutEdge.toString(),
-                p.headTop.toString(), renderer.rearTuck());
+                p.headTop.toString(), renderer.rearTuck(), p.fixedPlates.toString());
     }
 
     private void playerPart(PoseStack stack, ModelPart part, String name, float inflate, boolean sleeve) {
@@ -321,7 +337,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 new Phase("carrera", 0, 0, false, true, false, 24));
         private final StringBuilder trace = new StringBuilder(
                 "sample\tphase\ttick\tpose\tsprint\tspeed\tpitch\tyaw\tvanilla\tcamera_pitch\tcamera_yaw\tpliegue\timage\n");
-        private final StringBuilder boxes = new StringBuilder(), withoutEdge = new StringBuilder();
+        private final StringBuilder boxes = new StringBuilder(), withoutEdge = new StringBuilder(), fixedPlates = new StringBuilder();
         private int phase, frame, sample;
         private int start = -1, lastTick = -1;
 
@@ -390,6 +406,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                     .append('\t').append(cam.getYRot()).append('\t').append(draw.hoodClearance()).append('\t').append(image).append('\n');
             draw.boxes().lines().forEach(box -> boxes.append(sample).append('\t').append(box).append('\n'));
             draw.withoutEdge().lines().forEach(box -> withoutEdge.append(sample).append('\t').append(box).append('\n'));
+            draw.fixedPlates().lines().forEach(box -> fixedPlates.append(sample).append('\t').append(box).append('\n'));
             sample++;
             lastTick = p.tickCount;
             if (++frame < q.samples()) return false;
@@ -404,6 +421,7 @@ final class CapePlacementProbe extends GeoRenderLayer<CapaDeteriorerItem> {
             Files.writeString(root.resolve(name + "-posturas.tsv"), trace);
             Files.writeString(root.resolve(name + "-cubos.tsv"), boxes);
             Files.writeString(root.resolve(name + "-sin-holgura-brazos.tsv"), withoutEdge);
+            Files.writeString(root.resolve(name + "-placas-fijas.tsv"), fixedPlates);
             return true;
         }
     }

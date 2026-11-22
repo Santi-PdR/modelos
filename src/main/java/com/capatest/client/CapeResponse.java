@@ -12,6 +12,8 @@ public final class CapeResponse {
     private static final double SIDE_YAW = 0.62;
     private static final double SIDE_ROLL = 1.32;
     private static final double SIDE_WATER_DAMPING = 0.65;
+    private static final double HEM_TURN_RATE = 4.2;
+    private static final double TURN_WAKE = .98, TURN_WATER_DAMPING = .60;
     private static final double SEGMENT_POWER = 1.45;
     private static final double TICK_SECONDS = 1 / 20.0;
     // Same order as the pose inputs: speed, lift, turn, crouch, water, air, sprint.
@@ -78,7 +80,7 @@ public final class CapeResponse {
         for (int i = 0; i < values.length; ++i)
             values[i] = toward(values[i], targets[i], dt, RATES[i]);
         hemSpeed = toward(hemSpeed, targets[0], dt, 3.1);
-        hemTurn = toward(hemTurn, targets[2], dt, 4.2);
+        hemTurn = toward(hemTurn, targets[2], dt, HEM_TURN_RATE);
         hemAir = toward(hemAir, targets[5], dt, 3.55);
         sideNear = toward(sideNear, targets[7], dt, SIDE_NEAR_RATE);
         sideHem = toward(sideHem, targets[7], dt, SIDE_HEM_RATE);
@@ -93,6 +95,13 @@ public final class CapeResponse {
     /** The upper fold answers a turn first; inertia delays the free hem. */
     public double turnAt(double weight) {
         return values[2] + weight * (hemTurn - values[2]);
+    }
+
+    /** Additional yaw bias before weighting and the existing yaw limit. */
+    public double turnWake(double weight) {
+        // Rotate the loose pieces slightly against the turn, with the slow
+        // hem clock. The first fold gets little of it and the sewn root none.
+        return TURN_WAKE * weight * hemTurn * (1 - TURN_WATER_DAMPING * values[4]);
     }
 
     public static double weightAt(int segment, int lastSegment) {

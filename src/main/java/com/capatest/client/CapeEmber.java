@@ -33,9 +33,13 @@ public final class CapeEmber {
         double glint = .5 + .5 * Math.sin(phase + p * 7.5);
         double fade = ease(0, .16, p) * (1 - ease(.36, 1, p));
         double cool = ease(.22, .93, p);
+        // A warm rose core on ignition, blending back to violet before
+        // the final sprite. Keep the opacity envelope, quad and impulse.
+        double heat = 1 - ease(.14, .58, p);
         int frame = p < FIRST_CHANGE ? 0 : p < SECOND_CHANGE ? 1 : 2;
         return new Look(frame, (.79 + .06 * glint + .07 * streak) * fade,
-                1 - .43 * p + .05 * glint, 1 - .39 * cool, .98 - .18 * cool, .93 + .07 * cool);
+                1 - .43 * p + .05 * glint, 1 - .39 * cool,
+                .98 - .18 * cool - .055 * heat, .93 + .07 * cool - .20 * heat);
     }
 
     private static double ease(double lo, double hi, double p) {

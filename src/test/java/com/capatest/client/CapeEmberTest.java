@@ -23,7 +23,7 @@ public final class CapeEmberTest {
                         check(look.alpha() >= 0 && look.alpha() <= 1, "opacity out of range");
                         check(look.scale() < width && look.scale() > .5, "ember stops shrinking");
                         check(look.red() >= .60 && look.red() <= 1 && look.green() >= .79 && look.green() <= 1
-                                && look.blue() >= .92 && look.blue() <= 1, "tint out of range");
+                                && look.blue() >= .73 && look.blue() <= 1, "tint out of range");
                         if (age == 0 || age == life) check(look.alpha() == 0, "pop at start or end");
                         if (look.alpha() * .85 >= .1) visible |= 1 << look.frame();
                         width = look.scale();
@@ -40,6 +40,10 @@ public final class CapeEmberTest {
             System.out.println("Brasas: " + count + " muestras de color, cobertura y tamaño");
             checkRenderClock();
             checkSpriteTimeline();
+            var hot = CapeEmber.look(.16, .43, .82);
+            var cool = CapeEmber.look(.55, .43, .82);
+            check(hot.alpha() > .79 && hot.red() - hot.blue() > .25 && cool.blue() > cool.red(),
+                    "no se ve la transición de rosa cálido a violeta");
         }
     }
 

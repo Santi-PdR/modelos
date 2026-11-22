@@ -7,6 +7,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -17,6 +18,8 @@ import net.minecraft.world.entity.Pose;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.renderer.GeoArmorRenderer;
@@ -34,6 +37,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private double hoodUp, hoodTurn, hoodLean;
     private boolean dryHood;
     private CapeHood.Nape nape = CapeHood.NO_NAPE;
+    private CapeShoulder.Pose smallShoulder = CapeShoulder.REST;
+    private CapeShoulder.Pose wideShoulder = CapeShoulder.REST;
 
     double hoodClearance() { return hoodClearance; }
     double rearTuck() { return rearTuck; }
@@ -114,6 +119,14 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         elytra = player != null && player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA);
         slimSleeves = player != null && player.getModelName().equals("slim");
         mountInChest = bone(CapeFit.BONE) != null && bone(CapeFit.GUSSET_BONE) != null;
+        smallShoulder = wideShoulder = CapeShoulder.REST;
+        if (mountInChest && !elytra && player != null && !player.isPassenger()) {
+            // ModelPart's own rotation order, relative to the live torso,
+            // not the swing of the other arm or a camera/aim angle.
+            var inverseBody = partRotation(model.body).conjugate();
+            smallShoulder = sleevePose(inverseBody, model.body, model.rightArm, false);
+            wideShoulder = sleevePose(inverseBody, model.body, model.leftArm, true);
+        }
         double arm = backArm(model);
         double leg = Math.max(CapeStride.backDegrees(model.leftLeg.xRot, model.leftLeg.yRot),
                 CapeStride.backDegrees(model.rightLeg.xRot, model.rightLeg.yRot));
@@ -126,6 +139,17 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         double wings = elytra ? CapeWingFit.topGoal(Math.toDegrees(player.elytraRotX), Math.toDegrees(player.elytraRotZ),
                 Math.toDegrees(model.body.xRot), 0) : 0;
         capeModel.setClearancePose(arm, leg, model.body.xRot, wings);
+    }
+
+    private static Quaternionf partRotation(ModelPart part) {
+        return new Quaternionf().rotationZYX(part.zRot, part.yRot, part.xRot);
+    }
+
+    private CapeShoulder.Pose sleevePose(Quaternionf inverseBody, ModelPart body, ModelPart sleeve, boolean wide) {
+        var down = inverseBody.transform(partRotation(sleeve).transform(new Vector3f(0, 1, 0)));
+        var joint = inverseBody.transform(new Vector3f(sleeve.x - body.x, sleeve.y - body.y, sleeve.z - body.z));
+        // ModelPart Y points down, GeckoLib's baked Y points up.
+        return CapeShoulder.pose(wide, -down.y, down.z, (slimSleeves ? 2.5 : 2) - joint.y, joint.z);
     }
 
     // Aim is local to the hood, sampled once per base draw. Never use
@@ -278,19 +302,33 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         if (plate == null || !placedPlate(plate)) return;
         poseStack.pushPose();
         try {
-            double x = -fit.x()/16, y = fit.y()/16, z = fit.z()/16;
-            poseStack.translate(x-fit.shiftX(slimSleeves)/16, y+fit.dy()/16, z+fit.dz()/16);
-            poseStack.mulPose(Axis.ZP.rotationDegrees((float) fit.roll()));
-            poseStack.mulPose(Axis.YP.rotationDegrees((float) -fit.yaw()));
-            poseStack.mulPose(Axis.XP.rotationDegrees((float) -fit.pitch()));
-            poseStack.translate(-x, -y, -z);
-            // Same complete plate geometry, cutout and emission. Nothing is
-            // added to the GEO or attached to the camera/helmet/hand pose.
+            boolean wide = CapePlateFit.WIDE.equals(fit.bone());
+            CapeShoulder.Pose spring = wide ? wideShoulder : smallShoulder;
+            if (spring != CapeShoulder.REST) {
+                double x = CapeShoulder.side(wide) * CapeShoulder.HINGE_X / 16;
+                double y = CapeShoulder.HINGE_Y / 16, z = CapeShoulder.HINGE_Z / 16;
+                poseStack.translate(x + spring.x()/16, y + spring.y()/16, z + spring.z()/16);
+                poseStack.mulPose(Axis.ZP.rotationDegrees((float) spring.roll()));
+                poseStack.mulPose(Axis.XP.rotationDegrees((float) spring.pitch()));
+                poseStack.translate(-x, -y, -z);
+            }
+            placeShoulderRest(poseStack, fit);
+            // Same rigid plate and sleeve fit in the solid and light pass.
+            // Do not move the yoke, deform cubes or write to the shared rig.
             super.renderRecursively(poseStack, animatable, plate, renderType, buffers, buffer,
                     isReRender, partialTick, light, overlay, red, green, blue, alpha);
         } finally {
             poseStack.popPose();
         }
+    }
+
+    void placeShoulderRest(PoseStack poseStack, CapeMountPlacement.Plate fit) {
+        double x = -fit.x()/16, y = fit.y()/16, z = fit.z()/16;
+        poseStack.translate(x-fit.shiftX(slimSleeves)/16, y+fit.dy()/16, z+fit.dz()/16);
+        poseStack.mulPose(Axis.ZP.rotationDegrees((float) fit.roll()));
+        poseStack.mulPose(Axis.YP.rotationDegrees((float) -fit.yaw()));
+        poseStack.mulPose(Axis.XP.rotationDegrees((float) -fit.pitch()));
+        poseStack.translate(-x, -y, -z);
     }
 
     private static boolean placedPlate(GeoBone bone) {

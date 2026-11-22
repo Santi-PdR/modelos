@@ -330,7 +330,8 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
             double ripple = Math.sin(time * 1.7D - lag + seed * 0.05D) * 0.44D;
             double turn = response.turnAt(weight);
             double side = lateralFreedom * response.sideAt(weight);
-            double offY = turn * 1.84D * lateral + wind * 0.38D + sweep * 0.35D;
+            double offY = turn * 1.84D * lateral + wind * 0.38D + sweep * 0.35D
+                    + lateralFreedom * response.turnWake(weight);
             double offZ = (gust * 0.68D + wind * 0.24D) * (0.6D + 0.4D * Math.abs(lateral))
                     + ripple + turn * 0.86D * lateral;
             b.setRotX(b.getRotX() + (float) Math.toRadians(response.pitchAt(weight)));

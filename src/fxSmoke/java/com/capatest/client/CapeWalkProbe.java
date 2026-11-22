@@ -113,7 +113,8 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                 -Math.toDegrees(renderer.getGeoModel().getBone(MID).orElseThrow().getRotX()),
                 tip.transformPosition(0, 0, .36F, new Vector3f()).mul(16), hood,
                 loosePitch(renderer, 2), loosePitch(renderer, 9), motion.weight(CapeState.SNEAK),
-                -Math.toDegrees(renderer.getGeoModel().getBone(BOTTOM).orElseThrow().getRotX()), motion.clearancePace());
+                -Math.toDegrees(renderer.getGeoModel().getBone(BOTTOM).orElseThrow().getRotX()), motion.clearancePace(),
+                motion.response.turnWake(1));
     }
 
     private static double loosePitch(CapaArmorRenderer renderer, int ribbon) {
@@ -161,10 +162,10 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
 
     record Draw(String clip, double stride, double pace, double walk, double run, double swim, double air, double fall,
                 double collarZ, double top, double mid, Vector3f tip, Vector3f hood, double edge2, double edge9,
-                double sneak, double bottom, double clearancePace) {}
+                double sneak, double bottom, double clearancePace, double turnWake) {}
 
     static final class Route {
-        private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tclip\tstride\twalk\trun\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\tpace\thood_x\thood_y\thood_z\tedge2\tedge9\tsneak\tbottom\tage\tcrouching\tclearance_pace\n");
+        private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tclip\tstride\twalk\trun\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\tpace\thood_x\thood_y\thood_z\tedge2\tedge9\tsneak\tbottom\tage\tcrouching\tclearance_pace\tgiro_punta_deg\n");
         private final boolean quietStudy;
         private int start = -1;
         private int shot;
@@ -202,7 +203,7 @@ final class CapeWalkProbe extends GeoRenderLayer<CapaDeteriorerItem> {
                     .append('\t').append(draw.edge2()).append('\t').append(draw.edge9())
                     .append('\t').append(draw.sneak()).append('\t').append(draw.bottom())
                     .append('\t').append((double) p.tickCount + partial).append('\t').append(p.isCrouching() ? 1 : 0)
-                    .append('\t').append(draw.clearancePace()).append('\n');
+                    .append('\t').append(draw.clearancePace()).append('\t').append(draw.turnWake()).append('\n');
             count++;
             if (shot < landmarks.length && t >= landmarks[shot]) {
                 try (var image = Screenshot.takeScreenshot(game.getMainRenderTarget())) {

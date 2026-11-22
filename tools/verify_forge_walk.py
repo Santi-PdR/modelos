@@ -146,13 +146,22 @@ if __name__ == '__main__':
                     help='omitir la comparativa de camiseta v1.67.10 si no se capturaron escenas históricas')
     ap.add_argument('--baseline-shots', type=Path)
     args = ap.parse_args()
-    table = []
+    table, turns = [], []
     for name in ('paso-pecho','paso-curios','paso-steve-pecho','paso-steve-curios'):
         path = args.shots / (name + '.tsv')
         if 'steve' in name and not path.is_file() and args.baseline_shots is None:
             continue # historical recording
         data = read(path)
         report(data, name)
+        if 'giro_punta_deg' in data.dtype.names:
+            t, wake = (data[k] for k in ('time','giro_punta_deg'))
+            sample = np.abs(wake[(t >= 73) & (t < 107)])
+            settled = np.abs(wake[(t >= 142) & (t < 154)])
+            assert len(sample) >= 25 and len(settled) >= 7, name
+            peak = sample.max()
+            assert .06 < peak <= .98 and settled.mean() < max(.025, peak*.12), (name, peak, settled)
+            turns.append((name, len(sample), peak, settled.mean()))
+            print(f'{name}: corrección de giro en la punta, antes del límite: pico {peak:.3f}°, al volver {settled.mean():.4f}°.', flush=True)
         if 'pace' in data.dtype.names:
             old = read(args.baseline_shots / path.name) if args.baseline_shots and 'steve' not in name else None
             table.extend(continuity(data,name,old))
@@ -161,5 +170,10 @@ if __name__ == '__main__':
             print('ruta\tfase\tpares\tarriba_deg_tick\tmedio_deg_tick\tpunta_u_tick\tbase_arriba\tbase_medio\tbase_punta',file=f)
             for *labels,a,b,c,d,e,g in table:
                 print(*labels,*(f'{v:.3f}' for v in (a,b,c,d,e,g)),sep='\t',file=f)
+    if turns:
+        with (args.shots/'remate-giro-forge.tsv').open('w') as f:
+            print('ruta\tcuadros\tpico_antes_limite_deg\tmedia_reposo_deg', file=f)
+            for name, n, peak, still in turns:
+                print(name,n,f'{peak:.6f}',f'{still:.6f}',sep='\t',file=f)
     if not args.motion_only:
         upper_edge(args.shots)

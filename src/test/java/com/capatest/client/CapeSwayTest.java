@@ -72,7 +72,28 @@ public final class CapeSwayTest {
                 }
             }
         }
-        System.out.println("CapeSway: proyección, corte de teletransporte, inversión con retardo y amplitud de costura verificadas");
+        turnWake();
+        System.out.println("CapeSway: proyección, corte, inversión con retardo y remate del giro verificados");
+    }
+
+    private static void turnWake() {
+        var r = new CapeResponse();
+        r.sample(0, 0, 0, 0, 0, 0, 0, 0);
+        r.sample(.05, 0, 0, 1, 0, 0, 0, 0);
+        check(r.turnWake(1) > .1 && r.turnWake(1) < .3 && r.turnWake(0) == 0, "no nace en el extremo libre");
+        close(r.turnWake(weight(1)) / r.turnWake(1), weight(1), "se perdió la progresión hacia la punta");
+        var beforeBrake = r.turnWake(1);
+        for (int tick = 2; tick <= 35; tick++) {
+            r.sample(tick / 20., 0, 0, 0, 0, 0, 0, 0);
+            if (tick == 2) check(r.turnWake(1) < beforeBrake && r.turnWake(1) > .1, "el faldón paró en seco");
+        }
+        check(Math.abs(r.turnWake(1)) < .001, "no volvió a reposo");
+        r.reset();
+        r.sample(2, 0, 0, -1, 0, 0, 0, 0);
+        var dry = r.turnWake(1);
+        r.reset();
+        r.sample(2, 0, 0, -1, 0, 1, 0, 0);
+        close(r.turnWake(1), dry * .4, "el agua no frenó el giro");
     }
 
     private static void export() {
@@ -80,15 +101,16 @@ public final class CapeSwayTest {
         // Warm up to the periodic response of two one-second legs. The
         // viewer uses its closed form so a seek isn't tied to frame history.
         final int cycle = 40;
-        update(r, 0, -1, 0);
+        r.sample(0, .34, 0, -1, 0, 0, 0, 0, -1);
         for (int tick = 1; tick <= 11 * cycle; tick++) {
             double time = tick / 20.0;
-            update(r, time, (tick-1) % cycle < cycle / 2 ? 1 : -1, 0);
+            int direction = (tick-1) % cycle < cycle / 2 ? 1 : -1;
+            r.sample(time, .34, 0, direction, 0, 0, 0, 0, direction);
             if (tick < 10 * cycle) continue;
             System.out.print((tick - 10 * cycle) / 20.0);
             for (int seg = 1; seg <= 4; seg++) {
                 double q = weight(seg), bias = r.sideAt(q);
-                System.out.print("\t" + CapeResponse.sideYaw(0, bias, q) + "\t" + CapeResponse.sideRoll(0, bias, q));
+                System.out.print("\t" + CapeResponse.sideYaw(r.turnWake(q), bias, q) + "\t" + CapeResponse.sideRoll(0, bias, q));
             }
             System.out.println();
         }

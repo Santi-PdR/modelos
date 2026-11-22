@@ -412,6 +412,7 @@ if __name__=='__main__':
     ap.add_argument('--rear-samples',type=Path)
     ap.add_argument('--nape-samples',type=Path)
     ap.add_argument('--edge-samples',type=Path)
+    ap.add_argument('--shoulder-samples',type=Path)
     ap.add_argument('--assets-only',action='store_true')
     args = ap.parse_args()
     asset_contract(args.jar)
@@ -422,5 +423,12 @@ if __name__=='__main__':
         clearance_parity(geo,args.look_samples,args.edge_samples)
         rear_parity(args.rear_samples)
         nape_parity(geo,args.nape_samples)
+        if args.shoulder_samples:
+            rows = np.loadtxt(args.shoulder_samples)
+            fit = F.viewer_profile(placed=True)
+            run = subprocess.run(['node', 'tools/check_viewer_pose.js'], cwd=P.ROOT, check=True, text=True,
+                                 input=json.dumps(dict(shoulderMotionSamples=rows[:, :5].tolist(), fit=fit)), capture_output=True)
+            np.testing.assert_allclose(json.loads(run.stdout), rows[:, 5:], atol=1e-12, rtol=0)
+            print(f'Hombreras: {len(rows)} poses de articulación Java/visor coinciden.')
         lining_parity(geo)
         exercise(geo)

@@ -36,6 +36,9 @@ const matrices = vm.runInContext(`${src}
       return indata.strideSamples.map(([top,mid,arm,leg,stance,depth]) =>
         strideLifts(indata.stride,top,mid,arm,leg,stance*indata.fit.bodyAngle,depth));
     }
+    if (indata.shoulderMotionSamples) {
+      return indata.shoulderMotionSamples.map(args=>shoulderMotion(indata.fit.shoulderMotion,...args));
+    }
     if (indata.mountPlateSamples) {
       return indata.mountPlateSamples.map(([w,slim,i])=>wornPlate(indata.fit.mount,i,!!w,!!slim));
     }

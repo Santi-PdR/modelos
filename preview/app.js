@@ -317,7 +317,15 @@ function sprintEdgeOffset(e, name, parent) {
   return [(r<half ? -1 : 1)*weight*e.INBOARD[seg],0,weight*e.TRAIL[seg]];
 }
 
-function fixedWearerPose(geo, profile, stance, elytra, slim, hood, look=0, turn=0, edgeAmount=0) {
+function shoulderMotion(p, i, downY, downZ, rise, jointZ) {
+  const cap=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+  const w=smooth(p.START,p.FULL,1+downY), side=i===1 ? -1 : 1;
+  const s=cap(downZ,-1,1);
+  return [side*p.OUT*w,(p.LIFT+p.FOLLOW_UP*cap(rise,0,p.UP_LIMIT))*w,
+    (p.FOLLOW_Z*cap(jointZ,-p.Z_LIMIT,p.Z_LIMIT)-p.SWEEP*s)*w,-p.PITCH*s*w,side*p.ROLL*w];
+}
+
+function fixedWearerPose(geo, profile, stance, elytra, slim, hood, look=0, turn=0, edgeAmount=0, gait=null) {
   const f=profile.mount;
   const fixed=geo.bones.some(b=>b.name===profile.bone) && geo.bones.some(b=>b.name===profile.gussetBone);
   const a=profile.backing, h=profile.hood, bones=[];
@@ -375,6 +383,21 @@ function fixedWearerPose(geo, profile, stance, elytra, slim, hood, look=0, turn=
       const [x,y,z,dx,dy,dz,pitch,yaw,roll]=wornPlate(f,plate,elytra,slim);
       const frame={name:'shoulder_'+name,parent:'chestplate',pivot:[x,y,z],offset:[dx,dy,dz],
         rotation:[pitch,yaw,roll],cubes:[]};
+      const shoulder=profile.shoulderMotion;
+      if (shoulder && gait && !elytra) {
+        // Same baked hinge relative to the visor's synthetic vanilla arms.
+        const lean=profile.bodyAngle*stance*Math.PI/180;
+        const arm=gait.arms[1-plate]*Math.PI/180+.4*stance-lean;
+        const y=slim ? 2.5 : 2;
+        const [dx,dy,dz,rx,rz]=shoulderMotion(shoulder,plate,-Math.cos(arm),Math.sin(arm),
+          y*(1-Math.cos(lean)),-y*Math.sin(lean));
+        if (rz) {
+          frame.parent='sleeve_'+name;
+          bones.push({name:frame.parent,parent:'chestplate',
+            pivot:[(plate===0 ? -1 : 1)*shoulder.HINGE_X,shoulder.HINGE_Y,shoulder.HINGE_Z],
+            offset:[-dx,dy,dz],rotation:[-rx,0,rz],cubes:[]});
+        }
+      }
       bones.push(frame);
       piece={...piece,parent:frame.name};
     }
@@ -383,8 +406,8 @@ function fixedWearerPose(geo, profile, stance, elytra, slim, hood, look=0, turn=
   return {...geo,bones};
 }
 
-function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm, slim=false, hood, edgeAmount=0) {
-  if (profile.mount) return fixedWearerPose(geo,profile,stance,elytra,slim,hood,look,turn,edgeAmount);
+function wearerPose(geo, profile, stance, look, turn, elytra=false, arm=0, effort=arm, slim=false, hood, edgeAmount=0, gait=null) {
+  if (profile.mount) return fixedWearerPose(geo,profile,stance,elytra,slim,hood,look,turn,edgeAmount,gait);
   const depth=backset(profile,stance,look,turn);
   const anchor = profile.backing;
   const seat = profile.seat;
@@ -497,9 +520,11 @@ function swayAngles(p, time, segment) {
   const q=Math.pow(segment/p.LAST_SEGMENT,p.SEGMENT_POWER);
   const near=step(p.SIDE_NEAR_RATE), hem=step(p.SIDE_HEM_RATE);
   const pull=near+q*(hem-near);
-  return [p.SIDE_YAW,p.SIDE_ROLL].map((gain,i)=>{
+  const yaw=pull*p.SIDE_YAW+q*p.TURN_WAKE*step(p.HEM_TURN_RATE);
+  const roll=pull*p.SIDE_ROLL;
+  return [yaw,roll].map((angle,i)=>{
     const cap=i===0 ? p.MAX_YAW : p.MAX_ROLL;
-    return q*Math.max(-cap,Math.min(cap,pull*gain));
+    return q*Math.max(-cap,Math.min(cap,angle));
   });
 }
 function swayPose(geo,p,time) {
@@ -799,10 +824,10 @@ function emberLook(progress, streak, phase) {
   };
   const glint=.5+.5*Math.sin(phase+p*7.5);
   const fade=ease(0,.16)*(1-ease(.36,1));
-  const cool=ease(.22,.93);
+  const cool=ease(.22,.93), heat=1-ease(.14,.58);
   return {frame:p<.25 ? 0 : p<.63 ? 1 : 2,
           alpha:(.79+.06*glint+.07*streak)*fade, scale:1-.43*p+.05*glint,
-          tint:[1-.39*cool,.98-.18*cool,.93+.07*cool]};
+          tint:[1-.39*cool,.98-.18*cool-.055*heat,.93+.07*cool-.20*heat]};
 }
 
 function emberSpriteIndex(progress, life, {steps, halfTicks, changes}) {
@@ -976,7 +1001,7 @@ function draw(now) {
   const guide=wingPose ? wingGoal(WINGS,wingPose[0],wingPose[2],FIT.bodyAngle*stance,depth) : 0;
   const fit=(pose, goal)=>{
     if (clearanceGait || goal>0) pose=clearancePose(pose,clearanceGait,stance,depth,goal);
-    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn,!!wingPose,backArm,armEffort,false,hood,sprintEdge),hidden);
+    return collect(referenceView ? pose : wearerPose(pose,FIT,stance,look,turn,!!wingPose,backArm,armEffort,false,hood,sprintEdge,gait),hidden);
   };
   const drift=demo ? swayPose(base,SWAY,t) : null;
   const current=drift && swayFit.checked ? drift : base;

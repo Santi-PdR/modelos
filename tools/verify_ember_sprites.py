@@ -58,8 +58,25 @@ def verify(samples, report):
     report.write_text('\n'.join(rows)+'\n')
 
 
+def compare_tint(before, after):
+    a, b = np.loadtxt(before), np.loadtxt(after)
+    # Progress, streak, phase, sprite, alpha, size and red retain .37 values.
+    np.testing.assert_array_equal(a[:, :7], b[:, :7])
+    quiet = a[:, 0] >= .58
+    np.testing.assert_array_equal(a[quiet], b[quiet])
+    warm = (a[:, 0] >= .14) & (a[:, 0] <= .22)
+    changes = a[warm, 7:] - b[warm, 7:]
+    assert len(changes) >= 48 and (changes.min(axis=0) > [.04, .17]).all(), changes.min(axis=0)
+    print(f'Visibilidad de brasas: {len(warm)} muestras mantienen tiempos, tamaños e índices; '
+          'el color destacado se enfría antes de la fase final.', flush=True)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('samples',type=Path)
     parser.add_argument('report',type=Path)
-    verify(**vars(parser.parse_args()))
+    parser.add_argument('--looks', nargs=2, type=Path, metavar=('BEFORE', 'AFTER'))
+    args = parser.parse_args()
+    verify(args.samples, args.report)
+    if args.looks:
+        compare_tint(*args.looks)

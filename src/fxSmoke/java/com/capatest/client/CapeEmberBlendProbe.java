@@ -30,7 +30,7 @@ final class CapeEmberBlendProbe {
             @Override public TextureAtlasSprite get(int index, int span) { return key(atlas, index * 2 / span); }
             @Override public TextureAtlasSprite get(RandomSource random) { return key(atlas, random.nextInt(3)); }
         });
-        StringBuilder rows = new StringBuilder("secuencia\tvida_ticks\tinstante_ticks\tsprite\tvertices\talfa\n");
+        StringBuilder rows = new StringBuilder("secuencia\tvida_ticks\tinstante_ticks\tsprite\tvertices\talfa\trojo\tverde\tazul\n");
         try {
             record(game, live, atlas, true, rows);
             record(game, legacy, atlas, false, rows);
@@ -81,8 +81,15 @@ final class CapeEmberBlendProbe {
                                 && actual.count == replay.count,
                         "sub-tick replay changed appearance or atlas frame");
                 require(pos.equals(particle.getPos()), "drawing advanced the particle position");
-                rows.append(String.format(Locale.ROOT, "%s\t%d\t%.5f\t%s\t%d\t%d%n",
-                        blends ? "interpolada" : "tres-sprites", life, moment, name, actual.count, actual.rgba & 255));
+                var tint = CapeEmber.look(CapeEmber.renderProgress(tick + 1, life, partial), 0, 0);
+                int red = actual.rgba >>> 24, green = actual.rgba >>> 16 & 255, blue = actual.rgba >>> 8 & 255;
+                // Tint is independent of the random flicker/size. Check the
+                // bytes actually going to the particle shader, not just Look.
+                require(Math.abs(red - 255*tint.red()) <= 1.01 && Math.abs(green - 255*tint.green()) <= 1.01
+                        && Math.abs(blue - 255*tint.blue()) <= 1.01, "warm/cool tint did not reach the drawn quad");
+                rows.append(String.format(Locale.ROOT, "%s\t%d\t%.5f\t%s\t%d\t%d\t%d\t%d\t%d%n",
+                        blends ? "interpolada" : "tres-sprites", life, moment, name, actual.count, actual.rgba & 255,
+                        red, green, blue));
             }
         }
     }

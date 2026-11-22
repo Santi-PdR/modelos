@@ -9,7 +9,7 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.67.37: el paño reconoce el apoyo del vehículo y responde al avance sin simular una caída.
+v1.67.38: las hombreras acompañan las mangas, los jirones rematan el giro y las brasas pasan de rosa cálido a violeta.
 Se conservan el modelo, las texturas del paño, el halo y los ocho clips.
 El icono de referencia pulsa en la hotbar.
 '''

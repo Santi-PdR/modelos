@@ -281,6 +281,11 @@ def mount_profile():
     return values
 
 
+def shoulder_motion_profile():
+    code = SOURCE.with_name('CapeShoulder.java').read_text()
+    return {key: float(value) for key, value in re.findall(r'\b([A-Z_]+) = (\d*\.?\d+)[,;]', code)}
+
+
 def worn_plate(index, elytra, slim):
     f = mount_profile()
     *pose, inset = f['wingPlates' if elytra else 'plates'][index]
@@ -475,6 +480,7 @@ def viewer_profile(*, placed=False):
     fit = dict(profile(),backing=B.profile(),seat=seat_profile(),plates=plate_profile(),torso=torso_profile())
     if placed:
         fit['mount'] = mount_profile()
+        fit['shoulderMotion'] = shoulder_motion_profile()
         fit['hood'] = hood_profile()
         fit['sprintEdge'] = sprint_edge_profile()
     return fit

@@ -122,7 +122,8 @@ def fit(root, slot, data, spans, rig, source):
         assert ((ticks >= a) & (ticks < b)).sum() >= 4 and ((ticks >= b) & (ticks <= b + 6)).sum() >= 2, (
             slot, event.name, 'faltan cubos de vuelo o de aterrizaje', a, b, ticks)
     roots = np.array([name.endswith('_seg0') for name in rig.names])
-    fixed = rig.rigid & ~np.array([hood_moves(name) for name in rig.names])
+    flex_plates = tuple(map(int, mod_version().split('.'))) >= (1, 67, 38)
+    fixed = rig.rigid & ~np.array([hood_moves(name) or flex_plates and name.startswith('v18_pad_') for name in rig.names])
     min_fit = np.full(3, np.inf)
     leg_hit, arm_hit, drift = 0., 0., 0.
     first = None
