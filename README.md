@@ -11,9 +11,11 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
-### v1.67.42 — prototipo de aterrizaje (en validación)
+### v1.67.42 — eco del dobladillo al aterrizar (verificada para test-1)
 
-Esta revisión mide una respuesta breve del dobladillo tras un contacto seco. **Aún no hay JAR .42 verificado ni instalador**; v1.67.41 sigue siendo el build de prueba disponible. La versión pública v1.67.13 no cambia.
+**[Descargar JAR de prueba v1.67.42](https://raw.githubusercontent.com/Santi-PdR/modelos/c5e30bcc6931fc94c884898147d4463e1b999ede/entregables/v1.67.42/capatest-1.67.42.jar)** · [PowerShell para `test-1`](docs/releases/v1.67.42/instalar-test-1.txt) · [Mediciones Forge y SHA-256](docs/releases/v1.67.42/notas.md) · [Ejecución CI](https://github.com/Santi-PdR/modelos/actions/runs/45033840606).
+
+La caída seca hace que el dobladillo tenga un cabeceo corto y un eco de luz localizado; escalones bajos, vuelo, agua y aterrizajes no observados no activan el efecto. Compilación reproducible y prueba de Forge completadas. **Es un build de prueba para `test-1`, no una Release pública ni un instalador automático**; v1.67.13 sigue siendo la versión pública.
 
 ### v1.67.41 — balanceo de la cadena equipada
 
