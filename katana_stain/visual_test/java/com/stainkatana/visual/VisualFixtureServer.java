@@ -24,9 +24,21 @@ public final class VisualFixtureServer {
     private static net.minecraft.world.phys.Vec3 casterPosition;
     private static boolean casterMoved, casterLockVerified;
     private static boolean xSoundVerified;
-    private static java.util.UUID weakTarget;
+    private static java.util.UUID weakTarget, primaryTarget;
+    public record ImpactCapture(int index, long serverTick) { }
+    public static final java.util.concurrent.ConcurrentLinkedQueue<ImpactCapture> confirmedImpacts = new java.util.concurrent.ConcurrentLinkedQueue<>();
+    private static int confirmedImpactCount;
     private static int weakDamageEvents;
     public static volatile boolean weakSequenceVerified;
+
+    /** Observe only the initial high-health C target, never synthetic preview clips. */
+    @SubscribeEvent public static void captureConfirmedImpact(net.minecraftforge.event.entity.living.LivingDamageEvent event) {
+        if (primaryTarget == null || !primaryTarget.equals(event.getEntity().getUUID())
+                || event.getEntity().level().isClientSide || event.getAmount() <= 0
+                || !(event.getSource().getEntity() instanceof ServerPlayer)
+                || !com.stainkatana.katana.KatanaAbilities.isCinematicallyBound(event.getEntity())) return;
+        confirmedImpacts.add(new ImpactCapture(++confirmedImpactCount, event.getEntity().level().getGameTime()));
+    }
 
     /** Separate 20-health control: all ten cuts must deal positive damage. */
     public static void startWeakSequence(ServerPlayer player) {
@@ -220,6 +232,7 @@ public final class VisualFixtureServer {
         zombie.setHealth(1000.0F);
         zombie.moveTo(2.0, y, 3.0, 180, 0);
         level.addFreshEntity(zombie);
+        primaryTarget = zombie.getUUID(); confirmedImpactCount = 0; confirmedImpacts.clear();
         System.out.println("STAIN_VISUAL_FIXTURE_READY y=" + y);
     }
 }

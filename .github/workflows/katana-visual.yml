@@ -79,6 +79,7 @@ jobs:
           grep -F 'STAIN_WEAK_FINISHER_DAMAGE_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_Z_LOCKED_MARK_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_X_WALL_AND_VISIBLE_TARGET_VERIFIED' /tmp/stain-visual-client.log
+          grep -F 'STAIN_C_CONFIRMED_IMPACT_CAPTURES=10' /tmp/stain-visual-client.log
           grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_X_SOUND_DISPATCH_VERIFIED' /tmp/stain-visual-client.log
           grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-client.log
@@ -111,6 +112,7 @@ jobs:
           grep -F 'STAIN_WEAK_FINISHER_DAMAGE_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_Z_LOCKED_MARK_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_X_WALL_AND_VISIBLE_TARGET_VERIFIED' /tmp/stain-visual-fallback.log
+          grep -F 'STAIN_C_CONFIRMED_IMPACT_CAPTURES=10' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_X_SOUND_DISPATCH_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-fallback.log
@@ -144,6 +146,7 @@ jobs:
           grep -F 'STAIN_WEAK_FINISHER_DAMAGE_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_Z_LOCKED_MARK_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_X_WALL_AND_VISIBLE_TARGET_VERIFIED' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_C_CONFIRMED_IMPACT_CAPTURES=10' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_EMPTY_X_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_X_SOUND_DISPATCH_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_LONG_RANGE_C_VERIFIED' /tmp/stain-visual-full-bc.log

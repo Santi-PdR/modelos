@@ -18,6 +18,8 @@ import java.io.File;
 public final class VisualFixtureClient {
     private static int tick;
     private static String capture;
+    private static long impactServerTick = -1;
+    private static int impactCaptures;
     private static net.minecraft.world.item.ItemStack savedStack;
     private static int vanillaCueBeforeDisabled;
     private static float comboHealth;
@@ -34,6 +36,13 @@ public final class VisualFixtureClient {
         // next render; otherwise later cases overwrite captures or change hands
         // before the image is actually taken. Also avoid the loading overlay.
         if (capture != null || (tick == 0 && mc.screen != null)) return;
+        var impact = VisualFixtureServer.confirmedImpacts.poll();
+        if (impact != null) {
+            impactServerTick = impact.serverTick();
+            capture = String.format("confirmed_c_impact_%02d.png", impact.index());
+            impactCaptures++;
+            return;
+        }
         tick++;
         if (tick == 1) {
             var id = new net.minecraft.resources.ResourceLocation("bettercombat", "attack_animations/two_handed_slash_vertical_right.json");
@@ -588,6 +597,9 @@ public final class VisualFixtureClient {
                 VisualFixtureServer.verifyXWallCheck(player);
             });
             case 1840 -> {
+                if (impactCaptures != com.stainkatana.katana.CombatTuning.ultimateStrikeCount())
+                    throw new IllegalStateException("Expected ten confirmed C screenshots, got " + impactCaptures);
+                System.out.println("STAIN_C_CONFIRMED_IMPACT_CAPTURES=" + impactCaptures);
                 System.out.println("STAIN_EFFECT_SAMPLES_DONE"); System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop();
             }
             default -> { }
@@ -660,7 +672,9 @@ public final class VisualFixtureClient {
             int clipTick = animation instanceof dev.kosmx.playerAnim.api.layered.KeyframeAnimationPlayer player
                     ? player.getTick() : -1;
             String row = name + "\t" + tick + "\t" + clipTick + "\t"
-                    + mc.player.getMainArm() + "\t" + mc.options.getCameraType() + "\n";
+                    + mc.player.getMainArm() + "\t" + mc.options.getCameraType() + "\t"
+                    + impactServerTick + "\t" + mc.level.getGameTime() + "\n";
+            impactServerTick = -1;
             java.nio.file.Files.writeString(new File(directory, "capture-timing.tsv").toPath(), row,
                     java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
             System.out.println("STAIN_VISUAL_CAPTURE " + name + " tick=" + tick + " clipTick=" + clipTick);
