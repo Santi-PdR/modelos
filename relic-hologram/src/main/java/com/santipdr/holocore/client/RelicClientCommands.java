@@ -415,6 +415,7 @@ public final class RelicClientCommands {
             Tweak.flag("visuals.shaderGlow", RelicConfig.SHADER_GLOW, true),
             Tweak.number("visuals.shaderIntensity", RelicConfig.SHADER_INTENSITY, 0.0D, 1.0D, 0.35D),
             Tweak.number("visuals.animSpeed", RelicConfig.ANIM_SPEED, 0.25D, 2.0D, 0.65D),
+            Tweak.flag("visuals.groundEcho", RelicConfig.GROUND_ECHO, true),
             Tweak.number("visuals.sparkSpeed", RelicConfig.SPARK_SPEED_SCALE, 0.0D, 3.0D, 1.0D),
             Tweak.flag("visuals.reducedEffects", RelicConfig.REDUCED_EFFECTS, false),
             Tweak.flag("visuals.idleVariations", RelicConfig.IDLE_VARIATIONS, true),

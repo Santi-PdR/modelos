@@ -1,5 +1,20 @@
 # Historial de cambios
 
+## 1.0.47 — el eco en el suelo
+
+* **En cada evento, el anillo se tumba en el suelo**: se dibuja con los ejes **X y Z de
+  la pose** (los del portador) y baja por su **Y**, no por la de la pantalla. Un billboard
+  más habría sido otro aro mirándote de frente; esto es una onda que golpea el suelo a tus
+  pies y se abre de 0.32 a 1.15 bloques mientras el destello se apaga.
+* **Solo en tercera persona.** En la vista previa no hay suelo debajo, así que ahí no se
+  dibuja: se pasa un `onShoulder` explícito en vez de adivinar por la cámara.
+* **Se apaga con `visuals.groundEcho`** (por defecto `true`). Es lo primero que hay que
+  probar de este bloque: si sale como una tarjeta flotante, es un `/relic set groundEcho
+  false` y te digo cómo lo arreglo con el dato.
+* Cuesta **un quad** y solo mientras dura el destello: en reposo, cero.
+* 29 claves de config. CI: 7 comprobaciones nuevas, con 3 negativos en rojo (eco que no se
+  dibuja, eco colándose en la vista previa y eco con los ejes de la cámara).
+
 ## 1.0.46 — las chispas orbitan de verdad
 
 La órbita de chispas iba a **0.75 rad/tick**, o sea **2,8 vueltas por segundo**: no se

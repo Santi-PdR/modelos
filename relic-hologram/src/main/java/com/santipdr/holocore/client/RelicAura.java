@@ -99,6 +99,14 @@ public final class RelicAura {
     private static final int FLAKE_COUNT = 7;
     private static final float FLAKE_SIZE = 0.038F;
     private static final float FLAKE_SPEED = 0.28F;
+    /**
+     * Eco en el suelo de los eventos: radio de salida y de llegada, en bloques, y a
+     * que altura por debajo del nucleo se tumba (el hombro queda ~1,15 bloques por
+     * encima de los pies).
+     */
+    private static final float GROUND_MIN_RADIUS = 0.32F;
+    private static final float GROUND_MAX_RADIUS = 1.15F;
+    private static final float GROUND_DROP = 1.15F;
     private static final int SHOCK_COUNT = 8;
     private static final float SHOCK_MIN = 0.16F;
     private static final float SHOCK_MAX = 0.62F;
@@ -125,7 +133,7 @@ public final class RelicAura {
 
     static void render(PoseStack poseStack, MultiBufferSource bufferSource, float partialTick,
                        RelicAnimatable.LoopState state, RelicGlowState glow, float fade,
-                       RelicAnimatable.Mood mood, float motion) {
+                       RelicAnimatable.Mood mood, float motion, boolean onShoulder) {
         float time = time(partialTick);
         Frame frame = frame(poseStack);
         // Destello de evento: el anillo se enciende aunque el estado no lo tenga,
@@ -137,6 +145,12 @@ public final class RelicAura {
         }
         if (RelicConfig.GLOW_RING.get() && glow.ring() + flash * 0.8F > 0.01F) {
             drawRing(bufferSource, frame, time, state, glow, flash, fade, motion);
+        }
+        // Eco en el suelo: un anillo tumbado a los pies del portador, que se abre y
+        // se apaga con el destello. Solo en el hombro: en la vista previa el "suelo"
+        // seria la cara de la camara y quedaria una tarjeta flotando en el aire.
+        if (onShoulder && RelicConfig.GROUND_ECHO.get() && flash > 0.04F) {
+            drawGroundEcho(bufferSource, frame, flash, glow, fade);
         }
         // Onda de choque: solo mientras dura el destello, o sea que en reposo no
         // cuesta ni un quad. Va detras del anillo para que el eco quede debajo.
@@ -188,6 +202,42 @@ public final class RelicAura {
             billboard(buffer, frame, DIAMETER[layer] * spread, time * SPIN[layer],
                     glow.red() * weight, glow.green() * weight, glow.blue() * weight, AURA_ALPHA);
         }
+    }
+
+    /**
+     * Eco en el suelo: el anillo del estado tumbado en el plano horizontal del
+     * portador, un poco por debajo del nucleo, abriendose mientras el destello se
+     * apaga.
+     *
+     * <p>Usa los ejes X y Z de la matriz de pose (los del portador) en vez de los de
+     * la camara: billboardeado seria otro aro mirandote de frente, y lo que hace que
+     * un golpe se sienta es que la onda <b>golpee el suelo</b>. La altura baja por el
+     * eje Y del portador, no por el de la pantalla.</p>
+     */
+    private static void drawGroundEcho(MultiBufferSource bufferSource, Frame frame, float flash,
+                                       RelicGlowState glow, float fade) {
+        float t = 1.0F - Math.min(1.0F, flash);
+        float radius = GROUND_MIN_RADIUS + (GROUND_MAX_RADIUS - GROUND_MIN_RADIUS) * t;
+        float alpha = flash * 0.42F * fade;
+        if (alpha <= 0.01F) {
+            return;
+        }
+        float cx = frame.originX - frame.skyX * GROUND_DROP;
+        float cy = frame.originY - frame.skyY * GROUND_DROP;
+        float cz = frame.originZ - frame.skyZ * GROUND_DROP;
+        float rx = frame.rightX * radius;
+        float ry = frame.rightY * radius;
+        float rz = frame.rightZ * radius;
+        float bx = frame.backX * radius;
+        float by = frame.backY * radius;
+        float bz = frame.backZ * radius;
+        VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(RING_TEXTURE));
+        quad(buffer,
+                cx - rx - bx, cy - ry - by, cz - rz - bz,
+                cx - rx + bx, cy - ry + by, cz - rz + bz,
+                cx + rx + bx, cy + ry + by, cz + rz + bz,
+                cx + rx - bx, cy + ry - by, cz + rz - bz,
+                glow.red() * alpha, glow.green() * alpha, glow.blue() * alpha, 1.0F);
     }
 
     /**
@@ -545,6 +595,18 @@ public final class RelicAura {
         private float upX;
         private float upY;
         private float upZ;
+        /** Eje X del modelo (derecha del portador) en espacio de vista, normalizado. */
+        private float rightX;
+        private float rightY;
+        private float rightZ;
+        /** Eje Z del modelo (hacia delante del portador) en espacio de vista. */
+        private float backX;
+        private float backY;
+        private float backZ;
+        /** Eje Y del modelo (arriba del portador): la normal del plano del suelo. */
+        private float skyX;
+        private float skyY;
+        private float skyZ;
     }
 
     /** Unico frame vivo: se rellena en {@link #frame} y se lee en {@link #billboard}. */
@@ -560,6 +622,26 @@ public final class RelicAura {
         float scale = (float) Math.sqrt(
                 matrix.m00() * matrix.m00() + matrix.m01() * matrix.m01() + matrix.m02() * matrix.m02());
         frame.scale = (scale > 0.0F) && !Float.isNaN(scale) ? scale : 1.0F;
+
+        // Ejes del modelo, normalizados: son los del portador, no los de la camara.
+        // El eco en el suelo los necesita para tumbarse en el plano horizontal de
+        // quien lleva la reliquia (y para bajar por su Y en vez de por la pantalla).
+        float lenZ = (float) Math.sqrt(
+                matrix.m20() * matrix.m20() + matrix.m21() * matrix.m21() + matrix.m22() * matrix.m22());
+        float lenY = (float) Math.sqrt(
+                matrix.m10() * matrix.m10() + matrix.m11() * matrix.m11() + matrix.m12() * matrix.m12());
+        float invZ = lenZ > 1.0E-6F ? 1.0F / lenZ : 0.0F;
+        float invY = lenY > 1.0E-6F ? 1.0F / lenY : 0.0F;
+        float invX = 1.0F / frame.scale;
+        frame.rightX = matrix.m00() * invX;
+        frame.rightY = matrix.m01() * invX;
+        frame.rightZ = matrix.m02() * invX;
+        frame.backX = matrix.m20() * invZ;
+        frame.backY = matrix.m21() * invZ;
+        frame.backZ = matrix.m22() * invZ;
+        frame.skyX = matrix.m10() * invY;
+        frame.skyY = matrix.m11() * invY;
+        frame.skyZ = matrix.m12() * invY;
 
         // Ejes de la camara tal cual: se leen sus componentes en el acto, sin
         // copiarlos a ningun vector propio.

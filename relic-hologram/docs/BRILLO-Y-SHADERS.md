@@ -237,6 +237,15 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.47, el eco en el suelo y de dónde salen sus ejes.** `Frame` solo tenía el origen y
+los ejes de la cámara (para los billboards). El eco necesita lo contrario: una superficie
+tumbada, así que `frame()` lee también las columnas 0, 1 y 2 de la matriz de pose
+normalizadas. La 0 y la 2 dan el plano horizontal del portador y la 1 (arriba) da por dónde
+bajar los `GROUND_DROP = 1.15` bloques hasta sus pies. Con los ejes de la cámara el quad
+saldría perpendicular a la vista, o sea un aro más de frente. En la vista previa la pose no
+cuelga del jugador, así que `render` recibe `onShoulder` y ahí no se llama: es un caso real,
+no una precaución teórica.
+
 **1.0.46, unidades en el aura.** Convenio: `time()` son ticks y todas las constantes de
 frecuencia del aura están en **radianes por tick** (`SPIN` 0.035 = 1 vuelta / 9 s,
 `pulseAt` 0.08 = 3,9 s, latido del anillo 0.15 = 2,1 s). La órbita de chispas estaba en

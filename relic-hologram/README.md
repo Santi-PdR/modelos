@@ -232,6 +232,12 @@ se reproduce» de «un objeto que está ahí». El movimiento se aplica al `Pose
 antes del modelo y del aura, así que los dos se mueven juntos; se rota la matriz en
 el sitio para no crear un cuaternión por reliquia y frame.
 
+En cada evento, además, el anillo del estado se tumba **en el suelo**: se dibuja con los ejes
+del portador (X y Z de la pose) y baja por su Y, no por la de la pantalla, así que la onda
+golpea el suelo a sus pies en vez de ser otro aro de frente. Solo se dibuja en tercera persona
+—en la vista previa no hay suelo y quedaría una tarjeta en el aire— y se apaga con
+`visuals.groundEcho`.
+
 **Unidades**: el reloj interno de la reliquia son ticks y todo efecto nuevo pasa por
 `seconds()` (`ticks / 20`). Los primeros VFX de estado se escribieron en «por segundo» sin
 convertir y salían 20× rápidos — de ahí el vaivén de 5,4 Hz que hacía que la reliquia
@@ -346,6 +352,7 @@ cambiar de look:
 | `visuals.flashIntensity` | `1.0` | Destello al ocurrir algo (pulso, liberación, golpe, nivel, despertar). `0` lo apaga. |
 | `visuals.shaderGlow` | `true` | Pase GLSL propio (dos bordes de silueta + línea de lectura + rejilla). Se apaga solo con shaderpack activo. |
 | `visuals.shaderIntensity` | `0.35` | Fuerza del pase GLSL, independiente del halo. |
+| `visuals.groundEcho` | `true` | En cada evento, un anillo **tumbado a los pies** del portador que se abre y se apaga. Solo en tercera persona. |
 | `visuals.sparkSpeed` | `1.0` | Multiplicador de la órbita de chispas (0–3). `1.0` es 1,6 s por vuelta; `3.0` recupera la velocidad de hasta 1.0.45 (2,8 vueltas/s, se veía como un aro temblando); `0` las deja quietas. |
 | `visuals.animSpeed` | `0.65` | Ritmo del bucle de animación (0.25–2). `1.0` = el de las animaciones tal cual están hechas (idle 48 s); `0.65` lo deja flotando. El estado de brillo lo multiplica encima. |
 | `visuals.reducedEffects` | `false` | Reposo sin rayos/cometas/ondas (`idle_calm`). |

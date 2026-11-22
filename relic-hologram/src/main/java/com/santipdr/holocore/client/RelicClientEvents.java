@@ -291,8 +291,9 @@ public final class RelicClientEvents {
         visual.renderer().renderHologram(poseStack, animatable, buffers, partialTick,
                 LightTexture.FULL_BRIGHT, visual.glow(), 1.0F);
         if (RelicAura.enabled()) {
+            // false: la vista previa no tiene suelo debajo, asi que no dibuja el eco.
             RelicAura.render(poseStack, buffers, partialTick, animatable.loopState(), visual.glow(),
-                    1.0F, animatable.mood(), animatable.motion());
+                    1.0F, animatable.mood(), animatable.motion(), false);
         }
         buffers.endBatch();
         poseStack.popPose();

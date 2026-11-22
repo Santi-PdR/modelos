@@ -472,6 +472,18 @@ jobs:
               'las brasas no parpadean (parecen burbujas naranjas)'
           # Onda de choque: sale del destello, sin estado propio ni listas que
           # mantener. Si alguien la cambia por una lista de particulas, esto falla.
+          # Eco en el suelo: anillo tumbado en el plano del portador, no billboardeado
+          # (un billboard seria otro aro de frente) y solo en el hombro: en la vista
+          # previa el "suelo" es la cara de la camara.
+          assert 'private static void drawGroundEcho(' in aura, 'los eventos no tocan el suelo'
+          assert 'drawGroundEcho(bufferSource, frame, flash, glow, fade);' in aura, \
+              'el eco en el suelo no se dibuja nunca'
+          assert 'if (onShoulder && RelicConfig.GROUND_ECHO.get() && flash > 0.04F) {' in aura, \
+              'el eco no esta limitado al hombro o no se puede apagar'
+          assert 'frame.rightX * radius' in aura and 'frame.skyX * GROUND_DROP' in aura, \
+              'el eco usa los ejes de la camara en vez de los del portador'
+          assert 'GROUND_MIN_RADIUS' in aura and 'GROUND_DROP' in aura, 'faltan las cotas del eco'
+          assert '.define("groundEcho", true)' in configuracion, 'groundEcho no esta declarado'
           assert 'private static void drawShockwave(' in aura, 'los eventos no tienen onda'
           assert 'drawShockwave(bufferSource, frame, time, glow, flash, fade)' in aura, \
               'la onda de choque no se dibuja nunca'
@@ -650,18 +662,18 @@ jobs:
           assert 'isSprinting()' in animatable and 'isSwimming()' in animatable, \
               'correr o nadar no alimentan la energia'
           assert 'isCrouching()' in animatable, 'agacharse no frena la energia'
-          assert 'RelicAnimatable.Mood mood, float motion)' in aura, \
-              'el aura no recibe la energia de movimiento'
+          assert 'RelicAnimatable.Mood mood, float motion, boolean onShoulder)' in aura, \
+              'el aura no recibe la energia de movimiento (y el eco, si va en el hombro)'
           assert '(1.0F + 0.70F * motion)' in aura, 'el anillo no late mas rapido al correr'
           assert '(1.0F + 0.45F * motion)' in aura, 'las chispas no barren mas rapido al correr'
           assert '(1.0F + 0.50F * motion)' in aura, 'las burbujas no suben mas rapido al nadar'
           assert 'energy *= 1.0F + 0.60F * motion;' in aura, \
               'el vaiven no crece al correr'
           # Las dos vistas tienen que pasarla al aura (no solo al movimiento propio).
-          assert 'animatable.mood(), animatable.motion());' in curio, \
-              'el hombro no pasa la energia de movimiento al aura'
-          assert '1.0F, animatable.mood(), animatable.motion());' in eventos, \
-              'la vista previa no pasa la energia de movimiento al aura'
+          assert 'animatable.mood(), animatable.motion(), true);' in curio, \
+              'el hombro no pasa la energia de movimiento al aura (ni pide el eco en el suelo)'
+          assert '1.0F, animatable.mood(), animatable.motion(), false);' in eventos, \
+              'la vista previa no pasa la energia de movimiento al aura o dibuja el eco sin suelo'
           assert 'static void applyAliveMotion(' in aura, 'la reliquia no tiene movimiento propio'
           assert 'RelicAura.applyAliveMotion(' in curio, 'el hombro no usa el movimiento propio'
           assert 'RelicAura.applyAliveMotion(' in eventos, 'la vista previa no usa el movimiento propio'
@@ -825,7 +837,7 @@ jobs:
               eleccion = re.search(r'\.defineEnum\("(\w+)",\s*[\w.]+\.(\w+)\)', linea)
               if eleccion:
                   defectos[f'{seccion}.{eleccion.group(1)}'] = eleccion.group(2)
-          assert len(defectos) == 28, f'esperaba 28 defectos, hay {len(defectos)}'
+          assert len(defectos) == 29, f'esperaba 29 defectos, hay {len(defectos)}'
 
           # --- tabla de configuracion del README (solo esa seccion) ---
           inicio = readme.index('## Configuración')
@@ -914,7 +926,7 @@ jobs:
                   clave = re.search(r'\.defineEnum\("(\w+)"', linea).group(1)
                   declaradas[f'{seccion}.{clave}'] = ('enum', 0.0, 0.0)
 
-          assert len(declaradas) == 28, f'esperaba 28 claves en RelicConfig, hay {len(declaradas)}'
+          assert len(declaradas) == 29, f'esperaba 29 claves en RelicConfig, hay {len(declaradas)}'
 
           # --- comando: Tweak.<tipo>("clave", RelicConfig.CAMPO, [min, max,] defecto) ---
           tabla, defecto_tabla = {}, {}
