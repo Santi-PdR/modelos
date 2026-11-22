@@ -378,6 +378,47 @@ public final class RelicAura {
                 .endVertex();
     }
 
+    /**
+     * Movimiento propio del objeto, aplicado al {@code PoseStack} <b>antes</b> del
+     * modelo y del aura: los dos lean la matriz, asi que se mueven juntos.
+     *
+     * <p>Hasta 1.0.30 la reliquia estaba clavada al hombro: la animacion movia
+     * huesos, pero el conjunto no respiraba. Aqui hay dos cosas:</p>
+     * <ul>
+     *   <li><b>flotar</b>: 0.022 bloques de vaiven lento, con la amplitud segun el
+     *       estado de brillo (tormenta 1.5x, herido 0.6x);</li>
+     *   <li><b>asentarse</b>: en un evento el conjunto se achata un 4% y se ensancha
+     *       un 5%, que es lo que da sensacion de golpe frente a solo cambiar de
+     *       color.</li>
+     * </ul>
+     *
+     * <p>{@code yDown} existe porque el render de la entidad hereda la convencion
+     * del modelo del jugador (Y+ hacia abajo) y la vista previa esta en
+     * coordenadas de mundo (Y+ hacia arriba): el vaiven tiene que ir al reves.</p>
+     */
+    static void applyAliveMotion(PoseStack poseStack, float partialTick, float flash,
+                                 RelicAnimatable.Mood mood, boolean yDown) {
+        float time = time(partialTick);
+        float energy = switch (mood) {
+            case STORM -> 1.5F;
+            case RESONANT -> 1.2F;
+            case DARK -> 0.9F;
+            case RAIN -> 0.8F;
+            case WOUNDED -> 0.6F;
+            case NEUTRAL -> 1.0F;
+        };
+        float lift = 0.022F * energy * sin(time * 1.7F);
+        poseStack.translate(0.0D, yDown ? -lift : lift, 0.0D);
+        // Un grado escaso de ladeo, desfasado del vaiven: si no, parece un pez.
+        // Se rota la matriz en el sitio: pasar un eje a mulPose crea un Quaternionf
+        // por reliquia y frame, y el camino de render no asigna nada.
+        poseStack.last().pose().rotateY((float) Math.toRadians(1.1F * sin(time * 0.7F)));
+        if (flash > 0.01F) {
+            float squeeze = Math.min(1.0F, flash);
+            poseStack.scale(1.0F + 0.05F * squeeze, 1.0F - 0.04F * squeeze, 1.0F + 0.05F * squeeze);
+        }
+    }
+
     private static float sin(float value) {
         return (float) Math.sin(value);
     }

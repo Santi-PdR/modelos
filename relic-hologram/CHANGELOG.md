@@ -1,5 +1,22 @@
 # Historial de cambios
 
+## 1.0.31 — la reliquia flota, se asienta y tiene tecla de pulso
+
+* **Movimiento propio** (`RelicAura.applyAliveMotion`): el conjunto **flota** con un
+  vaivén de 0.022 bloques, con la amplitud según el estado de brillo (tormenta 1.5×,
+  resonancia 1.2×, herido 0.6×), y **se asienta** en cada evento achatándose un 4% y
+  ensanchándose un 5% — eso es lo que da sensación de golpe. Se aplica al `PoseStack`
+  antes del modelo y del aura, así que los dos se mueven juntos; el aura además lee
+  la escala de la matriz, o sea que también se ensancha con los eventos.
+* **Sin asignaciones**: el ladeo rota la matriz en el sitio
+  (`poseStack.last().pose().rotateY`) en vez de `mulPose` con un eje, que crea un
+  `Quaternionf` por reliquia y frame.
+* **Tecla P para el pulso** (`key.holocore.pulse`, remapeable como la G): manda el
+  mismo paquete que `/relic pulse`, así que se puede lanzar en mitad del combate sin
+  escribir. Con lo de 1.0.29 se ve entero: eco del anillo, glitch del shader y
+  achatado.
+* 1 clave nueva por idioma (59 en cada uno).
+
 ## 1.0.30 — dos estados más, animación que cambia de ritmo y `/relic mood`
 
 * **Dos estados de brillo nuevos**: `dark` (menos de luz de bloque 4: casi blanca y

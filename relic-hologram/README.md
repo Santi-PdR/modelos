@@ -80,6 +80,7 @@ En el juego:
 | Acción | Cómo |
 |---|---|
 | Despertar / dormir | tecla **G** o `/relic toggle` |
+| Pulso manual | tecla **P** o `/relic pulse` |
 | Pulso de energía | `/relic pulse` |
 | Liberación total | `/relic release` |
 | Afinar posición | `/relic offset <x> <y> <z>` (píxeles de modelo) |
@@ -208,6 +209,13 @@ mandan: herido > tormenta > resonancia.
 | resonancia (`resonant`) | otro portador a menos de 12 bloques | violeta, anillo más marcado y giro rápido: las dos reliquias se «oyen» |
 | oscuridad (`dark`) | menos de luz de bloque 4 donde está | casi blanca y bastante más aura: en una cueva es la única luz que hay |
 | lluvia (`rain`) | llueve encima del portador (sin tormenta) | azul profundo, anillo más tenue |
+
+El conjunto además se mueve solo: **flota** con un vaivén lento de 0.022 bloques
+(la amplitud sube con la tormenta y baja cuando está herido) y **se asienta** en cada
+evento, achatándose un 4% y ensanchándose un 5%. Es lo que separa «una animación que
+se reproduce» de «un objeto que está ahí». El movimiento se aplica al `PoseStack`
+antes del modelo y del aura, así que los dos se mueven juntos; se rota la matriz en
+el sitio para no crear un cuaternión por reliquia y frame.
 
 Al cambiar de estado de brillo la reliquia da un destello corto para que se note
 que ha reaccionado a algo, y **cambia la velocidad del bucle** (herido 0.72×, tormenta
@@ -370,6 +378,8 @@ hay que sumar la traslación que traía `relic_hologram.geo.json`.
 - [ ] Equipar en `charm` → `activation` y luego `idle` en bucle.
 - [ ] Desequipar → desaparece; re-equipar → vuelve a activarse.
 - [ ] Tecla G y `/relic toggle` → `deactivation`/`idle_dormant` y vuelta.
+- [ ] Tecla P (`/relic pulse`) → pulso con eco del anillo, glitch del shader y el
+      achatado del evento.
 - [ ] `/relic pulse`, `/relic release`, subida de nivel (`layer_bump`).
 - [ ] Recibir daño → `hit` + `layer_hit`; monstruo cerca → `idle_alert`.
 - [ ] Agacharse (sneak) y girar el cuerpo: el núcleo acompaña al torso sin saltos.

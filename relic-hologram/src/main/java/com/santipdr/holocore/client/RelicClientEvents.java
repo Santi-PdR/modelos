@@ -82,6 +82,7 @@ public final class RelicClientEvents {
         @SubscribeEvent
         public static void registerKeys(RegisterKeyMappingsEvent event) {
             event.register(RelicKeys.TOGGLE);
+            event.register(RelicKeys.PULSE);
         }
 
         /**
@@ -120,6 +121,9 @@ public final class RelicClientEvents {
 
         while (RelicKeys.TOGGLE.consumeClick()) {
             RelicNetwork.sendToServer(new RelicActionPacket(RelicActionPacket.Action.TOGGLE));
+        }
+        while (RelicKeys.PULSE.consumeClick()) {
+            RelicNetwork.sendToServer(new RelicActionPacket(RelicActionPacket.Action.PULSE));
         }
     }
 
@@ -249,6 +253,10 @@ public final class RelicClientEvents {
         // Se esta viendo: que encole sus animaciones como en tercera persona.
         animatable.markRendered(minecraft.level.getGameTime());
         visual.glow().update(animatable.loopState(), animatable.flash(), animatable.mood());
+
+        // Mismo flotar/asentarse que en el hombro, pero aqui la Y es la del mundo.
+        RelicAura.applyAliveMotion(poseStack, partialTick, visual.glow().flashScaled(),
+                animatable.mood(), false);
 
         MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
         visual.renderer().renderHologram(poseStack, animatable, buffers, partialTick,

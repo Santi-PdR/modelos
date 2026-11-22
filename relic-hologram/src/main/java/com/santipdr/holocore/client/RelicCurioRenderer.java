@@ -96,6 +96,12 @@ public class RelicCurioRenderer implements ICurioRenderer {
         RelicAnimatable.LoopState state = animatable.loopState();
         visual.glow().update(state, animatable.flash(), animatable.mood());
 
+        // Flotar y asentarse, ya con el destello de este frame: va antes del modelo
+        // y del aura para que los dos se muevan juntos. Aqui la Y del cuerpo del
+        // jugador apunta hacia abajo.
+        RelicAura.applyAliveMotion(poseStack, partialTicks, visual.glow().flashScaled(),
+                animatable.mood(), true);
+
         visual.renderer().renderHologram(poseStack, animatable, bufferSource, partialTicks,
                 LightTexture.FULL_BRIGHT, visual.glow(), fade);
 

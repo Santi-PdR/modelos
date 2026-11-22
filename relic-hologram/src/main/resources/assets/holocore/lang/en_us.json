@@ -56,5 +56,6 @@
   "message.holocore.state.rain": "rain",
   "message.holocore.mood_show": "Glow state: %s.",
   "message.holocore.mood_forced": "Glow state forced: %s (/relic mood auto to release).",
-  "message.holocore.mood_auto": "Glow state back to automatic."
+  "message.holocore.mood_auto": "Glow state back to automatic.",
+  "key.holocore.pulse": "Pulse the relic"
 }

@@ -360,6 +360,8 @@ jobs:
           aura = (base / 'RelicAura.java').read_text(encoding='utf-8')
           comandos = (base / 'RelicClientCommands.java').read_text(encoding='utf-8')
           geo = (base / 'RelicGeoRenderer.java').read_text(encoding='utf-8')
+          curio = (base / 'RelicCurioRenderer.java').read_text(encoding='utf-8')
+          eventos = (base / 'RelicClientEvents.java').read_text(encoding='utf-8')
 
           enum = animatable.split('enum Mood {', 1)[1].split('}', 1)[0]
           moods = re.findall(r'^\s*([A-Z][A-Z_]*)\s*,?$', enum, re.M)
@@ -408,6 +410,29 @@ jobs:
                   assert clave in lang, f'{idioma} sin {clave}'
 
           assert 'safeGetUniform("HoloGlitch")' in geo, 'el pase GLSL no manda el glitch'
+
+          # Movimiento propio: flotar y asentarse en los eventos, aplicado antes del
+          # modelo y del aura (si se aplicara solo al modelo, el aura se quedaria
+          # clavada mientras el nucleo se mueve).
+          assert 'static void applyAliveMotion(' in aura, 'la reliquia no tiene movimiento propio'
+          assert 'RelicAura.applyAliveMotion(' in curio, 'el hombro no usa el movimiento propio'
+          assert 'RelicAura.applyAliveMotion(' in eventos, 'la vista previa no usa el movimiento propio'
+          assert 'rotateY(' in aura, 'el ladeo crea un cuaternion por frame'
+          assert 'mulPose(Axis' not in aura, 'el ladeo vuelve a crear objetos por frame'
+          assert 'poseStack.scale(1.0F + 0.05F * squeeze' in aura, \
+              'el achatado del evento no esta aplicado'
+
+          # Teclas: G despierta/dorme y P pulsa. La segunda tiene que estar
+          # registrada y consumida, o el jugador la configura y no pasa nada.
+          teclas = (base / 'RelicKeys.java').read_text(encoding='utf-8')
+          assert 'KeyMapping PULSE' in teclas, 'falta la tecla del pulso'
+          assert 'event.register(RelicKeys.PULSE)' in eventos, 'la tecla del pulso no se registra'
+          assert 'RelicKeys.PULSE.consumeClick()' in eventos, 'la tecla del pulso no se consume'
+          for idioma in ('en_us', 'es_es'):
+              lang = json.loads(pathlib.Path(
+                  f'relic-hologram/src/main/resources/assets/holocore/lang/{idioma}.json'
+              ).read_text(encoding='utf-8'))
+              assert 'key.holocore.pulse' in lang, f'{idioma} sin key.holocore.pulse'
           print('Estados y VFX OK: herido/tormenta/resonancia con su texto, chispas, eco del'
                 ' anillo y glitch en el shader.')
           PY
