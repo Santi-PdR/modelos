@@ -151,7 +151,11 @@ public final class KatanaAnimations {
                 @Override protected float getFadeIn(float delta) { return 1F; }
             });
         }
-        timedClip.addModifierBefore(new SpeedModifier(ability == 0 ? 3F : (ability == 1 ? 1F : 1.4F)));
+        // The first cinematic strike has a ten-tick wind-up; subsequent cuts
+        // are triggered only six ticks ahead. Keep the opening's downstroke at
+        // the server impact instead of finishing it several ticks early.
+        float speed = ability == 0 ? 3F : ability == 1 ? 1F : ability == 2 ? .7F : 1.4F;
+        timedClip.addModifierBefore(new SpeedModifier(speed));
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
     }
 

@@ -627,6 +627,10 @@ public final class VisualFixtureClient {
                 animation = modifier.getAnimation();
             int clipTick = animation instanceof dev.kosmx.playerAnim.api.layered.KeyframeAnimationPlayer player
                     ? player.getTick() : -1;
+            // The local C opening is sampled ten game ticks after playback.
+            // Its animated downstroke should still be near the impact pose.
+            if (name.equals("93_c_cinematic_impact.png") && (clipTick < 6 || clipTick > 8))
+                throw new IllegalStateException("C opening missed impact pose, clip tick=" + clipTick);
             String row = name + "\t" + tick + "\t" + clipTick + "\t"
                     + mc.player.getMainArm() + "\t" + mc.options.getCameraType() + "\n";
             java.nio.file.Files.writeString(new File(directory, "capture-timing.tsv").toPath(), row,
