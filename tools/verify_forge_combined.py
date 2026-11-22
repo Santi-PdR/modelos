@@ -87,7 +87,7 @@ def fit(root, data, slot, rig, source, *, direction=1):
     roots = np.array([name.endswith('_seg0') for name in rig.names])
     # The chain has a local render stroke, but original_dimensions above
     # the contact checks still requires the unscaled box for every link.
-    trim = mod_version() in ('1.67.31','1.67.32')
+    trim = tuple(map(int, mod_version().split('.'))) >= (1, 67, 31)
     fixed = rig.rigid & ~np.array([hood_moves(name) or trim and name.startswith('v18_chain_') for name in rig.names])
     plate = np.array([name == 'v18_pad_1' for name in rig.names])
     reference = None

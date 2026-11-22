@@ -228,7 +228,7 @@ def run(root, reference=None):
         source[name].append(cube)
     rows, pictures, base_pictures, pairs = [], {}, {}, []
     for slot in ('pecho','curios'):
-        measured, images, arms = report(root,slot,rig,source,nape=mod_version() in ('1.67.32', '1.67.33'))
+        measured, images, arms = report(root,slot,rig,source,nape=tuple(map(int, mod_version().split('.'))) >= (1, 67, 32))
         pairs.append(sleeves(slot,arms))
         rows.extend(measured)
         pictures[slot] = images

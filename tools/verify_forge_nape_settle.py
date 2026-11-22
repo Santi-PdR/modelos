@@ -9,7 +9,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from cape_fit import fixed_wearer_pose, nape_piece, nape_shifts, profile
-from preview_cloth import ARMOR_GEO, load, matrices
+from preview_cloth import ARMOR_GEO, load, matrices, mod_version
 from verify_forge_combined import SLOTS, fit, timeline
 from verify_forge_crown import head_roof, sewn
 from verify_forge_gaits import table, text
@@ -20,10 +20,11 @@ from verify_forge_walk import read
 from verify_v1660 import WornModel
 
 TRIM = (CHAIN, BAND, FRONT)
-MESH_COLS = ('ranura sentido tick tiempo yaw pitch peso_shift seccion_misma_pose_31_u2 seccion_32_u2 '
-             'techo_32_u costura_u tira_u avance_ajuste_u_tick')
-COLOR_COLS = ('ranura sentido tick tiempo_31 tiempo_32 yaw_31 yaw_32 granate_31 granate_32 pelo_recuperado '
-              'granate_nuevo lado_granate_31 lado_granate_32 lado_pelo_recuperado lado_granate_nuevo')
+PATCH = mod_version().rsplit('.', 1)[-1]
+MESH_COLS = (f'ranura sentido tick tiempo yaw pitch peso_shift seccion_misma_pose_31_u2 seccion_{PATCH}_u2 '
+             f'techo_{PATCH}_u costura_u tira_u avance_ajuste_u_tick')
+COLOR_COLS = (f'ranura sentido tick tiempo_31 tiempo_{PATCH} yaw_31 yaw_{PATCH} granate_31 granate_{PATCH} pelo_recuperado '
+              f'granate_nuevo lado_granate_31 lado_granate_{PATCH} lado_pelo_recuperado lado_granate_nuevo')
 
 
 def draw_metrics(root, reference, slot, direction, stem, rig, source, faults):
@@ -127,7 +128,9 @@ def gallery(path, slot, tracks):
     for i, track in enumerate(tracks):
         for j,(t,old,new) in enumerate(track):
             x,y = 12+i*2*(w+6),91+j*(h+28)
-            text(pen,(x,y-20),f'{"+" if i==0 else "−"}55° · {t} · .31 / .32' if old else f'{"+" if i==0 else "−"}55° · {t} · .32',15,bold=True)
+            angle = '+55°' if i == 0 else '−55°'
+            pair = f'.31 / .{PATCH}' if old else f'.{PATCH}'
+            text(pen,(x,y-20),f'{angle} · {t} · {pair}',15,bold=True)
             for k,c in enumerate((old,new)):
                 if c is not None:
                     with Image.open(c.path) as p:
