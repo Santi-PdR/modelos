@@ -512,7 +512,17 @@ public final class VisualFixtureClient {
             case 1412 -> capture = "76_left_contact_z_minus8.png";
             case 1430 -> bloodSample(0, 0, 8);
             case 1437 -> capture = "77_left_contact_z_plus8.png";
-            case 1460 -> {
+            case 1460 -> bloodSample(0, -6, 0);
+            case 1464 -> capture = "78_left_candidate_a_reach.png";
+            case 1467 -> capture = "79_left_candidate_a_draw.png";
+            case 1471 -> capture = "80_left_candidate_a_face.png";
+            case 1475 -> capture = "81_left_candidate_a_recovery.png";
+            case 1490 -> bloodSample(0, -6, -3);
+            case 1494 -> capture = "82_left_candidate_b_reach.png";
+            case 1497 -> capture = "83_left_candidate_b_draw.png";
+            case 1501 -> capture = "84_left_candidate_b_face.png";
+            case 1505 -> capture = "85_left_candidate_b_recovery.png";
+            case 1525 -> {
                 mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Y.set(0.0);
