@@ -93,6 +93,7 @@ jobs:
           timeout 420s xvfb-run -a -s '-screen 0 1280x720x24' gradle runClient -PkatanaOnly -PkatanaVisual --no-daemon > /tmp/stain-visual-fallback.log 2>&1 || { tail -160 /tmp/stain-visual-fallback.log; exit 1; }
           grep -F 'STAIN_FIXTURE_CLIP=fallback' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_VANILLA_SWING_PLAYING' /tmp/stain-visual-fallback.log
+          grep -F 'STAIN_VANILLA_CUE_WITHOUT_ANIMATION_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_CAMERA_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_VANILLA_COMBO_VERIFIED' /tmp/stain-visual-fallback.log
           grep -F 'STAIN_ULTIMATE_VERIFIED' /tmp/stain-visual-fallback.log
@@ -166,8 +167,11 @@ jobs:
           name: katana-client-visual
           path: |
             run/stain-visual-bettercombat-clips/*.png
+            run/stain-visual-bettercombat-clips/*.tsv
             run/stain-visual-vanilla/*.png
+            run/stain-visual-vanilla/*.tsv
             run/stain-visual-full-bc/*.png
+            run/stain-visual-full-bc/*.tsv
             /tmp/stain-visual-full-bc.log
             /tmp/stain-visual-fallback.log
             /tmp/stain-visual-client.log
@@ -182,12 +186,15 @@ jobs:
           mkdir -p katana_stain/vistas/client-test
           rm -f katana_stain/vistas/client-test/*.png
           cp run/stain-visual-bettercombat-clips/*.png katana_stain/vistas/client-test/
+          cp run/stain-visual-bettercombat-clips/capture-timing.tsv katana_stain/vistas/client-test/
           mkdir -p katana_stain/vistas/client-vanilla
           rm -f katana_stain/vistas/client-vanilla/*.png
           cp run/stain-visual-vanilla/*.png katana_stain/vistas/client-vanilla/
+          cp run/stain-visual-vanilla/capture-timing.tsv katana_stain/vistas/client-vanilla/
           mkdir -p katana_stain/vistas/client-full-bc
           rm -f katana_stain/vistas/client-full-bc/*.png
           cp run/stain-visual-full-bc/*.png katana_stain/vistas/client-full-bc/
+          cp run/stain-visual-full-bc/capture-timing.tsv katana_stain/vistas/client-full-bc/
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add katana_stain/vistas/client-test/ katana_stain/vistas/client-vanilla/ katana_stain/vistas/client-full-bc/

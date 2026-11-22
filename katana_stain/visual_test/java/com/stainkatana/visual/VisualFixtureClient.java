@@ -533,7 +533,21 @@ public final class VisualFixtureClient {
             File directory = new File(mc.gameDirectory, "stain-visual-test");
             if (!directory.isDirectory() && !directory.mkdirs()) throw new IllegalStateException("Cannot create screenshots folder");
             image.writeToFile(new File(directory, name));
-            System.out.println("STAIN_VISUAL_CAPTURE " + name + " tick=" + tick);
+            // A queued screenshot can be rendered after several game ticks on
+            // the software renderer. Record the actual animation tick at the
+            // rendered frame; the script tick alone is not its pose timestamp.
+            var layer = dev.kosmx.playerAnim.minecraftApi.PlayerAnimationAccess
+                    .getPlayerAssociatedData(mc.player).get(new net.minecraft.resources.ResourceLocation("stainkatana", "abilities"));
+            dev.kosmx.playerAnim.api.layered.IAnimation animation = layer;
+            while (animation instanceof dev.kosmx.playerAnim.api.layered.ModifierLayer<?> modifier)
+                animation = modifier.getAnimation();
+            int clipTick = animation instanceof dev.kosmx.playerAnim.api.layered.KeyframeAnimationPlayer player
+                    ? player.getTick() : -1;
+            String row = name + "\t" + tick + "\t" + clipTick + "\t"
+                    + mc.player.getMainArm() + "\t" + mc.options.getCameraType() + "\n";
+            java.nio.file.Files.writeString(new File(directory, "capture-timing.tsv").toPath(), row,
+                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+            System.out.println("STAIN_VISUAL_CAPTURE " + name + " tick=" + tick + " clipTick=" + clipTick);
         } catch (Exception e) { throw new IllegalStateException("Screenshot failed: " + name, e); }
     }
 }
