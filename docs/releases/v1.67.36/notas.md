@@ -1,5 +1,7 @@
 # v1.67.36 · Las brasas siguen al torso agachado
 
+La prueba más reciente es [v1.67.37](../v1.67.37/notas.md). Este JAR queda disponible para volver atrás.
+
 **[JAR de prueba](https://raw.githubusercontent.com/Santi-PdR/modelos/bc9b8efe70abf8fda72a554eaf207899525d7716/entregables/v1.67.36/capatest-1.67.36.jar)** · [PowerShell para `test-1`](instalar-test-1.txt) · [SHA-256](JAR.sha256) · [Volver a v1.67.35](../v1.67.35/notas.md).
 
 Con Shift, la .35 reducía la altura de los puntos de nacimiento según la caja de colisión y dejaba el origen vertical. La .36 aplica la inclinación del torso y el descenso visual de Minecraft al nacimiento. La brasa ya desprendida sigue su vuelo original. Se mantienen el intervalo y límite de emisión, el filtro por bloques, los 25 sprites y sus fundidos. En reposo de pie, planeo y nado se mantienen las proyecciones anteriores. No cambian el modelo, el halo ni los ocho clips.

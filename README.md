@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.37 — el paño al viajar sentado
+
+**[Descargar JAR de prueba v1.67.37](https://raw.githubusercontent.com/Santi-PdR/modelos/f989619869e686a09362d17dfeb6d155cc7db0b0/entregables/v1.67.37/capatest-1.67.37.jar)** · [PowerShell para test-1](docs/releases/v1.67.37/instalar-test-1.txt) · [Pruebas y SHA-256](docs/releases/v1.67.37/notas.md).
+
+El paño ya no interpreta ir sentado como caída. En el bote responde al avance sin simular zancadas. Verificado en Forge en pecho y Curios; la .36 queda para volver atrás.
+
 ### v1.67.36 — nacimiento de las brasas al agacharse
 
 **[Descargar JAR de prueba v1.67.36](https://raw.githubusercontent.com/Santi-PdR/modelos/bc9b8efe70abf8fda72a554eaf207899525d7716/entregables/v1.67.36/capatest-1.67.36.jar)** · [PowerShell para test-1](docs/releases/v1.67.36/instalar-test-1.txt) · [Medidas y SHA-256](docs/releases/v1.67.36/notas.md).
