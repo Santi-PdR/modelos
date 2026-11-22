@@ -12,6 +12,11 @@ public final class CapeNocturne {
     private static final double EDGE_DELAY = 0.18;
     private static final double PERIOD = 3.40;
     private static final double SEED_SHIFT = 0.137;
+    private static final double WAKE_LIMIT = .55;
+    private static final double WAKE_DEAD_ZONE = .008;
+    private static final double INNER_WAKE_SCALE = 12.0;
+    private static final double EDGE_WAKE_SCALE = 20.0;
+    private static final double WAKE_WATER_DAMPING = .80;
     private static final int GAIN_UNITS = 4096;
     private static final double TICK_SECONDS = 1 / 20.0;
 
@@ -20,11 +25,15 @@ public final class CapeNocturne {
     private double last = Double.NaN;
 
     public Gains sample(int block, int sky, float skyIntensity, double seconds, int wearerId) {
+        return sample(block, sky, skyIntensity, seconds, wearerId, CapeResponse.SpeedWake.NONE);
+    }
+
+    Gains sample(int block, int sky, float skyIntensity, double seconds, int wearerId, CapeResponse.SpeedWake wake) {
         // Raw skylight still reads 15 outside at midnight. Use the sky
         // brightness that feeds the vanilla lightmap, not raw sky alone.
         double target = darkness(Math.max(block, sky * (double) skyIntensity));
         double dt = seconds - last;
-        if (dt == 0) return gains(dusk, seconds, wearerId);
+        if (dt == 0) return gains(dusk, seconds, wearerId, wake);
         last = seconds;
         // Allow one ULP of clock rounding at the ten-tick boundary.
         if (!Double.isFinite(dt) || dt < 0 || (dt > .5 && dt - .5 > Math.ulp(seconds))) {
@@ -38,7 +47,7 @@ public final class CapeNocturne {
             advance(target, Math.min(dt, TICK_SECONDS));
         }
         lastTarget = target;
-        return gains(dusk, seconds, wearerId);
+        return gains(dusk, seconds, wearerId, wake);
     }
 
     private void advance(double target, double dt) {
@@ -52,10 +61,23 @@ public final class CapeNocturne {
     }
 
     public static Gains gains(double dusk, double seconds, int wearerId) {
+        return gains(dusk, seconds, wearerId, CapeResponse.SpeedWake.NONE);
+    }
+
+    static Gains gains(double dusk, double seconds, int wearerId, CapeResponse.SpeedWake wake) {
         double phase = seconds / PERIOD + wearerId * SEED_SHIFT;
         double inner = INNER_BASE + INNER_PULSE * wave(phase);
         double edge = EDGE_BASE + EDGE_PULSE * wave(phase - EDGE_DELAY);
-        return new Gains(DAY_GAIN + dusk * (edge - DAY_GAIN), DAY_GAIN + dusk * (inner - DAY_GAIN));
+        // The extra light is subtle in mixed lighting and zero at full day.
+        // Limit the strength smoothly even when a wearer moves very fast.
+        double contrast = dusk * dusk * (1 - WAKE_WATER_DAMPING * wake.water());
+        return new Gains(DAY_GAIN + dusk * (edge - DAY_GAIN) + contrast * boost(wake.edge(), EDGE_WAKE_SCALE),
+                DAY_GAIN + dusk * (inner - DAY_GAIN) + contrast * boost(wake.inner(), INNER_WAKE_SCALE));
+    }
+
+    private static double boost(double wake, double scale) {
+        double strength = Math.max(0, wake - WAKE_DEAD_ZONE) * scale;
+        return WAKE_LIMIT * strength / (1 + strength);
     }
 
     private static double wave(double phase) {

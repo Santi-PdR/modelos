@@ -15,15 +15,19 @@ public final class CapeResponse {
     private static final double HEM_TURN_RATE = 4.2;
     private static final double TURN_WAKE = .98, TURN_WATER_DAMPING = .60;
     private static final double SEGMENT_POWER = 1.45;
+    private static final double SPEED_RATE = 8.0;
+    private static final double HEM_SPEED_RATE = 3.1;
+    private static final double RIM_SPEED_RATE = 1.8;
     private static final double TICK_SECONDS = 1 / 20.0;
     // Same order as the pose inputs: speed, lift, turn, crouch, water, air, sprint.
-    private static final double[] RATES = {8.0, 6.2, 9.0, 8.0, 4.4, 8.0, 8.0};
+    private static final double[] RATES = {SPEED_RATE, 6.2, 9.0, 8.0, 4.4, 8.0, 8.0};
 
     private final double[] values = new double[RATES.length];
     private final double[] targets = new double[RATES.length + 1]; // includes lateral travel
     private double lastSeconds = Double.NaN;
     private double hemTurn;
     private double hemSpeed;
+    private double rimSpeed; // Only used by the emissive pass.
     private double hemAir;
     private double pitchBase;
     private double pitchLag;
@@ -61,7 +65,7 @@ public final class CapeResponse {
             // First draw or a real clock/view cut: discard the old impulse.
             System.arraycopy(targets, 0, values, 0, values.length);
             hemTurn = turn;
-            hemSpeed = speed;
+            hemSpeed = rimSpeed = speed;
             hemAir = air;
             sideNear = sideHem = side;
         } else {
@@ -79,11 +83,23 @@ public final class CapeResponse {
     private void advance(double dt) {
         for (int i = 0; i < values.length; ++i)
             values[i] = toward(values[i], targets[i], dt, RATES[i]);
-        hemSpeed = toward(hemSpeed, targets[0], dt, 3.1);
+        hemSpeed = toward(hemSpeed, targets[0], dt, HEM_SPEED_RATE);
+        rimSpeed = toward(rimSpeed, targets[0], dt, RIM_SPEED_RATE);
         hemTurn = toward(hemTurn, targets[2], dt, HEM_TURN_RATE);
         hemAir = toward(hemAir, targets[5], dt, 3.55);
         sideNear = toward(sideNear, targets[7], dt, SIDE_NEAR_RATE);
         sideHem = toward(sideHem, targets[7], dt, SIDE_HEM_RATE);
+    }
+
+    record SpeedWake(double edge, double inner, double water) {
+        static final SpeedWake NONE = new SpeedWake(0, 0, 0);
+    }
+
+    /** Speed changes excite the lip first and the violet edge later. */
+    SpeedWake speedWake() {
+        // The differences vanish at constant speed. Absolute values give
+        // braking a wake too, without changing any of the pose filters.
+        return new SpeedWake(Math.abs(hemSpeed - rimSpeed), Math.abs(values[0] - hemSpeed), values[4]);
     }
 
     /** Degrees in the baked rig's X convention (negative opens the drape). */

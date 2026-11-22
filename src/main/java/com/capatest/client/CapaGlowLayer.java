@@ -89,9 +89,10 @@ public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
             halo = CapeNocturne.gains(0, 0, 0);
         } else {
             float sky = wearer.level() instanceof ClientLevel world ? world.getSkyDarken(partialTick) : 1.0F;
+            var wake = armor.getGeoModel() instanceof CapaArmorModel model ? model.speedWake() : CapeResponse.SpeedWake.NONE;
             var light = LIGHTS.computeIfAbsent(wearer, key -> new CapeWornLight());
             var frame = light.sample(mode, LightTexture.block(packedLight), LightTexture.sky(packedLight),
-                    sky, wearer.tickCount, partialTick, wearer.getId());
+                    sky, wearer.tickCount, partialTick, wearer.getId(), wake);
             glow = frame.glow();
             halo = frame.halo();
         }

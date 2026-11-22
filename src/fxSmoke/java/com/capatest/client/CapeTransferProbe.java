@@ -101,7 +101,8 @@ final class CapeTransferProbe {
         double blight = motion.weight(CapeState.BLIGHT);
         double now = player.tickCount + (double) partial;
         double edge = (short) sample.light / 4096.0, inner = (short) (sample.light >>> 16) / 4096.0;
-        require(edge >= .459 && edge <= 1.631 && inner >= .459 && inner <= 1.421, "invalid halo gains in real equipment render");
+        // .39's base halo plus a bounded, halo-only wake (< .55).
+        require(edge >= .459 && edge <= 2.181 && inner >= .459 && inner <= 1.971, "invalid halo gains in real equipment render");
         double tipStep = priorTip == null ? 0 : priorTip.distance(pose.tip());
         boolean expected = curios == (stage == 1);
         if (start < 0 && expected) {

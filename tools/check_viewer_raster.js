@@ -51,11 +51,17 @@ const result = vm.runInContext(`${source}
       assert.equal(Math.round(edge*p.GAIN_UNITS) | (Math.round(inner*p.GAIN_UNITS)<<16),packed,'UV2 Java/JS');
     }
   }
+  for (const [time,water,dusk,id,e,i,packed] of input.wakeSamples || []) {
+    const p=input.nocturne;
+    const [edge,inner]=haloGains(p,dusk,time,id,haloDemoWake(p,time,water));
+    assert(Math.abs(edge-e)<1e-12 && Math.abs(inner-i)<1e-12,'pulso de movimiento Java/JS');
+    assert.equal(Math.round(edge*p.GAIN_UNITS) | (Math.round(inner*p.GAIN_UNITS)<<16),packed,'UV2 del pulso Java/JS');
+  }
   const mesh=collect(input.geo, runtimeHidden(input.geo));
-  input.tests.map(({yaw, pitch, ambient, tint, bloom, mannequin, dusk, time}) => {
+  input.tests.map(({yaw, pitch, ambient, tint, bloom, mannequin, dusk, time, wake}) => {
     const frame=referenceFrame(input.size);
     const faces=mannequin ? [...mesh,...playerFaces()] : mesh;
-    const gain=dusk===undefined ? null : haloGains(input.nocturne,dusk,time);
+    const gain=dusk===undefined ? null : haloGains(input.nocturne,dusk,time,0,wake ? haloDemoWake(input.nocturne,time) : null);
     render(faces, yaw, pitch, 1, input.size, null, tint, ambient, frame, null, bloom, gain);
     return { frame, rgba: rendered() };
   });`, context, { filename: 'preview/app.js' });

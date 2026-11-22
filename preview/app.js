@@ -653,12 +653,30 @@ function smooth(lo, hi, x) {
 function haloDusk(p, light) {
   return 1-smooth(p.DARK_LEVEL,p.LIGHT_LEVEL,light);
 }
-function haloGains(p, dusk, seconds, seed=0) {
+// A seekable light demo. Reuse the three live filter rates, but feed a
+// known start/stop signal so scrubbing doesn't need to replay game ticks.
+function haloDemoWake(p, time, water=0) {
+  const rise=(rate,start)=>-Math.expm1(-rate*Math.max(0,time-start));
+  const speed=rate=>p.DEMO_SPEED*(rise(rate,p.DEMO_START)-rise(rate,p.DEMO_STOP));
+  const hem=speed(p.HEM_SPEED_RATE);
+  return [Math.abs(hem-speed(p.RIM_SPEED_RATE)),Math.abs(speed(p.SPEED_RATE)-hem),water];
+}
+function haloGains(p, dusk, seconds, seed=0, wake=null) {
   const phase=seconds/p.PERIOD+seed*p.SEED_SHIFT;
   const wave=t=>.5+.5*Math.cos(2*Math.PI*t);
   const edge=p.EDGE_BASE+p.EDGE_PULSE*wave(phase-p.EDGE_DELAY);
   const inner=p.INNER_BASE+p.INNER_PULSE*wave(phase);
-  return [p.DAY_GAIN+dusk*(edge-p.DAY_GAIN), p.DAY_GAIN+dusk*(inner-p.DAY_GAIN), p.EDGE_LO, p.EDGE_HI];
+  const gains=[p.DAY_GAIN+dusk*(edge-p.DAY_GAIN), p.DAY_GAIN+dusk*(inner-p.DAY_GAIN), p.EDGE_LO, p.EDGE_HI];
+  if (wake) {
+    const contrast=dusk*dusk*(1-p.WAKE_WATER_DAMPING*wake[2]);
+    const boost=(value,scale)=>{
+      const strength=Math.max(0,value-p.WAKE_DEAD_ZONE)*scale;
+      return p.WAKE_LIMIT*strength/(1+strength);
+    };
+    gains[0]+=contrast*boost(wake[0],p.EDGE_WAKE_SCALE);
+    gains[1]+=contrast*boost(wake[1],p.INNER_WAKE_SCALE);
+  }
+  return gains;
 }
 function render(faces, yaw, pitch, zoom, size, bounds, tint, ambient=1, frame=null, overlay=null, bloom=false, gains=null, comparison=null) {
   const view = mul(R('x', pitch), R('y', yaw));
@@ -895,7 +913,7 @@ function drawRuntimeParticles(seconds, size, stance, pix, depth) {
 
 let yaw=25, pitch=10, zoom=1.0, playing=true, t=0, elapsed=0;
 let lastFrame=null, dirty=true, hidden=null, frameBounds=null, gaitBounds=null;
-let showPlayer=true, showFx=false, referenceView=false;
+let showPlayer=true, showFx=false, referenceView=false, haloDemo=false;
 const stanceControl=document.getElementById('fitStance'), lookControl=document.getElementById('fitLook');
 const turnControl=document.getElementById('fitTurn'), fitValue=document.getElementById('fitValue');
 const stridePlayer=document.getElementById('stridePlayer'), strideFit=document.getElementById('strideFit');
@@ -906,6 +924,7 @@ const stateControl=document.getElementById('state');
 const wingMode=document.getElementById('wingMode'), wingFit=document.getElementById('wingFit');
 const fitReset=document.getElementById('fitReset'), fxControl=document.getElementById('l_particles');
 const glowControl=document.getElementById('l_glow'), haloControl=document.getElementById('l_halo');
+const wakeControl=document.getElementById('haloWake'), haloMoment=document.getElementById('haloMoment');
 const seek=document.getElementById('seek'), play=document.getElementById('play');
 const ambientControl=document.getElementById('ambient');
 const lightPresets=[['lightCave',.18],['lightTorch',.88],['lightDay',1]]
@@ -940,6 +959,9 @@ function refreshStrideControls() {
 }
 function refreshHaloControl() {
   haloControl.disabled=referenceView || !glowControl.checked;
+  haloMoment.disabled=referenceView;
+  haloMoment.setAttribute('aria-pressed', String(haloDemo && !referenceView));
+  wakeControl.disabled=haloControl.disabled || !haloControl.checked || !haloDemo;
 }
 function refreshSwayControls() {
   swayDemo.disabled=referenceView;
@@ -982,11 +1004,17 @@ function updateBounds() {
     for (const p of pts) for (let a=0;a<3;a++) { lo[a]=Math.min(lo[a],p[a]); hi[a]=Math.max(hi[a],p[a]); }
   gaitBounds=CORNERS.map(k=>k.map((v,i)=>v?hi[i]:lo[i]));
 }
+function viewDuration(clip) {
+  if (!referenceView && haloDemo) return NOCTURNE.DEMO_SECONDS;
+  if (!referenceView && swayDemo.checked) return SWAY.DEMO_SECONDS;
+  return clip.length;
+}
 function draw(now) {
   requestAnimationFrame(draw);
   const clip=CLIPS[motionState];
   const demo=!referenceView && swayDemo.checked;
-  const duration=demo ? SWAY.DEMO_SECONDS : clip.length;
+  const lightDemo=!referenceView && haloDemo;
+  const duration=viewDuration(clip);
   if (playing && lastFrame!==null) {
     const step=Math.min(.05,(now-lastFrame)/1000);
     t=(t+step)%duration; elapsed+=step; dirty=true;
@@ -999,7 +1027,7 @@ function draw(now) {
   // A synthetic stride has its own clock. Pausing freezes both it and the clip.
   const amplitude=+strideAmount.value;
   const gait=!referenceView && stridePlayer.checked ? strideGait(elapsed*(.8+.95*amplitude),amplitude) : null;
-  const clipTime=demo ? elapsed%clip.length : t;
+  const clipTime=demo || lightDemo ? elapsed%clip.length : t;
   const base=referenceView ? GEO : poseAt(GEO,clip,clipTime);
   const wingPose=referenceView ? null : WINGS[wingMode.value === 'folded' && stance ? 'crouched' : wingMode.value];
   const clearanceGait=strideFit.checked ? gait : null;
@@ -1034,7 +1062,8 @@ function draw(now) {
   const bloom=haloControl.checked&&!referenceView;
   // The slider stands in for local block/sky light. It snaps to the target
   // so a paused frame can be compared at identical pose and pulse phase.
-  const gains=bloom ? haloGains(NOCTURNE,haloDusk(NOCTURNE,15*(ambient-.18)/.82),elapsed) : null;
+  const wake=bloom && lightDemo && wakeControl.checked ? haloDemoWake(NOCTURNE,t) : null;
+  const gains=bloom ? haloGains(NOCTURNE,haloDusk(NOCTURNE,15*(ambient-.18)/.82),elapsed,0,wake) : null;
   render(faces,yaw,pitch,zoom,SIZE,gait ? gaitBounds : frameBounds,
          glowControl.checked&&!referenceView ? simulatedTint(clipTime,clip.length) : null,
          ambient, referenceView ? referenceFrame(SIZE) : null,
@@ -1107,15 +1136,34 @@ play.onclick=()=>setPlaying(!playing);
 seek.oninput=e=>{
   if (!CLIPS) return;
   setPlaying(false); setReference(false);
-  t=(swayDemo.checked ? SWAY.DEMO_SECONDS : CLIPS[motionState].length)*(+e.target.value)/1000;
+  t=viewDuration(CLIPS[motionState])*(+e.target.value)/1000;
   elapsed=t; dirty=true;
 };
 function setMotion(state) {
+  haloDemo=false;
   stateControl.value=motionState=state;
   stanceControl.checked=state==='animation.sneak';
   t=elapsed=0;
   setReference(false);
 }
+haloMoment.onclick=()=>{
+  if (!NOCTURNE) return;
+  if (haloDemo) {
+    haloDemo=false;
+    t=elapsed=0;
+    refreshHaloControl(); dirty=true;
+    return;
+  }
+  swayDemo.checked=false;
+  setMotion('animation.sprint');
+  haloDemo=haloControl.checked=glowControl.checked=wakeControl.checked=true;
+  setPlaying(false);
+  refreshHaloControl();
+  t=elapsed=NOCTURNE.DEMO_START+.20;
+  yaw=0; pitch=9;
+  ambientControl.value=.18;
+  ambientControl.oninput();
+};
 swayDemo.onchange=()=>{
   if (swayDemo.checked) setMotion('animation.moving');
   else t=elapsed=0;
@@ -1147,7 +1195,8 @@ zoomControl.oninput=e=>{ zoom=+e.target.value; dirty=true; };
 document.getElementById('l_player').onchange=e=>{ showPlayer=e.target.checked; dirty=true; };
 fxControl.onchange=e=>{ showFx=e.target.checked; dirty=true; };
 glowControl.onchange=()=>{ refreshHaloControl(); dirty=true; };
-haloControl.onchange=wipe.oninput=()=>{ dirty=true; };
+haloControl.onchange=()=>{ refreshHaloControl(); dirty=true; };
+wakeControl.onchange=wipe.oninput=()=>{ dirty=true; };
 ambientControl.oninput=()=>{
   for (const [button,value] of lightPresets)
     button.setAttribute('aria-pressed',String(+ambientControl.value===value));

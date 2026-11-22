@@ -66,7 +66,7 @@ def assets(geo, core):
     return Image.fromarray(halo)
 
 
-def samples(geo, albedo, core, halo, java_samples=None):
+def samples(geo, albedo, core, halo, java_samples=None, wake_classpath=None):
     # Check the *shipped* offline data first. Existing render/fit tests cover
     # the no-halo mode: A/B is a switch in the same software rasterizer.
     html = (P.ROOT/'docs/capa_v1170_visor.html').read_text()
@@ -84,6 +84,19 @@ def samples(geo, albedo, core, halo, java_samples=None):
         lo, hi = (int(g*p['GAIN_UNITS']+.5) for g in (edge, inner))
         assert (lo | (hi << 16)) == int(packed)
 
+    wake_rows = []
+    if wake_classpath:
+        route = [str(p[k]) for k in ('DEMO_START', 'DEMO_STOP', 'DEMO_SECONDS', 'DEMO_SPEED')]
+        run = subprocess.run(['java', '-cp', wake_classpath, 'com.capatest.client.CapeHaloWakeTest', '--samples', *route],
+                             cwd=P.ROOT, check=True, capture_output=True, text=True)
+        wake_rows = [list(map(float, line.split())) for line in run.stdout.splitlines()]
+        assert len(wake_rows) == 6*(40*p['DEMO_SECONDS'] + 1)
+        for t, water, dusk, entity, edge, inner, packed in wake_rows:
+            e, i, _, _ = N.gains(p, dusk, t, entity, N.demo_wake(p, t, water))
+            assert np.allclose((edge, inner), (e, i), atol=1e-12, rtol=0)
+            lo, hi = (int(g*p['GAIN_UNITS']+.5) for g in (e, i))
+            assert (lo | (hi << 16)) == int(packed)
+
     size = 360
     ref = R.viewer_camera()
     frame = (*ref['center'], size*R.SCALE/max(ref['cropSize']))
@@ -93,12 +106,17 @@ def samples(geo, albedo, core, halo, java_samples=None):
     tests = [dict(yaw=yaw, pitch=pitch, ambient=a, tint=(.932,.69,.91), mannequin=True,
                   bloom=enabled, dusk=N.darkness(p, 15*(a-.18)/.82), time=.61)
              for _,yaw,pitch,a in cases for enabled in (False,True)]
+    wake_cases = [('arranque', .18, p['DEMO_START']+.20), ('frenada', .18, p['DEMO_STOP']+.42),
+                  ('día', 1, p['DEMO_STOP']+.42), ('reposo', .18, p['DEMO_SECONDS'])]
+    tests += [dict(yaw=R.YAW, pitch=R.PITCH, ambient=a, tint=(.932,.69,.91), mannequin=True,
+                   bloom=True, dusk=N.darkness(p, 15*(a-.18)/.82), time=t, wake=enabled)
+              for _, a, t in wake_cases for enabled in (False, True)]
     rgb = np.asarray(halo)[..., 0]
     y, x = np.unravel_index(np.argmax(np.where(np.asarray(core)[..., 3] == 0, rgb, 0)), rgb.shape)
     encode = lambda im: base64.b64encode(im.convert('RGBA').tobytes()).decode()
     packet = dict(geo=geo, reference=ref, size=size, atlasSize=512, tests=tests,
                   probe=[x+.5,y+.5], albedo=encode(albedo), emission=encode(core), halo=encode(halo),
-                  nocturne=p, nocturneSamples=rows)
+                  nocturne=p, nocturneSamples=rows, wakeSamples=wake_rows)
     run = subprocess.run(['node','tools/check_viewer_raster.js'],cwd=P.ROOT,check=True,
                          input=json.dumps(packet),capture_output=True,text=True)
     rendered, energies = [], []
@@ -111,11 +129,12 @@ def samples(geo, albedo, core, halo, java_samples=None):
         # The A/B improvement is not a separate layer in the viewer; compare
         # both modes with an independent rasterization of the same depth test.
         player = [(o,s,c) for (o,s,_),c in zip(P.MANNEQUIN_BOXES, NEUTRAL_PALETTE, strict=True)]
+        wake = N.demo_wake(p, test['time']) if test.get('wake') else (0, 0, 0)
         py = P.render(geo, albedo, P.effective_hidden(geo), frame=frame, size=size,
                       bg=(18,14,26), emission=core, yaw=test['yaw'], pitch=test['pitch'],
                       ambient=test['ambient'], tint=test['tint'], mannequin=player,
                       bloom=halo if test['bloom'] else None,
-                      halo_gains=N.gains(p, test['dusk'], test['time']))
+                      halo_gains=N.gains(p, test['dusk'], test['time'], wake=wake))
         diff = np.abs(rgb - np.asarray(py))
         assert (diff <= 1).mean() > .997, (test, diff.mean())
         if not i % 2:
@@ -124,6 +143,15 @@ def samples(geo, albedo, core, halo, java_samples=None):
         delta = rgb - baseline
         assert delta.min() == 0, 'la luz de borde no debe oscurecer'
         assert not delta[(baseline == (18,14,26)).all(2)].any(), 'el halo salió del contorno'
+        if i//2 >= len(cases):
+            name = wake_cases[i//2 - len(cases)][0]
+            pixels = int((delta.max(2) >= 2).sum())
+            if name in ('día', 'reposo'):
+                assert not delta.any(), (name, pixels)
+            else:
+                assert pixels > 200, (name, pixels)
+            print(f'Pulso {name}: {pixels} píxeles cambian ≥2/255 a igual pose, sin extender la cobertura.')
+            continue
         pixels = int((delta.max(2) >= 8).sum())
         name = cases[i//2][0]
         energies.append(int(delta.sum()))
@@ -137,18 +165,21 @@ def samples(geo, albedo, core, halo, java_samples=None):
           'La mitad tapada no cambia en ninguno de los dos órdenes de dibujo.')
     if rows:
         print(f'{len(rows)} muestras de exposición, pulso y UV2 coinciden en Java/JS/Python.')
+    if wake_rows:
+        print(f'{len(wake_rows)} muestras de arranque/frenada, luz y agua coinciden en Java/JS/Python, incluso antes de cuantizar.')
 
 
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument('--nocturne-samples', type=Path, help='muestras TSV de CapeNocturneTest --samples')
+    cli.add_argument('--wake-classpath', help='classpath de CapeHaloWakeTest para cotejar el pulso de velocidad')
     args = cli.parse_args()
     preservation(changed=SPARKS)
     geo = P.load(P.ARMOR_GEO)
     with Image.open(P.ARMOR_TEX) as albedo, Image.open(B.CORE) as core:
         assert np.all(np.asarray(albedo)[..., 3] == 255)
         halo = assets(geo, core)
-        samples(geo, albedo, core, halo, args.nocturne_samples)
+        samples(geo, albedo, core, halo, args.nocturne_samples, args.wake_classpath)
 
 
 if __name__ == '__main__':

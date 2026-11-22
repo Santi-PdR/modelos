@@ -68,7 +68,15 @@ details{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}summar
       <label for="ambient">Luz ambiente</label><input type="range" id="ambient" min="0.18" max="1" step="0.02" value="0.38">
       <button id="lightCave" type="button" aria-pressed="false">Cueva</button><button id="lightTorch" type="button" aria-pressed="false">Antorcha</button><button id="lightDay" type="button" aria-pressed="false">Día</button>
     </div>
-    <p class="muted">Pausa en «Cueva» y alterna «Halo suave» para ver el mismo fotograma con o sin el halo. Al reproducir, el borde violeta pulsa con un ligero retardo.</p>
+    <p class="muted">Pausa en «Cueva» y alterna «Halo suave» para ver el mismo fotograma con o sin el halo.</p>
+    <details>
+      <summary>Halo al arrancar y frenar · A/B</summary>
+      <div class="controls">
+        <button id="haloMoment" type="button" aria-pressed="false">Simular arranque y frenada</button>
+        <label><input type="checkbox" id="haloWake" checked disabled> Pulso de movimiento</label>
+      </div>
+      <p class="muted">La demo pausa poco después del arranque. Alterna «Pulso de movimiento» para comparar con el halo de la .39 a la misma luz y en la misma pose. Reproduce o usa la barra de tiempo para ver el retardo del borde y la frenada. El visor simula la velocidad del portador sólo para el halo; el paño sigue su clip.</p>
+    </details>
     <details>
       <summary>Ajuste al portador</summary>
       <div class="controls fit">

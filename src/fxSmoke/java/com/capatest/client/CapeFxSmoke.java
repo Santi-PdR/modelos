@@ -342,6 +342,8 @@ public final class CapeFxSmoke {
                     }
                     if (!game.level.getBlockState(pane).is(Blocks.GLASS_PANE)) return;
                     checkLightHandoff(game);
+                    var pulse = CapeHaloWakeProbe.verify(game, mantle(), shots(game));
+                    checkHaloWakeBatch(game, pulse);
                     CapeFrameGapProbe.verify(game, mantle(), shots(game));
                     note("pausa de render: punta y UV2 coinciden con el control continuo en ambos cambios; repetición y corte verificados");
                     testFlight(game);
@@ -1007,7 +1009,46 @@ public final class CapeFxSmoke {
         // An actual NEW_ENTITY upload and the installed RenderType, not a
         // shader test that binds the attributes in its own order. Mix two
         // payloads in one batch and test the edge and lip independently.
-        TextureTarget target = new TextureTarget(96, 16, true, Minecraft.ON_OSX);
+        int edge = new CapeNocturne.Gains(1.5, .5).packed();
+        int inner = new CapeNocturne.Gains(.5, 1.5).packed();
+        int[] pixels = readHaloBatch(game, new HaloTexel(251, 2, edge), new HaloTexel(251, 2, inner),
+                new HaloTexel(259, 11, edge), new HaloTexel(259, 11, inner),
+                new HaloTexel(259, 11, inner), new HaloTexel(0, 0, edge));
+        int[] red = {37, 27, 79, 193, 22, 22};
+        for (int i = 0; i < red.length; i++) {
+            int rgba = pixels[i];
+            check(Math.abs((rgba & 255) - red[i]) <= 1 && (rgba >>> 24) == 128,
+                    "UV2/alpha/depth sample " + i + ": " + Integer.toHexString(rgba));
+        }
+        note("NEW_ENTITY en GPU: dos intensidades UV2 en un lote, borde/interior, oclusión y alfa intacto");
+    }
+
+    private static void checkHaloWakeBatch(Minecraft game, int[] gains) throws IOException {
+        // The same texel/pose before and during the wake, using UV2 sampled
+        // from an actual equipped render and the .39 gain at the same phase.
+        int[] pixels = readHaloBatch(game, new HaloTexel(259, 11, gains[0]), new HaloTexel(259, 11, gains[1]),
+                new HaloTexel(251, 2, gains[2]), new HaloTexel(251, 2, gains[3]),
+                new HaloTexel(251, 2, gains[3]), new HaloTexel(0, 0, gains[1]));
+        int lip = (pixels[1] & 255) - (pixels[0] & 255), edge = (pixels[3] & 255) - (pixels[2] & 255);
+        check(lip >= 20 && edge >= 2, "motion wake not visible in the halo shader: " + lip + "/" + edge);
+        check(pixels[4] == 0x801c1016 && pixels[5] == pixels[4], "motion halo crossed the occluder or matte UV");
+        StringBuilder rows = new StringBuilder("muestra\tr\tg\tb\ta\n");
+        String[] labels = {"interior-base", "interior-arranque", "borde-base", "borde-frenada", "ocluido", "mate"};
+        for (int i = 0; i < pixels.length; ++i) {
+            int rgba = pixels[i];
+            check((rgba >>> 24) == 128, "motion halo changed destination alpha");
+            rows.append(labels[i]).append('\t').append(rgba & 255).append('\t').append((rgba >>> 8) & 255)
+                    .append('\t').append((rgba >>> 16) & 255).append("\t128\n");
+        }
+        Files.writeString(shots(game).resolve("pulso-halo-gpu.tsv"), rows);
+        note("pulso del halo: interior +" + lip + "/255 al arrancar, borde +" + edge
+                + "/255 al frenar en texels de prueba; UV2 de la malla, mismo alfa y oclusión");
+    }
+
+    private record HaloTexel(int x, int y, int light) {}
+
+    private static int[] readHaloBatch(Minecraft game, HaloTexel... texels) {
+        TextureTarget target = new TextureTarget(16*texels.length, 16, true, Minecraft.ON_OSX);
         PoseStack view = RenderSystem.getModelViewStack();
         float start = RenderSystem.getShaderFogStart(), end = RenderSystem.getShaderFogEnd();
         float[] color = RenderSystem.getShaderColor().clone();
@@ -1029,30 +1070,20 @@ public final class CapeFxSmoke {
             RenderSystem.clear(org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
             RenderSystem.disableScissor();
             RenderSystem.clearDepth(1);
-            int edge = new CapeNocturne.Gains(1.5, .5).packed();
-            int inner = new CapeNocturne.Gains(.5, 1.5).packed();
             MultiBufferSource.BufferSource buffers = MultiBufferSource.immediate(new BufferBuilder(1024));
             var type = CapeBloom.wornLight(CapeBloom.Mode.HALO);
             var vertices = buffers.getBuffer(type);
-            probeQuad(vertices, 0, 251, 2, edge);
-            probeQuad(vertices, 1, 251, 2, inner);
-            probeQuad(vertices, 2, 259, 11, edge);
-            probeQuad(vertices, 3, 259, 11, inner);
-            probeQuad(vertices, 4, 259, 11, inner); // behind the depth-only occluder
-            probeQuad(vertices, 5, 0, 0, edge);      // matte UV
+            for (int i = 0; i < texels.length; ++i) probeQuad(vertices, i, texels.length, texels[i]);
             buffers.endBatch(type);
-            int[] red = {37, 27, 79, 193, 22, 22};
             // Screenshot.takeScreenshot forces alpha to 255. Read the same
             // attachment here without that conversion to test the blend mask.
+            int[] pixels = new int[texels.length];
             try (NativeImage image = new NativeImage(target.width, target.height, false)) {
                 RenderSystem.bindTexture(target.getColorTextureId());
                 image.downloadTexture(0, false);
-                for (int i = 0; i < red.length; i++) {
-                    int rgba = image.getPixelRGBA(i * 16 + 8, 8);
-                    check(Math.abs((rgba & 255) - red[i]) <= 1 && (rgba >>> 24) == 128,
-                            "UV2/alpha/depth sample " + i + ": " + Integer.toHexString(rgba));
-                }
+                for (int i = 0; i < pixels.length; ++i) pixels[i] = image.getPixelRGBA(i * 16 + 8, 8);
             }
+            return pixels;
         } finally {
             RenderSystem.disableScissor();
             RenderSystem.clearDepth(1);
@@ -1065,15 +1096,14 @@ public final class CapeFxSmoke {
             view.popPose();
             RenderSystem.applyModelViewMatrix();
         }
-        note("NEW_ENTITY en GPU: dos intensidades UV2 en un lote, borde/interior, oclusión y alfa intacto");
     }
 
-    private static void probeQuad(VertexConsumer vertices, int col, int x, int y, int light) {
-        float left = col/3F - 1, right = (col+1)/3F - 1;
-        float u = (x+.5F)/512, v = (y+.5F)/512;
+    private static void probeQuad(VertexConsumer vertices, int col, int columns, HaloTexel texel) {
+        float left = 2F*col/columns - 1, right = 2F*(col+1)/columns - 1;
+        float u = (texel.x+.5F)/512, v = (texel.y+.5F)/512;
         for (int i = 0; i < 4; i++)
             vertices.vertex(i < 2 ? left : right, i == 0 || i == 3 ? -1 : 1, 0,
-                    1, 1, 1, 1, u, v, OverlayTexture.NO_OVERLAY, light, 0, 0, 1);
+                    1, 1, 1, 1, u, v, OverlayTexture.NO_OVERLAY, texel.light, 0, 0, 1);
     }
 
     private static ICurioStacksHandler backOf(net.minecraft.world.entity.LivingEntity player) {
