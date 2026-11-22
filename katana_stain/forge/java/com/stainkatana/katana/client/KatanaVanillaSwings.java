@@ -25,12 +25,15 @@ public final class KatanaVanillaSwings {
     private static final Map<UUID, Integer> alternates = new HashMap<>();
     private static final Map<UUID, Integer> lastAttackTick = new HashMap<>();
     private static ClientLevel lastLevel;
+    private static int cueCount;
     private KatanaVanillaSwings() { }
+    /** Diagnostic count of vanilla swing cues, independent of animation preference. */
+    public static int cueCount() { return cueCount; }
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != lastLevel) { lastLevel = mc.level; lastSwing.clear(); alternates.clear(); lastAttackTick.clear(); }
-        if (mc.level == null || mc.isPaused() || !KatanaClientConfig.VANILLA_SWINGS.get() || ModList.get().isLoaded("bettercombat")) return;
+        if (mc.level == null || mc.isPaused() || ModList.get().isLoaded("bettercombat")) return;
         Set<UUID> present = new HashSet<>();
         for (AbstractClientPlayer player : mc.level.players()) {
             UUID id = player.getUUID(); present.add(id);
@@ -51,11 +54,12 @@ public final class KatanaVanillaSwings {
                             player.getYRot(), step % 2 == 0 ? com.stainkatana.katana.KatanaVisualStyle.SWING
                                     : com.stainkatana.katana.KatanaVisualStyle.ULTIMATE_CROSS,
                             player.getMainArm() == net.minecraft.world.entity.HumanoidArm.LEFT);
+                    cueCount++;
                     mc.level.playLocalSound(player.getX(), player.getY(), player.getZ(),
                             net.minecraft.sounds.SoundEvents.PLAYER_ATTACK_SWEEP,
                             net.minecraft.sounds.SoundSource.PLAYERS, .35F, 1.25F, false);
                 }
-                KatanaAnimations.swing(player, step);
+                if (KatanaClientConfig.VANILLA_SWINGS.get()) KatanaAnimations.swing(player, step);
             }
             lastSwing.put(id, current);
         }

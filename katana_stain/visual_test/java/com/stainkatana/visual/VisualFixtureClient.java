@@ -19,6 +19,7 @@ public final class VisualFixtureClient {
     private static int tick;
     private static String capture;
     private static net.minecraft.world.item.ItemStack savedStack;
+    private static int vanillaCueBeforeDisabled;
     private static float comboHealth;
     private static float firstComboDamage;
     private static java.util.UUID dragonId, finisherTarget;
@@ -99,6 +100,25 @@ public final class VisualFixtureClient {
                     if (com.stainkatana.katana.client.KatanaBetterCombatFx.cueCount() == 0)
                         throw new IllegalStateException("Better Combat attack did not trigger a katana cue");
                     System.out.println("STAIN_BC_ATTACK_FX_VERIFIED");
+                }
+            }
+            // Animation preference must not silently disable the fallback
+            // swing sound and particles. Better Combat owns its own cues.
+            case 208 -> {
+                if (!net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) {
+                    vanillaCueBeforeDisabled = com.stainkatana.katana.client.KatanaVanillaSwings.cueCount();
+                    com.stainkatana.katana.KatanaClientConfig.VANILLA_SWINGS.set(false);
+                    mc.player.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                }
+            }
+            case 214 -> {
+                if (!net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) {
+                    if (com.stainkatana.katana.client.KatanaVanillaSwings.cueCount() <= vanillaCueBeforeDisabled)
+                        throw new IllegalStateException("Disabling vanilla animation also suppressed its swing cue");
+                    if (com.stainkatana.katana.client.KatanaAnimations.isPlaying(mc.player))
+                        throw new IllegalStateException("Vanilla swing animation ignored disabled preference");
+                    com.stainkatana.katana.KatanaClientConfig.VANILLA_SWINGS.set(true);
+                    System.out.println("STAIN_VANILLA_CUE_WITHOUT_ANIMATION_VERIFIED");
                 }
             }
             case 220 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(2));
