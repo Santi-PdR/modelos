@@ -58,10 +58,11 @@ public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
                 poseStack.translate(0, -1.2 / 16.0, 0);
             if (!FIRST_PERSON_ARM.get() && (context == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND
                     || context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND)) {
-                // Both hands use the same local turn: opposite signs made the
-                // mirrored guard point sideways instead of raising the blade.
+                // Keep the original mirrored third-person transform while the
+                // rejected 0.20 guard and pose are reworked.
                 poseStack.translate(.5, .5, .5);
-                poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(-45));
+                poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(
+                        context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND ? 45 : -45));
                 poseStack.translate(-.5, -.5, -.5);
             }
             super.renderByItem(stack, context, poseStack, buffers, light, overlay);

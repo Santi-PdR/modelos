@@ -145,17 +145,12 @@ public final class KatanaAnimations {
                     return java.util.Optional.empty();
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                         dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
-                        new dev.kosmx.playerAnim.core.util.Vec3f(
-                                player.getMainArm() == HumanoidArm.LEFT ? 12 : 0, 1, -5)));
+                        new dev.kosmx.playerAnim.core.util.Vec3f(0, 1, 5)));
             }) {
                 @Override protected float getFadeIn(float delta) { return 1F; }
             });
         }
-        // The first cinematic strike has a ten-tick wind-up; subsequent cuts
-        // are triggered only six ticks ahead. Keep the opening's downstroke at
-        // the server impact instead of finishing it several ticks early.
-        float speed = ability == 0 ? 3F : ability == 1 ? 1F : ability == 2 ? .7F : 1.4F;
-        timedClip.addModifierBefore(new SpeedModifier(speed));
+        timedClip.addModifierBefore(new SpeedModifier(ability == 0 ? 3F : (ability == 1 ? 1F : 1.4F)));
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
     }
 

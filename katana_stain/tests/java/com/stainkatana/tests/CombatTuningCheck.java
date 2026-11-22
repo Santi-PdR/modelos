@@ -52,6 +52,21 @@ public final class CombatTuningCheck {
         if (CombatTuning.backstabDamage(Float.NaN, 20) != 0
                 || CombatTuning.backstabDamage(20, Float.POSITIVE_INFINITY) != 0)
             throw new AssertionError("backstab nonfinite input");
+        for (float initial : new float[]{1F, 20F, 100F, 1000F}) {
+            float health = initial;
+            for (int i = 0; i < CombatTuning.ultimateStrikeCount(); i++) {
+                float damage = CombatTuning.ultimateStrikeDamage(30F, health, i);
+                if (!(damage > 0F) || !Float.isFinite(damage))
+                    throw new AssertionError("C strike did not have positive damage: " + initial + " strike=" + i);
+                if (i < CombatTuning.ultimateStrikeCount() - 1 && damage >= health)
+                    throw new AssertionError("C killed before final strike");
+                health = Math.max(0F, health - damage);
+            }
+        }
+        if (CombatTuning.ultimateStrikeDamage(30F, Float.NaN, 0) != 0F
+                || CombatTuning.ultimateStrikeDamage(30F, 20F, -1) != 0F
+                || CombatTuning.ultimateStrikeDamage(30F, 20F, 10) != 0F)
+            throw new AssertionError("C strike damage input validation");
         System.out.println("OK: cooldowns, PvP duration and damage bounds");
     }
 }

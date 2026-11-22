@@ -40,7 +40,6 @@ public final class VisualFixtureClient {
             System.out.println("STAIN_FIXTURE_BETTERCOMBAT=" + net.minecraftforge.fml.ModList.get().isLoaded("bettercombat"));
             System.out.println("STAIN_FIXTURE_CLIP=" + (mc.getResourceManager().getResource(id).isPresent() ? "bettercombat" : "fallback"));
             verifyAbilitySoundSelection(mc);
-            verifyBetterCombatGuard(mc);
         }
         switch (tick) {
             case 5 -> {
@@ -536,6 +535,16 @@ public final class VisualFixtureClient {
             case 1460 -> {
                 com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), -1);
                 mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
+                mc.getSingleplayerServer().execute(() -> {
+                    var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                    VisualFixtureServer.startWeakSequence(player);
+                });
+            }
+            case 1690 -> mc.getSingleplayerServer().execute(VisualFixtureServer::verifyWeakSequence);
+            case 1710 -> {
+                if (!VisualFixtureServer.weakSequenceVerified)
+                    throw new IllegalStateException("Low-health C sequence was not verified");
+                mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Y.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Z.set(0.0);
@@ -544,23 +553,6 @@ public final class VisualFixtureClient {
             default -> { }
         }
     }
-    /** Confirm BC actually resolves this item's own guard, not the inherited preset. */
-    private static void verifyBetterCombatGuard(Minecraft mc) {
-        if (!net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) return;
-        try {
-            var registry = Class.forName("net.bettercombat.logic.WeaponRegistry");
-            var attributes = registry.getMethod("getAttributes", net.minecraft.world.item.ItemStack.class)
-                    .invoke(null, mc.player.getMainHandItem());
-            if (attributes == null || !"stainkatana:stain_guard".equals(attributes.getClass().getMethod("pose").invoke(attributes)))
-                throw new IllegalStateException("Better Combat did not select the Stain guard");
-            var animations = (java.util.Map<?, ?>) Class.forName("net.bettercombat.client.animation.AnimationRegistry")
-                    .getField("animations").get(null);
-            if (!animations.containsKey("stainkatana:stain_guard"))
-                throw new IllegalStateException("Better Combat did not load the Stain guard");
-            System.out.println("STAIN_BC_GUARD_VERIFIED");
-        } catch (ReflectiveOperationException e) { throw new IllegalStateException("Cannot inspect Better Combat guard", e); }
-    }
-
     /** Verify actual registry selection, not whether an audio device produced sound. */
     private static void verifyAbilitySoundSelection(Minecraft mc) {
         boolean betterCombat = net.minecraftforge.fml.ModList.get().isLoaded("bettercombat");
@@ -627,10 +619,6 @@ public final class VisualFixtureClient {
                 animation = modifier.getAnimation();
             int clipTick = animation instanceof dev.kosmx.playerAnim.api.layered.KeyframeAnimationPlayer player
                     ? player.getTick() : -1;
-            // The local C opening is sampled ten game ticks after playback.
-            // Its animated downstroke should still be near the impact pose.
-            if (name.equals("93_c_cinematic_impact.png") && (clipTick < 6 || clipTick > 8))
-                throw new IllegalStateException("C opening missed impact pose, clip tick=" + clipTick);
             String row = name + "\t" + tick + "\t" + clipTick + "\t"
                     + mc.player.getMainArm() + "\t" + mc.options.getCameraType() + "\n";
             java.nio.file.Files.writeString(new File(directory, "capture-timing.tsv").toPath(), row,

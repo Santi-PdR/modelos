@@ -18,6 +18,14 @@ public final class CombatTuning {
         if (!Float.isFinite(health) || !Float.isFinite(maximumHealth)) return 0;
         return Math.max(0F, Math.min(60F, Math.min(maximumHealth * .90F, health - 1F)));
     }
+    /** Distribute remaining health over remaining cuts without killing before the finale.
+     * This limits raw damage only; armor, absorption, immunity and other mods remain authoritative. */
+    public static float ultimateStrikeDamage(float baseDamage, float health, int index) {
+        if (!Float.isFinite(baseDamage) || !Float.isFinite(health) || baseDamage <= 0F || health <= 0F
+                || index < 0 || index >= ultimateStrikeCount()) return 0F;
+        int remaining = ultimateStrikeCount() - index;
+        return remaining == 1 ? baseDamage : Math.min(baseDamage, health / remaining);
+    }
     public static float damage(double attackDamage, boolean ultimate) {
         if (!Double.isFinite(attackDamage)) attackDamage = 0;
         return (float) Math.max(8, Math.min(ultimate ? 36 : 26,

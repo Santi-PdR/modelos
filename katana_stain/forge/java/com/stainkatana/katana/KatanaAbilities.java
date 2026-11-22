@@ -413,9 +413,11 @@ public final class KatanaAbilities {
         if (cast.cinematicStroke < CombatTuning.ultimateStrikeCount()
                 && elapsed >= CombatTuning.ultimateStrikeTick(cast.cinematicStroke)) {
             int index = cast.cinematicStroke++;
-            float damage = CombatTuning.damage(cast.attackDamage, true);
-            // Reserve the kill for the last cut, but never protect the mob from other damage sources.
-            if (index < CombatTuning.ultimateStrikeCount() - 1) damage = Math.min(damage, Math.max(0, mob.getHealth() - 1));
+            // Reserve health across the remaining cuts instead of leaving one
+            // HP after the first blow and silently dealing zero on later cuts.
+            // Other damage sources and target defenses remain unaffected.
+            float damage = CombatTuning.ultimateStrikeDamage(
+                    CombatTuning.damage(cast.attackDamage, true), mob.getHealth(), index);
             // Vanilla damage immunity can otherwise swallow consecutive cinematic cuts.
             // Clear it only immediately before a scheduled hit, never every tick.
             if (damage > 0) mob.invulnerableTime = 0;

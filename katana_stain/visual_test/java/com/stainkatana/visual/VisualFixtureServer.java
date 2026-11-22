@@ -24,6 +24,41 @@ public final class VisualFixtureServer {
     private static net.minecraft.world.phys.Vec3 casterPosition;
     private static boolean casterMoved, casterLockVerified;
     private static boolean xSoundVerified;
+    private static java.util.UUID weakTarget;
+    private static int weakDamageEvents;
+    public static volatile boolean weakSequenceVerified;
+
+    /** Separate 20-health control: all ten cuts must deal positive damage. */
+    public static void startWeakSequence(ServerPlayer player) {
+        var level = player.serverLevel();
+        level.getEntitiesOfClass(Zombie.class, player.getBoundingBox().inflate(40)).forEach(zombie -> zombie.discard());
+        var victim = EntityType.HUSK.create(level);
+        if (victim == null) throw new IllegalStateException("Cannot create low-health test target");
+        victim.setNoAi(true); victim.setPersistenceRequired(); victim.setHealth(20F);
+        victim.moveTo(player.getX(), player.getY(), player.getZ() + 3, 180, 0);
+        level.addFreshEntity(victim);
+        weakTarget = victim.getUUID(); weakDamageEvents = 0; weakSequenceVerified = false;
+        player.setYRot(0); player.setXRot(0);
+        var state = player.getPersistentData().getCompound("StainKatanaAbilities");
+        state.putLong("next2", 0); state.remove("last");
+        player.getPersistentData().put("StainKatanaAbilities", state);
+        com.stainkatana.katana.KatanaAbilities.activate(player, 2);
+        if (state.getLong("next2") == 0) throw new IllegalStateException("Low-health C did not activate");
+    }
+    @SubscribeEvent public static void weakDamage(net.minecraftforge.event.entity.living.LivingDamageEvent event) {
+        if (weakTarget == null || !weakTarget.equals(event.getEntity().getUUID()) || event.getEntity().level().isClientSide) return;
+        if (event.getAmount() <= 0F || !(event.getSource().getEntity() instanceof ServerPlayer))
+            throw new IllegalStateException("Invalid weak-target C damage");
+        weakDamageEvents++;
+        if (weakDamageEvents > com.stainkatana.katana.CombatTuning.ultimateStrikeCount())
+            throw new IllegalStateException("Too many weak-target strikes");
+    }
+    public static void verifyWeakSequence() {
+        if (weakDamageEvents != com.stainkatana.katana.CombatTuning.ultimateStrikeCount())
+            throw new IllegalStateException("Low-health target did not receive ten damaging cuts: " + weakDamageEvents);
+        weakSequenceVerified = true;
+        System.out.println("STAIN_WEAK_C_TEN_DAMAGE_EVENTS_VERIFIED");
+    }
 
     @SubscribeEvent public static void observeAbilitySound(net.minecraftforge.event.PlayLevelSoundEvent.AtPosition event) {
         if (xSoundVerified || !(event.getLevel() instanceof ServerLevel) || event.getSound() == null
@@ -66,7 +101,8 @@ public final class VisualFixtureServer {
             boundSeen = true; boundTicks++;
         } else if (boundSeen) {
             if (boundTicks < 180) throw new IllegalStateException("Ultimate ended early, bound ticks=" + boundTicks);
-            if (ultimateHealthDrops < 3) throw new IllegalStateException("Ultimate caused too few separate health drops: " + ultimateHealthDrops);
+            if (ultimateHealthDrops != com.stainkatana.katana.CombatTuning.ultimateStrikeCount())
+                throw new IllegalStateException("Ultimate did not cause ten separate health drops: " + ultimateHealthDrops);
             boundChecked = true;
             System.out.println("STAIN_ULTIMATE_VERIFIED ticks=" + boundTicks + " healthDrops=" + ultimateHealthDrops);
         }
