@@ -997,6 +997,7 @@ jobs:
           OPENBLAS_NUM_THREADS=1 python3 tools/verify_cape_placement.py --assets-only --jar "build/libs/capatest-$ver.jar"
 
       - name: Upload verified jar as artifact
+        id: verified-jar
         uses: actions/upload-artifact@v4
         with:
           name: capatest-jar
@@ -1114,9 +1115,10 @@ jobs:
       - name: Probar FX y equipo en Forge (opcional)
         id: fx-smoke
         if: >-
-          (github.event_name == 'push' && (contains(github.event.head_commit.message, '[probar-halo]') ||
+          !cancelled() && steps.verified-jar.outcome == 'success' &&
+          ((github.event_name == 'push' && (contains(github.event.head_commit.message, '[probar-halo]') ||
           contains(github.event.head_commit.message, '[publicar]'))) ||
-          (github.event_name == 'workflow_dispatch' && (inputs.probar_halo == true || inputs.publicar == true))
+          (github.event_name == 'workflow_dispatch' && (inputs.probar_halo == true || inputs.publicar == true)))
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
           GALLIUM_DRIVER: llvmpipe

@@ -152,12 +152,12 @@ def parity(geo, java_samples=None):
             aim = [body,pitch,yaw,wings,arm,arm,slim]
             frame = P.matrices(F.wearer_pose(geo,body,pitch,yaw,elytra=wings,arm_back=arm,placed=True,slim=slim))
             for name in base:
-                if wings or (name != 'worn_hood' and not F.hood_moves(name)):
+                if wings or (not name.startswith('worn_hood') and F.nape_piece(name) is None):
                     np.testing.assert_array_equal(frame[name],base[name],err_msg=f'{name}: {aim}')
             cases.append(aim)
             expected.append([frame[n].ravel() for n in parts])
     np.testing.assert_allclose(viewer(geo=geo,torsoMatrices=cases,parts=parts),expected,atol=5e-9,rtol=0)
-    print(f'{len(cases)} poses coinciden con el visor; la mirada sólo mueve el borde alto de la capucha.'
+    print(f'{len(cases)} poses coinciden con el visor; la mirada no mueve la montura, las placas ni las raíces.'
           + (' Perfil fijo de Java verificado.' if java_samples else ''),flush=True)
 
 
@@ -177,7 +177,7 @@ def hood_parity(geo, java_samples=None):
         model = P.matrices(F.fixed_wearer_pose(geo,stance,elytra=wings,slim=True,hood=pose))
         fixed = P.matrices(F.fixed_wearer_pose(geo,stance,elytra=wings,slim=True))
         for n in model:
-            if n != 'worn_hood' and (wings or not F.hood_moves(n)):
+            if not n.startswith('worn_hood') and (wings or not F.hood_moves(n)):
                 np.testing.assert_array_equal(model[n],fixed[n],err_msg=f'la capucha movió {n}')
         expected.append([*pose, *[v for n in parts for v in model[n].ravel()]])
     np.testing.assert_allclose(viewer(geo=geo,hoodSamples=case,parts=parts),expected,atol=5e-9,rtol=0)
