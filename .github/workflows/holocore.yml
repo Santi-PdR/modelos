@@ -366,7 +366,7 @@ jobs:
           enum = animatable.split('enum Mood {', 1)[1].split('}', 1)[0]
           moods = re.findall(r'^\s*([A-Z][A-Z_]*)\s*,?$', enum, re.M)
           esperados = ['NEUTRAL', 'RESONANT', 'STORM', 'WOUNDED', 'DARK', 'RAIN', 'NIGHT',
-                       'SUBMERGED']
+                       'SUBMERGED', 'PORTAL']
           assert moods == esperados, moods
           assert 'public Mood mood()' in animatable, 'falta el accessor de Mood'
           assert 'isThundering()' in animatable, 'la tormenta no alimenta ningun estado'
@@ -380,6 +380,18 @@ jobs:
           assert 'isEyeInFluid(FluidTags.WATER)' in animatable, 'el agua no es un estado'
           assert 'import net.minecraft.tags.FluidTags;' in animatable, \
               'falta el import de FluidTags para el estado sumergido'
+          # El portal se escanea cacheado y con posicion reutilizable: 486 bloques
+          # por tick y portador no lo paga nadie, y crear un BlockPos por bloque
+          # escaneado seria asignar objetos en el camino de tick.
+          assert 'Blocks.NETHER_PORTAL' in animatable, 'el portal del Nether no es un estado'
+          assert 'Blocks.END_PORTAL' in animatable and 'Blocks.END_GATEWAY' in animatable, \
+              'faltan el portal del End y la puerta de salida'
+          assert 'new BlockPos.MutableBlockPos()' in animatable, \
+              'el escaneo de portal asigna una posicion por bloque'
+          assert 'PORTAL_SCAN_TICKS' in animatable and 'PORTAL_RADIUS' in animatable, \
+              'el escaneo de portal no esta cacheado'
+          assert 'if (portalNear(player)) {' in animatable, \
+              'el escaneo de portal existe pero no alimenta ningun estado'
           assert 'case NIGHT ->' in animatable, 'el estado de noche no tiene velocidad'
           assert 'anotherBearerNear(' in animatable, 'no hay deteccion de otro portador cerca'
           assert 'RelicServer.findRelic(other).isPresent()' in animatable, \
@@ -407,6 +419,8 @@ jobs:
           assert 'private static float fract(' in aura, 'las burbujas no tienen ciclo'
           assert 'BUBBLE_COUNT' in aura and 'BUBBLE_SPEED' in aura, \
               'faltan las constantes de las burbujas'
+          assert 'boolean portal = mood == RelicAnimatable.Mood.PORTAL' in aura, \
+              'el portal no cambia las chispas'
 
           assert 'message.holocore.mood' in comandos, '/relic info no dice el estado de brillo'
           assert 'Commands.literal("mood")' in comandos, 'falta /relic mood'
@@ -479,7 +493,7 @@ jobs:
               assert 'key.holocore.mood' in lang, f'{idioma} sin el nombre de la tecla M'
               assert 'message.holocore.mood_list' in lang, f'{idioma} sin la lista de estados'
               for mood in ('wounded', 'storm', 'resonant', 'dark', 'rain',
-                           'neutral', 'night', 'submerged'):
+                           'neutral', 'night', 'submerged', 'portal'):
                   clave = f'message.holocore.state.{mood}'
                   assert clave in lang, f'{idioma} sin {clave}'
 

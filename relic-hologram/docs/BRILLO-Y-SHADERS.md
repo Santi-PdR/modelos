@@ -237,6 +237,15 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.35, noveno estado: portal.** `PORTAL` es el único estado que mira **bloques** y no
+el cielo o el jugador: busca `NETHER_PORTAL`, `END_PORTAL` o `END_GATEWAY` en una caja de
+9×6×9 alrededor de los pies. Para que eso no cueste, el escaneo se hace cada 20 ticks y
+se guarda el resultado, y la posición es un `MutableBlockPos` de campo (un `BlockPos` por
+bloque serían 486 asignaciones por segundo y portador). En el shader solo cambia el
+`HoloTint` (0.96, el borde casi como en reposo: el violeta ya destaca solo), y en
+`RelicAura` las chispas giran 1.5× más rápido con el vaivén vertical ×1.8: estirarlas
+en vertical es lo que hace que se lean como el borde de un portal y no como una órbita.
+
 **1.0.34, ver los ocho estados de un tirón.** Sin tocar shaders: la tecla M cicla el
 estado forzado (`RelicAnimatable.cycleForcedMood`, la misma ronda que
 `/relic mood next`) y avisa por la barra de acción. Para comparar dos estados sin

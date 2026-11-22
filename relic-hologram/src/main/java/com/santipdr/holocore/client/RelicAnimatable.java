@@ -6,9 +6,12 @@ import com.santipdr.holocore.config.RelicConfig;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import software.bernie.geckolib.core.animatable.GeoAnimatable;
@@ -88,7 +91,13 @@ public final class RelicAnimatable implements GeoAnimatable {
          * El portador tiene los ojos dentro del agua: la reliquia se hunde en el
          * ritmo (velocidad 0.66), flota menos y cambia las chispas por burbujas.
          */
-        SUBMERGED
+        SUBMERGED,
+        /**
+         * Un portal (del Nether, del End o de salida) a menos de cuatro bloques: la
+         * reliquia se pone violeta y nerviosa. Se mira una vez por segundo, no en
+         * cada tick, y con una posicion reutilizable: esto corre por portador.
+         */
+        PORTAL
     }
 
     private final UUID wearer;
@@ -163,6 +172,14 @@ public final class RelicAnimatable implements GeoAnimatable {
     private double animSpeed = 1.0D;
     private int resonanceCooldown;
     private boolean resonanceNear;
+    /** Cada cuantos ticks se mira si hay un portal cerca: uno por segundo sobra. */
+    private static final int PORTAL_SCAN_TICKS = 20;
+    /** Radio (bloques) del escaneo de portal, a la altura de los pies y la cabeza. */
+    private static final int PORTAL_RADIUS = 4;
+    private int portalCooldown;
+    private boolean portalNear;
+    /** Posicion reutilizable del escaneo: crear una por bloque seria absurdo. */
+    private final BlockPos.MutableBlockPos scanPos = new BlockPos.MutableBlockPos();
 
     public RelicAnimatable(UUID wearer) {
         this.wearer = wearer;
@@ -485,6 +502,8 @@ public final class RelicAnimatable implements GeoAnimatable {
             case NIGHT -> 0.85D;
             // La mas lenta de todas: bajo el agua todo pesa.
             case SUBMERGED -> 0.66D;
+            // Un portal tira de la reliquia: es el estado mas nervioso.
+            case PORTAL -> 1.22D;
             case RESONANT -> 1.18D;
             case NEUTRAL -> 1.0D;
         };
@@ -509,6 +528,9 @@ public final class RelicAnimatable implements GeoAnimatable {
         if (player.isEyeInFluid(FluidTags.WATER)) {
             return Mood.SUBMERGED;
         }
+        if (portalNear(player)) {
+            return Mood.PORTAL;
+        }
         int bloque = player.level().getBrightness(LightLayer.BLOCK, player.blockPosition());
         if (bloque < DARK_LIGHT
                 && player.level().getBrightness(LightLayer.SKY, player.blockPosition()) < DARK_SKY) {
@@ -521,6 +543,34 @@ public final class RelicAnimatable implements GeoAnimatable {
             return Mood.NIGHT;
         }
         return this.resonanceNear ? Mood.RESONANT : Mood.NEUTRAL;
+    }
+
+    /**
+     * Portal a menos de cuatro bloques. Se mira una vez por segundo y se guarda:
+     * buscar 486 bloques por tick y por portador no lo paga nadie, y un portal no
+     * aparece ni desaparece de un tick a otro. La posicion es un campo reutilizable
+     * (`MutableBlockPos`) porque un `BlockPos` por bloque escaneado seria asignar
+     * 486 objetos por segundo y portador.
+     */
+    private boolean portalNear(Player player) {
+        if (this.portalCooldown-- > 0) {
+            return this.portalNear;
+        }
+        this.portalCooldown = PORTAL_SCAN_TICKS;
+        BlockPos base = player.blockPosition();
+        boolean found = false;
+        for (int dx = -PORTAL_RADIUS; dx <= PORTAL_RADIUS && !found; dx++) {
+            for (int dy = -2; dy <= 3 && !found; dy++) {
+                for (int dz = -PORTAL_RADIUS; dz <= PORTAL_RADIUS && !found; dz++) {
+                    this.scanPos.set(base.getX() + dx, base.getY() + dy, base.getZ() + dz);
+                    BlockState state = player.level().getBlockState(this.scanPos);
+                    found = state.is(Blocks.NETHER_PORTAL) || state.is(Blocks.END_PORTAL)
+                            || state.is(Blocks.END_GATEWAY);
+                }
+            }
+        }
+        this.portalNear = found;
+        return found;
     }
 
     /**

@@ -93,8 +93,8 @@ En el juego:
 | Ajustar cualquier clave | `/relic set` (lista) · `/relic set <clave> <valor>` |
 | Guardar los ajustes | `/relic save` |
 | Volver a los valores de fábrica | `/relic reset` · `/relic reset <clave>` (una sola) |
-| Ver o forzar el estado de brillo | `/relic mood` · `/relic mood <auto\|dark\|rain\|storm\|wounded\|resonant\|night\|submerged>` |
-| Recorrer los estados o ver la lista | `/relic mood next` (ronda, igual que la tecla M) · `/relic mood list` (los ocho, con el que manda marcado) |
+| Ver o forzar el estado de brillo | `/relic mood` · `/relic mood <auto\|dark\|rain\|storm\|wounded\|resonant\|night\|submerged\|portal>` |
+| Recorrer los estados o ver la lista | `/relic mood next` (ronda, igual que la tecla M) · `/relic mood list` (los nueve, con el que manda marcado) |
 | Ver la reliquia de cerca | `/relic preview` · `/relic preview <0.5–6>` (bloques) |
 | Medir el coste | `/relic stats` · `/relic stats reset` |
 
@@ -200,9 +200,9 @@ un borde más), y tanto el anillo como el aura cambian de color con el estado:
 | `idle_alert` | rojo | 1.05 | late como un aviso, gira al revés |
 | `idle_dormant` | gris azulado | 0.35 | no sale |
 
-Y por encima del ciclo de animación hay **ocho estados de brillo** que solo cambian
+Y por encima del ciclo de animación hay **nueve estados de brillo** que solo cambian
 la luz, no la animación (`RelicAnimatable.Mood`, desde 1.0.29). Se aplican cuando
-mandan: herido > tormenta > agua > oscuridad > lluvia > noche > resonancia.
+mandan: herido > tormenta > agua > portal > oscuridad > lluvia > noche > resonancia.
 
 | Estado de brillo | Cuándo | Qué hace |
 |---|---|---|
@@ -213,6 +213,7 @@ mandan: herido > tormenta > agua > oscuridad > lluvia > noche > resonancia.
 | lluvia (`rain`) | llueve encima del portador (sin tormenta) | azul profundo, anillo más tenue |
 | noche (`night`) | hay cielo, es de noche y no llueve (desde 1.0.32) | pálido y frío, giro lento y las chispas flotan a media velocidad y con la mitad de densidad |
 | agua (`submerged`) | el portador tiene los ojos dentro del agua (desde 1.0.33) | verde azulado, el anillo casi apagado, el giro más lento de todos (0.66×) y las chispas se cambian por **burbujas** que suben y se apagan |
+| portal (`portal`) | un portal del Nether, del End o de salida a menos de 4 bloques (desde 1.0.35) | violeta de obsidiana, el giro más rápido de todos (1.22×) y las chispas estiradas hacia arriba, como el borde del portal |
 
 El conjunto además se mueve solo: **flota** con un vaivén lento de 0.022 bloques
 (la amplitud sube con la tormenta y baja cuando está herido) y **se asienta** en cada
@@ -224,13 +225,13 @@ el sitio para no crear un cuaternión por reliquia y frame.
 Al cambiar de estado de brillo la reliquia da un destello corto y un **glitch** de
 una sola vez (la misma animación y el mismo uniform `HoloGlitch` que el pulso), para
 que se note que ha reaccionado a algo, y **cambia la velocidad del bucle** (agua 0.66×, herido
-0.72×, noche 0.85×, tormenta 1.32×, resonancia 1.18×): no es solo color. `/relic info` lo dice en una línea
+0.72×, noche 0.85×, resonancia 1.18×, portal 1.22×, tormenta 1.32×): no es solo color. `/relic info` lo dice en una línea
 aparte, así que si el aura se pone roja no hay que adivinar por qué.
 
 Para verlos sin montar la escena está `/relic mood <estado>`, que fuerza uno de ellos,
 `/relic mood auto` para volver a la detección normal, `/relic mood next` para pasarlos
 de uno en uno (lo mismo que la **tecla M**, con el aviso en la barra de acción en vez
-del chat) y `/relic mood list` para ver los ocho nombres con el activo marcado: en
+del chat) y `/relic mood list` para ver los nueve nombres con el activo marcado: en
 oro si está forzado, en azul si lo ha elegido la escena. Es la forma de mirar la
 tormenta o el herido con un solo jugador y sin comandos raros.
 

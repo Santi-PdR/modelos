@@ -229,8 +229,11 @@ public final class RelicAura {
         // y mas frias. Es lo que distingue "noche despejada" de "no pasa nada"
         // sin tocar el color del aura ni el del modelo.
         boolean night = mood == RelicAnimatable.Mood.NIGHT;
+        // Con un portal cerca las chispas se estiran hacia arriba y giran mas rapido:
+        // es lo que hace el borde de un portal del Nether con las particulas.
+        boolean portal = mood == RelicAnimatable.Mood.PORTAL;
         float orbit = time * SPARK_SPEED * (1.0F + 6.0F * Math.abs(glow.spin()))
-                * (night ? 0.45F : 1.0F);
+                * (night ? 0.45F : portal ? 1.5F : 1.0F);
         // Con tormenta las chispas tiran a azul electrico: el color del estado es
         // casi blanco y sin esto se perderia el "hay truenos" en el aura.
         float redTint = glow.red();
@@ -240,6 +243,11 @@ public final class RelicAura {
             redTint = redTint * 0.55F + 0.35F * 0.45F;
             greenTint = greenTint * 0.55F + 0.85F * 0.45F;
             blueTint = blueTint * 0.55F + 1.00F * 0.45F;
+        } else if (portal) {
+            // Violeta: el color del portal, mezclado con el del estado.
+            redTint = redTint * 0.40F + 0.78F * 0.60F;
+            greenTint = greenTint * 0.30F + 0.42F * 0.70F;
+            blueTint = blueTint * 0.85F + 1.00F * 0.15F;
         } else if (night) {
             // Palido y frio, como el hielo: menos rojo, el verde y el azul intactos.
             redTint = redTint * 0.65F + 0.45F * 0.35F;
@@ -253,7 +261,7 @@ public final class RelicAura {
                 continue;
             }
             float radius = SPARK_RADIUS * (0.72F + 0.28F * sin(phase * 2.0F + i));
-            float lift = sin(phase * 3.0F + i * 1.7F) * 0.16F;
+            float lift = sin(phase * 3.0F + i * 1.7F) * (portal ? 0.30F : 0.16F);
             float offset = cos(phase) * radius;
             float height = sin(phase) * radius * 0.8F + lift;
             float cx = frame.originX + frame.leftX * offset + frame.upX * height;
@@ -471,6 +479,8 @@ public final class RelicAura {
             case NIGHT -> 0.75F;
             // Bajo el agua el vaiven es el mas corto: el agua frena todo.
             case SUBMERGED -> 0.50F;
+            // Un portal tira de ella: flota un poco mas que en reposo.
+            case PORTAL -> 1.10F;
             case NEUTRAL -> 1.0F;
         };
         float lift = 0.022F * energy * sin(time * 1.7F);

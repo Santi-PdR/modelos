@@ -1,5 +1,20 @@
 # Historial de cambios
 
+## 1.0.35 — noveno estado: portal, y las chispas se estiran
+
+* **Estado nuevo `portal`**: con un portal del Nether, del End o de salida a menos de
+  4 bloques la reliquia se pone violeta de obsidiana encantada, gira a 1.22× (el ritmo
+  más nervioso de los nueve) y flota un poco más. Manda sobre la oscuridad, la lluvia
+  y la noche; pierde con el agua, el herido y la tormenta.
+* **El escaneo está cacheado**: mira 486 bloques **una vez por segundo** (no por tick) y
+  con un `MutableBlockPos` reutilizable, porque un `BlockPos` por bloque escaneado
+  serían 486 objetos por segundo y portador. El CI comprueba las dos cosas para que no
+  se pierdan en un refactor.
+* **Chispas estiradas**: con portal delante el recorrido gira 1.5× y el vaivén vertical
+  se multiplica por 1.8, así que las chispas se alargan hacia arriba como el borde del
+  portal en vez de quedarse en órbita redonda. El tinte del borde sube a 0.96.
+* 1 clave nueva por idioma (65 en cada uno).
+
 ## 1.0.34 — la tecla M recorre los estados y `/relic mood list` los enseña
 
 * **Tecla M** (`key.holocore.mood`, remapeable como la G y la P): pasa al siguiente

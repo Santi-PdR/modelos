@@ -90,6 +90,10 @@ final class RelicGlowState {
     private static final float NIGHT_RED = 0.38F;
     private static final float NIGHT_GREEN = 0.72F;
     private static final float NIGHT_BLUE = 1.00F;
+    /** Portal cerca: violeta de obsidiana encantada, el color mas "magico" de todos. */
+    private static final float PORTAL_RED = 0.78F;
+    private static final float PORTAL_GREEN = 0.42F;
+    private static final float PORTAL_BLUE = 1.00F;
     /** Bajo el agua: verdoso de fondo de rio, con el anillo casi apagado. */
     private static final float SUBMERGED_RED = 0.30F;
     private static final float SUBMERGED_GREEN = 0.88F;
@@ -152,6 +156,16 @@ final class RelicGlowState {
                 blue = lerp(blue, RAIN_BLUE, 0.45F);
                 aura += 0.05F;
                 ring -= 0.15F;
+            }
+            case PORTAL -> {
+                // Un portal tira del color y del giro: es el unico estado "de sitio"
+                // que se nota a distancia, y el violeta no lo tiene ningun otro.
+                red = lerp(red, PORTAL_RED, 0.50F);
+                green = lerp(green, PORTAL_GREEN, 0.50F);
+                blue = lerp(blue, PORTAL_BLUE, 0.50F);
+                aura += 0.14F;
+                ring += 0.20F;
+                spin += 0.040F;
             }
             case SUBMERGED -> {
                 // El agua se come el rojo: la reliquia tira a verde azulado y el

@@ -158,6 +158,7 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
                 case NIGHT -> 0.84F;
                 // Bajo el agua el borde se apaga: el agua se lleva la luz.
                 case SUBMERGED -> 0.74F;
+                case PORTAL -> 0.96F;
                 case NEUTRAL -> 1.0F;
             };
             glowShader.safeGetUniform("HoloTint").set(gain, gain, gain, 1.0F);
