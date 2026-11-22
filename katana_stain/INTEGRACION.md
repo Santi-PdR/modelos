@@ -498,3 +498,18 @@ Los cambios son cosméticos y el servidor conserva el control del daño y objeti
 La versión de protocolo para estos cambios es 11: cliente y servidor deben usar
 el mismo JAR. Las capturas del fixture aún requieren revisión humana y no son
 una prueba de rendimiento en el modpack real.
+
+### Prueba posterior: señales de ataque y gesto
+
+Se suavizó la entrada y salida del desplazamiento de la mano libre durante Z,
+se reajustó el encuadre de primera persona y se corrigió el agarre zurdo de
+tercera persona. Desactivar `interface.vanillaSwings` ahora desactiva la
+animación alternativa sin suprimir sus señales de sonido y partículas; con
+Better Combat instalado, ese mod sigue controlando sus sonidos de ataque.
+El fixture comprueba la señal con la animación desactivada en modo vanilla.
+
+La compilación y las pruebas automatizadas no sustituyen una partida real:
+el contacto de la mano con la hoja, especialmente en zurdos, y la calidad
+del audio y del movimiento aún requieren evaluación humana. No se distribuye
+audio de Better Combat: las habilidades usan su sonido si está instalado o
+un sonido vanilla alternativo. No se usan efectos de Darkest Hours.
