@@ -292,22 +292,25 @@ public class CapaArmorModel extends DefaultedItemGeoModel<CapaDeteriorerItem> {
     }
 
     private void applyClothResponse(LivingEntity wearer, float partial, CapeWornMotion motion) {
+        boolean passenger = wearer.isPassenger();
         Vec3 velocity = wearer.getDeltaMovement();
+        // rideTick can zero the rider's own velocity before the vehicle
+        // positions them. Keep that visible travel in the free hem, not gait.
         CapeTravel.Motion travel = CapeTravel.measure(new CapeTravel.Step(velocity.x, velocity.y, velocity.z),
                 new CapeTravel.Step(wearer.getX() - wearer.xo, wearer.getY() - wearer.yo, wearer.getZ() - wearer.zo),
-                wearer instanceof RemotePlayer, Mth.rotLerp(partial, wearer.yBodyRotO, wearer.yBodyRot));
+                passenger || wearer instanceof RemotePlayer, Mth.rotLerp(partial, wearer.yBodyRotO, wearer.yBodyRot));
         double time = motion.time() / 20.0D;
         double turnTarget = travel.cut() ? 0
                 : Mth.clamp(Mth.wrapDegrees(wearer.yBodyRot - wearer.yBodyRotO) / 14.0F, -1.0F, 1.0F);
         // Flight and rides have their own body frames. Fade with the actual
         // swim blend; standing in water only damps the response.
-        double lateralFreedom = wearer.isFallFlying() || wearer.isPassenger() || wearer.isAutoSpinAttack()
+        double lateralFreedom = wearer.isFallFlying() || passenger || wearer.isAutoSpinAttack()
                 ? 0 : 1 - Mth.clamp(wearer.getSwimAmount(partial), 0, 1);
         CapeResponse response = motion.response;
         if (travel.cut()) response.reset();
         response.sample(time, travel.speed(), travel.lift(), turnTarget,
-                wearer.isCrouching() ? 1 : 0, wearer.isInWater() ? 1 : 0,
-                wearer.onGround() ? 0 : 1, wearer.isSprinting() ? 1 : 0,
+                !passenger && wearer.isCrouching() ? 1 : 0, wearer.isInWater() ? 1 : 0,
+                passenger || wearer.onGround() ? 0 : 1, !passenger && wearer.isSprinting() ? 1 : 0,
                 lateralFreedom > 0 ? travel.side() : 0);
         double seed = wearer.getId();
         double wind = Math.sin(time * 1.31D + seed * 0.37D) * 0.65D

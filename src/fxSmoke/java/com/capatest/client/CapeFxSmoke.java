@@ -127,6 +127,7 @@ public final class CapeFxSmoke {
         GLIDE("planeo-real", 6000), WADE("de-pie-en-agua", 6000), SWIM("nado-horizontal", 6000),
         SWIM_EXIT("fin-del-nado", 6000), WADE_BACK("de-pie-en-agua-curios", 6000),
         SWIM_BACK("nado-horizontal-curios", 6000), SWIM_EXIT_BACK("fin-del-nado-curios", 6000),
+        RIDE_CHEST("bote-pecho", 6000), RIDE_BACK("bote-curios", 6000),
         COMBINED_CHEST("maniobra-pecho", 6000), COMBINED_BACK("maniobra-curios", 6000),
         NO_CHAIN_CHEST("sin-cadena-pecho", 6000, "v18_chain_"), NO_CHAIN_BACK("sin-cadena-curios", 6000, "v18_chain_"),
         NO_BAND_CHEST("sin-borde-pecho", 6000, "v17_cowl_back_"), NO_BAND_BACK("sin-borde-curios", 6000, "v17_cowl_back_"),
@@ -147,7 +148,7 @@ public final class CapeFxSmoke {
         boolean hotbar() { return this == HOTBAR_BARE || this == HOTBAR; }
         boolean elytra() { return this == WINGS || this == GLIDE; }
         boolean usesBack() { return this == WALK_STEVE_BACK || this == WALK_ALEX_BACK || this == AUDIT_BACK
-                || (placement() || aquatic() || jump() || climb() || combined()) && file.endsWith("-curios") || elytra(); }
+                || (placement() || aquatic() || jump() || climb() || ride() || combined()) && file.endsWith("-curios") || elytra(); }
         boolean hasBack() { return this == BOTH || usesBack(); }
         boolean placement() { return ordinal() >= PLACE_STEVE_CHEST.ordinal() && ordinal() <= PLACE_ALEX_BACK.ordinal(); }
         boolean walk() { return ordinal() >= WALK_STEVE_CHEST.ordinal() && ordinal() <= WALK_ALEX_BACK.ordinal(); }
@@ -155,10 +156,11 @@ public final class CapeFxSmoke {
         boolean audit() { return this == AUDIT_CHEST || this == AUDIT_BACK; }
         boolean jump() { return this == JUMP_CHEST || this == JUMP_BACK; }
         boolean climb() { return this == CLIMB_CHEST || this == CLIMB_BACK; }
+        boolean ride() { return this == RIDE_CHEST || this == RIDE_BACK; }
         boolean reverse() { return this == REVERSE_CHEST || this == REVERSE_BACK; }
         boolean combined() { return this == COMBINED_CHEST || this == COMBINED_BACK || reverse() || omitted != null; }
         boolean transfer() { return this == TRANSFER; }
-        boolean measureMotion() { return walk() || aquatic() || jump() || climb() || combined() || transfer(); }
+        boolean measureMotion() { return walk() || aquatic() || jump() || climb() || ride() || combined() || transfer(); }
         boolean wade() { return this == WADE || this == WADE_BACK; }
         boolean swim() { return this == SWIM || this == SWIM_BACK; }
         boolean swimExit() { return this == SWIM_EXIT || this == SWIM_EXIT_BACK; }
@@ -188,6 +190,7 @@ public final class CapeFxSmoke {
     private static CapeSparkCrouchProbe.Route crouchSparks;
     private static CapeJumpProbe jumpRoute;
     private static CapeClimbProbe climbRoute;
+    private static CapeRideProbe rideRoute;
     private static CapeCombinedProbe combinedRoute;
     private static CapeTransferProbe transferRoute;
     private static boolean jumpFit, combinedFit;
@@ -366,12 +369,12 @@ public final class CapeFxSmoke {
                         check(!CapaDeteriorerItem.auraFrame(game.player).posed(), "swim frame persisted after blend");
                         waterRoute.save(shots(game), scene.usesBack() ? "curios" : "pecho");
                     }
-                    if (scene != Scene.SWIM_EXIT_BACK) {
+                    if (scene != Scene.RIDE_BACK) {
                         Scene next = Scene.values()[scene.ordinal() + 1];
                         equipScene(game, next);
                         return;
                     }
-                    note("PASS: recarga, luz, oclusión, montaje, hotbar, marcha, saltos, aterrizajes, escalera, alas, planeo y nado");
+                    note("PASS: recarga, luz, oclusión, montaje, hotbar, marcha, saltos, aterrizajes, escalera, alas, planeo, nado y bote");
                     game.stop();
                 }
                 default -> { return; }
@@ -538,13 +541,14 @@ public final class CapeFxSmoke {
         crouchSparks = next.studyQuietCloth() ? new CapeSparkCrouchProbe.Route() : null;
         jumpRoute = next.jump() ? new CapeJumpProbe(CapeJumpProbe.deck(pane)) : null;
         climbRoute = next.climb() ? new CapeClimbProbe(CapeClimbProbe.column(pane)) : null;
-        if (next.climb()) game.options.fov().set(50);
-        if (next.walk() || next.wade() || next.jump() || next.climb() || next.combined() || next.transfer()) game.options.framerateLimit().set(60);
+        rideRoute = next.ride() ? new CapeRideProbe(CapeRideProbe.pool(pane, next.usesBack())) : null;
+        if (next.climb() || next.ride()) game.options.fov().set(50);
+        if (next.walk() || next.wade() || next.jump() || next.climb() || next.ride() || next.combined() || next.transfer()) game.options.framerateLimit().set(60);
         if (next.wade()) waterRoute = new CapeWaterProbe();
         if (next == Scene.HOTBAR_BARE || next == Scene.PLACE_STEVE_CHEST) game.options.framerateLimit().set(30);
         stableFrames = observedBirths = 0;
         captured = false;
-        if (next == Scene.HOTBAR_BARE || next.placement() || next.audit() || next.walk() || next.wade() || next.jump() || next.climb() || next.combined() || next.transfer()) {
+        if (next == Scene.HOTBAR_BARE || next.placement() || next.audit() || next.walk() || next.wade() || next.jump() || next.climb() || next.ride() || next.combined() || next.transfer()) {
             selectSkin(game, next);
         }
         if (next.hotbar()) {
@@ -561,7 +565,7 @@ public final class CapeFxSmoke {
         game.options.keyDown.setDown(false);
         game.options.keyJump.setDown(false);
         game.options.keyShift.setDown(false);
-        if (next == Scene.HOTBAR_BARE || next.walk() || next.audit() || next.jump() || next.climb() || next.combined()) {
+        if (next == Scene.HOTBAR_BARE || next.walk() || next.audit() || next.jump() || next.climb() || next.ride() || next.combined()) {
             game.options.keyUp.setDown(false);
             game.options.keySprint.setDown(false);
         }
@@ -616,6 +620,8 @@ public final class CapeFxSmoke {
                 CapeCombinedProbe.prepare(player, CapeCombinedProbe.runway(pane));
             } else if (next.climb()) {
                 CapeClimbProbe.prepare(player, CapeClimbProbe.column(pane));
+            } else if (next.ride()) {
+                CapeRideProbe.prepare(player, CapeRideProbe.pool(pane, next.usesBack()));
             } else if (next.jump()) {
                 CapeJumpProbe.prepare(player, CapeJumpProbe.deck(pane));
             } else if (next.audit() || next.walk() || next == Scene.STRAFE_LEFT) {
@@ -658,6 +664,7 @@ public final class CapeFxSmoke {
         }
         if (scene.jump()) jumpRoute.drive(game);
         if (scene.climb()) climbRoute.drive(game);
+        if (scene.ride()) pending = rideRoute.drive(game);
         if (scene.strafe()) {
             game.options.keyLeft.setDown(scene == Scene.STRAFE_LEFT);
             game.options.keyRight.setDown(scene == Scene.STRAFE_RIGHT);
@@ -742,6 +749,7 @@ public final class CapeFxSmoke {
         if (player != null && placementRoute != null) placementRoute.camera(event, player);
         if (player != null && auditRoute != null) auditRoute.camera(event, player);
         if (player != null && combinedRoute != null) combinedRoute.camera(event, player);
+        if (player != null && rideRoute != null) rideRoute.camera(event, player);
         if (player != null && scene != null && scene.studyQuietCloth()) {
             float yaw = Mth.rotLerp((float) event.getPartialTick(), player.yBodyRotO, player.yBodyRot);
             CapePlacementProbe.orbit(event, player, yaw + 32, 12, 3.2, 1.00);
@@ -824,6 +832,7 @@ public final class CapeFxSmoke {
             case WADE, WADE_BACK -> player.isInWater() && !player.isVisuallySwimming() && swim == 0;
             case SWIM, SWIM_BACK -> player.isInWater() && player.isVisuallySwimming() && swim == 1;
             case SWIM_EXIT, SWIM_EXIT_BACK -> player.isInWater() && !player.isVisuallySwimming() && swim > .12F && swim < .9F;
+            case RIDE_CHEST, RIDE_BACK -> true; // After Shift the rider can land in the test pool.
             default -> !player.isFallFlying() && !player.isInWater();
         };
         if (!posed) {
@@ -869,6 +878,10 @@ public final class CapeFxSmoke {
             if (scene.climb()) {
                 check(player.getModelName().equals("slim") && player.getSkinTextureLocation().equals(ALEX), "wrong climbing skin");
                 captured = climbRoute.capture(game, framePartialTick, walkDraw, shots(game), scene.file);
+                return;
+            }
+            if (scene.ride()) {
+                captured = rideRoute.capture(game, framePartialTick, walkDraw, rendered, shots(game), scene.file);
                 return;
             }
             if (scene.audit()) {

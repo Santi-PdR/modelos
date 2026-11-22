@@ -75,6 +75,11 @@ public enum CapeState {
             return airborne ? new Wearer(blight, elytra, water, false, crouching, sprinting, horizontalSquared, vertical) : this;
         }
 
+        /** A vehicle carries the wearer. Its travel is not a step, sprint or free fall. */
+        public Wearer asPassenger() {
+            return new Wearer(blight, elytra, water, false, false, false, 0, vertical);
+        }
+
         public CapeState cosmeticState() {
             return select(blight, elytra, water, airborne, crouching, sprinting, horizontalSquared, vertical);
         }

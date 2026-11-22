@@ -122,6 +122,41 @@ final class CapeWornMotionTest {
         }
     }
 
+    private static void passengerSupport() {
+        var cape = new CapeWornMotion();
+        var earlier = new CapeWornMotion();
+        var fallback = new CapePlayback();
+        double last = 0;
+        for (int tick = 1; tick <= 54; tick++) {
+            boolean seated = tick < 19 || tick >= 31;
+            boolean blight = tick >= 44;
+            double dy = tick < 8 ? 0 : seated ? -.18 : -.38;
+            var raw = new CapeState.Wearer(blight, false, false, true, tick == 7, tick < 10, .09, dy);
+            var cloth = seated ? raw.asPassenger() : raw;
+            near(dy, cloth.vertical(), 0, "vehicle descent is still real travel");
+            if (seated && (cloth.airborne() || cloth.sprinting() || cloth.crouching() || cloth.horizontalSquared() != 0))
+                throw new AssertionError("seat is not a fall, stride or crouch");
+            var expected = !seated ? CapeState.FALL : blight ? CapeState.BLIGHT : CapeState.IDLE;
+            if (fallback.sample(cloth, tick) != expected)
+                throw new AssertionError("fallback is not using the supported cloth pose");
+            earlier.sample(raw, tick, 1, 0, 0, 0, 0, 0, 0);
+            if (tick == 1) near(.22, earlier.weight(CapeState.FALL), 1e-12, "previous rest in air");
+            for (int i = 0; i <= 4; i++) {
+                cape.sample(cloth, tick, i / 4F, 0, 0, 0, 0, 0, 0);
+                normalized(cape);
+                double fall = cape.weight(CapeState.FALL);
+                if (tick < 19 || tick >= 37) near(0, fall, 0, "no settled FALL as a passenger");
+                if (i == 0) near(last, fall, 1e-12, "seat transition is continuous across ticks");
+                else if (fall - last > .14 / 4 + 1e-12 || last - fall > .16 / 4 + 1e-12)
+                    throw new AssertionError("seat transition bypassed the fall slew");
+                last = fall;
+            }
+            if (tick == 26 && last < .6) throw new AssertionError("free fall after leaving the seat was lost");
+            if (tick == 31 && last < .4) throw new AssertionError("getting back on killed the drop in one tick");
+            if (tick == 52) near(1, cape.weight(CapeState.BLIGHT), 0, "seated blight still plays");
+        }
+    }
+
     private static void dryTransitions() {
         var cape = new CapeWornMotion();
         var slow = new CapeWornMotion();
@@ -302,6 +337,7 @@ final class CapeWornMotionTest {
         sprintIntoCrouch();
         swimCycle();
         climbSupport();
-        System.out.println("CapeWornMotion: marcha, frenada, paso agachado, nado y escalera continuos por portador");
+        passengerSupport();
+        System.out.println("CapeWornMotion: marcha, frenada, paso agachado, nado, escalera y asiento continuos por portador");
     }
 }

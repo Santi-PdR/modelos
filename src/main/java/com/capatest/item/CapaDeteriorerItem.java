@@ -106,11 +106,15 @@ public class CapaDeteriorerItem extends ArmorItem implements GeoItem {
         return readWearer(entity, equipped).cosmeticState();
     }
 
-    /** Keep light/FX selection independent of the cloth's support on climbables. */
+    /** A seat or handhold supports the cloth without changing the light/FX policy. */
     public static CapeState.Wearer readClothWearer(Entity entity, ItemStack equipped) {
         CapeState.Wearer state = readWearer(entity, equipped);
-        return state.airborne() && !state.water() && !state.elytra()
-                && entity instanceof LivingEntity wearer && wearer.onClimbable() ? state.withSupport() : state;
+        if (entity instanceof LivingEntity wearer) {
+            if (wearer.isPassenger()) return state.asPassenger();
+            if (state.airborne() && !state.water() && !state.elytra() && wearer.onClimbable())
+                return state.withSupport();
+        }
+        return state;
     }
 
     public static CapeState.Wearer readWearer(Entity entity, ItemStack equipped) {

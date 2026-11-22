@@ -10,7 +10,7 @@ on:
         default: false
         type: boolean
       probar_halo:
-        description: 'Probar montaje, marcha, saltos, escalera, nado, hotbar, halo y élitros en un cliente Forge con pantalla virtual'
+        description: 'Probar montaje, marcha, saltos, escalera, nado, bote, hotbar, halo y élitros en un cliente Forge con pantalla virtual'
         required: false
         default: false
         type: boolean
@@ -831,14 +831,15 @@ jobs:
           java -cp "$CLASSES" com.capatest.client.CapeEmberTest
           java -cp "$CLASSES" com.capatest.client.CapeEmberTest --samples > "$CLASSES/embers.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeEmberTest --blend-samples > "$CLASSES/ember-blends.tsv"
-          if grep -qx 'mod_version=1.67.36' gradle.properties; then
-            (cd entregables/v1.67.35 && sha256sum -c ../../docs/releases/v1.67.35/JAR.sha256)
-            base="entregables/v1.67.35/capatest-1.67.35.jar:$CLASSES"
-            java -cp "$base" com.capatest.item.CapeSparkFrameTest --samples > "$CLASSES/spark-frames-35.tsv"
-            java -cp "$base" com.capatest.client.CapeEmberTest --samples > "$CLASSES/embers-35.tsv"
-            java -cp "$base" com.capatest.client.CapeEmberTest --blend-samples > "$CLASSES/ember-blends-35.tsv"
-            for profile in spark-frames embers ember-blends; do
-              cmp "$CLASSES/$profile-35.tsv" "$CLASSES/$profile.tsv"
+          if grep -qx 'mod_version=1.67.37' gradle.properties; then
+            (cd entregables/v1.67.36 && sha256sum -c ../../docs/releases/v1.67.36/JAR.sha256)
+            base="entregables/v1.67.36/capatest-1.67.36.jar:$CLASSES"
+            java -cp "$base" com.capatest.item.CapeSparkFrameTest --samples > "$CLASSES/spark-frames-36.tsv"
+            java -cp "$base" com.capatest.item.CapeSparkFrameTest --crouch-samples > "$CLASSES/spark-crouch-36.tsv"
+            java -cp "$base" com.capatest.client.CapeEmberTest --samples > "$CLASSES/embers-36.tsv"
+            java -cp "$base" com.capatest.client.CapeEmberTest --blend-samples > "$CLASSES/ember-blends-36.tsv"
+            for profile in spark-frames spark-crouch embers ember-blends; do
+              cmp "$CLASSES/$profile-36.tsv" "$CLASSES/$profile.tsv"
             done
           fi
           OPENBLAS_NUM_THREADS=1 python3 tools/verify_ember_sprites.py "$CLASSES/ember-blends.tsv" "$CLASSES/saltos-rgb-brasas.tsv"
@@ -1060,7 +1061,7 @@ jobs:
         run: |
           set -euo pipefail
           args=()
-          if grep -Eq '^mod_version=1\.67\.(29|30|31|32|33|34|35|36)$' gradle.properties; then
+          if grep -Eq '^mod_version=1\.67\.(29|30|31|32|33|34|35|36|37)$' gradle.properties; then
             args=(--reference docs/releases/v1.67.28/maniobra/maniobra-forge.tsv)
           fi
           if [[ -f build/fx-smoke-run/fx-shots/giro-inverso-pecho.tsv ]]; then args+=(--extended); fi
@@ -1268,6 +1269,15 @@ jobs:
             printf '::notice title=Brasas al agacharse::%s\n' "$line"
           done
 
+      - name: Verificar el paño al remar y bajar de un bote en Forge
+        id: verify-ride
+        if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_ride.py build/fx-smoke-run/fx-shots | while IFS= read -r line; do
+            printf '::notice title=El paño en el bote::%s\n' "$line"
+          done
+
       - name: Revisar las posturas de Alex y medir los cruces de malla
         id: verify-postures
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
@@ -1330,24 +1340,24 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Adjuntar el JAR de prueba v1.67.36 después de ambas pruebas Forge
+      - name: Adjuntar el JAR de prueba v1.67.37 después de ambas pruebas Forge
         if: >-
           success() && github.ref_name == 'arena/5a9fa51b-modelos' &&
-          contains(github.event.head_commit.message, '[adjuntar-v16736]') &&
+          contains(github.event.head_commit.message, '[adjuntar-v16737]') &&
           steps.verify-combined.outcome == 'success' && steps.verify-crown.outcome == 'success' &&
           steps.verify-return.outcome == 'success' &&
           steps.fx-smoke.outcome == 'success' &&
           steps.verify-climb.outcome == 'success' && steps.verify-jumps.outcome == 'success' &&
           steps.verify-placement.outcome == 'success' && steps.verify-walk.outcome == 'success' &&
-          steps.verify-crouch-sparks.outcome == 'success' && steps.verify-postures.outcome == 'success' && steps.verify-swim.outcome == 'success'
+          steps.verify-ride.outcome == 'success' && steps.verify-crouch-sparks.outcome == 'success' && steps.verify-postures.outcome == 'success' && steps.verify-swim.outcome == 'success'
         run: |
           set -euo pipefail
-          grep -qx 'mod_version=1.67.36' gradle.properties
-          test ! -e entregables/v1.67.36/capatest-1.67.36.jar
-          jar=capatest-1.67.36.jar
+          grep -qx 'mod_version=1.67.37' gradle.properties
+          test ! -e entregables/v1.67.37/capatest-1.67.37.jar
+          jar=capatest-1.67.37.jar
           (cd build/libs && sha256sum -c SHA256SUMS.txt)
-          proof=docs/releases/v1.67.36
-          out="entregables/v1.67.36/$jar"
+          proof=docs/releases/v1.67.37
+          out="entregables/v1.67.37/$jar"
           install -m 0644 -D "build/libs/$jar" "$out"
           install -m 0644 -D build/libs/SHA256SUMS.txt "$proof/JAR.sha256"
           mkdir -p "$proof/maniobra"
@@ -1358,12 +1368,13 @@ jobs:
           install -m 0644 "$shots"/maniobra-retorno/{retorno.tsv,retorno-malla.tsv,retorno-pecho.jpg,retorno-curios.jpg} "$proof/maniobra/retorno/"
           install -m 0644 "$shots"/{continuidad-forge,saltos-forge,costuras-saltos-forge,escalera-forge,nado-forge,halo-continuidad-forge,traspaso-forge,pausa-render-forge,secuencia-brasa-forge,revision-alex-forge,holgura-brazos-forge}.tsv "$proof/"
           install -m 0644 "$shots"/nacimiento-agachado-{pecho,curios,resumen}.tsv "$proof/"
-          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16736_colocacion_forge.jpg
+          install -m 0644 "$shots"/bote-{pecho.tsv,curios.tsv,resumen.tsv,forge.jpg} "$proof/"
+          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16737_colocacion_forge.jpg
           printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$proof/compilacion.txt"
-          git add "$proof" docs/capa_v16736_colocacion_forge.jpg
+          git add "$proof" docs/capa_v16737_colocacion_forge.jpg
           git add -f "$out"
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m 'Adjuntar v1.67.36 probada en Forge, sólo para test-1 [skip ci]'
+            commit -m 'Adjuntar v1.67.37 probada en Forge, sólo para test-1 [skip ci]'
           git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
 
       # [publicar] prepara una release verificable sin escribir a otras
