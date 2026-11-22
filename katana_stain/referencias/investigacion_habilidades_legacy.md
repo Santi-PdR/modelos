@@ -21,3 +21,9 @@ Revisión de código y documentación, no una afirmación de que las técnicas y
 - Los sprites MIT de Better Combat Particle y su renderer adaptado ya tienen atribución incluida. No se usan efectos de Darkest Hours. Se conservará el origen de cualquier otro recurso y se evitará presentarlo como un recurso propio.
 
 El ajuste de Z para guardar su marca al activarse, sin borrar otra marca obtenida durante el gesto, se verificó con un caso de dos blancos en las tres configuraciones del fixture. Las demás ideas siguen pendientes de implementación y revisión visual; una prueba automatizada no reemplaza un playtest.
+
+## Verificación posterior del corte vertical sin Better Combat
+
+Las capturas `confirmed_c_impact_04`, `07` y `10` se activan tras eventos `LivingDamageEvent` del objetivo de prueba; `capture-timing.tsv` registra el tick del servidor, el del cliente y el del clip. Con Better Combat instalado, el movimiento de espada elegido muestra mejor la hoja bajando hacia el objetivo. Sin sus recursos, el clip derivado de Improved Animations sigue viéndose demasiado parecido a una guardia en el momento del impacto.
+
+Se probaron dos pistas originales de `rightItem`: inclinación y giro de muñeca. Ambas cambiaron la orientación visible pero no produjeron una postura convincente de corte, así que se retiraron. Evitar asumir que un clip se ve correcto solo porque PlayerAnimator lo parsea, avanza o porque cambia el ángulo del arma. La alternativa sin Better Combat necesita una coreografía de cuerpo y mano diseñada en conjunto y una revisión del contacto y del pivote de la empuñadura; faltan además capturas zurdas de los impactos confirmados y un playtest en movimiento.
