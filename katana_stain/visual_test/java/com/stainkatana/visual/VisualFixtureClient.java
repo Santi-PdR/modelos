@@ -39,6 +39,7 @@ public final class VisualFixtureClient {
             var id = new net.minecraft.resources.ResourceLocation("bettercombat", "attack_animations/two_handed_slash_vertical_right.json");
             System.out.println("STAIN_FIXTURE_BETTERCOMBAT=" + net.minecraftforge.fml.ModList.get().isLoaded("bettercombat"));
             System.out.println("STAIN_FIXTURE_CLIP=" + (mc.getResourceManager().getResource(id).isPresent() ? "bettercombat" : "fallback"));
+            verifyAbilitySoundSelection(mc);
         }
         switch (tick) {
             case 5 -> {
@@ -504,6 +505,35 @@ public final class VisualFixtureClient {
                 System.out.println("STAIN_EFFECT_SAMPLES_DONE"); System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop();
             }
             default -> { }
+        }
+    }
+    /** Verify actual registry selection, not whether an audio device produced sound. */
+    private static void verifyAbilitySoundSelection(Minecraft mc) {
+        boolean betterCombat = net.minecraftforge.fml.ModList.get().isLoaded("bettercombat");
+        try {
+            var swing = com.stainkatana.katana.KatanaAbilities.class.getDeclaredMethod("katanaSwingSound");
+            var stab = com.stainkatana.katana.KatanaAbilities.class.getDeclaredMethod("betterCombatSound", String.class, net.minecraft.sounds.SoundEvent.class);
+            swing.setAccessible(true); stab.setAccessible(true);
+            var fallback = net.minecraft.sounds.SoundEvents.PLAYER_ATTACK_SWEEP;
+            var actualSwing = (net.minecraft.sounds.SoundEvent) swing.invoke(null);
+            var actualStab = (net.minecraft.sounds.SoundEvent) stab.invoke(null, "rapier_stab", fallback);
+            var registry = net.minecraftforge.registries.ForgeRegistries.SOUND_EVENTS;
+            for (String path : new String[]{"katana_slash", "rapier_stab"}) {
+                var soundId = new net.minecraft.resources.ResourceLocation("bettercombat", path);
+                var actual = path.equals("katana_slash") ? actualSwing : actualStab;
+                if (betterCombat) {
+                    if (!registry.containsKey(soundId) || actual != registry.getValue(soundId))
+                        throw new IllegalStateException("Better Combat sound not selected: " + soundId);
+                    var ogg = new net.minecraft.resources.ResourceLocation("bettercombat", "sounds/" + path + "-01.ogg");
+                    if (mc.getResourceManager().getResource(ogg).isEmpty())
+                        throw new IllegalStateException("Better Combat sound asset missing: " + ogg);
+                } else if (actual != fallback) {
+                    throw new IllegalStateException("Expected vanilla fallback for " + soundId);
+                }
+            }
+            System.out.println("STAIN_ABILITY_SOUND_SELECTION_VERIFIED=" + (betterCombat ? "bettercombat" : "vanilla"));
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Unable to inspect ability sound selection", e);
         }
     }
     private static void bloodSample(double x, double y, double z) {
