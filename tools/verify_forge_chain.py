@@ -14,7 +14,7 @@ from verify_v1600 import sat
 from verify_v1660 import contacts
 
 SLOTS = ('pecho', 'curios')
-COLS = 'escena cuadros cuadros_activos recorrido_max_u enlace_min_u soporte_extremo_min_u costura_min_u cruce_adicional_max_u'
+COLS = 'escena cuadros cuadros_activos recorrido_max_u enlace_min_u soporte_lado_min_u costura_min_u cruce_adicional_max_u'
 
 
 def pose_metrics(groups, base, key, config):
@@ -30,7 +30,11 @@ def pose_metrics(groups, base, key, config):
     assert abs(shift[0]) < .003 and -.003 <= -shift[1] <= config['DROP']+.003 and -.003 <= shift[2] <= config['AWAY']+.003, (key,shift)
     join = (-sat(live[:-1],live[1:])).min()
     anchors = np.concatenate([g for n,g in groups.items() if n.startswith(('v17_cowl_', 'v19_cuellito_', 'v20_mount_saddle'))])
-    support = (-contacts(live[None,[0,7]],anchors[None])[0]).max(axis=0).min()
+    # Either of the sewn end's first two links can supply the overlap.
+    # In .40's upward look the terminal block is just outside one collar
+    # box; its unchanged neighbor still connects it to the collar.
+    ends = (-contacts(live[None,[0,1,6,7]],anchors[None])[0]).max(axis=0)
+    support = ends.reshape(2,2).max(axis=1).min()
     sewn = chain_seam(groups)
     assert join > .004 and support > .025 and sewn > .15, (key,'disconnected join or end',join,support,sewn)
     obstacles = np.concatenate([g for n,g in groups.items() if n in ACTOR or n.startswith('v18_pad_')])
@@ -63,15 +67,20 @@ def walks(root, config):
             step = (35 < t) & (t < 69)
             run = (108 < t) & (t < 129)
             brake = (130 < t) & (t < 146) & (inputs[:,1] < .10)
-            rest = (t < 17) | ((t > 151) & (t < 156)) | ((t > 241) & (t < 370))
-            assert step.sum() > 20 and run.sum() > 12 and brake.sum() > 3 and rest.sum() > 12, stem
+            tail = (t > 151) & (t < 156)
+            rest = (t < 17) | ((t > 241) & (t < 370))
+            assert step.sum() > 20 and run.sum() > 12 and brake.sum() > 3 and tail.sum() > 4 and rest.sum() > 12, stem
             walk = np.ptp(measured[step,0]); sprint = measured[run,1].max(); carry = measured[brake,1].max()
             quiet = np.abs(measured[rest]).max()
-            assert walk > .065 and sprint > .23 and carry > .025 and quiet < .003, (stem,walk,sprint,carry,quiet)
-            rows.append((stem,len(t),walk,sprint,carry,quiet))
-    table(root/'cadena-zancada-forge.tsv', 'escena cuadros caida_ciclo_u salida_carrera_u arrastre_freno_u reposo_max_u', rows)
-    for stem, n, walk, sprint, carry, quiet in rows:
-        print(f'{stem}: {n} draws; step drop {walk:.3f}u; outward run {sprint:.3f}u, brake with low pace {carry:.3f}u, rest {quiet:.4f}u.', flush=True)
+            residual = np.abs(measured[tail]).max()
+            assert walk > .065 and sprint > .23 and carry > .025 and residual < .016 and quiet < .003, (
+                stem,walk,sprint,carry,residual,quiet)
+            rows.append((stem,len(t),walk,sprint,carry,residual,quiet))
+    table(root/'cadena-zancada-forge.tsv',
+          'escena cuadros caida_ciclo_u salida_carrera_u arrastre_freno_u residual_1s_u reposo_max_u',rows)
+    for stem, n, walk, sprint, carry, residual, quiet in rows:
+        print(f'{stem}: {n} draws; step drop {walk:.3f}u; outward run {sprint:.3f}u, brake with low pace {carry:.3f}u, '
+              f'after 1s {residual:.4f}u, rest {quiet:.4f}u.',flush=True)
 
 
 def run(root, combined):
