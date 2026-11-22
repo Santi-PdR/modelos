@@ -15,6 +15,7 @@ final class CapeLandingTest {
             samples();
             return;
         }
+        verifyEnvelopeBoundaries();
         require(landing(.36, 0, 1).equals(landing(.36, .75, 1)), "horizontal speed supplied impact");
         require(landing(.36, 0, 1).equals(landing(.36, 0, 3)), "short gap lost the last observed descent");
         var hop = landing(.39, 0, 1);
@@ -61,6 +62,20 @@ final class CapeLandingTest {
         quiet(repeated.sample(51, 51.5, true, true, FLOOR), "second landing reused the first impulse");
         verifyLight();
         System.out.println("Aterrizaje: contacto seco y reciente, arrastre y eco retardado; sin pulso en aire, al frenar ni tras corte.");
+    }
+
+    private static void verifyEnvelopeBoundaries() {
+        require(CapeLanding.strength(.16) == 0 && CapeLanding.strength(.84) == 1,
+                "lift thresholds are not closed at the expected bounds");
+        require(CapeLanding.strength(.160001) > 0 && CapeLanding.strength(Double.NaN) == 0,
+                "small or non-finite lift escaped its bounds");
+        require(CapeLanding.pose(3, 1).pitch() == 5.5, "cloth pulse missed its peak");
+        require(CapeLanding.pose(1.6, 1).heat() == 0 && CapeLanding.pose(4.4, 1).heat() == 1,
+                "light pulse start or peak drifted");
+        require(CapeLanding.pose(9, 1).pitch() == 0 && CapeLanding.pose(11, 1).equals(CapeLanding.REST),
+                "cloth or light pulse did not reach its endpoint");
+        quiet(CapeLanding.pose(Double.NaN, 1), "non-finite pose age");
+        quiet(CapeLanding.pose(3, Double.NaN), "non-finite landing strength");
     }
 
     private static CapeLanding.Motion landing(double lift, double speed, int gap) {
