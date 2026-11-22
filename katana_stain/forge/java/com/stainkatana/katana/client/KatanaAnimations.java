@@ -78,7 +78,7 @@ public final class KatanaAnimations {
         // X uses a timed adaptation of Improved Animations' sword motion;
         // other abilities retain their existing reference clips for now.
         boolean overhead = ability == 2 || ability == 9 || ability == 12 || ability == 15;
-        KeyframeAnimation clip = ability == 1 || overhead ? null : loadBetterCombat(ability);
+        KeyframeAnimation clip = ability == 1 ? null : loadBetterCombat(overhead ? 2 : ability);
         boolean external = clip != null;
         if (!external) clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID,
                 overhead ? "stain_c_overhead" : CLIPS[ability]));
@@ -155,7 +155,8 @@ public final class KatanaAnimations {
         // pose with the server's ten-tick opening or six-tick later wind-up.
         // Keep this a presentation adjustment; damage remains server-timed.
         float speed = ability == 0 ? 3F : ability == 1 ? 1F
-                : overhead ? (ability == 2 ? .875F : 8.75F / 6F) : 1.4F;
+                : overhead ? (external ? (ability == 2 ? 1.4F : 14F / 6F)
+                        : (ability == 2 ? .875F : 8.75F / 6F)) : 1.4F;
         timedClip.addModifierBefore(new SpeedModifier(speed));
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
     }
