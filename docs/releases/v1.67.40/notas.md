@@ -1,5 +1,7 @@
 # v1.67.40 · Halo al arrancar y frenar
 
+**Versión de prueba más reciente: [v1.67.41](../v1.67.41/notas.md).**
+
 **[JAR de prueba](https://raw.githubusercontent.com/Santi-PdR/modelos/78affa5083570571c23d8692a12a09a111b54757/entregables/v1.67.40/capatest-1.67.40.jar)** · [PowerShell para `test-1`](instalar-test-1.txt) · [SHA-256](JAR.sha256) · [Volver a la .39](../v1.67.39/notas.md).
 
 En la oscuridad, el halo se aviva brevemente con los cambios de velocidad. La luz junto a las grietas responde primero y el borde violeta tarda un poco más en alcanzar su máximo. El extra se desvanece al mantener el ritmo o al quedar quieto, se atenúa en penumbra y en el agua, y es nulo con luz plena. El halo base sigue respirando como antes.

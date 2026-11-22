@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.41 — balanceo de la cadena equipada
+
+**[Descargar JAR de prueba v1.67.41](https://raw.githubusercontent.com/Santi-PdR/modelos/c4837d26be7d9589360a650b9dc86f3ceb0f7b32/entregables/v1.67.41/capatest-1.67.41.jar)** · [PowerShell para test-1](docs/releases/v1.67.41/instalar-test-1.txt) · [Mediciones en Forge](docs/releases/v1.67.41/notas.md).
+
+El centro de la cadena acompaña las pisadas y se asienta al frenar; los extremos siguen sujetos. Se conservan el halo, las hombreras, las brasas y el paño de la .40. Comparación en el [visor offline](docs/capa_v1170_visor.html).
+
 ### v1.67.40 — halo al arrancar y frenar
 
 **[Descargar JAR de prueba v1.67.40](https://raw.githubusercontent.com/Santi-PdR/modelos/78affa5083570571c23d8692a12a09a111b54757/entregables/v1.67.40/capatest-1.67.40.jar)** · [PowerShell para test-1](docs/releases/v1.67.40/instalar-test-1.txt) · [Mediciones en Forge](docs/releases/v1.67.40/notas.md).
