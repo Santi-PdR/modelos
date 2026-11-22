@@ -120,9 +120,10 @@ public final class KatanaAnimations {
                         new dev.kosmx.playerAnim.core.util.Vec3f(
                                 (leftHanded ? 16 : -8) + contact * ((leftHanded ? -8 : 4)
                                         + KatanaClientConfig.BLOOD_HAND_X.get().floatValue()),
-                                -3 + contact * ((leftHanded ? -6 : -8)
+                                -3 + contact * ((leftHanded ? -12 : -8)
                                         + KatanaClientConfig.BLOOD_HAND_Y.get().floatValue()),
-                                -10 + contact * KatanaClientConfig.BLOOD_HAND_Z.get().floatValue())));
+                                -10 + contact * ((leftHanded ? -3 : 0)
+                                        + KatanaClientConfig.BLOOD_HAND_Z.get().floatValue()))));
             }) {
                 @Override public dev.kosmx.playerAnim.core.util.Vec3f get3DTransform(
                         String part, dev.kosmx.playerAnim.api.TransformType type, float tickDelta,
