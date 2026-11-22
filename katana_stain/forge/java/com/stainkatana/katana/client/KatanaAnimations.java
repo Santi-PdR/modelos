@@ -75,8 +75,9 @@ public final class KatanaAnimations {
             animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(3, Ease.INOUTSINE), null);
             return;
         }
-        // X uses a timed adaptation of Improved Animations' sword motion;
-        // other abilities retain their existing reference clips for now.
+        // X uses a timed adaptation of Improved Animations' sword motion.
+        // For overhead C strokes, prefer the installed Better Combat sword
+        // clip; without that optional resource use our credited fallback.
         boolean overhead = ability == 2 || ability == 9 || ability == 12 || ability == 15;
         KeyframeAnimation clip = ability == 1 ? null : loadBetterCombat(overhead ? 2 : ability);
         boolean external = clip != null;
@@ -150,10 +151,10 @@ public final class KatanaAnimations {
                 @Override protected float getFadeIn(float delta) { return 1F; }
             });
         }
-        // The downward stroke *ends* at 0.4375 s (source tick 8.75),
-        // not at tick 5.25 where the arm is still raised. Align that contact
-        // pose with the server's ten-tick opening or six-tick later wind-up.
-        // Keep this a presentation adjustment; damage remains server-timed.
+        // Align the contact pose with the server's ten-tick opening or
+        // six-tick later wind-up: source tick 14 for the installed Better
+        // Combat sword clip, 8.75 for the Improved Animations fallback.
+        // Damage remains server-timed; these speeds affect presentation only.
         float speed = ability == 0 ? 3F : ability == 1 ? 1F
                 : overhead ? (external ? (ability == 2 ? 1.4F : 14F / 6F)
                         : (ability == 2 ? .875F : 8.75F / 6F)) : 1.4F;
