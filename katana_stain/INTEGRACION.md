@@ -513,3 +513,9 @@ el contacto de la mano con la hoja, especialmente en zurdos, y la calidad
 del audio y del movimiento aún requieren evaluación humana. No se distribuye
 audio de Better Combat: las habilidades usan su sonido si está instalado o
 un sonido vanilla alternativo. No se usan efectos de Darkest Hours.
+
+En una revisión posterior se desplazó la mano libre zurda en primera persona
+hacia la hoja durante el gesto de Z. Se compararon ajustes en el mismo tick del
+clip y se comprobó el resultado en tres configuraciones del cliente. Sigue
+siendo una aproximación: las capturas no demuestran contacto tridimensional
+exacto ni calidad del movimiento durante una partida.
