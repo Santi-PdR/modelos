@@ -237,6 +237,15 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.45, undécimo estado con VFX propio.** `FREEZING` sale de `Entity.getTicksFrozen() > 0`:
+el contador solo sube cuando el juego ya decidió que te estás helando, así que no hay que
+mirar biomas ni bloques (y en cliente el dato llega sincronizado). Paleta `0.62 / 0.88 / 1.00`
+mezclada al 55%, `HoloTint` 0.90 y energía de vaivén 0.55. Los copos son el cuarto VFX del
+mismo lote aditivo: siete quads, `0.038` de tamaño, caída `0.28/s` (un cruce cada 3,6 s con
+`seconds()`) y zigzag `sin(t × 1,1) × 0,09`, que es lo que los separa de las gotas. La
+diferencia de diseño: los copos **se encienden al llegar abajo** (como uno que se posa) y las
+gotas se apagan.
+
 **1.0.43, el factor 20.** `time()` devuelve `level.getGameTime() + partialTick`, o sea
 ticks, y así se pensaron el anillo (`beatSpeed` 0.15 rad/tick = 2 s) y las chispas
 (`SPARK_SPEED` 0.75 rad/tick). Los efectos que se añadieron después venían de cabecera en

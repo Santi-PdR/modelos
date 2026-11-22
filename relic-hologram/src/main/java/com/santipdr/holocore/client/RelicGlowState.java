@@ -94,6 +94,10 @@ final class RelicGlowState {
     private static final float BURNING_RED = 1.00F;
     private static final float BURNING_GREEN = 0.42F;
     private static final float BURNING_BLUE = 0.16F;
+    /** Congelandose: hielo palido, el estado mas frio de la paleta. */
+    private static final float FREEZING_RED = 0.62F;
+    private static final float FREEZING_GREEN = 0.88F;
+    private static final float FREEZING_BLUE = 1.00F;
     /** Portal cerca: violeta de obsidiana encantada, el color mas "magico" de todos. */
     private static final float PORTAL_RED = 0.78F;
     private static final float PORTAL_GREEN = 0.42F;
@@ -170,6 +174,16 @@ final class RelicGlowState {
                 aura += 0.18F;
                 ring += 0.30F;
                 spin += 0.060F;
+            }
+            case FREEZING -> {
+                // Hielo: azul casi blanco, poco aura y el giro mas quieto de todos.
+                // El frio no acelera nada, lo apaga.
+                red = lerp(red, FREEZING_RED, 0.55F);
+                green = lerp(green, FREEZING_GREEN, 0.55F);
+                blue = lerp(blue, FREEZING_BLUE, 0.55F);
+                aura += 0.08F;
+                ring += 0.04F;
+                spin -= 0.014F;
             }
             case PORTAL -> {
                 // Un portal tira del color y del giro: es el unico estado "de sitio"

@@ -381,7 +381,7 @@ jobs:
           enum = animatable.split('enum Mood {', 1)[1].split('}', 1)[0]
           moods = re.findall(r'^\s*([A-Z][A-Z_]*)\s*,?$', enum, re.M)
           esperados = ['NEUTRAL', 'RESONANT', 'STORM', 'WOUNDED', 'DARK', 'RAIN', 'NIGHT',
-                       'SUBMERGED', 'PORTAL', 'BURNING']
+                       'SUBMERGED', 'PORTAL', 'BURNING', 'FREEZING']
           assert moods == esperados, moods
           assert 'public Mood mood()' in animatable, 'falta el accessor de Mood'
           assert 'isThundering()' in animatable, 'la tormenta no alimenta ningun estado'
@@ -414,6 +414,19 @@ jobs:
               .split('private static double speedFor', 1)[0]
           assert deteccion.index('isOnFire()') < deteccion.index('getHealth()'), \
               'estar ardiendo tiene que mandar sobre el herido'
+          # Congelandose: getTicksFrozen solo sube cuando el juego ya decidio que te
+          # estas helando, asi que no hay que mirar biomas ni bloques.
+          assert 'if (player.getTicksFrozen() > 0) {' in animatable, 'congelarse no es un estado'
+          assert deteccion.index('getTicksFrozen()') < deteccion.index('getHealth()'), \
+              'congelarse tiene que mandar sobre el herido'
+          assert 'if (mood == RelicAnimatable.Mood.FREEZING) {' in aura, 'congelarse no tiene VFX'
+          assert 'drawFlakes(bufferSource, frame, time, glow, amount, motion);' in aura, \
+              'los copos no se dibujan nunca'
+          assert 'private static void drawFlakes(' in aura, 'faltan los copos'
+          assert 'FLAKE_COUNT' in aura and 'FLAKE_SPEED' in aura, 'faltan las constantes de los copos'
+          # Los copos caen con el reloj en segundos, no en ticks (1.0.43).
+          assert 'fract(seconds(time) * speed + i * (1.0F / FLAKE_COUNT));' in aura, \
+              'los copos no usan el reloj en segundos'
           assert 'case NIGHT ->' in animatable, 'el estado de noche no tiene velocidad'
           assert 'anotherBearerNear(' in animatable, 'no hay deteccion de otro portador cerca'
           assert 'RelicServer.findRelic(other).isPresent()' in animatable, \
@@ -612,7 +625,8 @@ jobs:
                   f'{idioma} sin el aviso de parar la ronda'
               assert 'message.holocore.mood_list' in lang, f'{idioma} sin la lista de estados'
               for mood in ('wounded', 'storm', 'resonant', 'dark', 'rain',
-                           'neutral', 'night', 'submerged', 'portal', 'burning'):
+                           'neutral', 'night', 'submerged', 'portal', 'burning',
+                           'freezing'):
                   clave = f'message.holocore.state.{mood}'
                   assert clave in lang, f'{idioma} sin {clave}'
 

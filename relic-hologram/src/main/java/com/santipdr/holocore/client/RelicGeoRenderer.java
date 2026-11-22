@@ -161,6 +161,8 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
                 case PORTAL -> 0.96F;
                 // Ardiendo el borde se enciende: es el unico estado que sube de 1.
                 case BURNING -> 1.05F;
+                // Con hielo encima el borde se apaga: es un estado de estar quieto.
+                case FREEZING -> 0.90F;
                 case NEUTRAL -> 1.0F;
             };
             glowShader.safeGetUniform("HoloTint").set(gain, gain, gain, 1.0F);

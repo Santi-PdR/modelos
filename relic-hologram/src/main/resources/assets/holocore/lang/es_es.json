@@ -63,6 +63,7 @@
   "message.holocore.state.submerged": "bajo el agua",
   "message.holocore.state.portal": "portal",
   "message.holocore.state.burning": "ardiendo",
+  "message.holocore.state.freezing": "congelándose",
   "message.holocore.mood_show": "Estado de brillo: %s.",
   "message.holocore.mood_forced": "Estado de brillo forzado: %s (/relic mood auto para soltarlo).",
   "message.holocore.mood_auto": "Estado de brillo otra vez automático.",

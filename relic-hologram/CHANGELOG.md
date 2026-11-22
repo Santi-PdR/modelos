@@ -1,5 +1,22 @@
 # Historial de cambios
 
+## 1.0.45 — undécimo estado: congelándose, con copos
+
+* **Estado nuevo `freezing`**: cuando `getTicksFrozen()` sube (nieve en polvo, agua
+  helada) la reliquia pasa a **hielo pálido**, el bucle baja a **0.78×**, el vaivén se
+  queda en 0.55 (el más quieto de los once) y el borde del shader baja a 0.90. El frío
+  no acelera nada: lo apaga.
+* **Manda sobre herido**, pero por detrás de ardiendo: las dos son daño lento, y si te
+  estás quemando el fuego gana. El CI comprueba el orden de `getTicksFrozen()` contra
+  el chequeo de vida.
+* **Copos**: siete, diminutos, caen un cruce cada ~3,5 s con zigzag propio y se
+  encienden al llegar abajo (al revés que las gotas, que se apagan). Es el único VFX
+  más lento que la lluvia, y usa `seconds()` desde el primer día.
+* Cuatro VFX de estado ya completos: burbujas (suben), gotas (caen rápido), brasas
+  (suben parpadeando) y copos (caen en zigzag).
+* 1 clave nueva por idioma (73 en cada uno). CI: 6 comprobaciones nuevas, con 3
+  negativos en rojo (sin detección, copos que no se dibujan y copos en ticks).
+
 ## 1.0.44 — `/relic preset`: tres looks con nombre
 
 El look no se puede decidir mirando números: hay 27 claves y las que mandan son seis.

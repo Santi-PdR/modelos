@@ -105,7 +105,13 @@ public final class RelicAnimatable implements GeoAnimatable {
          * giro mas rapido de los diez y brasas subiendo. Es el estado mas urgente:
          * manda sobre todo lo demas, herida incluida.
          */
-        BURNING
+        BURNING,
+        /**
+         * El portador se esta congelando (nieve en polvo, biomas de hielo): hielo
+         * palido, el bucle mas lento despues del agua y copos que caen despacio.
+         * Va justo detras de ardiendo porque tambien es dano lento.
+         */
+        FREEZING
     }
 
     private final UUID wearer;
@@ -615,6 +621,8 @@ public final class RelicAnimatable implements GeoAnimatable {
             // Un portal tira de la reliquia: es el estado mas nervioso.
             case PORTAL -> 1.22D;
             case BURNING -> 1.40D;
+            // El frio entumece: casi tan lento como el agua.
+            case FREEZING -> 0.78D;
             case RESONANT -> 1.18D;
             case NEUTRAL -> 1.0D;
         };
@@ -634,6 +642,11 @@ public final class RelicAnimatable implements GeoAnimatable {
         // dano mientras lo miras.
         if (player.isOnFire()) {
             return Mood.BURNING;
+        }
+        // Congelandose: no hace falta mirar biomas, getTicksFrozen solo sube cuando
+        // el juego ya ha decidido que te estas helando (nieve en polvo, agua helada).
+        if (player.getTicksFrozen() > 0) {
+            return Mood.FREEZING;
         }
         if (player.getHealth() < player.getMaxHealth() * WOUNDED_HEALTH) {
             return Mood.WOUNDED;

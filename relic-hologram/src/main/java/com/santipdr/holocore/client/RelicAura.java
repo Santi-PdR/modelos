@@ -95,6 +95,10 @@ public final class RelicAura {
      * Onda de choque de los eventos: cuantas particulas, radio de salida y de
      * llegada, y tamano. Sale del destello, asi que no guarda estado.
      */
+    /** Copos del estado de congelacion: caen despacio, giran y son diminutos. */
+    private static final int FLAKE_COUNT = 7;
+    private static final float FLAKE_SIZE = 0.038F;
+    private static final float FLAKE_SPEED = 0.28F;
     private static final int SHOCK_COUNT = 8;
     private static final float SHOCK_MIN = 0.16F;
     private static final float SHOCK_MAX = 0.62F;
@@ -283,6 +287,12 @@ public final class RelicAura {
             drawBubbles(bufferSource, frame, time, glow, amount, motion);
             return;
         }
+        if (mood == RelicAnimatable.Mood.FREEZING) {
+            // Congelandose: copos que bajan y se mecen. Es el unico VFX que va
+            // *mas* lento que la lluvia: el frio congela hasta el movimiento.
+            drawFlakes(bufferSource, frame, time, glow, amount, motion);
+            return;
+        }
         if (mood == RelicAnimatable.Mood.BURNING) {
             // Ardiendo: brasas subiendo, con parpadeo. Se ve aunque el jugador este
             // quieto, que es justo cuando mas falta hace saber que sigues en fuego.
@@ -424,6 +434,34 @@ public final class RelicAura {
             // parpadea en el sitio se lee como un pixel roto, no como lluvia.
             float weight = amount * (0.25F + 0.75F * fall) * 0.60F;
             billboardAt(buffer, frame, cx, cy, cz, DROP_SIZE, seconds(time) * 0.8F + i,
+                    redTint * weight, greenTint * weight, blueTint * weight, 1.0F);
+        }
+    }
+
+    /**
+     * Copos: caen muy despacio (un cruce cada ~3,5 s), se mecen de lado con un
+     * giro propio y son mas pequenos que las gotas. Blanco azulado del estado, y
+     * correr los arrastra sin acelerarlos mucho: el hielo no reacciona rapido.
+     */
+    private static void drawFlakes(MultiBufferSource bufferSource, Frame frame, float time,
+                                   RelicGlowState glow, float amount, float motion) {
+        VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
+        float redTint = glow.red() * 0.45F + 0.88F * 0.55F;
+        float greenTint = glow.green() * 0.60F + 0.96F * 0.40F;
+        float blueTint = glow.blue() * 0.75F + 1.00F * 0.25F;
+        float speed = FLAKE_SPEED * (1.0F + 0.30F * motion);
+        for (int i = 0; i < FLAKE_COUNT; i++) {
+            float fall = fract(seconds(time) * speed + i * (1.0F / FLAKE_COUNT));
+            // El mecido es lo que distingue un copo de una gota: baja en zigzag.
+            float sway = sin(seconds(time) * 1.1F + i * 2.6F) * 0.09F;
+            float height = 0.42F - fall * 0.78F;
+            float cx = frame.originX + frame.leftX * sway + frame.upX * height;
+            float cy = frame.originY + frame.leftY * sway + frame.upY * height;
+            float cz = frame.originZ + frame.leftZ * sway + frame.upZ * height;
+            // Entran apagados y se encienden al llegar abajo, como un copo que se
+            // posa: al reves que las gotas, que se apagan al caer.
+            float weight = amount * (0.35F + 0.45F * fall) * 0.55F;
+            billboardAt(buffer, frame, cx, cy, cz, FLAKE_SIZE, seconds(time) * 0.35F + i,
                     redTint * weight, greenTint * weight, blueTint * weight, 1.0F);
         }
     }
@@ -637,6 +675,8 @@ public final class RelicAura {
             case PORTAL -> 1.10F;
             // Ardiendo vibra: el vaiven mas amplio despues de la tormenta.
             case BURNING -> 1.35F;
+            // Congelandose apenas se mueve: el frio entumece.
+            case FREEZING -> 0.55F;
             case NEUTRAL -> 1.0F;
         };
         // Correr suma un 60% de vaiven y agacharse lo recorta: es la diferencia

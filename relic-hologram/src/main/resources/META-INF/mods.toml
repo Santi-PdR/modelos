@@ -23,7 +23,8 @@ GeckoLib 4. El brillo es fullbright (se ve igual de noche y en cuevas).
   y /relic anim|info|stats|set|reset|save|preview|mood|preset. /relic vfx shock
   grita un destello a mano para ver la onda de choque sin esperar a que pase algo,
   y /relic preset soft|normal|showcase cambia de look de golpe.
-- Diez estados de brillo (ardiendo, herido, tormenta, agua, portal, oscuridad, lluvia, noche, resonancia) que
+- Once estados de brillo (ardiendo, congelandose, herido, tormenta, agua, portal, oscuridad,
+  lluvia, noche, resonancia) que
   cambian color, intensidad y velocidad de la animacion; /relic mood los fuerza,
   /relic mood next los recorre (tecla M), /relic mood list los enseña todos y
   /relic mood cycle los pasa solos cada N segundos.
