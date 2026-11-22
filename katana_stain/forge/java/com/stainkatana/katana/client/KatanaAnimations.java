@@ -150,13 +150,12 @@ public final class KatanaAnimations {
                 @Override protected float getFadeIn(float delta) { return 1F; }
             });
         }
-        // The overhead clip's main downward stroke is near source tick 5.25.
-        // C starts its opening at activation (10 ticks before the first hit),
-        // while later overhead cuts start 6 ticks before their scheduled hit.
-        // Playback was previously 1.4x for both, making the downward stroke
-        // finish several ticks before the server's contact effect and damage.
+        // The downward stroke *ends* at 0.4375 s (source tick 8.75),
+        // not at tick 5.25 where the arm is still raised. Align that contact
+        // pose with the server's ten-tick opening or six-tick later wind-up.
+        // Keep this a presentation adjustment; damage remains server-timed.
         float speed = ability == 0 ? 3F : ability == 1 ? 1F
-                : overhead ? (ability == 2 ? .525F : .875F) : 1.4F;
+                : overhead ? (ability == 2 ? .875F : 8.75F / 6F) : 1.4F;
         timedClip.addModifierBefore(new SpeedModifier(speed));
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
     }
