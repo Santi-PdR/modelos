@@ -145,7 +145,8 @@ public final class KatanaAnimations {
                     return java.util.Optional.empty();
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                         dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
-                        new dev.kosmx.playerAnim.core.util.Vec3f(0, 1, -5)));
+                        new dev.kosmx.playerAnim.core.util.Vec3f(
+                                player.getMainArm() == HumanoidArm.LEFT ? 12 : 0, 1, -5)));
             }) {
                 @Override protected float getFadeIn(float delta) { return 1F; }
             });
