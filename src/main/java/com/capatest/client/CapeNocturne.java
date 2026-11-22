@@ -113,7 +113,7 @@ public final class CapeNocturne {
         if (!(strength > 0)) return 0;
         // Avoid infinity/infinity if a finite but corrupt speed sample overflows
         // while scaled; high impulses simply saturate at the visual budget.
-        return WAKE_LIMIT * (Double.isInfinite(strength) ? 1 : strength / (1 + strength));
+        return Double.isInfinite(strength) ? WAKE_LIMIT : WAKE_LIMIT * strength / (1 + strength);
     }
 
     private static double wave(double phase) {
