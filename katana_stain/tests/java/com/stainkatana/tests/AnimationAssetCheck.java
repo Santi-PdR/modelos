@@ -12,7 +12,7 @@ import java.nio.file.Path;
 /** Exercises PlayerAnimator's actual parser and player, not just JSON syntax. */
 public class AnimationAssetCheck {
     public static void main(String[] args) throws Exception {
-        for (String name : new String[]{"inspect", "stain_x_cut", "stain_c_overhead", "sword_attack", "sword_attack2", "combo_1", "combo_2", "combo_3", "combo_heavy", "scene_01", "scene_02", "scene_03", "scene_04", "scene_05", "scene_06", "scene_07", "scene_08", "scene_09", "scene_10"}) {
+        for (String name : new String[]{"inspect", "stain_x_cut", "stain_c_overhead", "stain_c_fallback", "sword_attack", "sword_attack2", "combo_1", "combo_2", "combo_3", "combo_heavy", "scene_01", "scene_02", "scene_03", "scene_04", "scene_05", "scene_06", "scene_07", "scene_08", "scene_09", "scene_10"}) {
             String path = "/assets/stainkatana/player_animation/" + name + ".json";
             try (InputStream in = AnimationAssetCheck.class.getResourceAsStream(path)) {
                 if (in == null) throw new AssertionError("Missing " + path);

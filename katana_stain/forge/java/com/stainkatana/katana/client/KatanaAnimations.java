@@ -82,7 +82,7 @@ public final class KatanaAnimations {
         KeyframeAnimation clip = ability == 1 ? null : loadBetterCombat(overhead ? 2 : ability);
         boolean external = clip != null;
         if (!external) clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID,
-                overhead ? "stain_c_overhead" : CLIPS[ability]));
+                overhead ? "stain_c_fallback" : CLIPS[ability]));
         if (clip == null) {
             LOGGER.warn("Missing katana animation for ability {}", ability);
             return;
@@ -153,11 +153,11 @@ public final class KatanaAnimations {
         }
         // Align the contact pose with the server's ten-tick opening or
         // six-tick later wind-up: source tick 14 for the installed Better
-        // Combat sword clip, 8.75 for the Improved Animations fallback.
+        // Combat sword clip, 6 for the original katana fallback.
         // Damage remains server-timed; these speeds affect presentation only.
         float speed = ability == 0 ? 3F : ability == 1 ? 1F
                 : overhead ? (external ? (ability == 2 ? 1.4F : 14F / 6F)
-                        : (ability == 2 ? .875F : 8.75F / 6F)) : 1.4F;
+                        : (ability == 2 ? .6F : 1F)) : 1.4F;
         timedClip.addModifierBefore(new SpeedModifier(speed));
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
     }
