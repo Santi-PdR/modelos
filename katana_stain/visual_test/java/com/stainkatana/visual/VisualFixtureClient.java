@@ -409,23 +409,28 @@ public final class VisualFixtureClient {
             case 954 -> com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 1);
             case 959 -> capture = "30_slash_first_night.png";
             case 969 -> {
-                mc.getSingleplayerServer().execute(() -> mc.getSingleplayerServer().overworld().setDayTime(6000));
+                mc.getSingleplayerServer().execute(() -> {
+                    var world = mc.getSingleplayerServer().overworld();
+                    world.setDayTime(6000);
+                    var dragon = world.getEntity(dragonId);
+                    if (dragon != null) dragon.discard();
+                });
                 mc.options.fov().set(70); mc.options.setCameraType(CameraType.FIRST_PERSON);
             }
             case 980 -> bloodSample(0, 0, 0);
             case 987 -> capture = "31_blood_base.png";
-            case 1005 -> bloodSample(4, 0, 0);
-            case 1012 -> capture = "32_blood_x_plus.png";
-            case 1030 -> bloodSample(-4, 0, 0);
-            case 1037 -> capture = "33_blood_x_minus.png";
-            case 1055 -> bloodSample(0, 4, 0);
-            case 1062 -> capture = "34_blood_y_plus.png";
-            case 1080 -> bloodSample(0, -4, 0);
-            case 1087 -> capture = "35_blood_y_minus.png";
-            case 1105 -> bloodSample(0, 0, 4);
-            case 1112 -> capture = "36_blood_z_plus.png";
-            case 1130 -> bloodSample(0, 0, -4);
-            case 1137 -> capture = "37_blood_z_minus.png";
+            case 1005 -> bloodSample(4, -4, 0);
+            case 1012 -> capture = "32_blood_x4_y_minus4.png";
+            case 1030 -> bloodSample(6, -6, 0);
+            case 1037 -> capture = "33_blood_x6_y_minus6.png";
+            case 1055 -> bloodSample(8, -6, 0);
+            case 1062 -> capture = "34_blood_x8_y_minus6.png";
+            case 1080 -> bloodSample(4, -8, 0);
+            case 1087 -> capture = "35_blood_x4_y_minus8.png";
+            case 1105 -> bloodSample(6, -6, 4);
+            case 1112 -> capture = "36_blood_x6_y_minus6_z4.png";
+            case 1130 -> bloodSample(6, -6, -4);
+            case 1137 -> capture = "37_blood_x6_y_minus6_z_minus4.png";
             // Sample a full gesture for both handedness settings. A single frame
             // cannot establish hand-to-blade contact or catch mirroring errors.
             case 1155 -> {
