@@ -332,6 +332,7 @@ public final class CapeFxSmoke {
                         return;
                     }
                     if (!game.level.getBlockState(pane).is(Blocks.GLASS_PANE)) return;
+                    checkLightHandoff(game);
                     testFlight(game);
                     equipScene(game, Scene.CHEST);
                 }
@@ -1024,6 +1025,40 @@ public final class CapeFxSmoke {
         game.stop();
     }
 
+    private static void checkLightHandoff(Minecraft game) throws IOException {
+        // Two real layer instances, as in chest and Curios, with one dummy
+        // wearer. Don't teleport the live player or make the clock test
+        // depend on when the light engine delivers a packet.
+        var actor = new ArmorStand(game.level, 0, 64, 0);
+        var other = new ArmorStand(game.level, 0, 64, 0);
+        actor.tickCount = other.tickCount = 40;
+        var stack = mantle();
+        GlowProbe chest = new GlowProbe(), back = new GlowProbe();
+        int bright = LightTexture.pack(15, 15), dark = LightTexture.pack(0, 0);
+        int day = chest.wearerLight(actor, stack, .15F, bright);
+        int partial = chest.wearerLight(actor, stack, .75F, dark);
+        var tint = chest.submittedColor;
+        int replay = back.wearerLight(actor, stack, .25F, dark);
+        check(partial == replay && tint.equals(back.submittedColor), "glow jumped between renderers or rewound");
+        check(back.wearerLight(other, stack, .75F, bright) == day, "another wearer inherited the glow fade");
+        actor.tickCount += 2;
+        int next = back.wearerLight(actor, stack, .75F, dark);
+        check(edgeGain(day) < edgeGain(partial) && edgeGain(partial) < edgeGain(next) && edgeGain(next) < 1.30,
+                "exposure did not continue through the handoff");
+        Files.writeString(shots(game).resolve("halo-continuidad-forge.tsv"),
+                "pase\tborde\tinterior\n" + lightRow("dia",day) + lightRow("entrada",partial)
+                        + lightRow("otro-renderer",replay) + lightRow("dos-ticks-despues",next));
+        note("halo y tinte continuos entre dos renderers del mismo portador");
+    }
+
+    private static double edgeGain(int packed) {
+        return (short) packed / 4096.0;
+    }
+
+    private static String lightRow(String label, int packed) {
+        return label + "\t" + edgeGain(packed) + "\t" + (short) (packed >>> 16) / 4096.0 + "\n";
+    }
+
     private static final class GlowProbe extends CapaArmorRenderer {
         private final CapaGlowLayer layer = new CapaGlowLayer(this);
         private final CapaDeteriorerItem item = (CapaDeteriorerItem) mantle().getItem();
@@ -1031,6 +1066,7 @@ public final class CapeFxSmoke {
         private final BufferBuilder sink = new BufferBuilder(256);
         private RenderType submitted;
         private int submittedLight;
+        private com.capatest.item.CapeState.Glow submittedColor;
         private Entity sampleWearer;
         private ItemStack sampleStack;
         private boolean failing;
@@ -1089,6 +1125,7 @@ public final class CapeFxSmoke {
                              float r, float g, float b, float a) {
             submitted = type;
             submittedLight = light;
+            submittedColor = new com.capatest.item.CapeState.Glow(r, g, b);
             check(stack.last().pose().equals(caller.last().pose()) && stack.last().normal().equals(caller.last().normal()),
                     "emission transform differs from opaque transform");
             stack.pushPose();

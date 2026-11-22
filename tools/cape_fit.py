@@ -291,7 +291,7 @@ def worn_plate(index, elytra, slim):
 @lru_cache(maxsize=1)
 def hood_profile():
     code = SOURCE.with_name('CapeHood.java').read_text()
-    return {k: float(v) for k,v in re.findall(r'\bdouble ([A-Z_]+) = ([0-9.]+);', code)}
+    return {k: float(v) for k,v in re.findall(r'\bdouble ([A-Z_]+) = (-?[0-9.]+);', code)}
 
 
 def hood_moves(name):
@@ -317,12 +317,13 @@ def rear_tuck(up, yaw, lean):
 
 
 NAPE_LIP = ('v17_cowl_back_0', 'v17_cowl_back_1', 'v17_cowl_front_0', 'v17_cowl_front_2', 'v17_cowl_front_3')
+NAPE_OPPOSITE = ('v17_cowl_back_3', 'v17_cowl_back_4', 'v17_cowl_front_4', 'v17_cowl_front_5', 'v17_cowl_front_6')
 
 
-def nape_shifts(up, yaw, lean):
-    """Chain and selected cowl offsets in post-bake torso axes, in model units."""
-    if not all(math.isfinite(v) for v in (up,yaw,lean)):
-        return [(0.,)*3]*2
+def nape_shifts(up, yaw, lean, crouch_mix=0., *, legacy=False):
+    """Post-bake torso offsets. Legacy reproduces the archived .31 stroke."""
+    if not all(math.isfinite(v) for v in (up,yaw,lean,crouch_mix)):
+        return [(0.,)*3]*4
     h = hood_profile()
     turn = math.remainder(yaw,360.)
     angle = abs(turn)
@@ -335,11 +336,31 @@ def nape_shifts(up, yaw, lean):
     x,a = math.sin(yaw),math.cos(yaw)
     y,z = a*math.sin(bend),-a*math.cos(bend)
     k = h['NAPE_INSET']
-    return [(chain*x,chain*y,chain*z), (lip*(k*x+math.copysign(h['NAPE_SIDE']*(1+open_),turn)),lip*k*y,lip*k*z)]
+    r = lip*(k*x+math.copysign(h['NAPE_SIDE']*(1+open_),turn))
+    b,c = lip*k*y,lip*k*z
+    if legacy:
+        return [(chain*x,chain*y,chain*z), (r,b,c), (0.,)*3, (0.,)*3]
+    handoff = 1-smooth(h['OPPOSITE_FULL'],h['OPPOSITE_END'],angle) if turn < 0 else 0.
+    stance = max(smooth(h['REAR_LEAN_START'],h['REAR_LEAN_FULL'],lean),max(0.,min(1.,crouch_mix)))
+    settle = (stance
+              * (1-smooth(h['RETURN_TURN_FULL'],h['RETURN_TURN_END'],angle))
+              * smooth(h['RETURN_DOWN_START'],h['RETURN_DOWN_FULL'],up)
+              * (1-smooth(h['RETURN_UP_FULL'],h['RETURN_UP_END'],up)))
+    drop,inset,follow = settle*h['RETURN_DROP'],settle*h['RETURN_INSET'],h['RETURN_CHAIN']
+    return [(chain*x,chain*y-drop*follow,chain*z-inset*follow),
+            (r*(1-handoff),b*(1-handoff)-drop,c*(1-handoff)-inset),
+            (r*handoff*h['OPPOSITE_X'], b*handoff*h['OPPOSITE_Y']-drop, c*handoff*h['OPPOSITE_Z']-inset),
+            (0.,-drop,-inset)]
 
 
 def nape_piece(name):
-    return 0 if name.startswith('v18_chain_') else 1 if name in NAPE_LIP else None
+    if name.startswith('v18_chain_'):
+        return 0
+    if name in NAPE_LIP:
+        return 1
+    if name in NAPE_OPPOSITE:
+        return 2
+    return 3 if hood_moves(name) else None
 
 
 @lru_cache(maxsize=1)
@@ -414,20 +435,21 @@ def fixed_wearer_pose(geo, stance, *, elytra=False, plates=True, slim=False, hoo
         if tuck:
             bones.append(rear)
         trim = nape_shifts(look,turn,lean)
-        if any(trim[1]):
-            # Convert from the post-bake axes to authored GEO X.
-            dx,dy,dz = trim[1]
-            for hinge in [frame, rear] if tuck else [frame]:
-                x,y,z = hinge['offset']
-                bones.append(dict(hinge,name=hinge['name']+'_nape',offset=[x-dx,y+dy,z+dz]))
+        for k, (dx,dy,dz) in enumerate(trim[1:],1):
+            if dx or dy or dz:
+                # Convert from the post-bake axes to authored GEO X.
+                for hinge in [frame, rear] if tuck else [frame]:
+                    x,y,z = hinge['offset']
+                    bones.append(dict(hinge,name=f"{hinge['name']}_nape{k}",offset=[x-dx,y+dy,z+dz]))
     for b in geo['bones']:
         n = b['name']
         piece = dict(b,**changes.get(n,{}))
         if flex and piece.get('parent') == G.FIT_BONE:
             if hood_moves(n):
                 piece['parent'] = 'worn_hood_rear' if tuck and n.startswith('v17_cowl_back_') else 'worn_hood'
-                if n in NAPE_LIP and any(trim[1]):
-                    piece['parent'] += '_nape'
+                k = nape_piece(n)
+                if any(trim[k]):
+                    piece['parent'] += f'_nape{k}'
             if nape_piece(n) == 0 and any(trim[0]):
                 dx,dy,dz = trim[0]
                 x,y,z = piece.get('offset',(0.,0.,0.))

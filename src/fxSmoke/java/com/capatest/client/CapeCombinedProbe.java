@@ -27,6 +27,7 @@ final class CapeCombinedProbe {
     private final BlockPos runway;
     private final int direction;
     private final boolean followNape;
+    private final boolean followNeutral = "1".equals(System.getenv("CAPA_REPOSO_NUCA"));
     private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tstride\tground\tsprinting\tcrouching\t"
             + "walk\trun\tsneak\tair\tfall\tswim\ttop\tmid\ttip_x\ttip_y\ttip_z\tseat_z\tpitch\tyaw\tfit\tcrouch_floor\trear_tuck\timage\n");
     private final StringBuilder boxes = new StringBuilder(), head = new StringBuilder();
@@ -147,7 +148,7 @@ final class CapeCombinedProbe {
         double t = tick + (double) partial;
         String image = "-";
         boolean landmark = nextShot < SHOTS.length && tick >= SHOTS[nextShot];
-        boolean unwind = followNape && tick >= 78 && tick <= 83;
+        boolean unwind = followNape && ((tick >= 78 && tick <= 83) || (followNeutral && tick >= 87 && tick <= 89));
         if (fit != null && (landmark || unwind)) {
             if (landmark) {
                 if (tick > SHOTS[nextShot] + 2) throw new AssertionError(name + ": missed screenshot near " + SHOTS[nextShot]);

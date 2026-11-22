@@ -47,22 +47,40 @@ final class CapeHood {
     private static final double CHAIN_INSET = 1.45;
     private static final double NAPE_INSET = 1.15;
     private static final double NAPE_SIDE = .55;
+    private static final double OPPOSITE_FULL = 38;
+    private static final double OPPOSITE_END = 50;
+    // The cut is deliberately asymmetric. Match the opposite lip to its
+    // own sewn edge, rather than moving the original pieces twice as far.
+    private static final double OPPOSITE_X = .84;
+    private static final double OPPOSITE_Y = 1.04;
+    private static final double OPPOSITE_Z = 1.12;
+    private static final double RETURN_TURN_FULL = 21;
+    private static final double RETURN_TURN_END = 31;
+    private static final double RETURN_DOWN_START = -24;
+    private static final double RETURN_DOWN_FULL = -7;
+    private static final double RETURN_UP_FULL = 27;
+    private static final double RETURN_UP_END = 43;
+    private static final double RETURN_DROP = 1.90;
+    private static final double RETURN_INSET = 2.00;
+    private static final double RETURN_CHAIN = .60;
     static final Pose REST = new Pose(REST_PITCH, 0, 0);
     static final Shift FIXED = new Shift(0, 0, 0);
-    static final Nape NO_NAPE = new Nape(FIXED, FIXED);
+    static final Nape NO_NAPE = new Nape(FIXED, FIXED, FIXED, FIXED);
 
     // Angles in the baked frame; positive pitch moves the crown away from
     // the neck. The collar teeth, returns, mount and cloth roots stay sewn.
     record Pose(double pitch, double yaw, double roll) {}
     record Shift(double x, double y, double z) {}
-    record Nape(Shift chain, Shift lip) {
+    record Nape(Shift chain, Shift lip, Shift opposite, Shift crown) {
         Shift forBone(String name) {
             if (chainLink(name)) return chain;
-            // The edges exposed at the nape, not the entire hood or collar.
+            // The edges are not exact mirrors in the authored mesh.
             return switch (name) {
                 case "v17_cowl_back_0", "v17_cowl_back_1", "v17_cowl_front_0",
                         "v17_cowl_front_2", "v17_cowl_front_3" -> lip;
-                default -> FIXED;
+                case "v17_cowl_back_3", "v17_cowl_back_4", "v17_cowl_front_4",
+                        "v17_cowl_front_5", "v17_cowl_front_6" -> opposite;
+                default -> moves(name) ? crown : FIXED;
             };
         }
     }
@@ -72,13 +90,16 @@ final class CapeHood {
     static boolean chainLink(String name) { return name.startsWith("v18_chain_"); }
 
     /** Retract the lower trim into its sewn seat, independently of the crown fold. */
-    static Nape nape(double up, double yaw, double lean) {
-        if (!Double.isFinite(up) || !Double.isFinite(yaw) || !Double.isFinite(lean)) return NO_NAPE;
+    static Nape nape(double up, double yaw, double lean, double crouchMix) {
+        if (!Double.isFinite(up) || !Double.isFinite(yaw) || !Double.isFinite(lean) || !Double.isFinite(crouchMix))
+            return NO_NAPE;
         double turn = Math.IEEEremainder(yaw, 360), absTurn = Math.abs(turn);
         double weight = smooth(REAR_LEAN_START, REAR_LEAN_FULL, lean) * smooth(NAPE_UP_START, NAPE_UP_FULL, up)
                 * smooth(NAPE_TURN_START, NAPE_TURN_FULL, absTurn);
         double lip = weight * (1 - smooth(NAPE_TURN_RELEASE, NAPE_TURN_END, absTurn));
-        if (lip == 0) return NO_NAPE;
+        double rest = settle(up, absTurn, Math.max(smooth(REAR_LEAN_START, REAR_LEAN_FULL, lean),
+                Math.max(0, Math.min(1, crouchMix))));
+        if (lip == 0 && rest == 0) return NO_NAPE;
         double open = 1 - smooth(CHAIN_RELEASE, CHAIN_END, absTurn);
         double chain = weight * open * CHAIN_INSET;
         double aim = Math.toRadians(turn), bend = Math.toRadians(lean);
@@ -86,8 +107,28 @@ final class CapeHood {
         // axes. The extra inboard stroke keeps the cowl tip off the near side.
         double x = Math.sin(aim), along = Math.cos(aim);
         double y = along * Math.sin(bend), z = -along * Math.cos(bend);
-        return new Nape(chain == 0 ? FIXED : new Shift(chain*x, chain*y, chain*z),
-                new Shift(lip*(NAPE_INSET*x + Math.copySign(NAPE_SIDE*(1 + open), turn)), lip*NAPE_INSET*y, lip*NAPE_INSET*z));
+        double across = lip * (NAPE_INSET * x + Math.copySign(NAPE_SIDE * (1 + open), turn));
+        double rise = lip * NAPE_INSET * y, depth = lip * NAPE_INSET * z;
+        double handoff = turn < 0 ? 1 - smooth(OPPOSITE_FULL, OPPOSITE_END, absTurn) : 0;
+        double drop = rest * RETURN_DROP, inset = rest * RETURN_INSET;
+        return new Nape(shift(chain*x, chain*y - drop * RETURN_CHAIN, chain*z - inset * RETURN_CHAIN),
+                shift(across * (1 - handoff), rise * (1 - handoff) - drop, depth * (1 - handoff) - inset),
+                shift(OPPOSITE_X * across * handoff, OPPOSITE_Y * rise * handoff - drop,
+                        OPPOSITE_Z * depth * handoff - inset), shift(0, -drop, -inset));
+    }
+
+    private static Shift shift(double x, double y, double z) {
+        return x == 0 && y == 0 && z == 0 ? FIXED : new Shift(x, y, z);
+    }
+
+    private static double settle(double up, double absTurn, double stance) {
+        // At neutral the raised rear rim relaxes, but the crouched neck is
+        // still in its path. Keep the stroke on the cloth's release blend
+        // even after the vanilla torso snaps back to its standing angle.
+        return stance
+                * (1 - smooth(RETURN_TURN_FULL, RETURN_TURN_END, absTurn))
+                * smooth(RETURN_DOWN_START, RETURN_DOWN_FULL, up)
+                * (1 - smooth(RETURN_UP_FULL, RETURN_UP_END, up));
     }
 
     static boolean rear(String name) { return name.startsWith("v17_cowl_back_"); }

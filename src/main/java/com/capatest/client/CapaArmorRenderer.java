@@ -2,6 +2,7 @@ package com.capatest.client;
 
 import com.capatest.CapaTestMod;
 import com.capatest.item.CapaDeteriorerItem;
+import com.capatest.item.CapeState;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -29,6 +30,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private boolean armorPassSubmitted;
     private boolean sampleFit;
     private double hoodClearance, rearTuck;
+    private double hoodUp, hoodTurn, hoodLean;
+    private boolean dryHood;
     private CapeHood.Nape nape = CapeHood.NO_NAPE;
 
     double hoodClearance() { return hoodClearance; }
@@ -126,14 +129,17 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
     private void fitHood(HumanoidModel<?> model, boolean enabled, boolean dryGround) {
         hoodClearance = rearTuck = 0;
         nape = CapeHood.NO_NAPE;
+        dryHood = enabled && dryGround;
         if (!enabled) return;
         double up = -Math.toDegrees(model.head.xRot);
         double turn = Math.toDegrees(model.head.yRot - model.body.yRot);
         double lean = Math.toDegrees(model.body.xRot);
         hoodClearance = CapeHood.lookClearance(up, turn, lean);
-        if (dryGround) {
+        if (dryHood) {
             rearTuck = CapeHood.rearTuck(up, turn, lean);
-            nape = CapeHood.nape(up, turn, lean);
+            hoodUp = up;
+            hoodTurn = turn;
+            hoodLean = lean;
         }
     }
 
@@ -161,8 +167,8 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         boolean fitted = seat || saddle || shoulder || wingFit || hood || trim != CapeHood.FIXED || edge != null;
         if (fitted) poseStack.pushPose();
         try {
-            // This pose-only stroke is shared by cutout and bloom. The trim
-            // keeps its rigid shape, the cloth roots and mount don't move.
+            // Shared by cutout and bloom. Part of the return stroke follows
+            // through on the chain so it remains connected to the cowl.
             if (trim != CapeHood.FIXED) poseStack.translate(trim.x() / 16, trim.y() / 16, trim.z() / 16);
             if (seat) {
                 // One rigid displacement in chest space, shared by the
@@ -244,6 +250,13 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
                                  RenderType renderType, MultiBufferSource buffers, VertexConsumer buffer,
                                  boolean isReRender, float partialTick, int light, int overlay,
                                  float red, float green, float blue, float alpha) {
+        if (dryHood && !isReRender && CapeFit.BONE.equals(bone.getName())
+                && getCurrentEntity() instanceof AbstractClientPlayer player) {
+            // The clip sampler has now advanced the cloth to this draw. Reuse
+            // that Shift release, and keep the identical fit in the glow pass.
+            var motion = CapaArmorModel.wornMotion(player);
+            nape = CapeHood.nape(hoodUp, hoodTurn, hoodLean, motion == null ? 0 : motion.weight(CapeState.SNEAK));
+        }
         super.renderChildBones(poseStack, animatable, bone, renderType, buffers, buffer,
                 isReRender, partialTick, light, overlay, red, green, blue, alpha);
         if (!mountInChest || !bone.getName().equals("chestplate") || bone.isHidingChildren()) return;

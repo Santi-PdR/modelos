@@ -20,12 +20,9 @@ import java.util.WeakHashMap;
 
 /** Separate, depth-tested light on the same solids, without editing the opaque atlas. */
 public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
-    // The tint and exposure histories follow the wearer, not the shared renderer.
-    private record WornLight(CapeTint tint, CapeNocturne halo) {
-        WornLight() { this(new CapeTint(), new CapeNocturne()); }
-    }
-
-    private final Map<Entity, WornLight> lights = new WeakHashMap<>();
+    // Render-thread histories survive a transfer from chest to Curios. A
+    // weak key keeps the clock specific to this wearer and this loaded world.
+    private static final Map<Entity, CapeWornLight> LIGHTS = new WeakHashMap<>();
     private int resourceGeneration = -1;
     private CapeBloom.Mode ceiling = CapeBloom.Mode.HALO;
 
@@ -85,19 +82,22 @@ public class CapaGlowLayer extends GeoRenderLayer<CapaDeteriorerItem> {
             return;
         Entity wearer = armor.getCurrentEntity();
         CapeState mode = CapaDeteriorerItem.stateFor(wearer, armor.getCurrentStack());
-        double seconds = wearer == null ? 0.0 : (wearer.tickCount + (double) partialTick) / 20.0;
-        WornLight light = wearer == null ? null : lights.computeIfAbsent(wearer, key -> new WornLight());
-        CapeState.Glow glow = light == null ? mode.glow(seconds) : light.tint().sample(mode, seconds);
-        int vertexLight = LightTexture.FULL_BRIGHT;
-        if (pass == CapeBloom.Mode.HALO) {
-            // Per-vertex data survives batching of several wearers. Keep the
-            // vanilla fallback's lightmap coordinates fullbright.
-            float sky = wearer != null && wearer.level() instanceof ClientLevel world
-                    ? world.getSkyDarken(partialTick) : 1.0F;
-            CapeNocturne.Gains gains = light == null ? CapeNocturne.gains(0, 0, 0) : light.halo().sample(
-                    LightTexture.block(packedLight), LightTexture.sky(packedLight), sky, seconds, wearer.getId());
-            vertexLight = gains.packed();
+        CapeState.Glow glow;
+        CapeNocturne.Gains halo;
+        if (wearer == null) {
+            glow = mode.glow(0);
+            halo = CapeNocturne.gains(0, 0, 0);
+        } else {
+            float sky = wearer.level() instanceof ClientLevel world ? world.getSkyDarken(partialTick) : 1.0F;
+            var light = LIGHTS.computeIfAbsent(wearer, key -> new CapeWornLight());
+            var frame = light.sample(mode, LightTexture.block(packedLight), LightTexture.sky(packedLight),
+                    sky, wearer.tickCount, partialTick, wearer.getId());
+            glow = frame.glow();
+            halo = frame.halo();
         }
+        // Packed per vertex for batching. The vanilla fallback still gets
+        // ordinary fullbright lightmap coordinates, not the halo payload.
+        int vertexLight = pass == CapeBloom.Mode.HALO ? halo.packed() : LightTexture.FULL_BRIGHT;
         getRenderer().reRender(bakedModel, poseStack, bufferSource, animatable, emissive,
                 bufferSource.getBuffer(emissive), partialTick,
                 vertexLight, OverlayTexture.NO_OVERLAY, glow.red(), glow.green(), glow.blue(), 1.0F);

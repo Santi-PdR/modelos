@@ -202,7 +202,8 @@ def ablation(baseline, out):
 
 
 def undo_trim(groups, pose):
-    shifts = nape_shifts(-pose['pitch'],pose['yaw'],profile()['bodyAngle']) if pose['crouching'] else [(0.,)*3]*2
+    # This historical verifier is specifically the .31 versus .30 gate.
+    shifts = nape_shifts(-pose['pitch'],pose['yaw'],profile()['bodyAngle'],legacy=True) if pose['crouching'] else [(0.,)*3]*4
     return {n:np.asarray(c)-shifts[k] if (k := nape_piece(n)) is not None else c for n,c in groups.items()}
 
 

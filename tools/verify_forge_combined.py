@@ -61,18 +61,33 @@ def timeline(data, slot):
     return len(t), p90, peak, t[a], t[a+1]-t[a], *(float(abs(data[k][a+1]-data[k][a])) for k in ('top', 'mid'))
 
 
-def fit(root, data, slot, rig, source):
-    mesh = read_boxes(root / f'maniobra-{slot}-cubos.tsv')
+def landmarks(data, stem, *, extended=False):
+    visible = data[data['image'] != '-']
+    assert len(visible) >= len(STILLS), (stem,'capturas incompletas')
+    picked = []
+    for at, _ in STILLS:
+        shot = next(r for r in visible if at <= int(r['time']) <= at+2)
+        t = int(shot['time'])
+        assert shot['image'] == f'{stem}-{t:03d}.png', (stem,t,shot)
+        picked.append(shot)
+    extra = set(visible['time'].astype(int)) - {int(p['time']) for p in picked}
+    assert not extra or extended and extra <= set(range(78,84)) | set(range(87,90)), (stem,extra)
+    return picked
+
+
+def fit(root, data, slot, rig, source, *, direction=1):
+    stem = f'{"maniobra" if direction == 1 else "giro-inverso"}-{slot}'
+    mesh = read_boxes(root / f'{stem}-cubos.tsv')
     sampled = data[data['fit'] == 1]
     ticks = sampled['time'].astype(int)
     assert list(ticks) == sorted(mesh) and len(mesh) >= 55, (slot, 'faltan cuadros de malla')
     held = sampled[(ticks >= 49) & (ticks <= 67)]
-    assert len(held) >= 13 and held['yaw'].min() > 54.5 and held['pitch'].max() < -34.5, (slot, 'faltó el giro en el render real')
-    assert sampled['yaw'][0] < .05 and abs(sampled['yaw'][-1]) < .05, (slot, 'faltó barrer la mirada')
+    assert len(held) >= 13 and (direction*held['yaw']).min() > 54.5 and held['pitch'].max() < -34.5, (stem, 'faltó el giro en el render real')
+    assert abs(sampled['yaw'][0]) < .05 and abs(sampled['yaw'][-1]) < .05, (stem, 'faltó barrer la mirada')
     roots = np.array([name.endswith('_seg0') for name in rig.names])
-    # The sewn nape trim has a local render stroke in .31. The rest is still
-    # the original fixed rig; verify_forge_nape checks this exception itself.
-    trim = mod_version() == '1.67.31'
+    # The chain has a local render stroke, but original_dimensions above
+    # the contact checks still requires the unscaled box for every link.
+    trim = mod_version() in ('1.67.31','1.67.32')
     fixed = rig.rigid & ~np.array([hood_moves(name) or trim and name.startswith('v18_chain_') for name in rig.names])
     plate = np.array([name == 'v18_pad_1' for name in rig.names])
     reference = None
@@ -127,7 +142,7 @@ def previous_rows(path):
     return rows
 
 
-def main(root, diagnostic=False, reference=None):
+def main(root, diagnostic=False, reference=None, extended=False):
     baseline = previous_rows(reference)
     geo = load(ARMOR_GEO)
     rig = WornModel(fixed_wearer_pose(geo, 0.))
@@ -163,12 +178,8 @@ def main(root, diagnostic=False, reference=None):
         faults.extend(f'{slot}: {case}' for case in faults_here)
         result = (p90, peak, tick, dt, top, mid, seam, join, back, drift, head, hat, arm, leg)
         results.append((slot, count, poses, *(f'{v:.6f}' for v in result), ','.join(faults_here) or 'OK'))
-        visible = data[data['image'] != '-']
-        assert len(visible) == len(STILLS), (slot, 'capturas incompletas')
-        for sample, (at, _) in zip(visible, STILLS, strict=True):
-            captured_at = int(sample['time'])
-            assert at <= captured_at <= at + 2 and sample['image'] == f'maniobra-{slot}-{captured_at:03d}.png', (slot, at, sample)
-        pictures[slot] = [root/name for name in visible['image']]
+        chosen = landmarks(data,f'maniobra-{slot}',extended=extended)
+        pictures[slot] = [root/p['image'] for p in chosen]
         print(f'{slot}: {count} cuadros, {poses} poses con malla; punta p90/pico {p90:.3f}/{peak:.3f}u/tick; '
               f'pico en t={tick:.2f}, intervalo {dt:.3f}, bisagras Δ{top:.2f}/{mid:.2f}°; '
               f'costura/raíz {seam:.3f}/{join:.3f}u, deriva {drift:.6f}u; placa/cabeza/capa exterior '
@@ -191,5 +202,6 @@ if __name__ == '__main__':
     parser.add_argument('shots', type=Path)
     parser.add_argument('--diagnostico', action='store_true', help='Guardar las mediciones incluso si superan el umbral; no certifica la maniobra.')
     parser.add_argument('--reference', type=Path, help='TSV del diagnóstico .28 y sus trazas en el mismo directorio')
+    parser.add_argument('--extended', action='store_true', help='La ruta registra también el retorno hasta reposo agachado.')
     args = parser.parse_args()
-    main(args.shots, args.diagnostico, args.reference)
+    main(args.shots, args.diagnostico, args.reference, args.extended)

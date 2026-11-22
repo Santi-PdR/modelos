@@ -102,7 +102,7 @@ def asset_contract(candidate=None):
     with ZipFile(PREVIOUS) as jar:
         previous = art_entries(jar)
     quiet_assets(previous,source[WORN_ANIMATION])
-    if P.mod_version() in ('1.67.29', '1.67.30', '1.67.31'):
+    if P.mod_version() in ('1.67.29', '1.67.30', '1.67.31', '1.67.32'):
         assert hashlib.sha256(DELIVERED_28.read_bytes()).hexdigest() == 'b2ee2c448715501053611cd4e95a923a9b26e8d4990e080fb721711a74a6d78b'
         with ZipFile(DELIVERED_28) as jar:
             assert art_entries(jar) == source, 'el freno agachado debe conservar todo el arte y las curvas de .28'
@@ -264,22 +264,23 @@ def rear_parity(java_rear=None):
 
 
 def nape_parity(geo, java_nape=None):
-    samples = list(product((-14.,4.,12.,21.,35.), (-415.,-35.,0.,17.,33.,49.,55.,74.), (0.,17.,26.,28.65)))
+    samples = list(product((-25.,-14.,0.,12.,21.,35.,44.), (-415.,-42.,-35.,-26.,0.,17.,26.,33.,49.,55.,74.),
+                           (0.,17.,26.,28.65), (0.,.74)))
     if java_nape:
         rows = np.loadtxt(java_nape)
-        samples = rows[:,:3].tolist()
-        np.testing.assert_allclose(rows[:,3:].reshape(-1,2,3), [F.nape_shifts(*a) for a in samples], atol=1e-10, rtol=0)
+        samples = rows[:,:4].tolist()
+        np.testing.assert_allclose(rows[:,4:].reshape(-1,4,3), [F.nape_shifts(*a) for a in samples], atol=1e-10, rtol=0)
     np.testing.assert_allclose(viewer(napeSamples=samples), [F.nape_shifts(*a) for a in samples], atol=1e-10, rtol=0)
-    parts = [*F.NAPE_LIP, 'v18_chain_2', 'v18_chain_7', 'v17_cowl_back_2', 'v17_cowl_return',
+    parts = [*F.NAPE_LIP, *F.NAPE_OPPOSITE, 'v18_chain_2', 'v18_chain_7', 'v17_cowl_back_2', 'v17_cowl_return',
              'v18_pad_1', G.SADDLE_BONE, G.SHOULDERS_BONE, 'v17_ribbon_8_seg0']
     cases = [[pose,look,yaw,wings,0.,0.,True]
-             for pose,look,yaw,wings in product((0.,1.),(0.,21.,35.),(-55.,-34.,0.,34.,55.),(False,True))]
+             for pose,look,yaw,wings in product((0.,1.),(-45.,0.,21.,35.),(-55.,-34.,-26.,0.,26.,34.,55.),(False,True))]
     expected = []
     from unittest.mock import patch
     for pose,look,yaw,wings,*_ in cases:
         args = dict(look=look,turn=yaw,elytra=wings,slim=True)
         live = P.matrices(F.fixed_wearer_pose(geo,pose,**args))
-        with patch.object(F,'nape_shifts',return_value=[(0.,)*3]*2):
+        with patch.object(F,'nape_shifts',return_value=[(0.,)*3]*4):
             original = P.matrices(F.fixed_wearer_pose(geo,pose,**args))
         delta = F.nape_shifts(look,yaw,pose*F.profile()['bodyAngle'])
         for n in original:

@@ -9,8 +9,8 @@ displayName="${mod_name}"
 authors="${mod_authors}"
 description='''Mantle of the Blight Star para Forge 1.20.1 con GeckoLib 4.8.1.
 
-v1.67.31: la tira del cuello y los bordes expuestos se recogen al girar y frenar agachado.
-Se conservan la frenada, los ciclos, las hombreras, el apoyo en escaleras, el ajuste con élitros, el halo y las brasas.
+v1.67.32: el borde de la capucha se recoge a ambos lados y acompaña la vuelta al centro y el fin de Shift.
+El halo y el tinte mantienen su fundido al cambiar entre pecho y Curios. Se conservan el modelo, las texturas y los ocho clips.
 El icono de referencia pulsa en la hotbar.
 '''
 

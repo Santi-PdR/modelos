@@ -16,7 +16,7 @@ WINDOW = range(77, 84)
 GROUPS = (CHAIN,BAND,FRONT)
 
 
-def frames(root, out, track, slot, direction):
+def frames(root, out, track, slot, direction, *, neutral=False):
     stem = f'{track}-{slot}'
     trace = read(root/f'{stem}.tsv')
     timeline(trace, slot)
@@ -31,9 +31,11 @@ def frames(root, out, track, slot, direction):
     photos = {}
     for p in shots:
         tick = int(p['time'])
-        if tick not in range(63,66) and tick not in WINDOW:
+        rest = neutral and tick in range(87,90)
+        if tick not in range(63,66) and tick not in WINDOW and not rest:
             continue
-        assert p['fit'] == p['ground'] == p['crouching'] == 1 and direction*p['yaw'] > 0, (stem,p)
+        assert p['fit'] == p['ground'] == p['crouching'] == 1, (stem,p)
+        assert abs(p['yaw']) < 2 if rest else direction*p['yaw'] > 0, (stem,p)
         assert p['image'] == f'{stem}-{tick:03d}.png'
         with Image.open(root/str(p['image'])) as im:
             w,h = im.size

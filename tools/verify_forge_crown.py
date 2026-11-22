@@ -9,7 +9,8 @@ from PIL import Image, ImageDraw
 
 from cape_contact import lap
 from cape_fit import profile, rear_tuck
-from verify_forge_combined import SLOTS
+from preview_cloth import mod_version
+from verify_forge_combined import SLOTS, landmarks
 from verify_forge_gaits import crop, table, text
 from verify_forge_postures import read_boxes
 from verify_forge_walk import read
@@ -84,7 +85,7 @@ def hair_pixels(path, quad):
     return len(rgb),int(hair.sum()),int(maroon.sum())
 
 
-def report(root, baseline):
+def report(root, baseline, *, extended=False):
     out, pictures = [], []
     old_dir = baseline/'diagnostico-cuello'
     with (root/'maniobra-forge.tsv').open() as f:
@@ -100,7 +101,8 @@ def report(root, baseline):
             xy = np.asarray(xy,float).reshape(4,2)
             assert label == 'top' and (0 < xy).all() and (xy < 1).all(), (slot,tick,xy)
             quads[int(tick)] = xy
-        assert len(quads) == 5 and combined[slot]['fuera_de_umbral'] == 'OK'
+        assert set(quads) == set(trace[trace['image'] != '-']['time'].astype(int))
+        assert combined[slot]['fuera_de_umbral'] == 'OK'
         assert float(combined[slot]['punta_pico_u_tick']) < 3.75, (slot,'se perdió el freno .29',combined[slot])
         fit = trace[trace['fit'] == 1]
         ticks = fit['time'].astype(int)
@@ -112,7 +114,7 @@ def report(root, baseline):
         for t,boxes in held:
             rise,area = head_roof(boxes)
             assert rise < -.04 and sum(area.values()) < .05 and sewn(boxes) > .14, (slot,t,rise,area,sewn(boxes))
-        stills = fit[fit['image'] != '-'][2:4]
+        stills = landmarks(fit,stem,extended=extended)[2:4]
         for at,expected_at in zip(stills,(63,77),strict=True):
             tick = int(at['time'])
             control = old[expected_at]
@@ -144,7 +146,8 @@ def gallery(root, pictures):
     pen=ImageDraw.Draw(sheet)
     text(pen,(13,8),'Borde posterior de la capucha · Alex en Forge',27,bold=True)
     text(pen,(13,47),'Giro sostenido y frenada agachada · recortes de las tomas reales',17,'#dbc1dc')
-    for col,title in enumerate(('Paso · v1.67.29','Paso · v1.67.30','Freno · v1.67.29','Freno · v1.67.30')):
+    ver = mod_version()
+    for col,title in enumerate(('Paso · v1.67.29',f'Paso · v{ver}','Freno · v1.67.29',f'Freno · v{ver}')):
         text(pen,(13+col*(w+7),77),title,15,'#e4c3df')
     for row,slot in enumerate(SLOTS):
         y=120+row*(h+35)
@@ -160,5 +163,6 @@ if __name__ == '__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('shots',type=Path)
     parser.add_argument('--reference',type=Path,required=True)
+    parser.add_argument('--extended',action='store_true')
     args=parser.parse_args()
-    report(args.shots,args.reference)
+    report(args.shots,args.reference,extended=args.extended)
