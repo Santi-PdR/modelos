@@ -122,7 +122,7 @@ public final class KatanaAnimations {
                                         + KatanaClientConfig.BLOOD_HAND_X.get().floatValue()),
                                 -3 + contact * ((leftHanded ? -12 : -8)
                                         + KatanaClientConfig.BLOOD_HAND_Y.get().floatValue()),
-                                0 + contact * ((leftHanded ? -3 : 0)
+                                -16 + contact * ((leftHanded ? -3 : 0)
                                         + KatanaClientConfig.BLOOD_HAND_Z.get().floatValue()))));
             }) {
                 @Override public dev.kosmx.playerAnim.core.util.Vec3f get3DTransform(
