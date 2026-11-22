@@ -476,24 +476,39 @@ public final class VisualFixtureClient {
             case 1272 -> capture = "51_blood_right_third_draw.png";
             case 1276 -> capture = "52_blood_right_third_face.png";
             case 1280 -> capture = "53_blood_right_third_recovery.png";
-            case 1295 -> { mc.options.setCameraType(CameraType.FIRST_PERSON); mc.options.fov().set(70); mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.LEFT); }
-            case 1310 -> bloodSample(-4, -6, 0);
-            case 1314 -> capture = "54_contact_left_xminus4_reach.png";
-            case 1317 -> capture = "55_contact_left_xminus4_draw.png";
-            case 1321 -> capture = "56_contact_left_xminus4_face.png";
-            case 1335 -> bloodSample(-8, -6, 0);
-            case 1339 -> capture = "57_contact_left_xminus8_reach.png";
-            case 1342 -> capture = "58_contact_left_xminus8_draw.png";
-            case 1346 -> capture = "59_contact_left_xminus8_face.png";
-            case 1360 -> bloodSample(-12, -6, 0);
-            case 1364 -> capture = "60_contact_left_xminus12_reach.png";
-            case 1367 -> capture = "61_contact_left_xminus12_draw.png";
-            case 1371 -> capture = "62_contact_left_xminus12_face.png";
-            case 1385 -> bloodSample(-4, -8, 0);
-            case 1389 -> capture = "63_contact_left_yminus8_reach.png";
-            case 1392 -> capture = "64_contact_left_yminus8_draw.png";
-            case 1396 -> capture = "65_contact_left_yminus8_face.png";
-            case 1410 -> {
+            case 1295 -> { mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.LEFT); mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); mc.options.fov().set(35); }
+            case 1310 -> itemOffset(.25F, 0, 0);
+            case 1315 -> capture = "54_grip_xplus_idle.png";
+            case 1320 -> bloodSample(0, 0, 0);
+            case 1327 -> capture = "55_grip_xplus_draw.png";
+            case 1331 -> capture = "56_grip_xplus_face.png";
+            case 1345 -> itemOffset(-.25F, 0, 0);
+            case 1350 -> capture = "57_grip_xminus_idle.png";
+            case 1355 -> bloodSample(0, 0, 0);
+            case 1362 -> capture = "58_grip_xminus_draw.png";
+            case 1366 -> capture = "59_grip_xminus_face.png";
+            case 1380 -> itemOffset(0, .25F, 0);
+            case 1385 -> capture = "60_grip_yplus_idle.png";
+            case 1390 -> bloodSample(0, 0, 0);
+            case 1397 -> capture = "61_grip_yplus_draw.png";
+            case 1401 -> capture = "62_grip_yplus_face.png";
+            case 1415 -> itemOffset(0, -.25F, 0);
+            case 1420 -> capture = "63_grip_yminus_idle.png";
+            case 1425 -> bloodSample(0, 0, 0);
+            case 1432 -> capture = "64_grip_yminus_draw.png";
+            case 1436 -> capture = "65_grip_yminus_face.png";
+            case 1450 -> itemOffset(0, 0, .25F);
+            case 1455 -> capture = "66_grip_zplus_idle.png";
+            case 1460 -> bloodSample(0, 0, 0);
+            case 1467 -> capture = "67_grip_zplus_draw.png";
+            case 1471 -> capture = "68_grip_zplus_face.png";
+            case 1485 -> itemOffset(0, 0, -.25F);
+            case 1490 -> capture = "69_grip_zminus_idle.png";
+            case 1495 -> bloodSample(0, 0, 0);
+            case 1502 -> capture = "70_grip_zminus_draw.png";
+            case 1506 -> capture = "71_grip_zminus_face.png";
+            case 1525 -> {
+                itemOffset(0, 0, 0);
                 mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Y.set(0.0);
@@ -502,6 +517,10 @@ public final class VisualFixtureClient {
             }
             default -> { }
         }
+    }
+    private static void itemOffset(float x, float y, float z) {
+        float[] offset = com.stainkatana.katana.KatanaRenderer.diagnosticOffset;
+        offset[0] = x; offset[1] = y; offset[2] = z;
     }
     private static void bloodSample(double x, double y, double z) {
         com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(x);

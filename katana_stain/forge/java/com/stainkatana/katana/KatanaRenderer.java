@@ -15,6 +15,8 @@ import software.bernie.geckolib.renderer.GeoItemRenderer;
 
 /** Icono plano en la interfaz; geometría GeckoLib en mano, suelo y marco. */
 public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
+    // Test-only offsets; zero during normal play.
+    public static final float[] diagnosticOffset = new float[3];
     private static final ThreadLocal<Boolean> FIRST_PERSON_ARM = ThreadLocal.withInitial(() -> false);
 
     /** Preserve the dedicated first-person wrist pose while using the same item model. */
@@ -45,6 +47,8 @@ public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
                              MultiBufferSource buffers, int light, int overlay) {
         if (context != ItemDisplayContext.GUI) {
             poseStack.pushPose();
+            if (!FIRST_PERSON_ARM.get() && context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND)
+                poseStack.translate(diagnosticOffset[0], diagnosticOffset[1], diagnosticOffset[2]);
             // Separate hand-space adjustments: the two vanilla pipelines have different origins.
             // These are provisional and must be checked against the rendered grip, not just the bone pivot.
             if (context == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND || context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND)
