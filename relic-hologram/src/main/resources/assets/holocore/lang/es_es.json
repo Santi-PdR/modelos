@@ -40,5 +40,7 @@
   "message.holocore.save": "Guardado en config/holocore-client.toml (%s claves).",
   "message.holocore.save_none": "Nada que guardar: no hay valores cambiados desde la última vez.",
   "message.holocore.save_error": "No se pudo escribir config/holocore-client.toml (mira el log).",
-  "message.holocore.unsaved": "%s valor(es) solo en memoria — /relic save para conservarlos."
+  "message.holocore.unsaved": "%s valor(es) solo en memoria — /relic save para conservarlos.",
+  "message.holocore.preview_on": "Vista previa activada: la reliquia delante de la cámara a %s bloques (/relic preview para quitarla).",
+  "message.holocore.preview_off": "Vista previa desactivada."
 }

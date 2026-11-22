@@ -538,7 +538,16 @@ jobs:
               'el tick local tiene que pasar el flag de visibilidad'
           assert 'markRendered(' in curio, 'el renderer tiene que marcar el portador como dibujado'
           assert 'lastUpdateTick()' in visuales, 'el prune tiene que medir ticks sin actualizar, no sin dibujar'
-          print('Tick local OK: estado vivo fuera de pantalla y prune por actualizacion.')
+
+          # /relic preview: sin hook, sin dibujo, o sin volcar el lote (que es lo
+          # que hace que no se vea nada) la vista previa se quedaria muda.
+          assert 'onRenderStage(RenderLevelStageEvent' in eventos, 'falta el hook de render de la vista previa'
+          assert 'renderHologram(poseStack' in eventos, 'la vista previa no dibuja el modelo'
+          assert 'RelicAura.render(poseStack' in eventos, 'la vista previa no dibuja el aura'
+          assert 'endBatch()' in eventos, 'la vista previa no vuelca el lote'
+          assert 'preview = false' in eventos, 'la vista previa tiene que apagarse al salir del mundo'
+
+          print('Tick local OK: estado vivo fuera de pantalla, prune por actualizacion y preview cableada.')
           PY
 
       # 1.0.16 quitaba tres de las cuatro evaluaciones de animacion por frame. Es

@@ -40,5 +40,7 @@
   "message.holocore.save": "Saved to config/holocore-client.toml (%s keys).",
   "message.holocore.save_none": "Nothing to save: no values changed since the last save.",
   "message.holocore.save_error": "Could not write config/holocore-client.toml (check the log).",
-  "message.holocore.unsaved": "%s value(s) only in memory — /relic save to keep them."
+  "message.holocore.unsaved": "%s value(s) only in memory — /relic save to keep them.",
+  "message.holocore.preview_on": "Preview on: the relic in front of the camera at %s blocks (use /relic preview to switch it off).",
+  "message.holocore.preview_off": "Preview off."
 }

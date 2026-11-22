@@ -97,6 +97,11 @@ public final class RelicClientCommands {
                                         SharedSuggestionProvider.suggest(shortNames(), builder))
                                 .executes(ctx -> anim(ctx.getSource(),
                                         StringArgumentType.getString(ctx, "nombre")))))
+                .then(Commands.literal("preview")
+                        .executes(ctx -> preview(ctx.getSource(), null))
+                        .then(Commands.argument("distancia", DoubleArgumentType.doubleArg(0.5D, 6.0D))
+                                .executes(ctx -> preview(ctx.getSource(),
+                                        ctx.getArgument("distancia", Double.class)))))
                 .then(Commands.literal("save").executes(ctx -> save(ctx.getSource())))
                 .then(Commands.literal("set")
                         .executes(ctx -> setList(ctx.getSource()))
@@ -493,6 +498,37 @@ public final class RelicClientCommands {
     private static void set(ForgeConfigSpec.DoubleValue value, String clave, double newValue) {
         value.set(newValue);
         markUnsaved(clave);
+    }
+
+    /**
+     * {@code /relic preview [distancia]}: dibuja la reliquia del jugador local
+     * delante de la camara, con sus cuatro pases y su aura.
+     *
+     * <p>Existe para mirar el brillo siempre a la misma distancia y en cualquier
+     * fondo —nieve, arena, cueva— sin depender de donde caiga el hombro ni de
+     * ponerse en tercera persona. Sin argumento alterna; con argumento la enciende
+     * a esa distancia.</p>
+     */
+    private static int preview(CommandSourceStack source, Double distancia) {
+        Player player = Minecraft.getInstance().player;
+        if (player == null || RelicServer.findRelic(player).isEmpty()) {
+            source.sendFailure(Component.translatable("message.holocore.not_equipped"));
+            return 0;
+        }
+        boolean encender = distancia != null || !RelicClientEvents.previewEnabled();
+        float valor = distancia == null
+                ? RelicClientEvents.previewDistance()
+                : distancia.floatValue();
+        RelicClientEvents.preview(encender, valor);
+        if (!encender) {
+            source.sendSuccess(() -> Component.translatable("message.holocore.preview_off")
+                    .withStyle(ChatFormatting.GRAY), false);
+            return 1;
+        }
+        String texto = String.format(Locale.ROOT, "%.2f", valor);
+        source.sendSuccess(() -> Component.translatable("message.holocore.preview_on", texto)
+                .withStyle(ChatFormatting.AQUA), false);
+        return 1;
     }
 
     /**

@@ -90,6 +90,7 @@ En el juego:
 | Probar una animación | `/relic anim <nombre>` · `/relic anim list` |
 | Ajustar cualquier clave | `/relic set` (lista) · `/relic set <clave> <valor>` |
 | Guardar los ajustes | `/relic save` |
+| Ver la reliquia de cerca | `/relic preview` · `/relic preview <0.5–6>` (bloques) |
 | Medir el coste | `/relic stats` · `/relic stats reset` |
 
 Los comandos de ajuste son de **cliente** y cambian la config en memoria al
@@ -125,6 +126,13 @@ queden en el aire al cerrar el juego. Las dos únicas claves sin pasar por
 `set` son `placement.shoulder` y `visuals.quality`, que tienen su propio comando
 (`/relic side`, `/relic quality`) porque además validan el texto — y también
 cuentan como cambios sin guardar.
+
+`/relic preview` dibuja **tu** reliquia delante de la cámara, a una distancia fija
+(2.5 bloques por defecto; `/relic preview 1.5` la acerca), con los mismos cuatro
+pases y el mismo aura. Es para mirar el brillo siempre igual y sobre cualquier
+fondo —nieve, arena, cueva— sin depender de dónde caiga el hombro ni de ponerse en
+tercera persona: el estado sigue siendo el real (si te pegan, se pone cargada), y
+la vista previa se apaga sola al salir del mundo.
 
 `pulse`, `release` y
 `toggle` sí viajan al servidor, para que el resto de jugadores vea lo mismo. El
@@ -337,6 +345,8 @@ hay que sumar la traslación que traía `relic_hologram.geo.json`.
       rechaza sin tocar nada.
 - [ ] Tras un `set`, `/relic info` avisa de los cambios sin guardar; `/relic save`
       los escribe en `config/holocore-client.toml` (comprobar reabriendo el juego).
+- [ ] `/relic preview` pone la reliquia delante de la cámara con su aura;
+      `/relic preview 1.5` la acerca y `/relic preview` la quita.
 - [ ] Distancia > `maxRenderDistance`: deja de renderizarse (sin tirones).
 - [ ] `/relic offset 6 -6 8`, `/relic scale 1.0`, `/relic side left|right` mueven
       el núcleo en caliente y `/relic info` muestra los valores para la config.

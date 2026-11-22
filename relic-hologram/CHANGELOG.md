@@ -1,5 +1,23 @@
 # Historial de cambios
 
+## 1.0.22 — `/relic preview`: mirar la reliquia de cerca y siempre igual
+
+* **Nuevo `/relic preview`**: dibuja la reliquia del jugador delante de la cámara
+  a una distancia fija (2.5 bloques; `/relic preview 1.5` la acerca, rango 0.5–6)
+  con los mismos cuatro pases y el mismo aura. El estado es el real —si te pegan,
+  se pone cargada— y se apaga sola al salir del mundo.
+* El motivo es el que faltaba para afinar el brillo: hasta ahora solo se podía
+  mirar la reliquia colgada del hombro, que cambia de tamaño con la perspectiva y
+  depende de dónde esté la cámara. Con la vista previa el aura queda siempre a la
+  misma distancia y sobre el fondo que elijas (nieve, arena, cueva), que es lo que
+  hace comparables dos `auraIntensity` distintos.
+* Se dibuja en `RenderLevelStageEvent` (`AFTER_ENTITIES`) y vuelca su lote con
+  `endBatch()` al terminar: no toca el render normal, es un dibujo extra mientras
+  el comando esté activo.
+* 2 claves nuevas en `en_us` y `es_es` (44 en cada uno). El chequeo de CI
+  `Validate local relic tick` comprueba además que el hook de render sigue
+  existiendo, que dibuja y que vuelca el lote.
+
 ## 1.0.21 — `/relic save`: los ajustes ya no se quedan en el aire
 
 * **Nuevo `/relic save`**: escribe en `config/holocore-client.toml` lo que haya en

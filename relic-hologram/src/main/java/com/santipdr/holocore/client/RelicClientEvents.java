@@ -1,14 +1,20 @@
 package com.santipdr.holocore.client;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.santipdr.holocore.HoloCore;
 import com.santipdr.holocore.common.ModItems;
 import com.santipdr.holocore.common.RelicServer;
 import com.santipdr.holocore.network.RelicActionPacket;
 import com.santipdr.holocore.network.RelicNetwork;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
+import org.joml.Vector3f;
 import net.minecraftforge.client.event.RegisterClientCommandsEvent;
 import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
@@ -31,6 +37,12 @@ public final class RelicClientEvents {
      * primera persona deja de contar y sus animaciones no se encolan.
      */
     private static final long VISIBLE_WINDOW_TICKS = 20L;
+
+    /** Distancia por defecto (bloques) de la vista previa delante de la camara. */
+    public static final float PREVIEW_DEFAULT_DISTANCE = 2.5F;
+
+    private static boolean preview;
+    private static float previewDistance = PREVIEW_DEFAULT_DISTANCE;
 
     private RelicClientEvents() {
     }
@@ -130,8 +142,69 @@ public final class RelicClientEvents {
         visual.glow().update(animatable.loopState(), animatable.flash());
     }
 
+    /** {@code /relic preview}: dibuja la reliquia delante de la camara. */
+    public static void preview(boolean on, float distance) {
+        preview = on;
+        previewDistance = distance;
+    }
+
+    public static boolean previewEnabled() {
+        return preview;
+    }
+
+    public static float previewDistance() {
+        return previewDistance;
+    }
+
+    /**
+     * Vista previa: la misma reliquia del jugador local, dibujada a una distancia
+     * fija delante de la camara, con los mismos cuatro pases y el mismo aura.
+     *
+     * <p>Sirve para mirar el brillo y el aura de cerca y siempre a la misma
+     * distancia (sobre nieve, arena, cueva) sin depender de la posicion del hombro
+     * ni de ponerse en tercera persona. No toca nada del render normal: es un
+     * dibujo extra mientras el comando este activo.</p>
+     */
+    @SubscribeEvent
+    public static void onRenderStage(RenderLevelStageEvent event) {
+        if (!preview || event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) {
+            return;
+        }
+        Minecraft minecraft = Minecraft.getInstance();
+        LocalPlayer player = minecraft.player;
+        if (player == null || minecraft.level == null) {
+            return;
+        }
+        RelicVisuals.RelicVisual visual = RelicVisuals.existing(player);
+        if (visual == null) {
+            return;
+        }
+        Camera camera = minecraft.gameRenderer.getMainCamera();
+        Vector3f look = camera.getLookVector();
+        PoseStack poseStack = event.getPoseStack();
+        poseStack.pushPose();
+        poseStack.translate(look.x() * previewDistance, look.y() * previewDistance - 0.15D,
+                look.z() * previewDistance);
+
+        float partialTick = event.getPartialTick();
+        RelicAnimatable animatable = visual.animatable();
+        // Se esta viendo: que encole sus animaciones como en tercera persona.
+        animatable.markRendered(minecraft.level.getGameTime());
+        visual.glow().update(animatable.loopState(), animatable.flash());
+
+        MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
+        visual.renderer().renderHologram(poseStack, animatable, buffers, partialTick,
+                LightTexture.FULL_BRIGHT, visual.glow(), 1.0F);
+        if (RelicAura.enabled()) {
+            RelicAura.render(poseStack, buffers, partialTick, animatable.loopState(), visual.glow(), 1.0F);
+        }
+        buffers.endBatch();
+        poseStack.popPose();
+    }
+
     @SubscribeEvent
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+        preview = false;
         RelicVisuals.clear();
         ClientRelicStates.clear();
     }
