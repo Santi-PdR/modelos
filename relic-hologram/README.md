@@ -89,6 +89,7 @@ En el juego:
 | Cambiar de hombro | `/relic side left\|right` |
 | Calidad (full/lite) | `/relic quality full\|lite` |
 | Ver valores actuales | `/relic info` (tres líneas: placement, estado en vivo y brillo) |
+| Cambiar de "look" de golpe | `/relic preset soft\|normal\|showcase` — ajusta ritmo, aura, halo, GLSL, anillo y destello a la vez (no guarda: `/relic save`) |
 | Probar un efecto | `/relic vfx shock [fuerza]` — destello a mano (0.1–1, por defecto 0.6) para ver la onda de choque sin esperar a que pase nada |
 | Probar una animación | `/relic anim <nombre>` · `/relic anim list` |
 | Ajustar cualquier clave | `/relic set` (lista) · `/relic set <clave> <valor>` |
@@ -307,6 +308,20 @@ aura y al halo, y ya **no** se dispara al despertar, dormir ni cambiar de estado
 Lo que **no** hace: post-proceso de pantalla (caro y se pelea con los packs). El
 razonamiento completo, la matriz de compatibilidad y los detalles de la API de
 shaders de 1.20.1 están en [BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
+
+## Presets
+
+Tres ajustes con nombre para no tocar 27 claves a mano cuando lo que se quiere es
+cambiar de look:
+
+| Preset | Qué hace |
+| --- | --- |
+| `soft` | Flotado lento y discreto: `animSpeed` 0.5, aura 0.22, halo 0.18, GLSL 0.25, anillo 0.45, destello 0.8 |
+| `normal` | Los valores de fábrica de la tabla de abajo |
+| `showcase` | Ritmo 1.0 y todo más alto (aura 0.45, halo 0.35, GLSL 0.50, anillo 0.75, destello 1.2) para grabar |
+
+`/relic preset <nombre>` lo aplica **en memoria** (avisa de cuántas claves cambian),
+`/relic info` las marca con asterisco y `/relic save` lo escribe en el toml.
 
 ## Configuración (`config/holocore-client.toml`)
 

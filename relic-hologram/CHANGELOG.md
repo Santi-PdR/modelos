@@ -1,5 +1,21 @@
 # Historial de cambios
 
+## 1.0.44 — `/relic preset`: tres looks con nombre
+
+El look no se puede decidir mirando números: hay 27 claves y las que mandan son seis.
+* **`/relic preset soft|normal|showcase`** aplica de golpe ritmo, aura, halo, GLSL,
+  anillo y destello. `soft` es flotado lento y discreto (`animSpeed` 0.5, aura 0.22),
+  `normal` son los defectos y `showcase` es lo contrario: ritmo de fábrica, todo más
+  alto y destello 1.2, para grabar o para ver los efectos.
+* **No guarda**: se aplica en memoria, se compara y luego `/relic save`, igual que
+  `/relic set`. Avisa de cuántas claves han cambiado de verdad y `/relic info` las
+  marca como pendientes hasta guardarlas.
+* Pasa por el mismo camino que `/relic set`, así que un valor fuera de rango se
+  rechaza solo y no hay una segunda validación que se pueda quedar vieja.
+* CI: los tres nombres comprobados, los 18 pares (3 × 6) tienen que ser claves reales
+  de `TWEAKS`, y 3 negativos probados en rojo (clave inventada, preset que no valida y
+  nombre cambiado). 72 claves de idioma.
+
 ## 1.0.43 — el fallo de unidades: es esto lo que hacía que saltara
 
 El reloj de la reliquia son **ticks** (20 por segundo) y los efectos de 1.0.38–1.0.42

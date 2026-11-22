@@ -545,6 +545,20 @@ jobs:
               'el contador del relampago no se reinicia al salir de la tormenta'
           # /relic vfx shock: llama al destello de verdad, no a una copia.
           assert '"vfx"' in comandos and '"shock"' in comandos, 'falta /relic vfx shock'
+          assert '"preset"' in comandos, 'falta /relic preset'
+          # Un preset es una tabla de claves: si una no existe en TWEAKS se ignora
+          # en silencio y el preset queda a medias sin que nadie se entere.
+          import re as _re
+          claves_tweak = set(_re.findall(r'Tweak\.(?:number|whole|flag)\("([\w.]+)"', comandos))
+          nombres = _re.findall(r'new Preset\("(\w+)"', comandos)
+          assert nombres == ['soft', 'normal', 'showcase'], nombres
+          pares = _re.findall(
+              r'\{"((?:visuals|sound|placement)\.[\w.]+)", "([^"]+)"\}', comandos)
+          assert len(pares) == 3 * 6, f'esperaba 18 pares (3 presets x 6), hay {len(pares)}'
+          for clave, valor in pares:
+              assert clave in claves_tweak, f'{clave} no es una clave de TWEAKS'
+              assert _re.search(r'[\d.]+', valor), f'{clave} no tiene valor'
+          assert 'tweak.apply(par[1])' in comandos, 'el preset no pasa por la validacion de /relic set'
           assert 'visual.animatable().flash(strength);' in comandos, \
               '/relic vfx shock no dispara el destello'
           assert 'public double currentAnimSpeed()' in animatable, \

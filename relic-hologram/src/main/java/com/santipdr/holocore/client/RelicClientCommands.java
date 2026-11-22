@@ -138,6 +138,13 @@ public final class RelicClientCommands {
                                         .executes(ctx -> setApply(ctx.getSource(),
                                                 StringArgumentType.getString(ctx, "clave"),
                                                 StringArgumentType.getString(ctx, "valor"))))))
+                .then(Commands.literal("preset")
+                        .executes(ctx -> presetList(ctx.getSource()))
+                        .then(Commands.argument("nombre", StringArgumentType.word())
+                                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
+                                        presetNames(), builder))
+                                .executes(ctx -> presetApply(ctx.getSource(),
+                                        StringArgumentType.getString(ctx, "nombre")))))
                 .then(Commands.literal("vfx")
                         .then(Commands.literal("shock")
                                 .executes(ctx -> vfxShock(ctx.getSource(), 0.6F))
@@ -356,6 +363,41 @@ public final class RelicClientCommands {
      * {@code visuals.quality} porque ya tienen su propio comando ({@code /relic
      * side} y {@code /relic quality}), que ademas valida el texto.
      */
+    /**
+     * Un preset es un paquete de ajustes con nombre. Existe porque el "look" no se
+     * puede decidir mirando numeros: hay 27 claves y las que mandan son seis.
+     * Aplicar uno no guarda nada: se ve, se compara y luego {@code /relic save}.
+     */
+    private record Preset(String key, String[][] valores) {
+    }
+
+    private static final List<Preset> PRESETS = List.of(
+            new Preset("soft", new String[][] {
+                    {"visuals.animSpeed", "0.5"},
+                    {"visuals.auraIntensity", "0.22"},
+                    {"visuals.haloIntensity", "0.18"},
+                    {"visuals.shaderIntensity", "0.25"},
+                    {"visuals.ringIntensity", "0.45"},
+                    {"visuals.flashIntensity", "0.8"}}),
+            new Preset("normal", new String[][] {
+                    {"visuals.animSpeed", "0.65"},
+                    {"visuals.auraIntensity", "0.32"},
+                    {"visuals.haloIntensity", "0.25"},
+                    {"visuals.shaderIntensity", "0.35"},
+                    {"visuals.ringIntensity", "0.60"},
+                    {"visuals.flashIntensity", "1.0"}}),
+            new Preset("showcase", new String[][] {
+                    {"visuals.animSpeed", "1.0"},
+                    {"visuals.auraIntensity", "0.45"},
+                    {"visuals.haloIntensity", "0.35"},
+                    {"visuals.shaderIntensity", "0.50"},
+                    {"visuals.ringIntensity", "0.75"},
+                    {"visuals.flashIntensity", "1.2"}}));
+
+    private static String[] presetNames() {
+        return PRESETS.stream().map(Preset::key).toArray(String[]::new);
+    }
+
     private static final List<Tweak> TWEAKS = List.of(
             Tweak.number("placement.offsetX", RelicConfig.OFFSET_X, -32.0D, 32.0D, 6.0D),
             Tweak.number("placement.offsetY", RelicConfig.OFFSET_Y, -48.0D, 48.0D, -6.0D),
@@ -665,6 +707,49 @@ public final class RelicClientCommands {
      * paso de comprobar que los pases que se dibujan son los que la config
      * permite (1 sin nada, 4 con base, emisivo, halo y GLSL).</p>
      */
+    private static int presetList(CommandSourceStack source) {
+        source.sendSuccess(() -> Component.translatable("message.holocore.preset_list",
+                String.join(", ", presetNames())).withStyle(ChatFormatting.AQUA), false);
+        return 1;
+    }
+
+    /**
+     * Aplica un preset clave a clave por el mismo camino que {@code /relic set}:
+     * asi un rango mal puesto en la tabla se rechaza solo y no hace falta repetir
+     * aqui la validacion.
+     */
+    private static int presetApply(CommandSourceStack source, String nombre) {
+        Preset elegido = null;
+        for (Preset candidato : PRESETS) {
+            if (candidato.key().equals(nombre.toLowerCase(Locale.ROOT))) {
+                elegido = candidato;
+                break;
+            }
+        }
+        if (elegido == null) {
+            source.sendFailure(Component.translatable("message.holocore.preset_unknown",
+                    nombre, String.join(", ", presetNames())));
+            return 0;
+        }
+        int cambiadas = 0;
+        for (String[] par : elegido.valores()) {
+            Tweak tweak = tweak(par[0]);
+            if (tweak == null) {
+                continue;
+            }
+            String antes = tweak.current();
+            if (tweak.apply(par[1]) && !tweak.current().equals(antes)) {
+                markUnsaved(tweak.key());
+                cambiadas++;
+            }
+        }
+        final int total = cambiadas;
+        final String clave = elegido.key();
+        source.sendSuccess(() -> Component.translatable("message.holocore.preset_applied",
+                clave, total).withStyle(ChatFormatting.AQUA), false);
+        return 1;
+    }
+
     /**
      * {@code /relic vfx shock}: destello a mano, para ver la onda de choque sin
      * esperar a que pase algo. La fuerza es lo que se le pasa al destello: 0.6
