@@ -1,5 +1,7 @@
 # v1.67.39 · Vuelo de las brasas
 
+**Versión de prueba más reciente: [v1.67.40](../v1.67.40/notas.md).**
+
 **[JAR de prueba](https://raw.githubusercontent.com/Santi-PdR/modelos/266f6d1c02a2c630d188acaa0bb960c20d5e3c00/entregables/v1.67.39/capatest-1.67.39.jar)** · [PowerShell para `test-1`](instalar-test-1.txt) · [SHA-256](JAR.sha256) · [Volver a la .38](../v1.67.38/notas.md).
 
 Las brasas se inclinan con el movimiento lateral que realmente tuvieron. La inclinación entra suavemente y desaparece antes de apagarse. Si una brasa va directa hacia la cámara, sube recta o se frena en un panel, no queda inclinada por la dirección de salida.

@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.40 — halo al arrancar y frenar
+
+**[Descargar JAR de prueba v1.67.40](https://raw.githubusercontent.com/Santi-PdR/modelos/78affa5083570571c23d8692a12a09a111b54757/entregables/v1.67.40/capatest-1.67.40.jar)** · [PowerShell para test-1](docs/releases/v1.67.40/instalar-test-1.txt) · [Mediciones en Forge](docs/releases/v1.67.40/notas.md).
+
+En la oscuridad, el interior del halo se aviva brevemente al arrancar o frenar; el borde violeta responde después. Mismo paño, hombreras y brasas que en la .39. Comparación en el [visor offline](docs/capa_v1170_visor.html).
+
 ### v1.67.39 — brasas con inclinación en vuelo
 
 **[Descargar JAR de prueba v1.67.39](https://raw.githubusercontent.com/Santi-PdR/modelos/266f6d1c02a2c630d188acaa0bb960c20d5e3c00/entregables/v1.67.39/capatest-1.67.39.jar)** · [PowerShell para test-1](docs/releases/v1.67.39/instalar-test-1.txt) · [Mediciones en Forge](docs/releases/v1.67.39/notas.md).
