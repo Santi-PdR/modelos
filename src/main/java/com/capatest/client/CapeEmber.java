@@ -6,6 +6,14 @@ public final class CapeEmber {
 
     public record Look(int frame, double alpha, double scale, double red, double green, double blue) {}
 
+    static double renderProgress(int age, int lifetime, float partialTick) {
+        if (age <= 0 || lifetime <= 0) return 0;
+        double fraction = Float.isFinite(partialTick) ? Math.max(0, Math.min(1, partialTick)) : 0;
+        // TextureSheetParticle draws between its previous and current
+        // positions; sample the same interval of the appearance curve.
+        return Math.min(1, (age - 1 + fraction) / lifetime);
+    }
+
     public static Look look(double progress, double streak, double phase) {
         double p = Math.max(0, Math.min(1, progress));
         double glint = .5 + .5 * Math.sin(phase + p * 7.5);

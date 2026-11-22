@@ -111,7 +111,7 @@ public final class CapeFxSmoke {
 
     private enum Scene {
         CHEST("pecho-dia", 6000), NIGHT("pecho-noche", 18000), LAMP("pecho-noche-con-luz", 18000),
-        BOTH("ambos-noche-encantado", 18000),
+        BOTH("ambos-noche-encantado", 18000), TRANSFER("traspaso", 18000),
         PLACE_STEVE_CHEST("posicion-steve-pecho", 6000), PLACE_STEVE_BACK("posicion-steve-curios", 6000),
         PLACE_ALEX_CHEST("posicion-alex-pecho", 6000), PLACE_ALEX_BACK("posicion-alex-curios", 6000),
         WALK_STEVE_CHEST("paso-steve-pecho", 6000), WALK_STEVE_BACK("paso-steve-curios", 6000),
@@ -155,7 +155,8 @@ public final class CapeFxSmoke {
         boolean climb() { return this == CLIMB_CHEST || this == CLIMB_BACK; }
         boolean reverse() { return this == REVERSE_CHEST || this == REVERSE_BACK; }
         boolean combined() { return this == COMBINED_CHEST || this == COMBINED_BACK || reverse() || omitted != null; }
-        boolean measureMotion() { return walk() || aquatic() || jump() || climb() || combined(); }
+        boolean transfer() { return this == TRANSFER; }
+        boolean measureMotion() { return walk() || aquatic() || jump() || climb() || combined() || transfer(); }
         boolean wade() { return this == WADE || this == WADE_BACK; }
         boolean swim() { return this == SWIM || this == SWIM_BACK; }
         boolean swimExit() { return this == SWIM_EXIT || this == SWIM_EXIT_BACK; }
@@ -185,6 +186,7 @@ public final class CapeFxSmoke {
     private static CapeJumpProbe jumpRoute;
     private static CapeClimbProbe climbRoute;
     private static CapeCombinedProbe combinedRoute;
+    private static CapeTransferProbe transferRoute;
     private static boolean jumpFit, combinedFit;
     private static CapeWalkProbe.Draw walkDraw;
     private static CapeWaterProbe waterRoute;
@@ -446,7 +448,24 @@ public final class CapeFxSmoke {
             Particle particle = game.particleEngine.createParticle(CapaParticles.CAPA_SPARK.get(),
                     x, pane.getY() + .36, pane.getZ() + .5 + dz, .04, .007, 0);
             check(particle instanceof CapaSparkParticle, "custom provider absent");
-            for (int t = 0; t < 23; t++) particle.tick();
+            for (int t = 0; t < 23; t++) {
+                particle.tick();
+                if (dz == 1 && t == 2) {
+                    var camera = game.gameRenderer.getMainCamera();
+                    var early = new CapeVertexProbe();
+                    var late = new CapeVertexProbe();
+                    var replay = new CapeVertexProbe();
+                    particle.render(early, camera, .125F);
+                    particle.render(late, camera, .875F);
+                    particle.render(replay, camera, .125F);
+                    check(early.count == 4 && late.count == 4 && replay.count == 4
+                                    && early.light == LightTexture.FULL_BRIGHT && late.light == early.light
+                                    && (late.rgba & 255) > (early.rgba & 255) && replay.rgba == early.rgba,
+                            "actual particle opacity is stepped or depends on render order");
+                    note("brasa, el mismo tick: alfa en vértices " + (early.rgba & 255) + " → " + (late.rgba & 255)
+                            + "; la repetición conserva el primer valor");
+                }
+            }
             double travel = particle.getPos().x - x;
             particle.remove();
             check(dz == 0 ? travel < .32 && travel > .15 : travel > .48,
@@ -468,7 +487,7 @@ public final class CapeFxSmoke {
         try {
             var textures = (Map<MinecraftProfileTexture.Type, ResourceLocation>) SKIN_TEXTURES.get(info);
             var type = MinecraftProfileTexture.Type.SKIN;
-            if (next == Scene.PLACE_STEVE_CHEST) {
+            if (next.transfer()) {
                 savedModel = (String) SKIN_MODEL.get(info);
                 savedTexture = textures.get(type);
             }
@@ -478,7 +497,7 @@ public final class CapeFxSmoke {
                 else textures.put(type, savedTexture);
                 return;
             }
-            boolean slim = next.aquatic() || next.audit() || next.jump() || next.climb() || next.combined() || next == Scene.WALK_ALEX_CHEST || next == Scene.WALK_ALEX_BACK
+            boolean slim = next.transfer() || next.aquatic() || next.audit() || next.jump() || next.climb() || next.combined() || next == Scene.WALK_ALEX_CHEST || next == Scene.WALK_ALEX_BACK
                     || next.file.startsWith("posicion-alex-");
             ResourceLocation skin = slim ? ALEX : STEVE;
             check(game.getResourceManager().getResource(skin).isPresent(), "missing vanilla skin " + skin);
@@ -494,6 +513,7 @@ public final class CapeFxSmoke {
         scene = next;
         placementRoute = next.placement() ? new CapePlacementProbe.Route() : null;
         auditRoute = next.audit() ? new CapePlacementProbe.PoseAudit() : null;
+        transferRoute = next.transfer() ? new CapeTransferProbe() : null;
         combinedRoute = next.combined()
                 ? new CapeCombinedProbe(CapeCombinedProbe.runway(pane), next.reverse() ? -1 : 1, NAPE_RETURN) : null;
         if (next.placement() || next.audit() || next.jump() || next.combined()) game.options.fov().set(42);
@@ -501,12 +521,12 @@ public final class CapeFxSmoke {
         jumpRoute = next.jump() ? new CapeJumpProbe(CapeJumpProbe.deck(pane)) : null;
         climbRoute = next.climb() ? new CapeClimbProbe(CapeClimbProbe.column(pane)) : null;
         if (next.climb()) game.options.fov().set(50);
-        if (next.walk() || next.wade() || next.jump() || next.climb() || next.combined()) game.options.framerateLimit().set(60);
+        if (next.walk() || next.wade() || next.jump() || next.climb() || next.combined() || next.transfer()) game.options.framerateLimit().set(60);
         if (next.wade()) waterRoute = new CapeWaterProbe();
         if (next == Scene.HOTBAR_BARE) game.options.framerateLimit().set(30);
         stableFrames = observedBirths = 0;
         captured = false;
-        if (next == Scene.HOTBAR_BARE || next.placement() || next.audit() || next.walk() || next.wade() || next.jump() || next.climb() || next.combined()) {
+        if (next == Scene.HOTBAR_BARE || next.placement() || next.audit() || next.walk() || next.wade() || next.jump() || next.climb() || next.combined() || next.transfer()) {
             selectSkin(game, next);
         }
         if (next.hotbar()) {
@@ -558,12 +578,14 @@ public final class CapeFxSmoke {
                     : next.usesBack() || next.hotbar() ? ItemStack.EMPTY : mantle();
             if (next == Scene.BOTH) chest.enchant(Enchantments.UNBREAKING, 1);
             player.setItemSlot(EquipmentSlot.CHEST, chest);
-            backOf(player).getStacks().setStackInSlot(0, next.hasBack() ? mantle() : ItemStack.EMPTY);
+            ItemStack back = next.hasBack() || next.transfer() ? mantle() : ItemStack.EMPTY;
+            if (next.transfer()) back.setDamageValue(back.getMaxDamage() * 3 / 4);
+            backOf(player).getStacks().setStackInSlot(0, back);
             if (next.hotbar() || next == Scene.STRAFE_LEFT) {
                 player.getInventory().setItem(HOTBAR_SLOT, next == Scene.HOTBAR ? mantle() : ItemStack.EMPTY);
                 player.inventoryMenu.broadcastChanges();
             }
-            if (next.combined()) {
+            if (next.combined() || next.transfer()) {
                 CapeCombinedProbe.prepare(player, CapeCombinedProbe.runway(pane));
             } else if (next.climb()) {
                 CapeClimbProbe.prepare(player, CapeClimbProbe.column(pane));
@@ -601,6 +623,7 @@ public final class CapeFxSmoke {
         var player = game.player;
         if (scene.placement()) placementRoute.drive(game);
         if (scene.audit()) auditRoute.drive(game);
+        if (scene.transfer()) transferRoute.drive(game);
         if ((scene.walk() || scene.combined()) && (scene.usesBack() ? !backOf(player).getStacks().getStackInSlot(0).isEmpty()
                 : player.getItemBySlot(EquipmentSlot.CHEST).is(CapaTestMod.CAPA_DETERIORER.get()))) {
             if (scene.combined()) combinedRoute.drive(game);
@@ -660,6 +683,7 @@ public final class CapeFxSmoke {
         combinedFit = scene.combined() && combinedRoute.measureFit(event.getEntity().tickCount);
         if (scene.audit() || jumpFit || combinedFit) CapePlacementProbe.arm(renderer, false, false, false, true);
         if (scene.measureMotion()) CapeWalkProbe.arm(renderer);
+        if (scene.transfer() && !captured) transferRoute.arm(renderer);
         if (scene.omitted != null) combinedRoute.omit(renderer, scene.omitted);
     }
 
@@ -702,6 +726,7 @@ public final class CapeFxSmoke {
             jumpFit = combinedFit = false;
             rendered = ItemStack.EMPTY;
             playerPose = armorPose = null;
+            if (transferRoute != null) transferRoute.beginFrame();
             var player = Minecraft.getInstance().player;
             if (player != null && placementRoute != null) placementRoute.aim(player);
             if (player != null && auditRoute != null) auditRoute.aim(player);
@@ -718,6 +743,14 @@ public final class CapeFxSmoke {
         Minecraft game = Minecraft.getInstance();
         var player = game.player;
         if (player == null || game.screen != null || game.level.getDayTime() != scene.dayTime) return;
+        if (transferRoute != null) {
+            try {
+                captured = transferRoute.capture(game, shots(game), framePasses, rendered, framePartialTick, walkDraw);
+            } catch (Exception | AssertionError error) {
+                fail(game, error);
+            }
+            return;
+        }
         ItemStack chest = player.getItemBySlot(EquipmentSlot.CHEST);
         ItemStack back = backOf(player).getStacks().getStackInSlot(0);
         boolean chestReady = scene.elytra() ? chest.is(Items.ELYTRA)

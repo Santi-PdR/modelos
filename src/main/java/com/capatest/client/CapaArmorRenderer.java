@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.Nullable;
@@ -117,8 +118,11 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
         double leg = Math.max(CapeStride.backDegrees(model.leftLeg.xRot, model.leftLeg.yRot),
                 CapeStride.backDegrees(model.rightLeg.xRot, model.rightLeg.yRot));
         boolean upright = player != null && !player.isFallFlying() && !player.isSwimming() && !player.isPassenger();
-        boolean dryGround = upright && player.onGround() && !player.isInWaterOrBubble() && !player.onClimbable();
-        fitHood(model, mountInChest && !elytra && upright, dryGround);
+        // Head and torso keep the crouched pose through an ordinary hop.
+        // Losing floor contact must not undo the local nape fit in one frame.
+        boolean dryUpright = upright && (player.getPose() == Pose.STANDING || player.getPose() == Pose.CROUCHING)
+                && !player.isInWaterOrBubble() && !player.onClimbable();
+        fitHood(model, mountInChest && !elytra && upright, dryUpright);
         double wings = elytra ? CapeWingFit.topGoal(Math.toDegrees(player.elytraRotX), Math.toDegrees(player.elytraRotZ),
                 Math.toDegrees(model.body.xRot), 0) : 0;
         capeModel.setClearancePose(arm, leg, model.body.xRot, wings);
@@ -126,10 +130,10 @@ public class CapaArmorRenderer extends GeoArmorRenderer<CapaDeteriorerItem> {
 
     // Aim is local to the hood, sampled once per base draw. Never use
     // camera orientation, move the rigid mount, or touch the Elytra fit.
-    private void fitHood(HumanoidModel<?> model, boolean enabled, boolean dryGround) {
+    private void fitHood(HumanoidModel<?> model, boolean enabled, boolean dryUpright) {
         hoodClearance = rearTuck = 0;
         nape = CapeHood.NO_NAPE;
-        dryHood = enabled && dryGround;
+        dryHood = enabled && dryUpright;
         if (!enabled) return;
         double up = -Math.toDegrees(model.head.xRot);
         double turn = Math.toDegrees(model.head.yRot - model.body.yRot);

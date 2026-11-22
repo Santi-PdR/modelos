@@ -7,7 +7,7 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [JAR anterior v1.67.12](https://github.com/Santi-PdR/modelos/releases/download/v1.67.12/capatest-1.67.12.jar)
 · [JAR anterior v1.67.11](https://github.com/Santi-PdR/modelos/releases/download/v1.67.11/capatest-1.67.11.jar)
 · [Builds de Forge (Actions)](https://github.com/Santi-PdR/modelos/actions/workflows/build.yml)
-· [Proyecto Blockbench v1.67.32](docs/CAPA_v1.67.32.bbmodel)
+· [Proyecto Blockbench v1.67.33](docs/CAPA_v1.67.33.bbmodel)
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
@@ -15,7 +15,7 @@ Se equipa en el pecho o en `back` con Curios opcional.
 
 **[Descargar JAR de prueba v1.67.32](https://raw.githubusercontent.com/Santi-PdR/modelos/35ec91a169424ff08b86108703ccaf7b2ef7f49b/entregables/v1.67.32/capatest-1.67.32.jar)** · [PowerShell para test-1](docs/releases/v1.67.32/instalar-test-1.txt) · Comparativa [pecho](docs/releases/v1.67.32/maniobra/retorno/retorno-pecho.jpg) / [Curios](docs/releases/v1.67.32/maniobra/retorno/retorno-curios.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.32/notas.md).
 
-La capucha acompaña el giro a ambos lados, la vuelta al centro y el fin de Shift. El halo conserva su fundido entre pecho y Curios. Modelo, texturas y clips intactos.
+La capucha acompaña el giro a ambos lados, la vuelta al centro y el fin de Shift. Dos renderers de equipo para el mismo portador conservaron el fundido del halo en la prueba de la .32. Modelo, texturas y clips intactos.
 
 ### v1.67.31 — tira de la nuca en el giro y la frenada
 

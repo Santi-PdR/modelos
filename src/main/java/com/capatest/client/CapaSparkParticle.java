@@ -1,5 +1,7 @@
 package com.capatest.client;
 
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.particle.Particle;
@@ -40,15 +42,17 @@ public class CapaSparkParticle extends TextureSheetParticle {
     }
 
     @Override
-    public void tick() {
-        super.tick();
-        CapeEmber.Look look = CapeEmber.look((double) this.age / this.lifetime, this.streak, this.phase);
+    public void render(VertexConsumer vertices, Camera camera, float partialTick) {
+        double progress = CapeEmber.renderProgress(this.age, this.lifetime, partialTick);
+        if (progress <= 0 || progress >= 1) return;
+        CapeEmber.Look look = CapeEmber.look(progress, this.streak, this.phase);
         this.alpha = (float) look.alpha();
         this.quadSize = this.baseSize * (float) look.scale();
         this.rCol = (float) look.red();
         this.gCol = (float) look.green();
         this.bCol = (float) look.blue();
         this.setSprite(this.sprites.get(look.frame(), 2));
+        super.render(vertices, camera, partialTick);
     }
 
     @Override

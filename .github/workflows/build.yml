@@ -562,7 +562,7 @@ jobs:
           _hood_input = re.search(r'private void fitHood\([^\n]*\) \{\n.*?\n    \}', armor_renderer, re.S)
           assert _hood_input and armor_renderer.count('fold.pitch() + hoodClearance') == 1
           assert 'CapeHood.lookClearance(up, turn, lean)' in _hood_input[0]
-          assert 'dryHood = enabled && dryGround;' in _hood_input[0]
+          assert 'dryHood = enabled && dryUpright;' in _hood_input[0]
           assert re.search(r'if \(dryHood\) \{\s*rearTuck = CapeHood.rearTuck\(up, turn, lean\);', _hood_input[0])
           assert re.search(r'if \(dryHood && !isReRender && CapeFit.BONE.equals\(bone.getName\(\)\).*?\bnape = CapeHood.nape\(', armor_renderer, re.S)
           assert 'collarPart ? nape.forBone(name) : CapeHood.FIXED' in armor_renderer
@@ -1047,7 +1047,7 @@ jobs:
         run: |
           set -euo pipefail
           args=()
-          if grep -Eq '^mod_version=1\.67\.(29|30|31|32)$' gradle.properties; then
+          if grep -Eq '^mod_version=1\.67\.(29|30|31|32|33)$' gradle.properties; then
             args=(--reference docs/releases/v1.67.28/maniobra/maniobra-forge.tsv)
           fi
           if [[ -f build/fx-smoke-run/fx-shots/giro-inverso-pecho.tsv ]]; then args+=(--extended); fi
@@ -1136,6 +1136,7 @@ jobs:
           mkdir -p build/fx-smoke-run/config
           printf 'earlyWindowControl = false\n' > build/fx-smoke-run/config/fml.toml
           timeout --kill-after=12s 360s xvfb-run -a -s '-screen 0 1280x1024x24 +extension GLX -noreset' gradle -PcapeFxSmoke --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
+          { grep -E 'FX smoke: (traspaso real|nuca en salto|brasa, el mismo tick)' "$log" || true; }
           awk 'sub(/.*FX smoke: /, "")' "$log" | tail -n 5 | while IFS= read -r line; do
             printf '::notice title=FX en Forge::%s\n' "$line"
           done
@@ -1148,6 +1149,7 @@ jobs:
               while IFS= read -r line; do printf '::warning title=Diagnóstico de cliente::%s\n' "${line//%/%25}"; done
             exit 1
           fi
+          test -s build/fx-smoke-run/fx-shots/traspaso-forge.tsv
 
       - name: Verificar apoyo, salida y caída de la escalera en Forge
         id: verify-climb
@@ -1302,10 +1304,10 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Adjuntar el JAR de prueba v1.67.32 después de ambas pruebas Forge
+      - name: Adjuntar el JAR de prueba v1.67.33 después de ambas pruebas Forge
         if: >-
           success() && github.ref_name == 'arena/5a9fa51b-modelos' &&
-          contains(github.event.head_commit.message, '[adjuntar-v16732]') &&
+          contains(github.event.head_commit.message, '[adjuntar-v16733]') &&
           steps.verify-combined.outcome == 'success' && steps.verify-crown.outcome == 'success' &&
           steps.verify-return.outcome == 'success' &&
           steps.fx-smoke.outcome == 'success' &&
@@ -1314,12 +1316,12 @@ jobs:
           steps.verify-postures.outcome == 'success' && steps.verify-swim.outcome == 'success'
         run: |
           set -euo pipefail
-          grep -qx 'mod_version=1.67.32' gradle.properties
-          test ! -e entregables/v1.67.32/capatest-1.67.32.jar
-          jar=capatest-1.67.32.jar
+          grep -qx 'mod_version=1.67.33' gradle.properties
+          test ! -e entregables/v1.67.33/capatest-1.67.33.jar
+          jar=capatest-1.67.33.jar
           (cd build/libs && sha256sum -c SHA256SUMS.txt)
-          proof=docs/releases/v1.67.32
-          out="entregables/v1.67.32/$jar"
+          proof=docs/releases/v1.67.33
+          out="entregables/v1.67.33/$jar"
           install -m 0644 -D "build/libs/$jar" "$out"
           install -m 0644 -D build/libs/SHA256SUMS.txt "$proof/JAR.sha256"
           mkdir -p "$proof/maniobra"
@@ -1328,13 +1330,13 @@ jobs:
           install -m 0644 "$shots"/giro-inverso-{pecho,curios}.tsv "$proof/maniobra/"
           mkdir -p "$proof/maniobra/retorno"
           install -m 0644 "$shots"/maniobra-retorno/{retorno.tsv,retorno-malla.tsv,retorno-pecho.jpg,retorno-curios.jpg} "$proof/maniobra/retorno/"
-          install -m 0644 "$shots"/{continuidad-forge,saltos-forge,costuras-saltos-forge,escalera-forge,nado-forge,halo-continuidad-forge,revision-alex-forge,holgura-brazos-forge}.tsv "$proof/"
-          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16732_colocacion_forge.jpg
+          install -m 0644 "$shots"/{continuidad-forge,saltos-forge,costuras-saltos-forge,escalera-forge,nado-forge,halo-continuidad-forge,traspaso-forge,revision-alex-forge,holgura-brazos-forge}.tsv "$proof/"
+          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16733_colocacion_forge.jpg
           printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$proof/compilacion.txt"
-          git add "$proof" docs/capa_v16732_colocacion_forge.jpg
+          git add "$proof" docs/capa_v16733_colocacion_forge.jpg
           git add -f "$out"
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m 'Adjuntar v1.67.32 probada en Forge, sólo para test-1 [skip ci]'
+            commit -m 'Adjuntar v1.67.33 probada en Forge, sólo para test-1 [skip ci]'
           git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
 
       # [publicar] prepara una release verificable sin escribir a otras

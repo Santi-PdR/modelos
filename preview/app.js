@@ -825,7 +825,7 @@ function drawRuntimeParticles(seconds, size, stance, pix, depth) {
       const life=39-Math.round(13*streak)+Math.floor(random(shot,i,3)*9);
       const tick=age*20;
       if (tick<=0 || tick>=life) continue;
-      const look=emberLook(Math.floor(tick)/life,streak,noise[1]*3.14);
+      const look=emberLook(tick/life,streak,noise[1]*3.14);
       if (look.alpha<.1) continue;
       const fly=(1-Math.pow(.94,tick))/(1-.94);
       const clamp=Math.min(1,.04/Math.max(1e-9,Math.hypot(dx,dz)));
