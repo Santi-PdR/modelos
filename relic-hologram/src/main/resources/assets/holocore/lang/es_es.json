@@ -47,5 +47,9 @@
   "message.holocore.reset_none": "Ya estaba todo en los valores de fábrica.",
   "message.holocore.reset_one_none": "%s ya estaba en su valor de fábrica.",
   "message.holocore.set_list_unsaved": "Las claves con * no están guardadas todavía (/relic save): %s.",
-  "message.holocore.preview_info": "Vista previa activa a %s bloques (/relic preview para quitarla)."
+  "message.holocore.preview_info": "Vista previa activa a %s bloques (/relic preview para quitarla).",
+  "message.holocore.mood": "Extra: %s.",
+  "message.holocore.state.wounded": "herido",
+  "message.holocore.state.storm": "tormenta",
+  "message.holocore.state.resonant": "resonancia"
 }

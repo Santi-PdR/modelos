@@ -67,23 +67,76 @@ final class RelicGlowState {
     private boolean initialised;
     private long lastNanos;
 
+    // Colores y pesos de los estados de brillo (ver RelicAnimatable.Mood). Son
+    // constantes sueltas y no un Target porque la mezcla se hace en locales: el
+    // CI (Validate render path allocations) no admite ni un objeto nuevo por
+    // frame en esta clase.
+    private static final float WOUNDED_RED = 1.00F;
+    private static final float WOUNDED_GREEN = 0.30F;
+    private static final float WOUNDED_BLUE = 0.28F;
+    private static final float STORM_RED = 0.75F;
+    private static final float STORM_GREEN = 0.92F;
+    private static final float STORM_BLUE = 1.00F;
+    private static final float RESONANT_RED = 0.85F;
+    private static final float RESONANT_GREEN = 0.62F;
+    private static final float RESONANT_BLUE = 1.00F;
+
     /**
-     * Acerca los valores al estado indicado y guarda el destello del evento.
-     * Se llama una vez por frame y portador.
+     * Acerca los valores al estado indicado, con el matiz del {@code mood}, y
+     * guarda el destello del evento. Se llama una vez por frame y portador.
      */
-    void update(RelicAnimatable.LoopState state, float flash) {
+    void update(RelicAnimatable.LoopState state, float flash, RelicAnimatable.Mood mood) {
         this.flash = Math.max(0.0F, Math.min(1.2F, flash));
-        Target target = targetFor(state);
+        Target base = targetFor(state);
+
+        // El mood tira del color del estado hacia el suyo y sube aura, anillo y
+        // giro. Herido manda sobre tormenta, y tormenta sobre resonancia: es el
+        // orden en el que importan las cosas.
+        float red = base.red();
+        float green = base.green();
+        float blue = base.blue();
+        float aura = base.aura();
+        float ring = base.ring();
+        float spin = base.spin();
+        switch (mood) {
+            case WOUNDED -> {
+                red = lerp(red, WOUNDED_RED, 0.55F);
+                green = lerp(green, WOUNDED_GREEN, 0.55F);
+                blue = lerp(blue, WOUNDED_BLUE, 0.55F);
+                aura += 0.10F;
+                ring += 0.55F;
+                spin += 0.030F;
+            }
+            case STORM -> {
+                red = lerp(red, STORM_RED, 0.45F);
+                green = lerp(green, STORM_GREEN, 0.45F);
+                blue = lerp(blue, STORM_BLUE, 0.45F);
+                aura += 0.15F;
+                ring += 0.25F;
+                spin += 0.050F;
+            }
+            case RESONANT -> {
+                red = lerp(red, RESONANT_RED, 0.40F);
+                green = lerp(green, RESONANT_GREEN, 0.40F);
+                blue = lerp(blue, RESONANT_BLUE, 0.40F);
+                aura += 0.12F;
+                ring += 0.35F;
+                spin += 0.060F;
+            }
+            default -> {
+                // NEUTRAL: el estado tal cual.
+            }
+        }
 
         if (!this.initialised) {
             // Primera vez que se ve este portador: sin transicion, el estado tal cual.
             this.initialised = true;
-            this.red = target.red();
-            this.green = target.green();
-            this.blue = target.blue();
-            this.aura = target.aura();
-            this.ring = target.ring();
-            this.spin = target.spin();
+            this.red = red;
+            this.green = green;
+            this.blue = blue;
+            this.aura = aura;
+            this.ring = ring;
+            this.spin = spin;
             this.lastNanos = System.nanoTime();
             return;
         }
@@ -98,12 +151,12 @@ final class RelicGlowState {
         float colorK = approach(delta, COLOR_TAU);
         float weightK = approach(delta, WEIGHT_TAU);
 
-        this.red = lerp(this.red, target.red(), colorK);
-        this.green = lerp(this.green, target.green(), colorK);
-        this.blue = lerp(this.blue, target.blue(), colorK);
-        this.aura = lerp(this.aura, target.aura(), weightK);
-        this.ring = lerp(this.ring, target.ring(), weightK);
-        this.spin = lerp(this.spin, target.spin(), weightK);
+        this.red = lerp(this.red, red, colorK);
+        this.green = lerp(this.green, green, colorK);
+        this.blue = lerp(this.blue, blue, colorK);
+        this.aura = lerp(this.aura, aura, weightK);
+        this.ring = lerp(this.ring, ring, weightK);
+        this.spin = lerp(this.spin, spin, weightK);
     }
 
     /** Factor de interpolacion exponencial: 1 - e^(-dt/tau). */

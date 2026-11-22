@@ -140,6 +140,11 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
         ShaderInstance glowShader = RelicShaders.ready() ? RelicShaders.shader() : null;
         if (glowShader != null && !fading) {
             glowShader.safeGetUniform("HoloTime").set(RelicShaders.timeSeconds(partialTick));
+            // Glitch del shader: se abre con el destello del evento (el glitch de
+            // reposo, un pulso, un golpe) y se cierra solo. Es un uniform, asi que
+            // una sola rama para todo el dibujo: sin eventos no cuesta muestras.
+            glowShader.safeGetUniform("HoloGlitch")
+                    .set(Math.min(1.0F, glow.flashScaled() * 1.5F));
             float i = RelicConfig.SHADER_INTENSITY.get().floatValue() * amount;
             renderExtra(model, poseStack, animatable, bufferSource, partialTick, packedLight,
                     RelicRenderTypes.GLOW_SHADER.apply(RelicGeoModel.glowTexture()),

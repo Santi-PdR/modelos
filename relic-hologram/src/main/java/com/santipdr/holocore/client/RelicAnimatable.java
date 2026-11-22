@@ -1,6 +1,7 @@
 package com.santipdr.holocore.client;
 
 import com.santipdr.holocore.common.RelicAnimations;
+import com.santipdr.holocore.common.RelicServer;
 import com.santipdr.holocore.config.RelicConfig;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -53,6 +54,26 @@ public final class RelicAnimatable implements GeoAnimatable {
         DORMANT
     }
 
+    /**
+     * Estados de <b>brillo</b> que corren por encima del ciclo de animacion: no
+     * cambian que animacion suena (eso es {@link LoopState}), cambian de que color
+     * y con que fuerza late el aura, el halo y el anillo.
+     *
+     * <p>Van aparte a proposito. Meterlos como {@code LoopState} nuevos obligaria a
+     * escribir transiciones para cada pareja (reposo, combate, alerta, dormida...) y
+     * una mal escrita deja el modelo en una pose que no toca. Aqui el ciclo de
+     * animacion se queda como estaba y lo nuevo es solo luz.</p>
+     */
+    public enum Mood {
+        NEUTRAL,
+        /** Otro portador cerca: las dos reliquias se "oyen". */
+        RESONANT,
+        /** Tormenta encima del portador. */
+        STORM,
+        /** Portador con poca vida. */
+        WOUNDED
+    }
+
     private final UUID wearer;
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private final AnimationController<RelicAnimatable> stateController;
@@ -91,6 +112,15 @@ public final class RelicAnimatable implements GeoAnimatable {
      */
     private float flash;
     private long flashNanos;
+
+    /** Radio (bloques) al que se nota otro portador. */
+    private static final double RESONANCE_RADIUS = 12.0D;
+    /** Por debajo de esta fraccion de vida el brillo pasa a herido. */
+    private static final float WOUNDED_HEALTH = 0.35F;
+
+    private Mood mood = Mood.NEUTRAL;
+    private int resonanceCooldown;
+    private boolean resonanceNear;
 
     public RelicAnimatable(UUID wearer) {
         this.wearer = wearer;
@@ -155,6 +185,11 @@ public final class RelicAnimatable implements GeoAnimatable {
      */
     public float flash() {
         return this.flash;
+    }
+
+    /** Estado de brillo de ahora mismo (ver {@link Mood}). */
+    public Mood mood() {
+        return this.mood;
     }
 
     // ------------------------------------------------------------------
@@ -259,6 +294,28 @@ public final class RelicAnimatable implements GeoAnimatable {
             this.threatTicks = hasThreat(player) ? 40 : Math.max(0, this.threatTicks - 10);
         }
 
+        // --- Estados de brillo: vida baja, tormenta y otro portador cerca ----
+        // El escaneo de portadores va cada 20 ticks (una pasada por la lista de
+        // jugadores del mundo): hacerlo por tick es gratis hoy y caro en un
+        // servidor con mucha gente.
+        if (this.resonanceCooldown-- <= 0) {
+            this.resonanceCooldown = 20;
+            this.resonanceNear = anotherBearerNear(player);
+        }
+        Mood nextMood = !this.active ? Mood.NEUTRAL
+                : player.getHealth() < player.getMaxHealth() * WOUNDED_HEALTH ? Mood.WOUNDED
+                : player.level().isThundering() ? Mood.STORM
+                : this.resonanceNear ? Mood.RESONANT
+                : Mood.NEUTRAL;
+        if (nextMood != this.mood) {
+            // Un toque de luz al cambiar, para que se note que la reliquia ha
+            // reaccionado a algo y no que se ha recoloreado sola.
+            if (nextMood != Mood.NEUTRAL) {
+                boostFlash(0.25F);
+            }
+            this.mood = nextMood;
+        }
+
         // --- Variaciones de reposo: la reliquia tambien hace cosas sola ----
         // Antes solo habia un glitch cada 20-60 s; ahora se elige entre varias
         // animaciones de una vez (y capas) para que el standby no sea un bucle
@@ -333,6 +390,27 @@ public final class RelicAnimatable implements GeoAnimatable {
 
     private static boolean isRest(LoopState state) {
         return state == LoopState.IDLE || state == LoopState.CALM;
+    }
+
+    /**
+     * Otro portador a menos de 12 bloques. Se mira Curios en cliente (Curios
+     * sincroniza las ranuras de los jugadores que te ven) y, por si esa consulta
+     * no responde para otros jugadores, tambien si su reliquia esta dibujada.
+     */
+    private static boolean anotherBearerNear(Player player) {
+        double radio = RESONANCE_RADIUS * RESONANCE_RADIUS;
+        for (Player other : player.level().players()) {
+            if (other == player || other.isSpectator()) {
+                continue;
+            }
+            if (other.distanceToSqr(player) > radio) {
+                continue;
+            }
+            if (RelicServer.findRelic(other).isPresent() || RelicVisuals.existing(other) != null) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean hasThreat(Player player) {

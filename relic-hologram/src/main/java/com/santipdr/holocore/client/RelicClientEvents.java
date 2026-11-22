@@ -187,7 +187,7 @@ public final class RelicClientEvents {
         animatable.update(player, ClientRelicStates.get(player.getUUID()), 1.0F, visible);
         // El brillo (color y fuerzas) se interpola con tiempo real: se mantiene al
         // dia para que al girarse la camara ya este en el estado correcto.
-        visual.glow().update(animatable.loopState(), animatable.flash());
+        visual.glow().update(animatable.loopState(), animatable.flash(), animatable.mood());
     }
 
     /** {@code /relic preview}: dibuja la reliquia delante de la camara. */
@@ -248,7 +248,7 @@ public final class RelicClientEvents {
         RelicAnimatable animatable = visual.animatable();
         // Se esta viendo: que encole sus animaciones como en tercera persona.
         animatable.markRendered(minecraft.level.getGameTime());
-        visual.glow().update(animatable.loopState(), animatable.flash());
+        visual.glow().update(animatable.loopState(), animatable.flash(), animatable.mood());
 
         MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
         visual.renderer().renderHologram(poseStack, animatable, buffers, partialTick,

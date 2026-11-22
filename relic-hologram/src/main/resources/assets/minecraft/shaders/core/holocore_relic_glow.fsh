@@ -3,6 +3,7 @@
 uniform sampler2D Sampler0;
 uniform vec4 ColorModulator;
 uniform float HoloTime;
+uniform float HoloGlitch;
 
 in vec2 texCoord;
 in vec4 vertexColor;
@@ -19,7 +20,25 @@ float hash(vec2 p) {
 }
 
 void main() {
-    vec4 tex = texture(Sampler0, texCoord);
+    // Glitch de evento (destello, pulso, golpe): la UV se parte por bandas
+    // horizontales y los canales se separan. Va en una rama sobre un uniform, o
+    // sea la misma para todos los pixeles del dibujo, asi que el camino normal
+    // sigue muestreando la textura una sola vez.
+    vec2 uv = texCoord;
+    if (HoloGlitch > 0.01) {
+        float band = floor(viewY * 48.0);
+        float tear = (hash(vec2(band, floor(HoloTime * 14.0))) - 0.5) * HoloGlitch * 0.08;
+        uv.x += tear;
+    }
+
+    vec4 tex = texture(Sampler0, uv);
+    vec3 texRgb = tex.rgb;
+    if (HoloGlitch > 0.01) {
+        float split = HoloGlitch * 0.010;
+        texRgb = vec3(texture(Sampler0, uv + vec2(split, 0.0)).r,
+                      tex.r,
+                      texture(Sampler0, uv - vec2(split, 0.0)).b);
+    }
     float texAlpha = tex.a * vertexColor.a;
 
     // Dos bordes por multiplicacion, no por pow: el suave tine la cara y el
@@ -50,7 +69,7 @@ void main() {
     // Al raspar, el borde se va al violeta: dos tonos en la misma silueta.
     rimTint = mix(rimTint, vec3(0.78, 0.62, 1.0), rimTight * 0.35);
 
-    vec3 rgb = tex.rgb * tint
+    vec3 rgb = texRgb * tint
              + rimSoft * rimTint * 0.28 * breath
              + rimTight * rimTint * 0.45
              + sweep * 0.07

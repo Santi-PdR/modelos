@@ -94,7 +94,7 @@ public class RelicCurioRenderer implements ICurioRenderer {
         // El estado de brillo se actualiza antes de dibujar nada: el modelo usa el
         // mismo factor que el aura, asi que dormida se apaga todo a la vez.
         RelicAnimatable.LoopState state = animatable.loopState();
-        visual.glow().update(state, animatable.flash());
+        visual.glow().update(state, animatable.flash(), animatable.mood());
 
         visual.renderer().renderHologram(poseStack, animatable, bufferSource, partialTicks,
                 LightTexture.FULL_BRIGHT, visual.glow(), fade);

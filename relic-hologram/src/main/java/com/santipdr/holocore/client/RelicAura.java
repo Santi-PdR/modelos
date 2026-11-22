@@ -77,6 +77,13 @@ public final class RelicAura {
      */
     private static final float TINT_ALPHA_BOOST = 1.6F;
 
+    /** Chispas en orbita alrededor del nucleo. */
+    private static final int SPARK_COUNT = 5;
+    private static final float SPARK_RADIUS = 0.42F;
+    private static final float SPARK_SIZE = 0.075F;
+    private static final float SPARK_SPEED = 0.75F;
+    private static final float TWO_PI = 6.2831855F;
+
     private RelicAura() {
     }
 
@@ -98,6 +105,9 @@ public final class RelicAura {
         }
         if (RelicConfig.GLOW_RING.get() && glow.ring() + flash * 0.8F > 0.01F) {
             drawRing(bufferSource, frame, time, state, glow, flash, fade);
+        }
+        if (RelicConfig.GLOW_AURA.get() && sparksEnabled()) {
+            drawSparks(bufferSource, frame, time, glow, fade);
         }
     }
 
@@ -174,6 +184,52 @@ public final class RelicAura {
         VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(RING_TEXTURE));
         billboard(buffer, frame, size, angle,
                 glow.red() * amount, glow.green() * amount, glow.blue() * amount, 1.0F);
+
+        // Eco del anillo en los eventos (pulso, golpe, liberacion, cambio de
+        // estado): un anillo mas grande que se abre y se apaga con el destello.
+        // Es lo que convierte un fogonazo en una onda. Un quad, mismo lote.
+        if (flash > 0.05F) {
+            float echoSize = RING_DIAMETER * (1.0F + 2.4F * flash);
+            float echo = weight * flash * 0.55F;
+            billboard(buffer, frame, echoSize, -angle * 0.6F,
+                    glow.red() * echo, glow.green() * echo, glow.blue() * echo, 1.0F);
+        }
+    }
+
+    /**
+     * Chispas en orbita: cinco quads aditivos del mismo tipo que el aura, o sea
+     * que suman al lote que ya esta abierto. Giran en el plano de la camara, con
+     * radio y altura distintos por chispa para que no se lean como un anillo
+     * plano, y el giro hereda el del estado ({@code glow.spin()}): en alerta van
+     * al reves que en calma.
+     */
+    private static void drawSparks(MultiBufferSource bufferSource, Frame frame, float time,
+                                   RelicGlowState glow, float fade) {
+        float amount = fade * (0.55F + 0.45F * glow.aura()) * (1.0F + 0.6F * glow.flashScaled());
+        if (amount <= 0.01F) {
+            return;
+        }
+        VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
+        float orbit = time * SPARK_SPEED * (1.0F + 6.0F * Math.abs(glow.spin()));
+        for (int i = 0; i < SPARK_COUNT; i++) {
+            float phase = orbit + i * (TWO_PI / SPARK_COUNT);
+            float radius = SPARK_RADIUS * (0.72F + 0.28F * sin(phase * 2.0F + i));
+            float lift = sin(phase * 3.0F + i * 1.7F) * 0.16F;
+            float offset = cos(phase) * radius;
+            float height = sin(phase) * radius * 0.8F + lift;
+            float cx = frame.originX + frame.leftX * offset + frame.upX * height;
+            float cy = frame.originY + frame.leftY * offset + frame.upY * height;
+            float cz = frame.originZ + frame.leftZ * offset + frame.upZ * height;
+            float weight = amount * (0.35F + 0.25F * sin(phase * 4.0F + i));
+            billboardAt(buffer, frame, cx, cy, cz, SPARK_SIZE,
+                    phase * 2.0F, glow.red() * weight, glow.green() * weight, glow.blue() * weight, 1.0F);
+        }
+    }
+
+    /** Las chispas se saltan en LITE y con los efectos reducidos, como el halo. */
+    private static boolean sparksEnabled() {
+        return RelicConfig.QUALITY.get() == RelicConfig.Quality.FULL
+                && !RelicConfig.REDUCED_EFFECTS.get();
     }
 
     /** Latido lento de cada capa del aura: 0.82 .. 1.0, desfasado entre capas. */
@@ -240,6 +296,14 @@ public final class RelicAura {
      */
     private static void billboard(VertexConsumer buffer, Frame frame, float diameter, float angle,
                                   float red, float green, float blue, float alpha) {
+        billboardAt(buffer, frame, frame.originX, frame.originY, frame.originZ,
+                diameter, angle, red, green, blue, alpha);
+    }
+
+    /** Igual que {@link #billboard} pero centrado en un punto cualquiera. */
+    private static void billboardAt(VertexConsumer buffer, Frame frame, float centerX, float centerY,
+                                    float centerZ, float diameter, float angle,
+                                    float red, float green, float blue, float alpha) {
         float cos = (float) Math.cos(angle);
         float sin = (float) Math.sin(angle);
 
@@ -260,9 +324,9 @@ public final class RelicAura {
         float uy = half * ayY;
         float uz = half * ayZ;
 
-        float ox = frame.originX;
-        float oy = frame.originY;
-        float oz = frame.originZ;
+        float ox = centerX;
+        float oy = centerY;
+        float oz = centerZ;
 
         quad(buffer,
                 ox - x - ux, oy - y - uy, oz - z - uz,
@@ -303,6 +367,10 @@ public final class RelicAura {
 
     private static float sin(float value) {
         return (float) Math.sin(value);
+    }
+
+    private static float cos(float value) {
+        return (float) Math.cos(value);
     }
 
     private static float time(float partialTick) {

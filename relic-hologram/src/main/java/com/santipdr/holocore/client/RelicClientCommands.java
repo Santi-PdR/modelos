@@ -151,6 +151,15 @@ public final class RelicClientCommands {
         source.sendSuccess(() -> message, false);
         source.sendSuccess(RelicClientCommands::diag, false);
         source.sendSuccess(RelicClientCommands::glowLine, false);
+        RelicVisuals.RelicVisual actual = localVisual();
+        if (actual != null && actual.animatable().mood() != RelicAnimatable.Mood.NEUTRAL) {
+            // Los estados de brillo (herido, tormenta, resonancia) no se deducen
+            // mirando: si el aura se ha puesto roja hay que saber por que.
+            Component nombre = Component.translatable("message.holocore.state."
+                    + actual.animatable().mood().name().toLowerCase(Locale.ROOT));
+            source.sendSuccess(() -> Component.translatable("message.holocore.mood", nombre)
+                    .withStyle(ChatFormatting.GOLD), false);
+        }
         if (RelicClientEvents.previewEnabled()) {
             // Sin esto, la reliquia flotando delante de la camara parece un fallo
             // del mod hasta que uno se acuerda de que dejo /relic preview puesto.

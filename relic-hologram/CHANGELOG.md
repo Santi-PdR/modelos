@@ -1,5 +1,41 @@
 # Historial de cambios
 
+## 1.0.29 — tres estados de brillo, chispas, eco de anillo y glitch en el shader
+
+**Estados nuevos** (`RelicAnimatable.Mood`, aparte del ciclo de animación a
+propósito: meterlos como `LoopState` obligaba a escribir transiciones para cada
+pareja y una mal escrita deja el modelo en una pose que no toca). Solo cambian la
+luz, y mandan en este orden: herido > tormenta > resonancia.
+
+* **herido**: al portador le queda menos del 35% de vida. Color a rojo, aura +0.10,
+  anillo +0.55 y giro más rápido.
+* **tormenta**: truena donde está el portador. Azul casi blanco, aura +0.15, anillo
+  +0.25.
+* **resonancia**: otro portador a menos de 12 bloques. Violeta, aura +0.12, anillo
+  +0.35. Se comprueba cada 20 ticks, no cada tick, y mira la reliquia del otro
+  (Curios en cliente) además de si su visual está dibujado.
+* Al cambiar de estado de brillo la reliquia da un destello corto, y `/relic info`
+  lo dice en una línea aparte: si el aura se pone roja no hay que adivinar por qué.
+
+**VFX nuevos**, los dos sin geometría nueva y sumando al lote aditivo que ya está
+abierto:
+
+* **Chispas en órbita**: cinco quads que giran en el plano de la cámara, con radio y
+  altura distintos por chispa y heredando el sentido de giro del estado. Se saltan
+  en `lite` y con `reducedEffects`, como el halo.
+* **Eco del anillo**: en cada evento (pulso, golpe, liberación, cambio de estado) sale
+  un anillo más grande que se abre y se apaga con el destello. Un fogonazo pasa a
+  leerse como una onda.
+
+**Shader**: uniform nuevo `HoloGlitch`, que el renderer rellena con
+`min(1, flash × 1.5)`. Con glitch, la UV se parte por bandas horizontales y los
+canales R y B se separan. La condición es sobre un uniform, así que sin evento se
+sigue muestreando la textura una vez; con evento, tres.
+
+CI: paso nuevo `Validate moods and vfx` (los tres estados con su texto en los dos
+idiomas, la detección de cada uno, chispas, eco y el glitch cableado) y
+`Validate shader resources` exige `HoloGlitch` en el JSON y la rama en el fragment.
+
 ## 1.0.28 — segunda vuelta al shader y dos pases menos donde no se ven
 
 **Shader** (`holocore_relic_glow`), cuatro cambios, todos con motivo:

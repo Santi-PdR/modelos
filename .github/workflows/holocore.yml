@@ -212,7 +212,7 @@ jobs:
           assert (blend['func'], blend['srcrgb'], blend['dstrgb']) == ('add', 'srcalpha', 'one'), blend
 
           uniforms = {u['name']: u for u in doc['uniforms']}
-          for name in ('ModelViewMat', 'ProjMat', 'ColorModulator', 'HoloTime'):
+          for name in ('ModelViewMat', 'ProjMat', 'ColorModulator', 'HoloTime', 'HoloGlitch'):
               assert name in uniforms, name
           for uniform in uniforms.values():
               assert len(uniform['values']) == uniform['count'], uniform['name']
@@ -237,6 +237,8 @@ jobs:
           # Dos bordes por multiplicacion en vez de dos pow: mas barato y mas limpio.
           assert 'rimTight' in fsh and 'pow(' not in fsh, \
               'el fragment shader volvio a usar pow para los dos bordes'
+          # El glitch se paga solo cuando hay evento: rama sobre el uniform.
+          assert 'HoloGlitch > 0.01' in fsh, 'el glitch del shader no esta condicionado'
 
           # El apendice A del documento tiene que ser copia literal de estos
           # ficheros: es la unica forma de que el GLSL explicado no se quede
@@ -341,6 +343,59 @@ jobs:
               'el README no documenta /relic reset <clave>')
           print('Reset OK: variante por clave con marca de sin guardar, asterisco en /relic set'
                 ' y ambos en el README.')
+          PY
+
+      # Los estados de brillo (herido, tormenta, resonancia) y los VFX nuevos son
+      # justo lo que un refactor se lleva por delante sin que falle nada: el aura
+      # se queda de un color y nadie sabe por que.
+      - name: Validate moods and vfx
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, re
+
+          base = pathlib.Path('relic-hologram/src/main/java/com/santipdr/holocore/client')
+          animatable = (base / 'RelicAnimatable.java').read_text(encoding='utf-8')
+          glow = (base / 'RelicGlowState.java').read_text(encoding='utf-8')
+          aura = (base / 'RelicAura.java').read_text(encoding='utf-8')
+          comandos = (base / 'RelicClientCommands.java').read_text(encoding='utf-8')
+          geo = (base / 'RelicGeoRenderer.java').read_text(encoding='utf-8')
+
+          enum = animatable.split('enum Mood {', 1)[1].split('}', 1)[0]
+          moods = re.findall(r'^\s*(NEUTRAL|RESONANT|STORM|WOUNDED),?', enum, re.M)
+          assert moods == ['NEUTRAL', 'RESONANT', 'STORM', 'WOUNDED'], moods
+          assert 'public Mood mood()' in animatable, 'falta el accessor de Mood'
+          assert 'isThundering()' in animatable, 'la tormenta no alimenta ningun estado'
+          assert 'WOUNDED_HEALTH' in animatable and 'getMaxHealth()' in animatable, \
+              'la vida del portador no alimenta ningun estado'
+          assert 'anotherBearerNear(' in animatable, 'no hay deteccion de otro portador cerca'
+          assert 'RelicServer.findRelic(other).isPresent()' in animatable, \
+              'la resonancia no consulta la reliquia del otro jugador'
+
+          assert 'RelicAnimatable.Mood mood)' in glow, \
+              'RelicGlowState.update no acepta el estado de brillo'
+          assert 'switch (mood)' in glow, 'los estados de brillo no cambian el color'
+
+          assert 'private static void drawSparks(' in aura, 'faltan las chispas en orbita'
+          assert 'billboardAt(' in aura, 'las chispas no pueden dibujarse fuera del centro'
+          assert 'echoSize' in aura, 'el anillo no tiene eco en los eventos'
+          assert 'sparksEnabled()' in aura, 'las chispas no tienen interruptor'
+          assert 'Quality.FULL' in aura, 'las chispas no miran la calidad'
+
+          assert 'message.holocore.mood' in comandos, '/relic info no dice el estado de brillo'
+
+          # Cada Mood tiene su nombre en los dos idiomas: un enum nuevo sin texto
+          # saldria como clave cruda en el chat.
+          for idioma in ('en_us', 'es_es'):
+              lang = json.loads(pathlib.Path(
+                  f'relic-hologram/src/main/resources/assets/holocore/lang/{idioma}.json'
+              ).read_text(encoding='utf-8'))
+              for mood in ('wounded', 'storm', 'resonant'):
+                  clave = f'message.holocore.state.{mood}'
+                  assert clave in lang, f'{idioma} sin {clave}'
+
+          assert 'safeGetUniform("HoloGlitch")' in geo, 'el pase GLSL no manda el glitch'
+          print('Estados y VFX OK: herido/tormenta/resonancia con su texto, chispas, eco del'
+                ' anillo y glitch en el shader.')
           PY
 
       # ------------------------------------------------------------------

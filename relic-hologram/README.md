@@ -196,6 +196,20 @@ un borde más), y tanto el anillo como el aura cambian de color con el estado:
 | `idle_alert` | rojo | 1.05 | late como un aviso, gira al revés |
 | `idle_dormant` | gris azulado | 0.35 | no sale |
 
+Y por encima del ciclo de animación hay tres **estados de brillo** que solo cambian
+la luz, no la animación (`RelicAnimatable.Mood`, desde 1.0.29). Se aplican cuando
+mandan: herido > tormenta > resonancia.
+
+| Estado de brillo | Cuándo | Qué hace |
+|---|---|---|
+| herido (`wounded`) | al portador le queda menos del 35% de vida | tira el color a rojo, sube el aura y enciende el anillo aunque esté en reposo |
+| tormenta (`storm`) | truena donde está el portador | azul casi blanco, más aura y el giro más rápido |
+| resonancia (`resonant`) | otro portador a menos de 12 bloques | violeta, anillo más marcado y giro rápido: las dos reliquias se «oyen» |
+
+Al cambiar de estado de brillo la reliquia da un destello corto para que se note
+que ha reaccionado a algo. `/relic info` lo dice en una línea aparte, así que si el
+aura se pone roja no hay que adivinar por qué.
+
 Los cambios **no saltan**: `RelicGlowState` interpola color (≈0.30 s) y
 fuerza/giro (≈0.22 s) por portador y con el tiempo real entre frames, así que se
 ve igual a 30 que a 240 FPS. El giro del anillo pasa por cero al cambiar de
@@ -204,10 +218,19 @@ calma o dormido. Ese mismo factor multiplica el halo y el pase GLSL del modelo,
 así que dormida se atenúa **todo** el brillo a la vez y cargada se intensifica,
 en vez de quedar el aura apagada y el modelo a tope.
 
+Hay dos VFX más, los dos sin geometría nueva: **chispas en órbita** (cinco quads
+aditivos que giran en el plano de la cámara, con radio y altura distintos por
+chispa y heredando el sentido de giro del estado) y un **eco del anillo** en cada
+evento —pulso, golpe, liberación, cambio de estado—, un anillo más grande que se
+abre y se apaga con el destello. Las dos cosas suman al lote que ya está abierto, así
+que no cuestan ni un cambio de estado; las chispas se saltan en `lite` y con
+`reducedEffects`.
+
 El **shader propio** (`visuals.shaderGlow`) añade un cuarto pase con dos bordes
 de silueta (uno suave y otro pegado al canto, este último con un desvío al
 violeta), una banda que sube por la reliquia entera, rejilla fina de holograma que
-respira y un grano mínimo, en GLSL de verdad
+respira, un glitch por bandas con separación de canales en los eventos y un grano
+mínimo, en GLSL de verdad
 (`assets/minecraft/shaders/core/holocore_relic_glow.{json,vsh,fsh}`). Se compila
 en cada recarga de recursos y **se desactiva solo si hay shaderpack activo**
 (Iris/Oculus/OptiFine): esos packs sustituyen el programa y la reliquia podría
