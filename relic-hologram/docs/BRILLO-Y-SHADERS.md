@@ -237,6 +237,14 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.42, el destello como interfaz de prueba.** El relámpago de tormenta no inventa
+ningún efecto nuevo: llama a `boostFlash(0.55)` cada 100–220 ticks con el RNG del propio
+portador (`RandomSource`), y el destello ya alimenta la onda de choque, el eco del anillo,
+el shader (`HoloGlitch`) y el apretón de escala. Por eso una tormenta se ve con pulso sin
+tocar el shader ni el aura. `/relic vfx shock [fuerza]` hace lo mismo a mano: es la única
+forma de mirar la onda con la fuerza que se quiera (0.1–1) sin esperar a que ocurra un
+evento, y sirve de banco de pruebas para cualquier efecto futuro que cuelgue del destello.
+
 **1.0.41, el barrido era un aro y el ritmo no se podía bajar.** El barrido de 1.0.8–1.0.40
 era `smoothstep(0.40, 0.62, fract(viewY * 0.9 - HoloTime * 0.25))`: como `viewY` recorre
 medio bloque, esa ventana de 0.22 de fase son ~0.22 bloques de alto, o sea una faja que

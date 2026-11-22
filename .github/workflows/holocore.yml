@@ -521,6 +521,20 @@ jobs:
               'el ritmo del bucle no pasa por animSpeed de la config'
           assert '.defineInRange("animSpeed", 0.65D, 0.25D, 2.0D)' in configuracion, \
               'animSpeed no esta declarado con su rango'
+          # Tormenta con relampagos: el estado tiene que parpadear solo, y el
+          # contador reiniciarse al salir para no heredar la espera anterior.
+          assert 'STORM_FLASH_STRENGTH' in animatable and 'STORM_FLASH_MIN_TICKS' in animatable, \
+              'faltan las constantes del relampago de tormenta'
+          assert 'if (nextMood == Mood.STORM) {' in animatable, \
+              'la tormenta no destella'
+          assert 'boostFlash(STORM_FLASH_STRENGTH);' in animatable, \
+              'el relampago de tormenta no enciende el destello'
+          assert 'this.stormFlashCooldown = 0;' in animatable, \
+              'el contador del relampago no se reinicia al salir de la tormenta'
+          # /relic vfx shock: llama al destello de verdad, no a una copia.
+          assert '"vfx"' in comandos and '"shock"' in comandos, 'falta /relic vfx shock'
+          assert 'visual.animatable().flash(strength);' in comandos, \
+              '/relic vfx shock no dispara el destello'
           assert 'public double currentAnimSpeed()' in animatable, \
               'el ritmo aplicado no se puede leer (sin eso /relic info no lo puede ensenar)'
           bloque_mood = animatable.split('if (nextMood != this.mood) {', 1)[1]\

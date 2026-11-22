@@ -89,6 +89,7 @@ En el juego:
 | Cambiar de hombro | `/relic side left\|right` |
 | Calidad (full/lite) | `/relic quality full\|lite` |
 | Ver valores actuales | `/relic info` (tres líneas: placement, estado en vivo y brillo) |
+| Probar un efecto | `/relic vfx shock [fuerza]` — destello a mano (0.1–1, por defecto 0.6) para ver la onda de choque sin esperar a que pase nada |
 | Probar una animación | `/relic anim <nombre>` · `/relic anim list` |
 | Ajustar cualquier clave | `/relic set` (lista) · `/relic set <clave> <valor>` |
 | Guardar los ajustes | `/relic save` |
@@ -213,7 +214,7 @@ resonancia.
 | Estado de brillo | Cuándo | Qué hace |
 |---|---|---|
 | herido (`wounded`) | al portador le queda menos del 35% de vida | tira el color a rojo, sube el aura y enciende el anillo aunque esté en reposo |
-| tormenta (`storm`) | truena donde está el portador | azul casi blanco, más aura y el giro más rápido |
+| tormenta (`storm`) | truena donde está el portador | azul casi blanco, más aura y el giro más rápido | Cada 5–11 s pega un destello como el cielo (desde 1.0.42).
 | resonancia (`resonant`) | otro portador a menos de 12 bloques | violeta, anillo más marcado y giro rápido: las dos reliquias se «oyen» |
 | oscuridad (`dark`) | menos de luz de bloque 4 **y** menos de luz de cielo 8 (encerrado) | casi blanca y bastante más aura: en una cueva es la única luz que hay |
 | lluvia (`rain`) | llueve encima del portador (sin tormenta) | azul profundo, anillo más tenue y las chispas se cambian por **gotas que caen** (desde 1.0.38) |

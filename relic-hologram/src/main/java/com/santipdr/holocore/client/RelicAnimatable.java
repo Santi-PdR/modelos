@@ -177,6 +177,8 @@ public final class RelicAnimatable implements GeoAnimatable {
     private static final int MOOD_GLITCH_TICKS = 120;
 
     private Mood mood = Mood.NEUTRAL;
+    /** Ticks que faltan para el proximo relampago de tormenta. */
+    private int stormFlashCooldown;
     /** Ultimo tick en el que el cambio de estado encolo su glitch. */
     private long moodGlitchedAt = Long.MIN_VALUE;
     /**
@@ -189,6 +191,15 @@ public final class RelicAnimatable implements GeoAnimatable {
     private double animSpeed = 1.0D;
     private int resonanceCooldown;
     private boolean resonanceNear;
+    /**
+     * Relampagos de tormenta: cada 5-11 s la reliquia pega un destello, como el
+     * cielo. Es lo que separa "esta lloviendo" de "hay tormenta" mirando la
+     * reliquia, y de paso abre la onda de choque sin que pase nada mas.
+     */
+    private static final int STORM_FLASH_MIN_TICKS = 100;
+    private static final int STORM_FLASH_SPREAD_TICKS = 120;
+    private static final float STORM_FLASH_STRENGTH = 0.55F;
+
     /** Cada cuantos ticks se mira si hay un portal cerca: uno por segundo sobra. */
     private static final int PORTAL_SCAN_TICKS = 20;
     /** Radio (bloques) del escaneo de portal, a la altura de los pies y la cabeza. */
@@ -243,6 +254,17 @@ public final class RelicAnimatable implements GeoAnimatable {
     /** Marca que este portador se dibujo en {@code gameTime}. */
     public void markRendered(long gameTime) {
         this.lastRenderTick = gameTime;
+    }
+
+    /**
+     * Destello a mano, para {@code /relic vfx}: el mismo que produce un pulso, o
+     * sea que abre la onda de choque y enciende el eco del anillo.
+     */
+    public void flash(float strength) {
+        if (!this.active) {
+            return;
+        }
+        boostFlash(Math.max(0.0F, Math.min(1.0F, strength)));
     }
 
     /** Ritmo que se esta aplicando ahora mismo ({@code animSpeed} de la config × estado). */
@@ -462,6 +484,21 @@ public final class RelicAnimatable implements GeoAnimatable {
         if (speed != this.animSpeed) {
             this.animSpeed = speed;
             this.stateController.setAnimationSpeed(speed);
+        }
+
+        // Relampago de tormenta: el estado de tormenta no es solo azul, tambien
+        // parpadea cada tanto. Se para el contador al salir de la tormenta para
+        // que la proxima vez empiece con el margen completo.
+        if (nextMood == Mood.STORM) {
+            if (this.stormFlashCooldown <= 0) {
+                this.stormFlashCooldown = STORM_FLASH_MIN_TICKS
+                        + this.random.nextInt(STORM_FLASH_SPREAD_TICKS);
+                boostFlash(STORM_FLASH_STRENGTH);
+            } else {
+                this.stormFlashCooldown--;
+            }
+        } else {
+            this.stormFlashCooldown = 0;
         }
 
         if (nextMood != this.mood) {

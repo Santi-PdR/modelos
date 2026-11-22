@@ -138,6 +138,14 @@ public final class RelicClientCommands {
                                         .executes(ctx -> setApply(ctx.getSource(),
                                                 StringArgumentType.getString(ctx, "clave"),
                                                 StringArgumentType.getString(ctx, "valor"))))))
+                .then(Commands.literal("vfx")
+                        .then(Commands.literal("shock")
+                                .executes(ctx -> vfxShock(ctx.getSource(), 0.6F))
+                                .then(Commands.argument("fuerza",
+                                                DoubleArgumentType.doubleArg(0.1D, 1.0D))
+                                        .executes(ctx -> vfxShock(ctx.getSource(),
+                                                ctx.getArgument("fuerza", Double.class)
+                                                        .floatValue())))))
                 .then(Commands.literal("stats")
                         .executes(ctx -> stats(ctx.getSource()))
                         .then(Commands.literal("reset").executes(ctx -> statsReset(ctx.getSource()))))
@@ -657,6 +665,24 @@ public final class RelicClientCommands {
      * paso de comprobar que los pases que se dibujan son los que la config
      * permite (1 sin nada, 4 con base, emisivo, halo y GLSL).</p>
      */
+    /**
+     * {@code /relic vfx shock}: destello a mano, para ver la onda de choque sin
+     * esperar a que pase algo. La fuerza es lo que se le pasa al destello: 0.6
+     * es un pulso normal, 1.0 el pico maximo (onda grande y lenta de apagar).
+     */
+    private static int vfxShock(CommandSourceStack source, float strength) {
+        RelicVisuals.RelicVisual visual = localVisual();
+        if (visual == null) {
+            source.sendFailure(Component.translatable("message.holocore.not_equipped"));
+            return 0;
+        }
+        visual.animatable().flash(strength);
+        String fuerza = String.format(Locale.ROOT, "%.2f", strength);
+        source.sendSuccess(() -> Component.translatable("message.holocore.vfx_shock", fuerza)
+                .withStyle(ChatFormatting.AQUA), false);
+        return 1;
+    }
+
     private static int stats(CommandSourceStack source) {
         long dibujos = RelicRenderStats.draws();
         double segundos = Math.max(0.001, RelicRenderStats.seconds());

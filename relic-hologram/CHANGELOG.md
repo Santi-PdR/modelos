@@ -1,5 +1,19 @@
 # Historial de cambios
 
+## 1.0.42 — la tormenta relampaguea y `/relic vfx shock`
+
+* **Relámpago de tormenta**: cada 5–11 s el estado `storm` pega un destello de 0.55,
+  como el cielo. Es lo que separa "está lloviendo" de "hay tormenta" mirando la
+  reliquia, y de paso abre la onda de choque de 1.0.40 sin que pase nada más: la
+  tormenta pasa de ser un color a tener pulso. El contador se reinicia al salir del
+  estado, para no heredar la espera de la tormenta anterior.
+* **`/relic vfx shock [fuerza]`**: dispara el destello a mano (0.1–1, por defecto 0.6)
+  y con él la onda de choque y el eco del anillo. Es la forma de ver el efecto sin
+  esperar un pulso o un golpe, y de comparar una fuerza con otra.
+* 1 clave nueva por idioma (69 en cada uno). CI: 7 comprobaciones nuevas, con 4
+  negativos probados en rojo (tormenta sin destello, destello sin relámpago,
+  contador sin reiniciar y `vfx` que no llama al destello).
+
 ## 1.0.41 — el flotado vuelve a ser lento y el shader deja de ser un aro
 
 Dos fallos de percepción, contados con lo que se veía:

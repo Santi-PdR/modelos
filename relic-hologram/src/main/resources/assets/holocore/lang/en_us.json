@@ -30,6 +30,7 @@
   "message.holocore.anim_unknown": "No such animation: %s (try /relic anim list).",
   "message.holocore.anim_list": "Animations: %s",
   "message.holocore.stats": "Stats: %s relic(s) in memory · %s draws/s · %s passes per draw",
+  "message.holocore.vfx_shock": "Shockwave fired (flash %s)",
   "message.holocore.stats_time": "Model %s ms · aura %s ms per draw (%s draws in %s s) — /relic stats reset restarts",
   "message.holocore.stats_reset": "Stats reset.",
   "message.holocore.set_list": "Adjustable: %s",
