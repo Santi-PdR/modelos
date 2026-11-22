@@ -33,6 +33,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 public final class KatanaAnimations {
     private static final ResourceLocation LAYER = new ResourceLocation(StainKatanaMod.MOD_ID, "abilities");
     private static final Logger LOGGER = LogUtils.getLogger();
+    public static float fixtureXDepth = 5F;
     // Official Better Combat katana moves; loaded from the user's installed mod/resource pack,
     // not redistributed by this mod. Z uses a credited Emotecraft item-inspection gesture.
     private static final String[] BETTER_COMBAT = {
@@ -145,7 +146,7 @@ public final class KatanaAnimations {
                     return java.util.Optional.empty();
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                         dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
-                        new dev.kosmx.playerAnim.core.util.Vec3f(0, 1, 5)));
+                        new dev.kosmx.playerAnim.core.util.Vec3f(0, 1, fixtureXDepth)));
             }) {
                 @Override protected float getFadeIn(float delta) { return 1F; }
             });

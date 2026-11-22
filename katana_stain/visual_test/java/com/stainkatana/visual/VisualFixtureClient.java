@@ -498,7 +498,7 @@ public final class VisualFixtureClient {
             case 1272 -> capture = "51_blood_right_third_draw.png";
             case 1276 -> capture = "52_blood_right_third_face.png";
             case 1280 -> capture = "53_blood_right_third_recovery.png";
-            // Sample the whole X and opening C clips in first and third person.
+            // Sample X first-person and C's forced cinematic view.
             // Local visual playback only: these frames do not verify server timing.
             case 1295 -> { mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
                 mc.options.setCameraType(CameraType.FIRST_PERSON); mc.options.fov().set(70); }
@@ -522,7 +522,20 @@ public final class VisualFixtureClient {
             case 1390 -> capture = "98_c_third_impact.png";
             case 1393 -> capture = "99_c_third_follow.png";
             case 1397 -> capture = "100_c_third_recover.png";
-            case 1415 -> {
+            case 1415 -> { com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), -1);
+                mc.options.setCameraType(CameraType.FIRST_PERSON); mc.options.fov().set(70); }
+            case 1430 -> { com.stainkatana.katana.client.KatanaAnimations.fixtureXDepth = -5; com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 1); }
+            case 1437 -> capture = "101_x_depth_minus5.png";
+            case 1455 -> { com.stainkatana.katana.client.KatanaAnimations.fixtureXDepth = 0; com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 1); }
+            case 1462 -> capture = "102_x_depth_zero.png";
+            case 1480 -> { com.stainkatana.katana.client.KatanaAnimations.fixtureXDepth = 10; com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 1); }
+            case 1487 -> capture = "103_x_depth_10.png";
+            case 1505 -> { com.stainkatana.katana.client.KatanaAnimations.fixtureXDepth = 15; com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 1); }
+            case 1512 -> capture = "104_x_depth_15.png";
+            case 1530 -> { com.stainkatana.katana.client.KatanaAnimations.fixtureXDepth = 20; com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 1); }
+            case 1537 -> capture = "105_x_depth_20.png";
+            case 1560 -> {
+                com.stainkatana.katana.client.KatanaAnimations.fixtureXDepth = 5;
                 com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), -1);
                 mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(0.0);
