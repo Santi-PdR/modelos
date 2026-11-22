@@ -88,6 +88,36 @@ public final class VisualFixtureServer {
         System.out.println("STAIN_WEAK_FINISHER_DAMAGE_VERIFIED");
     }
 
+    private static Zombie originalMarked, newlyMarked;
+    public static void startRemarkDuringZ(ServerPlayer player) {
+        var level = player.serverLevel();
+        originalMarked = EntityType.HUSK.create(level);
+        newlyMarked = EntityType.HUSK.create(level);
+        if (originalMarked == null || newlyMarked == null) throw new IllegalStateException("Cannot create Z mark targets");
+        originalMarked.setNoAi(true); newlyMarked.setNoAi(true);
+        originalMarked.moveTo(player.getX() - 1, player.getY(), player.getZ() + 3, 180, 0);
+        newlyMarked.moveTo(player.getX() + 1, player.getY(), player.getZ() + 3, 180, 0);
+        level.addFreshEntity(originalMarked); level.addFreshEntity(newlyMarked);
+        var state = player.getPersistentData().getCompound("StainKatanaAbilities");
+        state.putInt("daggerCharges", 0); state.putLong("next0", 0); state.remove("last");
+        player.getPersistentData().put("StainKatanaAbilities", state);
+        var sword = player.getMainHandItem();
+        sword.hurtEnemy(originalMarked, player);
+        com.stainkatana.katana.KatanaAbilities.activate(player, 0);
+        if (state.getLong("next0") == 0) throw new IllegalStateException("Z mark test did not activate");
+        // Simulate an unrelated sword hit after the server accepted Z.
+        sword.hurtEnemy(newlyMarked, player);
+    }
+    public static void verifyRemarkDuringZ(ServerPlayer player) {
+        var mark = player.getMainHandItem().getOrCreateTag().getCompound("StainBloodMark");
+        if (originalMarked == null || newlyMarked == null
+                || !originalMarked.hasEffect(com.stainkatana.katana.KatanaEffects.PARALYSIS.get())
+                || newlyMarked.hasEffect(com.stainkatana.katana.KatanaEffects.PARALYSIS.get())
+                || !mark.hasUUID("Target") || !mark.getUUID("Target").equals(newlyMarked.getUUID()))
+            throw new IllegalStateException("Z did not retain its target and preserve the newer mark");
+        System.out.println("STAIN_Z_LOCKED_MARK_VERIFIED");
+    }
+
     @SubscribeEvent public static void observeAbilitySound(net.minecraftforge.event.PlayLevelSoundEvent.AtPosition event) {
         if (xSoundVerified || !(event.getLevel() instanceof ServerLevel) || event.getSound() == null
                 || event.getSource() != net.minecraft.sounds.SoundSource.PLAYERS

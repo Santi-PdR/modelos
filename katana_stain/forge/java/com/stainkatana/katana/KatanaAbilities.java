@@ -47,6 +47,7 @@ public final class KatanaAbilities {
         final ResourceKey<Level> dimension;
         final long start;
         final UUID markedTarget;
+        final CompoundTag markSnapshot;
         final AbilityTimeline timeline;
         Vec3 anchor;
         Vec3 casterAnchor;
@@ -58,6 +59,8 @@ public final class KatanaAbilities {
         Cast(int ability, ItemStack stack, ResourceKey<Level> dimension, long start, UUID markedTarget) {
             this.ability = ability; this.stack = stack; this.dimension = dimension;
             this.start = start; this.markedTarget = markedTarget;
+            this.markSnapshot = ability == 0 && stack.hasTag()
+                    ? stack.getTag().getCompound(StainKatanaItem.MARK).copy() : null;
             this.timeline = new AbilityTimeline(ability);
         }
     }
@@ -85,11 +88,9 @@ public final class KatanaAbilities {
         }
         if ((events & AbilityTimeline.IMPACT) != 0) {
             if (cast.ability == 0) {
-                // A second normal hit during the wind-up must not switch the intended victim.
-                CompoundTag tag = cast.stack.getTag();
-                CompoundTag mark = tag == null ? new CompoundTag() : tag.getCompound(StainKatanaItem.MARK);
-                if (mark.hasUUID("Target") && mark.getUUID("Target").equals(cast.markedTarget))
-                    stun(player, cast.stack, player.serverLevel());
+                // The cast keeps the validated mark from activation, even if a
+                // later hit marks a different enemy during the wind-up.
+                stun(player, cast, player.serverLevel());
             } else {
                 slash(player, cast.stack, player.serverLevel(), cast.ability == 2);
             }
@@ -492,16 +493,29 @@ public final class KatanaAbilities {
         return target;
     }
 
-    private static boolean stun(ServerPlayer player, ItemStack stack, ServerLevel level) {
-        LivingEntity target = markedTarget(player, stack, level, true);
-        if (target == null) return false;
-        CompoundTag tag = stack.getTag();
+    private static boolean stun(ServerPlayer player, Cast cast, ServerLevel level) {
+        CompoundTag mark = cast.markSnapshot;
+        if (mark == null || !mark.hasUUID("Target") || !mark.getUUID("Target").equals(cast.markedTarget)
+                || !mark.getString("Dimension").equals(level.dimension().location().toString())
+                || level.getGameTime() > mark.getLong("Expires")) {
+            player.displayClientMessage(Component.translatable("stainkatana.no_mark"), true);
+            return false;
+        }
+        Entity entity = level.getEntity(cast.markedTarget);
+        if (!(entity instanceof LivingEntity target) || !legalTarget(player, target)
+                || player.distanceToSqr(target) > 576.0D) {
+            player.displayClientMessage(Component.translatable("stainkatana.target_unavailable"), true);
+            return false;
+        }
+        CompoundTag tag = cast.stack.getTag();
         int duration = CombatTuning.paralysisTicks(target instanceof Player);
         if (!target.addEffect(new MobEffectInstance(KatanaEffects.PARALYSIS.get(), duration, 0, false, false, false))) {
             player.displayClientMessage(Component.translatable("stainkatana.resisted"), true);
             return false;
         }
-        tag.remove(StainKatanaItem.MARK);
+        // A newer mark belongs to a later hit and must not be consumed here.
+        if (tag != null && tag.contains(StainKatanaItem.MARK, 10)
+                && tag.getCompound(StainKatanaItem.MARK).equals(mark)) tag.remove(StainKatanaItem.MARK);
         // Count only successful stuns, never key presses or failed attempts.
         CompoundTag data = player.getPersistentData().getCompound(COOLDOWNS);
         int charges = Math.min(2, data.getInt("daggerCharges") + 1);
