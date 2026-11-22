@@ -22,9 +22,26 @@ from verify_v1660 import WornModel
 TRIM = (CHAIN, BAND, FRONT)
 PATCH = mod_version().rsplit('.', 1)[-1]
 MESH_COLS = (f'ranura sentido tick tiempo yaw pitch peso_shift seccion_misma_pose_31_u2 seccion_{PATCH}_u2 '
-             f'techo_{PATCH}_u costura_u tira_u avance_ajuste_u_tick')
+             f'techo_{PATCH}_u costura_u tira_u avance_ajuste_u_tick salto_pose_u')
 COLOR_COLS = (f'ranura sentido tick tiempo_31 tiempo_{PATCH} yaw_31 yaw_{PATCH} granate_31 granate_{PATCH} pelo_recuperado '
               f'granate_nuevo lado_granate_31 lado_granate_{PATCH} lado_pelo_recuperado lado_granate_nuevo')
+
+
+# Vanilla switches the torso between two discrete poses. The archived .35
+# has a 1.631327u adjustment at that switch in both slots and directions.
+MAX_POSE_STEP = 1.65
+MAX_ADJUSTMENT_SPEED = 2.3
+
+
+def adjustment_motion(previous, sample):
+    if previous is None:
+        return 0., 0.
+    dt = sample[0] - previous[0]
+    assert np.isfinite(dt) and dt > 0, ('invalid Forge clock', previous[0], sample[0])
+    delta = np.linalg.norm(sample[2] - previous[2], axis=1).max()
+    # A pose step has magnitude, not a velocity: the interval between two
+    # render samples around it depends on their unrelated partial ticks.
+    return (0., delta) if sample[1] != previous[1] else (delta/dt, 0.)
 
 
 def draw_metrics(root, reference, slot, direction, stem, rig, source, faults):
@@ -56,14 +73,15 @@ def draw_metrics(root, reference, slot, direction, stem, rig, source, faults):
         cut0, cut1 = cut(control,TRIM), cut(groups,TRIM)
         height, areas = head_roof(groups)
         sewn_edge, chain = sewn(groups), chain_seam(groups)
-        rate = 0. if previous is None else np.linalg.norm(current-previous[1],axis=1).max()/(p['time']-previous[0])
-        previous = p['time'],current
-        row = (slot,direction,tick,p['time'],p['yaw'],p['pitch'],p['sneak'],cut0,cut1,height,sewn_edge,chain,rate)
+        sample = p['time'], p['crouching'], current
+        rate, jump = adjustment_motion(previous, sample)
+        previous = sample
+        row = (slot,direction,tick,p['time'],p['yaw'],p['pitch'],p['sneak'],cut0,cut1,height,sewn_edge,chain,rate,jump)
         rows.append(row)
         if min(sewn_edge-.14,chain-.15) <= 0:
             faults.append((stem,tick,'unión del cuello o de la tira',round(sewn_edge,3),round(chain,3)))
-        if rate > 2.3:
-            faults.append((stem,tick,'salto del ajuste',round(rate,3)))
+        if not (rate <= MAX_ADJUSTMENT_SPEED and jump <= MAX_POSE_STEP):
+            faults.append((stem,tick,'ajuste de la nuca: velocidad y salto de pose',round(rate,3),round(jump,3)))
         if 58 <= tick <= 91 and (height >= -.04 or sum(areas.values()) >= .05):
             faults.append((stem,tick,'cruce en la coronilla',round(height,3),round(sum(areas.values()),3)))
         if tick in neighborhood and (cut0 <= 5 or cut1 > 1.0):
@@ -72,7 +90,8 @@ def draw_metrics(root, reference, slot, direction, stem, rig, source, faults):
             faults.append((stem,tick,'el ajuste cruza al ponerse de pie',round(cut1,3)))
     late = np.array([r[7:9] for r in rows if r[2] in neighborhood])
     print(f'{stem}: sección media t80–91 (misma pose) {late.mean(0)[0]:.3f} → {late.mean(0)[1]:.3f}u²; '
-          f'unión tira mínima {min(r[11] for r in rows):.3f}u, velocidad del ajuste {max(r[12] for r in rows):.3f}u/tick.',flush=True)
+          f'unión tira mínima {min(r[11] for r in rows):.3f}u, velocidad del ajuste {max(r[12] for r in rows):.3f}u/tick, '
+          f'salto al cambiar de pose {max(r[13] for r in rows):.3f}u.',flush=True)
     return rows
 
 
