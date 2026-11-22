@@ -2,7 +2,9 @@
 
 Estas imágenes son capturas automáticas de un cliente Forge de prueba, **no un video ni un playtest**. Los fotogramas aislados no garantizan continuidad de la animación, calidad del agarre, sonido ni compatibilidad con todos los mods. Las carpetas se actualizan cuando termina el workflow visual; pueden reflejar una prueba experimental posteriormente descartada y no necesariamente el código actual.
 
-**Último ensayo visual:** corte alternativo de C sin Better Combat (workflow `45063789172`). Su postura no resultó convincente y el cambio de código fue revertido. Por tanto, las capturas de C sin Better Combat de esta ejecución muestran ese ensayo descartado. No son una versión final.
+**Estado de revisión:** las posturas de esta galería fueron rechazadas: la guardia cruza la cara y en primera persona hay brazos separados y agarres incorrectos. Además, las habilidades C aquí todavía pueden usar las animaciones predeterminadas de Better Combat, que no cumplen la petición de usar las de otro mod. Ninguna imagen debe tomarse como aprobación final.
+
+**Último ensayo visual:** el workflow `45065244473` produjo capturas del experimento original de C sin Better Combat, pero terminó con estado de error y el experimento fue revertido. Las capturas de C sin Better Combat no representan el código actual. La compilación asociada terminó correctamente; no equivale a validación visual.
 
 ## Con Better Combat instalado
 
