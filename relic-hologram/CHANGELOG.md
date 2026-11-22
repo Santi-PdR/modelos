@@ -1,5 +1,15 @@
 # Historial de cambios
 
+## 1.0.25 — deshacer un solo ajuste, y ver qué está sin guardar
+
+* **`/relic reset <clave>`**: vuelve al defecto una sola clave. Es el deshacer de un
+  experimento suelto (`/relic reset scale`) sin tirar los otros 23 ajustes, y no
+  marca nada como sin guardar si esa clave ya estaba en su valor de fábrica.
+* **`/relic set` sin argumentos marca con `*` las claves sin guardar** y añade una
+  línea con cuántas son. Antes solo se sabía el número total, y en `/relic info`;
+  ahora se ve cuáles, que es lo que hace falta para decidir si lanzar `/relic save`.
+* 2 claves nuevas por idioma (48 en cada uno).
+
 ## 1.0.24 — dos fallos que salen con el juego en español
 
 * **`/relic info` enseñaba `6,00` en vez de `6.00`.** Los cuatro números de la

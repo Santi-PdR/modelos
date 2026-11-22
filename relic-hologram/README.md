@@ -90,7 +90,7 @@ En el juego:
 | Probar una animación | `/relic anim <nombre>` · `/relic anim list` |
 | Ajustar cualquier clave | `/relic set` (lista) · `/relic set <clave> <valor>` |
 | Guardar los ajustes | `/relic save` |
-| Volver a los valores de fábrica | `/relic reset` |
+| Volver a los valores de fábrica | `/relic reset` · `/relic reset <clave>` (una sola) |
 | Ver la reliquia de cerca | `/relic preview` · `/relic preview <0.5–6>` (bloques) |
 | Medir el coste | `/relic stats` · `/relic stats reset` |
 
@@ -132,6 +132,11 @@ cuentan como cambios sin guardar.
 en memoria: si el resultado te gusta, `/relic save`; si no, cierra sin guardar y el
 archivo sigue como estaba. Solo cuenta —y solo marca como sin guardar— las claves que
 de verdad estaban en otro valor; si ya estaba todo de fábrica, lo dice y no toca nada.
+Con una clave delante (`/relic reset auraIntensity`) vuelve solo esa, que es el deshacer
+de un experimento suelto sin perder los demás ajustes.
+
+`/relic set` sin argumentos lista las 22 claves con su valor actual y marca con `*` las
+que no están guardadas todavía, así se ve de un vistazo qué se pierde al cerrar.
 
 `/relic preview` dibuja **tu** reliquia delante de la cámara, a una distancia fija
 (2.5 bloques por defecto; `/relic preview 1.5` la acerca), con los mismos cuatro
@@ -354,7 +359,10 @@ hay que sumar la traslación que traía `relic_hologram.geo.json`.
 - [ ] `/relic preview` pone la reliquia delante de la cámara con su aura;
       `/relic preview 1.5` la acerca y `/relic preview` la quita.
 - [ ] `/relic reset` deja de nuevo las 24 claves en su defecto (comparar con
-      `/relic set`) y avisa de que hay 24 cambios sin guardar.
+      `/relic set`) y avisa de los cambios sin guardar; repetido, dice que ya
+      estaba todo de fábrica.
+- [ ] `/relic reset scale` vuelve solo esa clave y `/relic set` deja de marcarla
+      con `*`.
 - [ ] Distancia > `maxRenderDistance`: deja de renderizarse (sin tirones).
 - [ ] `/relic offset 6 -6 8`, `/relic scale 1.0`, `/relic side left|right` mueven
       el núcleo en caliente y `/relic info` muestra los valores para la config.

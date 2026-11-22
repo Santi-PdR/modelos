@@ -44,5 +44,7 @@
   "message.holocore.preview_on": "Preview on: the relic in front of the camera at %s blocks (use /relic preview to switch it off).",
   "message.holocore.preview_off": "Preview off.",
   "message.holocore.reset": "Factory defaults restored in memory (%s keys) — /relic save to keep them.",
-  "message.holocore.reset_none": "Everything was already at its factory default."
+  "message.holocore.reset_none": "Everything was already at its factory default.",
+  "message.holocore.reset_one_none": "%s was already at its factory default.",
+  "message.holocore.set_list_unsaved": "Keys marked * are not saved yet (/relic save): %s."
 }

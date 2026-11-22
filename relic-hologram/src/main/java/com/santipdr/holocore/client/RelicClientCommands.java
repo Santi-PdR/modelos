@@ -97,7 +97,13 @@ public final class RelicClientCommands {
                                         SharedSuggestionProvider.suggest(shortNames(), builder))
                                 .executes(ctx -> anim(ctx.getSource(),
                                         StringArgumentType.getString(ctx, "nombre")))))
-                .then(Commands.literal("reset").executes(ctx -> reset(ctx.getSource())))
+                .then(Commands.literal("reset")
+                        .executes(ctx -> reset(ctx.getSource()))
+                        .then(Commands.argument("clave", StringArgumentType.word())
+                                .suggests((ctx, builder) ->
+                                        SharedSuggestionProvider.suggest(tweakKeys(), builder))
+                                .executes(ctx -> resetOne(ctx.getSource(),
+                                        StringArgumentType.getString(ctx, "clave")))))
                 .then(Commands.literal("preview")
                         .executes(ctx -> preview(ctx.getSource(), null))
                         .then(Commands.argument("distancia", DoubleArgumentType.doubleArg(0.5D, 6.0D))
@@ -371,12 +377,22 @@ public final class RelicClientCommands {
                 linea.append(" · ");
             }
             linea.append(tweak.key()).append('=').append(tweak.current());
+            if (UNSAVED.contains(tweak.key())) {
+                // Con un asterisco: asi se ve de un vistazo que se va a perder
+                // al cerrar el juego, sin tener que ir clave por clave.
+                linea.append('*');
+            }
             enLinea++;
         }
         if (enLinea > 0) {
             String texto = linea.toString();
             source.sendSuccess(() -> Component.translatable("message.holocore.set_list", texto)
                     .withStyle(ChatFormatting.DARK_AQUA), false);
+        }
+        if (!UNSAVED.isEmpty()) {
+            int pendientes = UNSAVED.size();
+            source.sendSuccess(() -> Component.translatable("message.holocore.set_list_unsaved",
+                    pendientes).withStyle(ChatFormatting.YELLOW), false);
         }
         source.sendSuccess(() -> Component.translatable("message.holocore.set_usage",
                 String.format(Locale.ROOT, "%.2f", RelicConfig.AURA_INTENSITY.get()))
@@ -554,6 +570,29 @@ public final class RelicClientCommands {
         source.sendSuccess(() -> Component.translatable("message.holocore.reset", total)
                 .withStyle(ChatFormatting.AQUA), false);
         return total;
+    }
+
+    /**
+     * {@code /relic reset <clave>}: volver al defecto de <b>una</b> clave. Es el
+     * deshacer de un experimento suelto sin tirar los otros veintitres ajustes.
+     * Si la clave ya estaba en su defecto no se marca como sin guardar, igual
+     * que en el reset completo.
+     */
+    private static int resetOne(CommandSourceStack source, String clave) {
+        Tweak tweak = tweak(clave);
+        if (tweak == null) {
+            source.sendFailure(Component.translatable("message.holocore.set_unknown", clave));
+            return 0;
+        }
+        if (!tweak.restoreDefault()) {
+            source.sendSuccess(() -> Component.translatable("message.holocore.reset_one_none",
+                    tweak.key()).withStyle(ChatFormatting.GRAY), false);
+            return 0;
+        }
+        markUnsaved(tweak.key());
+        source.sendSuccess(() -> Component.translatable("message.holocore.set_value",
+                tweak.key(), tweak.current()).withStyle(ChatFormatting.AQUA), false);
+        return 1;
     }
 
     /**

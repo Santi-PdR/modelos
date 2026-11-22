@@ -300,6 +300,39 @@ jobs:
                 ' /relic info con punto decimal y /relic reset contando solo cambios reales.')
           PY
 
+      # /relic reset <clave> es el deshacer de un ajuste suelto, y el asterisco de
+      # /relic set es la unica forma de saber que claves se van a perder al cerrar.
+      # Las dos cosas son faciles de perder en un refactor, asi que se comprueban.
+      - name: Validate reset variants and unsaved marks
+        run: |
+          python3 - <<'PY'
+          import pathlib
+
+          comandos = pathlib.Path(
+              'relic-hologram/src/main/java/com/santipdr/holocore/client/RelicClientCommands.java'
+          ).read_text(encoding='utf-8')
+
+          assert 'private static int resetOne(' in comandos, (
+              'falta /relic reset <clave>: no existe resetOne()')
+          assert 'resetOne(ctx.getSource()' in comandos, (
+              '/relic reset no tiene la variante con clave')
+          cuerpo = comandos.split('private static int resetOne(')[1].split('private static')[0]
+          assert 'restoreDefault()' in cuerpo, (
+              '/relic reset <clave> no vuelve al defecto')
+          assert 'markUnsaved' in cuerpo, (
+              '/relic reset <clave> no marca la clave como sin guardar')
+
+          cuerpo_lista = comandos.split('private static int setList(')[1].split('private static')[0]
+          assert 'UNSAVED.contains(' in cuerpo_lista, (
+              '/relic set no marca con * las claves sin guardar')
+
+          readme = pathlib.Path('relic-hologram/README.md').read_text(encoding='utf-8')
+          assert '/relic reset <clave>' in readme, (
+              'el README no documenta /relic reset <clave>')
+          print('Reset OK: variante por clave con marca de sin guardar, asterisco en /relic set'
+                ' y ambos en el README.')
+          PY
+
       # ------------------------------------------------------------------
       # RelicAnimations.java se genera desde el manifiesto: si alguien edito a
       # mano un nombre de animacion, aqui se ve.
