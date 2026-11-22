@@ -13,8 +13,12 @@ public final class CapeResponse {
     private static final double SIDE_ROLL = 1.32;
     private static final double SIDE_WATER_DAMPING = 0.65;
     private static final double SEGMENT_POWER = 1.45;
+    private static final double TICK_SECONDS = 1 / 20.0;
+    // Same order as the pose inputs: speed, lift, turn, crouch, water, air, sprint.
+    private static final double[] RATES = {8.0, 6.2, 9.0, 8.0, 4.4, 8.0, 8.0};
 
-    private final double[] values = new double[7];
+    private final double[] values = new double[RATES.length];
+    private final double[] targets = new double[RATES.length + 1]; // includes lateral travel
     private double lastSeconds = Double.NaN;
     private double hemTurn;
     private double hemSpeed;
@@ -36,34 +40,30 @@ public final class CapeResponse {
     public double[] sample(double seconds, double speed, double lift, double turn,
                            double crouch, double water, double air, double sprint, double side) {
         double dt = seconds - lastSeconds;
+        if (dt == 0) return values; // An extra pass must not replace the last observed input.
         lastSeconds = seconds;
-        if (!Double.isFinite(dt) || dt < 0.0 || dt > .5) {
-            // Primer frame, cambio de mundo o portador fuera de cámara.
-            // No heredar el impulso viejo ni arrastrar el salto del reloj.
-            values[0] = speed;
-            values[1] = lift;
-            values[2] = turn;
-            values[3] = crouch;
-            values[4] = water;
-            values[5] = air;
-            values[6] = sprint;
+        // Allow one ULP of clock rounding at the ten-tick boundary.
+        boolean reset = !Double.isFinite(dt) || dt < 0 || (dt > .5 && dt - .5 > Math.ulp(seconds));
+        // We don't know when a newly observed input changed within the gap.
+        // Continue the old response, then give the new input at most one tick.
+        if (!reset && dt > TICK_SECONDS) advance(dt - TICK_SECONDS);
+        targets[0] = speed;
+        targets[1] = lift;
+        targets[2] = turn;
+        targets[3] = crouch;
+        targets[4] = water;
+        targets[5] = air;
+        targets[6] = sprint;
+        targets[7] = side;
+        if (reset) {
+            // First draw or a real clock/view cut: discard the old impulse.
+            System.arraycopy(targets, 0, values, 0, values.length);
             hemTurn = turn;
             hemSpeed = speed;
             hemAir = air;
             sideNear = sideHem = side;
-        } else if (dt > 0.0) {
-            values[0] = toward(values[0], speed, dt, 8.0);
-            values[1] = toward(values[1], lift, dt, 6.2);
-            values[2] = toward(values[2], turn, dt, 9.0);
-            values[3] = toward(values[3], crouch, dt, 8.0);
-            values[4] = toward(values[4], water, dt, 4.4);
-            values[5] = toward(values[5], air, dt, 8.0);
-            values[6] = toward(values[6], sprint, dt, 8.0);
-            hemTurn = toward(hemTurn, turn, dt, 4.2);
-            hemSpeed = toward(hemSpeed, speed, dt, 3.1);
-            hemAir = toward(hemAir, air, dt, 3.55);
-            sideNear = toward(sideNear, side, dt, SIDE_NEAR_RATE);
-            sideHem = toward(sideHem, side, dt, SIDE_HEM_RATE);
+        } else {
+            advance(Math.min(dt, TICK_SECONDS));
         }
         pitchBase = (values[3] + values[4]) * .72 - (values[6] * 1.3 + values[5] * .9
                 + values[1] * .65 + values[0] * .62);
@@ -72,6 +72,16 @@ public final class CapeResponse {
         pitchLag = Math.max(0, Math.max(3.8 * (hemSpeed - values[0]), 3.1 * (hemAir - values[5])))
                 * (1 - .65 * values[4]);
         return values;
+    }
+
+    private void advance(double dt) {
+        for (int i = 0; i < values.length; ++i)
+            values[i] = toward(values[i], targets[i], dt, RATES[i]);
+        hemSpeed = toward(hemSpeed, targets[0], dt, 3.1);
+        hemTurn = toward(hemTurn, targets[2], dt, 4.2);
+        hemAir = toward(hemAir, targets[5], dt, 3.55);
+        sideNear = toward(sideNear, targets[7], dt, SIDE_NEAR_RATE);
+        sideHem = toward(sideHem, targets[7], dt, SIDE_HEM_RATE);
     }
 
     /** Degrees in the baked rig's X convention (negative opens the drape). */

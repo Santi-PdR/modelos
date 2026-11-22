@@ -102,7 +102,7 @@ def asset_contract(candidate=None):
     with ZipFile(PREVIOUS) as jar:
         previous = art_entries(jar)
     quiet_assets(previous,source[WORN_ANIMATION])
-    if P.mod_version() in ('1.67.29', '1.67.30', '1.67.31', '1.67.32', '1.67.33'):
+    if tuple(map(int, P.mod_version().split('.'))) >= (1, 67, 29):
         assert hashlib.sha256(DELIVERED_28.read_bytes()).hexdigest() == 'b2ee2c448715501053611cd4e95a923a9b26e8d4990e080fb721711a74a6d78b'
         with ZipFile(DELIVERED_28) as jar:
             assert art_entries(jar) == source, 'el freno agachado debe conservar todo el arte y las curvas de .28'
@@ -120,7 +120,7 @@ def asset_contract(candidate=None):
         with ZipFile(candidate) as jar:
             assert jar.testzip() is None
             assert art_entries(jar) == source, 'el JAR no contiene los recursos verificados'
-            assert not any(any(probe in n for probe in ('CapePlacementProbe','CapeFxSmoke','CapeWalkProbe','CapeWaterProbe','CapeJumpProbe','CapeClimbProbe','CapeCombinedProbe','CapeTransferProbe','CapeVertexProbe'))
+            assert not any(any(probe in n for probe in ('CapePlacementProbe','CapeFxSmoke','CapeWalkProbe','CapeWaterProbe','CapeJumpProbe','CapeClimbProbe','CapeCombinedProbe','CapeTransferProbe','CapeVertexProbe','CapeFrameGapProbe'))
                            for n in jar.namelist()), 'se empaquetó el ensayo de Forge'
     print(f'{len(original)-1} recursos idénticos al JAR v1.67.14; respecto a v1.67.27 sólo se retocó reposo/agachado. '
           'Marchas, Blockbench y visor verificados.',flush=True)

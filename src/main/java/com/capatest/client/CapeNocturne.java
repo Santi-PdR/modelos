@@ -13,8 +13,10 @@ public final class CapeNocturne {
     private static final double PERIOD = 3.40;
     private static final double SEED_SHIFT = 0.137;
     private static final int GAIN_UNITS = 4096;
+    private static final double TICK_SECONDS = 1 / 20.0;
 
     private double dusk;
+    private double lastTarget;
     private double last = Double.NaN;
 
     public Gains sample(int block, int sky, float skyIntensity, double seconds, int wearerId) {
@@ -22,14 +24,26 @@ public final class CapeNocturne {
         // brightness that feeds the vanilla lightmap, not raw sky alone.
         double target = darkness(Math.max(block, sky * (double) skyIntensity));
         double dt = seconds - last;
+        if (dt == 0) return gains(dusk, seconds, wearerId);
         last = seconds;
-        if (!Double.isFinite(dt) || dt < 0 || dt > .5) {
+        // Allow one ULP of clock rounding at the ten-tick boundary.
+        if (!Double.isFinite(dt) || dt < 0 || (dt > .5 && dt - .5 > Math.ulp(seconds))) {
             dusk = target;
-        } else if (dt > 0) {
-            double rate = target > dusk ? 5.0 : 9.0;
-            dusk += (target - dusk) * -Math.expm1(-dt * rate);
+        } else if (target == lastTarget) {
+            advance(target, dt);
+        } else {
+            // Don't let a new light reading rewrite the unseen part of a
+            // short frame gap. Continue the old fade up to the latest tick.
+            if (dt > TICK_SECONDS) advance(lastTarget, dt - TICK_SECONDS);
+            advance(target, Math.min(dt, TICK_SECONDS));
         }
+        lastTarget = target;
         return gains(dusk, seconds, wearerId);
+    }
+
+    private void advance(double target, double dt) {
+        double rate = target > dusk ? 5.0 : 9.0;
+        dusk += (target - dusk) * -Math.expm1(-dt * rate);
     }
 
     public static double darkness(double light) {

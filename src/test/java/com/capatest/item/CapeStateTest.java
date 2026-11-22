@@ -86,6 +86,7 @@ public final class CapeStateTest {
         check(filter.sample(0,.5,0,0,0,0,0,0)[0] == .5, "arrastre de otro reloj");
         check(Math.abs(simulateTurn(30)-simulateTurn(144)) < 1e-12, "retardo distinto con FPS");
         filter.sample(10,0,0,0,0,0,0,0);
+        filter.sample(10.05,0,0,1,0,0,0,0);
         filter.sample(10.1,0,0,1,0,0,0,0);
         double upper = filter.turnAt(.2), hem = filter.turnAt(1);
         check(upper > hem && hem > 0, "el dobladillo responde antes que la tela alta");

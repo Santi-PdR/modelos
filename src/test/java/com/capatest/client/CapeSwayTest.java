@@ -35,6 +35,7 @@ public final class CapeSwayTest {
         update(r, 0, 1, 0);
         update(r, 0, -1, 0);
         check(r.sideAt(1) == 1, "el mismo fotograma avanzó el paño");
+        update(r, .05, -1, 0);
         update(r, .10, -1, 0);
         check(r.sideAt(weight(1)) < 0 && r.sideAt(1) > .30, "el extremo invirtió a la vez que el inicio");
         double turnTip = r.sideAt(1);
@@ -42,7 +43,8 @@ public final class CapeSwayTest {
         close(turnTip, after(120), "la respuesta depende de FPS a 120");
         var submerged = new CapeResponse();
         update(submerged, 0, 1, 1);
-        update(submerged, .1, -1, 1);
+        update(submerged, .05, -1, 1);
+        update(submerged, .10, -1, 1);
         close(submerged.sideAt(1), .35 * turnTip, "agua sin amortiguación");
         check(r.sideAt(1) != new CapeResponse().sideAt(1), "historial compartido");
         for (int tick = 3; tick <= 32; tick++) {

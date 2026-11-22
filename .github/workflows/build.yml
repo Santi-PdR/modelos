@@ -799,7 +799,7 @@ jobs:
           javac --release 17 -d "$CLASSES" src/main/java/com/capatest/item/{CapeState,CapePlayback,CapeSparkFrame}.java \
             src/main/java/com/capatest/client/{CapeResponse,CapeTravel,CapeFit,CapeBacking,CapePlateFit,CapeTorsoFit,CapeMountPlacement,CapeStride,CapeTint,CapeWornLight,CapeEmber,CapeNocturne,CapeWingFit,CapeWornMotion,CapeHood,CapeSprintEdge}.java \
             src/test/java/com/capatest/item/{CapeStateTest,CapeSparkFrameTest}.java \
-            src/test/java/com/capatest/client/{CapeFitTest,CapeMountPlacementTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeWornLightTest,CapeSettleTest,CapeSwayTest,CapeWingFitTest,CapeWornMotionTest,CapeJumpMotionTest,CapeHoodTest,CapeSprintEdgeTest}.java
+            src/test/java/com/capatest/client/{CapeFitTest,CapeMountPlacementTest,CapeRuntimeTest,CapeEmberTest,CapeNocturneTest,CapeWornLightTest,CapeFrameGapTest,CapeSettleTest,CapeSwayTest,CapeWingFitTest,CapeWornMotionTest,CapeJumpMotionTest,CapeHoodTest,CapeSprintEdgeTest}.java
           java -cp "$CLASSES" com.capatest.client.CapeMountPlacementTest --samples > "$CLASSES/placement.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeHoodTest --samples > "$CLASSES/hood.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeHoodTest --aim > "$CLASSES/hood-aim.tsv"
@@ -819,6 +819,13 @@ jobs:
           OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_cape_sway.py "$CLASSES/sway.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeNocturneTest
           java -cp "$CLASSES" com.capatest.client.CapeWornLightTest
+          java -cp "$CLASSES" com.capatest.client.CapeFrameGapTest
+          if grep -qx 'mod_version=1.67.34' gradle.properties; then
+            # Run the same fixture against the pinned previous runtime, not a copy of its formulas.
+            (cd entregables/v1.67.33 && sha256sum -c ../../docs/releases/v1.67.33/JAR.sha256)
+            java -cp "entregables/v1.67.33/capatest-1.67.33.jar:$CLASSES" com.capatest.client.CapeFrameGapTest --samples > "$CLASSES/pausa-v1.67.33.tsv"
+            java -cp "$CLASSES" com.capatest.client.CapeFrameGapTest --samples > "$CLASSES/pausa-v1.67.34.tsv"
+          fi
           java -cp "$CLASSES" com.capatest.client.CapeNocturneTest --samples > "$CLASSES/nocturne.tsv"
           OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_v1670.py --nocturne-samples "$CLASSES/nocturne.tsv"
           java -cp "$CLASSES" com.capatest.client.CapeSettleTest
@@ -1047,7 +1054,7 @@ jobs:
         run: |
           set -euo pipefail
           args=()
-          if grep -Eq '^mod_version=1\.67\.(29|30|31|32|33)$' gradle.properties; then
+          if grep -Eq '^mod_version=1\.67\.(29|30|31|32|33|34)$' gradle.properties; then
             args=(--reference docs/releases/v1.67.28/maniobra/maniobra-forge.tsv)
           fi
           if [[ -f build/fx-smoke-run/fx-shots/giro-inverso-pecho.tsv ]]; then args+=(--extended); fi
@@ -1136,7 +1143,7 @@ jobs:
           mkdir -p build/fx-smoke-run/config
           printf 'earlyWindowControl = false\n' > build/fx-smoke-run/config/fml.toml
           timeout --kill-after=12s 360s xvfb-run -a -s '-screen 0 1280x1024x24 +extension GLX -noreset' gradle -PcapeFxSmoke --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
-          awk 'sub(/.*FX smoke: /, "") && /^(traspaso real|nuca en salto|brasa, el mismo tick)/' "$log" | while IFS= read -r line; do
+          awk 'sub(/.*FX smoke: /, "") && /^(traspaso real|nuca en salto|brasa, el mismo tick|pausa de render)/' "$log" | while IFS= read -r line; do
             printf '::notice title=Transiciones reales en Forge::%s\n' "$line"
           done
           awk 'sub(/.*FX smoke: /, "")' "$log" | tail -n 5 | while IFS= read -r line; do
@@ -1152,6 +1159,7 @@ jobs:
             exit 1
           fi
           test -s build/fx-smoke-run/fx-shots/traspaso-forge.tsv
+          test -s build/fx-smoke-run/fx-shots/pausa-render-forge.tsv
 
       - name: Verificar apoyo, salida y caída de la escalera en Forge
         id: verify-climb
@@ -1306,10 +1314,10 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Adjuntar el JAR de prueba v1.67.33 después de ambas pruebas Forge
+      - name: Adjuntar el JAR de prueba v1.67.34 después de ambas pruebas Forge
         if: >-
           success() && github.ref_name == 'arena/5a9fa51b-modelos' &&
-          contains(github.event.head_commit.message, '[adjuntar-v16733]') &&
+          contains(github.event.head_commit.message, '[adjuntar-v16734]') &&
           steps.verify-combined.outcome == 'success' && steps.verify-crown.outcome == 'success' &&
           steps.verify-return.outcome == 'success' &&
           steps.fx-smoke.outcome == 'success' &&
@@ -1318,12 +1326,12 @@ jobs:
           steps.verify-postures.outcome == 'success' && steps.verify-swim.outcome == 'success'
         run: |
           set -euo pipefail
-          grep -qx 'mod_version=1.67.33' gradle.properties
-          test ! -e entregables/v1.67.33/capatest-1.67.33.jar
-          jar=capatest-1.67.33.jar
+          grep -qx 'mod_version=1.67.34' gradle.properties
+          test ! -e entregables/v1.67.34/capatest-1.67.34.jar
+          jar=capatest-1.67.34.jar
           (cd build/libs && sha256sum -c SHA256SUMS.txt)
-          proof=docs/releases/v1.67.33
-          out="entregables/v1.67.33/$jar"
+          proof=docs/releases/v1.67.34
+          out="entregables/v1.67.34/$jar"
           install -m 0644 -D "build/libs/$jar" "$out"
           install -m 0644 -D build/libs/SHA256SUMS.txt "$proof/JAR.sha256"
           mkdir -p "$proof/maniobra"
@@ -1332,13 +1340,14 @@ jobs:
           install -m 0644 "$shots"/giro-inverso-{pecho,curios}.tsv "$proof/maniobra/"
           mkdir -p "$proof/maniobra/retorno"
           install -m 0644 "$shots"/maniobra-retorno/{retorno.tsv,retorno-malla.tsv,retorno-pecho.jpg,retorno-curios.jpg} "$proof/maniobra/retorno/"
-          install -m 0644 "$shots"/{continuidad-forge,saltos-forge,costuras-saltos-forge,escalera-forge,nado-forge,halo-continuidad-forge,traspaso-forge,revision-alex-forge,holgura-brazos-forge}.tsv "$proof/"
-          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16733_colocacion_forge.jpg
+          install -m 0644 "$shots"/{continuidad-forge,saltos-forge,costuras-saltos-forge,escalera-forge,nado-forge,halo-continuidad-forge,traspaso-forge,pausa-render-forge,revision-alex-forge,holgura-brazos-forge}.tsv "$proof/"
+          install -m 0644 "$RUNNER_TEMP/cape-state-test"/pausa-v1.67.{33,34}.tsv "$proof/"
+          install -m 0644 "$shots/colocacion-original-forge.jpg" docs/capa_v16734_colocacion_forge.jpg
           printf '%s\nhttps://github.com/%s/actions/runs/%s\n' "$GITHUB_SHA" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > "$proof/compilacion.txt"
-          git add "$proof" docs/capa_v16733_colocacion_forge.jpg
+          git add "$proof" docs/capa_v16734_colocacion_forge.jpg
           git add -f "$out"
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
-            commit -m 'Adjuntar v1.67.33 probada en Forge, sólo para test-1 [skip ci]'
+            commit -m 'Adjuntar v1.67.34 probada en Forge, sólo para test-1 [skip ci]'
           git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
 
       # [publicar] prepara una release verificable sin escribir a otras

@@ -29,6 +29,9 @@ public final class CapeSettleTest {
             check(steady == oldPitch(moving, 1), "steady gait changed");
             stop(response, motion, 0, 0);
             check(steady == response.pitchAt(1), "same-frame sample advanced the fold");
+            // Observe the first four ticks of an ordinary stop; the
+            // separate frame-gap test covers a late observation.
+            for (int tick = 1; tick < 4; ++tick) stop(response, motion, tick / 20.0, 0);
             double[] stopped = stop(response, motion, .2, 0);
             double tip = oldPitch(stopped, 1) - response.pitchAt(1);
             double upper = oldPitch(stopped, weight(1)) - response.pitchAt(weight(1));
@@ -37,6 +40,7 @@ public final class CapeSettleTest {
             check(Math.abs(simulate(motion, 30) - simulate(motion, 144)) < 1e-12, "settling depends on FPS");
             var wet = new CapeResponse();
             begin(wet, motion, 1);
+            for (int tick = 1; tick < 4; ++tick) stop(wet, motion, tick / 20.0, 1);
             double[] submerged = stop(wet, motion, .2, 1);
             check((oldPitch(submerged, 1) - wet.pitchAt(1)) < .4 * tip, "no damping in water");
             for (int i = 5; i <= 40; i++) {

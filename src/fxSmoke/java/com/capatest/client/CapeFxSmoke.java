@@ -335,6 +335,8 @@ public final class CapeFxSmoke {
                     }
                     if (!game.level.getBlockState(pane).is(Blocks.GLASS_PANE)) return;
                     checkLightHandoff(game);
+                    CapeFrameGapProbe.verify(game, mantle(), shots(game));
+                    note("pausa de render: punta y UV2 coinciden con el control continuo en ambos cambios; repetición y corte verificados");
                     testFlight(game);
                     equipScene(game, Scene.CHEST);
                 }

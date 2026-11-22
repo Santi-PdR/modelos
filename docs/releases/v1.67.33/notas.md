@@ -4,7 +4,7 @@
 
 - La nuca y la tira cosida siguen la postura de cabeza y torso en un salto agachado normal. Ya no pierden el ajuste por dejar de tocar el suelo. Se conservan las exclusiones para nado, escalera y élitros.
 - El tamaño, el color y la opacidad de cada brasa se calculan en el mismo instante interpolado que su posición. El perfil, las tres imágenes, la trayectoria, las colisiones y el límite de emisión no cambian. El visor offline también interpola la apariencia; no simula la red ni los bloques de Minecraft.
-- La geometría, el atlas, el halo, el icono y las curvas de los ocho clips siguen **byte por byte** iguales en el JAR. El [proyecto editable](../../CAPA_v1.67.33.bbmodel) sólo cambia el nombre de versión.
+- La geometría, el atlas, el halo, el icono y las curvas de los ocho clips siguen **byte por byte** iguales en el JAR. El [proyecto editable](https://raw.githubusercontent.com/Santi-PdR/modelos/da2c83305c0fbe550a8f4c9a95561531afd9fc61/docs/CAPA_v1.67.33.bbmodel) sólo cambia el nombre de versión.
 
 ## Pruebas en Forge
 
