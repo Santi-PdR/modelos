@@ -110,8 +110,10 @@ public final class KatanaAnimations {
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                         dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
                         new dev.kosmx.playerAnim.core.util.Vec3f(
-                                (leftHanded ? 16 : -8) + (free ? KatanaClientConfig.BLOOD_HAND_X.get().floatValue() : 0),
-                                -6 + (free ? KatanaClientConfig.BLOOD_HAND_Y.get().floatValue() : 0),
+                                (leftHanded ? 16 : -8) + (free ? (leftHanded ? -8 : 4)
+                                        + KatanaClientConfig.BLOOD_HAND_X.get().floatValue() : 0),
+                                -6 + (free ? (leftHanded ? -6 : -8)
+                                        + KatanaClientConfig.BLOOD_HAND_Y.get().floatValue() : 0),
                                 -14 + (free ? KatanaClientConfig.BLOOD_HAND_Z.get().floatValue() : 0))));
             }) {
                 // Inspect begins at tick zero; the library's default fade divides
