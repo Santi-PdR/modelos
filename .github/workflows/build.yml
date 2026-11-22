@@ -1039,6 +1039,24 @@ jobs:
           sha256sum "capatest-$VER.jar" > SHA256SUMS.txt
           printf '::notice title=SHA-256 del JAR Forge verificado::%s\n' "$(cat SHA256SUMS.txt)"
 
+      - name: Check pinned test JAR identity
+        id: verify-pinned-test-jar
+        run: |
+          set -euo pipefail
+          ver=$(sed -n 's/^mod_version=//p' gradle.properties)
+          delivered="entregables/v$ver/capatest-$ver.jar"
+          built="build/libs/capatest-$ver.jar"
+          if [ -f "$delivered" ]; then
+            if cmp -s "$built" "$delivered"; then
+              echo "Pinned test JAR v$ver matches the reproducible build."
+            else
+              built_sha=$(sha256sum "$built" | cut -d' ' -f1)
+              delivered_sha=$(sha256sum "$delivered" | cut -d' ' -f1)
+              printf '::error title=JAR de prueba fijado::La build v%s (%s) difiere del entregable de prueba (%s); no se reemplaza automáticamente.\n' "$ver" "$built_sha" "$delivered_sha"
+              exit 1
+            fi
+          fi
+
       - name: Verify packaged art, idle and crouch clips, and untouched gaits
         run: |
           ver=$(sed -n 's/^mod_version=//p' gradle.properties)
@@ -1354,12 +1372,6 @@ jobs:
         id: verify-postures
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' }}
         run: |
-          ver=$(sed -n 's/^mod_version=//p' gradle.properties)
-          delivered="entregables/v$ver/capatest-$ver.jar"
-          if [ -f "$delivered" ]; then
-            cmp "build/libs/capatest-$ver.jar" "$delivered"
-            echo 'JAR compilado byte por byte idéntico al entregado.'
-          fi
           set -o pipefail
           base=()
           if [ -d "$RUNNER_TEMP/forge-v16722" ]; then base=(--baseline-shots "$RUNNER_TEMP/forge-v16722"); fi
