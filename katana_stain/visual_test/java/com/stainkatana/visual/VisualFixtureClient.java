@@ -509,33 +509,31 @@ public final class VisualFixtureClient {
             case 1320 -> capture = "89_x_first_follow.png";
             case 1323 -> capture = "90_x_first_recover.png";
             case 1340 -> com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 2);
-            case 1342 -> capture = "91_c_first_prepare.png";
-            case 1345 -> capture = "92_c_first_windup.png";
-            case 1350 -> capture = "93_c_first_impact.png";
-            case 1353 -> capture = "94_c_first_follow.png";
-            case 1357 -> capture = "95_c_first_recover.png";
+            case 1342 -> capture = "91_c_cinematic_prepare.png";
+            case 1345 -> capture = "92_c_cinematic_windup.png";
+            case 1350 -> capture = "93_c_cinematic_impact.png";
+            case 1353 -> capture = "94_c_cinematic_follow.png";
+            case 1357 -> capture = "95_c_cinematic_recover.png";
             case 1370 -> { com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), -1);
                 mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); mc.options.fov().set(35); }
             case 1380 -> com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 2);
-            case 1382 -> capture = "96_c_third_prepare.png";
-            case 1385 -> capture = "97_c_third_windup.png";
-            case 1390 -> capture = "98_c_third_impact.png";
-            case 1393 -> capture = "99_c_third_follow.png";
-            case 1397 -> capture = "100_c_third_recover.png";
+            case 1382 -> capture = "96_c_cinematic_repeat_prepare.png";
+            case 1385 -> capture = "97_c_cinematic_repeat_windup.png";
+            case 1390 -> capture = "98_c_cinematic_repeat_impact.png";
+            case 1393 -> capture = "99_c_cinematic_repeat_follow.png";
+            case 1397 -> capture = "100_c_cinematic_repeat_recover.png";
             case 1415 -> { com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), -1);
-                mc.options.setCameraType(CameraType.FIRST_PERSON); mc.options.fov().set(70); }
-            case 1430 -> { com.stainkatana.katana.client.KatanaAnimations.fixtureXDepth = -5; com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 1); }
-            case 1437 -> capture = "101_x_depth_minus5.png";
-            case 1455 -> { com.stainkatana.katana.client.KatanaAnimations.fixtureXDepth = 0; com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 1); }
-            case 1462 -> capture = "102_x_depth_zero.png";
-            case 1480 -> { com.stainkatana.katana.client.KatanaAnimations.fixtureXDepth = 10; com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 1); }
-            case 1487 -> capture = "103_x_depth_10.png";
-            case 1505 -> { com.stainkatana.katana.client.KatanaAnimations.fixtureXDepth = 15; com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 1); }
-            case 1512 -> capture = "104_x_depth_15.png";
-            case 1530 -> { com.stainkatana.katana.client.KatanaAnimations.fixtureXDepth = 20; com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 1); }
-            case 1537 -> capture = "105_x_depth_20.png";
-            case 1560 -> {
-                com.stainkatana.katana.client.KatanaAnimations.fixtureXDepth = 5;
+                mc.options.setCameraType(CameraType.FIRST_PERSON); mc.options.fov().set(70);
+                mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.LEFT); }
+            case 1430 -> { if (mc.player.getMainArm() != net.minecraft.world.entity.HumanoidArm.LEFT)
+                    throw new IllegalStateException("Left hand not synchronized for X sample");
+                com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 1); }
+            case 1432 -> capture = "101_x_left_first_prepare.png";
+            case 1435 -> capture = "102_x_left_first_windup.png";
+            case 1437 -> capture = "103_x_left_first_impact.png";
+            case 1440 -> capture = "104_x_left_first_follow.png";
+            case 1443 -> capture = "105_x_left_first_recover.png";
+            case 1460 -> {
                 com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), -1);
                 mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(0.0);
