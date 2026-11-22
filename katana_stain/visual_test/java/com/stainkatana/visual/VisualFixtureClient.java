@@ -476,7 +476,31 @@ public final class VisualFixtureClient {
             case 1272 -> capture = "51_blood_right_third_draw.png";
             case 1276 -> capture = "52_blood_right_third_face.png";
             case 1280 -> capture = "53_blood_right_third_recovery.png";
-            case 1295 -> {
+            case 1295 -> { mc.options.setCameraType(CameraType.FIRST_PERSON); mc.options.fov().set(70); }
+            case 1300 -> frameSample(3, 4);
+            case 1304 -> capture = "54_frame_y3_z4_right_reach.png";
+            case 1307 -> capture = "55_frame_y3_z4_right_draw.png";
+            case 1311 -> capture = "56_frame_y3_z4_right_face.png";
+            case 1325 -> frameSample(3, 2);
+            case 1329 -> capture = "57_frame_y3_z2_right_reach.png";
+            case 1332 -> capture = "58_frame_y3_z2_right_draw.png";
+            case 1336 -> capture = "59_frame_y3_z2_right_face.png";
+            case 1350 -> frameSample(5, 4);
+            case 1354 -> capture = "60_frame_y5_z4_right_reach.png";
+            case 1357 -> capture = "61_frame_y5_z4_right_draw.png";
+            case 1361 -> capture = "62_frame_y5_z4_right_face.png";
+            case 1375 -> mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.LEFT);
+            case 1390 -> frameSample(3, 4);
+            case 1394 -> capture = "63_frame_y3_z4_left_reach.png";
+            case 1397 -> capture = "64_frame_y3_z4_left_draw.png";
+            case 1401 -> capture = "65_frame_y3_z4_left_face.png";
+            case 1415 -> frameSample(3, 2);
+            case 1419 -> capture = "66_frame_y3_z2_left_reach.png";
+            case 1422 -> capture = "67_frame_y3_z2_left_draw.png";
+            case 1426 -> capture = "68_frame_y3_z2_left_face.png";
+            case 1440 -> {
+                com.stainkatana.katana.client.KatanaAnimations.framingYTest = 0;
+                com.stainkatana.katana.client.KatanaAnimations.framingZTest = 0;
                 mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Y.set(0.0);
@@ -485,6 +509,11 @@ public final class VisualFixtureClient {
             }
             default -> { }
         }
+    }
+    private static void frameSample(float y, float z) {
+        com.stainkatana.katana.client.KatanaAnimations.framingYTest = y;
+        com.stainkatana.katana.client.KatanaAnimations.framingZTest = z;
+        bloodSample(0, 0, 0);
     }
     private static void bloodSample(double x, double y, double z) {
         com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(x);
