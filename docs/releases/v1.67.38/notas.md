@@ -1,5 +1,7 @@
 # v1.67.38 · Hombreras, giro del paño y brasas
 
+**Versión de prueba más reciente: [v1.67.39](../v1.67.39/notas.md).**
+
 **[JAR de prueba](https://raw.githubusercontent.com/Santi-PdR/modelos/7e1e20752281197140e9f1cfc290b084ee572691/entregables/v1.67.38/capatest-1.67.38.jar)** · [PowerShell para `test-1`](instalar-test-1.txt) · [SHA-256](JAR.sha256) · [Volver a v1.67.37](../v1.67.37/notas.md).
 
 - **Hombreras:** una bisagra corta sobre cada manga eleva el canto al balancear el brazo. No cambia la forma de la placa ni su colocación en reposo. El sólido y la emisión usan el mismo encastre; cuello y montura siguen sujetos al torso. Se conserva el ajuste anterior con élitros y en el asiento.

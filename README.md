@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.39 — brasas con inclinación en vuelo
+
+**[Descargar JAR de prueba v1.67.39](https://raw.githubusercontent.com/Santi-PdR/modelos/266f6d1c02a2c630d188acaa0bb960c20d5e3c00/entregables/v1.67.39/capatest-1.67.39.jar)** · [PowerShell para test-1](docs/releases/v1.67.39/instalar-test-1.txt) · [Mediciones en Forge](docs/releases/v1.67.39/notas.md).
+
+Las brasas acompañan su deriva y se enderezan al apagarse o frenarse, sin cambiar la trayectoria. Se mantiene el encastre de la .38; esa versión queda para volver atrás.
+
 ### v1.67.38 — hombreras, giro del paño y brasas
 
 **[Descargar JAR de prueba v1.67.38](https://raw.githubusercontent.com/Santi-PdR/modelos/7e1e20752281197140e9f1cfc290b084ee572691/entregables/v1.67.38/capatest-1.67.38.jar)** · [PowerShell para test-1](docs/releases/v1.67.38/instalar-test-1.txt) · [Hombreras en Forge](docs/releases/v1.67.38/hombreras-en-carrera.jpg) · [Pruebas y SHA-256](docs/releases/v1.67.38/notas.md).
