@@ -422,6 +422,8 @@ public final class RelicAura {
             case DARK -> 0.9F;
             case RAIN -> 0.8F;
             case WOUNDED -> 0.6F;
+            // De noche flota poco y muy despacio: el estado es "quieta y palida".
+            case NIGHT -> 0.75F;
             case NEUTRAL -> 1.0F;
         };
         float lift = 0.022F * energy * sin(time * 1.7F);

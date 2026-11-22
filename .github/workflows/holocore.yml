@@ -418,10 +418,30 @@ jobs:
 
           # El tinte del shader se mueve con el estado: lluvia lo baja, oscuridad lo sube.
           assert 'safeGetUniform("HoloTint")' in geo, 'el pase GLSL no manda el tinte por estado'
-          # Un Mood nuevo sin rama en el switch no compila; esto lo caza antes de
-          # gastar un build entero (paso en 1.0.32: NIGHT sin tinte).
-          for mood in moods:
-              assert f'case {mood} -> ' in geo, f'el estado {mood} no tiene tinte de shader'
+          # Cada switch sobre Mood tiene que cubrir los siete estados. javac lo
+          # exige, pero descubrirlo cuesta un build entero (en 1.0.32 pasó dos
+          # veces: NIGHT sin tinte de shader y sin energia de flotado). Los switch
+          # con `default` son sentencias y no se tocan.
+          def cuerpo_switch(texto, desde):
+              hondo = 0
+              for i in range(desde, len(texto)):
+                  if texto[i] == '{':
+                      hondo += 1
+                  elif texto[i] == '}':
+                      hondo -= 1
+                      if hondo == 0:
+                          return texto[desde:i]
+              return texto[desde:]
+
+          for fuente in sorted(base.glob('*.java')):
+              texto = fuente.read_text(encoding='utf-8')
+              for coincidencia in re.finditer(r'switch \([^)]*mood\(?\)?\) \{', texto):
+                  cuerpo = cuerpo_switch(texto, coincidencia.end() - 1)
+                  if 'default' in cuerpo:
+                      continue
+                  for mood in moods:
+                      assert f'case {mood} ->' in cuerpo, \
+                          f'{fuente.name}: switch sobre Mood sin el estado {mood}'
 
           # Cada Mood tiene su nombre en los dos idiomas: un enum nuevo sin texto
           # saldria como clave cruda en el chat.

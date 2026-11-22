@@ -86,6 +86,10 @@ final class RelicGlowState {
     private static final float RAIN_RED = 0.45F;
     private static final float RAIN_GREEN = 0.68F;
     private static final float RAIN_BLUE = 0.95F;
+    /** Noche despejada: frio de hielo, pero muy poco mezclado (casi el reposo). */
+    private static final float NIGHT_RED = 0.38F;
+    private static final float NIGHT_GREEN = 0.72F;
+    private static final float NIGHT_BLUE = 1.00F;
 
     /**
      * Acerca los valores al estado indicado, con el matiz del {@code mood}, y
@@ -144,6 +148,15 @@ final class RelicGlowState {
                 blue = lerp(blue, RAIN_BLUE, 0.45F);
                 aura += 0.05F;
                 ring -= 0.15F;
+            }
+            case NIGHT -> {
+                // Noche despejada: casi el reposo, un punto mas frio y con el aura
+                // baja. La reliquia se apaga, no se enciende: el cielo ya ilumina.
+                red = lerp(red, NIGHT_RED, 0.30F);
+                green = lerp(green, NIGHT_GREEN, 0.30F);
+                blue = lerp(blue, NIGHT_BLUE, 0.30F);
+                aura -= 0.06F;
+                spin -= 0.010F;
             }
             default -> {
                 // NEUTRAL: el estado tal cual.
