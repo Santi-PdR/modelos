@@ -1,0 +1,23 @@
+# Investigación de animaciones, efectos y ataques especiales
+
+Revisión de código y documentación, no una afirmación de que las técnicas ya se hayan incorporado ni una evaluación en movimiento dentro del juego.
+
+## Referencias antiguas
+
+- [Mo' Bends](https://github.com/mobends/MoBends), versión histórica 1.1.0, commit `1f25e6ddbbf67e95b704149548662a6fa6d7b972`, 1.12.2. El código `AttackSlashInwardAnimationBit`, `AttackSlashDownAnimationBit` y `AttackWhirlSlashAnimationBit` coordina torso, cabeza, brazo principal, brazo libre y piernas; adapta los lados a la mano y alimenta una estela solo durante el movimiento. `SwordTrail` guarda poses previas y desvanece segmentos en vez de dibujar una imagen fija. MIT, Iwo Plaza. El modelo articulado de Mo' Bends no coincide directamente con los brazos vanilla de PlayerAnimator, por lo que no se puede copiar el movimiento sin retargeting ni validar la empuñadura.
+- [Aperture](https://github.com/mchorse/aperture), 1.12.2, commit `d8d627f928e7e676837205b9fd7ac72513e92f3c`. `KeyframeFixture` separa canales de posición, yaw, pitch, roll, FOV y distancia; `PathFixture` interpola rutas y el sistema de modificadores permite seguimiento. Es una herramienta de cinemáticas, no un mod de combate ni un ataque listo para usar. GPL-3.0; estudiado como referencia, sin incorporar código.
+- [Dynamic Sword Skills](https://www.curseforge.com/minecraft/mc-mods/dynamic-sword-skills/files/2495462), versión 1.7.10 de 2017: incluye Back Slice, Sword Beam y remates con objetivo fijado. El changelog menciona correcciones por golpes perdidos y selección de blanco; evidencia de que los efectos y el bloqueo del objetivo no deben sustituir a la verificación del daño. No se trasladaron código ni archivos.
+- [Xaero's Special Attacks](https://www.planetminecraft.com/mod/forge164xaeros-special-attacks-v100/), versiones 1.6.4–1.8: ataques cargados e indicadores de recursos. La documentación pública permite estudiar las reglas, pero no confirma que disponga de cinemáticas o animaciones aprovechables; no se han copiado recursos.
+
+## Referencia poco conocida, pero no antigua
+
+- [LethalWeaponry](https://github.com/X4yii/Lethalweaponry), commit `03e3add8c7b2b418fbd2b54cbf8e709bb681c0f5`, proyecto de 2026 para 1.12.2, con una estrella al consultar. `ParticleFatalitySlash` dibuja un plano de corte orientado con escala y desvanecimiento en 15 ticks; el remate usa posición y tamaño del objetivo. El PNG examinado es una media luna roja; no se ha importado ni se ha considerado superior a los cuadros ya usados. El archivo LICENSE.txt del repositorio habla de Forge y no aclara inequívocamente el alcance de sus assets; no se atribuye una licencia a esa textura.
+
+## Aplicación prevista a este proyecto
+
+- **Z:** conservar el objetivo original durante preparación; para el gesto, retargetear con atención al contacto real entre mano y hoja y comprobar ambos lados en primera y tercera persona. Un brazo flotante no se arregla simplemente añadiendo partículas.
+- **X:** reforzar anticipación, corte y recuperación con giro de torso y contramovimiento del brazo libre. Una estela debe acompañar la hoja y no anunciar impactos a distancia después de que el servidor ya haya causado daño.
+- **C:** diferenciación de cortes, postura completa y cámara que conserve a ambos sujetos; efectos de impacto solo cuando el servidor acepta el golpe. Probar también objetivos grandes y espacios reducidos.
+- Los sprites MIT de Better Combat Particle y su renderer adaptado ya tienen atribución incluida. No se usan efectos de Darkest Hours. Se conservará el origen de cualquier otro recurso y se evitará presentarlo como un recurso propio.
+
+El ajuste de Z para guardar su marca al activarse, sin borrar otra marca obtenida durante el gesto, se verificó con un caso de dos blancos en las tres configuraciones del fixture. Las demás ideas siguen pendientes de implementación y revisión visual; una prueba automatizada no reemplaza un playtest.
