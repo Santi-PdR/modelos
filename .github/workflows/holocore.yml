@@ -226,7 +226,17 @@ jobs:
               assert text.lstrip().startswith('#version 150'), src
               assert 'void main()' in text, src
           # UV2 es ivec2 en las shaders de entidad: declararlo vec2 rompe el enlace.
-          assert 'in vec2 UV2' not in (base / 'holocore_relic_glow.vsh').read_text()
+          vsh = (base / 'holocore_relic_glow.vsh').read_text()
+          fsh = (base / 'holocore_relic_glow.fsh').read_text()
+          assert 'in vec2 UV2' not in vsh
+          # El barrido y la rejilla van en espacio de vista: con UV0 salian cuatro
+          # bandas por cara en vez de una que recorre la reliquia (1.0.28).
+          assert 'out float viewY' in vsh and 'viewY = viewPos.y' in vsh, \
+              'el vertex shader no pasa la altura en espacio de vista'
+          assert 'viewY * 0.9' in fsh, 'el barrido no usa el espacio de vista'
+          # Dos bordes por multiplicacion en vez de dos pow: mas barato y mas limpio.
+          assert 'rimTight' in fsh and 'pow(' not in fsh, \
+              'el fragment shader volvio a usar pow para los dos bordes'
 
           # El apendice A del documento tiene que ser copia literal de estos
           # ficheros: es la unica forma de que el GLSL explicado no se quede
@@ -726,7 +736,15 @@ jobs:
                       continue
                   malos.append(f'{nombre}:{numero}: {linea.strip()}')
           assert not malos, 'asignacion en el camino de render -> ' + '; '.join(malos)
-          print('Render path OK: aura y estado sin asignaciones por frame.')
+          # En la banda de desvanecido los dos pases que suman luz no se ven y
+          # cuestan dos recorridos de 977 cubos: se saltan (1.0.28).
+          geo = (base / 'RelicGeoRenderer.java').read_text(encoding='utf-8')
+          assert 'boolean fading = fade < 0.55F' in geo, \
+              'no se calcula la banda de desvanecido del modelo'
+          assert 'haloEnabled() && !fading' in geo and 'glowShader != null && !fading' in geo, \
+              'el halo o el pase GLSL vuelven a dibujarse enteros en la banda de desvanecido'
+          print('Render path OK: aura y estado sin asignaciones por frame;'
+                ' halo y GLSL se saltan en la banda de desvanecido.')
           PY
 
       - name: Build

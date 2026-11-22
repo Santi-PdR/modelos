@@ -15,6 +15,7 @@ uniform mat4 ProjMat;
 out vec2 texCoord;
 out vec4 vertexColor;
 out float edge;
+out float viewY;
 
 void main() {
     vec4 viewPos = ModelViewMat * vec4(Position, 1.0);
@@ -36,6 +37,12 @@ void main() {
 
     // 1 de canto (borde de la silueta), 0 de frente.
     edge = 1.0 - clamp(abs(dot(viewDir, basis)), 0.0, 1.0);
+
+    // Altura en espacio de vista, en bloques. El barrido y la rejilla del
+    // fragment se hacen con esto y no con UV0: las UV de un modelo de 98 huesos
+    // se repiten por cara, asi que salian cuatro bandas por cara en vez de una
+    // que recorre la reliquia entera.
+    viewY = viewPos.y;
 
     gl_Position = ProjMat * viewPos;
     texCoord = UV0;

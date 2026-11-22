@@ -1,5 +1,34 @@
 # Historial de cambios
 
+## 1.0.28 — segunda vuelta al shader y dos pases menos donde no se ven
+
+**Shader** (`holocore_relic_glow`), cuatro cambios, todos con motivo:
+
+* **Dos bordes de silueta en vez de uno.** `edge²` tiñe la cara y `edge⁴` se queda
+  pegado al canto, y ese canto se va al violeta (35%): la silueta tiene dos tonos
+  y se lee como contorno de holograma. Los dos se calculan multiplicando, no con
+  `pow`; dos `pow` por píxel para esto era gastar de más y además el corte del
+  borde queda más limpio.
+* **El barrido deja de repetirse por cara.** Iba sobre `UV0`, y en un modelo de 98
+  huesos cada cara trae sus propias UV: en vez de una banda que recorre la
+  reliquia salían cuatro por cara. Ahora el vértice pasa `viewY` (la altura en
+  espacio de vista) y la banda sube por la reliquia entera, un ciclo cada 4 s.
+* **La rejilla fina, igual:** anclada a `viewY`, las líneas siguen de una cara a
+  otra en vez de pelearse entre caras al girar la cámara. Baja de 160 a 90 ciclos,
+  que a distancia hacía muaré.
+* **El borde respira** (`0.85 + 0.15·sin(t·1.6)`) y el núcleo no. El dither sigue
+  sin tiempo dentro a propósito: animado deja de romper el banding y se ve hervir.
+
+**Optimización**: en la banda de desvanecido (los últimos 8 bloques antes de
+`maxRenderDistance`) el halo y el pase GLSL se saltan. Son dos recorridos más de
+los 977 cubos y a esa opacidad se ven como un píxel borroso: una reliquia lejana
+cuesta **2 pases en vez de 4**. Se ve en `/relic stats` como menos «pases por
+dibujo».
+
+CI: `Validate shader resources` fija las decisiones anteriores (barrido en
+espacio de vista, `viewY` en el vértice, cero `pow` en el fragment, apéndice
+sincronizado) y `Validate render path allocations` exige la banda de desvanecido.
+
 ## 1.0.27 — la vista previa deja de tapar la mirilla
 
 * **`/relic preview` dibujaba la reliquia justo en el centro de la pantalla**, así

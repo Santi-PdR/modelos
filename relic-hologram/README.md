@@ -204,9 +204,10 @@ calma o dormido. Ese mismo factor multiplica el halo y el pase GLSL del modelo,
 así que dormida se atenúa **todo** el brillo a la vez y cargada se intensifica,
 en vez de quedar el aura apagada y el modelo a tope.
 
-El **shader propio** (`visuals.shaderGlow`) añade un cuarto pase con borde de
-silueta, dos barridos (uno sube, otro cruza en diagonal), líneas finas de
-holograma y un grano mínimo, en GLSL de verdad
+El **shader propio** (`visuals.shaderGlow`) añade un cuarto pase con dos bordes
+de silueta (uno suave y otro pegado al canto, este último con un desvío al
+violeta), una banda que sube por la reliquia entera, rejilla fina de holograma que
+respira y un grano mínimo, en GLSL de verdad
 (`assets/minecraft/shaders/core/holocore_relic_glow.{json,vsh,fsh}`). Se compila
 en cada recarga de recursos y **se desactiva solo si hay shaderpack activo**
 (Iris/Oculus/OptiFine): esos packs sustituyen el programa y la reliquia podría
@@ -256,7 +257,7 @@ shaders de 1.20.1 están en [BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
 | `visuals.glowRing` | `true` | Anillo de estado (gira y se tiñe según la reliquia). |
 | `visuals.ringIntensity` | `0.60` | Fuerza del anillo (0–1). |
 | `visuals.flashIntensity` | `1.0` | Destello al ocurrir algo (pulso, liberación, golpe, nivel, despertar). `0` lo apaga. |
-| `visuals.shaderGlow` | `true` | Pase GLSL propio (borde de silueta + dos barridos). Se apaga solo con shaderpack activo. |
+| `visuals.shaderGlow` | `true` | Pase GLSL propio (dos bordes de silueta + banda de barrido + rejilla). Se apaga solo con shaderpack activo. |
 | `visuals.shaderIntensity` | `0.35` | Fuerza del pase GLSL, independiente del halo. |
 | `visuals.reducedEffects` | `false` | Reposo sin rayos/cometas/ondas (`idle_calm`). |
 | `visuals.maxRenderDistance` | `32` | Distancia para dibujar la reliquia de otros jugadores (se apaga en los últimos 8 bloques). |

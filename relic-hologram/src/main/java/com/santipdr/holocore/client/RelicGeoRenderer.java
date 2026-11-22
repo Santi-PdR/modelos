@@ -118,7 +118,12 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
         float amount = Math.max(0.0F, Math.min(1.25F, glow.aura()))
                 * (1.0F + 0.2F * glow.flashScaled()) * fade;
 
-        if (haloEnabled()) {
+        // Banda de desvanecido: los dos pases que suman luz (halo y GLSL) son dos
+        // recorridos mas de los 977 cubos y a esa opacidad se ven como un pixel
+        // borroso. Se saltan, y una reliquia lejana cuesta 2 pases en vez de 4.
+        boolean fading = fade < 0.55F;
+
+        if (haloEnabled() && !fading) {
             float i = RelicConfig.HALO_INTENSITY.get().floatValue() * amount;
             // Nucleo de luz fria por defecto, pero arrastrado a medias hacia el
             // color del estado: cargada se ve ambarienta, alerta rojiza.
@@ -133,7 +138,7 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
         // barrido. Se salta solo si hay shaderpack (el pack sustituiria el
         // programa) o si el shader no compilo.
         ShaderInstance glowShader = RelicShaders.ready() ? RelicShaders.shader() : null;
-        if (glowShader != null) {
+        if (glowShader != null && !fading) {
             glowShader.safeGetUniform("HoloTime").set(RelicShaders.timeSeconds(partialTick));
             float i = RelicConfig.SHADER_INTENSITY.get().floatValue() * amount;
             renderExtra(model, poseStack, animatable, bufferSource, partialTick, packedLight,
@@ -144,7 +149,8 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
         }
 
         // Se anota al final, con lo que de verdad se dibujo: si el halo o el GLSL
-        // estaban apagados, no cuentan como pase.
+        // estaban apagados (o el portador estaba en la banda de desvanecido), no
+        // cuentan como pase.
         RelicRenderStats.model(System.nanoTime() - began, drawnPasses);
     }
 
