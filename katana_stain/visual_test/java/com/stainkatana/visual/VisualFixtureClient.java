@@ -124,6 +124,15 @@ public final class VisualFixtureClient {
             }
             case 220 -> KatanaNetwork.CHANNEL.sendToServer(new KatanaNetwork.AbilityMessage(2));
             case 230 -> capture = "07_ultimate_start.png";
+            // Sample additional real C strokes, not just the local animation preview.
+            case 246 -> capture = "106_c_stroke_02.png";
+            case 277 -> capture = "107_c_stroke_04.png";
+            case 297 -> capture = "108_c_stroke_05.png";
+            case 319 -> capture = "109_c_stroke_06.png";
+            case 339 -> capture = "110_c_stroke_07.png";
+            case 358 -> capture = "111_c_stroke_08.png";
+            case 378 -> capture = "112_c_stroke_09.png";
+            case 405 -> capture = "113_c_stroke_10.png";
             case 260 -> {
                 if (!com.stainkatana.katana.client.KatanaScene.cameraApplied())
                     throw new IllegalStateException("Cinematic orbit never applied");
