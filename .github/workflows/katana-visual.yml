@@ -193,5 +193,8 @@ jobs:
           git add katana_stain/vistas/client-test/ katana_stain/vistas/client-vanilla/ katana_stain/vistas/client-full-bc/
           if ! git diff --cached --quiet; then
             git commit -m 'Record Forge client visual fixture'
+            # The build workflow may have stored its JAR while rendering.
+            # Replay the image-only commit on the current branch before pushing.
+            git pull --rebase origin "$BRANCH"
             git push origin "HEAD:$BRANCH"
           fi
