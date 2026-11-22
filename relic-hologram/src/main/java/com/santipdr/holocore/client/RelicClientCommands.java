@@ -8,8 +8,10 @@ import com.santipdr.holocore.common.RelicServer;
 import com.santipdr.holocore.config.RelicConfig;
 import com.santipdr.holocore.network.RelicActionPacket;
 import com.santipdr.holocore.network.RelicNetwork;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
@@ -39,15 +41,15 @@ public final class RelicClientCommands {
                                 .then(Commands.argument("y", DoubleArgumentType.doubleArg(-48, 48))
                                         .then(Commands.argument("z", DoubleArgumentType.doubleArg(-24, 48))
                                                 .executes(ctx -> {
-                                                    set(RelicConfig.OFFSET_X, ctx.getArgument("x", Double.class));
-                                                    set(RelicConfig.OFFSET_Y, ctx.getArgument("y", Double.class));
-                                                    set(RelicConfig.OFFSET_Z, ctx.getArgument("z", Double.class));
+                                                    set(RelicConfig.OFFSET_X, "placement.offsetX", ctx.getArgument("x", Double.class));
+                                                    set(RelicConfig.OFFSET_Y, "placement.offsetY", ctx.getArgument("y", Double.class));
+                                                    set(RelicConfig.OFFSET_Z, "placement.offsetZ", ctx.getArgument("z", Double.class));
                                                     return info(ctx.getSource());
                                                 })))))
                 .then(Commands.literal("scale")
                         .then(Commands.argument("value", DoubleArgumentType.doubleArg(0.1, 4.0))
                                 .executes(ctx -> {
-                                    set(RelicConfig.SCALE, ctx.getArgument("value", Double.class));
+                                    set(RelicConfig.SCALE, "placement.scale", ctx.getArgument("value", Double.class));
                                     return info(ctx.getSource());
                                 })))
                 .then(Commands.literal("side")
@@ -63,6 +65,7 @@ public final class RelicClientCommands {
                                     RelicConfig.SHOULDER.set(value.equalsIgnoreCase("left")
                                             ? RelicConfig.Shoulder.LEFT
                                             : RelicConfig.Shoulder.RIGHT);
+                                    markUnsaved("placement.shoulder");
                                     return info(ctx.getSource());
                                 })))
                 .then(Commands.literal("quality")
@@ -78,6 +81,7 @@ public final class RelicClientCommands {
                                     RelicConfig.QUALITY.set(value.equalsIgnoreCase("lite")
                                             ? RelicConfig.Quality.LITE
                                             : RelicConfig.Quality.FULL);
+                                    markUnsaved("visuals.quality");
                                     return info(ctx.getSource());
                                 })))
                 .then(Commands.literal("toggle").executes(ctx -> action(ctx.getSource(),
@@ -93,6 +97,7 @@ public final class RelicClientCommands {
                                         SharedSuggestionProvider.suggest(shortNames(), builder))
                                 .executes(ctx -> anim(ctx.getSource(),
                                         StringArgumentType.getString(ctx, "nombre")))))
+                .then(Commands.literal("save").executes(ctx -> save(ctx.getSource())))
                 .then(Commands.literal("set")
                         .executes(ctx -> setList(ctx.getSource()))
                         .then(Commands.argument("clave", StringArgumentType.word())
@@ -131,6 +136,11 @@ public final class RelicClientCommands {
         source.sendSuccess(() -> message, false);
         source.sendSuccess(RelicClientCommands::diag, false);
         source.sendSuccess(RelicClientCommands::glowLine, false);
+        if (!UNSAVED.isEmpty()) {
+            int cambios = UNSAVED.size();
+            source.sendSuccess(() -> Component.translatable("message.holocore.unsaved", cambios)
+                    .withStyle(ChatFormatting.YELLOW), false);
+        }
         return 1;
     }
 
@@ -179,6 +189,17 @@ public final class RelicClientCommands {
             return Component.translatable("message.holocore.glsl.failed");
         }
         return Component.translatable("message.holocore.glsl.on");
+    }
+
+    /**
+     * Claves cambiadas en memoria desde el ultimo {@code /relic save}. Sirve para
+     * dos cosas: que {@code /relic info} avise de que hay valores que se perderan
+     * al cerrar, y que {@code /relic save} sepa si hay algo que escribir.
+     */
+    private static final Set<String> UNSAVED = new LinkedHashSet<>();
+
+    private static void markUnsaved(String clave) {
+        UNSAVED.add(clave);
     }
 
     /**
@@ -370,6 +391,7 @@ public final class RelicClientCommands {
                     tweak.key(), tweak.current()));
             return 0;
         }
+        markUnsaved(tweak.key());
         source.sendSuccess(() -> Component.translatable("message.holocore.set_value",
                 tweak.key(), tweak.current()).withStyle(ChatFormatting.AQUA), false);
         return 1;
@@ -467,7 +489,33 @@ public final class RelicClientCommands {
         return 1;
     }
 
-    private static void set(ForgeConfigSpec.DoubleValue value, double newValue) {
+    /** Atajo tipado de los comandos de colocacion: fija y marca como sin guardar. */
+    private static void set(ForgeConfigSpec.DoubleValue value, String clave, double newValue) {
         value.set(newValue);
+        markUnsaved(clave);
+    }
+
+    /**
+     * {@code /relic save}: escribe en {@code config/holocore-client.toml} lo que
+     * haya en memoria. Hasta 1.0.20 todo lo que se ajustaba con comandos moria al
+     * cerrar el juego, asi que habia que copiar los numeros a mano.
+     */
+    private static int save(CommandSourceStack source) {
+        if (UNSAVED.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("message.holocore.save_none")
+                    .withStyle(ChatFormatting.GRAY), false);
+            return 0;
+        }
+        int cambios = UNSAVED.size();
+        try {
+            RelicConfig.SPEC.save();
+        } catch (RuntimeException ex) {
+            source.sendFailure(Component.translatable("message.holocore.save_error"));
+            return 0;
+        }
+        UNSAVED.clear();
+        source.sendSuccess(() -> Component.translatable("message.holocore.save", cambios)
+                .withStyle(ChatFormatting.AQUA), false);
+        return cambios;
     }
 }

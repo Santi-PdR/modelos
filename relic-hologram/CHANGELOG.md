@@ -1,5 +1,21 @@
 # Historial de cambios
 
+## 1.0.21 — `/relic save`: los ajustes ya no se quedan en el aire
+
+* **Nuevo `/relic save`**: escribe en `config/holocore-client.toml` lo que haya en
+  memoria (`RelicConfig.SPEC.save()`). Hasta 1.0.20 todo lo que se ajustaba con
+  `/relic set`, `/relic offset`, `/relic scale`, `/relic side` o `/relic quality`
+  se perdía al cerrar el juego: había que copiar los números a mano.
+* Mientras haya valores sin guardar, **`/relic info` añade una cuarta línea
+  amarilla** con cuántos son, así que el aviso sale justo donde se miran los
+  valores. `/relic save` sin cambios contesta «nada que guardar» y no toca el
+  archivo; si la escritura falla, lo dice en vez de fingir que guardó.
+* **Nuevo chequeo de CI** (`Validate documented defaults`): la columna «Defecto»
+  de la tabla del README tiene que coincidir clave a clave con los valores por
+  defecto de `RelicConfig`, incluida la fila compartida de `glitchMinSeconds` /
+  `glitchMaxSeconds`. Esa columna era de fiar solo por costumbre.
+* 4 claves nuevas en `en_us` y `es_es` (42 en cada uno).
+
 ## 1.0.20 — `/relic set`: la configuración, en caliente
 
 * **Nuevo `/relic set`**: `/relic set` sin argumentos lista las **22 claves**

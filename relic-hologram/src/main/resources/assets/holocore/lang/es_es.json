@@ -36,5 +36,9 @@
   "message.holocore.set_usage": "Uso: /relic set <clave> <valor> — p. ej. /relic set visuals.auraIntensity %s",
   "message.holocore.set_value": "%s = %s (en memoria; edita holocore-client.toml para conservarlo)",
   "message.holocore.set_unknown": "Clave desconocida: %s (prueba /relic set)",
-  "message.holocore.set_bad_value": "Valor no válido para %s (ahora mismo %s)"
+  "message.holocore.set_bad_value": "Valor no válido para %s (ahora mismo %s)",
+  "message.holocore.save": "Guardado en config/holocore-client.toml (%s claves).",
+  "message.holocore.save_none": "Nada que guardar: no hay valores cambiados desde la última vez.",
+  "message.holocore.save_error": "No se pudo escribir config/holocore-client.toml (mira el log).",
+  "message.holocore.unsaved": "%s valor(es) solo en memoria — /relic save para conservarlos."
 }

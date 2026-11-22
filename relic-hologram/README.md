@@ -89,6 +89,7 @@ En el juego:
 | Ver valores actuales | `/relic info` (tres líneas: placement, estado en vivo y brillo) |
 | Probar una animación | `/relic anim <nombre>` · `/relic anim list` |
 | Ajustar cualquier clave | `/relic set` (lista) · `/relic set <clave> <valor>` |
+| Guardar los ajustes | `/relic save` |
 | Medir el coste | `/relic stats` · `/relic stats reset` |
 
 Los comandos de ajuste son de **cliente** y cambian la config en memoria al
@@ -116,10 +117,14 @@ vuelve a mirar. `/relic stats reset` reinicia la media.
 `/relic set` ajusta **cualquiera** de las claves de la tabla de configuración en
 caliente, sin cerrar el juego: `/relic set` sin argumentos lista las 22 claves con
 su valor actual, `/relic set auraIntensity 0.55` la cambia y te dice el
-valor nuevo (vale el nombre completo o el corto, siempre que no sea ambiguo). Todo es **en memoria** (el `.toml` no se toca, igual que con
-`/relic offset`): cuando el número te guste, cópialo al archivo. Las dos únicas
-claves sin pasar por aquí son `placement.shoulder` y `visuals.quality`, que tienen
-su propio comando (`/relic side`, `/relic quality`) porque además validan el texto.
+valor nuevo (vale el nombre completo o el corto, siempre que no sea ambiguo). Todo es **en memoria** mientras
+pruebas, igual que con `/relic offset`: cuando el número te guste, **`/relic save`**
+lo escribe en `config/holocore-client.toml`. Mientras haya valores sin guardar,
+`/relic info` añade una línea amarilla diciendo cuántos son, para que no se
+queden en el aire al cerrar el juego. Las dos únicas claves sin pasar por
+`set` son `placement.shoulder` y `visuals.quality`, que tienen su propio comando
+(`/relic side`, `/relic quality`) porque además validan el texto — y también
+cuentan como cambios sin guardar.
 
 `pulse`, `release` y
 `toggle` sí viajan al servidor, para que el resto de jugadores vea lo mismo. El
@@ -243,8 +248,8 @@ shaders de 1.20.1 están en [BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
 
 Desde 1.0.20 todas estas claves (menos `placement.shoulder` y `visuals.quality`,
 que tienen `/relic side` y `/relic quality`) se pueden probar en caliente con
-`/relic set <clave> <valor>`; el archivo no se modifica, así que cuando encuentres
-el valor lo copias aquí. El CI comprueba que la tabla de `/relic set` y esta tabla
+`/relic set <clave> <valor>`; el archivo no se modifica hasta que lanzas
+`/relic save`, que escribe en él lo que haya en memoria (1.0.21). El CI comprueba que la tabla de `/relic set` y esta tabla
 tienen las mismas claves y los mismos rangos que `RelicConfig`.
 
 Los offsets se aplican en el espacio del hueso `body` del jugador (origen en el
@@ -327,9 +332,11 @@ hay que sumar la traslación que traía `relic_hologram.geo.json`.
       un mob cerca); pasar a tercera **no** reinicia la `activation`.
 - [ ] `/relic stats` responde con los pases por dibujo (4 con base, emisivo, halo y
       GLSL) y los ms por dibujo; `/relic stats reset` los reinicia.
-- [ ] `/relic set` lista las 22 claves; `/relic set visuals.auraIntensity 0.55`
-      cambia el aura al instante y avisa de que es en memoria; un valor fuera de
-      rango se rechaza sin tocar nada.
+- [ ] `/relic set` lista las 22 claves; `/relic set auraIntensity 0.55` cambia el
+      aura al instante y avisa de que es en memoria; un valor fuera de rango se
+      rechaza sin tocar nada.
+- [ ] Tras un `set`, `/relic info` avisa de los cambios sin guardar; `/relic save`
+      los escribe en `config/holocore-client.toml` (comprobar reabriendo el juego).
 - [ ] Distancia > `maxRenderDistance`: deja de renderizarse (sin tirones).
 - [ ] `/relic offset 6 -6 8`, `/relic scale 1.0`, `/relic side left|right` mueven
       el núcleo en caliente y `/relic info` muestra los valores para la config.

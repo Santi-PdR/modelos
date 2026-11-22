@@ -344,6 +344,81 @@ jobs:
           print(f'Comandos OK: {len(subcomandos)} documentados -> {", ".join(subcomandos)}')
           PY
 
+      # La columna "Defecto" del README se creia a si misma: nadie comparaba esos
+      # numeros con RelicConfig. Aqui se comparan clave a clave.
+      - name: Validate documented defaults
+        run: |
+          python3 - <<'PY'
+          import pathlib, re
+
+          def codigo(ruta):
+              texto = pathlib.Path(ruta).read_text(encoding='utf-8')
+              texto = re.sub(r'/\*.*?\*/', '', texto, flags=re.S)
+              return re.sub(r'//[^\n]*', '', texto)
+
+          config = codigo('relic-hologram/src/main/java/com/santipdr/holocore/config/RelicConfig.java')
+          readme = pathlib.Path('relic-hologram/README.md').read_text(encoding='utf-8')
+
+          # --- valores por defecto de la config ---
+          seccion, defectos = '', {}
+          for linea in config.splitlines():
+              push = re.search(r'\.push\("(\w+)"\)', linea)
+              if push:
+                  seccion = push.group(1)
+                  continue
+              if re.search(r'\.pop\(\)', linea):
+                  seccion = ''
+                  continue
+              rango = re.search(r'\.defineInRange\("(\w+)",\s*(-?[\d.]+)D?,', linea)
+              if rango:
+                  defectos[f'{seccion}.{rango.group(1)}'] = rango.group(2)
+                  continue
+              bandera = re.search(r'\.define\("(\w+)",\s*(true|false)\)', linea)
+              if bandera:
+                  defectos[f'{seccion}.{bandera.group(1)}'] = bandera.group(2)
+                  continue
+              eleccion = re.search(r'\.defineEnum\("(\w+)",\s*[\w.]+\.(\w+)\)', linea)
+              if eleccion:
+                  defectos[f'{seccion}.{eleccion.group(1)}'] = eleccion.group(2)
+          assert len(defectos) == 24, f'esperaba 24 defectos, hay {len(defectos)}'
+
+          # --- tabla de configuracion del README (solo esa seccion) ---
+          inicio = readme.index('## Configuración')
+          fin = readme.index('\n## ', inicio + 5)
+          tabla = readme[inicio:fin]
+
+          leidos = {}
+          for linea in tabla.splitlines():
+              if not linea.startswith('| `'):
+                  continue
+              celdas = [c.strip() for c in linea.strip().strip('|').split('|')]
+              if len(celdas) < 3:
+                  continue
+              claves = re.findall(r'`([^`]+)`', celdas[0])
+              valores = re.findall(r'`([^`]+)`', celdas[1])
+              if not claves or len(claves) != len(valores):
+                  continue
+              # La fila de los glitch comparte celda: la segunda clave va sin seccion.
+              for clave, valor in zip(claves, valores):
+                  completo = clave if '.' in clave else f'visuals.{clave}'
+                  leidos[completo] = valor
+
+          faltan = sorted(set(defectos) - set(leidos))
+          sobran = sorted(set(leidos) - set(defectos))
+          assert not faltan, f'claves de la config que la tabla del README no lista: {faltan}'
+          assert not sobran, f'la tabla del README lista claves que no existen: {sobran}'
+
+          for clave, esperado in sorted(defectos.items()):
+              valor = leidos[clave]
+              if re.fullmatch(r'-?[\d.]+', valor) and re.fullmatch(r'-?[\d.]+', esperado):
+                  iguales = abs(float(valor) - float(esperado)) < 1e-9
+              else:
+                  iguales = valor.lower() == esperado.lower()
+              assert iguales, f'{clave}: el README dice {valor}, RelicConfig dice {esperado}'
+
+          print(f'Defectos OK: {len(defectos)} claves con el mismo valor en el README y en RelicConfig.')
+          PY
+
       # /relic set es una segunda copia de la tabla de config (claves, tipos y
       # rangos). Una copia sin comprobar es una mentira a plazos: aqui se compara
       # con RelicConfig y falla en cuanto se separan.

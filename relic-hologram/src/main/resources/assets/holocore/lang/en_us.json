@@ -36,5 +36,9 @@
   "message.holocore.set_usage": "Usage: /relic set <key> <value> — e.g. /relic set visuals.auraIntensity %s",
   "message.holocore.set_value": "%s = %s (in memory; edit holocore-client.toml to keep it)",
   "message.holocore.set_unknown": "Unknown key: %s (try /relic set)",
-  "message.holocore.set_bad_value": "Not a valid value for %s (currently %s)"
+  "message.holocore.set_bad_value": "Not a valid value for %s (currently %s)",
+  "message.holocore.save": "Saved to config/holocore-client.toml (%s keys).",
+  "message.holocore.save_none": "Nothing to save: no values changed since the last save.",
+  "message.holocore.save_error": "Could not write config/holocore-client.toml (check the log).",
+  "message.holocore.unsaved": "%s value(s) only in memory — /relic save to keep them."
 }
