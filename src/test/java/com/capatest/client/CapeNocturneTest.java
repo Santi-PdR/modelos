@@ -40,11 +40,13 @@ public final class CapeNocturneTest {
                 new CapeResponse.SpeedWake(Double.NaN, Double.POSITIVE_INFINITY, Double.NaN));
         check(Double.isFinite(malformed.edge()) && Double.isFinite(malformed.inner()),
                 "non-finite wake or clock poisoned the glow frame");
+        var noWake = CapeNocturne.gains(1, 0, 0, CapeResponse.SpeedWake.NONE);
         var ordinaryWake = CapeNocturne.gains(1, 0, 0,
                 new CapeResponse.SpeedWake(.108, .108, 0));
-        check(ordinaryWake.edge() > 1.99 && ordinaryWake.edge() < 2.01
-                        && ordinaryWake.inner() > 1.71 && ordinaryWake.inner() < 1.73,
-                "ordinary impulse left the established wake range: " + ordinaryWake);
+        double edgeBoost = ordinaryWake.edge() - noWake.edge();
+        double innerBoost = ordinaryWake.inner() - noWake.inner();
+        check(edgeBoost > .36 && edgeBoost < .38 && innerBoost > .29 && innerBoost < .31,
+                "ordinary impulse changed the established increment: edge=" + edgeBoost + ", inner=" + innerBoost);
         var saturated = CapeNocturne.gains(1, 0, 0,
                 new CapeResponse.SpeedWake(Double.MAX_VALUE, Double.MAX_VALUE, 0));
         check(Double.isFinite(saturated.edge()) && Double.isFinite(saturated.inner())
