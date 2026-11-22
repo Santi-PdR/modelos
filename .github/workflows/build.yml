@@ -1379,7 +1379,7 @@ jobs:
           OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_shoulders.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
             case "$line" in
               *AssertionError:*|*Error:*) printf '::error title=Hombreras en Forge::%s\n' "${line//%/%25}" ;;
-              pecho/*|curios/*) printf '::notice title=Hombreras en Forge::%s\n' "${line//%/%25}" ;;
+              pecho/*|curios/*) printf '  %s\n' "$line" ;;
               *) printf '%s\n' "$line" ;;
             esac
           done
@@ -1392,7 +1392,7 @@ jobs:
           python3 tools/verify_forge_swim.py build/fx-smoke-run/fx-shots 2>&1 | while IFS= read -r line; do
             case "$line" in
               *AssertionError:*|*Error:*) printf '::error title=Ciclo de nado en Forge::%s\n' "${line//%/%25}" ;;
-              *) printf '::notice title=Ciclo de nado en Forge::%s\n' "${line//%/%25}" ;;
+              *) printf '  %s\n' "$line" ;;
             esac
           done
 
@@ -1408,9 +1408,18 @@ jobs:
       - name: Recorte del ciclo de la hotbar
         if: always() && steps.fx-smoke.outcome != 'skipped'
         run: |
+          set -euo pipefail
           shots=build/fx-smoke-run/fx-shots
           if [ -f "$shots/hotbar-31.png" ]; then
-            python3 tools/verify_forge_mount.py "$shots" --gallery hotbar
+            python3 tools/verify_forge_mount.py "$shots" --gallery hotbar 2>&1 | while IFS= read -r line; do
+              case "$line" in
+                *AssertionError:*|*Error:*) printf '::error title=Ciclo de hotbar Forge::%s\n' "${line//%/%25}" ;;
+                ::notice\ title=Ranura\ hotbar-ciclo*) : ;; # El GIF completo se adjunta como artefacto.
+                *) printf '%s\n' "$line" ;;
+              esac
+            done
+            test -s "$shots/hotbar-ciclo.gif"
+            printf '::notice title=Hotbar en Forge::Ciclo GIF incluido en el artefacto capatest-fx-en-mundo.'
           fi
 
       - name: Subir capturas de la prueba en mundo
