@@ -40,6 +40,11 @@ public final class CapeNocturneTest {
                 new CapeResponse.SpeedWake(Double.NaN, Double.POSITIVE_INFINITY, Double.NaN));
         check(Double.isFinite(malformed.edge()) && Double.isFinite(malformed.inner()),
                 "non-finite wake or clock poisoned the glow frame");
+        var ordinaryWake = CapeNocturne.gains(1, 0, 0,
+                new CapeResponse.SpeedWake(.108, .108, 0));
+        check(Math.abs(ordinaryWake.edge() - (1.63 + .55 * 2 / 3)) < 1e-12
+                        && Math.abs(ordinaryWake.inner() - (1.42 + .55 * 1.2 / 2.2)) < 1e-12,
+                "ordinary impulse no longer follows the established wake curve");
         var saturated = CapeNocturne.gains(1, 0, 0,
                 new CapeResponse.SpeedWake(Double.MAX_VALUE, Double.MAX_VALUE, 0));
         check(Double.isFinite(saturated.edge()) && Double.isFinite(saturated.inner())
