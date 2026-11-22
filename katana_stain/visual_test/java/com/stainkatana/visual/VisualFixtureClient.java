@@ -548,53 +548,10 @@ public final class VisualFixtureClient {
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Y.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Z.set(0.0);
-                if (!net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) { finishVisual(); return; }
-                mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); mc.options.fov().set(35);
+                System.out.println("STAIN_EFFECT_SAMPLES_DONE"); System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop();
             }
-            case 1720 -> lateralPoseSample("yaw", -1.2F);
-            case 1735 -> capture = "106_guard_yaw_minus12_front.png";
-            case 1740 -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
-            case 1745 -> capture = "107_guard_yaw_minus12_back.png";
-            case 1750 -> { mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); lateralPoseSample("yaw", 1.2F); }
-            case 1765 -> capture = "108_guard_yaw_plus12_front.png";
-            case 1770 -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
-            case 1775 -> capture = "109_guard_yaw_plus12_back.png";
-            case 1780 -> { mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); lateralPoseSample("pitch", -1.2F); }
-            case 1795 -> capture = "110_guard_pitch_minus12_front.png";
-            case 1800 -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
-            case 1805 -> capture = "111_guard_pitch_minus12_back.png";
-            case 1810 -> { mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT); lateralPoseSample("pitch", 1.2F); }
-            case 1825 -> capture = "112_guard_pitch_plus12_front.png";
-            case 1830 -> mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
-            case 1835 -> capture = "113_guard_pitch_plus12_back.png";
-            case 1850 -> finishVisual();
             default -> { }
         }
-    }
-    private static void finishVisual() {
-        System.out.println("STAIN_EFFECT_SAMPLES_DONE"); System.out.println("STAIN_VISUAL_FIXTURE_FINISHED");
-        Minecraft.getInstance().stop();
-    }
-    @SuppressWarnings("unchecked")
-    private static void lateralPoseSample(String axis, float angle) {
-        try {
-            var mc = Minecraft.getInstance();
-            var resource = mc.getResourceManager().getResourceOrThrow(new net.minecraft.resources.ResourceLocation(
-                    "stainkatana", "attack_animations/stain_lateral_guard.json"));
-            com.google.gson.JsonObject root;
-            try (var reader = new java.io.InputStreamReader(resource.open(), java.nio.charset.StandardCharsets.UTF_8)) {
-                root = com.google.gson.JsonParser.parseReader(reader).getAsJsonObject();
-            }
-            for (var move : root.getAsJsonObject("emote").getAsJsonArray("moves")) {
-                var item = new com.google.gson.JsonObject(); item.addProperty(axis, angle);
-                move.getAsJsonObject().add("rightItem", item);
-            }
-            var input = new java.io.ByteArrayInputStream(root.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            var clips = dev.kosmx.playerAnim.core.data.gson.AnimationSerializing.deserializeAnimation(input);
-            var map = (java.util.Map<String, dev.kosmx.playerAnim.core.data.KeyframeAnimation>)
-                    Class.forName("net.bettercombat.client.animation.AnimationRegistry").getField("animations").get(null);
-            map.put("stainkatana:stain_lateral_guard", clips.get(0));
-        } catch (Exception e) { throw new IllegalStateException("Cannot sample lateral guard", e); }
     }
     /** Verify actual registry selection, not whether an audio device produced sound. */
     private static void verifyAbilitySoundSelection(Minecraft mc) {
