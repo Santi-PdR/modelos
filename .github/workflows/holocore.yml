@@ -658,6 +658,12 @@ jobs:
           assert 'preview = false' in rama_espectador, \
               'la rama de espectador del tick local no apaga la vista previa'
 
+          # La vista previa tiene que ir descentrada: en el centro tapaba la
+          # mirilla y lo que hubiera detras, que es lo que se quiere mirar.
+          pose_preview = eventos.split('onRenderStage(RenderLevelStageEvent', 1)[1]
+          assert 'getLeftVector()' in pose_preview and 'getUpVector()' in pose_preview, \
+              'la vista previa vuelve a dibujarse en el centro de la pantalla (tapa la mirilla)'
+
           # /relic info tiene que decir que la vista previa esta puesta.
           comandos = pathlib.Path(
               'relic-hologram/src/main/java/com/santipdr/holocore/client/RelicClientCommands.java'

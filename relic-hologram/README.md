@@ -356,7 +356,8 @@ hay que sumar la traslación que traía `relic_hologram.geo.json`.
       rechaza sin tocar nada.
 - [ ] Tras un `set`, `/relic info` avisa de los cambios sin guardar; `/relic save`
       los escribe en `config/holocore-client.toml` (comprobar reabriendo el juego).
-- [ ] `/relic preview` pone la reliquia delante de la cámara con su aura;
+- [ ] `/relic preview` pone la reliquia delante de la cámara con su aura, un poco
+      a la derecha y por debajo del centro (la mirilla se ve libre);
       `/relic preview 1.5` la acerca y `/relic preview` la quita.
 - [ ] `/relic reset` deja de nuevo las 24 claves en su defecto (comparar con
       `/relic set`) y avisa de los cambios sin guardar; repetido, dice que ya

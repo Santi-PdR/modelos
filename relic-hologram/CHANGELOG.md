@@ -1,5 +1,19 @@
 # Historial de cambios
 
+## 1.0.27 — la vista previa deja de tapar la mirilla
+
+* **`/relic preview` dibujaba la reliquia justo en el centro de la pantalla**, así
+  que tapaba la mirilla y lo que estuvieras apuntando — que es justo lo que se
+  quiere ver detrás para juzgar el brillo. Ahora va desplazada a la derecha y un
+  poco por debajo, siguiendo los ejes de la cámara (al levantar la vista sigue
+  abajo, no se queda flotando en el aire).
+* El desplazamiento se da en **tangentes** (0.30 de lado, 0.17 hacia abajo, o sea
+  16.7° y 9.6°), multiplicadas por la distancia: el encuadre es el mismo a 0.5
+  que a 6 bloques. Con el aura de 1.10 bloques de diámetro, su borde se queda a
+  ~4.6° del centro a la distancia por defecto, así que la mirilla queda libre.
+* CI: `Validate local relic tick` falla si la vista previa vuelve a colocarse con
+  solo el vector de mirada.
+
 ## 1.0.26 — la vista previa deja de ser invisible
 
 * **`/relic info` avisa de que la vista previa está encendida** y a qué distancia.

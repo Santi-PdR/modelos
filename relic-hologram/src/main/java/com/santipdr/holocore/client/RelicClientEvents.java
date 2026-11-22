@@ -46,6 +46,20 @@ public final class RelicClientEvents {
     /** Distancia por defecto (bloques) de la vista previa delante de la camara. */
     public static final float PREVIEW_DEFAULT_DISTANCE = 2.5F;
 
+    /**
+     * Cuanto se aparta la vista previa del centro de la pantalla, sobre los ejes
+     * de la camara: a la derecha ({@code -left}) y hacia abajo. Son <b>tangentes</b>,
+     * no bloques: se multiplican por la distancia, asi que el encuadre es el mismo
+     * a 0.5 que a 6 bloques.
+     *
+     * <p>0.30 de lado son 16.7 grados y 0.17 hacia abajo son 9.6. Con el aura
+     * midiendo 1.10 bloques de diametro (0.55 de radio, 12.4 grados a cualquier
+     * distancia) el borde del aura se queda a ~4 grados del centro: la mirilla y
+     * lo que hay detras se ven libres.</p>
+     */
+    private static final float PREVIEW_SIDE_TANGENT = 0.30F;
+    private static final float PREVIEW_DROP_TANGENT = 0.17F;
+
     private static boolean preview;
     private static float previewDistance = PREVIEW_DEFAULT_DISTANCE;
 
@@ -215,10 +229,20 @@ public final class RelicClientEvents {
         }
         Camera camera = minecraft.gameRenderer.getMainCamera();
         Vector3f look = camera.getLookVector();
+        Vector3f left = camera.getLeftVector();
+        Vector3f up = camera.getUpVector();
         PoseStack poseStack = event.getPoseStack();
         poseStack.pushPose();
-        poseStack.translate(look.x() * previewDistance, look.y() * previewDistance - 0.15D,
-                look.z() * previewDistance);
+        // Delante de la camara, pero descentrada: en el centro justo la reliquia
+        // tapaba la mirilla y lo que estuvieras mirando, que es justo lo que se
+        // quiere ver detras. Se desplaza con los ejes de la camara (no con la Y
+        // del mundo) para que siga a la derecha y por debajo al levantar la vista.
+        float side = previewDistance * PREVIEW_SIDE_TANGENT;
+        float drop = previewDistance * PREVIEW_DROP_TANGENT;
+        poseStack.translate(
+                look.x() * previewDistance - left.x() * side - up.x() * drop,
+                look.y() * previewDistance - left.y() * side - up.y() * drop,
+                look.z() * previewDistance - left.z() * side - up.z() * drop);
 
         float partialTick = event.getPartialTick();
         RelicAnimatable animatable = visual.animatable();
