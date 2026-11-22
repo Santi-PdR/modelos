@@ -1097,7 +1097,13 @@ jobs:
           set -euo pipefail
           shots=build/fx-smoke-run/fx-shots
           OPENBLAS_NUM_THREADS=1 python3 tools/verify_forge_nape_settle.py "$shots" docs/diagnosticos/retorno-v1.67.31/base \
-            "$shots/maniobra-retorno" "$RUNNER_TEMP/retorno-recortes"
+            "$shots/maniobra-retorno" "$RUNNER_TEMP/retorno-recortes" 2>&1 | while IFS= read -r line; do
+            case "$line" in
+              *AssertionError:*|*Error:*|*StopIteration*) printf '::error title=Retorno en Forge::%s\n' "${line//%/%25}" ;;
+              *pelo\ recuperado*|*sección\ media*) printf '::notice title=Retorno en Forge::%s\n' "${line//%/%25}" ;;
+              *) printf '%s\n' "$line" ;;
+            esac
+          done
 
       - name: Subir capturas y malla de la maniobra en mundo
         if: ${{ !cancelled() && steps.combined-smoke.outcome != 'skipped' }}

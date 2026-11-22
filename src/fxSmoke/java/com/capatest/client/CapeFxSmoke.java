@@ -378,7 +378,7 @@ public final class CapeFxSmoke {
         game.options.hideGui = true;
         game.options.renderDistance().set(4);
         game.options.simulationDistance().set(5);
-        game.options.framerateLimit().set(30);
+        game.options.framerateLimit().set(NAPE_RETURN && CapeCombinedProbe.FOLLOW_NEUTRAL ? 60 : 30);
         game.options.setCameraType(CameraType.THIRD_PERSON_BACK);
         GameRules rules = new GameRules();
         rules.getRule(GameRules.RULE_DAYLIGHT).set(false, null);

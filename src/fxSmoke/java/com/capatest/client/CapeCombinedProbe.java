@@ -1,5 +1,6 @@
 package com.capatest.client;
 
+import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.player.LocalPlayer;
@@ -13,6 +14,7 @@ import net.minecraftforge.client.event.ViewportEvent;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -27,7 +29,9 @@ final class CapeCombinedProbe {
     private final BlockPos runway;
     private final int direction;
     private final boolean followNape;
-    private final boolean followNeutral = "1".equals(System.getenv("CAPA_REPOSO_NUCA"));
+    static final boolean FOLLOW_NEUTRAL = "1".equals(System.getenv("CAPA_REPOSO_NUCA"));
+    private record Grab(String name, NativeImage image) {}
+    private final List<Grab> deferred = new ArrayList<>(14);
     private final StringBuilder rows = new StringBuilder("time\tleg_pos\tleg_speed\tstride\tground\tsprinting\tcrouching\t"
             + "walk\trun\tsneak\tair\tfall\tswim\ttop\tmid\ttip_x\ttip_y\ttip_z\tseat_z\tpitch\tyaw\tfit\tcrouch_floor\trear_tuck\timage\n");
     private final StringBuilder boxes = new StringBuilder(), head = new StringBuilder();
@@ -148,7 +152,7 @@ final class CapeCombinedProbe {
         double t = tick + (double) partial;
         String image = "-";
         boolean landmark = nextShot < SHOTS.length && tick >= SHOTS[nextShot];
-        boolean unwind = followNape && ((tick >= 78 && tick <= 83) || (followNeutral && tick >= 87 && tick <= 89));
+        boolean unwind = followNape && ((tick >= 78 && tick <= 83) || (FOLLOW_NEUTRAL && tick >= 87 && tick <= 89));
         if (fit != null && (landmark || unwind)) {
             if (landmark) {
                 if (tick > SHOTS[nextShot] + 2) throw new AssertionError(name + ": missed screenshot near " + SHOTS[nextShot]);
@@ -156,8 +160,15 @@ final class CapeCombinedProbe {
             }
             image = String.format(Locale.ROOT, "%s-%03d.png", name, tick);
             head.append(tick).append('\t').append(fit.headTop());
-            try (var shot = Screenshot.takeScreenshot(game.getMainRenderTarget())) {
-                shot.writeToFile(root.resolve(image));
+            var shot = Screenshot.takeScreenshot(game.getMainRenderTarget());
+            if (followNape && FOLLOW_NEUTRAL) {
+                // Keep the actual pixels from this draw, but don't compress
+                // a full PNG while the next tick of the return is arriving.
+                deferred.add(new Grab(image, shot));
+            } else {
+                try (shot) {
+                    shot.writeToFile(root.resolve(image));
+                }
             }
         }
         if (fit != null) {
@@ -177,6 +188,12 @@ final class CapeCombinedProbe {
                 .append('\t').append(CapaArmorModel.wornMotion(p).crouchTopFloor())
                 .append('\t').append(fit == null ? 0 : fit.rearTuck()).append('\t').append(image).append('\n');
         if (tick < END) return false;
+        try {
+            for (Grab grab : deferred) grab.image().writeToFile(root.resolve(grab.name()));
+        } finally {
+            deferred.forEach(grab -> grab.image().close());
+            deferred.clear();
+        }
         Files.writeString(root.resolve(name + ".tsv"), rows);
         Files.writeString(root.resolve(name + "-cubos.tsv"), boxes);
         Files.writeString(root.resolve(name + "-cabeza.tsv"), head);
