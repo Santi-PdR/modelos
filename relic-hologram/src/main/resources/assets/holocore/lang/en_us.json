@@ -62,6 +62,8 @@
   "message.holocore.mood_forced": "Glow state forced: %s (/relic mood auto to release).",
   "message.holocore.mood_auto": "Glow state back to automatic.",
   "message.holocore.mood_list": "Glow states: %s",
+  "message.holocore.mood_cycle": "Cycling glow states every %s s (/relic mood cycle 0 to stop).",
+  "message.holocore.mood_cycle_stop": "Glow state cycle stopped.",
   "key.holocore.pulse": "Pulse the relic",
   "key.holocore.mood": "Cycle glow state"
 }

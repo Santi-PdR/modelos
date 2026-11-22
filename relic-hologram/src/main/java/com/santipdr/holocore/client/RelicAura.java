@@ -83,6 +83,10 @@ public final class RelicAura {
     private static final int BUBBLE_COUNT = 7;
     private static final float BUBBLE_SIZE = 0.055F;
     private static final float BUBBLE_SPEED = 0.28F;
+    /** Gotas del estado de lluvia: caen, asi que van al reves que las burbujas. */
+    private static final int DROP_COUNT = 6;
+    private static final float DROP_SIZE = 0.045F;
+    private static final float DROP_SPEED = 1.10F;
     private static final float SPARK_RADIUS = 0.42F;
     private static final float SPARK_SIZE = 0.075F;
     private static final float SPARK_SPEED = 0.75F;
@@ -226,6 +230,13 @@ public final class RelicAura {
             drawBubbles(bufferSource, frame, time, glow, amount, motion);
             return;
         }
+        if (mood == RelicAnimatable.Mood.RAIN) {
+            // Con lluvia, gotas cayendo alrededor: el mismo truco que las burbujas,
+            // al reves. Es el estado que mas tiempo se pasa encendido, y con chispas
+            // en orbita se confundia con el reposo.
+            drawDrops(bufferSource, frame, time, glow, amount, motion);
+            return;
+        }
         VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
         boolean storm = mood == RelicAnimatable.Mood.STORM;
         // De noche las brasas flotan: la mitad de velocidad, la mitad de densidad
@@ -307,6 +318,37 @@ public final class RelicAura {
             float weight = amount * (1.0F - rise) * 0.55F;
             float size = BUBBLE_SIZE * (0.6F + 0.6F * rise);
             billboardAt(buffer, frame, cx, cy, cz, size, time * 0.6F + i,
+                    redTint * weight, greenTint * weight, blueTint * weight, 1.0F);
+        }
+    }
+
+    /**
+     * Gotas de lluvia: caen de arriba abajo, se apagan al llegar abajo y llevan un
+     * poco de viento lateral (cada una con su fase) para que no caigan en columna.
+     * Misma textura y mismo lote que las chispas: cero draws nuevos.
+     */
+    private static void drawDrops(MultiBufferSource bufferSource, Frame frame, float time,
+                                  RelicGlowState glow, float amount, float motion) {
+        VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
+        // Azul de agua mezclado con el color del estado (que en lluvia ya es profundo).
+        float redTint = glow.red() * 0.55F + 0.62F * 0.45F;
+        float greenTint = glow.green() * 0.75F + 0.82F * 0.25F;
+        float blueTint = glow.blue() * 0.95F + 1.00F * 0.05F;
+        // Correr acelera la caida: es la sensacion de que la lluvia te llega de lado.
+        float speed = DROP_SPEED * (1.0F + 0.40F * motion);
+        for (int i = 0; i < DROP_COUNT; i++) {
+            // fall va de 0 (arriba) a 1 (abajo), desfasado por indice.
+            float fall = fract(time * speed + i * (1.0F / DROP_COUNT));
+            float wind = sin(time * 0.9F + i * 1.9F) * 0.07F;
+            float offset = wind;
+            float height = 0.40F - fall * 0.72F;
+            float cx = frame.originX + frame.leftX * offset + frame.upX * height;
+            float cy = frame.originY + frame.leftY * offset + frame.upY * height;
+            float cz = frame.originZ + frame.leftZ * offset + frame.upZ * height;
+            // Se ven al entrar arriba y se apagan al llegar abajo: una gota que
+            // parpadea en el sitio se lee como un pixel roto, no como lluvia.
+            float weight = amount * (0.25F + 0.75F * fall) * 0.60F;
+            billboardAt(buffer, frame, cx, cy, cz, DROP_SIZE, time * 0.8F + i,
                     redTint * weight, greenTint * weight, blueTint * weight, 1.0F);
         }
     }

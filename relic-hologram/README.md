@@ -95,6 +95,7 @@ En el juego:
 | Volver a los valores de fábrica | `/relic reset` · `/relic reset <clave>` (una sola) |
 | Ver o forzar el estado de brillo | `/relic mood` · `/relic mood <auto\|dark\|rain\|storm\|wounded\|resonant\|night\|submerged\|portal>` |
 | Recorrer los estados o ver la lista | `/relic mood next` (ronda, igual que la tecla M) · `/relic mood list` (los nueve, con el que manda marcado) |
+| Que los estados pasen solos | `/relic mood cycle [segundos]` (6 por defecto, 1–60) · `/relic mood cycle 0` para parar |
 | Ver la reliquia de cerca | `/relic preview` · `/relic preview <0.5–6>` (bloques) |
 | Medir el coste | `/relic stats` · `/relic stats reset` |
 
@@ -210,7 +211,7 @@ mandan: herido > tormenta > agua > portal > oscuridad > lluvia > noche > resonan
 | tormenta (`storm`) | truena donde está el portador | azul casi blanco, más aura y el giro más rápido |
 | resonancia (`resonant`) | otro portador a menos de 12 bloques | violeta, anillo más marcado y giro rápido: las dos reliquias se «oyen» |
 | oscuridad (`dark`) | menos de luz de bloque 4 **y** menos de luz de cielo 8 (encerrado) | casi blanca y bastante más aura: en una cueva es la única luz que hay |
-| lluvia (`rain`) | llueve encima del portador (sin tormenta) | azul profundo, anillo más tenue |
+| lluvia (`rain`) | llueve encima del portador (sin tormenta) | azul profundo, anillo más tenue y las chispas se cambian por **gotas que caen** (desde 1.0.38) |
 | noche (`night`) | hay cielo, es de noche y no llueve (desde 1.0.32) | pálido y frío, giro lento y las chispas flotan a media velocidad y con la mitad de densidad |
 | agua (`submerged`) | el portador tiene los ojos dentro del agua (desde 1.0.33) | verde azulado, el anillo casi apagado, el giro más lento de todos (0.66×) y las chispas se cambian por **burbujas** que suben y se apagan |
 | portal (`portal`) | un portal del Nether, del End o de salida a menos de 4 bloques (desde 1.0.35) | violeta de obsidiana, el giro más rápido de todos (1.22×) y las chispas estiradas hacia arriba, como el borde del portal |
@@ -231,7 +232,9 @@ aparte, así que si el aura se pone roja no hay que adivinar por qué.
 Para verlos sin montar la escena está `/relic mood <estado>`, que fuerza uno de ellos,
 `/relic mood auto` para volver a la detección normal, `/relic mood next` para pasarlos
 de uno en uno (lo mismo que la **tecla M**, con el aviso en la barra de acción en vez
-del chat) y `/relic mood list` para ver los nueve nombres con el activo marcado: en
+del chat), `/relic mood cycle [segundos]` para que pasen solos (con `0` se para, y
+avisa igual que la tecla, así que al mirar la grabación se sabe qué estado es cada
+tramo) y `/relic mood list` para ver los nueve nombres con el activo marcado: en
 oro si está forzado, en azul si lo ha elegido la escena. Es la forma de mirar la
 tormenta o el herido con un solo jugador y sin comandos raros.
 

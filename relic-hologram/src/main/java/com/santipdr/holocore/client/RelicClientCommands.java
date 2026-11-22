@@ -2,6 +2,7 @@ package com.santipdr.holocore.client;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.santipdr.holocore.common.RelicAnimations;
 import com.santipdr.holocore.common.RelicServer;
@@ -115,6 +116,12 @@ public final class RelicClientCommands {
                         .executes(ctx -> moodShow(ctx.getSource()))
                         .then(Commands.literal("next").executes(ctx -> moodNext(ctx.getSource())))
                         .then(Commands.literal("list").executes(ctx -> moodList(ctx.getSource())))
+                        .then(Commands.literal("cycle")
+                                .executes(ctx -> moodCycle(ctx.getSource(), 6))
+                                .then(Commands.argument("segundos",
+                                                IntegerArgumentType.integer(0, 60))
+                                        .executes(ctx -> moodCycle(ctx.getSource(),
+                                                ctx.getArgument("segundos", Integer.class)))))
                         .then(Commands.argument("estado", StringArgumentType.word())
                                 .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
                                         MOOD_NAMES, builder))
@@ -501,7 +508,25 @@ public final class RelicClientCommands {
     }
 
     /**
-     * {@code /relic mood list}: los ocho estados en una linea, con el que manda
+     * {@code /relic mood cycle [segundos]}: pasa de estado solo cada N segundos (6
+     * por defecto) y con {@code 0} para y vuelve a automatico. Es para grabar una
+     * comparacion de los nueve sin estar pulsando M, y por eso avisa igual que la
+     * tecla: al mirar el video se sabe que estado es cada tramo.
+     */
+    private static int moodCycle(CommandSourceStack source, int segundos) {
+        RelicAnimatable.cycleEvery(segundos);
+        if (segundos <= 0) {
+            source.sendSuccess(() -> Component.translatable("message.holocore.mood_cycle_stop")
+                    .withStyle(ChatFormatting.GRAY), false);
+            return 1;
+        }
+        source.sendSuccess(() -> Component.translatable("message.holocore.mood_cycle", segundos)
+                .withStyle(ChatFormatting.AQUA), false);
+        return 1;
+    }
+
+    /**
+     * {@code /relic mood list}: los nueve estados en una linea, con el que manda
      * marcado. Sirve para saber que nombres acepta el comando sin adivinar.
      */
     private static int moodList(CommandSourceStack source) {
@@ -561,6 +586,11 @@ public final class RelicClientCommands {
                 + actual.animatable().mood().name().toLowerCase(Locale.ROOT));
         source.sendSuccess(() -> Component.translatable("message.holocore.mood_show", nombre)
                 .withStyle(ChatFormatting.AQUA), false);
+        // Si hay ronda puesta, se dice: si no, el estado cambia solo y parece un fallo.
+        if (RelicAnimatable.cycleSeconds() > 0) {
+            source.sendSuccess(() -> Component.translatable("message.holocore.mood_cycle",
+                    RelicAnimatable.cycleSeconds()).withStyle(ChatFormatting.DARK_AQUA), false);
+        }
         return 1;
     }
 

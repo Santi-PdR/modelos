@@ -421,6 +421,12 @@ jobs:
               'faltan las constantes de las burbujas'
           assert 'boolean portal = mood == RelicAnimatable.Mood.PORTAL' in aura, \
               'el portal no cambia las chispas'
+          # La lluvia tiene su propio VFX: gotas cayendo, al reves que las burbujas.
+          assert 'private static void drawDrops(' in aura, 'la lluvia no tiene gotas'
+          assert 'drawDrops(bufferSource, frame, time, glow, amount, motion)' in aura, \
+              'las gotas no se dibujan nunca'
+          assert 'DROP_COUNT' in aura and 'DROP_SPEED' in aura, \
+              'faltan las constantes de las gotas'
 
           assert 'message.holocore.mood' in comandos, '/relic info no dice el estado de brillo'
           assert 'Commands.literal("mood")' in comandos, 'falta /relic mood'
@@ -433,6 +439,25 @@ jobs:
           assert 'RelicAnimatable.cycleForcedMood()' in comandos, \
               '/relic mood next no usa la misma ronda que la tecla M'
           assert 'Commands.literal("next")' in comandos, 'falta /relic mood next'
+          # Ronda temporizada: avanza sola cada N segundos y se para con 0.
+          assert 'public static void cycleEvery(int seconds)' in animatable, \
+              'no se puede poner una ronda de estados'
+          assert 'public static boolean tickForcedCycle()' in animatable, \
+              'la ronda no avanza'
+          # El cuerpo tiene que avanzar de verdad (no basta con que exista el metodo).
+          cuerpo_ronda = animatable.split('public static boolean tickForcedCycle()', 1)[1] \
+              .split('public static Mood forcedMood()', 1)[0]
+          assert 'if (++cycleTicks < cycleSeconds * 20)' in cuerpo_ronda, \
+              'la ronda no cuenta los ticks'
+          assert 'cycleForcedMood();' in cuerpo_ronda, 'la ronda no cambia de estado'
+          assert 'return true;' in cuerpo_ronda, 'la ronda no avisa cuando pasa de estado'
+          assert 'RelicAnimatable.tickForcedCycle()' in eventos, \
+              'nadie avanza la ronda en el tick del cliente'
+          assert 'Commands.literal("cycle")' in comandos, 'falta /relic mood cycle'
+          assert 'IntegerArgumentType.integer(0, 60)' in comandos, \
+              '/relic mood cycle no acepta los segundos (ni el 0 para parar)'
+          assert 'cycleEvery(segundos)' in comandos, \
+              '/relic mood cycle no arranca la ronda del animatable'
           assert 'Commands.literal("list")' in comandos, 'falta /relic mood list'
           assert 'message.holocore.mood_list' in comandos, 'la lista de estados no se anuncia'
           # Las sugerencias del comando salen de Mood.values(): escritas a mano se
@@ -491,6 +516,9 @@ jobs:
                   f'relic-hologram/src/main/resources/assets/holocore/lang/{idioma}.json'
               ).read_text(encoding='utf-8'))
               assert 'key.holocore.mood' in lang, f'{idioma} sin el nombre de la tecla M'
+              assert 'message.holocore.mood_cycle' in lang, f'{idioma} sin el aviso de la ronda'
+              assert 'message.holocore.mood_cycle_stop' in lang, \
+                  f'{idioma} sin el aviso de parar la ronda'
               assert 'message.holocore.mood_list' in lang, f'{idioma} sin la lista de estados'
               for mood in ('wounded', 'storm', 'resonant', 'dark', 'rain',
                            'neutral', 'night', 'submerged', 'portal'):

@@ -237,6 +237,16 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.38, gotas para la lluvia y ronda temporizada.** La lluvia era el único estado que
+parecía reposo: cambiaba de color y bajaba el anillo, pero las chispas seguían en órbita.
+Ahora `RelicAura.drawDrops` dibuja seis gotas que caen de +0.40 a −0.32 en el eje `up` de
+la cámara, con viento lateral por fase (`sin(tiempo × 0.9 + i × 1.9) × 0.07`), creciendo
+el brillo al bajar y apagándose de golpe abajo, y a ×1.4 si el portador corre. Se reutiliza
+el lote aditivo del aura, así que el coste son seis quads y ningún pase nuevo.
+La otra mitad es `/relic mood cycle [segundos]`: la ronda temporizada va por ticks de
+cliente (`tickForcedCycle`, 20 por segundo) y avisa por la barra de acción, de modo que una
+grabación queda etiquetada sola.
+
 **1.0.37, la energía de movimiento.** Un eje más, ortogonal a los estados de brillo:
 `RelicAnimatable.motion()` (0–1) sale de `isSprinting`, `isSwimming`, `isCrouching` y la
 velocidad horizontal, suavizado con tiempo real (τ 0,30 s). Entra por `RelicAura.render`

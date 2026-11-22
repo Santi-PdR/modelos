@@ -272,6 +272,45 @@ public final class RelicAnimatable implements GeoAnimatable {
         forced = mood;
     }
 
+    /** Segundos entre estados de la ronda temporizada; 0 = parada. */
+    private static int cycleSeconds;
+    private static int cycleTicks;
+
+    /** Segundos configurados en la ronda ({@code /relic mood cycle}), 0 si no hay. */
+    public static int cycleSeconds() {
+        return cycleSeconds;
+    }
+
+    /**
+     * Arranca la ronda temporizada ({@code segundos > 0}) o la para y suelta el
+     * estado forzado ({@code segundos <= 0}).
+     */
+    public static void cycleEvery(int seconds) {
+        cycleSeconds = Math.max(0, seconds);
+        cycleTicks = 0;
+        if (cycleSeconds == 0) {
+            forced = null;
+        }
+    }
+
+    /**
+     * Avanza la ronda si toca. Se llama una vez por tick de cliente, no por frame:
+     * la ronda se mide en ticks porque el estado del jugador solo cambia por tick.
+     *
+     * @return {@code true} si acaba de pasar al siguiente estado
+     */
+    public static boolean tickForcedCycle() {
+        if (cycleSeconds <= 0) {
+            return false;
+        }
+        if (++cycleTicks < cycleSeconds * 20) {
+            return false;
+        }
+        cycleTicks = 0;
+        cycleForcedMood();
+        return true;
+    }
+
     /** Estado forzado, o {@code null} si manda la deteccion automatica. */
     public static Mood forcedMood() {
         return forced;

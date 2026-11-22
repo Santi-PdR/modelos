@@ -129,7 +129,13 @@ public final class RelicClientEvents {
             RelicNetwork.sendToServer(new RelicActionPacket(RelicActionPacket.Action.PULSE));
         }
         while (RelicKeys.MOOD.consumeClick()) {
-            announceForcedMood(minecraft);
+            RelicAnimatable.cycleForcedMood();
+            announceMood(minecraft);
+        }
+        // Ronda temporizada (/relic mood cycle): avanza sola y se anuncia igual que
+        // la tecla, para que al grabar se vea de que estado es cada tramo.
+        if (RelicAnimatable.tickForcedCycle()) {
+            announceMood(minecraft);
         }
     }
 
@@ -138,8 +144,8 @@ public final class RelicClientEvents {
      * con la tecla M se pasan los ocho estados en unos segundos y nueve lineas de
      * chat taparian justo lo que se esta mirando.
      */
-    private static void announceForcedMood(Minecraft minecraft) {
-        RelicAnimatable.Mood mood = RelicAnimatable.cycleForcedMood();
+    private static void announceMood(Minecraft minecraft) {
+        RelicAnimatable.Mood mood = RelicAnimatable.forcedMood();
         Component aviso = mood == null
                 ? Component.translatable("message.holocore.mood_auto")
                 : Component.translatable("message.holocore.mood_forced",

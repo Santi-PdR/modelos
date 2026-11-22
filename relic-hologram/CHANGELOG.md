@@ -1,5 +1,21 @@
 # Historial de cambios
 
+## 1.0.38 — la lluvia tiene gotas y los estados pueden pasar solos
+
+* **VFX propio para la lluvia**: seis gotas cayendo alrededor de la reliquia, con viento
+  lateral por fase, apagándose abajo. La lluvia es el estado que más tiempo se pasa
+  encendido y con chispas en órbita se confundía con el reposo. Mismo lote aditivo y
+  misma textura que las chispas: **cero draws nuevos**, y correr acelera la caída
+  (×1.4) como si te llegara de lado.
+* **`/relic mood cycle [segundos]`**: los nueve estados pasan solos cada N segundos (6 por
+  defecto, 1–60) y `cycle 0` para. Avisa igual que la tecla M (barra de acción), así que
+  al mirar una grabación se sabe qué estado es cada tramo. La ronda va por **ticks de
+  cliente** y `/relic mood` la recuerda en una línea aparte: si no, el estado cambiaría
+  solo y parecería un fallo.
+* Los dos VFX de «estado» quedan simétricos: **burbujas que suben** bajo el agua y
+  **gotas que caen** con lluvia, con el mismo código de base (`fract` + `billboardAt`).
+* 2 claves nuevas por idioma (67 en cada uno).
+
 ## 1.0.37 — la reliquia reacciona a cómo te mueves
 
 * **Energía de movimiento (0–1)**, un eje **aparte** de los nueve estados de brillo: el
