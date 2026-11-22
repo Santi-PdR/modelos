@@ -33,7 +33,8 @@ public final class VisualFixtureServer {
 
     /** Observe only the initial high-health C target, never synthetic preview clips. */
     @SubscribeEvent public static void captureConfirmedImpact(net.minecraftforge.event.entity.living.LivingDamageEvent event) {
-        if (primaryTarget == null || !primaryTarget.equals(event.getEntity().getUUID())
+        if (confirmedImpactCount >= com.stainkatana.katana.CombatTuning.ultimateStrikeCount()
+                || primaryTarget == null || !primaryTarget.equals(event.getEntity().getUUID())
                 || event.getEntity().level().isClientSide || event.getAmount() <= 0
                 || !(event.getSource().getEntity() instanceof ServerPlayer)
                 || !com.stainkatana.katana.KatanaAbilities.isCinematicallyBound(event.getEntity())) return;
