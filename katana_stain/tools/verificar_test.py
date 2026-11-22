@@ -71,7 +71,7 @@ print('OK: gesto de Emotecraft atribuido y cancelación de línea de tiempo')
 
 scene=(root/'java/com/stainkatana/katana/client/KatanaScene.java').read_text()
 assert 'SAFETY_TIMEOUT = 212' in scene and 'mc.isPaused()' in scene
-assert 'KatanaScene.start()' in anim and 'KatanaScene.stop()' in anim
+assert 'KatanaScene.start(ability == 6)' in anim and 'KatanaScene.stop()' in anim
 assert (root/'resources/META-INF/CINEMASCOPE_LICENSE.txt').is_file()
 assert 'betterCombatSound("katana_slash", SoundEvents.PLAYER_ATTACK_SWEEP)' in ability
 assert 'betterCombatSound("rapier_stab", SoundEvents.PLAYER_ATTACK_SWEEP)' in ability

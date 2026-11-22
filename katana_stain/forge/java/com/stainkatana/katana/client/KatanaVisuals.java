@@ -25,7 +25,8 @@ public final class KatanaVisuals {
         if (localCaster && (style == KatanaVisualStyle.ULTIMATE_CUT || style == KatanaVisualStyle.ULTIMATE_CROSS
                 || style == KatanaVisualStyle.ULTIMATE_FINAL || style == KatanaVisualStyle.FINISHER
                 || style == KatanaVisualStyle.SCENE_FOCUS)) {
-            KatanaScene.impact(style == KatanaVisualStyle.ULTIMATE_CROSS, leftHanded, x, y, z);
+            if (style == KatanaVisualStyle.SCENE_FOCUS) KatanaScene.focus(x, y, z);
+            else KatanaScene.impact(style == KatanaVisualStyle.ULTIMATE_CROSS, leftHanded, x, y, z);
         }
         // Focus is a camera cue, not a premature hit effect.
         if (style == KatanaVisualStyle.SCENE_FOCUS) return;

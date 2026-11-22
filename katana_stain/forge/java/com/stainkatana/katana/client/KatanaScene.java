@@ -24,13 +24,19 @@ public final class KatanaScene {
     private static int age, impactAge = 4;
     private static int impactDirection;
     private static float initialYaw;
-    private static final double[] ORBIT = {40, 95, 170, 230, 300, 365};
-    private static final double[] DISTANCE = {5.0, 3.4, 4.2, 3.2, 5.0, 3.6};
-    private static final double[] HEIGHT = {2.0, .9, 2.1, .8, 2.8, 1.3};
+    private static boolean finisher;
+    // Side-biased two-shots keep both actors readable; a full orbit frequently
+    // put the victim directly in front of the attacker. Z has its own timing.
+    private static final double[] C_ANGLE = {72, 92, 106, 78, 100, 88};
+    private static final double[] C_DISTANCE = {4.6, 4.0, 4.5, 4.0, 4.6, 3.7};
+    private static final double[] C_HEIGHT = {1.0, .65, .85, .55, 1.0, .6};
+    private static final double[] Z_ANGLE = {70, 90, 105};
+    private static final double[] Z_DISTANCE = {4.5, 3.5, 4.1};
+    private static final double[] Z_HEIGHT = {.8, .55, .75};
     private static double progress, previous;
     private KatanaScene() { }
 
-    public static void start() {
+    public static void start(boolean shortFinisher) {
         if (!KatanaClientConfig.ULTIMATE_FRAME.get()) return;
         Minecraft mc = Minecraft.getInstance();
         if (!active && mc.player != null) {
@@ -38,6 +44,7 @@ public final class KatanaScene {
             mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
         }
         initialYaw = mc.player == null ? 0 : mc.player.getYRot();
+        finisher = shortFinisher;
         active = true; age = 0; impactAge = 4; focus = null; cameraPosition = null; cameraApplied = false;
     }
     public static void stop() {
@@ -48,6 +55,10 @@ public final class KatanaScene {
         active = false; impactAge = 4; focus = null; cameraPosition = null;
     }
     public static boolean cameraApplied() { return cameraApplied; }
+    public static void focus(double x, double y, double z) {
+        if (active && KatanaClientConfig.ULTIMATE_FRAME.get())
+            focus = new net.minecraft.world.phys.Vec3(x, y, z);
+    }
     public static void impact(boolean second, boolean leftHanded, double x, double y, double z) {
         if (active && KatanaClientConfig.ULTIMATE_FRAME.get()) {
             impactAge = 0;
@@ -92,15 +103,27 @@ public final class KatanaScene {
         event.setRoll(event.getRoll() + (float) tilt);
         if (!active || focus == null || cameraUnavailable) return;
         Minecraft mc = Minecraft.getInstance();
-        // Original orbit around the midpoint, with a wall raycast to avoid filming through terrain.
+        // Target-relative side framing: preserve the line between the two
+        // actors even when the server relocates the caster for the next cut.
+        // This is local presentation only and never changes aim or damage.
         var player = mc.player;
         var caster = player.getPosition(partial).add(0, 1.1, 0);
-        var center = caster.lerp(focus, .55);
+        var center = caster.lerp(focus, .5);
+        var axis = caster.subtract(focus).multiply(1, 0, 1);
+        double separation = axis.length();
+        if (separation < .1) {
+            double yaw = Math.toRadians(initialYaw);
+            axis = new net.minecraft.world.phys.Vec3(Math.sin(yaw), 0, -Math.cos(yaw));
+        } else axis = axis.scale(1 / separation);
         double time = age + partial;
-        double angle = Math.toRadians(initialYaw + SceneCurve.shot(time, ORBIT));
-        double distance = SceneCurve.shot(time, DISTANCE);
-        double height = SceneCurve.shot(time, HEIGHT);
-        var desired = center.add(Math.sin(angle) * distance, height, -Math.cos(angle) * distance);
+        double duration = finisher ? 30 : 200;
+        double angle = Math.toRadians(SceneCurve.shot(time, duration, finisher ? Z_ANGLE : C_ANGLE));
+        double distance = SceneCurve.shot(time, duration, finisher ? Z_DISTANCE : C_DISTANCE)
+                + Math.min(4.0, Math.max(0.0, separation - 2.0) * .5);
+        double height = SceneCurve.shot(time, duration, finisher ? Z_HEIGHT : C_HEIGHT);
+        var side = new net.minecraft.world.phys.Vec3(-axis.z, 0, axis.x);
+        var desired = center.add(axis.scale(Math.cos(angle) * distance))
+                .add(side.scale(Math.sin(angle) * distance)).add(0, height, 0);
         var trace = mc.level.clip(new net.minecraft.world.level.ClipContext(center, desired,
                 net.minecraft.world.level.ClipContext.Block.COLLIDER,
                 net.minecraft.world.level.ClipContext.Fluid.NONE, player));

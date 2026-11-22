@@ -12,7 +12,13 @@ public final class SceneCurve {
     public static double shot(double ticks, double[] keys) {
         if (keys.length < 2) throw new IllegalArgumentException("camera keyframes");
         if (!Double.isFinite(ticks)) ticks = 0;
-        double segment = Math.max(0, Math.min(keys.length - 1, ticks / 200 * (keys.length - 1)));
+        return shot(ticks, 200, keys);
+    }
+    /** Interpolate over the actual scene duration, including short finishers. */
+    public static double shot(double ticks, double duration, double[] keys) {
+        if (keys.length < 2 || !Double.isFinite(duration) || duration <= 0) throw new IllegalArgumentException("camera keyframes");
+        if (!Double.isFinite(ticks)) ticks = 0;
+        double segment = Math.max(0, Math.min(keys.length - 1, ticks / duration * (keys.length - 1)));
         int i = Math.min(keys.length - 2, (int) segment);
         double factor = ease(segment - i);
         return keys[i] + (keys[i + 1] - keys[i]) * factor;

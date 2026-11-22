@@ -24,6 +24,11 @@ public final class SceneCurveCheck {
         double[] shots = {40, 95, 170, 230, 300, 365};
         if (SceneCurve.shot(-1, shots) != 40 || SceneCurve.shot(200, shots) != 365 || SceneCurve.shot(400, shots) != 365)
             throw new AssertionError("shot endpoints");
+        if (SceneCurve.shot(0, 30, shots) != 40 || SceneCurve.shot(30, 30, shots) != 365
+                || SceneCurve.shot(15, 30, new double[]{0, 10, 20}) != 10)
+            throw new AssertionError("short finisher timing");
+        try { SceneCurve.shot(0, 0, shots); throw new AssertionError("invalid duration accepted"); }
+        catch (IllegalArgumentException expected) { }
         for (int i = 1; i < 2000; i++) {
             double a = SceneCurve.shot(i / 10.0, shots);
             double b = SceneCurve.shot((i + 1) / 10.0, shots);
