@@ -17,6 +17,7 @@ import armor_model_pipeline as G
 import bbmodel_export as B
 import cape_animation_pipeline as A
 import cape_fit as F
+import cape_ember_sprites as E
 import cape_motion as M
 import cape_stride as S
 import cape_tracks as T
@@ -88,6 +89,9 @@ def preservation(*, changed=()):
         elif wide and (P.ASSETS/name) == P.ICON:
             from cape_icon import verify as verify_icon
             verify_icon()
+        elif name == E.MANIFEST and version >= (1, 67, 35):
+            assert json.loads((BASE/name).read_text()) == {'textures': ['capatest:'+n for n in E.KEYS]}
+            E.bake(check=True)  # only deterministic in-betweens may extend the original list
         elif name not in changed:
             live = P.ASSETS/name
             reference = gait_backup/name if gait_backup and live == A.ANIM else live
