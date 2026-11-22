@@ -84,8 +84,9 @@ final class CapeLandingLightProbe {
                 "a second wearer inherited another wearer's landing");
         var repeatRenderer = new CapaArmorRenderer();
         var impulse = new CapeLanding.Motion(3.2, .8);
-        var first = draw(repeatRenderer, stand(game), stack, armor, 7, 0, impulse);
-        var replay = draw(repeatRenderer, stand(game), stack, armor, 7, 0, impulse);
+        var replayStand = stand(game);
+        var first = draw(repeatRenderer, replayStand, stack, armor, 7, 0, impulse);
+        var replay = draw(repeatRenderer, replayStand, stack, armor, 7, 0, impulse);
         require(Arrays.equals(first.light, replay.light) && first.rgba == replay.rgba,
                 "replaying the same landing tick changed UV2");
         rows.append("repeticion\t7\t\t.8000\t\t\t").append(String.format(Locale.ROOT, "%.6f\t%.6f\t%d\t%d%n",
