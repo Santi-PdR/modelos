@@ -1,5 +1,7 @@
 # v1.67.34 · Continuidad de tela y halo tras un tirón
 
+La prueba más reciente es [v1.67.35](../v1.67.35/notas.md). Este JAR queda disponible para volver atrás.
+
 **[JAR de prueba](https://raw.githubusercontent.com/Santi-PdR/modelos/e6fde0d3db23264c105b9f88beacf404bdda1931/entregables/v1.67.34/capatest-1.67.34.jar)** · [PowerShell para `test-1`](instalar-test-1.txt) · [SHA-256](JAR.sha256) · [Volver a v1.67.33](../v1.67.33/notas.md).
 
 Cuando vuelve el dibujo después de una pausa breve (hasta 0,5 s de tiempo del juego), el último giro o cambio de luz ya no se aplica retroactivamente a todo el intervalo sin cuadros. La tela mantiene su inercia y el halo continúa el fundido anterior, con hasta un tick de respuesta al dato nuevo en el cuadro de regreso. No intenta adivinar el instante del cambio ni aumentar los FPS. Se mantienen los reinicios tras ausencias largas, los cortes de posición del paño y la protección contra pasadas repetidas.

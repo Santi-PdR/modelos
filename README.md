@@ -11,6 +11,12 @@ Se equipa en el pecho o en `back` con Curios opcional.
 · [Visor offline](docs/capa_v1170_visor.html)
 · [Propuestas de accesorios](docs/ACCESORIOS_BLIGHT_STAR.md)
 
+### v1.67.35 — fundido de las brasas
+
+**[Descargar JAR de prueba v1.67.35](https://raw.githubusercontent.com/Santi-PdR/modelos/8039d835ccd2b620c31f69a668b594628b64d44d/entregables/v1.67.35/capatest-1.67.35.jar)** · [PowerShell para test-1](docs/releases/v1.67.35/instalar-test-1.txt) · [Medidas y SHA-256](docs/releases/v1.67.35/notas.md).
+
+Los dos cambios de dibujo de cada brasa tienen cuadros intermedios. Se verifica en Forge el mismo cuadrilátero por partícula, sin cambiar su vuelo, el paño o el halo. La .34 queda disponible para volver atrás.
+
 ### v1.67.34 — continuidad tras una pausa de renderizado
 
 **[Descargar JAR de prueba v1.67.34](https://raw.githubusercontent.com/Santi-PdR/modelos/e6fde0d3db23264c105b9f88beacf404bdda1931/entregables/v1.67.34/capatest-1.67.34.jar)** · [PowerShell para test-1](docs/releases/v1.67.34/instalar-test-1.txt) · [Comparación contra la .33 y SHA-256](docs/releases/v1.67.34/notas.md).
