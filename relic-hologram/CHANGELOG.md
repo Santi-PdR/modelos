@@ -23,6 +23,11 @@
 * **Dos claves de idioma que faltaban** (`neutral` y `night`): `/relic mood` con la
   reliquia en calma enseñaba `message.holocore.state.neutral` en crudo. 61 claves por
   idioma.
+* **El CI exige los siete estados en cada `switch` sobre `Mood`**: un enum nuevo sin
+  rama no compila (`NIGHT` se olvidó dos veces: el tinte del borde y la energía del
+  flotado), y descubrirlo cuesta un build entero. La validación recorre los `.java`
+  del cliente, extrae cada switch por llaves y, si no tiene `default`, exige los
+  siete `case`. Probada en rojo quitando las dos ramas.
 
 ## 1.0.31 — la reliquia flota, se asienta y tiene tecla de pulso
 
