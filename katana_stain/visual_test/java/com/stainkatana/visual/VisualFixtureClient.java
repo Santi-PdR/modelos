@@ -579,7 +579,15 @@ public final class VisualFixtureClient {
                 var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                 VisualFixtureServer.verifyRemarkDuringZ(player);
             });
-            case 1810 -> {
+            case 1810 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                VisualFixtureServer.startXWallCheck(player);
+            });
+            case 1830 -> mc.getSingleplayerServer().execute(() -> {
+                var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                VisualFixtureServer.verifyXWallCheck(player);
+            });
+            case 1840 -> {
                 System.out.println("STAIN_EFFECT_SAMPLES_DONE"); System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop();
             }
             default -> { }

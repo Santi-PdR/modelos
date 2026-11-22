@@ -118,6 +118,43 @@ public final class VisualFixtureServer {
         System.out.println("STAIN_Z_LOCKED_MARK_VERIFIED");
     }
 
+    private static Zombie blockedXTarget, visibleXTarget;
+    private static BlockPos xWall;
+    private static net.minecraft.world.level.block.state.BlockState xPreviousBlock;
+    public static void startXWallCheck(ServerPlayer player) {
+        var level = player.serverLevel();
+        // Isolated flat-world setup: one target behind a wall and one beside it.
+        int x = 100, z = 100;
+        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
+        player.teleportTo(level, x + .5, y, z + .5, 0, 0);
+        player.setYRot(0); player.setXRot(0);
+        xWall = new BlockPos(x, y + 1, z + 2);
+        xPreviousBlock = level.getBlockState(xWall);
+        level.setBlockAndUpdate(xWall, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+        blockedXTarget = EntityType.HUSK.create(level);
+        visibleXTarget = EntityType.HUSK.create(level);
+        if (blockedXTarget == null || visibleXTarget == null) throw new IllegalStateException("Cannot create X targets");
+        blockedXTarget.setNoAi(true); visibleXTarget.setNoAi(true);
+        blockedXTarget.moveTo(x + .5, y, z + 4.5, 180, 0);
+        visibleXTarget.moveTo(x + 3.0, y, z + 4.5, 180, 0);
+        level.addFreshEntity(blockedXTarget); level.addFreshEntity(visibleXTarget);
+        var state = player.getPersistentData().getCompound("StainKatanaAbilities");
+        state.putLong("next1", 0); state.remove("last");
+        player.getPersistentData().put("StainKatanaAbilities", state);
+        com.stainkatana.katana.KatanaAbilities.activate(player, 1);
+        if (state.getLong("next1") == 0) throw new IllegalStateException("X wall test did not activate");
+    }
+    public static void verifyXWallCheck(ServerPlayer player) {
+        player.serverLevel().setBlockAndUpdate(xWall, xPreviousBlock);
+        if (blockedXTarget == null || visibleXTarget == null
+                || blockedXTarget.getHealth() != blockedXTarget.getMaxHealth()
+                || visibleXTarget.getHealth() >= visibleXTarget.getMaxHealth())
+            throw new IllegalStateException("X line of sight: blocked="
+                    + (blockedXTarget == null ? "missing" : blockedXTarget.getHealth())
+                    + " visible=" + (visibleXTarget == null ? "missing" : visibleXTarget.getHealth()));
+        System.out.println("STAIN_X_WALL_AND_VISIBLE_TARGET_VERIFIED");
+    }
+
     @SubscribeEvent public static void observeAbilitySound(net.minecraftforge.event.PlayLevelSoundEvent.AtPosition event) {
         if (xSoundVerified || !(event.getLevel() instanceof ServerLevel) || event.getSound() == null
                 || event.getSource() != net.minecraft.sounds.SoundSource.PLAYERS

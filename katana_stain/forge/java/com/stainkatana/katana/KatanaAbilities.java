@@ -544,6 +544,15 @@ public final class KatanaAbilities {
         int hits = 0;
         for (LivingEntity target : targets) {
             if (hits >= maxTargets) break;
+            // A nearby entity behind a solid wall must not receive a through-wall
+            // hit just because its center falls inside the horizontal cone. Use
+            // the nearest actual hitbox point, including multipart hitboxes.
+            Vec3 eye = player.getEyePosition();
+            Vec3 contact = nearestPoint(target, eye);
+            if (level.clip(new net.minecraft.world.level.ClipContext(eye, contact,
+                    net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                    net.minecraft.world.level.ClipContext.Fluid.NONE, player)).getType()
+                    != net.minecraft.world.phys.HitResult.Type.MISS) continue;
             // Deliberadamente poderoso, pero con límites frente a atributos de otros mods.
             double base = player.getAttributeValue(Attributes.ATTACK_DAMAGE);
             float damage = CombatTuning.damage(base, ultimate);
