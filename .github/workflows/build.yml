@@ -1136,7 +1136,9 @@ jobs:
           mkdir -p build/fx-smoke-run/config
           printf 'earlyWindowControl = false\n' > build/fx-smoke-run/config/fml.toml
           timeout --kill-after=12s 360s xvfb-run -a -s '-screen 0 1280x1024x24 +extension GLX -noreset' gradle -PcapeFxSmoke --no-daemon --console=plain runClient > "$log" 2>&1 || rc=$?
-          { grep -E 'FX smoke: (traspaso real|nuca en salto|brasa, el mismo tick)' "$log" || true; }
+          awk 'sub(/.*FX smoke: /, "") && /^(traspaso real|nuca en salto|brasa, el mismo tick)/' "$log" | while IFS= read -r line; do
+            printf '::notice title=Transiciones reales en Forge::%s\n' "$line"
+          done
           awk 'sub(/.*FX smoke: /, "")' "$log" | tail -n 5 | while IFS= read -r line; do
             printf '::notice title=FX en Forge::%s\n' "$line"
           done

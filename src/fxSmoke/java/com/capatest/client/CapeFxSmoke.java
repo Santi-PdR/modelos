@@ -585,7 +585,16 @@ public final class CapeFxSmoke {
                 player.getInventory().setItem(HOTBAR_SLOT, next == Scene.HOTBAR ? mantle() : ItemStack.EMPTY);
                 player.inventoryMenu.broadcastChanges();
             }
-            if (next.combined() || next.transfer()) {
+            if (next.transfer()) {
+                // Isolate the hop from the later walk/posture routes. The
+                // inherited combined runway builds a raised floor, which can
+                // leave a later teleport inside snow after walking off it.
+                player.getAbilities().flying = false;
+                player.onUpdateAbilities();
+                player.setSprinting(false);
+                player.setDeltaMovement(Vec3.ZERO);
+                player.teleportTo(level, pane.getX() - 13.5, pane.getY() - .999, pane.getZ() - 13.5, 0, 0);
+            } else if (next.combined()) {
                 CapeCombinedProbe.prepare(player, CapeCombinedProbe.runway(pane));
             } else if (next.climb()) {
                 CapeClimbProbe.prepare(player, CapeClimbProbe.column(pane));
