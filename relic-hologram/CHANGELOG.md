@@ -1,5 +1,22 @@
 # Historial de cambios
 
+## 1.0.36 — la reliquia suena
+
+* **Sonido propio**: al despertar, dormir y pulsar la reliquia del jugador local suena
+  con **ametista de vanilla** (`amethyst_block.resonate` grave al despertar, más grave
+  al dormir, `amethyst_block.chime` agudo en el pulso). El mod sigue sin traer ningún
+  asset de audio.
+* **Solo la reliquia propia nunca las ajenas**: cada portador vería (y oiría) su reliquia
+  y las de los demás, y con cuatro jugadores cerca cada pulso sería un coro sin forma de
+  saber de dónde viene. La comprobación es sobre el UUID del portador.
+* **Suena en la cabeza y no en el hombro**: el hombro está a medio metro de la cámara y
+  colocar ahí la fuente hace que el paneo salte al girar.
+* **Dos claves nuevas**: `sound.events` (interruptor) y `sound.volume` (0–1, por defecto
+  0.45). Se pueden probar en caliente con `/relic set`, como el resto. Va por
+  `SoundSource.PLAYERS`, así que respeta el volumen de jugador del ajuste de sonido.
+* El CI comprueba que solo suena la propia, que los sonidos son de vanilla, que se
+  pueden apagar y que las tres llamadas siguen conectadas (probado en rojo cada una).
+
 ## 1.0.35 — noveno estado: portal, y las chispas se estiran
 
 * **Estado nuevo `portal`**: con un portal del Nether, del End o de salida a menos de

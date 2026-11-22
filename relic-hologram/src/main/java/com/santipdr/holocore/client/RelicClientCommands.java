@@ -354,7 +354,9 @@ public final class RelicClientCommands {
             Tweak.whole("visuals.glitchMinSeconds", RelicConfig.GLITCH_MIN_SECONDS, 2, 600, 20),
             Tweak.whole("visuals.glitchMaxSeconds", RelicConfig.GLITCH_MAX_SECONDS, 2, 900, 60),
             Tweak.whole("visuals.alertRadius", RelicConfig.ALERT_RADIUS, 2, 48, 12),
-            Tweak.whole("visuals.combatHoldTicks", RelicConfig.COMBAT_HOLD_TICKS, 10, 600, 80));
+            Tweak.whole("visuals.combatHoldTicks", RelicConfig.COMBAT_HOLD_TICKS, 10, 600, 80),
+            Tweak.flag("sound.events", RelicConfig.EVENT_SOUND, true),
+            Tweak.number("sound.volume", RelicConfig.SOUND_VOLUME, 0.0D, 1.0D, 0.45D));
 
     private static String[] tweakKeys() {
         return TWEAKS.stream().map(Tweak::key).toArray(String[]::new);

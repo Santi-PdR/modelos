@@ -514,6 +514,20 @@ jobs:
           # registrada y consumida, o el jugador la configura y no pasa nada.
           teclas = (base / 'RelicKeys.java').read_text(encoding='utf-8')
           assert 'KeyMapping PULSE' in teclas, 'falta la tecla del pulso'
+          # Sonido: solo la reliquia propia, con sonidos de vanilla y apagable.
+          sonidos = (base / 'RelicSounds.java').read_text(encoding='utf-8')
+          assert 'playLocalSound(' in sonidos, 'la reliquia no suena'
+          assert '!player.getUUID().equals(wearer)' in sonidos, \
+              'sonarian tambien las reliquias de otros jugadores'
+          assert 'SoundEvents.AMETHYST_BLOCK_CHIME' in sonidos \
+              and 'SoundEvents.AMETHYST_BLOCK_RESONATE' in sonidos, \
+              'los sonidos no son de vanilla (el mod no trae assets de audio)'
+          assert 'RelicConfig.EVENT_SOUND.get()' in sonidos \
+              and 'RelicConfig.SOUND_VOLUME.get()' in sonidos, \
+              'el sonido no se puede apagar ni bajar'
+          for llamada in ('RelicSounds.pulse(this.wearer)', 'RelicSounds.awake(this.wearer)', \
+                          'RelicSounds.sleep(this.wearer)'):
+              assert llamada in animatable, f'el sonido no esta conectado: {llamada}'
           assert 'KeyMapping MOOD' in teclas, 'falta la tecla de los estados de brillo'
           assert 'event.register(RelicKeys.MOOD)' in eventos, 'la tecla M no se registra'
           assert 'RelicKeys.MOOD.consumeClick()' in eventos, 'la tecla M no se consume'
@@ -651,7 +665,7 @@ jobs:
               eleccion = re.search(r'\.defineEnum\("(\w+)",\s*[\w.]+\.(\w+)\)', linea)
               if eleccion:
                   defectos[f'{seccion}.{eleccion.group(1)}'] = eleccion.group(2)
-          assert len(defectos) == 24, f'esperaba 24 defectos, hay {len(defectos)}'
+          assert len(defectos) == 26, f'esperaba 26 defectos, hay {len(defectos)}'
 
           # --- tabla de configuracion del README (solo esa seccion) ---
           inicio = readme.index('## Configuración')
@@ -740,7 +754,7 @@ jobs:
                   clave = re.search(r'\.defineEnum\("(\w+)"', linea).group(1)
                   declaradas[f'{seccion}.{clave}'] = ('enum', 0.0, 0.0)
 
-          assert len(declaradas) == 24, f'esperaba 24 claves en RelicConfig, hay {len(declaradas)}'
+          assert len(declaradas) == 26, f'esperaba 26 claves en RelicConfig, hay {len(declaradas)}'
 
           # --- comando: Tweak.<tipo>("clave", RelicConfig.CAMPO, [min, max,] defecto) ---
           tabla, defecto_tabla = {}, {}

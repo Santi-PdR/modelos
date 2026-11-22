@@ -40,6 +40,8 @@ public final class RelicConfig {
     public static final ForgeConfigSpec.IntValue GLITCH_MAX_SECONDS;
     public static final ForgeConfigSpec.IntValue ALERT_RADIUS;
     public static final ForgeConfigSpec.IntValue COMBAT_HOLD_TICKS;
+    public static final ForgeConfigSpec.BooleanValue EVENT_SOUND;
+    public static final ForgeConfigSpec.DoubleValue SOUND_VOLUME;
 
     static {
         ForgeConfigSpec.Builder b = new ForgeConfigSpec.Builder();
@@ -107,6 +109,16 @@ public final class RelicConfig {
                 .defineInRange("alertRadius", 12, 2, 48);
         COMBAT_HOLD_TICKS = b.comment("Ticks que la reliquia sigue en estado cargado tras el ultimo golpe/ataque.")
                 .defineInRange("combatHoldTicks", 80, 10, 600);
+        b.pop();
+
+        b.comment("Sonidos de la reliquia del jugador local.").push("sound");
+        EVENT_SOUND = b.comment("Suena al despertar, dormir y pulsar. Solo la reliquia del jugador local:",
+                        "las de otros jugadores no suenan, o con cuatro portadores cerca seria una orquesta.",
+                        "Los sonidos son de ametista de vanilla: el mod no trae assets de audio.")
+                .define("events", true);
+        SOUND_VOLUME = b.comment("Volumen de esos sonidos (0 = apagados, 1 = los de vanilla tal cual).",
+                        "0.45 es lo que se oye sin tapar los pasos ni la musica.")
+                .defineInRange("volume", 0.45D, 0.0D, 1.0D);
         b.pop();
 
         SPEC = b.build();

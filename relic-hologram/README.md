@@ -313,6 +313,8 @@ shaders de 1.20.1 están en [BRILLO-Y-SHADERS.md](docs/BRILLO-Y-SHADERS.md).
 | `visuals.glitchMinSeconds` / `glitchMaxSeconds` | `20` / `60` | Intervalo entre variaciones de reposo. |
 | `visuals.alertRadius` | `12` | Radio en el que un monstruo activa `idle_alert`. |
 | `visuals.combatHoldTicks` | `80` | Ticks en estado cargado tras el último golpe. |
+| `sound.events` | `true` | Sonidos al despertar, dormir y pulsar, **solo de la reliquia propia**. Son de ametista de vanilla: el mod no trae audio. |
+| `sound.volume` | `0.45` | Volumen de esos sonidos (0–1). `0` los apaga igual que `sound.events = false`. |
 
 Desde 1.0.20 todas estas claves (menos `placement.shoulder` y `visuals.quality`,
 que tienen `/relic side` y `/relic quality`) se pueden probar en caliente con
@@ -324,6 +326,19 @@ Los offsets se aplican en el espacio del hueso `body` del jugador (origen en el
 torso/cuello, Y+ abajo, Z+ espalda), no en el origen de los pies. Por eso el
 `.geo.json` centrado es el correcto: el anclaje al hombro lo pone el código y no
 hay que sumar la traslación que traía `relic_hologram.geo.json`.
+
+## Sonido
+
+La reliquia **propia** suena al despertar, dormir y pulsar, con sonidos de **ametista
+de vanilla** (el mod no trae ningún asset de audio): `amethyst_block.resonate` grave
+para despertar, más grave todavía para dormir y `amethyst_block.chime` agudo para el
+pulso. Suena en la cabeza del jugador y no en el hombro, porque el hombro está a medio
+metro de la cámara y el paneo saltaría al girar.
+
+Las reliquias de **otros** jugadores no suenan nunca: con cuatro portadores cerca cada
+pulso sería un coro sin forma de saber de dónde viene. Se apaga con
+`sound.events = false` o bajando `sound.volume` a `0` (también en caliente con
+`/relic set sound.volume 0`).
 
 ## Qué hace exactamente
 
@@ -387,8 +402,10 @@ hay que sumar la traslación que traía `relic_hologram.geo.json`.
 - [ ] Equipar en `charm` → `activation` y luego `idle` en bucle.
 - [ ] Desequipar → desaparece; re-equipar → vuelve a activarse.
 - [ ] Tecla G y `/relic toggle` → `deactivation`/`idle_dormant` y vuelta.
-- [ ] Tecla P (`/relic pulse`) → pulso con eco del anillo, glitch del shader y el
-      achatado del evento.
+- [ ] Tecla P (`/relic pulse`) → pulso con eco del anillo, glitch del shader, el
+      achatado del evento y **el chime** (una sola vez; con otros portadores cerca no
+      suena la de ellos).
+- [ ] `/relic set sound.volume 0` en caliente → el siguiente pulso ya no suena.
 - [ ] `/relic pulse`, `/relic release`, subida de nivel (`layer_bump`).
 - [ ] Recibir daño → `hit` + `layer_hit`; monstruo cerca → `idle_alert`.
 - [ ] Agacharse (sneak) y girar el cuerpo: el núcleo acompaña al torso sin saltos.

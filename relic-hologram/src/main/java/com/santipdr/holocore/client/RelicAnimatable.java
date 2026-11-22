@@ -319,6 +319,7 @@ public final class RelicAnimatable implements GeoAnimatable {
             if (this.active && isRecent(now, snapshot.pulse())) {
                 request(RelicAnimations.ENERGY_PULSE);
                 boostFlash(0.60F);
+                RelicSounds.pulse(this.wearer);
             }
         }
         if (snapshot.release() != this.seenRelease) {
@@ -460,8 +461,10 @@ public final class RelicAnimatable implements GeoAnimatable {
             // evento, y encender el brillo a tope al entrar se veia como un flash
             // blanco encima del jugador.
             request(quick ? RelicAnimations.WAKE : RelicAnimations.ACTIVATION);
+            RelicSounds.awake(this.wearer);
         } else if (previous != LoopState.DORMANT && next == LoopState.DORMANT) {
             request(quick ? RelicAnimations.SLEEP : RelicAnimations.DEACTIVATION);
+            RelicSounds.sleep(this.wearer);
         }
 
         if (restBefore && next == LoopState.CHARGED) {
