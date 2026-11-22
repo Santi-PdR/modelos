@@ -496,7 +496,23 @@ public final class VisualFixtureClient {
             case 1272 -> capture = "51_blood_right_third_draw.png";
             case 1276 -> capture = "52_blood_right_third_face.png";
             case 1280 -> capture = "53_blood_right_third_recovery.png";
-            case 1295 -> {
+            // Controlled left-handed calibration at the same clip phase.
+            case 1290 -> { mc.options.setCameraType(CameraType.FIRST_PERSON); mc.options.fov().set(70);
+                mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.LEFT); }
+            case 1305 -> { if (mc.player.getMainArm() != net.minecraft.world.entity.HumanoidArm.LEFT)
+                    throw new IllegalStateException("Left hand not synchronized for calibration"); bloodSample(-8, 0, 0); }
+            case 1312 -> capture = "72_left_contact_x_minus8.png";
+            case 1330 -> bloodSample(8, 0, 0);
+            case 1337 -> capture = "73_left_contact_x_plus8.png";
+            case 1355 -> bloodSample(0, -8, 0);
+            case 1362 -> capture = "74_left_contact_y_minus8.png";
+            case 1380 -> bloodSample(0, 8, 0);
+            case 1387 -> capture = "75_left_contact_y_plus8.png";
+            case 1405 -> bloodSample(0, 0, -8);
+            case 1412 -> capture = "76_left_contact_z_minus8.png";
+            case 1430 -> bloodSample(0, 0, 8);
+            case 1437 -> capture = "77_left_contact_z_plus8.png";
+            case 1460 -> {
                 mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_X.set(0.0);
                 com.stainkatana.katana.KatanaClientConfig.BLOOD_HAND_Y.set(0.0);
