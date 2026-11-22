@@ -15,6 +15,18 @@ for name, target in [('rightArm','rightArm'), ('leftArm','leftArm'), ('body','to
         if name == 'body': values = [0, values[1], 0]
         track[f'{frame * .0875:.4f}'] = {'vector': values, 'easing':'linear'}
     bones[target] = {'rotation':track}
+# Original wrist motion for the katana: the axe reference does not animate the
+# held item. Tilt the blade through the downstroke, then settle it back; the
+# player model arm remains the parent, so both follow the same hand transform.
+# These angles are authored for this mod, not copied from Better Combat.
+bones['rightItem'] = {'rotation': {
+    '0.0000': {'vector': [0, 0, 0], 'easing': 'linear'},
+    '0.1750': {'vector': [20, 0, 0], 'easing': 'linear'},
+    '0.3500': {'vector': [-35, 0, 0], 'easing': 'linear'},
+    '0.4375': {'vector': [-45, 0, 0], 'easing': 'linear'},
+    '0.6125': {'vector': [-20, 0, 0], 'easing': 'linear'},
+    '0.8750': {'vector': [0, 0, 0], 'easing': 'linear'},
+}}
 out = root/'forge/resources/assets/stainkatana/player_animation/stain_c_overhead.json'
 out.write_text(json.dumps({'format_version':'1.8.0','animations':{'stain_c_overhead':{'animation_length':.875,'bones':bones}}},indent=2)+'\n')
 print('Adapted', out)
