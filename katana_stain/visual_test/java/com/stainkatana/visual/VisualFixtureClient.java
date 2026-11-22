@@ -334,6 +334,14 @@ public final class VisualFixtureClient {
                 var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
                 var dragon = player.serverLevel().getEntity(dragonId);
                 if (!(dragon instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon boss)) throw new IllegalStateException("Dragon missing");
+                // Its autonomous flight and client rotation packets can move the
+                // target or aim between the setup and activation. Establish the
+                // test geometry on the server immediately before the request.
+                boss.teleportTo(player.getX(), player.getY() + 3, player.getZ() + 12);
+                boss.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                for (var part : boss.getParts()) part.setPos(player.getX(), player.getEyeY() - .4, player.getZ() + 10);
+                player.setYRot(0); player.setXRot(0);
+                player.getPersistentData().getCompound("StainKatanaAbilities").remove("last");
                 com.stainkatana.katana.KatanaAbilities.activate(player, 2);
                 if (!com.stainkatana.katana.KatanaAbilities.isCinematicallyBound(boss))
                     throw new IllegalStateException("C failed to select Ender Dragon");
