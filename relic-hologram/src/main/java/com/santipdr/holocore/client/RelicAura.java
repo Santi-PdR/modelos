@@ -178,7 +178,8 @@ public final class RelicAura {
 
     static void render(PoseStack poseStack, MultiBufferSource bufferSource, float partialTick,
                        RelicAnimatable.LoopState state, RelicGlowState glow, float fade,
-                       RelicAnimatable.Mood mood, float motion, boolean onShoulder) {
+                       RelicAnimatable.Mood mood, float motion, boolean onShoulder,
+                       RelicAnimatable.Ground ground) {
         float time = time(partialTick);
         Frame frame = frame(poseStack);
         // Destello de evento: el anillo se enciende aunque el estado no lo tenga,
@@ -195,7 +196,7 @@ public final class RelicAura {
         // se apaga con el destello. Solo en el hombro: en la vista previa el "suelo"
         // seria la cara de la camara y quedaria una tarjeta flotando en el aire.
         if (onShoulder && RelicConfig.GROUND_ECHO.get() && flash > 0.04F) {
-            drawGroundEcho(bufferSource, frame, flash, glow, fade);
+            drawGroundEcho(bufferSource, frame, flash, glow, fade, ground);
         }
         // Onda de choque: solo mientras dura el destello, o sea que en reposo no
         // cuesta ni un quad. Va detras del anillo para que el eco quede debajo.
@@ -260,13 +261,48 @@ public final class RelicAura {
      * eje Y del portador, no por el de la pantalla.</p>
      */
     private static void drawGroundEcho(MultiBufferSource bufferSource, Frame frame, float flash,
-                                       RelicGlowState glow, float fade) {
+                                       RelicGlowState glow, float fade, RelicAnimatable.Ground ground) {
         float t = 1.0F - Math.min(1.0F, flash);
         float radius = GROUND_MIN_RADIUS + (GROUND_MAX_RADIUS - GROUND_MIN_RADIUS) * t;
         float alpha = flash * GROUND_ADDITIVE * fade;
         if (alpha <= 0.01F) {
             return;
         }
+        // El suelo cambia la forma del eco (1.0.55), no su brillo: el presupuesto
+        // de luz es el mismo, asi que la regla de "tinte debajo, aditivo pequeno"
+        // se cumple igual en los cuatro casos.
+        float spread = switch (ground) {
+            // En el agua el eco es un rizo: mas ancho y mas tenue. El agua se lleva
+            // parte de la luz, como en el estado sumergido.
+            case WATER -> 1.35F;
+            // Arena, tierra, nieve: el suelo cede, el eco se abre y se apaga antes.
+            case LOOSE -> 1.12F;
+            // Piedra y metal: el eco se cierra sobre si mismo.
+            case HARD -> 0.88F;
+            case OTHER -> 1.0F;
+        };
+        float gain = switch (ground) {
+            case WATER -> 0.70F;
+            case LOOSE -> 0.88F;
+            case HARD -> 1.0F;
+            case OTHER -> 1.0F;
+        };
+        echoRing(bufferSource, frame, glow, radius * spread, alpha * gain);
+        if (ground == RelicAnimatable.Ground.HARD) {
+            // Rebote: el segundo anillo, mas pequeno y mas flojo, sale con el mismo
+            // destello pero cerrado sobre el primero. Es lo que hace una piedra.
+            echoRing(bufferSource, frame, glow, radius * spread * 0.55F, alpha * gain * 0.55F);
+        }
+    }
+
+    /**
+     * Un anillo tumbado: tinte con cobertura {@code alpha x GROUND_TINT_BOOST} y
+     * aditivo {@code alpha} encima. Sobre nieve o arena el aditivo solo sube los
+     * tres canales y la onda se queda blanca (fue el fallo de 1.0.9-1.0.10 con el
+     * aura); el tinte la mantiene del color del estado y el aditivo la hace brillar.
+     */
+    private static void echoRing(MultiBufferSource bufferSource, Frame frame,
+                                 RelicGlowState glow, float radius, float alpha) {
         float cx = frame.originX - frame.skyX * GROUND_DROP;
         float cy = frame.originY - frame.skyY * GROUND_DROP;
         float cz = frame.originZ - frame.skyZ * GROUND_DROP;
@@ -276,10 +312,6 @@ public final class RelicAura {
         float bx = frame.backX * radius;
         float by = frame.backY * radius;
         float bz = frame.backZ * radius;
-        // Tinte primero, igual que el anillo: sobre nieve o arena el aditivo solo
-        // sube los tres canales y la onda se queda blanca (fue el fallo de
-        // 1.0.9-1.0.10 con el aura). El tinte la mantiene del color del estado; el
-        // aditivo encima es lo que la hace brillar.
         if (RelicConfig.AURA_TINT.get()) {
             VertexConsumer tint = bufferSource.getBuffer(RelicRenderTypes.TINT_GLOW.apply(RING_TEXTURE));
             float coverage = Math.min(1.0F, alpha * GROUND_TINT_BOOST);

@@ -237,6 +237,12 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.55, el eco lee el suelo.** La forma del eco se elige con dos `switch` sobre
+`RelicAnimatable.Ground` (`spread` y `gain`), así que el brillo máximo no sube en ningún
+caso: en `HARD` se dibujan dos anillos, pero el segundo va a la mitad de fuerza. El tinte
+sigue debajo de cada uno (`echoRing`), o sea que la composición medida en 1.0.49 no cambia,
+solo cuántas veces se aplica.
+
 **1.0.54, el halo.** El único pase aditivo que no se tiñe, porque va sobre el modelo. Se
 acota en vez de tintarse: `HALO_ADDITIVE` 0.30 por canal. La textura de brillo es blanca
 pura, así que sin tope el pase sumaba hasta 1.25 por canal con `haloIntensity` alto y un

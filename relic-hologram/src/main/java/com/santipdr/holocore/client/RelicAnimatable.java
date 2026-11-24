@@ -131,6 +131,22 @@ public final class RelicAnimatable implements GeoAnimatable {
         END
     }
 
+    /**
+     * Lo que hay bajo los pies, para el eco del suelo (1.0.55). Se mira una vez por
+     * segundo y se guarda: el eco solo se dibuja con el destello de un evento, y en
+     * ese momento ya nadie puede consultar el bloque en medio del render.
+     */
+    public enum Ground {
+        /** Aire, madera, hierba alta... el caso de siempre. */
+        OTHER,
+        /** Piedra, deepslate, metal: el eco rebota (dos anillos). */
+        HARD,
+        /** Arena, tierra, nieve, hojas: el eco se abre mas y se apaga antes. */
+        LOOSE,
+        /** Agua: el eco se abre mucho mas y se queda tenue, como un rizo. */
+        WATER
+    }
+
     private final UUID wearer;
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     private final AnimationController<RelicAnimatable> stateController;
@@ -200,6 +216,8 @@ public final class RelicAnimatable implements GeoAnimatable {
     private static final int MOOD_GLITCH_TICKS = 120;
 
     private Mood mood = Mood.NEUTRAL;
+    private Ground ground = Ground.OTHER;
+    private int groundCooldown;
     /** Ticks que faltan para el proximo relampago de tormenta. */
     private int stormFlashCooldown;
     /** Ultimo tick en el que el cambio de estado encolo su glitch. */
@@ -225,9 +243,17 @@ public final class RelicAnimatable implements GeoAnimatable {
 
     /** Cada cuantos ticks se mira si hay un portal cerca: uno por segundo sobra. */
     private static final int PORTAL_SCAN_TICKS = 20;
+
+    /** Cada cuanto se mira el bloque de debajo (1 s). Un suelo no cambia de un tick a otro. */
+    private static final int GROUND_SCAN_TICKS = 20;
+    /** Por debajo de esta dureza el suelo es blando y el eco se abre (arena, tierra, nieve). */
+    private static final float GROUND_LOOSE_SPEED = 0.6F;
+    /** Por encima, el suelo es duro y el eco rebota (piedra, deepslate, metal). */
+    private static final float GROUND_HARD_SPEED = 1.5F;
     /** Radio (bloques) del escaneo de portal, a la altura de los pies y la cabeza. */
     private static final int PORTAL_RADIUS = 4;
     private int portalCooldown;
+    private final BlockPos.MutableBlockPos groundPos = new BlockPos.MutableBlockPos();
     private boolean portalNear;
     /** Posicion reutilizable del escaneo: crear una por bloque seria absurdo. */
     private final BlockPos.MutableBlockPos scanPos = new BlockPos.MutableBlockPos();
@@ -319,6 +345,42 @@ public final class RelicAnimatable implements GeoAnimatable {
     }
 
     /** Estado de brillo de ahora mismo (ver {@link Mood}). */
+    public Ground ground() {
+        return this.ground;
+    }
+
+    /**
+     * Clasifica el bloque de debajo. Cacheado como el portal: una consulta por
+     * segundo, no por frame, y con la posicion reutilizable.
+     */
+    private void scanGround(Player player) {
+        if (this.groundCooldown-- > 0) {
+            return;
+        }
+        this.groundCooldown = GROUND_SCAN_TICKS;
+        BlockPos.MutableBlockPos below = this.groundPos;
+        below.set(player.blockPosition()).move(0, -1, 0);
+        BlockState state = player.level().getBlockState(below);
+        if (!state.getFluidState().isEmpty() && state.getFluidState().is(FluidTags.WATER)) {
+            this.ground = Ground.WATER;
+            return;
+        }
+        if (state.isAir()) {
+            this.ground = Ground.OTHER;
+            return;
+        }
+        // Dureza real del bloque: es lo que separa una loseta de piedra de un
+        // monton de arena, y no hay lista de bloques que mantener.
+        float speed = state.getDestroySpeed(player.level(), below);
+        if (speed < 0.0F || speed >= GROUND_HARD_SPEED) {
+            this.ground = Ground.HARD;
+        } else if (speed <= GROUND_LOOSE_SPEED) {
+            this.ground = Ground.LOOSE;
+        } else {
+            this.ground = Ground.OTHER;
+        }
+    }
+
     public Mood mood() {
         return this.mood;
     }
@@ -498,6 +560,7 @@ public final class RelicAnimatable implements GeoAnimatable {
             this.resonanceCooldown = 20;
             this.resonanceNear = anotherBearerNear(player);
         }
+        scanGround(player);
         Mood nextMood = forced != null ? forced : detectMood(player);
         // La velocidad del bucle tambien cuenta: herido va lento (le cuesta), la
         // tormenta acelera y la resonancia se pone nerviosa. Solo se llama al

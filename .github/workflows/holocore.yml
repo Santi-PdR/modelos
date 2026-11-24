@@ -549,7 +549,7 @@ jobs:
           # (un billboard seria otro aro de frente) y solo en el hombro: en la vista
           # previa el "suelo" es la cara de la camara.
           assert 'private static void drawGroundEcho(' in aura, 'los eventos no tocan el suelo'
-          assert 'drawGroundEcho(bufferSource, frame, flash, glow, fade);' in aura, \
+          assert 'drawGroundEcho(bufferSource, frame, flash, glow, fade, ground);' in aura, \
               'el eco en el suelo no se dibuja nunca'
           assert 'if (onShoulder && RelicConfig.GROUND_ECHO.get() && flash > 0.04F) {' in aura, \
               'el eco no esta limitado al hombro o no se puede apagar'
@@ -771,18 +771,46 @@ jobs:
           assert 'isSprinting()' in animatable and 'isSwimming()' in animatable, \
               'correr o nadar no alimentan la energia'
           assert 'isCrouching()' in animatable, 'agacharse no frena la energia'
-          assert 'RelicAnimatable.Mood mood, float motion, boolean onShoulder)' in aura, \
+          assert 'RelicAnimatable.Mood mood, float motion, boolean onShoulder,' in aura, \
               'el aura no recibe la energia de movimiento (y el eco, si va en el hombro)'
+          assert 'RelicAnimatable.Ground ground)' in aura, \
+              'el aura no sabe sobre que suelo esta el portador (eco ciego, 1.0.55)'
+          # 1.0.55: el eco del suelo cambia de forma segun lo que pisas. Se mira una
+          # vez por segundo y cacheado, como el portal: en el render ya no se puede.
+          assert 'public enum Ground {' in animatable, 'no hay tipos de suelo'
+          for tipo in ('OTHER', 'HARD', 'LOOSE', 'WATER'):
+              assert f'        {tipo},' in animatable or f'        {tipo}\n' in animatable, \
+                  f'falta el suelo {tipo}'
+          assert 'GROUND_SCAN_TICKS' in animatable, 'el suelo se mira en cada tick'
+          assert 'if (this.groundCooldown-- > 0) {' in animatable and \
+              'this.groundCooldown = GROUND_SCAN_TICKS;' in animatable, \
+              'la consulta del suelo no esta cacheada (se pagaria en cada tick)'
+          assert 'private void scanGround(Player player)' in animatable, 'no hay quien mire el suelo'
+          assert 'scanGround(player);' in animatable, 'el suelo se mira pero no se actualiza'
+          assert 'state.getDestroySpeed(player.level(), below)' in animatable, \
+              'el suelo no se clasifica por dureza (habria lista de bloques que mantener)'
+          assert 'this.groundPos' in animatable and 'new BlockPos.MutableBlockPos()' in animatable, \
+              'mirar el suelo asigna una posicion por consulta'
+          assert 'public Ground ground()' in animatable, 'el suelo no se puede leer'
+          assert 'float spread = switch (ground) {' in aura and 'float gain = switch (ground) {' \
+              in aura, 'el eco no cambia de forma segun el suelo'
+          assert 'private static void echoRing(' in aura, 'el eco no tiene un anillo reutilizable'
+          assert 'echoRing(bufferSource, frame, glow, radius * spread, alpha * gain);' in aura, \
+              'el eco no usa el anillo'
+          assert 'if (ground == RelicAnimatable.Ground.HARD) {' in aura, \
+              'el suelo duro no hace rebotar el eco'
           assert '(1.0F + 0.70F * motion)' in aura, 'el anillo no late mas rapido al correr'
           assert '(1.0F + 0.45F * motion)' in aura, 'las chispas no barren mas rapido al correr'
           assert '(1.0F + 0.50F * motion)' in aura, 'las burbujas no suben mas rapido al nadar'
           assert 'energy *= 1.0F + 0.60F * motion;' in aura, \
               'el vaiven no crece al correr'
           # Las dos vistas tienen que pasarla al aura (no solo al movimiento propio).
-          assert 'animatable.mood(), animatable.motion(), true);' in curio, \
+          assert 'animatable.mood(), animatable.motion(), true, animatable.ground());' in curio, \
               'el hombro no pasa la energia de movimiento al aura (ni pide el eco en el suelo)'
-          assert '1.0F, animatable.mood(), animatable.motion(), false);' in eventos, \
+          assert '1.0F, animatable.mood(), animatable.motion(), false,' in eventos, \
               'la vista previa no pasa la energia de movimiento al aura o dibuja el eco sin suelo'
+          assert 'RelicAnimatable.Ground.OTHER);' in eventos, \
+              'la vista previa no dice sobre que suelo esta (no lo hay)'
           assert 'static void applyAliveMotion(' in aura, 'la reliquia no tiene movimiento propio'
           assert 'RelicAura.applyAliveMotion(' in curio, 'el hombro no usa el movimiento propio'
           assert 'RelicAura.applyAliveMotion(' in eventos, 'la vista previa no usa el movimiento propio'

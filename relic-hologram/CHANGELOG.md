@@ -1,5 +1,26 @@
 # Historial de cambios
 
+## 1.0.55 — el eco lee el suelo
+
+El eco del suelo existía desde 1.0.47 y se dibujaba igual en todas partes. Ahora mira lo que
+hay bajo los pies del portador y **cambia de forma** (nunca de brillo: el presupuesto de luz
+es el mismo, así que la regla del tinte se cumple en los cuatro casos).
+
+* **Piedra, deepslate, metal** (`HARD`): el eco se cierra (`×0.88`) y **rebota** en un segundo
+  anillo más pequeño (`×0.55` de radio, `×0.55` de fuerza). Es lo que hace una piedra.
+* **Arena, tierra, nieve, hojas** (`LOOSE`): se abre un `×1.12` y se apaga antes (`×0.88`).
+* **Agua** (`WATER`): un rizo `×1.35` de ancho y `×0.70` de fuerza. El agua se lleva la luz,
+  igual que en el estado sumergido.
+* **El resto** (`OTHER`, incluido el aire): como siempre.
+* **Cómo se sabe**: por la **dureza real** del bloque (`getDestroySpeed`), no por una lista de
+  bloques que habría que mantener a cada versión. Menos de 0.6 es blando, 1.5 o más es duro.
+* **Una vez por segundo y cacheado**, con la posición reutilizable, como el escaneo del
+  portal: el eco solo se dibuja con el destello de un evento, y en mitad del render ya no se
+  puede ir a mirar el mundo.
+* CI: 14 comprobaciones nuevas (los cuatro tipos, el caché, la dureza, la firma del aura y
+  las dos vistas). Cuatro negativos en rojo, uno de ellos el que más importa: **quitar el
+  caché** no rompía nada visible, y ahora sí lo detecta.
+
 ## 1.0.54 — el halo tiene tope (y ya son seis pases medidos)
 
 El halo era el último pase aditivo que no estaba medido, y es el único que **no** se

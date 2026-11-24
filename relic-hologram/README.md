@@ -239,6 +239,10 @@ del portador (X y Z de la pose) y baja por su Y, no por la de la pantalla, así 
 golpea el suelo a sus pies en vez de ser otro aro de frente. Solo se dibuja en tercera persona
 —en la vista previa no hay suelo y quedaría una tarjeta en el aire— y se apaga con
 `visuals.groundEcho`.
+El eco **lee el suelo** desde 1.0.55: sobre piedra o metal se cierra y rebota en un segundo
+anillo, sobre arena o tierra se abre y se apaga antes, y sobre agua es un rizo más ancho y más
+tenue. Se decide por la dureza del bloque (`getDestroySpeed`), una vez por segundo, no por una
+lista de bloques — que se quedaría vieja a la siguiente versión del juego.
 
 Los **tres pases de evento** (eco del suelo, onda de chispas y eco del anillo) se **tiñen**
 antes de sumar, como el aura y el anillo: con solo aditivo, sobre nieve sumaban a un fondo ya
