@@ -1290,14 +1290,14 @@ jobs:
           for r in fits:
               d = json.loads(r['brazo_detalle_json']) if r['brazo_detalle_json'] else None
               if d:
-                  md.append(f"- {r['ranura']}: {d['limb']} en tick {d['tick']} (muestra {d['sample_time']}); {d['cape_bone']}, cubo local {d['cube_in_bone']} / rig {d['rig_cube_index']}; gap SAT {d['signed_sat_gap_u']:.6f}u; suelo={d['on_ground']}, altura={d['height']}u, velocidad={d['speed']}u/tick, vertical={d['vertical_speed']}u/tick, carrera={d['run']}.")
+                  md.append(f"- {r['ranura']}: {d['limb']} en tick {d['tick']} (muestra {d['sample_time']}); {d['cape_bone']}, cubo local {d['cube_in_bone']} / rig {d['rig_cube_index']}; gap SAT {d['signed_sat_gap_u']:.6f}u; eje SAT {d['sat_axis_family']} {d['sat_axis']} con solape proyectado {d['overlap_on_sat_axis_u']:.6f}u; suelo={d['on_ground']}, altura={d['height']}u, velocidad={d['speed']}u/tick, vertical={d['vertical_speed']}u/tick, carrera={d['run']}.")
               else:
                   md.append(f"- {r['ranura']}: sin solapamiento con brazos en las poses medidas.")
           md.extend(['', '### Máximo con piernas (límite de aprobación: <0.05u)'])
           for r in fits:
               d = json.loads(r['pierna_detalle_json']) if r['pierna_detalle_json'] else None
               if d:
-                  md.append(f"- {r['ranura']}: {d['limb']} en tick {d['tick']} (muestra {d['sample_time']}); {d['cape_bone']}, cubo local {d['cube_in_bone']} / rig {d['rig_cube_index']}; gap SAT {d['signed_sat_gap_u']:.6f}u; suelo={d['on_ground']}, altura={d['height']}u, velocidad={d['speed']}u/tick, vertical={d['vertical_speed']}u/tick, carrera={d['run']}.")
+                  md.append(f"- {r['ranura']}: {d['limb']} en tick {d['tick']} (muestra {d['sample_time']}); {d['cape_bone']}, cubo local {d['cube_in_bone']} / rig {d['rig_cube_index']}; gap SAT {d['signed_sat_gap_u']:.6f}u; eje SAT {d['sat_axis_family']} {d['sat_axis']} con solape proyectado {d['overlap_on_sat_axis_u']:.6f}u; suelo={d['on_ground']}, altura={d['height']}u, velocidad={d['speed']}u/tick, vertical={d['vertical_speed']}u/tick, carrera={d['run']}.")
               else:
                   md.append(f"- {r['ranura']}: sin penetración detectada; pico medido {float(r['pico_pierna_u']):.6f}u.")
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as f:
@@ -1309,7 +1309,8 @@ jobs:
               for label, key in (('arm', 'brazo_detalle_json'), ('leg', 'pierna_detalle_json')):
                   d = json.loads(r[key]) if r[key] else None
                   if d:
-                      facts.append(f"{label}-detail-{r['ranura']}={d['limb']}@t{d['tick']}+{d['sample_time']-d['tick']:.4f}: {d['cape_bone']}#cube{d['cube_in_bone']}:rig{d['rig_cube_index']}:gap{d['signed_sat_gap_u']:.6f}u:ground{int(d['on_ground'])}:height{d['height']}u:speed{d['speed']}u_tick:vy{d['vertical_speed']}u_tick:sprint{int(d['run'])}:poseRun{d['pose_run']:.3f}")
+                      axis = ','.join(format(value, '.3f') for value in d['sat_axis'])
+                      facts.append(f"{label}-detail-{r['ranura']}={d['limb']}@t{d['tick']}+{d['sample_time']-d['tick']:.4f}: {d['cape_bone']}#cube{d['cube_in_bone']}:rig{d['rig_cube_index']}:gap{d['signed_sat_gap_u']:.6f}u:axis{d['sat_axis_family']}:{axis}:overlap{d['overlap_on_sat_axis_u']:.3f}u:ground{int(d['on_ground'])}:height{d['height']}u:speed{d['speed']}u_tick:vy{d['vertical_speed']}u_tick:sprint{int(d['run'])}:poseRun{d['pose_run']:.3f}")
           print('::notice title=Saltos y costuras en Forge::' + ' | '.join(facts))
           PY
 

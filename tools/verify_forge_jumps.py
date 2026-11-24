@@ -18,7 +18,7 @@ from cape_fit import fixed_wearer_pose, hood_moves
 from preview_cloth import ARMOR_GEO, load, matrices, mod_version
 from verify_forge_postures import ACTOR, read_boxes
 from verify_forge_walk import pairs, points, read
-from verify_v1660 import WornModel, contacts
+from verify_v1660 import WornModel, contacts, sat_witness
 
 SLOTS = ('pecho', 'curios')
 CASES = ('salto', 'salto-en-carrera', 'caida-del-borde')
@@ -148,10 +148,12 @@ def verdict(data, spans, now, before, slot):
                 slot, e.name, 'sigue el tirón en el salto con zancada o al aterrizar del borde', a, b)
 
 
-def contact_detail(tick, pose_state, limb, cloth_index, signed_gap, rig, cloth_indices, cloth_names):
+def contact_detail(tick, pose_state, limb, cloth_index, signed_gap, witness, rig, cloth_indices, cloth_names):
     garment_index = int(cloth_indices[cloth_index])
     garment_name = str(cloth_names[cloth_index])
     local_cube = int(np.count_nonzero(np.asarray(rig.names)[:garment_index] == garment_name))
+    assert np.isclose(witness['signed_gap_u'], signed_gap, atol=1e-6, rtol=1e-6), (
+        'SAT witness differs from contact gate', tick, witness, signed_gap)
     return {
         'tick': int(tick),
         'sample_time': round(pose_state['sample_time'], 4),
@@ -161,6 +163,12 @@ def contact_detail(tick, pose_state, limb, cloth_index, signed_gap, rig, cloth_i
         'vertical_speed': round(pose_state['vertical_speed'], 3),
         'run': pose_state['sprinting'],
         'pose_run': pose_state['pose_run'],
+        'sat_axis_index': witness['axis_index'],
+        'sat_axis_family': witness['axis_family'],
+        'sat_axis': [round(v, 6) for v in witness['axis']],
+        'cape_interval_u': [round(v, 6) for v in witness['cape_interval_u']],
+        'limb_interval_u': [round(v, 6) for v in witness['limb_interval_u']],
+        'overlap_on_sat_axis_u': round(witness['overlap_on_axis_u'], 6),
         'limb': limb,
         'cape_bone': garment_name,
         'cube_in_bone': local_cube,
@@ -241,16 +249,18 @@ def fit(root, slot, data, spans, rig, source):
         if current_arm_hit > arm_hit:
             arm_hit = current_arm_hit
             limb_index, cloth_index = worst_arm
+            witness = sat_witness(live[cloth_indices[cloth_index]], limbs[limb_index])
             arm_detail = contact_detail(tick, pose_states[tick], limb_names[limb_index], cloth_index,
-                                        arm_contacts[worst_arm], rig, cloth_indices, cloth_names)
+                                        arm_contacts[worst_arm], witness, rig, cloth_indices, cloth_names)
         leg_contacts = hit[2:]
         worst = np.unravel_index(int(np.argmin(leg_contacts)), leg_contacts.shape)
         current_leg_hit = max(0., -float(leg_contacts[worst]))
         if current_leg_hit > leg_hit:
             leg_hit = current_leg_hit
             limb_index, cloth_index = worst
+            witness = sat_witness(live[cloth_indices[cloth_index]], limbs[limb_index + 2])
             leg_detail = contact_detail(tick, pose_states[tick], limb_names[limb_index + 2], cloth_index,
-                                        leg_contacts[worst], rig, cloth_indices, cloth_names)
+                                        leg_contacts[worst], witness, rig, cloth_indices, cloth_names)
         min_fit = np.minimum(min_fit, [*rig.joins(live), lap(live[roots], torso)])
     assert (min_fit > [.038, .025, .018]).all() and drift < .006, (slot, 'deriva o costura en salto', min_fit, drift)
     # Keep the measured row even when leg contact exceeds the gate. The main

@@ -104,6 +104,39 @@ def sat(a,b):
     return np.where(d[:,:,0]>1e-8, np.maximum(pa.min(1)-pb.max(1),pb.min(1)-pa.max(1)), -100).max(1)
 
 
+def sat_witness(a, b):
+    """Return the decisive SAT axis and both projection intervals for one pair."""
+    a, b = np.asarray(a, dtype=float), np.asarray(b, dtype=float)
+    if a.ndim == 3:
+        assert len(a) == 1 and b.ndim == 3 and len(b) == 1
+        a, b = a[0], b[0]
+    assert a.shape == b.shape == (8, 3), (a.shape, b.shape)
+    ea = a[[1, 3, 4]] - a[0]
+    eb = b[[1, 3, 4]] - b[0]
+    axes_a = np.cross(ea, np.roll(ea, 1, axis=0))
+    axes_b = np.cross(eb, np.roll(eb, 1, axis=0))
+    cross = np.cross(ea[:, None], eb[None, :]).reshape(9, 3)
+    axes = np.concatenate((axes_a, axes_b, cross), axis=0)
+    lengths = np.linalg.norm(axes, axis=1)
+    valid = lengths > 1e-8
+    axes[valid] /= lengths[valid, None]
+    axes[~valid] = 0
+    pa, pb = a @ axes.T, b @ axes.T
+    lo_a, hi_a, lo_b, hi_b = pa.min(0), pa.max(0), pb.min(0), pb.max(0)
+    gaps = np.maximum(lo_a - hi_b, lo_b - hi_a)
+    gaps[~valid] = -100
+    index = int(np.argmax(gaps))
+    return {
+        'signed_gap_u': float(gaps[index]),
+        'axis_index': index,
+        'axis_family': 'cape-face' if index < 3 else 'limb-face' if index < 6 else 'edge-cross',
+        'axis': axes[index].tolist(),
+        'cape_interval_u': [float(lo_a[index]), float(hi_a[index])],
+        'limb_interval_u': [float(lo_b[index]), float(hi_b[index])],
+        'overlap_on_axis_u': float(-gaps[index]),
+    }
+
+
 def response_variants():
     j=(P.ROOT/'src/main/java/com/capatest/client/CapeResponse.java').read_text()
     v={n:float(t) for n,t in re.findall(r'double MAX_(\w+) = (\d+\.\d+);',j)}
