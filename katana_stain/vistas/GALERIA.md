@@ -4,7 +4,7 @@ Estas imágenes son capturas automáticas de un cliente Forge de prueba, **no un
 
 **Estado de revisión:** la guardia diestra coloca ahora la hoja más al costado, pero el agarre y la guardia zurda siguen sin aprobarse. En Z los brazos zurdos todavía se ven flotantes; también falta revisar el gesto diestro en movimiento. En C los golpes 3, 5 y 9 ahora apuntan hacia el objetivo y los verticales se orientan mejor, pero se repite demasiado la pose y las capturas no validan la coreografía completa.
 
-**Último ensayo visual:** workflow `45338153503` y compilación `45338153577`, ambos exitosos. Las capturas son posteriores al evento de daño, no necesariamente del mismo fotograma. Se conservan para revisión, no como aprobación final.
+**Último ensayo visual:** workflow `45341219285` y compilación `45341219328`, ambos exitosos. Las imágenes de guardia muestran una prueba más abierta que se descartó después porque la hoja zurda seguía cruzando la cara. La postura actual vuelve a la apertura anterior, por lo que esas capturas no la representan exactamente. Los impactos se capturan después del evento de daño, no necesariamente en el mismo fotograma.
 
 ## Con Better Combat instalado
 
