@@ -49,7 +49,7 @@ public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
             // origin back toward the palm; the custom idle first-person wrist
             // has its own alignment and must not receive this correction.
             if (!FIRST_PERSON_ARM.get() && context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND)
-                poseStack.translate(.5F, 0, 0);
+                poseStack.translate(.1F, 0, 0);
             // Separate hand-space adjustments: the two vanilla pipelines have different origins.
             // These are provisional and must be checked against the rendered grip, not just the bone pivot.
             if (context == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND || context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND)
