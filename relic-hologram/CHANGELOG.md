@@ -19,10 +19,11 @@ encontrado el comprobador de números antes que el ojo:
   (`flash * 0.55F * fade`), no el eco.
 * 4 negativos probados en rojo: el eco de 1.0.47 (se quema), tinte flojo (pierde el tono),
   eco sin tinte y aditivo fuera de su constante.
-* **v1.0.48 no llegó a publicarse**: el smoke test del cliente (`runClient`) se quedó los
-  480 s de timeout sin dejar sus dos marcas, con el build y el otro workflow en verde para
-  ese mismo commit. Ese paso ahora **reintenta el arranque una vez** si no encuentra las
-  marcas; lo que fuese de verdad (GLSL inválido, mixin roto) se cae también la segunda vez.
+* **El smoke test del cliente se quedó colgado en 1.0.48**: 480 s de timeout sin dejar sus
+  dos marcas, con el build y el otro workflow en verde para ese mismo commit (la release sí
+  se publicó: el job del cliente va aparte). Ese paso ahora **reintenta el arranque una vez**
+  si no encuentra las marcas; lo que fuese de verdad (GLSL inválido, mixin roto) se cae
+  también la segunda vez.
 
 ## 1.0.47 — el eco en el suelo
 
