@@ -237,6 +237,13 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.54, el halo.** El único pase aditivo que no se tiñe, porque va sobre el modelo. Se
+acota en vez de tintarse: `HALO_ADDITIVE` 0.30 por canal. La textura de brillo es blanca
+pura, así que sin tope el pase sumaba hasta 1.25 por canal con `haloIntensity` alto y un
+destello. Con el tope, sobre piedra y cueva el tono sobrevive (+0.14, croma 0.45) y sobre
+nieve el borde satura, que ahí se acepta: es el canto de la reliquia, no un quad en el
+suelo. Seis pases medidos en total.
+
 **1.0.53, pavesas.** Quinto pase medido, mismo presupuesto (`CINDER_ADDITIVE` 0.16 con
 tinte ×3). La pavesa llega al pico de brillo al salir y se apaga en la bajada con
 `(1 - 0.75·t)`, así que nunca pide más que el eco del suelo.

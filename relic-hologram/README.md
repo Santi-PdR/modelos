@@ -351,7 +351,7 @@ cambiar de look:
 | `visuals.quality` | `FULL` | `LITE` usa el .geo de 751 cubos y `idle_calm` en reposo. |
 | `visuals.glowLayer` | `true` | Segundo pase emisivo (la textura `_glowing`). |
 | `visuals.glowHalo` | `true` | Tercer pase con blend **aditivo** (suma luz). Se omite en `LITE` y con `reducedEffects`. |
-| `visuals.haloIntensity` | `0.25` | Fuerza del halo aditivo (0–1). Por encima de 0.4 se ve mancha blanca sobre nieve. |
+| `visuals.haloIntensity` | `0.25` | Fuerza del halo aditivo (0–1). Por encima de 0.4 se ve mancha blanca sobre nieve. Desde 1.0.54 el pase aditivo tiene tope en el código (0.30), así que subirlo de 0.45 no blanquea más. |
 | `visuals.glowAura` | `true` | Aura: tres billboards aditivos alrededor del núcleo. |
 | `visuals.auraIntensity` | `0.32` | Fuerza del aura (0–1). Es aditiva: sobre fondo claro suma hacia blanco. |
 | `visuals.auraTint` | `true` | Pase de tinte (mezcla normal) del aura: es lo que da color sobre nieve/arena. |

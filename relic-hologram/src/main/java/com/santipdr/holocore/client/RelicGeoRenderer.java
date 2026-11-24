@@ -124,7 +124,14 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
         boolean fading = fade < 0.55F;
 
         if (haloEnabled() && !fading) {
-            float i = RelicConfig.HALO_INTENSITY.get().floatValue() * amount;
+            // Tope del halo (1.0.54). El halo es el unico pase aditivo que NO se
+            // tine, y a proposito: va pegado al modelo, asi que teñirlo seria echar
+            // una pelicula de color sobre la reliquia. Lo que si se puede hacer es
+            // no dejar que se desmadre: glowTexture es blanca pura, y a
+            // haloIntensity 1.0 (multiplicado por el destello del evento y por el
+            // 60% extra de un pulso) sumaba 1.25 por canal, o sea una mancha blanca
+            // sobre nieve. Con el tope, el halo conserva el tono del estado.
+            float i = Math.min(RelicConfig.HALO_INTENSITY.get().floatValue() * amount, HALO_ADDITIVE);
             // Nucleo de luz fria por defecto, pero arrastrado a medias hacia el
             // color del estado: cargada se ve ambarienta, alerta rojiza.
             renderExtra(model, poseStack, animatable, bufferSource, partialTick, packedLight,
@@ -190,6 +197,14 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
      * canal y no con un {@code mix} de vectores porque el tinte se pasa a
      * GeckoLib como cuatro floats.
      */
+    /**
+     * Tope del pase aditivo del halo, por canal (1.0.54). No es cosmetico: por
+     * encima de esto la textura de brillo (blanca) suma mas de lo que falta para
+     * llegar a 1.0 sobre nieve y el halo se lee como un borron. Lo comprueba
+     * tools/check_aura_math.py.
+     */
+    private static final float HALO_ADDITIVE = 0.30F;
+
     private static float tint(float cool, float state) {
         return cool * 0.75F + state * 0.25F;
     }

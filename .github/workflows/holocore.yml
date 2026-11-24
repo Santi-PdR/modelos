@@ -752,6 +752,14 @@ jobs:
                   assert clave in lang, f'{idioma} sin {clave}'
 
           assert 'safeGetUniform("HoloGlitch")' in geo, 'el pase GLSL no manda el glitch'
+          # 1.0.54: el halo es el unico pase aditivo sin tinte (va pegado al modelo),
+          # asi que lo que se vigila es el tope. Sin el, haloIntensity 1.0 por el
+          # destello de un evento suma 1.25 por canal sobre una textura blanca.
+          assert 'HALO_ADDITIVE' in geo, 'el halo no tiene tope'
+          assert 'Math.min(RelicConfig.HALO_INTENSITY.get().floatValue() * amount, HALO_ADDITIVE)' \
+              in geo, 'el halo calcula la intensidad pero no la limita'
+          assert 'ADDITIVE_GLOW.apply(RelicGeoModel.glowTexture())' in geo, \
+              'el halo dejo de ser aditivo (y entonces el tope ya no aplica)'
 
           # Movimiento propio: flotar y asentarse en los eventos, aplicado antes del
           # modelo y del aura (si se aplicara solo al modelo, el aura se quedaria

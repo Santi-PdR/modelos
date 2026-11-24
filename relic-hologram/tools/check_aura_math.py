@@ -252,6 +252,35 @@ def main():
             if fondo_nombre == 'nieve' and tono < MIN_TONO_NIEVE:
                 fallos.append(f'{nombre} nieve: el tono se pierde (b-r {tono:+.2f})')
 
+    # --- Halo del modelo (1.0.54) ---------------------------------------------
+    # El unico pase aditivo que no se tine: va pegado al modelo. Lo que se mira es
+    # el tope, no la composicion: glowTexture es blanca pura, asi que sumar mas de
+    # lo que queda hasta 1.0 lo convierte en un borron.
+    geo = (AURA_JAVA.parent / 'RelicGeoRenderer.java').read_text(encoding='utf-8')
+    tope = floats(re.search(r'HALO_ADDITIVE = ([\d.]+)F', geo).group(1))[0]
+    assert 'Math.min(RelicConfig.HALO_INTENSITY.get().floatValue() * amount, HALO_ADDITIVE)' in geo, \
+        'el halo no usa su tope'
+    # Color del halo: mezcla nucleo frio (0.75) + estado (0.25), como en el codigo.
+    estado = (0.55, 0.78, 1.00)  # TARGET_IDLE, el caso normal
+    frio = (0.55, 0.78, 1.00)
+    color = tuple(c * 0.75 + e * 0.25 for c, e in zip(frio, estado))
+    print(f'halo: tope {tope:.2f}  color {tuple(round(c, 2) for c in color)}')
+    assert tope <= 0.35, f'el halo suma {tope:.2f}: demasiado para una textura blanca'
+    # Cromatico: el canal azul tiene que ir por delante, si no suma gris y blanquea.
+    croma = (color[2] - color[0]) / max(color)
+    print(f'  croma (b-r)/max {croma:.2f}')
+    assert croma >= 0.30, f'el halo suma un color poco saturado (croma {croma:.2f})'
+    for fondo_nombre, fondo in BACKGROUNDS.items():
+        salida = tuple(min(1.0, b + c * tope) for b, c in zip(fondo, color))
+        tono = salida[2] - salida[0]
+        print(f'  halo {fondo_nombre:5s} -> {tuple(round(c, 2) for c in salida)}  '
+              f'tono(b-r) {tono:+.2f}')
+        # Sobre nieve se acepta que el borde llegue a 1.0: es el canto del modelo,
+        # no un quad grande en el suelo. Lo que no se acepta es perder el tono en
+        # los otros dos fondos.
+        if fondo_nombre != 'nieve' and tono < MIN_TONO_NIEVE:
+            fallos.append(f'halo {fondo_nombre}: el tono se pierde (b-r {tono:+.2f})')
+
     if fallos:
         for fallo in fallos:
             print(f'FALLO: {fallo}')

@@ -1,5 +1,23 @@
 # Historial de cambios
 
+## 1.0.54 — el halo tiene tope (y ya son seis pases medidos)
+
+El halo era el último pase aditivo que no estaba medido, y es el único que **no** se
+tiñe, a propósito: va pegado al modelo, así que teñirlo sería echar una película de color
+sobre la reliquia.
+
+* **Pero sí se puede acotar.** `relic_hologram_glowing.png` es **blanca pura**: el halo suma
+  su color sin más, y con `haloIntensity` a 1.0 —multiplicado por el destello de un evento y
+  el +20% de un pulso— llegaba a **1.25 por canal**. Sobre nieve eso es una mancha blanca.
+  Ahora el resultado pasa por `HALO_ADDITIVE` 0.30: el brillo sigue subiendo con el destello
+  pero **se corta antes de reventar**, y el borde conserva el tono del estado.
+* **Medido en `check_aura_math.py`**: sexto pase. Sobre piedra y cueva el tono del halo
+  sobrevive (+0.14) y su croma es 0.45 (nunca suma gris). Sobre nieve **se acepta** que el
+  borde llegue a 1.0: es el canto del modelo, no un quad grande tumbado en el suelo, que era
+  el caso de 1.0.9 y de 1.0.48–1.0.52.
+* CI: tres comprobaciones nuevas (que exista el tope, que la intensidad pase por él y que el
+  halo siga siendo aditivo). Dos negativos en rojo: quitar el tope y subirlo a 0.90.
+
 ## 1.0.53 — pavesas en el Nether
 
 El Nether recicló las brasas de `burning` en 1.0.51; se distinguían por el color, pero el
