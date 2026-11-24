@@ -97,15 +97,6 @@ public final class KatanaAnimations {
                             new dev.kosmx.playerAnim.core.util.Vec3f(leftHanded ? -1.5F : .5F,
                                     leftHanded ? -.20F : -.10F, -1F)));
                 }
-                if (part.equals("rightArm")) {
-                    // The imported gesture translates the sword arm by (-5, 2)
-                    // model pixels throughout the clip. Undo that translation
-                    // for the first-person pass so its shoulder stays anchored;
-                    // MirrorModifier maps this correction for left-handers.
-                    return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
-                            dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
-                            new dev.kosmx.playerAnim.core.util.Vec3f(5F, -2F, 0F)));
-                }
                 if (!part.equals("leftArm")) return java.util.Optional.empty();
                 float contact = GestureCurve.contact(playing.getTick() + contactDelta[0]);
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
