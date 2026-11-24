@@ -19,7 +19,7 @@ from preview_cloth import ARMOR_GEO, load, matrices, mod_version
 from verify_forge_postures import ACTOR, read_boxes
 from verify_forge_walk import pairs, points, read
 from verify_v1660 import WornModel, contacts
-from verify_v1600 import sat_witness
+from verify_v1600 import sat, sat_witness
 
 SLOTS = ('pecho', 'curios')
 CASES = ('salto', 'salto-en-carrera', 'caida-del-borde')
@@ -204,6 +204,29 @@ def read_pose_states(path):
     assert np.all(np.diff([states[tick]['sample_time'] for tick in sorted(states)]) > 0), (
         'pose times are not increasing', path)
     return states
+
+
+def check_sat_witness():
+    order = (0, 1, 3, 2, 4, 5, 7, 6)
+
+    def box(lo, hi):
+        points = np.array([[x, y, z] for x in (lo[0], hi[0])
+                           for y in (lo[1], hi[1]) for z in (lo[2], hi[2])], dtype=float)
+        return points[list(order)]
+
+    cases = (
+        (box((0, 0, 0), (2, 2, 2)), box((1.5, .5, .5), (3.5, 2.5, 2.5)), -.5, .5, .5),
+        (box((2, 2, 2), (3, 3, 3)), box((0, 0, 0), (5, 5, 5)), -3., 1., 3.),
+        (box((0, 0, 0), (1, 1, 1)), box((3, 3, 3), (4, 4, 4)), 2., 0., 0.),
+    )
+    for a, b, signed_gap, intersection, translation in cases:
+        detail = sat_witness(a, b)
+        scalar = float(sat(a[None], b[None])[0])
+        assert np.isclose(detail['signed_gap_u'], scalar, atol=1e-9, rtol=1e-9)
+        assert np.isclose(scalar, signed_gap, atol=1e-9, rtol=1e-9), detail
+        assert np.isclose(detail['projection_intersection_on_axis_u'], intersection, atol=1e-9, rtol=1e-9), detail
+        assert np.isclose(detail['separation_translation_on_axis_u'], translation, atol=1e-9, rtol=1e-9), detail
+    print('SAT witness: solape parcial, contención y separación validados.', flush=True)
 
 
 def fit(root, slot, data, spans, rig, source):
@@ -415,6 +438,7 @@ if __name__ == '__main__':
     ap.add_argument('shots', type=Path)
     ap.add_argument('--baseline-shots', type=Path)
     args = ap.parse_args()
+    check_sat_witness()
     summary, curves, fit_rows, leg_hits = {}, {}, [], []
     version = 'v' + mod_version()
     geo = load(ARMOR_GEO)
