@@ -82,9 +82,12 @@ def leer_constantes():
     # Pavesas del Nether (1.0.53).
     pavesa = floats(re.search(r'CINDER_ADDITIVE = ([\d.]+)F', aura).group(1))[0]
     pavesa_boost = floats(re.search(r'CINDER_TINT_BOOST = ([\d.]+)F', aura).group(1))[0]
+    # Salpicadura del agua (1.0.56). El polvo no entra: no suma luz.
+    salpicadura = floats(re.search(r'SPLASH_ADDITIVE = ([\d.]+)F', aura).group(1))[0]
+    salpicadura_boost = floats(re.search(r'SPLASH_TINT_BOOST = ([\d.]+)F', aura).group(1))[0]
     return (diametros, pesos, alpha, boost, darken, tinte, intensidad, anillo,
             eco_alpha, eco_boost, onda, onda_boost, eco_anillo, eco_anillo_boost,
-            mota, mota_boost, pavesa, pavesa_boost)
+            mota, mota_boost, pavesa, pavesa_boost, salpicadura, salpicadura_boost)
 
 
 def leer_pixel_central(ruta=AURA_PNG, modo='centro'):
@@ -184,7 +187,7 @@ def componer_eco(fondo, eco_alpha, eco_boost, tinte, tex):
 def main():
     (diametros, pesos, alpha, boost, darken, tinte, intensidad, anillo, eco_alpha, eco_boost,
      onda, onda_boost, eco_anillo, eco_anillo_boost, mota, mota_boost,
-     pavesa, pavesa_boost) = leer_constantes()
+     pavesa, pavesa_boost, salpicadura, salpicadura_boost) = leer_constantes()
     tex = leer_pixel_central()
     print(f'textura centro: rgb {tuple(round(c, 2) for c in tex[:3])} alpha {tex[3]:.2f}')
     print(f'diametros {diametros}  pesos {pesos}  auraAlpha {alpha}  '
@@ -237,6 +240,7 @@ def main():
         ('eco anillo', eco_anillo, eco_anillo_boost, eco_tex),
         ('motas', mota, mota_boost, leer_pixel_central()),
         ('pavesas', pavesa, pavesa_boost, leer_pixel_central()),
+        ('salpicadura', salpicadura, salpicadura_boost, leer_pixel_central()),
     ]
     for nombre, aditivo, tinte_boost, tex in eventos:
         print(f'{nombre}: aditivo {aditivo:.2f}  tinte x{tinte_boost:.2f}  '

@@ -152,6 +152,16 @@ public final class RelicAura {
     /** Pavesas del Nether: la misma regla. */
     private static final float CINDER_TINT_BOOST = 3.0F;
     private static final float CINDER_ADDITIVE = 0.16F;
+    /**
+     * Salpicadura del agua (1.0.56): la misma regla. El polvo de la arena y la
+     * tierra no la necesita porque <b>no suma luz</b>: va solo con tinte, que es lo
+     * que hace el polvo de verdad (no brilla).
+     */
+    private static final float SPLASH_TINT_BOOST = 3.0F;
+    private static final float SPLASH_ADDITIVE = 0.16F;
+    private static final int BURST_COUNT = 7;
+    private static final float BURST_SIZE = 0.044F;
+    private static final float BURST_RISE = 0.26F;
     private static final int SHOCK_COUNT = 8;
     private static final float SHOCK_MIN = 0.16F;
     private static final float SHOCK_MAX = 0.62F;
@@ -292,6 +302,76 @@ public final class RelicAura {
             // Rebote: el segundo anillo, mas pequeno y mas flojo, sale con el mismo
             // destello pero cerrado sobre el primero. Es lo que hace una piedra.
             echoRing(bufferSource, frame, glow, radius * spread * 0.55F, alpha * gain * 0.55F);
+        }
+        if (ground == RelicAnimatable.Ground.LOOSE || ground == RelicAnimatable.Ground.WATER) {
+            // Y el suelo que cede tambien salta: polvo en la arena, salpicadura en el
+            // agua (1.0.56). La piedra no levanta nada.
+            drawGroundBurst(bufferSource, frame, glow, flash, fade, ground);
+        }
+    }
+
+    /**
+     * Lo que levanta el golpe del eco: {@code BURST_COUNT} granos que salen del
+     * suelo en parabola (suben y caen) y se abren hacia fuera. Dos acabados:
+     *
+     * <ul>
+     *   <li><b>polvo</b> (arena, tierra, nieve, hojas): solo <b>tinte</b>, sin
+     *       aditivo. El polvo no brilla; si sumara luz, sobre nieve saldria una
+     *       nube blanca, que es el error de siempre con otra ropa.</li>
+     *   <li><b>salpicadura</b> (agua): tinte y aditivo pequeno, como los demas
+     *       pases, porque una gota si devuelve la luz.</li>
+     * </ul>
+     */
+    private static void drawGroundBurst(MultiBufferSource bufferSource, Frame frame,
+                                        RelicGlowState glow, float flash, float fade,
+                                        RelicAnimatable.Ground ground) {
+        boolean water = ground == RelicAnimatable.Ground.WATER;
+        // El golpe ya paso: t=0 al empezar el destello y t=1 cuando se apaga, asi
+        // que el polvo sale con el golpe y se posa detras.
+        float t = 1.0F - Math.min(1.0F, flash);
+        float alpha = flash * fade * (1.0F - 0.85F * t);
+        if (alpha <= 0.01F) {
+            return;
+        }
+        VertexConsumer tint = bufferSource.getBuffer(RelicRenderTypes.TINT_GLOW.apply(AURA_TEXTURE));
+        VertexConsumer additive = water
+                ? bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE))
+                : null;
+        // Polvo: un gris calido que se mezcla poco con el estado (el polvo tiene su
+        // color). Agua: casi blanca, arrastrada al color del estado por la mitad.
+        float red;
+        float green;
+        float blue;
+        if (water) {
+            red = glow.red() * 0.50F + 0.78F * 0.50F;
+            green = glow.green() * 0.50F + 0.94F * 0.50F;
+            blue = glow.blue() * 0.50F + 1.00F * 0.50F;
+        } else {
+            red = glow.red() * 0.25F + 0.74F * 0.75F;
+            green = glow.green() * 0.25F + 0.68F * 0.75F;
+            blue = glow.blue() * 0.25F + 0.60F * 0.75F;
+        }
+        float spread = 0.16F + 0.62F * t;
+        for (int i = 0; i < BURST_COUNT; i++) {
+            float angle = i * (TWO_PI / BURST_COUNT) + t * 0.9F;
+            float height = BURST_RISE * 4.0F * t * (1.0F - t);
+            float left = cos(angle) * spread;
+            float back = sin(angle) * spread;
+            float cx = frame.originX + frame.rightX * left + frame.backX * back
+                    - frame.skyX * (GROUND_DROP - height);
+            float cy = frame.originY + frame.rightY * left + frame.backY * back
+                    - frame.skyY * (GROUND_DROP - height);
+            float cz = frame.originZ + frame.rightZ * left + frame.backZ * back
+                    - frame.skyZ * (GROUND_DROP - height);
+            float size = BURST_SIZE * (0.55F + 0.45F * (1.0F - t));
+            float weight = alpha * 0.55F;
+            billboardAt(tint, frame, cx, cy, cz, size, angle + i,
+                    red, green, blue, Math.min(1.0F, weight * (water ? SPLASH_TINT_BOOST : 2.2F)));
+            if (additive != null) {
+                billboardAt(additive, frame, cx, cy, cz, size, angle + i,
+                        red * weight * SPLASH_ADDITIVE, green * weight * SPLASH_ADDITIVE,
+                        blue * weight * SPLASH_ADDITIVE, 1.0F);
+            }
         }
     }
 

@@ -1,5 +1,21 @@
 # Historial de cambios
 
+## 1.0.56 — el suelo que cede también salta
+
+1.0.55 hizo que el eco leyera el suelo. Faltaba la otra mitad: **lo que levanta el golpe**.
+
+* **Arena, tierra, nieve, hojas**: sale **polvo**, siete granos en parábola que se abren
+  hacia fuera y se posan. Y el polvo va **solo con tinte, sin aditivo**: el polvo no brilla,
+  y si sumara luz sobre nieve saldría una nube blanca — el error de siempre con otra ropa.
+* **Agua**: **salpicadura** con tinte y aditivo pequeño (0.16), porque una gota sí devuelve
+  la luz. Va casi blanca y arrastrada a medias al color del estado.
+* **Piedra y metal**: no levantan nada. Solo el rebote del segundo anillo de 1.0.55.
+* El polvo **sale de `GROUND_DROP`**, no del aire: la altura es `4t(1-t)` y el tinte se
+  apaga con el destello, así que se ve el golpe y después cómo se posa.
+* CI: 9 comprobaciones nuevas y 5 negativos en rojo. Dos de ellos los destapé al probarlos:
+  cambiar **un solo eje** del polvo y quitar la constante de la salpicadura **pasaban en
+  verde**. Ahora se cuentan las tres apariciones de cada cosa.
+
 ## 1.0.55 — el eco lee el suelo
 
 El eco del suelo existía desde 1.0.47 y se dibujaba igual en todas partes. Ahora mira lo que

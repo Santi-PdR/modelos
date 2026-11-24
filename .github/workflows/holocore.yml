@@ -799,6 +799,34 @@ jobs:
               'el eco no usa el anillo'
           assert 'if (ground == RelicAnimatable.Ground.HARD) {' in aura, \
               'el suelo duro no hace rebotar el eco'
+          # 1.0.56: el suelo que cede tambien salta. Polvo con SOLO tinte (el polvo
+          # no brilla) y salpicadura con tinte + aditivo pequeno (una gota si
+          # devuelve la luz). La piedra no levanta nada.
+          assert 'private static void drawGroundBurst(' in aura, 'el eco no levanta nada del suelo'
+          assert 'if (ground == RelicAnimatable.Ground.LOOSE || ground == RelicAnimatable.Ground.WATER) {' \
+              in aura, 'el polvo y la salpicadura no se disparan con el eco'
+          assert 'drawGroundBurst(bufferSource, frame, glow, flash, fade, ground);' in aura, \
+              'el polvo no se dibuja nunca'
+          assert 'BURST_COUNT' in aura and 'BURST_RISE' in aura, 'faltan las constantes del polvo'
+          # El cuerpo del metodo hasta su llave de cierre (la de 4 espacios): si no,
+          # el trozo se lleva el metodo siguiente y los conteos no valen nada.
+          golpe = _re.split(r'\n    \}', aura.split('private static void drawGroundBurst(', 1)[1])[0]
+          assert 'VertexConsumer additive = water' in golpe, \
+              'el polvo y el agua no se distinguen: el polvo no puede sumar luz'
+          assert ': null;' in golpe, 'el polvo tendria aditivo (nube blanca sobre nieve)'
+          assert golpe.count('SPLASH_ADDITIVE') == 3, \
+              'la salpicadura no usa su constante en los tres canales'
+          assert 'SPLASH_TINT_BOOST' in golpe, \
+              'la salpicadura no usa su constante de tinte'
+          assert 'float height = BURST_RISE * 4.0F * t * (1.0F - t);' in golpe, \
+              'el polvo no sube y cae: mancharia el aire sin forma'
+          # Los tres ejes: cambiar uno solo deja el polvo a media altura y el
+          # `in` de antes no lo notaba.
+          assert golpe.count('GROUND_DROP - height') == 3, \
+              'el polvo no sale del suelo en los tres ejes (sale del aire)'
+          assert golpe.count('billboardAt(tint, frame') == 1 and \
+              golpe.count('billboardAt(additive, frame') == 1, \
+              'el polvo y la salpicadura tienen que compartir el mismo dibujo (tinte y uno opcional)'
           assert '(1.0F + 0.70F * motion)' in aura, 'el anillo no late mas rapido al correr'
           assert '(1.0F + 0.45F * motion)' in aura, 'las chispas no barren mas rapido al correr'
           assert '(1.0F + 0.50F * motion)' in aura, 'las burbujas no suben mas rapido al nadar'
