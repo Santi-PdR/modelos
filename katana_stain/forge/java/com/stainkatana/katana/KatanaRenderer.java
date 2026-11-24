@@ -62,7 +62,7 @@ public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
                 // rejected 0.20 guard and pose are reworked.
                 poseStack.translate(.5, .5, .5);
                 poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(
-                        -45));
+                        context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND ? 45 : -45));
                 poseStack.translate(-.5, -.5, -.5);
             }
             super.renderByItem(stack, context, poseStack, buffers, light, overlay);
