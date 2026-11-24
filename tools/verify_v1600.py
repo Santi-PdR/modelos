@@ -126,9 +126,7 @@ def sat_witness(a, b):
     gaps = np.maximum(lo_a - hi_b, lo_b - hi_a)
     gaps[~valid] = -100
     index = int(np.argmax(gaps))
-    projection_overlap = min(hi_a[index], hi_b[index]) - max(lo_a[index], lo_b[index])
-    if gaps[index] < 0:
-        assert np.isclose(projection_overlap, -gaps[index], atol=1e-9, rtol=1e-9)
+    projection_intersection = max(0., min(hi_a[index], hi_b[index]) - max(lo_a[index], lo_b[index]))
     return {
         'signed_gap_u': float(gaps[index]),
         'axis_index': index,
@@ -136,7 +134,8 @@ def sat_witness(a, b):
         'axis': axes[index].tolist(),
         'cape_interval_u': [float(lo_a[index]), float(hi_a[index])],
         'limb_interval_u': [float(lo_b[index]), float(hi_b[index])],
-        'overlap_on_axis_u': float(-gaps[index]),
+        'separation_translation_on_axis_u': float(max(0., -gaps[index])),
+        'projection_intersection_on_axis_u': float(projection_intersection),
     }
 
 
