@@ -22,7 +22,7 @@ final class CapeJumpProbe {
             + "\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\tvy\taterrizaje_deg\taterrizaje_eco\n");
     private final StringBuilder boxes = new StringBuilder(), fixedChain = new StringBuilder(), fixedHem = new StringBuilder();
     private final BlockPos deck;
-    private NativeImage apex, contact, sample80, sample92, sample120, sample138;
+    private NativeImage apex, contact, sample80, sample92, sample120, sample138, sample140;
     private int start = -1, fitTick = -1;
     private boolean rose;
 
@@ -116,16 +116,19 @@ final class CapeJumpProbe {
             sample120 = Screenshot.takeScreenshot(game.getMainRenderTarget());
         if (sample138 == null && t >= 138 && t < 139)
             sample138 = Screenshot.takeScreenshot(game.getMainRenderTarget());
+        if (sample140 == null && t >= 140 && t < 141)
+            sample140 = Screenshot.takeScreenshot(game.getMainRenderTarget());
         if (t < END) return false;
         if (apex == null || contact == null) throw new AssertionError(name + ": missing apex or touchdown");
         try (var shotA = apex; var shotB = contact; var shot80 = sample80; var shot92 = sample92;
-             var shot120 = sample120; var shot138 = sample138) {
+             var shot120 = sample120; var shot138 = sample138; var shot140 = sample140) {
             shotA.writeToFile(dir.resolve(name + "-apice.png"));
             shotB.writeToFile(dir.resolve(name + "-contacto.png"));
             if (shot80 != null) shot80.writeToFile(dir.resolve(name + "-muestra-t80.png"));
             if (shot92 != null) shot92.writeToFile(dir.resolve(name + "-muestra-t92.png"));
             if (shot120 != null) shot120.writeToFile(dir.resolve(name + "-muestra-t120.png"));
             if (shot138 != null) shot138.writeToFile(dir.resolve(name + "-muestra-t138.png"));
+            if (shot140 != null) shot140.writeToFile(dir.resolve(name + "-muestra-t140.png"));
         }
         Files.writeString(dir.resolve(name + ".tsv"), rows);
         Files.writeString(dir.resolve(name + "-cubos.tsv"), boxes);
