@@ -237,6 +237,12 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.51, dimensión.** `nether` y `end` se detectan con `Level.NETHER` /
+`Level.END` y se miran **antes** que la luz y la lluvia, pero después de los estados de
+daño. El Nether sube el aura y el anillo (brasa de forja, 1.14× de giro); el End los
+baja y le quita el anillo (0.82×, vaivén 0.70). Ninguno de los dos toca el shader: solo
+mueven el `HoloTint` que ya existía (1.02 y 0.88).
+
 **1.0.50, la regla de los pases de evento.** Todo lo que es aditivo y vuela sobre el suelo
 (eco del suelo, onda de chispas, eco del anillo) lleva tinte debajo con cobertura `3 ×` su
 aditivo, y el aditivo se queda entre 0.12 y 0.18. Con 0.55 puro, sobre nieve se sumaba a un

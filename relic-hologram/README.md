@@ -95,7 +95,7 @@ En el juego:
 | Ajustar cualquier clave | `/relic set` (lista) · `/relic set <clave> <valor>` |
 | Guardar los ajustes | `/relic save` |
 | Volver a los valores de fábrica | `/relic reset` · `/relic reset <clave>` (una sola) |
-| Ver o forzar el estado de brillo | `/relic mood` · `/relic mood <auto\|dark\|rain\|storm\|wounded\|resonant\|night\|submerged\|portal\|burning\|freezing>` |
+| Ver o forzar el estado de brillo | `/relic mood` · `/relic mood <auto\|dark\|rain\|storm\|wounded\|resonant\|night\|submerged\|portal\|burning\|freezing\|nether\|end>` |
 | Recorrer los estados o ver la lista | `/relic mood next` (ronda, igual que la tecla M) · `/relic mood list` (los once, con el que manda marcado) |
 | Que los estados pasen solos | `/relic mood cycle [segundos]` (6 por defecto, 1–60) · `/relic mood cycle 0` para parar |
 | Ver la reliquia de cerca | `/relic preview` · `/relic preview <0.5–6>` (bloques) |
@@ -207,10 +207,10 @@ un borde más), y tanto el anillo como el aura cambian de color con el estado:
 | `idle_alert` | rojo | 1.05 | late como un aviso, gira al revés |
 | `idle_dormant` | gris azulado | 0.35 | no sale |
 
-Y por encima del ciclo de animación hay **once estados de brillo** que solo cambian
-la luz, no la animación (`RelicAnimatable.Mood`, desde 1.0.29). Se aplican cuando
-mandan: ardiendo > congelándose > herido > tormenta > agua > portal > oscuridad >
-lluvia > noche > resonancia.
+Y por encima del ciclo de animación hay **trece estados de brillo** que solo cambian
+la luz, no la animación (`RelicAnimatable.Mood`, desde 1.0.29; los dos últimos son de
+dimensión, desde 1.0.51). Se aplican cuando mandan: ardiendo > congelándose > herido >
+tormenta > agua > portal > Nether > End > oscuridad > lluvia > noche > resonancia.
 
 | Estado de brillo | Cuándo | Qué hace |
 |---|---|---|
@@ -224,6 +224,8 @@ lluvia > noche > resonancia.
 | portal (`portal`) | un portal del Nether, del End o de salida a menos de 4 bloques (desde 1.0.35) | violeta de obsidiana, giro 1.22× y las chispas estiradas hacia arriba, como el borde del portal |
 | ardiendo (`burning`) | el portador está en llamas (desde 1.0.39) | naranja de brasa —el único estado cálido—, giro 1.40× (el más rápido), el vaivén más amplio y **brasas que suben parpadeando** |
 | congelándose (`freezing`) | el portador se está helando (nieve en polvo, desde 1.0.45) | hielo pálido, giro 0.78×, apenas se mueve y **copos diminutos que caen en zigzag** |
+| Nether (`nether`) | el portador está **en el Nether** (desde 1.0.51) | brasa de forja —más roja y honda que ardiendo—, giro 1.14×, más vaivén y las **brasas del fuego**, porque el sitio es el que las enciende |
+| End (`end`) | el portador está **en el End** (desde 1.0.51) | hueso verdoso, el anillo casi apagado, el vaivén más corto y **polvo del vacío** que cae despacio |
 
 El conjunto además se mueve solo: **flota** con un vaivén lento de 0.022 bloques
 (la amplitud sube con la tormenta y baja cuando está herido, y **+60% si corres**) y
@@ -268,7 +270,7 @@ Para verlos sin montar la escena está `/relic mood <estado>`, que fuerza uno de
 de uno en uno (lo mismo que la **tecla M**, con el aviso en la barra de acción en vez
 del chat), `/relic mood cycle [segundos]` para que pasen solos (con `0` se para, y
 avisa igual que la tecla, así que al mirar la grabación se sabe qué estado es cada
-tramo) y `/relic mood list` para ver los once nombres con el activo marcado: en
+tramo) y `/relic mood list` para ver los trece nombres con el activo marcado: en
 oro si está forzado, en azul si lo ha elegido la escena. Es la forma de mirar la
 tormenta o el herido con un solo jugador y sin comandos raros.
 

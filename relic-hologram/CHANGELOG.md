@@ -1,5 +1,27 @@
 # Historial de cambios
 
+## 1.0.51 — dos estados de dimensión: Nether y End
+
+Los once estados de brillo miraban el clima, la luz y la compañía, pero no **dónde**
+estás. Ahora son trece: `nether` y `end`.
+
+* **`nether`**: brasa de forja (0.98, 0.38, 0.20), giro 1.14×, más aura y el anillo
+  más marcado, con las **brasas de ardiendo**. El sitio calienta la reliquia, no hace
+  falta estar en llamas para verlas.
+* **`end`**: hueso verdoso (0.78, 0.86, 0.64) —el único estado claro y desaturado de la
+  paleta—, el anillo casi apagado, el giro 0.82× y el vaivén más corto: el vacío no
+  empuja nada. Las chispas se cambian por **polvo del vacío** que cae despacio.
+* **Orden**: los dos van justo después de `portal` y antes de `oscuridad`. Antes de la
+  luz y del tiempo, porque en el Nether no llueve y en el End la luz del cielo no dice
+  nada; después de lo que le pasa al portador, así que quemarse en el Nether se ve como
+  quemarse.
+* **Textos** en los dos idiomas (`en_us`/`es_es` pasan de 73 a 75 claves), y los dos
+  entran en la ronda de la tecla **M** y en `/relic mood list` sin tocar el comando.
+* CI: `esperados` de `Validate moods and vfx` con los dos nombres nuevos, más 9
+  comprobaciones de que existen el import de `Level`, las dos comparaciones de
+  dimensión, el orden en la detección, sus dos ritmos, su vaivén, su tinte de shader,
+  su color y sus dos VFX.
+
 ## 1.0.50 — los tres pases de evento, tenidos
 
 1.0.49 arregló el eco del suelo. Faltaban los otros dos pases que también vuelan sobre el

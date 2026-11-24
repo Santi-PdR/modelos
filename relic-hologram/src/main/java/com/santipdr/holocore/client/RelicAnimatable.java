@@ -9,6 +9,7 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -84,8 +85,8 @@ public final class RelicAnimatable implements GeoAnimatable {
         /** Cae lluvia (sin tormenta) encima del portador. */
         RAIN,
         /**
-         * Noche despejada: hay cielo (no es el Nether ni el End), es de noche y no
-         * llueve. Antes esto contaba como "oscuridad", pero una reliquia al aire
+         * Noche despejada: es de noche y no llueve. El Nether y el End no llegan
+         * aqui desde 1.0.51: tienen su propio estado y se miran antes. Antes esto contaba como "oscuridad", pero una reliquia al aire
          * libre bajo las estrellas no esta encerrada: se queda quieta y palida.
          */
         NIGHT,
@@ -111,7 +112,23 @@ public final class RelicAnimatable implements GeoAnimatable {
          * palido, el bucle mas lento despues del agua y copos que caen despacio.
          * Va justo detras de ardiendo porque tambien es dano lento.
          */
-        FREEZING
+        FREEZING,
+        /**
+         * El portador esta en el Nether: no es clima, es el sitio. Brasa de forja y
+         * bruma caliente, con las brasas de ardiendo pero sin estar ardiendo.
+         *
+         * <p>Los dos estados de dimension van los ultimos en la lista porque no
+         * compiten con nada: se miran antes que la luz y el tiempo (en el Nether
+         * llover no llueve y en el End el cielo no dice nada), pero despues de
+         * todo lo que le pasa al portador.</p>
+         */
+        NETHER,
+        /**
+         * El portador esta en el End: el vacio es quieto y palido, hueso verdoso,
+         * casi sin anillo y con el giro mas lento despues del hielo. El polvo de
+         * enderman cae despacio, al reves que las brasas del Nether.
+         */
+        END
     }
 
     private final UUID wearer;
@@ -623,6 +640,10 @@ public final class RelicAnimatable implements GeoAnimatable {
             case BURNING -> 1.40D;
             // El frio entumece: casi tan lento como el agua.
             case FREEZING -> 0.78D;
+            // La forja empuja: el Nether es el unico sitio que acelera sin hacer
+            // dano. El vacio del End no empuja nada: cae el ritmo un poco.
+            case NETHER -> 1.14D;
+            case END -> 0.82D;
             case RESONANT -> 1.18D;
             case NEUTRAL -> 1.0D;
         };
@@ -660,6 +681,15 @@ public final class RelicAnimatable implements GeoAnimatable {
         }
         if (portalNear(player)) {
             return Mood.PORTAL;
+        }
+        // Dimension: no es clima y no compite con lo de arriba, pero tiene que ir
+        // antes que la luz y la lluvia porque en el Nether no llueve y en el End la
+        // luz del cielo no significa nada (hay cielo y esta siempre oscuro).
+        if (player.level().dimension() == Level.NETHER) {
+            return Mood.NETHER;
+        }
+        if (player.level().dimension() == Level.END) {
+            return Mood.END;
         }
         int bloque = player.level().getBrightness(LightLayer.BLOCK, player.blockPosition());
         if (bloque < DARK_LIGHT

@@ -102,6 +102,18 @@ final class RelicGlowState {
     private static final float PORTAL_RED = 0.78F;
     private static final float PORTAL_GREEN = 0.42F;
     private static final float PORTAL_BLUE = 1.00F;
+    /**
+     * Nether: brasa de forja, mas roja y mas honda que el naranja de ardiendo. No
+     * se pueden confundir porque ardiendo manda sobre el sitio: si te quemas en el
+     * Nether el color es el de ardiendo.
+     */
+    private static final float NETHER_RED = 0.98F;
+    private static final float NETHER_GREEN = 0.38F;
+    private static final float NETHER_BLUE = 0.20F;
+    /** End: hueso verdoso del vacio. Es el unico estado claro y desaturado. */
+    private static final float END_RED = 0.78F;
+    private static final float END_GREEN = 0.86F;
+    private static final float END_BLUE = 0.64F;
     /** Bajo el agua: verdoso de fondo de rio, con el anillo casi apagado. */
     private static final float SUBMERGED_RED = 0.30F;
     private static final float SUBMERGED_GREEN = 0.88F;
@@ -204,6 +216,24 @@ final class RelicGlowState {
                 aura += 0.02F;
                 ring -= 0.20F;
                 spin -= 0.020F;
+            }
+            case NETHER -> {
+                // El sitio calienta la reliquia: brasa, mas aura y el giro avivado.
+                red = lerp(red, NETHER_RED, 0.45F);
+                green = lerp(green, NETHER_GREEN, 0.45F);
+                blue = lerp(blue, NETHER_BLUE, 0.45F);
+                aura += 0.12F;
+                ring += 0.22F;
+                spin += 0.045F;
+            }
+            case END -> {
+                // El vacio no empuja: casi sin anillo, por debajo del reposo.
+                red = lerp(red, END_RED, 0.45F);
+                green = lerp(green, END_GREEN, 0.45F);
+                blue = lerp(blue, END_BLUE, 0.45F);
+                aura += 0.04F;
+                ring -= 0.25F;
+                spin -= 0.018F;
             }
             case NIGHT -> {
                 // Noche despejada: casi el reposo, un punto mas frio y con el aura

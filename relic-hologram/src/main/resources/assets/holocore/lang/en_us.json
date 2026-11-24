@@ -64,6 +64,8 @@
   "message.holocore.state.portal": "portal",
   "message.holocore.state.burning": "on fire",
   "message.holocore.state.freezing": "freezing",
+  "message.holocore.state.nether": "in the Nether",
+  "message.holocore.state.end": "in the End",
   "message.holocore.mood_show": "Glow state: %s.",
   "message.holocore.mood_forced": "Glow state forced: %s (/relic mood auto to release).",
   "message.holocore.mood_auto": "Glow state back to automatic.",

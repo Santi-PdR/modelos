@@ -381,7 +381,7 @@ jobs:
           enum = animatable.split('enum Mood {', 1)[1].split('}', 1)[0]
           moods = re.findall(r'^\s*([A-Z][A-Z_]*)\s*,?$', enum, re.M)
           esperados = ['NEUTRAL', 'RESONANT', 'STORM', 'WOUNDED', 'DARK', 'RAIN', 'NIGHT',
-                       'SUBMERGED', 'PORTAL', 'BURNING', 'FREEZING']
+                       'SUBMERGED', 'PORTAL', 'BURNING', 'FREEZING', 'NETHER', 'END']
           assert moods == esperados, moods
           assert 'public Mood mood()' in animatable, 'falta el accessor de Mood'
           assert 'isThundering()' in animatable, 'la tormenta no alimenta ningun estado'
@@ -407,6 +407,26 @@ jobs:
               'el escaneo de portal no esta cacheado'
           assert 'if (portalNear(player)) {' in animatable, \
               'el escaneo de portal existe pero no alimenta ningun estado'
+          # 1.0.51: dimension. No es clima, es el sitio, y va antes que la luz y el
+          # tiempo: en el Nether no llueve y en el End la luz del cielo no dice nada.
+          assert 'import net.minecraft.world.level.Level;' in animatable, \
+              'falta el import de Level para los estados de dimension'
+          assert 'player.level().dimension() == Level.NETHER' in animatable, \
+              'el Nether no es un estado'
+          assert 'player.level().dimension() == Level.END' in animatable, \
+              'el End no es un estado'
+          assert 'case NETHER -> 1.14D;' in animatable and 'case END -> 0.82D;' in animatable, \
+              'los estados de dimension no tienen ritmo propio'
+          assert 'case NETHER -> 1.25F;' in aura and 'case END -> 0.70F;' in aura, \
+              'los estados de dimension no cambian el vaiven'
+          assert 'case NETHER -> 1.02F;' in geo and 'case END -> 0.88F;' in geo, \
+              'los estados de dimension no mueven el tinte del shader'
+          assert 'NETHER_RED' in glow and 'END_RED' in glow, \
+              'los estados de dimension no tienen color'
+          assert 'if (mood == RelicAnimatable.Mood.NETHER) {' in aura, \
+              'el Nether no tiene brasas de forja'
+          assert 'if (mood == RelicAnimatable.Mood.END) {' in aura, \
+              'el End no tiene polvo del vacio'
           # Ardiendo va el primero de la deteccion: es lo unico de la lista que hace
           # dano mientras lo miras.
           assert 'if (player.isOnFire()) {' in animatable, 'estar ardiendo no es un estado'
@@ -414,6 +434,14 @@ jobs:
               .split('private static double speedFor', 1)[0]
           assert deteccion.index('isOnFire()') < deteccion.index('getHealth()'), \
               'estar ardiendo tiene que mandar sobre el herido'
+          assert deteccion.index('Level.NETHER') < deteccion.index('isRainingAt'), \
+              'la dimension tiene que mirarse antes que la lluvia'
+          assert deteccion.index('Level.NETHER') < deteccion.index('isNight()'), \
+              'la dimension tiene que mirarse antes que la noche'
+          # Y despues de lo que le pasa al portador: quemarse en el Nether se ve
+          # como quemarse, no como estar en el Nether.
+          assert deteccion.index('isOnFire()') < deteccion.index('Level.NETHER'), \
+              'estar ardiendo tiene que mandar sobre la dimension'
           # Congelandose: getTicksFrozen solo sube cuando el juego ya decidio que te
           # estas helando, asi que no hay que mirar biomas ni bloques.
           assert 'if (player.getTicksFrozen() > 0) {' in animatable, 'congelarse no es un estado'
@@ -674,7 +702,7 @@ jobs:
               assert 'message.holocore.mood_list' in lang, f'{idioma} sin la lista de estados'
               for mood in ('wounded', 'storm', 'resonant', 'dark', 'rain',
                            'neutral', 'night', 'submerged', 'portal', 'burning',
-                           'freezing'):
+                           'freezing', 'nether', 'end'):
                   clave = f'message.holocore.state.{mood}'
                   assert clave in lang, f'{idioma} sin {clave}'
 

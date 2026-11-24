@@ -163,6 +163,10 @@ public class RelicGeoRenderer extends GeoObjectRenderer<RelicAnimatable> {
                 case BURNING -> 1.05F;
                 // Con hielo encima el borde se apaga: es un estado de estar quieto.
                 case FREEZING -> 0.90F;
+                // El Nether tiene su propia luz roja: el borde no necesita ayuda.
+                case NETHER -> 1.02F;
+                // En el End el borde se queda bajo: el vacio no devuelve nada.
+                case END -> 0.88F;
                 case NEUTRAL -> 1.0F;
             };
             glowShader.safeGetUniform("HoloTint").set(gain, gain, gain, 1.0F);

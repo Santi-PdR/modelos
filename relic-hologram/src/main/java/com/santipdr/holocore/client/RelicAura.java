@@ -420,6 +420,18 @@ public final class RelicAura {
             drawEmbers(bufferSource, frame, time, glow, amount, motion);
             return;
         }
+        if (mood == RelicAnimatable.Mood.NETHER) {
+            // En el Nether las brasas suben igual que ardiendo, pero con la paleta
+            // de forja: es el sitio el que las enciende, no el fuego del portador.
+            drawEmbers(bufferSource, frame, time, glow, amount, motion);
+            return;
+        }
+        if (mood == RelicAnimatable.Mood.END) {
+            // En el End cae polvo de enderman: granos palidos que bajan despacio y
+            // se mecen. Mismo VFX que el hielo, otra paleta y otro ritmo.
+            drawFlakes(bufferSource, frame, time, glow, amount, motion);
+            return;
+        }
         if (mood == RelicAnimatable.Mood.RAIN) {
             // Con lluvia, gotas cayendo alrededor: el mismo truco que las burbujas,
             // al reves. Es el estado que mas tiempo se pasa encendido, y con chispas
@@ -831,6 +843,10 @@ public final class RelicAura {
             case BURNING -> 1.35F;
             // Congelandose apenas se mueve: el frio entumece.
             case FREEZING -> 0.55F;
+            // El Nether vibra mas que el reposo pero menos que ardiendo; en el End
+            // no hay nada que empuje, asi que flota por debajo.
+            case NETHER -> 1.25F;
+            case END -> 0.70F;
             case NEUTRAL -> 1.0F;
         };
         // Correr suma un 60% de vaiven y agacharse lo recorta: es la diferencia
