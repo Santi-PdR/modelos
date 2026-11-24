@@ -5,6 +5,11 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+# Each fixture commits captures back to this branch. Serialize runs to avoid
+# image-only rebases colliding when an earlier experiment is reverted.
+concurrency:
+  group: katana-visual-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   client:
     if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[katana-visual]') }}
@@ -160,6 +165,7 @@ jobs:
           grep -F 'STAIN_MULTIPART_RANGE_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_BC_ATTACK_FX_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_BC_IMPORTED_COMBO_RESOLVED' /tmp/stain-visual-full-bc.log
+          test -f run/stain-visual-test/00c_left_guard_front.png
           grep -F 'STAIN_EFFECT_SAMPLES_DONE' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-full-bc.log
           test "$(find run/stain-visual-test -name '*.png' | wc -l)" -ge 10
