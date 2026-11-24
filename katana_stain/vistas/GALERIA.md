@@ -2,18 +2,19 @@
 
 Estas imágenes son capturas automáticas de un cliente Forge de prueba, **no un video ni un playtest**. Los fotogramas aislados no garantizan continuidad de la animación, calidad del agarre, sonido ni compatibilidad con todos los mods. Las carpetas se actualizan cuando termina el workflow visual; pueden reflejar una prueba experimental posteriormente descartada y no necesariamente el código actual.
 
-**Estado de revisión:** la guardia y la primera persona siguen rechazadas: la espada cruza la cara y hay brazos separados o agarres incorrectos. Los cortes de C tampoco están aprobados: en los impactos 4 y 7 la hoja todavía parece una guardia levantada. Las capturas no son una versión final.
+**Estado de revisión:** la guardia diestra coloca ahora la hoja más al costado, pero el agarre y la guardia zurda siguen sin aprobarse. En Z los brazos zurdos todavía se ven flotantes; también falta revisar el gesto diestro en movimiento. En C los golpes 3, 5 y 9 ahora apuntan hacia el objetivo y los verticales se orientan mejor, pero se repite demasiado la pose y las capturas no validan la coreografía completa.
 
-**Último ensayo visual:** workflow `45076866783`, sobre la versión con las pruebas de selección de animaciones. Las tres ejecuciones del cliente, incluida la verificación de que Better Combat resolvió los cuatro clips externos, terminaron correctamente; el paso final de guardar imágenes terminó con error, aunque las capturas se publicaron en el commit `698e9926`. La compilación `45076866765` pasó. Estos resultados no aprueban visualmente las poses ni prueban el movimiento completo.
-
-La prueba anterior (`45075610731`) abrió más el brazo de la guardia y adelantó el contacto de C: la hoja terminó atravesando la cara y otros golpes se veían de canto. Ambos cambios se revirtieron antes del ensayo más reciente.
+**Último ensayo visual:** workflow `45338153503` y compilación `45338153577`, ambos exitosos. Las capturas son posteriores al evento de daño, no necesariamente del mismo fotograma. Se conservan para revisión, no como aprobación final.
 
 ## Con Better Combat instalado
 
 [Ver todas las capturas](client-full-bc/) · [Tiempos de captura](client-full-bc/capture-timing.tsv)
 
 ### Guardia de frente
-![Guardia de frente](client-full-bc/04_third_front.png)
+[Diestro](client-full-bc/04_third_front.png) · [Zurdo](client-full-bc/00c_left_guard_front.png) · [Zurdo desde atrás](client-full-bc/00a_left_third.png)
+
+![Guardia diestra de frente](client-full-bc/04_third_front.png)
+![Guardia zurda de frente](client-full-bc/00c_left_guard_front.png)
 
 ### Z, primera persona: diestro y zurdo
 ![Z diestro](client-full-bc/39_blood_right_draw.png)
@@ -32,7 +33,7 @@ Cada captura se solicita después de un evento de daño confirmado; la sincroniz
 
 [Ver todas las capturas](client-vanilla/) · [Tiempos de captura](client-vanilla/capture-timing.tsv)
 
-**C sigue en desarrollo: las poses de impacto aún no están aprobadas.**
+**C sigue en desarrollo: los contactos mejoraron en algunos fotogramas, pero las poses aún no están aprobadas.**
 
 ![C sin Better Combat, postura pendiente](client-vanilla/confirmed_c_impact_07.png)
 
