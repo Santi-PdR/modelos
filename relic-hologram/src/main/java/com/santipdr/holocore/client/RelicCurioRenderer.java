@@ -112,7 +112,8 @@ public class RelicCurioRenderer implements ICurioRenderer {
             // cuanto aura: son dos palancas distintas (pases vs billboards).
             long began = System.nanoTime();
             RelicAura.render(poseStack, bufferSource, partialTicks, state, visual.glow(), fade,
-                    animatable.mood(), animatable.motion(), true, animatable.ground());
+                    animatable.mood(), animatable.motion(), true, animatable.ground(),
+                    animatable.stepFade());
             RelicRenderStats.aura(System.nanoTime() - began);
         }
 

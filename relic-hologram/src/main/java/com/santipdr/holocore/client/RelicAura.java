@@ -133,6 +133,8 @@ public final class RelicAura {
      * 3.0 de cobertura de tinte dan un anillo del color del estado sobre cualquier
      * fondo.
      */
+    /** Fuerza del eco de un paso respecto al de un evento (1.0.62). */
+    private static final float GROUND_STEP_SCALE = 0.45F;
     private static final float GROUND_TINT_BOOST = 3.0F;
     private static final float GROUND_ADDITIVE = 0.12F;
     /**
@@ -197,7 +199,7 @@ public final class RelicAura {
     static void render(PoseStack poseStack, MultiBufferSource bufferSource, float partialTick,
                        RelicAnimatable.LoopState state, RelicGlowState glow, float fade,
                        RelicAnimatable.Mood mood, float motion, boolean onShoulder,
-                       RelicAnimatable.Ground ground) {
+                       RelicAnimatable.Ground ground, float step) {
         float time = time(partialTick);
         Frame frame = frame(poseStack);
         // Destello de evento: el anillo se enciende aunque el estado no lo tenga,
@@ -209,6 +211,11 @@ public final class RelicAura {
         }
         if (RelicConfig.GLOW_RING.get() && glow.ring() + flash * 0.8F > 0.01F) {
             drawRing(bufferSource, frame, time, state, glow, flash, fade, motion);
+        }
+        // Paso (1.0.62): un anillo pequeño y corto donde cae el pie, cada 0.85
+        // bloques. Va con el eco del suelo, asi que se apaga con la misma config.
+        if (onShoulder && RelicConfig.GROUND_ECHO.get() && step > 0.02F) {
+            drawStepEcho(bufferSource, frame, glow, fade, step, ground);
         }
         // Escaner de peligro: solo en HUNTED y solo si las chispas estan activas (es
         // el mismo presupuesto de calidad). Va antes del eco para que quede encima.
@@ -322,6 +329,29 @@ public final class RelicAura {
             // Y el suelo que cede tambien salta: polvo en la arena, salpicadura en el
             // agua (1.0.56). La piedra no levanta nada.
             drawGroundBurst(bufferSource, frame, glow, flash, fade, ground);
+        }
+    }
+
+    /**
+     * El eco de un paso: el mismo anillo, mucho mas pequeño y con su propia fuerza
+     * ({@code GROUND_STEP_SCALE}). No cambia el presupuesto: usa {@link #echoRing},
+     * que ya lleva tinte debajo y aditivo pequeno.
+     *
+     * <p>En suelo blando o en el agua levanta ademas un poco de lo que pisa, con el
+     * mismo {@code drawGroundBurst} del golpe pero a un tercio de fuerza: es la
+     * diferencia entre pisar arena y pisar piedra.</p>
+     */
+    private static void drawStepEcho(MultiBufferSource bufferSource, Frame frame,
+                                     RelicGlowState glow, float fade, float step,
+                                     RelicAnimatable.Ground ground) {
+        float alpha = step * GROUND_ADDITIVE * GROUND_STEP_SCALE * fade;
+        if (alpha <= 0.005F) {
+            return;
+        }
+        // Anillo pequeño: el radio es el minimo del eco, no el que se abre con un golpe.
+        echoRing(bufferSource, frame, glow, GROUND_MIN_RADIUS * 0.55F, alpha);
+        if (ground == RelicAnimatable.Ground.LOOSE || ground == RelicAnimatable.Ground.WATER) {
+            drawGroundBurst(bufferSource, frame, glow, step * 0.35F, fade, ground);
         }
     }
 

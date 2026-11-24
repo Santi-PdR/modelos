@@ -237,6 +237,12 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.62, pasos.** `drawStepEcho` usa `echoRing` con el radio mínimo (`×0.55`) y
+`GROUND_STEP_SCALE` 0.45, así que el eco de un paso nunca pide más luz que el de un evento:
+es el mismo anillo, más pequeño. El polvo sale de `drawGroundBurst` con `flash = step × 0.35`,
+o sea por debajo del presupuesto del golpe. La cuenta de pasos vive en el tick, con dos
+`double` y un `boolean` por portador: nada nuevo por frame.
+
 **1.0.61, escáner.** El ping de `hunted` reutiliza la onda: `drawShockRing` con radio
 `SCAN_MIN..SCAN_MAX` y `alpha = (1-fase)² · SHOCK_ADDITIVE`. Al compartir las constantes, la
 composición medida en 1.0.50 vale tal cual y el script no necesita una entrada nueva. Es el

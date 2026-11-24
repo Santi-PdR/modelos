@@ -50,6 +50,15 @@ public final class RelicAnimatable implements GeoAnimatable {
     private static final float FLASH_TAU = 0.42F;
     /** Constante de tiempo de la energia de movimiento, en segundos. */
     private static final float MOTION_TAU = 0.30F;
+    /**
+     * Paso (1.0.62): cada {@code STEP_DISTANCE} bloques andados, el eco del suelo pega
+     * un anillo pequeno. Se mide con la distancia horizontal acumulada por tick, no
+     * con la animacion del jugador, que no dice nada del desplazamiento real (nadar,
+     * volar, ir en barco).
+     */
+    private static final float STEP_DISTANCE = 0.85F;
+    /** Lo que tarda en apagarse el eco de un paso, en segundos. */
+    private static final float STEP_FADE = 0.35F;
     /** Ticks durante los que se usa wake/sleep en vez de activation/deactivation. */
     private static final int QUICK_TOGGLE_WINDOW = 400;
     private static final String LAYER_CONTROLLER = "layer";
@@ -521,6 +530,7 @@ public final class RelicAnimatable implements GeoAnimatable {
         // medias cuando el juego va a 5 FPS.
         decayFlash();
         updateMotion(player);
+        updateStep(player);
 
         boolean wasActive = this.active;
         this.active = snapshot.active();
@@ -978,6 +988,59 @@ public final class RelicAnimatable implements GeoAnimatable {
      * deja a media con la velocidad horizontal. Se mide por tick y no por frame
      * porque el estado del jugador solo cambia por tick.
      */
+    /**
+     * Distancia horizontal acumulada desde el ultimo paso, y cuando fue. Se reinicia
+     * al pasar {@code STEP_DISTANCE}, asi que el eco de cada paso cae donde toca y no
+     * en cada tick.
+     */
+    private double stepWalked;
+    private double stepLastX;
+    private double stepLastZ;
+    private boolean stepSeeded;
+    private long stepNanos;
+
+    /**
+     * Eco del ultimo paso, de 1 a 0 en {@code STEP_FADE} segundos. Cero si no hay
+     * paso reciente, que es lo normal.
+     */
+    float stepFade() {
+        if (this.stepNanos == 0L) {
+            return 0.0F;
+        }
+        float age = (System.nanoTime() - this.stepNanos) / 1_000_000_000.0F;
+        if (age < 0.0F || age >= STEP_FADE) {
+            return 0.0F;
+        }
+        // Cuadratico: el anillo del paso sale y se va, no se queda flotando.
+        float rest = 1.0F - age / STEP_FADE;
+        return rest * rest;
+    }
+
+    private void updateStep(Player player) {
+        double x = player.getX();
+        double z = player.getZ();
+        if (!this.stepSeeded) {
+            this.stepSeeded = true;
+            this.stepLastX = x;
+            this.stepLastZ = z;
+            return;
+        }
+        double dx = x - this.stepLastX;
+        double dz = z - this.stepLastZ;
+        this.stepLastX = x;
+        this.stepLastZ = z;
+        // Solo horizontal: subir una escalera o caer no es un paso.
+        this.stepWalked += Math.sqrt(dx * dx + dz * dz);
+        if (this.stepWalked < STEP_DISTANCE) {
+            return;
+        }
+        this.stepWalked = 0.0D;
+        // En el agua el eco del paso lo hace el agua: no hay pisada.
+        if (!player.isEyeInFluid(FluidTags.WATER)) {
+            this.stepNanos = System.nanoTime();
+        }
+    }
+
     private void updateMotion(Player player) {
         long now = System.nanoTime();
         float target;

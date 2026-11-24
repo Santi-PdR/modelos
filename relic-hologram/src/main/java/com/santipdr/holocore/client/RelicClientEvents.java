@@ -294,7 +294,7 @@ public final class RelicClientEvents {
             // false: la vista previa no tiene suelo debajo, asi que no dibuja el eco.
             RelicAura.render(poseStack, buffers, partialTick, animatable.loopState(), visual.glow(),
                     1.0F, animatable.mood(), animatable.motion(), false,
-                    RelicAnimatable.Ground.OTHER);
+                    RelicAnimatable.Ground.OTHER, 0.0F);
         }
         buffers.endBatch();
         poseStack.popPose();

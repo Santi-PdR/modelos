@@ -1,5 +1,22 @@
 # Historial de cambios
 
+## 1.0.62 — cada paso deja un eco
+
+El eco del suelo solo aparecía con un evento. Ahora **también al andar**: cada 0,85 bloques
+cae un anillo pequeño donde está el pie.
+
+* **Anillo corto y flojo** (`×0.45` del eco de un evento, radio `×0.55`, se apaga en 0,35 s
+  con caída al cuadrado): al andar se ve una estela, no un charco.
+* **En suelo blando o en el agua levanta lo que pisa**: reutiliza `drawGroundBurst` del golpe a
+  un tercio de fuerza, así que pisar arena deja polvo y pisar agua deja salpicadura.
+* **Sin clave nueva de config**: va con `visuals.groundEcho`, que es lo que ya apagaba el eco.
+* **Medido en horizontal y por distancia recorrida** (`√(dx² + dz²)` acumulada), no con la
+  animación del jugador: subir una escalera o caer no es un paso, nadar tampoco (en el agua no
+  hay pisada: el eco lo hace el agua).
+* **Solo en el hombro** (`onShoulder`): en la vista previa el "suelo" es la cara de la cámara.
+* CI: 11 comprobaciones nuevas y 4 negativos en rojo: el paso en la vista previa, el anillo
+  del tamaño de un evento, la pisada en el agua y el paso contado sin distancia.
+
 ## 1.0.61 — el escáner del peligro
 
 1.0.60 dio color al estado `hunted`, pero las partículas eran las mismas chispas de siempre. Ahora

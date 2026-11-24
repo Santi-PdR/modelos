@@ -810,8 +810,29 @@ jobs:
           assert 'isCrouching()' in animatable, 'agacharse no frena la energia'
           assert 'RelicAnimatable.Mood mood, float motion, boolean onShoulder,' in aura, \
               'el aura no recibe la energia de movimiento (y el eco, si va en el hombro)'
-          assert 'RelicAnimatable.Ground ground)' in aura, \
+          assert 'RelicAnimatable.Ground ground, float step)' in aura, \
               'el aura no sabe sobre que suelo esta el portador (eco ciego, 1.0.55)'
+          # 1.0.62: el eco de un paso. Distancia horizontal acumulada (no la animacion
+          # del jugador, que no dice nada del desplazamiento real) y sin pisada en el
+          # agua, donde el eco lo hace el agua.
+          assert 'STEP_DISTANCE' in animatable and 'STEP_FADE' in animatable, \
+              'el paso no tiene distancia ni duracion'
+          assert 'private void updateStep(Player player)' in animatable, 'no hay quien cuente los pasos'
+          assert 'updateStep(player);' in animatable, 'los pasos se cuentan pero no se actualizan'
+          assert 'Math.sqrt(dx * dx + dz * dz)' in animatable, \
+              'el paso no se mide en horizontal (subir una escalera no es un paso)'
+          assert 'if (!player.isEyeInFluid(FluidTags.WATER)) {' in animatable, \
+              'en el agua tambien hay pisada'
+          assert 'float stepFade()' in animatable, 'el eco del paso no se puede leer'
+          assert 'if (onShoulder && RelicConfig.GROUND_ECHO.get() && step > 0.02F) {' in aura, \
+              'el eco del paso no se dibuja (o se dibuja en la vista previa, donde no hay suelo)'
+          assert 'private static void drawStepEcho(' in aura, 'el eco del paso no tiene dibujo'
+          paso = _re.split(r'\n    \}', aura.split('private static void drawStepEcho(', 1)[1])[0]
+          assert 'echoRing(bufferSource, frame, glow, GROUND_MIN_RADIUS * 0.55F, alpha);' in paso, \
+              'el paso no usa el anillo pequeño'
+          assert 'GROUND_STEP_SCALE' in paso, 'el paso no tiene fuerza propia'
+          assert 'drawGroundBurst(bufferSource, frame, glow, step * 0.35F, fade, ground);' in paso, \
+              'el paso no levanta polvo en suelo blando'
           # 1.0.55: el eco del suelo cambia de forma segun lo que pisas. Se mira una
           # vez por segundo y cacheado, como el portal: en el render ya no se puede.
           assert 'public enum Ground {' in animatable, 'no hay tipos de suelo'
@@ -898,11 +919,12 @@ jobs:
           assert 'energy *= 1.0F + 0.60F * motion;' in aura, \
               'el vaiven no crece al correr'
           # Las dos vistas tienen que pasarla al aura (no solo al movimiento propio).
-          assert 'animatable.mood(), animatable.motion(), true, animatable.ground());' in curio, \
+          assert 'animatable.stepFade());' in curio, 'el hombro no pasa el eco del paso'
+          assert 'animatable.mood(), animatable.motion(), true, animatable.ground(),' in curio, \
               'el hombro no pasa la energia de movimiento al aura (ni pide el eco en el suelo)'
           assert '1.0F, animatable.mood(), animatable.motion(), false,' in eventos, \
               'la vista previa no pasa la energia de movimiento al aura o dibuja el eco sin suelo'
-          assert 'RelicAnimatable.Ground.OTHER);' in eventos, \
+          assert 'RelicAnimatable.Ground.OTHER, 0.0F);' in eventos, \
               'la vista previa no dice sobre que suelo esta (no lo hay)'
           assert 'static void applyAliveMotion(' in aura, 'la reliquia no tiene movimiento propio'
           assert 'RelicAura.applyAliveMotion(' in curio, 'el hombro no usa el movimiento propio'
