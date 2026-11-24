@@ -100,7 +100,9 @@ public final class KatanaAnimations {
                 if (!part.equals("leftArm")) return java.util.Optional.empty();
                 float contact = GestureCurve.contact(playing.getTick() + contactDelta[0]);
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
-                        dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
+                        // Rotate about the shoulder rather than translating the
+                        // arm independently into the middle of the view.
+                        new dev.kosmx.playerAnim.core.util.Vec3f(-.35F * contact, 0, .3F * contact),
                         new dev.kosmx.playerAnim.core.util.Vec3f(
                                 contact * KatanaClientConfig.BLOOD_HAND_X.get().floatValue(),
                                 contact * KatanaClientConfig.BLOOD_HAND_Y.get().floatValue(),
