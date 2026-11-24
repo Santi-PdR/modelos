@@ -18,7 +18,8 @@ from cape_fit import fixed_wearer_pose, hood_moves
 from preview_cloth import ARMOR_GEO, load, matrices, mod_version
 from verify_forge_postures import ACTOR, read_boxes
 from verify_forge_walk import pairs, points, read
-from verify_v1660 import WornModel, contacts, sat_witness
+from verify_v1660 import WornModel, contacts
+from verify_v1600 import sat_witness
 
 SLOTS = ('pecho', 'curios')
 CASES = ('salto', 'salto-en-carrera', 'caida-del-borde')
