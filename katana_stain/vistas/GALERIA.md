@@ -2,9 +2,9 @@
 
 Estas imágenes son capturas automáticas de un cliente Forge de prueba, **no un video ni un playtest**. Los fotogramas aislados no garantizan continuidad de la animación, calidad del agarre, sonido ni compatibilidad con todos los mods. Las carpetas se actualizan cuando termina el workflow visual; pueden reflejar una prueba experimental posteriormente descartada y no necesariamente el código actual.
 
-**Estado de revisión:** la guardia diestra coloca ahora la hoja más al costado, pero el agarre y la guardia zurda siguen sin aprobarse. En Z los brazos zurdos todavía se ven flotantes; también falta revisar el gesto diestro en movimiento. En C los golpes 3, 5 y 9 ahora apuntan hacia el objetivo y los verticales se orientan mejor, pero se repite demasiado la pose y las capturas no validan la coreografía completa.
+**Estado de revisión:** la guardia aparece al costado en los ensayos recientes, pero todavía no está aprobada. En Z los brazos zurdos siguen viéndose separados o solapados; en X se probó un encuadre más bajo y aún debe revisarse la continuidad. La coreografía de C sigue siendo repetitiva y no está aprobada. Ninguna de estas capturas equivale a una aceptación visual o un playtest.
 
-**Último ensayo visual:** workflow `45341219285` y compilación `45341219328`, ambos exitosos. Las imágenes de guardia muestran una prueba más abierta que se descartó después porque la hoja zurda seguía cruzando la cara. La postura actual vuelve a la apertura anterior, por lo que esas capturas no la representan exactamente. Los impactos se capturan después del evento de daño, no necesariamente en el mismo fotograma.
+**Último ensayo visual:** workflow `45443052143` y compilación `45443049897`, ambos exitosos. Se descartó la prueba simétrica anterior porque ocultaba la espada y los brazos zurdos. Las imágenes se regeneraron con el encuadre anterior, que aún tiene defectos. Los impactos se capturan después del evento de daño, no necesariamente en el mismo fotograma.
 
 ## Con Better Combat instalado
 
@@ -26,8 +26,11 @@ Cada captura se solicita después de un evento de daño confirmado; la sincroniz
 
 ![C impacto 7](client-full-bc/confirmed_c_impact_07.png)
 
-### X: ejemplo de impacto
-![X impacto](client-full-bc/06b_slash_impact.png)
+### X: primera persona
+[Preparación diestra](client-full-bc/86_x_first_prepare.png) · [Impacto diestro](client-full-bc/88_x_first_impact.png) · [Preparación zurda](client-full-bc/101_x_left_first_prepare.png) · [Impacto zurdo](client-full-bc/103_x_left_first_impact.png)
+
+![X impacto diestro](client-full-bc/88_x_first_impact.png)
+![X impacto zurdo](client-full-bc/103_x_left_first_impact.png)
 
 ## Sin Better Combat
 
