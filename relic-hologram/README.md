@@ -252,7 +252,8 @@ salpicadura en el agua; la piedra no levanta nada.
 Y el eco **también cae al andar** (1.0.62): cada 0,85 bloques aparece un anillo pequeño donde
 está el pie (0,45 de la fuerza de un evento, se apaga en 0,35 s), con su polvo o su salpicadura
 si el suelo cede. Se apaga con `visuals.groundEcho`, como el eco de los eventos, y en el agua no
-hay pisada.
+hay pisada. En calidad `LITE` el paso se queda en el anillo: el polvo son siete quads y pasa
+muchas veces por minuto (el de un evento sí se mantiene, porque es un suceso y no algo continuo).
 
 Para mirar los cuatro sin moverte: **`/relic echo hard|loose|water|next`** fuerza el suelo y
 dispara un pulso para que el eco se vea en el sitio, y `/relic echo auto` vuelve al bloque de

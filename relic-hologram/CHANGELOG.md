@@ -1,5 +1,23 @@
 # Historial de cambios
 
+## 1.0.63 — el eco también respeta la calidad (y una regla nueva en el CI)
+
+Bloque de auditoría, de los que no se ven pero se notan en cuanto algo va mal.
+
+* **El polvo ignoraba `auraTint`.** Era el único pase con tinte que se dibujaba también con
+  el interruptor en `false` — justo lo que ese ajuste existe para apagar. Corregido.
+* **En LITE, el polvo de las pisadas desaparece.** El anillo del paso se queda (un quad), pero
+  los siete quads del polvo se van: es lo primero que sobra cuando alguien pide rendimiento y
+  pasa cada 0,85 bloques, o sea muchas veces por minuto. El polvo de un **evento** sí sigue en
+  LITE: es un suceso, no algo continuo.
+* **Y una regla general en el validador**: ningún trozo de código que pida `TINT_GLOW` puede
+  quedarse fuera de la guarda de `auraTint`. Es exactamente el invariante que **1.0.48 rompió
+  sin que nada lo notara** (el eco del anillo pintado con el render type del brillo). Hasta hoy
+  lo cubrían asserts sueltos; ahora es una regla que vale para cualquier pase futuro.
+* CI: el recuento de consultas de `AURA_TINT` (9: siete guardas y dos ternarios) y la regla
+  general. Cuatro negativos en rojo, incluido el que importa: **añadir un pase con tinte sin
+  guarda** falla aunque el recuento no cambie.
+
 ## 1.0.62 — cada paso deja un eco
 
 El eco del suelo solo aparecía con un evento. Ahora **también al andar**: cada 0,85 bloques

@@ -608,9 +608,19 @@ jobs:
               'el eco del anillo no lleva tinte debajo'
           # Y los cinco pases tenidos tienen que estar bajo su guarda: cambiar la
           # condicion por 'false' deja el codigo escrito y el pase sin tinte.
-          guardas = aura.count('if (RelicConfig.AURA_TINT.get()) {')
-          assert guardas == 6, \
-              f'esperaba 6 guardas de AURA_TINT (aura, anillo, 2 ecos, onda, escaner), hay {guardas}'
+          # Nueve consultas del interruptor: siete `if` (aura, anillo, eco del anillo,
+          # eco del suelo, onda, escaner, polvo) y dos ternarios (motas y pavesas).
+          # Se cuentan las consultas y no la forma: la guarda del polvo va negada.
+          guardas = aura.count('RelicConfig.AURA_TINT.get()')
+          assert guardas == 9, \
+              f'esperaba 9 consultas de AURA_TINT (7 guardas + 2 ternarios), hay {guardas}'
+          # 1.0.63: y una regla general, que es la que faltaba: NINGUN trozo de codigo
+          # que pida TINT_GLOW puede quedarse fuera de la guarda. Es el invariante
+          # que 1.0.48 rompio sin que nada lo notara.
+          for trozo in re.split(r'\n    (?:private |static |private static |public )', aura):
+              if 'TINT_GLOW.apply(' in trozo:
+                  assert 'AURA_TINT.get()' in trozo, \
+                      'pase con tinte sin guarda: ' + trozo.split(chr(10))[0][:70]
           assert 'ECHO_ADDITIVE' in aura and 'ECHO_TINT_BOOST' in aura, \
               'faltan las constantes de composicion del eco del anillo'
           assert 'float echo = weight * flash * ECHO_ADDITIVE;' in aura, \
@@ -831,8 +841,10 @@ jobs:
           assert 'echoRing(bufferSource, frame, glow, GROUND_MIN_RADIUS * 0.55F, alpha);' in paso, \
               'el paso no usa el anillo pequeño'
           assert 'GROUND_STEP_SCALE' in paso, 'el paso no tiene fuerza propia'
-          assert 'drawGroundBurst(bufferSource, frame, glow, step * 0.35F, fade, ground);' in paso, \
-              'el paso no levanta polvo en suelo blando'
+          assert 'boolean dust = sparksEnabled();' in paso, \
+              'el polvo de las pisadas no mira la calidad (siete quads por paso en LITE)'
+          assert 'if (dust && (ground == RelicAnimatable.Ground.LOOSE' in paso, \
+              'el polvo de las pisadas se dispara aunque la calidad sea LITE'
           # 1.0.55: el eco del suelo cambia de forma segun lo que pisas. Se mira una
           # vez por segundo y cacheado, como el portal: en el render ya no se puede.
           assert 'public enum Ground {' in animatable, 'no hay tipos de suelo'

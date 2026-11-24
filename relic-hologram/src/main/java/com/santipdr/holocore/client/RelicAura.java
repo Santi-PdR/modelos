@@ -325,9 +325,9 @@ public final class RelicAura {
             // destello pero cerrado sobre el primero. Es lo que hace una piedra.
             echoRing(bufferSource, frame, glow, radius * spread * 0.55F, alpha * gain * 0.55F);
         }
+        // El golpe de un evento si levanta lo que pisa, en cualquier calidad: es un
+        // suceso, no algo que pase cada paso. El polvo de las pisadas va con LITE.
         if (ground == RelicAnimatable.Ground.LOOSE || ground == RelicAnimatable.Ground.WATER) {
-            // Y el suelo que cede tambien salta: polvo en la arena, salpicadura en el
-            // agua (1.0.56). La piedra no levanta nada.
             drawGroundBurst(bufferSource, frame, glow, flash, fade, ground);
         }
     }
@@ -344,13 +344,17 @@ public final class RelicAura {
     private static void drawStepEcho(MultiBufferSource bufferSource, Frame frame,
                                      RelicGlowState glow, float fade, float step,
                                      RelicAnimatable.Ground ground) {
+        // En LITE el eco de un paso se queda en el anillo: el polvo son siete quads
+        // por paso y es lo primero que sobra cuando el jugador pide rendimiento.
+        boolean dust = sparksEnabled();
         float alpha = step * GROUND_ADDITIVE * GROUND_STEP_SCALE * fade;
         if (alpha <= 0.005F) {
             return;
         }
         // Anillo pequeño: el radio es el minimo del eco, no el que se abre con un golpe.
         echoRing(bufferSource, frame, glow, GROUND_MIN_RADIUS * 0.55F, alpha);
-        if (ground == RelicAnimatable.Ground.LOOSE || ground == RelicAnimatable.Ground.WATER) {
+        if (dust && (ground == RelicAnimatable.Ground.LOOSE
+                || ground == RelicAnimatable.Ground.WATER)) {
             drawGroundBurst(bufferSource, frame, glow, step * 0.35F, fade, ground);
         }
     }
@@ -406,6 +410,12 @@ public final class RelicAura {
         float t = 1.0F - Math.min(1.0F, flash);
         float alpha = flash * fade * (1.0F - 0.85F * t);
         if (alpha <= 0.01F) {
+            return;
+        }
+        // 1.0.63: el polvo tambien respeta el interruptor del tinte. Antes paseaba
+        // por encima de `auraTint=false`, que es justo lo que ese ajuste existe para
+        // apagar.
+        if (!RelicConfig.AURA_TINT.get()) {
             return;
         }
         VertexConsumer tint = bufferSource.getBuffer(RelicRenderTypes.TINT_GLOW.apply(AURA_TEXTURE));

@@ -237,6 +237,11 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.63, la regla.** Todo trozo de código que use `TINT_GLOW` tiene que estar bajo
+`AURA_TINT`, y el CI lo comprueba **método a método**, no con asserts sueltos. Si añades un
+pase nuevo con tinte y se te olvida la guarda, el build se cae con el nombre del método. El
+polvo de las pisadas además va con la calidad (LITE se queda solo con el anillo).
+
 **1.0.62, pasos.** `drawStepEcho` usa `echoRing` con el radio mínimo (`×0.55`) y
 `GROUND_STEP_SCALE` 0.45, así que el eco de un paso nunca pide más luz que el de un evento:
 es el mismo anillo, más pequeño. El polvo sale de `drawGroundBurst` con `flash = step × 0.35`,
