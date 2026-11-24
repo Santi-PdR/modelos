@@ -15,6 +15,11 @@ for name, target in [('rightArm','rightArm'), ('leftArm','leftArm'), ('body','to
         if name == 'body': values = [0, values[1], 0]
         track[f'{frame * .0875:.4f}'] = {'vector': values, 'easing':'linear'}
     bones[target] = {'rotation':track}
+# Carry the sword wrist orientation from Serious Player Animations instead of
+# leaving the inherited item at its idle angle. This is an experimental
+# cross-mod retarget: review contact and grip, not just the parsed values.
+serious = json.loads((root/'forge/resources/assets/stainkatana/player_animation/sword_attack2.json').read_text())
+bones['rightItem'] = serious['animations']['sword_attack2']['bones']['rightItem']
 out = root/'forge/resources/assets/stainkatana/player_animation/stain_c_overhead.json'
 out.write_text(json.dumps({'format_version':'1.8.0','animations':{'stain_c_overhead':{'animation_length':.875,'bones':bones}}},indent=2)+'\n')
 print('Adapted', out)
