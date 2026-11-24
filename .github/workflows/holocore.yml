@@ -446,6 +446,32 @@ jobs:
               'las motas no se apagan por el camino'
           assert 'drawFlakes(bufferSource, frame, time, glow, amount, motion);' in aura, \
               'los copos del hielo dejaron de dibujarse (siguen siendo de FREEZING)'
+          # 1.0.53: el Nether deja de reciclar las brasas de ardiendo. Pavesas: suben
+          # y caen (parabola), no solo suben.
+          assert 'private static void drawCinders(' in aura, 'faltan las pavesas del Nether'
+          assert 'drawCinders(bufferSource, frame, time, glow, amount, motion);' in aura, \
+              'las pavesas no se dibujan nunca'
+          assert 'CINDER_COUNT' in aura and 'CINDER_SPEED' in aura and 'CINDER_RISE' in aura, \
+              'faltan las constantes de las pavesas'
+          pavesas = aura.split('private static void drawCinders(', 1)[1] \
+              .split('private static void drawMotes(', 1)[0]
+          assert 'VertexConsumer tint = RelicConfig.AURA_TINT.get()' in pavesas, \
+              'las pavesas no llevan tinte debajo'
+          assert pavesas.count('billboardAt(') == 2, \
+              'las pavesas tienen que dibujarse dos veces: tinte y aditivo'
+          assert 'float height = CINDER_RISE * 4.0F * t * (1.0F - t);' in pavesas, \
+              'las pavesas no siguen una parabola: subirian sin caer'
+          assert 'CINDER_TINT_BOOST' in pavesas and 'CINDER_ADDITIVE' in pavesas, \
+              'las pavesas no usan sus constantes de composicion'
+          # El tinte de las motas y de las pavesas se decide una vez (ternario). Si
+          # alguien lo reasigna a null mas abajo, el pase se queda sin tinte y el
+          # codigo sigue pareciendo correcto: ya paso con el eco del anillo.
+          for nombre, cuerpo in (('pavesas', pavesas), ('motas', motas)):
+              assert 'tint =' not in cuerpo.replace('VertexConsumer tint =', ''), \
+                  f'{nombre}: el tinte se reasigna despues de declararlo'
+          # Y las brasas de ardiendo siguen siendo las de ardiendo.
+          assert 'drawEmbers(bufferSource, frame, time, glow, amount, motion);' in aura, \
+              'las brasas de ardiendo dejaron de dibujarse'
           # Ardiendo va el primero de la deteccion: es lo unico de la lista que hace
           # dano mientras lo miras.
           assert 'if (player.isOnFire()) {' in animatable, 'estar ardiendo no es un estado'

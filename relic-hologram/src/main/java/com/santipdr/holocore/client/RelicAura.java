@@ -102,6 +102,16 @@ public final class RelicAura {
      * que es lo que hace el polvo de enderman cuando lo miras.
      */
     private static final int MOTE_COUNT = 9;
+    /**
+     * Pavesas (el Nether, 1.0.53): brasas que <b>salen disparadas y caen</b>. La
+     * altura es una parabola ({@code 4t(1-t)}), no una subida: por eso no se
+     * confunden con las brasas de ardiendo, que solo suben. El Nether no respira
+     * fuego, lo escupe.
+     */
+    private static final int CINDER_COUNT = 8;
+    private static final float CINDER_SIZE = 0.030F;
+    private static final float CINDER_SPEED = 0.42F;
+    private static final float CINDER_RISE = 0.34F;
     private static final float MOTE_SIZE = 0.034F;
     private static final float MOTE_SPEED = 0.10F;
     private static final float MOTE_RADIUS = 0.28F;
@@ -139,6 +149,9 @@ public final class RelicAura {
     /** Motas del vacio: la misma regla (tinte x3, aditivo pequeno). */
     private static final float MOTE_TINT_BOOST = 3.0F;
     private static final float MOTE_ADDITIVE = 0.16F;
+    /** Pavesas del Nether: la misma regla. */
+    private static final float CINDER_TINT_BOOST = 3.0F;
+    private static final float CINDER_ADDITIVE = 0.16F;
     private static final int SHOCK_COUNT = 8;
     private static final float SHOCK_MIN = 0.16F;
     private static final float SHOCK_MAX = 0.62F;
@@ -433,9 +446,9 @@ public final class RelicAura {
             return;
         }
         if (mood == RelicAnimatable.Mood.NETHER) {
-            // En el Nether las brasas suben igual que ardiendo, pero con la paleta
-            // de forja: es el sitio el que las enciende, no el fuego del portador.
-            drawEmbers(bufferSource, frame, time, glow, amount, motion);
+            // En el Nether, pavesas: brasas que salen y caen (1.0.53). Hasta 1.0.52
+            // reciclaba las de ardiendo, y solo se distinguian por el color.
+            drawCinders(bufferSource, frame, time, glow, amount, motion);
             return;
         }
         if (mood == RelicAnimatable.Mood.END) {
@@ -590,6 +603,43 @@ public final class RelicAura {
      * giro propio y son mas pequenos que las gotas. Blanco azulado del estado, y
      * correr los arrastra sin acelerarlos mucho: el hielo no reacciona rapido.
      */
+    /**
+     * Pavesas: {@code CINDER_COUNT} granos que suben y vuelven a caer. La altura es
+     * {@code 4t(1-t)} (cero al salir, uno en el punto alto, cero al llegar al
+     * suelo), asi que su vuelo se ve entero; el tamano encoge en la bajada y el
+     * brillo se apaga al final. Tinte debajo, aditivo pequeno.
+     */
+    private static void drawCinders(MultiBufferSource bufferSource, Frame frame, float time,
+                                    RelicGlowState glow, float amount, float motion) {
+        VertexConsumer tint = RelicConfig.AURA_TINT.get()
+                ? bufferSource.getBuffer(RelicRenderTypes.TINT_GLOW.apply(AURA_TEXTURE))
+                : null;
+        VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
+        float speed = CINDER_SPEED * (1.0F + 0.45F * motion);
+        for (int i = 0; i < CINDER_COUNT; i++) {
+            // Cada pavesa sale desfasada: van saltando de una en una, no todas a la vez.
+            float t = fract(seconds(time) * speed + i * (1.0F / CINDER_COUNT));
+            float height = CINDER_RISE * 4.0F * t * (1.0F - t);
+            // Deriva lateral: la pavesa no sube recta, se abre al salir.
+            float drift = sin(seconds(time) * 0.9F + i * 2.3F) * 0.07F * t;
+            float cx = frame.originX + frame.leftX * drift + frame.upX * height;
+            float cy = frame.originY + frame.leftY * drift + frame.upY * height;
+            float cz = frame.originZ + frame.leftZ * drift + frame.upZ * height;
+            float weight = amount * (1.0F - 0.75F * t) * CINDER_ADDITIVE;
+            if (weight <= 0.002F) {
+                continue;
+            }
+            float size = CINDER_SIZE * (1.0F - 0.45F * t);
+            if (tint != null) {
+                billboardAt(tint, frame, cx, cy, cz, size, t * 3.0F + i,
+                        glow.red(), glow.green(), glow.blue(),
+                        Math.min(1.0F, weight * CINDER_TINT_BOOST));
+            }
+            billboardAt(buffer, frame, cx, cy, cz, size, t * 3.0F + i,
+                    glow.red() * weight, glow.green() * weight, glow.blue() * weight, 1.0F);
+        }
+    }
+
     /**
      * Motas del vacio: {@code MOTE_COUNT} granos que giran en un plano inclinado y
      * se encienden y apagan con un ciclo largo ({@code sin(life * PI)}: cero, uno,

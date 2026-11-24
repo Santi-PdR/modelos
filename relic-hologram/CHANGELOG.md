@@ -1,5 +1,21 @@
 # Historial de cambios
 
+## 1.0.53 — pavesas en el Nether
+
+El Nether recicló las brasas de `burning` en 1.0.51; se distinguían por el color, pero el
+dibujo era el mismo. Ahora tiene lo suyo.
+
+* **Ocho pavesas** que **salen y caen**: la altura es una parábola `4t(1-t)`, no una
+  subida. Las brasas de ardiendo solo suben y se apagan; la pavesa se ve llegar arriba y
+  volver, encogiendo por el camino. El Nether no respira fuego: lo escupe.
+* Salen desfasadas (de una en una), se abren hacia un lado al salir y aceleran al correr
+  un 45%, más que las brasas: el sitio ya está agitado.
+* Tinte debajo y aditivo 0.16, la misma regla que los otros cuatro pases. El script compone
+  ya **cinco** pases sobre nieve, piedra y cueva.
+* CI: además de las 8 comprobaciones de las pavesas, una nueva que vale para las motas y
+  para las pavesas: **el tinte no se puede reasignar** después de declararlo. Anularlo a
+  `null` dejaba el código con el tinte escrito y el pase sin teñir; el negativo lo destapó.
+
 ## 1.0.52 — motas del vacío
 
 En 1.0.51 el End recicló los copos del hielo. Se notaba: **los copos caen, y en el

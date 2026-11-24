@@ -237,6 +237,10 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.53, pavesas.** Quinto pase medido, mismo presupuesto (`CINDER_ADDITIVE` 0.16 con
+tinte ×3). La pavesa llega al pico de brillo al salir y se apaga en la bajada con
+`(1 - 0.75·t)`, así que nunca pide más que el eco del suelo.
+
 **1.0.52, motas.** Cuarto pase de evento medido: `MOTE_ADDITIVE` 0.16 con tinte ×3, igual
 que el eco del suelo, la onda y el eco del anillo. Las motas giran y se apagan con
 `sin(life * PI)`, así que su pico de brillo es el mismo que el de un eco; por eso los
