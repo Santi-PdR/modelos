@@ -68,6 +68,7 @@ public final class KatanaAnimations {
         boolean overhead = ability == 2 || ability == 9 || ability == 12 || ability == 15;
         String clipName = ability == 0 ? "inspect" : ability == 1 ? "stain_x_cut"
                 : overhead ? "stain_c_overhead"
+                : ability >= 7 ? "sword_attack2"
                 : ((ability & 1) == 0 ? "sword_attack" : "sword_attack2");
         KeyframeAnimation clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID, clipName));
         if (clip == null) {
