@@ -690,6 +690,14 @@ public final class VisualFixtureClient {
                 mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
                 mc.options.fov().set(35);
                 com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), -1);
+                // The BC combo target can stand directly between the front
+                // camera and the player. Remove only fixture mobs after all
+                // server assertions, before sampling the isolated animation.
+                mc.getSingleplayerServer().execute(() -> {
+                    var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                    for (var mob : player.serverLevel().getEntitiesOfClass(
+                            net.minecraft.world.entity.Mob.class, player.getBoundingBox().inflate(20))) mob.discard();
+                });
             }
             case 2028 -> com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 7);
             case 2030 -> capture = "114_c_lateral_prepare.png";
