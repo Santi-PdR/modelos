@@ -682,7 +682,22 @@ public final class VisualFixtureClient {
                     mc.getSingleplayerServer().execute(VisualFixtureServer::verifyBetterCombatCombo);
                 }
             }
-            case 2020 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
+            // Inspect the complete imported lateral stroke in isolation as well
+            // as the server-confirmed impact frames above. These are local
+            // playback samples, not proof of damage or exact network timing.
+            case 2020 -> {
+                mc.options.keyAttack.setDown(false);
+                mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+                mc.options.fov().set(35);
+                com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), -1);
+            }
+            case 2028 -> com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 7);
+            case 2030 -> capture = "114_c_lateral_prepare.png";
+            case 2032 -> capture = "115_c_lateral_windup.png";
+            case 2034 -> capture = "116_c_lateral_contact_estimate.png";
+            case 2036 -> capture = "117_c_lateral_follow.png";
+            case 2038 -> capture = "118_c_lateral_recover.png";
+            case 2050 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }
     }
