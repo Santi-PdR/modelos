@@ -32,6 +32,8 @@ public final class RelicSounds {
     private static final float SLEEP_PITCH = 0.55F;
     /** Pulso: agudo, corto, se oye por encima del combate. */
     private static final float PULSE_PITCH = 1.35F;
+    /** Volumen de base del aviso de cambio de estado (1.0.58). */
+    private static final float MOOD_GAIN = 0.55F;
 
     private RelicSounds() {
     }
@@ -46,6 +48,48 @@ public final class RelicSounds {
 
     static void pulse(UUID wearer) {
         play(SoundEvents.AMETHYST_BLOCK_CHIME, 0.80F, PULSE_PITCH, wearer);
+    }
+
+    /**
+     * Cambio de estado de brillo: un tono distinto por estado (1.0.58). El color ya
+     * cambia; el oido lo pilla antes que la vista, sobre todo con el estado en la
+     * espalda, y es la forma de saber que paso algo sin girarse.
+     *
+     * <p>La tabla es de tono, no de melodia: ardiendo y el Nether van graves (peso),
+     * herido tambien; el hielo y el End van agudos y finos. Los estados graves usan
+     * la nota larga de ametista y los agudos el cascabel corto, asi que se distinguen
+     * a la primera sin mirar.</p>
+     */
+    static void mood(UUID wearer, RelicAnimatable.Mood mood) {
+        float pitch = pitchFor(mood);
+        // Los graves resuenan; los agudos tintinean. El corte esta en 0.90, que es
+        // donde la tabla deja de sonar a "pesado".
+        SoundEvent sound = pitch < 0.90F
+                ? SoundEvents.AMETHYST_BLOCK_RESONATE
+                : SoundEvents.AMETHYST_BLOCK_CHIME;
+        play(sound, MOOD_GAIN, pitch, wearer);
+    }
+
+    /** Tono de cada estado de brillo. Sin {@code default}: el CI exige los trece. */
+    static float pitchFor(RelicAnimatable.Mood mood) {
+        return switch (mood) {
+            case NEUTRAL -> 1.00F;
+            // Dos reliquias que se oyen: una quinta por encima, que suena a respuesta.
+            case RESONANT -> 1.20F;
+            case STORM -> 1.45F;
+            // Herido y ardiendo son los dos estados de dano: graves y con peso.
+            case WOUNDED -> 0.72F;
+            case DARK -> 1.10F;
+            case RAIN -> 0.95F;
+            case NIGHT -> 0.85F;
+            case SUBMERGED -> 0.66F;
+            case PORTAL -> 1.28F;
+            case BURNING -> 0.58F;
+            // El frio es fino: el tono mas agudo fuera del End.
+            case FREEZING -> 1.55F;
+            case NETHER -> 0.62F;
+            case END -> 1.62F;
+        };
     }
 
     private static void play(SoundEvent sound, float gain, float pitch, UUID wearer) {

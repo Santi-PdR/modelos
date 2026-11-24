@@ -237,6 +237,12 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.58, tonos.** `RelicSounds.pitchFor(Mood)` es un `switch` sin `default`, y el validador
+de estados ya exige `case X ->` para los trece: un estado nuevo sin tono **rompe el CI** en
+vez de sonar genérico. Además, los tonos tienen que ser distintos entre sí: dos estados con
+la misma nota fallan. El corte de nota (resonar por debajo de 0.90, tintinear por encima) es
+lo que separa "pesado" de "fino" sin cambiar de sonido de vanilla.
+
 **1.0.57, `/relic echo`.** El suelo se puede forzar (`RelicAnimatable.forceGround`), igual que
 los estados de brillo desde 1.0.29: la detección sigue corriendo y `detectedGround()` la
 enseña, pero lo que dibuja el eco es el forzado. El comando **pulsa** al terminar, que es lo

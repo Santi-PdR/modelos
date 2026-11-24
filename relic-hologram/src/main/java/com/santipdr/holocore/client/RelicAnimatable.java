@@ -635,6 +635,9 @@ public final class RelicAnimatable implements GeoAnimatable {
                 // los .json exportados estan bloqueados por CI contra el zip del
                 // modelo, y una animacion nueva se hace en Blockbench, no a ciegas.
                 request(RelicAnimations.GLITCH);
+                // Y su tono (1.0.58): va dentro de la misma guarda que el glitch, asi
+                // que caminar dentro y fuera de una cueva no encadena campanadas.
+                RelicSounds.mood(this.wearer, nextMood);
                 this.moodGlitchedAt = this.lastLogicTick;
             }
             this.mood = nextMood;

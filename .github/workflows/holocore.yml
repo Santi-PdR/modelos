@@ -898,6 +898,26 @@ jobs:
           assert 'RelicConfig.EVENT_SOUND.get()' in sonidos \
               and 'RelicConfig.SOUND_VOLUME.get()' in sonidos, \
               'el sonido no se puede apagar ni bajar'
+          # 1.0.58: un tono por estado de brillo, dentro de la misma guarda que el
+          # glitch (si no, entrar y salir de una cueva encadena campanadas). El tono
+          # tiene que ser DISTINTO por estado: trece estados con cuatro notas seria
+          # un cambio de color sin aviso sonoro.
+          assert 'static void mood(UUID wearer, RelicAnimatable.Mood mood)' in sonidos, \
+              'el cambio de estado no suena'
+          assert 'static float pitchFor(RelicAnimatable.Mood mood)' in sonidos, \
+              'falta la tabla de tonos por estado'
+          assert 'RelicSounds.mood(this.wearer, nextMood);' in animatable, \
+              'el cambio de estado calcula el tono y no lo toca'
+          bloque_glitch = animatable.split('this.moodGlitchedAt == Long.MIN_VALUE', 1)[1] \
+              .split('this.moodGlitchedAt = this.lastLogicTick;', 1)[0]
+          assert 'RelicSounds.mood(this.wearer, nextMood);' in bloque_glitch, \
+              'el tono del cambio de estado no esta bajo la guarda del glitch'
+          tonos = _re.findall(r'case [A-Z_]+ -> ([\d.]+)F;', sonidos)
+          assert len(tonos) >= 13, f'faltan tonos por estado: {len(tonos)}'
+          assert len(set(tonos)) == len(tonos), \
+              f'dos estados suenan igual (el oido no los distingue): {sorted(tonos)}'
+          assert 'pitch < 0.90F' in sonidos, \
+              'los estados graves y agudos usan la misma nota (no se distinguen)'
           for llamada in ('RelicSounds.pulse(this.wearer)', 'RelicSounds.awake(this.wearer)', \
                           'RelicSounds.sleep(this.wearer)'):
               assert llamada in animatable, f'el sonido no esta conectado: {llamada}'

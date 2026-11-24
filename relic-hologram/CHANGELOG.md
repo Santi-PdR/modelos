@@ -1,5 +1,26 @@
 # Historial de cambios
 
+## 1.0.58 — cada estado tiene su tono
+
+La reliquia ya sonaba en el pulso, al despertar y al dormir. Ahora **también suena cuando
+cambia de estado de brillo**, con un tono distinto por estado — y eso resuelve un problema
+real: el estado va en la espalda, y con el color solo te enteras de que ardiendo, el Nether o
+la lluvia han entrado en escena **cuando te giras**.
+
+* **Trece tonos, todos distintos** (el CI lo exige): ardiendo 0.58, el Nether 0.62, bajo el
+  agua 0.66, herido 0.72, noche 0.85, lluvia 0.95, reposo 1.00, oscuridad 1.10, resonancia
+  1.20, portal 1.28, tormenta 1.45, congelándose 1.55 y el End 1.62.
+* **Dos notas**: por debajo de 0.90 la ametista **resuena** (grave, con cuerpo); por encima
+  **tintinea**. Los estados de daño y las dimensiones pesadas suenan a peso; el frío y el
+  vacío, a cristal fino.
+* **Bajo la guarda del glitch**: el tono va donde ya iba el glitch de una sola vez, así que
+  caminar dentro y fuera de una cueva **no encadena campanadas**.
+* Se apaga con el interruptor que ya existía (`sound.events`, `sound.volume`): no hay clave
+  nueva de config ni texto nuevo, porque solo suena la reliquia propia.
+* CI: 5 comprobaciones nuevas y 3 negativos en rojo, uno de ellos el que más me importa:
+  **dos estados con el mismo tono** falla, porque un aviso sonoro que se repite no es un
+  aviso.
+
 ## 1.0.57 — `/relic echo`: forzar el suelo y verlo
 
 Tres versiones tocando el eco del suelo y para mirar los cuatro casos había que ir a buscar
