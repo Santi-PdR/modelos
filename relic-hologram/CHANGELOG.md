@@ -1,5 +1,25 @@
 # Historial de cambios
 
+## 1.0.48 — el eco del suelo deja de quemarse a blanco
+
+El eco de 1.0.47 era **solo aditivo**: sobre nieve o arena sumaba a un fondo ya a 0.95
+y el anillo salía blanco. Es el mismo fallo que tuvo el aura en 1.0.9–1.0.10, y esta vez
+lo ha encontrado el comprobador de números antes que el ojo:
+
+* **Pasa a llevar tinte debajo** (`TINT_GLOW`) y el aditivo baja de **0.42 a 0.12**, con la
+  cobertura del tinte en 3× el aditivo. Resultado medido sobre los tres fondos: nieve
+  `(0.86, 0.98, 1.00)` con tono +0.14, piedra +0.22 y cueva +0.22 — se lee del color del
+  estado y no satura en ninguno.
+* **`tools/check_aura_math.py` comprueba el eco como el aura**: decodifica también
+  `relic_ring.png`, toma su píxel de más peso (el centro del anillo está vacío), compone
+  tinte + aditivo sobre nieve, piedra y cueva y falla si se blanquea o pierde el tono.
+  El CI ya lo ejecuta, así que el número queda atado al código.
+* Los dos números salen de constantes leídas por el script (`GROUND_ADDITIVE` y
+  `GROUND_TINT_BOOST`): antes buscaba un literal suelto y estaba midiendo la onda de
+  choque (`flash * 0.55F * fade`), no el eco.
+* 4 negativos probados en rojo: el eco de 1.0.47 (se quema), tinte flojo (pierde el tono),
+  eco sin tinte y aditivo fuera de su constante.
+
 ## 1.0.47 — el eco en el suelo
 
 * **En cada evento, el anillo se tumba en el suelo**: se dibuja con los ejes **X y Z de

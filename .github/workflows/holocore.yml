@@ -483,6 +483,16 @@ jobs:
           assert 'frame.rightX * radius' in aura and 'frame.skyX * GROUND_DROP' in aura, \
               'el eco usa los ejes de la camara en vez de los del portador'
           assert 'GROUND_MIN_RADIUS' in aura and 'GROUND_DROP' in aura, 'faltan las cotas del eco'
+          # El eco lleva tinte debajo del aditivo (1.0.48): con solo aditivo, sobre
+          # nieve el aro se quedaba blanco. Los numeros los compone ademas
+          # tools/check_aura_math.py sobre tres fondos.
+          assert 'TINT_GLOW.apply(RING_TEXTURE)' in aura, 'el eco no lleva tinte'
+          assert 'float coverage = Math.min(1.0F, alpha * GROUND_TINT_BOOST);' in aura, \
+              'la cobertura del tinte del eco no sale de su constante'
+          assert 'GROUND_ADDITIVE' in aura and 'GROUND_TINT_BOOST' in aura, \
+              'faltan las constantes de composicion del eco'
+          assert 'float alpha = flash * GROUND_ADDITIVE * fade;' in aura, \
+              'el aditivo del eco no es configurable desde su constante'
           assert '.define("groundEcho", true)' in configuracion, 'groundEcho no esta declarado'
           assert 'private static void drawShockwave(' in aura, 'los eventos no tienen onda'
           assert 'drawShockwave(bufferSource, frame, time, glow, flash, fade)' in aura, \

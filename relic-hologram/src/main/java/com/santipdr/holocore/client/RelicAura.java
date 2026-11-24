@@ -107,6 +107,15 @@ public final class RelicAura {
     private static final float GROUND_MIN_RADIUS = 0.32F;
     private static final float GROUND_MAX_RADIUS = 1.15F;
     private static final float GROUND_DROP = 1.15F;
+    /**
+     * El eco suma poco y tine mucho: sobre nieve el aditivo solo sube los tres
+     * canales y con 0.42 el anillo salia blanco (lo dice tools/check_aura_math.py,
+     * que compone las dos pasadas con estos mismos numeros). 0.12 de aditivo y
+     * 3.0 de cobertura de tinte dan un anillo del color del estado sobre cualquier
+     * fondo.
+     */
+    private static final float GROUND_TINT_BOOST = 3.0F;
+    private static final float GROUND_ADDITIVE = 0.12F;
     private static final int SHOCK_COUNT = 8;
     private static final float SHOCK_MIN = 0.16F;
     private static final float SHOCK_MAX = 0.62F;
@@ -218,7 +227,7 @@ public final class RelicAura {
                                        RelicGlowState glow, float fade) {
         float t = 1.0F - Math.min(1.0F, flash);
         float radius = GROUND_MIN_RADIUS + (GROUND_MAX_RADIUS - GROUND_MIN_RADIUS) * t;
-        float alpha = flash * 0.42F * fade;
+        float alpha = flash * GROUND_ADDITIVE * fade;
         if (alpha <= 0.01F) {
             return;
         }
@@ -231,6 +240,20 @@ public final class RelicAura {
         float bx = frame.backX * radius;
         float by = frame.backY * radius;
         float bz = frame.backZ * radius;
+        // Tinte primero, igual que el anillo: sobre nieve o arena el aditivo solo
+        // sube los tres canales y la onda se queda blanca (fue el fallo de
+        // 1.0.9-1.0.10 con el aura). El tinte la mantiene del color del estado; el
+        // aditivo encima es lo que la hace brillar.
+        if (RelicConfig.AURA_TINT.get()) {
+            VertexConsumer tint = bufferSource.getBuffer(RelicRenderTypes.TINT_GLOW.apply(RING_TEXTURE));
+            float coverage = Math.min(1.0F, alpha * GROUND_TINT_BOOST);
+            quad(tint,
+                    cx - rx - bx, cy - ry - by, cz - rz - bz,
+                    cx - rx + bx, cy - ry + by, cz - rz + bz,
+                    cx + rx + bx, cy + ry + by, cz + rz + bz,
+                    cx + rx - bx, cy + ry - by, cz + rz - bz,
+                    glow.red(), glow.green(), glow.blue(), coverage);
+        }
         VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(RING_TEXTURE));
         quad(buffer,
                 cx - rx - bx, cy - ry - by, cz - rz - bz,
@@ -304,7 +327,7 @@ public final class RelicAura {
         // El anillo tambien lleva tinte: sobre nieve el aditivo lo dejaba en
         // blanco y se perdia. El tinte lo mantiene del color del estado.
         if (RelicConfig.AURA_TINT.get()) {
-            VertexConsumer tint = bufferSource.getBuffer(RelicRenderTypes.TINT_GLOW.apply(RING_TEXTURE));
+            VertexConsumer tint = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(RING_TEXTURE));
             float coverage = Math.min(1.0F, amount * 0.9F);
             billboard(tint, frame, size, angle,
                     glow.red(), glow.green(), glow.blue(), coverage);

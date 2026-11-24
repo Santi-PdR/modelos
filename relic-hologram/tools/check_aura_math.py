@@ -25,6 +25,7 @@ AURA_JAVA = ROOT / 'src/main/java/com/santipdr/holocore/client/RelicAura.java'
 STATE_JAVA = ROOT / 'src/main/java/com/santipdr/holocore/client/RelicGlowState.java'
 CONFIG_JAVA = ROOT / 'src/main/java/com/santipdr/holocore/config/RelicConfig.java'
 AURA_PNG = ROOT / 'src/main/resources/assets/holocore/textures/relic/relic_aura.png'
+RING_PNG = ROOT / 'src/main/resources/assets/holocore/textures/relic/relic_ring.png'
 
 # Fondos de referencia (sRGB aproximado de lo que pinta el juego).
 BACKGROUNDS = {
@@ -64,12 +65,24 @@ def leer_constantes():
 
     config = CONFIG_JAVA.read_text(encoding='utf-8')
     intensidad = floats(re.search(r'"auraIntensity", ([\d.]+)D', config).group(1))[0]
-    return diametros, pesos, alpha, boost, darken, tinte, intensidad, anillo
+
+    # Eco en el suelo: su alpha maximo sale de flash=1, y el tinte va a su bola.
+    # Se lee la constante del eco, no un literal suelto: `flash * 0.55F * fade`
+    # tambien existe en el anillo y en la onda, y el script comprobaba otro numero.
+    eco_alpha = floats(re.search(r'GROUND_ADDITIVE = ([\d.]+)F', aura).group(1))[0]
+    eco_boost = floats(re.search(r'GROUND_TINT_BOOST = ([\d.]+)F', aura).group(1))[0]
+    return (diametros, pesos, alpha, boost, darken, tinte, intensidad, anillo,
+            eco_alpha, eco_boost)
 
 
-def leer_pixel_central():
-    """Decodifica el PNG a mano (sin Pillow) y devuelve el pixel del centro."""
-    data = AURA_PNG.read_bytes()
+def leer_pixel_central(ruta=AURA_PNG, modo='centro'):
+    """Decodifica el PNG a mano (sin Pillow) y devuelve un pixel.
+
+    ``modo='centro'`` devuelve el del centro (el aura es un degradado radial: ahi
+    esta su pico). ``modo='pico'`` devuelve el pixel de mas peso, que es lo que hay
+    que mirar en el anillo: su centro esta vacio, el aro esta a media textura.
+    """
+    data = ruta.read_bytes()
     pos, idat, ancho, alto, canal = 8, b'', 0, 0, 0
     while pos < len(data):
         largo = struct.unpack('>I', data[pos:pos + 4])[0]
@@ -108,6 +121,16 @@ def leer_pixel_central():
                 fila[x] = (fila[x] + pr) & 255
         filas.append(bytes(fila))
         previa = fila
+    if modo == 'pico':
+        mejor, elegido = -1.0, None
+        for fila in filas:
+            for x in range(0, stride, 4):
+                a = fila[x + 3] / 255.0
+                peso = a * (0.2126 * fila[x] + 0.7152 * fila[x + 1] + 0.0722 * fila[x + 2]) / 255.0
+                if peso > mejor:
+                    mejor, elegido = peso, tuple(c / 255.0 for c in fila[x:x + 4])
+        assert elegido is not None, 'la textura del anillo esta vacia'
+        return elegido
     centro = filas[alto // 2][(ancho // 2) * 4:(ancho // 2) * 4 + 4]
     return tuple(c / 255.0 for c in centro)
 
@@ -134,8 +157,21 @@ def componer(fondo, pesos, alpha, boost, darken, tinte, intensidad, tex):
     return tuple(dst)
 
 
+def componer_eco(fondo, eco_alpha, eco_boost, tinte, tex):
+    """Eco en el suelo: tinte (mezcla normal) y aditivo encima, con su textura."""
+    tex_rgb, tex_a = tex[:3], tex[3]
+    dst = list(fondo)
+    cobertura = min(1.0, eco_alpha * eco_boost)
+    for c in range(3):
+        dst[c] = dst[c] * (1.0 - cobertura) + tinte[c] * tex_rgb[c] * cobertura
+    for c in range(3):
+        dst[c] = min(1.0, dst[c] + tinte[c] * eco_alpha * tex_rgb[c] * tex_a)
+    return tuple(dst)
+
+
 def main():
-    diametros, pesos, alpha, boost, darken, tinte, intensidad, anillo = leer_constantes()
+    diametros, pesos, alpha, boost, darken, tinte, intensidad, anillo, \
+        eco_alpha, eco_boost = leer_constantes()
     tex = leer_pixel_central()
     print(f'textura centro: rgb {tuple(round(c, 2) for c in tex[:3])} alpha {tex[3]:.2f}')
     print(f'diametros {diametros}  pesos {pesos}  auraAlpha {alpha}  '
@@ -165,6 +201,20 @@ def main():
                 fallos.append(f'cueva: el tono se pierde (b-r {tono:+.2f} < {MIN_TONO_OSCURO})')
             if sum(salida) <= sum(fondo):
                 fallos.append('cueva: el aura no ilumina')
+
+    # --- Eco en el suelo (1.0.48): antes solo sumaba y sobre nieve se quedaba -----
+    # blanco; ahora lleva tinte debajo. Se comprueba igual que el aura.
+    eco_tex = leer_pixel_central(RING_PNG, 'pico')
+    print(f'anillo pico: rgb {tuple(round(c, 2) for c in eco_tex[:3])} '
+          f'alpha {eco_tex[3]:.2f}  eco {eco_alpha:.2f} x {eco_boost:.2f}')
+    for nombre, fondo in BACKGROUNDS.items():
+        salida = componer_eco(fondo, eco_alpha, eco_boost, tinte, eco_tex)
+        tono = salida[2] - salida[0]
+        print(f'  eco {nombre:5s} -> {tuple(round(c, 2) for c in salida)}  tono(b-r) {tono:+.2f}')
+        if min(salida) > MAX_BLANCO:
+            fallos.append(f'eco {nombre}: se blanquea (canal minimo {min(salida):.2f})')
+        if nombre == 'nieve' and tono < MIN_TONO_NIEVE:
+            fallos.append(f'eco nieve: el tono se pierde (b-r {tono:+.2f})')
 
     if fallos:
         for fallo in fallos:

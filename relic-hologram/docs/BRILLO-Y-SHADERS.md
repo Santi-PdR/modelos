@@ -237,6 +237,14 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.48, el eco también se tiñe.** Composición del eco con los números del código:
+tinte `cobertura = 0.12 × 3.0 = 0.36`, aditivo `0.12` sobre el píxel de más peso de
+`relic_ring.png` (blanco puro, alpha 1) y color `IDLE` (0.52, 0.86, 1.00). Sobre nieve
+(0.93, 0.95, 0.97): tinte → (0.78, 0.92, 0.98), aditivo → **(0.86, 0.98, 1.00)**, tono
++0.14. Con el aditivo de 1.0.47 (0.42) y sin tinte: (1.00, 1.00, 1.00) — blanco. La regla
+que sale de esto vale para cualquier pase nuevo: **lo aditivo que se ve sobre suelo claro
+tiene que ir teñido debajo**, y el aditivo solo aporta el 10-15%. 
+
 **1.0.47, el eco en el suelo y de dónde salen sus ejes.** `Frame` solo tenía el origen y
 los ejes de la cámara (para los billboards). El eco necesita lo contrario: una superficie
 tumbada, así que `frame()` lee también las columnas 0, 1 y 2 de la matriz de pose
