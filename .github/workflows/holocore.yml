@@ -750,6 +750,14 @@ jobs:
                            'freezing', 'nether', 'end'):
                   clave = f'message.holocore.state.{mood}'
                   assert clave in lang, f'{idioma} sin {clave}'
+              # Los cuatro suelos del eco (1.0.55-1.0.57) y los avisos de forzarlo.
+              for suelo in ('other', 'hard', 'loose', 'water'):
+                  clave = f'message.holocore.ground.{suelo}'
+                  assert clave in lang, f'{idioma} sin {clave}'
+              for aviso in ('ground_forced', 'ground_auto', 'ground_show',
+                            'ground_show_forced', 'bad_ground'):
+                  clave = f'message.holocore.{aviso}'
+                  assert clave in lang, f'{idioma} sin {clave}'
 
           assert 'safeGetUniform("HoloGlitch")' in geo, 'el pase GLSL no manda el glitch'
           # 1.0.54: el halo es el unico pase aditivo sin tinte (va pegado al modelo),
@@ -827,6 +835,34 @@ jobs:
           assert golpe.count('billboardAt(tint, frame') == 1 and \
               golpe.count('billboardAt(additive, frame') == 1, \
               'el polvo y la salpicadura tienen que compartir el mismo dibujo (tinte y uno opcional)'
+          # 1.0.57: /relic echo fuerza el suelo (y dispara un pulso para verlo). Es
+          # la unica forma de mirar los cuatro ecos sin ir a buscar una playa.
+          assert 'Commands.literal("echo")' in comandos, 'no se puede forzar el suelo del eco'
+          assert 'public static void forceGround(Ground ground)' in animatable, \
+              'el suelo no se puede forzar'
+          assert 'public static Ground forcedGround()' in animatable, \
+              'el suelo forzado no se puede leer'
+          assert 'public static Ground cycleForcedGround()' in animatable, \
+              'no hay ronda de suelos'
+          assert 'forcedGround != null ? forcedGround : this.ground' in animatable, \
+              'la ronda de suelos no cambia lo que dibuja el eco'
+          assert 'public Ground detectedGround()' in animatable, \
+              'no se puede decir cual es el suelo de verdad con uno forzado'
+          assert 'private static int echoSet(CommandSourceStack source, String suelo)' in comandos, \
+              'falta el comando del suelo'
+          assert 'private static int echoInfo(CommandSourceStack source)' in comandos, \
+              'falta /relic echo a secas'
+          cuerpo_echo = comandos.split('private static int echoSet(', 1)[1] \
+              .split('private static int moodSet(', 1)[0]
+          assert 'action(source, RelicActionPacket.Action.PULSE);' in cuerpo_echo, \
+              '/relic echo no dispara un pulso: el eco no se veria'
+          assert 'RelicAnimatable.cycleForcedGround()' in cuerpo_echo, \
+              '/relic echo next no usa la ronda'
+          for nombre_suelo in ('auto', 'hard', 'loose', 'water', 'next'):
+              assert f'"{nombre_suelo}"' in cuerpo_echo or f'"{nombre_suelo}",' in comandos, \
+                  f'/relic echo no acepta {nombre_suelo}'
+          assert '"message.holocore.diag", state, flash, suelo, glslStatus()' in comandos, \
+              '/relic info no dice sobre que suelo se calcula el eco'
           assert '(1.0F + 0.70F * motion)' in aura, 'el anillo no late mas rapido al correr'
           assert '(1.0F + 0.45F * motion)' in aura, 'las chispas no barren mas rapido al correr'
           assert '(1.0F + 0.50F * motion)' in aura, 'las burbujas no suben mas rapido al nadar'

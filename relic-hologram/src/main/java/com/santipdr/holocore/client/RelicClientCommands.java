@@ -112,6 +112,13 @@ public final class RelicClientCommands {
                                 .executes(ctx -> preview(ctx.getSource(),
                                         ctx.getArgument("distancia", Double.class)))))
                 .then(Commands.literal("save").executes(ctx -> save(ctx.getSource())))
+                .then(Commands.literal("echo")
+                        .executes(ctx -> echoInfo(ctx.getSource()))
+                        .then(Commands.argument("suelo", StringArgumentType.word())
+                                .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
+                                        new String[]{"auto", "hard", "loose", "water", "next"}, builder))
+                                .executes(ctx -> echoSet(ctx.getSource(),
+                                        StringArgumentType.getString(ctx, "suelo")))))
                 .then(Commands.literal("mood")
                         .executes(ctx -> moodShow(ctx.getSource()))
                         .then(Commands.literal("next").executes(ctx -> moodNext(ctx.getSource())))
@@ -247,7 +254,19 @@ public final class RelicClientCommands {
             state = visual.animatable().loopState().name().toLowerCase(Locale.ROOT);
             flash = String.format(Locale.ROOT, "%.0f%%", visual.glow().flashScaled() * 100.0F);
         }
-        return Component.translatable("message.holocore.diag", state, flash, glslStatus())
+        // Cuarto dato desde 1.0.57: sobre que se calcula el eco (y si esta forzado).
+        Component suelo = Component.translatable("message.holocore.ground.other");
+        if (visual != null) {
+            RelicAnimatable.Ground real = visual.animatable().detectedGround();
+            RelicAnimatable.Ground forzado = RelicAnimatable.forcedGround();
+            RelicAnimatable.Ground efectivo = forzado != null ? forzado : real;
+            suelo = Component.translatable(
+                    "message.holocore.ground." + efectivo.name().toLowerCase(Locale.ROOT));
+            if (forzado != null) {
+                suelo = suelo.copy().append(Component.literal("*"));
+            }
+        }
+        return Component.translatable("message.holocore.diag", state, flash, suelo, glslStatus())
                 .withStyle(ChatFormatting.DARK_AQUA);
     }
 
@@ -661,6 +680,69 @@ public final class RelicClientCommands {
      * automatico con {@code auto}. Sirve para ver tormenta, herido o resonancia sin
      * montar la escena — una tormenta de verdad, dos jugadores, poca vida.
      */
+    /**
+     * {@code /relic echo <suelo>}: fuerza lo que hay debajo para el eco del suelo,
+     * o vuelve al bloque de verdad con {@code auto}, o pasa al siguiente con
+     * {@code next}. Despues dispara un pulso, que es lo unico que hace visible el
+     * eco: sin destello no hay nada que mirar.
+     */
+    private static int echoSet(CommandSourceStack source, String suelo) {
+        String buscado = suelo.toLowerCase(Locale.ROOT);
+        if (buscado.equals("next")) {
+            RelicAnimatable.Ground siguiente = RelicAnimatable.cycleForcedGround();
+            return echoAnnounce(source, siguiente);
+        }
+        if (buscado.equals("auto")) {
+            RelicAnimatable.forceGround(null);
+            source.sendSuccess(() -> Component.translatable("message.holocore.ground_auto")
+                    .withStyle(ChatFormatting.GRAY), false);
+            return 1;
+        }
+        for (RelicAnimatable.Ground ground : RelicAnimatable.Ground.values()) {
+            if (!ground.name().equalsIgnoreCase(buscado)) {
+                continue;
+            }
+            RelicAnimatable.forceGround(ground);
+            return echoAnnounce(source, ground);
+        }
+        source.sendFailure(Component.translatable("message.holocore.bad_ground", suelo));
+        return 0;
+    }
+
+    private static int echoAnnounce(CommandSourceStack source, RelicAnimatable.Ground ground) {
+        if (ground == null) {
+            source.sendSuccess(() -> Component.translatable("message.holocore.ground_auto")
+                    .withStyle(ChatFormatting.GRAY), false);
+        } else {
+            Component nombre = Component.translatable("message.holocore.ground." + ground.name().toLowerCase(Locale.ROOT));
+            source.sendSuccess(() -> Component.translatable("message.holocore.ground_forced", nombre)
+                    .withStyle(ChatFormatting.AQUA), false);
+        }
+        // Un pulso para que el eco se vea ya, sin esperar a que pase algo.
+        action(source, RelicActionPacket.Action.PULSE);
+        return 1;
+    }
+
+    /** {@code /relic echo} a secas: sobre que suelo se calcula el eco ahora mismo. */
+    private static int echoInfo(CommandSourceStack source) {
+        RelicVisuals.RelicVisual visual = localVisual();
+        RelicAnimatable.Ground real = visual != null
+                ? visual.animatable().detectedGround() : RelicAnimatable.Ground.OTHER;
+        RelicAnimatable.Ground forzado = RelicAnimatable.forcedGround();
+        Component realNombre = Component.translatable(
+                "message.holocore.ground." + real.name().toLowerCase(Locale.ROOT));
+        if (forzado == null) {
+            source.sendSuccess(() -> Component.translatable("message.holocore.ground_show", realNombre)
+                    .withStyle(ChatFormatting.DARK_AQUA), false);
+        } else {
+            Component forzadoNombre = Component.translatable(
+                    "message.holocore.ground." + forzado.name().toLowerCase(Locale.ROOT));
+            source.sendSuccess(() -> Component.translatable("message.holocore.ground_show_forced",
+                    forzadoNombre, realNombre).withStyle(ChatFormatting.DARK_AQUA), false);
+        }
+        return 1;
+    }
+
     private static int moodSet(CommandSourceStack source, String estado) {
         String buscado = estado.toLowerCase(Locale.ROOT);
         if (buscado.equals("auto")) {

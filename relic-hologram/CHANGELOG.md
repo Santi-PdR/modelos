@@ -1,5 +1,22 @@
 # Historial de cambios
 
+## 1.0.57 — `/relic echo`: forzar el suelo y verlo
+
+Tres versiones tocando el eco del suelo y para mirar los cuatro casos había que ir a buscar
+una playa, un río y una cantera. Ahora se fuerza.
+
+* **`/relic echo auto|hard|loose|water|next`**: cambia lo que el eco cree que hay debajo. Y
+  **dispara un pulso al hacerlo**, porque sin destello el eco no se dibuja: así se ve el
+  efecto en el sitio, sin esperar a que pase algo.
+* **`next`** recorre los cuatro (y vuelve a automático), como `mood next` con sus estados.
+* **`/relic echo` a secas** dice el suelo efectivo y, si hay uno forzado, **cuál es el de
+  verdad** — que es la información que hace falta para no volverse loco depurando.
+* **`/relic info`** gana un cuarto dato en su línea de diagnóstico: `suelo <tipo>`, con un `*`
+  cuando está forzado. Antes no había forma de saber por qué el eco hacía lo que hacía.
+* Textos en los dos idiomas (73 → **84** claves: cuatro suelos y cinco avisos).
+* CI: 12 comprobaciones nuevas y 3 negativos en rojo (echo sin pulso, suelo forzado que no se
+  aplica, y ronda de suelos sin comando).
+
 ## 1.0.56 — el suelo que cede también salta
 
 1.0.55 hizo que el eco leyera el suelo. Faltaba la otra mitad: **lo que levanta el golpe**.

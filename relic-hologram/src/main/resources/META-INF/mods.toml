@@ -19,7 +19,7 @@ GeckoLib 4. El brillo es fullbright (se ve igual de noche y en cuevas).
 - 27 claves de configuracion de cliente, ajustables en caliente: /relic set
   <clave> <valor>, /relic reset para volver a los valores de fabrica y
   /relic save para escribirlos en holocore-client.toml.
-- Comandos de cliente: /relic offset|scale|side|quality|toggle|pulse|release
+- Comandos de cliente: /relic echo|offset|scale|side|quality|toggle|pulse|release
   y /relic anim|info|stats|set|reset|save|preview|mood|preset. /relic vfx shock
   grita un destello a mano para ver la onda de choque sin esperar a que pase algo,
   y /relic preset soft|normal|showcase cambia de look de golpe.

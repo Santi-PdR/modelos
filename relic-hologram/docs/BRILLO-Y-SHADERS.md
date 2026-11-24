@@ -237,6 +237,11 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.57, `/relic echo`.** El suelo se puede forzar (`RelicAnimatable.forceGround`), igual que
+los estados de brillo desde 1.0.29: la detección sigue corriendo y `detectedGround()` la
+enseña, pero lo que dibuja el eco es el forzado. El comando **pulsa** al terminar, que es lo
+único que hace visible el eco — sin destello no hay nada que mirar.
+
 **1.0.56, polvo y salpicadura.** Séptimo pase medido (la salpicadura, `SPLASH_ADDITIVE` 0.16
 con tinte ×3). El polvo **no entra en el script porque no suma luz**: va solo con tinte, y
 esa es justo la decisión que lo mantiene limpio sobre nieve. Es el primer VFX del mod que no

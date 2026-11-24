@@ -346,7 +346,40 @@ public final class RelicAnimatable implements GeoAnimatable {
 
     /** Estado de brillo de ahora mismo (ver {@link Mood}). */
     public Ground ground() {
+        return forcedGround != null ? forcedGround : this.ground;
+    }
+
+    /** Suelo forzado por {@code /relic echo} ({@code null} = el de verdad). */
+    private static Ground forcedGround;
+
+    /**
+     * Suelo de verdad, sin contar el forzado. Sirve para que {@code /relic info}
+     * pueda ensenar las dos cosas cuando hay uno forzado.
+     */
+    public Ground detectedGround() {
         return this.ground;
+    }
+
+    /** Fuerza el suelo del eco, o {@code null} para volver al de verdad. */
+    public static void forceGround(Ground ground) {
+        forcedGround = ground;
+    }
+
+    /** Suelo forzado, o {@code null} si manda el bloque de debajo. */
+    public static Ground forcedGround() {
+        return forcedGround;
+    }
+
+    /**
+     * Siguiente suelo de la ronda: automatico -> otros -> duro -> blando -> agua ->
+     * automatico. Es la forma de ver los cuatro ecos seguidos sin ir a buscar una
+     * playa o un rio.
+     */
+    public static Ground cycleForcedGround() {
+        Ground[] valores = Ground.values();
+        int siguiente = forcedGround == null ? 0 : forcedGround.ordinal() + 1;
+        forcedGround = siguiente >= valores.length ? null : valores[siguiente];
+        return forcedGround;
     }
 
     /**

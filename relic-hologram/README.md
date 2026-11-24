@@ -96,7 +96,8 @@ En el juego:
 | Guardar los ajustes | `/relic save` |
 | Volver a los valores de fábrica | `/relic reset` · `/relic reset <clave>` (una sola) |
 | Ver o forzar el estado de brillo | `/relic mood` · `/relic mood <auto\|dark\|rain\|storm\|wounded\|resonant\|night\|submerged\|portal\|burning\|freezing\|nether\|end>` |
-| Recorrer los estados o ver la lista | `/relic mood next` (ronda, igual que la tecla M) · `/relic mood list` (los once, con el que manda marcado) |
+| Recorrer los estados o ver la lista | `/relic mood next` (ronda, igual que la tecla M) · `/relic mood list` (los trece, con el que manda marcado) |
+| Forzar el suelo del eco | `/relic echo [auto\|hard\|loose\|water\|next]` (dispara un pulso para que se vea, desde 1.0.57) |
 | Que los estados pasen solos | `/relic mood cycle [segundos]` (6 por defecto, 1–60) · `/relic mood cycle 0` para parar |
 | Ver la reliquia de cerca | `/relic preview` · `/relic preview <0.5–6>` (bloques) |
 | Medir el coste | `/relic stats` · `/relic stats reset` |
@@ -245,6 +246,11 @@ tenue. Se decide por la dureza del bloque (`getDestroySpeed`), una vez por segun
 lista de bloques — que se quedaría vieja a la siguiente versión del juego. Y lo que cede
 **también salta** (1.0.56): polvo en arena y tierra —solo tinte, el polvo no brilla— y
 salpicadura en el agua; la piedra no levanta nada.
+
+Para mirar los cuatro sin moverte: **`/relic echo hard|loose|water|next`** fuerza el suelo y
+dispara un pulso para que el eco se vea en el sitio, y `/relic echo auto` vuelve al bloque de
+verdad (que `/relic echo` a secas te dice cuál es, y `/relic info` lo añade con un `*` cuando
+está forzado, desde 1.0.57).
 
 Los **tres pases de evento** (eco del suelo, onda de chispas y eco del anillo) se **tiñen**
 antes de sumar, como el aura y el anillo: con solo aditivo, sobre nieve sumaban a un fondo ya
