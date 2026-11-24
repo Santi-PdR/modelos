@@ -144,6 +144,14 @@ public final class RelicAura {
      */
     private static final float SHOCK_TINT_BOOST = 3.0F;
     private static final float SHOCK_ADDITIVE = 0.16F;
+    /**
+     * Escaner de peligro (1.0.60/1.0.61): cada dos segundos sale un anillo pequeno
+     * que se abre y se apaga. Es un ping, no una onda de golpe: no depende de
+     * ningun evento, se repite solo mientras el estado sea {@code HUNTED}.
+     */
+    private static final float SCAN_PERIOD = 2.0F;
+    private static final float SCAN_MIN = 0.18F;
+    private static final float SCAN_MAX = 0.78F;
     private static final float ECHO_TINT_BOOST = 3.0F;
     private static final float ECHO_ADDITIVE = 0.18F;
     /** Motas del vacio: la misma regla (tinte x3, aditivo pequeno). */
@@ -201,6 +209,13 @@ public final class RelicAura {
         }
         if (RelicConfig.GLOW_RING.get() && glow.ring() + flash * 0.8F > 0.01F) {
             drawRing(bufferSource, frame, time, state, glow, flash, fade, motion);
+        }
+        // Escaner de peligro: solo en HUNTED y solo si las chispas estan activas (es
+        // el mismo presupuesto de calidad). Va antes del eco para que quede encima.
+        RelicAnimatable.Mood scanMood = RelicAnimatable.forcedMood() != null
+                ? RelicAnimatable.forcedMood() : mood;
+        if (scanMood == RelicAnimatable.Mood.HUNTED && RelicConfig.GLOW_AURA.get() && sparksEnabled()) {
+            drawHuntScan(bufferSource, frame, time, glow, fade);
         }
         // Eco en el suelo: un anillo tumbado a los pies del portador, que se abre y
         // se apaga con el destello. Solo en el hombro: en la vista previa el "suelo"
@@ -308,6 +323,36 @@ public final class RelicAura {
             // agua (1.0.56). La piedra no levanta nada.
             drawGroundBurst(bufferSource, frame, glow, flash, fade, ground);
         }
+    }
+
+    /**
+     * El ping del escaner: un anillo que sale desde el nucleo y se apaga mientras se
+     * abre, cada {@code SCAN_PERIOD} segundos y sin que haga falta ningun evento.
+     *
+     * <p>Se apoya en {@link #drawShockRing} y en las constantes de la onda, asi que
+     * no gasta presupuesto nuevo: tinte debajo, aditivo {@code SHOCK_ADDITIVE} y el
+     * mismo dibujo de ocho particulas que ya estaba medido.</p>
+     */
+    private static void drawHuntScan(MultiBufferSource bufferSource, Frame frame, float time,
+                                     RelicGlowState glow, float fade) {
+        float phase = fract(seconds(time) / SCAN_PERIOD);
+        float radius = SCAN_MIN + (SCAN_MAX - SCAN_MIN) * phase;
+        // Cuadratico: sale fuerte y se apaga rapido. Un ping que se desvanece lento
+        // parece una ola, y esto no es una ola.
+        float rest = 1.0F - phase;
+        float alpha = rest * rest * SHOCK_ADDITIVE * fade;
+        if (alpha <= 0.01F) {
+            return;
+        }
+        if (RelicConfig.AURA_TINT.get()) {
+            VertexConsumer tint = bufferSource.getBuffer(RelicRenderTypes.TINT_GLOW.apply(AURA_TEXTURE));
+            drawShockRing(tint, frame, time, radius, phase,
+                    Math.min(1.0F, alpha * SHOCK_TINT_BOOST),
+                    glow.red(), glow.green(), glow.blue());
+        }
+        VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
+        drawShockRing(buffer, frame, time, radius, phase, 1.0F,
+                glow.red() * alpha, glow.green() * alpha, glow.blue() * alpha);
     }
 
     /**

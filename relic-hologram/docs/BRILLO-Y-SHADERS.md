@@ -237,6 +237,11 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.61, escáner.** El ping de `hunted` reutiliza la onda: `drawShockRing` con radio
+`SCAN_MIN..SCAN_MAX` y `alpha = (1-fase)² · SHOCK_ADDITIVE`. Al compartir las constantes, la
+composición medida en 1.0.50 vale tal cual y el script no necesita una entrada nueva. Es el
+sexto pase tenido del aura (aura, anillo, eco del anillo, eco del suelo, onda, escáner).
+
 **1.0.60, peligro.** Catorce estados. `hunted` no añade detección: lee `threatTicks`, que ya
 existía para el estado de animación `ALERT`. El magenta es el único tono de la paleta que no
 se parece a otro, y el anillo sube 0.45 (el máximo): el aviso tiene que verse de reojo. El

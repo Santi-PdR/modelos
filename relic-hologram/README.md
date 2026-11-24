@@ -217,7 +217,7 @@ resonancia.
 | Estado de brillo | Cuándo | Qué hace |
 |---|---|---|
 | herido (`wounded`) | al portador le queda menos del 35% de vida | tira el color a rojo, sube el aura y enciende el anillo aunque esté en reposo |
-| peligro (`hunted`) | **un monstruo** a menos de `alertRadius` bloques (desde 1.0.60) | magenta de alarma —el único color así en la paleta—, el anillo más marcado de todos (+0.45), vaivén 1.30 y giro 1.26×: es el único estado que avisa de algo que puede matarte sin que lo estés mirando |
+| peligro (`hunted`) | **un monstruo** a menos de `alertRadius` bloques (desde 1.0.60) | magenta de alarma —el único color así en la paleta—, el anillo más marcado de todos (+0.45), vaivén 1.30, giro 1.26× y un **escáner**: un anillo que sale del núcleo cada 2 s y se apaga al abrirse (desde 1.0.61) |
 | tormenta (`storm`) | truena donde está el portador | azul casi blanco, más aura y el giro más rápido | Cada 5–11 s pega un destello como el cielo (desde 1.0.42).
 | resonancia (`resonant`) | otro portador a menos de 12 bloques | violeta, anillo más marcado y giro rápido: las dos reliquias se «oyen» |
 | oscuridad (`dark`) | menos de luz de bloque 4 **y** menos de luz de cielo 8 (encerrado) | casi blanca y bastante más aura: en una cueva es la única luz que hay |

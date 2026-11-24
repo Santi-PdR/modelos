@@ -1,5 +1,23 @@
 # Historial de cambios
 
+## 1.0.61 — el escáner del peligro
+
+1.0.60 dio color al estado `hunted`, pero las partículas eran las mismas chispas de siempre. Ahora
+el peligro **emite**: un anillo pequeño sale del núcleo y se apaga al abrirse, **cada dos
+segundos**, sin que haga falta ningún evento.
+
+* **Es un ping, no una ola**: el brillo cae al cuadrado (`(1 - fase)²`), así que sale fuerte y
+  se apaga enseguida. Una onda que se desvanece lento parece un golpe, y esto no lo es.
+* **No gasta presupuesto nuevo**: usa `drawShockRing` y las constantes ya medidas de la onda
+  (`SHOCK_ADDITIVE`, tinte ×3), el mismo dibujo de ocho partículas del destello. Es el sexto
+  sitio con tinte del aura y el validador ahora cuenta seis.
+* **Solo en `hunted`**, con el aura encendida y la calidad en `FULL`/sin efectos reducidos: en
+  LITE el aura ya se salta el halo y las chispas, y esto va con ellas. El estado forzado
+  también lo dispara, así que `/relic mood hunted` basta para verlo.
+* CI: 6 comprobaciones nuevas y 3 negativos en rojo. Dos de ellos, otra vez, por asserts que
+  miraban el texto y no la llamada: envolver el tinte en `if (false)` pasaba en verde. Ahora
+  se exige la llamada con su sangría exacta.
+
 ## 1.0.60 — el peligro se enciende
 
 El estado de animación `ALERT` existe desde 1.0.29 y avisa de que hay un monstruo cerca…

@@ -609,7 +609,8 @@ jobs:
           # Y los cinco pases tenidos tienen que estar bajo su guarda: cambiar la
           # condicion por 'false' deja el codigo escrito y el pase sin tinte.
           guardas = aura.count('if (RelicConfig.AURA_TINT.get()) {')
-          assert guardas == 5, f'esperaba 5 guardas de AURA_TINT (aura, anillo, 2 ecos, onda), hay {guardas}'
+          assert guardas == 6, \
+              f'esperaba 6 guardas de AURA_TINT (aura, anillo, 2 ecos, onda, escaner), hay {guardas}'
           assert 'ECHO_ADDITIVE' in aura and 'ECHO_TINT_BOOST' in aura, \
               'faltan las constantes de composicion del eco del anillo'
           assert 'float echo = weight * flash * ECHO_ADDITIVE;' in aura, \
@@ -918,6 +919,25 @@ jobs:
           # Sonido: solo la reliquia propia, con sonidos de vanilla y apagable.
           sonidos = (base / 'RelicSounds.java').read_text(encoding='utf-8')
           assert 'case HUNTED -> 1.34F;' in sonidos, 'el peligro no tiene tono'
+          # 1.0.61: el escaner. Un ping cada dos segundos mientras hay peligro, hecho
+          # con el dibujo y las constantes de la onda (no gasta presupuesto nuevo).
+          assert 'private static void drawHuntScan(' in aura, 'el peligro no tiene escaner'
+          assert 'if (scanMood == RelicAnimatable.Mood.HUNTED && RelicConfig.GLOW_AURA.get() && sparksEnabled()) {' in aura, \
+              'el escaner no esta atado al estado de peligro, al aura y a la calidad'
+          assert 'SCAN_PERIOD' in aura and 'SCAN_MIN' in aura and 'SCAN_MAX' in aura, \
+              'faltan las constantes del escaner'
+          escaner = _re.split(r'\n    \}', aura.split('private static void drawHuntScan(', 1)[1])[0]
+          assert escaner.count('drawShockRing(') == 2, \
+              'el escaner no dibuja tinte y aditivo'
+          # Las dos llamadas, tal cual: envolver una en `if (false)` deja el texto y
+          # el escaner sin tinte (el negativo lo destapo).
+          assert _re.search(r'\n            drawShockRing\(tint, frame, time, radius, phase,', escaner), \
+              'el tinte del escaner no se dibuja de verdad'
+          assert _re.search(r'\n        drawShockRing\(buffer, frame, time, radius, phase,', escaner), \
+              'el aditivo del escaner no se dibuja de verdad'
+          assert 'SHOCK_ADDITIVE' in escaner and 'SHOCK_TINT_BOOST' in escaner, \
+              'el escaner no usa el presupuesto ya medido de la onda'
+          assert 'float rest = 1.0F - phase;' in escaner, 'el escaner no se apaga al abrirse'
           assert 'playLocalSound(' in sonidos, 'la reliquia no suena'
           assert '!player.getUUID().equals(wearer)' in sonidos, \
               'sonarian tambien las reliquias de otros jugadores'
