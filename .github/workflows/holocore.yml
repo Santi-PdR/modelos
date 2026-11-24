@@ -918,7 +918,23 @@ jobs:
               f'dos estados suenan igual (el oido no los distingue): {sorted(tonos)}'
           assert 'pitch < 0.90F' in sonidos, \
               'los estados graves y agudos usan la misma nota (no se distinguen)'
-          for llamada in ('RelicSounds.pulse(this.wearer)', 'RelicSounds.awake(this.wearer)', \
+          # 1.0.59: el pulso usa el mismo tono (una cuarta arriba) y bajo el agua el
+          # sonido se apaga, como se apaga la luz del aura.
+          assert 'static void pulse(UUID wearer, RelicAnimatable.Mood mood)' in sonidos, \
+              'el pulso suena igual en los trece estados'
+          assert 'pitchFor(mood) * PULSE_INTERVAL' in sonidos, \
+              'el pulso no deriva su tono del estado'
+          assert 'Math.min(PULSE_MAX,' in sonidos, 'el pulso no tiene tope de tono'
+          # Que esten declaradas no es que se usen: las dos asignaciones, literales.
+          assert 'submergedGain = water ? SUBMERGED_GAIN : 1.0F;' in sonidos and \
+              'submergedPitch = water ? SUBMERGED_PITCH : 1.0F;' in sonidos, \
+              'bajo el agua el sonido no se apaga (o no vuelve al normal fuera del agua)'
+          assert 'volume * gain * submergedGain' in sonidos and \
+              'pitch * submergedPitch' in sonidos, \
+              'el agua cambia el tono pero no llega a play()'
+          assert 'mood == RelicAnimatable.Mood.SUBMERGED' in sonidos, \
+              'solo el estado sumergido apaga el sonido, y no se comprueba'
+          for llamada in ('RelicSounds.pulse(this.wearer, this.mood)', 'RelicSounds.awake(this.wearer)', \
                           'RelicSounds.sleep(this.wearer)'):
               assert llamada in animatable, f'el sonido no esta conectado: {llamada}'
           assert 'KeyMapping MOOD' in teclas, 'falta la tecla de los estados de brillo'

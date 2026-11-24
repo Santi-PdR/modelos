@@ -289,7 +289,9 @@ tormenta o el herido con un solo jugador y sin comandos raros.
 Cada cambio de estado **suena** desde 1.0.58, con un tono distinto por estado (trece, todos
 diferentes; los graves resuenan y los agudos tintinean, siempre con ametista de vanilla). Va
 bajo la misma guarda que el glitch del cambio, así que entrar y salir de una cueva no encadena
-campanadas, y se apaga con `sound.events`/`sound.volume`.
+campanadas, y se apaga con `sound.events`/`sound.volume`. Desde 1.0.59 el **pulso** usa el tono
+del estado una cuarta por encima, y **bajo el agua** todo suena más bajo y más grave, como el
+agua se lleva la luz.
 
 Los cambios **no saltan**: `RelicGlowState` interpola color (≈0.30 s) y
 fuerza/giro (≈0.22 s) por portador y con el tiempo real entre frames, así que se

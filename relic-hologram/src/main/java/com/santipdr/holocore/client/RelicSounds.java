@@ -30,10 +30,15 @@ public final class RelicSounds {
     private static final float AWAKE_PITCH = 1.00F;
     /** Dormir: bastante mas grave, se hunde. */
     private static final float SLEEP_PITCH = 0.55F;
-    /** Pulso: agudo, corto, se oye por encima del combate. */
-    private static final float PULSE_PITCH = 1.35F;
     /** Volumen de base del aviso de cambio de estado (1.0.58). */
     private static final float MOOD_GAIN = 0.55F;
+    /** El pulso es el mismo tono del estado, una cuarta por encima (1.0.59). */
+    private static final float PULSE_INTERVAL = 1.25F;
+    /** Tope del pulso: por encima de 2.0 la ametista se convierte en un pitido. */
+    private static final float PULSE_MAX = 2.0F;
+    /** Bajo el agua el sonido se apaga, como se apaga la luz (1.0.59). */
+    private static final float SUBMERGED_GAIN = 0.45F;
+    private static final float SUBMERGED_PITCH = 0.85F;
 
     private RelicSounds() {
     }
@@ -46,8 +51,29 @@ public final class RelicSounds {
         play(SoundEvents.AMETHYST_BLOCK_RESONATE, 0.70F, SLEEP_PITCH, wearer);
     }
 
-    static void pulse(UUID wearer) {
-        play(SoundEvents.AMETHYST_BLOCK_CHIME, 0.80F, PULSE_PITCH, wearer);
+    /**
+     * Pulso: el tono del estado, una cuarta por encima (1.0.59). Antes iba siempre
+     * a 1.35 y sonaba igual ardiendo que en el vacio, que es justo lo que no debe
+     * pasar cuando el color ya dice cual es cual.
+     */
+    static void pulse(UUID wearer, RelicAnimatable.Mood mood) {
+        float pitch = Math.min(PULSE_MAX, pitchFor(mood) * PULSE_INTERVAL);
+        applySubmerged(mood);
+        play(SoundEvents.AMETHYST_BLOCK_CHIME, 0.80F, pitch, wearer);
+    }
+
+    /**
+     * Bajo el agua el sonido se apaga, igual que el agua se lleva la luz del aura:
+     * menos volumen y el tono un poco por debajo, que es lo que suena a "desde el
+     * fondo". Se guarda en campos porque {@link #play} no recibe el estado.
+     */
+    private static float submergedGain = 1.0F;
+    private static float submergedPitch = 1.0F;
+
+    private static void applySubmerged(RelicAnimatable.Mood mood) {
+        boolean water = mood == RelicAnimatable.Mood.SUBMERGED;
+        submergedGain = water ? SUBMERGED_GAIN : 1.0F;
+        submergedPitch = water ? SUBMERGED_PITCH : 1.0F;
     }
 
     /**
@@ -106,6 +132,6 @@ public final class RelicSounds {
             return;
         }
         minecraft.level.playLocalSound(player.getX(), player.getEyeY(), player.getZ(), sound,
-                SoundSource.PLAYERS, volume * gain, pitch, false);
+                SoundSource.PLAYERS, volume * gain * submergedGain, pitch * submergedPitch, false);
     }
 }

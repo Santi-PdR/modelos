@@ -237,6 +237,11 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.59, pulso y agua.** El pulso deriva su tono de `pitchFor(mood)` (`PULSE_INTERVAL` 1.25,
+tope 2.0), así que un estado nuevo con tono propio arrastra también su pulso. El agua se
+aplica en `play()` con dos campos (`submergedGain`/`submergedPitch`) porque esa función no
+recibe el estado: el CI exige las dos asignaciones completas, no que las constantes existan.
+
 **1.0.58, tonos.** `RelicSounds.pitchFor(Mood)` es un `switch` sin `default`, y el validador
 de estados ya exige `case X ->` para los trece: un estado nuevo sin tono **rompe el CI** en
 vez de sonar genérico. Además, los tonos tienen que ser distintos entre sí: dos estados con

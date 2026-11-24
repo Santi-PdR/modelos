@@ -526,7 +526,7 @@ public final class RelicAnimatable implements GeoAnimatable {
             if (this.active && isRecent(now, snapshot.pulse())) {
                 request(RelicAnimations.ENERGY_PULSE);
                 boostFlash(0.60F);
-                RelicSounds.pulse(this.wearer);
+                RelicSounds.pulse(this.wearer, this.mood);
             }
         }
         if (snapshot.release() != this.seenRelease) {

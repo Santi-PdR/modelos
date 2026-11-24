@@ -1,5 +1,21 @@
 # Historial de cambios
 
+## 1.0.59 — el pulso suena a lo que eres, y el agua lo apaga
+
+Dos cabos que dejó 1.0.58, atados.
+
+* **El pulso ya no tiene tono fijo.** Antes iba siempre a 1.35 y sonaba igual ardiendo que
+  en el vacío, justo lo que no debe pasar cuando el color ya distingue. Ahora es el tono del
+  estado **una cuarta por encima** (armónico con el aviso de cambio), con tope en 2.0 para que
+  la ametista no se vuelva un pitido: ardiendo un pulso grave, el End uno finísimo.
+* **Bajo el agua el sonido se apaga**, igual que el agua se lleva la luz del aura desde
+  1.0.33: volumen al 45% y el tono un 15% por debajo, que es lo que suena a oírse desde el
+  fondo. Fuera del agua vuelve solo — y se comprueba que vuelve, no solo que baja.
+* Los avisos de despertar y dormir siguen con su tono: no cambian, porque no son estados.
+* CI: 6 comprobaciones nuevas y 4 negativos en rojo. Uno de ellos me pilló: comprobar que la
+  constante del agua **existe** pasaba en verde con el agua sin apagar nada. Ahora se comprueba
+  la asignación entera, incluido el caso de volver al volumen normal.
+
 ## 1.0.58 — cada estado tiene su tono
 
 La reliquia ya sonaba en el pulso, al despertar y al dormir. Ahora **también suena cuando
