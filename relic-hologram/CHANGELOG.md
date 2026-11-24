@@ -1,5 +1,23 @@
 # Historial de cambios
 
+## 1.0.60 — el peligro se enciende
+
+El estado de animación `ALERT` existe desde 1.0.29 y avisa de que hay un monstruo cerca…
+solo moviendo la animación. Ahora la reliquia **también se enciende**.
+
+* **`hunted`**: magenta de alarma (1.00, 0.26, 0.62) — el único color así en la paleta, y a
+  propósito: si hay un monstruo detrás, el color tiene que cantar. Anillo **+0.45** (el más
+  marcado de todos), vaivén 1.30, giro 1.26× y tono 1.34 (agudo y cortante, justo por debajo
+  del hielo).
+* **Sin coste nuevo**: usa `threatTicks`, la cuenta que ya alimentaba `ALERT` (misma detección,
+  mismo `alertRadius` de la config y con histéresis de 2 s). No hay un segundo escaneo de
+  monstruos por tick.
+* **Prioridad**: después de *herido* y antes de *tormenta*. Herido es lo que ya pasó; un
+  monstruo importa más que la lluvia.
+* CI: 10 comprobaciones nuevas y 4 negativos en rojo. Y de paso, un fallo **del propio
+  validador**: cortaba el bloque del enum en el primer `` } `` y una llave dentro de un
+  comentario dejaba fuera a media lista de estados. Ahora cuenta llaves.
+
 ## 1.0.59 — el pulso suena a lo que eres, y el agua lo apaga
 
 Dos cabos que dejó 1.0.58, atados.

@@ -237,6 +237,12 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.60, peligro.** Catorce estados. `hunted` no añade detección: lee `threatTicks`, que ya
+existía para el estado de animación `ALERT`. El magenta es el único tono de la paleta que no
+se parece a otro, y el anillo sube 0.45 (el máximo): el aviso tiene que verse de reojo. El
+tono 1.34 queda a propósito por debajo del hielo (1.55), así que alarma y frío no se
+confunden de oído.
+
 **1.0.59, pulso y agua.** El pulso deriva su tono de `pitchFor(mood)` (`PULSE_INTERVAL` 1.25,
 tope 2.0), así que un estado nuevo con tono propio arrastra también su pulso. El agua se
 aplica en `play()` con dos campos (`submergedGain`/`submergedPitch`) porque esa función no

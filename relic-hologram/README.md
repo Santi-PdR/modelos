@@ -95,7 +95,7 @@ En el juego:
 | Ajustar cualquier clave | `/relic set` (lista) · `/relic set <clave> <valor>` |
 | Guardar los ajustes | `/relic save` |
 | Volver a los valores de fábrica | `/relic reset` · `/relic reset <clave>` (una sola) |
-| Ver o forzar el estado de brillo | `/relic mood` · `/relic mood <auto\|dark\|rain\|storm\|wounded\|resonant\|night\|submerged\|portal\|burning\|freezing\|nether\|end>` |
+| Ver o forzar el estado de brillo | `/relic mood` · `/relic mood <auto\|dark\|rain\|storm\|wounded\|hunted\|resonant\|night\|submerged\|portal\|burning\|freezing\|nether\|end>` |
 | Recorrer los estados o ver la lista | `/relic mood next` (ronda, igual que la tecla M) · `/relic mood list` (los trece, con el que manda marcado) |
 | Forzar el suelo del eco | `/relic echo [auto\|hard\|loose\|water\|next]` (dispara un pulso para que se vea, desde 1.0.57) |
 | Que los estados pasen solos | `/relic mood cycle [segundos]` (6 por defecto, 1–60) · `/relic mood cycle 0` para parar |
@@ -208,14 +208,16 @@ un borde más), y tanto el anillo como el aura cambian de color con el estado:
 | `idle_alert` | rojo | 1.05 | late como un aviso, gira al revés |
 | `idle_dormant` | gris azulado | 0.35 | no sale |
 
-Y por encima del ciclo de animación hay **trece estados de brillo** que solo cambian
-la luz, no la animación (`RelicAnimatable.Mood`, desde 1.0.29; los dos últimos son de
-dimensión, desde 1.0.51). Se aplican cuando mandan: ardiendo > congelándose > herido >
-tormenta > agua > portal > Nether > End > oscuridad > lluvia > noche > resonancia.
+Y por encima del ciclo de animación hay **catorce estados de brillo** que solo cambian
+la luz, no la animación (`RelicAnimatable.Mood`, desde 1.0.29; los dos de dimensión son de
+1.0.51 y el de peligro de 1.0.60). Se aplican cuando mandan: ardiendo > congelándose >
+herido > **peligro** > tormenta > agua > portal > Nether > End > oscuridad > lluvia > noche >
+resonancia.
 
 | Estado de brillo | Cuándo | Qué hace |
 |---|---|---|
 | herido (`wounded`) | al portador le queda menos del 35% de vida | tira el color a rojo, sube el aura y enciende el anillo aunque esté en reposo |
+| peligro (`hunted`) | **un monstruo** a menos de `alertRadius` bloques (desde 1.0.60) | magenta de alarma —el único color así en la paleta—, el anillo más marcado de todos (+0.45), vaivén 1.30 y giro 1.26×: es el único estado que avisa de algo que puede matarte sin que lo estés mirando |
 | tormenta (`storm`) | truena donde está el portador | azul casi blanco, más aura y el giro más rápido | Cada 5–11 s pega un destello como el cielo (desde 1.0.42).
 | resonancia (`resonant`) | otro portador a menos de 12 bloques | violeta, anillo más marcado y giro rápido: las dos reliquias se «oyen» |
 | oscuridad (`dark`) | menos de luz de bloque 4 **y** menos de luz de cielo 8 (encerrado) | casi blanca y bastante más aura: en una cueva es la única luz que hay |
@@ -282,7 +284,7 @@ Para verlos sin montar la escena está `/relic mood <estado>`, que fuerza uno de
 de uno en uno (lo mismo que la **tecla M**, con el aviso en la barra de acción en vez
 del chat), `/relic mood cycle [segundos]` para que pasen solos (con `0` se para, y
 avisa igual que la tecla, así que al mirar la grabación se sabe qué estado es cada
-tramo) y `/relic mood list` para ver los trece nombres con el activo marcado: en
+tramo) y `/relic mood list` para ver los catorce nombres con el activo marcado: en
 oro si está forzado, en azul si lo ha elegido la escena. Es la forma de mirar la
 tormenta o el herido con un solo jugador y sin comandos raros.
 
