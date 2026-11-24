@@ -225,7 +225,7 @@ tormenta > agua > portal > Nether > End > oscuridad > lluvia > noche > resonanci
 | ardiendo (`burning`) | el portador está en llamas (desde 1.0.39) | naranja de brasa —el único estado cálido—, giro 1.40× (el más rápido), el vaivén más amplio y **brasas que suben parpadeando** |
 | congelándose (`freezing`) | el portador se está helando (nieve en polvo, desde 1.0.45) | hielo pálido, giro 0.78×, apenas se mueve y **copos diminutos que caen en zigzag** |
 | Nether (`nether`) | el portador está **en el Nether** (desde 1.0.51) | brasa de forja —más roja y honda que ardiendo—, giro 1.14×, más vaivén y las **brasas del fuego**, porque el sitio es el que las enciende |
-| End (`end`) | el portador está **en el End** (desde 1.0.51) | hueso verdoso, el anillo casi apagado, el vaivén más corto y **polvo del vacío** que cae despacio |
+| End (`end`) | el portador está **en el End** (desde 1.0.51) | hueso verdoso, el anillo casi apagado, el vaivén más corto y **motas del vacío** que giran despacio y se apagan por el camino (VFX propio desde 1.0.52) |
 
 El conjunto además se mueve solo: **flota** con un vaivén lento de 0.022 bloques
 (la amplitud sube con la tormenta y baja cuando está herido, y **+60% si corres**) y

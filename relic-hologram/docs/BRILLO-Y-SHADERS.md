@@ -237,6 +237,11 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.52, motas.** Cuarto pase de evento medido: `MOTE_ADDITIVE` 0.16 con tinte ×3, igual
+que el eco del suelo, la onda y el eco del anillo. Las motas giran y se apagan con
+`sin(life * PI)`, así que su pico de brillo es el mismo que el de un eco; por eso los
+números del script sirven tal cual.
+
 **1.0.51, dimensión.** `nether` y `end` se detectan con `Level.NETHER` /
 `Level.END` y se miran **antes** que la luz y la lluvia, pero después de los estados de
 daño. El Nether sube el aura y el anillo (brasa de forja, 1.14× de giro); el End los

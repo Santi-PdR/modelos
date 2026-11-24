@@ -427,6 +427,25 @@ jobs:
               'el Nether no tiene brasas de forja'
           assert 'if (mood == RelicAnimatable.Mood.END) {' in aura, \
               'el End no tiene polvo del vacio'
+          # 1.0.52: las motas del vacio son su propio VFX (los copos caen, y en el
+          # End no cae nada). Tinte debajo del aditivo, como los otros tres pases.
+          assert 'private static void drawMotes(' in aura, 'faltan las motas del vacio'
+          assert 'drawMotes(bufferSource, frame, time, glow, amount, motion);' in aura, \
+              'las motas del vacio no se dibujan nunca'
+          assert 'MOTE_COUNT' in aura and 'MOTE_SPEED' in aura and 'MOTE_RADIUS' in aura, \
+              'faltan las constantes de las motas'
+          motas = aura.split('private static void drawMotes(', 1)[1] \
+              .split('private static void drawFlakes(', 1)[0]
+          assert 'VertexConsumer tint = RelicConfig.AURA_TINT.get()' in motas, \
+              'las motas no llevan tinte debajo'
+          assert motas.count('billboardAt(') == 2, \
+              'las motas tienen que dibujarse dos veces: tinte y aditivo'
+          assert 'MOTE_TINT_BOOST' in motas and 'MOTE_ADDITIVE' in motas, \
+              'las motas no usan sus constantes de composicion'
+          assert 'float blink = sin(life * (float) Math.PI);' in motas, \
+              'las motas no se apagan por el camino'
+          assert 'drawFlakes(bufferSource, frame, time, glow, amount, motion);' in aura, \
+              'los copos del hielo dejaron de dibujarse (siguen siendo de FREEZING)'
           # Ardiendo va el primero de la deteccion: es lo unico de la lista que hace
           # dano mientras lo miras.
           assert 'if (player.isOnFire()) {' in animatable, 'estar ardiendo no es un estado'

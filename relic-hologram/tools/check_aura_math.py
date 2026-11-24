@@ -76,8 +76,12 @@ def leer_constantes():
     onda_boost = floats(re.search(r'SHOCK_TINT_BOOST = ([\d.]+)F', aura).group(1))[0]
     eco_anillo = floats(re.search(r'ECHO_ADDITIVE = ([\d.]+)F', aura).group(1))[0]
     eco_anillo_boost = floats(re.search(r'ECHO_TINT_BOOST = ([\d.]+)F', aura).group(1))[0]
+    # Las motas del vacio del End (1.0.52).
+    mota = floats(re.search(r'MOTE_ADDITIVE = ([\d.]+)F', aura).group(1))[0]
+    mota_boost = floats(re.search(r'MOTE_TINT_BOOST = ([\d.]+)F', aura).group(1))[0]
     return (diametros, pesos, alpha, boost, darken, tinte, intensidad, anillo,
-            eco_alpha, eco_boost, onda, onda_boost, eco_anillo, eco_anillo_boost)
+            eco_alpha, eco_boost, onda, onda_boost, eco_anillo, eco_anillo_boost,
+            mota, mota_boost)
 
 
 def leer_pixel_central(ruta=AURA_PNG, modo='centro'):
@@ -176,7 +180,7 @@ def componer_eco(fondo, eco_alpha, eco_boost, tinte, tex):
 
 def main():
     (diametros, pesos, alpha, boost, darken, tinte, intensidad, anillo, eco_alpha, eco_boost,
-     onda, onda_boost, eco_anillo, eco_anillo_boost) = leer_constantes()
+     onda, onda_boost, eco_anillo, eco_anillo_boost, mota, mota_boost) = leer_constantes()
     tex = leer_pixel_central()
     print(f'textura centro: rgb {tuple(round(c, 2) for c in tex[:3])} alpha {tex[3]:.2f}')
     print(f'diametros {diametros}  pesos {pesos}  auraAlpha {alpha}  '
@@ -227,6 +231,7 @@ def main():
     eventos = [
         ('onda', onda, onda_boost, leer_pixel_central()),
         ('eco anillo', eco_anillo, eco_anillo_boost, eco_tex),
+        ('motas', mota, mota_boost, leer_pixel_central()),
     ]
     for nombre, aditivo, tinte_boost, tex in eventos:
         print(f'{nombre}: aditivo {aditivo:.2f}  tinte x{tinte_boost:.2f}  '

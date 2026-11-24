@@ -1,5 +1,20 @@
 # Historial de cambios
 
+## 1.0.52 — motas del vacío
+
+En 1.0.51 el End recicló los copos del hielo. Se notaba: **los copos caen, y en el
+End no cae nada**. Ahora tiene su propio VFX.
+
+* **Nueve motas** (`MOTE_COUNT`) que **giran** en un plano algo inclinado, cada una con su
+  radio y su fase, y se **encienden y apagan** con un ciclo largo (`sin(life * PI)`: cero,
+  uno, cero). No suben ni bajan: dan vueltas y se van.
+* **Muy lentas** (`MOTE_SPEED` 0.10, y solo +25% al correr): el End no se inmuta. Es el
+  VFX más quieto del mod.
+* Tinte debajo y aditivo pequeño (`MOTE_ADDITIVE` 0.16, tinte ×3), la misma regla que los
+  otros tres pases: medido sobre nieve, piedra y cueva en `check_aura_math.py`, que ahora
+  compone **cuatro** pases.
+* El hielo (`freezing`) sigue con sus copos: el CI comprueba que las dos cosas se dibujan.
+
 ## 1.0.51 — dos estados de dimensión: Nether y End
 
 Los once estados de brillo miraban el clima, la luz y la compañía, pero no **dónde**

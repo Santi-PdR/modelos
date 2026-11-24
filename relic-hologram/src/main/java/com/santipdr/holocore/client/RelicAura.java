@@ -96,6 +96,15 @@ public final class RelicAura {
      * llegada, y tamano. Sale del destello, asi que no guarda estado.
      */
     /** Copos del estado de congelacion: caen despacio, giran y son diminutos. */
+    /**
+     * Motas del vacio (el End, 1.0.52): pocas, muy lentas y con un parpadeo largo.
+     * No caen ni suben: giran en un plano algo inclinado y se apagan por el camino,
+     * que es lo que hace el polvo de enderman cuando lo miras.
+     */
+    private static final int MOTE_COUNT = 9;
+    private static final float MOTE_SIZE = 0.034F;
+    private static final float MOTE_SPEED = 0.10F;
+    private static final float MOTE_RADIUS = 0.28F;
     private static final int FLAKE_COUNT = 7;
     private static final float FLAKE_SIZE = 0.038F;
     private static final float FLAKE_SPEED = 0.28F;
@@ -127,6 +136,9 @@ public final class RelicAura {
     private static final float SHOCK_ADDITIVE = 0.16F;
     private static final float ECHO_TINT_BOOST = 3.0F;
     private static final float ECHO_ADDITIVE = 0.18F;
+    /** Motas del vacio: la misma regla (tinte x3, aditivo pequeno). */
+    private static final float MOTE_TINT_BOOST = 3.0F;
+    private static final float MOTE_ADDITIVE = 0.16F;
     private static final int SHOCK_COUNT = 8;
     private static final float SHOCK_MIN = 0.16F;
     private static final float SHOCK_MAX = 0.62F;
@@ -427,9 +439,10 @@ public final class RelicAura {
             return;
         }
         if (mood == RelicAnimatable.Mood.END) {
-            // En el End cae polvo de enderman: granos palidos que bajan despacio y
-            // se mecen. Mismo VFX que el hielo, otra paleta y otro ritmo.
-            drawFlakes(bufferSource, frame, time, glow, amount, motion);
+            // En el End, motas del vacio: giran despacio y se apagan por el camino
+            // (1.0.52). Antes se reciclaban los copos del hielo, y se notaba: los
+            // copos caen, y en el End no cae nada.
+            drawMotes(bufferSource, frame, time, glow, amount, motion);
             return;
         }
         if (mood == RelicAnimatable.Mood.RAIN) {
@@ -577,6 +590,43 @@ public final class RelicAura {
      * giro propio y son mas pequenos que las gotas. Blanco azulado del estado, y
      * correr los arrastra sin acelerarlos mucho: el hielo no reacciona rapido.
      */
+    /**
+     * Motas del vacio: {@code MOTE_COUNT} granos que giran en un plano inclinado y
+     * se encienden y apagan con un ciclo largo ({@code sin(life * PI)}: cero, uno,
+     * cero). Tinte debajo y aditivo pequeno, como todos los pases de evento.
+     */
+    private static void drawMotes(MultiBufferSource bufferSource, Frame frame, float time,
+                                  RelicGlowState glow, float amount, float motion) {
+        VertexConsumer tint = RelicConfig.AURA_TINT.get()
+                ? bufferSource.getBuffer(RelicRenderTypes.TINT_GLOW.apply(AURA_TEXTURE))
+                : null;
+        VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
+        // Muy lentas y apenas aceleran al correr: el End no se inmuta.
+        float orbit = seconds(time) * MOTE_SPEED * (1.0F + 0.25F * motion);
+        for (int i = 0; i < MOTE_COUNT; i++) {
+            float phase = orbit * TWO_PI + i * (TWO_PI / MOTE_COUNT);
+            float life = fract(orbit * 0.5F + i * (1.0F / MOTE_COUNT));
+            float blink = sin(life * (float) Math.PI);
+            float weight = amount * blink * MOTE_ADDITIVE;
+            if (weight <= 0.002F) {
+                continue;
+            }
+            float radius = MOTE_RADIUS * (0.72F + 0.36F * fract(i * 0.37F));
+            float left = cos(phase) * radius;
+            float up = sin(phase) * radius * 0.55F + 0.06F * sin(phase * 2.1F + i);
+            float cx = frame.originX + frame.leftX * left + frame.upX * up;
+            float cy = frame.originY + frame.leftY * left + frame.upY * up;
+            float cz = frame.originZ + frame.leftZ * left + frame.upZ * up;
+            if (tint != null) {
+                billboardAt(tint, frame, cx, cy, cz, MOTE_SIZE, phase,
+                        glow.red(), glow.green(), glow.blue(),
+                        Math.min(1.0F, weight * MOTE_TINT_BOOST));
+            }
+            billboardAt(buffer, frame, cx, cy, cz, MOTE_SIZE, phase,
+                    glow.red() * weight, glow.green() * weight, glow.blue() * weight, 1.0F);
+        }
+    }
+
     private static void drawFlakes(MultiBufferSource bufferSource, Frame frame, float time,
                                    RelicGlowState glow, float amount, float motion) {
         VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
