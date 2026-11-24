@@ -82,35 +82,27 @@ public final class KatanaAnimations {
         // Keep playback speed inside the clip, so the outer fade remains in real ticks.
         ModifierLayer<IAnimation> timedClip = new ModifierLayer<>(playing);
         if (ability == 0) {
-            // PlayerAnimator renders world-model arms in first person. Lift those
-            // arms only in that render pass so the blood-draw stays in view;
-            // the third-person animation and gameplay positions are unchanged.
-            // SpeedModifier passes the clip-relative fractional tick to the
-            // adjustment; using only getTick() visibly steps at render rates
-            // above the animation tick rate.
+            // Frame the complete world model in the first-person pass, instead
+            // of translating each arm away from its shoulder. Body offsets use
+            // world blocks; arm offsets use model pixels and the model itself
+            // flips X/Y. Preserve optional free-hand fine tuning separately.
             final float[] contactDelta = {0F};
             timedClip.addModifierBefore(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier(part -> {
-                if (!FirstPersonMode.isFirstPersonPass() || !(part.equals("leftArm") || part.equals("rightArm")))
-                    return java.util.Optional.empty();
-                // The animation's free hand is leftArm before the outer mirror
-                // modifier swaps it for left-handed players.
-                boolean free = part.equals("leftArm");
-                // The mirrored world-model pass is not a simple screen-space
-                // reflection, so both handedness settings need separate framing.
+                if (!FirstPersonMode.isFirstPersonPass()) return java.util.Optional.empty();
                 boolean leftHanded = player.getMainArm() == HumanoidArm.LEFT;
-                // The offset is for the contact phase, not the whole gesture.
-                // Ease it back out before recovery so the free arm does not
-                // remain displaced after it leaves the blade.
-                float contact = free ? GestureCurve.contact(playing.getTick() + contactDelta[0]) : 0;
+                if (part.equals("body")) {
+                    return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
+                            dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
+                            new dev.kosmx.playerAnim.core.util.Vec3f(leftHanded ? -1.5F : .5F, .1875F, -1F)));
+                }
+                if (!part.equals("leftArm")) return java.util.Optional.empty();
+                float contact = GestureCurve.contact(playing.getTick() + contactDelta[0]);
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                         dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
                         new dev.kosmx.playerAnim.core.util.Vec3f(
-                                (leftHanded ? 24 : -8) + contact * ((leftHanded ? -8 : 4)
-                                        + KatanaClientConfig.BLOOD_HAND_X.get().floatValue()),
-                                -3 + contact * ((leftHanded ? -12 : -8)
-                                        + KatanaClientConfig.BLOOD_HAND_Y.get().floatValue()),
-                                -16 + contact * ((leftHanded ? -3 : 0)
-                                        + KatanaClientConfig.BLOOD_HAND_Z.get().floatValue()))));
+                                contact * KatanaClientConfig.BLOOD_HAND_X.get().floatValue(),
+                                contact * KatanaClientConfig.BLOOD_HAND_Y.get().floatValue(),
+                                contact * KatanaClientConfig.BLOOD_HAND_Z.get().floatValue())));
             }) {
                 @Override public dev.kosmx.playerAnim.core.util.Vec3f get3DTransform(
                         String part, dev.kosmx.playerAnim.api.TransformType type, float tickDelta,
@@ -118,8 +110,6 @@ public final class KatanaAnimations {
                     contactDelta[0] = tickDelta;
                     return super.get3DTransform(part, type, tickDelta, value);
                 }
-                // Inspect begins at tick zero; the library's default fade divides
-                // by beginTick. The enclosing layer already performs the fade.
                 @Override protected float getFadeIn(float delta) { return 1F; }
             });
         }
