@@ -237,7 +237,7 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
-**1.0.48, el eco también se tiñe.** Composición del eco con los números del código:
+**1.0.49, el eco también se tiñe.** Composición del eco con los números del código:
 tinte `cobertura = 0.12 × 3.0 = 0.36`, aditivo `0.12` sobre el píxel de más peso de
 `relic_ring.png` (blanco puro, alpha 1) y color `IDLE` (0.52, 0.86, 1.00). Sobre nieve
 (0.93, 0.95, 0.97): tinte → (0.78, 0.92, 0.98), aditivo → **(0.86, 0.98, 1.00)**, tono

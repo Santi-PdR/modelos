@@ -1301,9 +1301,21 @@ jobs:
           command -v xvfb-run || sudo apt-get install -y xvfb
           # En CI no hay tarjeta de sonido: el cliente apaga el audio y sigue.
           # Un cliente sano NO termina solo, asi que timeout (124) = exito.
-          timeout 480 xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient --no-daemon > client.log 2>&1
-          RC=$?
-          echo "exit=$RC"
+          # Dos intentos: en 1.0.48 el arranque se quedo 480 s sin llegar a cargar el
+          # mod, con el build y el otro workflow en verde para el mismo commit. Un
+          # arranque que no deja las dos marcas se reintenta una vez; lo que sea de
+          # verdad (GLSL invalido, mixin roto) se cae tambien en el segundo.
+          RC=1
+          for intento in 1 2; do
+            echo "=== runClient, intento $intento ==="
+            timeout 480 xvfb-run -a -s "-screen 0 1280x720x24" gradle runClient --no-daemon > client.log 2>&1
+            RC=$?
+            echo "exit=$RC"
+            if grep -q "Holographic Core (holocore) cargado" client.log \
+                && grep -q "Shader del aura compilado" client.log; then
+              break
+            fi
+          done
           grep -n "Holographic Core (holocore) cargado" client.log | head -3 || true
           echo '--- ultimas lineas ---'
           tail -40 client.log
