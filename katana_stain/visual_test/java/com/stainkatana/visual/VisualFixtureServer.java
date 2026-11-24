@@ -41,6 +41,51 @@ public final class VisualFixtureServer {
         confirmedImpacts.add(new ImpactCapture(++confirmedImpactCount, event.getEntity().level().getGameTime()));
     }
 
+    // A separate, stationary target for real Better Combat client attacks. The
+    // server observes damage; the client observes selected animation IDs.
+    public static volatile java.util.UUID bcComboTarget;
+    private static volatile int bcComboDamageEvents;
+    private static net.minecraft.world.phys.Vec3 bcComboAnchor;
+    public static void startBetterCombatCombo(ServerPlayer player) {
+        var level = player.serverLevel();
+        int x = 150, z = 150;
+        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
+        player.teleportTo(level, x + .5, y, z + .5, 0, 0);
+        player.setYRot(0); player.setXRot(0);
+        player.setGameMode(GameType.SURVIVAL);
+        player.getInventory().setItem(player.getInventory().selected, new ItemStack(StainKatanaMod.KATANA_STAIN.get()));
+        var victim = EntityType.HUSK.create(level);
+        if (victim == null) throw new IllegalStateException("Cannot create Better Combat combo target");
+        victim.setNoAi(true); victim.setPersistenceRequired();
+        victim.getAttribute(Attributes.MAX_HEALTH).setBaseValue(1000);
+        victim.setHealth(1000);
+        bcComboAnchor = new net.minecraft.world.phys.Vec3(x + .5, y, z + 2.8);
+        victim.moveTo(bcComboAnchor.x, bcComboAnchor.y, bcComboAnchor.z, 180, 0);
+        level.addFreshEntity(victim);
+        bcComboDamageEvents = 0;
+        bcComboTarget = victim.getUUID();
+    }
+    @SubscribeEvent public static void keepBetterCombatTarget(net.minecraftforge.event.TickEvent.LevelTickEvent event) {
+        if (event.phase != net.minecraftforge.event.TickEvent.Phase.END || !(event.level instanceof ServerLevel level)
+                || bcComboTarget == null || bcComboAnchor == null) return;
+        var entity = level.getEntity(bcComboTarget);
+        if (entity instanceof Zombie victim && victim.isAlive()) {
+            victim.teleportTo(bcComboAnchor.x, bcComboAnchor.y, bcComboAnchor.z);
+            victim.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        }
+    }
+    @SubscribeEvent public static void countBetterCombatDamage(net.minecraftforge.event.entity.living.LivingDamageEvent event) {
+        if (bcComboTarget != null && bcComboTarget.equals(event.getEntity().getUUID())
+                && !event.getEntity().level().isClientSide && event.getAmount() > 0
+                && event.getSource().getEntity() instanceof ServerPlayer) bcComboDamageEvents++;
+    }
+    public static void verifyBetterCombatCombo() {
+        if (bcComboDamageEvents < 4) throw new IllegalStateException("Better Combat target received only " + bcComboDamageEvents + " damaging hits");
+        System.out.println("STAIN_BC_COMBO_DAMAGE_VERIFIED=" + bcComboDamageEvents);
+        bcComboTarget = null;
+        bcComboAnchor = null;
+    }
+
     /** Separate 20-health control: all ten cuts must deal positive damage. */
     public static void startWeakSequence(ServerPlayer player) {
         var level = player.serverLevel();

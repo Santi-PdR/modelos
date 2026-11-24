@@ -51,6 +51,34 @@ public final class VisualFixtureClient {
             throw new IllegalStateException("Cannot inspect Better Combat animation registry", e);
         }
     }
+    private static final java.util.Set<String> bcHits = new java.util.HashSet<>();
+    private static void observeBetterCombatCombo() {
+        try {
+            Class<?> events = Class.forName("net.bettercombat.api.client.BetterCombatClientEvents");
+            Class<?> listener = Class.forName("net.bettercombat.api.client.BetterCombatClientEvents$PlayerAttackHit");
+            Object callback = java.lang.reflect.Proxy.newProxyInstance(listener.getClassLoader(), new Class<?>[]{listener}, (proxy, method, args) -> {
+                if (method.getDeclaringClass() == Object.class) {
+                    if (method.getName().equals("toString")) return "KatanaComboFixture";
+                    if (method.getName().equals("hashCode")) return System.identityHashCode(proxy);
+                    if (method.getName().equals("equals")) return proxy == args[0];
+                    return null;
+                }
+                if (args != null && args.length >= 3 && args[2] instanceof java.util.List<?> targets
+                        && VisualFixtureServer.bcComboTarget != null
+                        && targets.stream().anyMatch(e -> e instanceof net.minecraft.world.entity.Entity entity
+                                && entity.getUUID().equals(VisualFixtureServer.bcComboTarget))) {
+                    Object attack = args[1].getClass().getMethod("attack").invoke(args[1]);
+                    String id = (String) attack.getClass().getMethod("animation").invoke(attack);
+                    bcHits.add(id);
+                }
+                return null;
+            });
+            Object publisher = events.getField("ATTACK_HIT").get(null);
+            publisher.getClass().getMethod("register", Object.class).invoke(publisher, callback);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Cannot observe Better Combat attack events", e);
+        }
+    }
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getInstance();
@@ -627,8 +655,34 @@ public final class VisualFixtureClient {
                 if (impactCaptures != com.stainkatana.katana.CombatTuning.ultimateStrikeCount())
                     throw new IllegalStateException("Expected ten confirmed C screenshots, got " + impactCaptures);
                 System.out.println("STAIN_C_CONFIRMED_IMPACT_CAPTURES=" + impactCaptures);
-                System.out.println("STAIN_EFFECT_SAMPLES_DONE"); System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop();
+                System.out.println("STAIN_EFFECT_SAMPLES_DONE");
+                if (net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) {
+                    observeBetterCombatCombo();
+                    mc.getSingleplayerServer().execute(() -> {
+                        var player = mc.getSingleplayerServer().getPlayerList().getPlayer(mc.player.getUUID());
+                        VisualFixtureServer.startBetterCombatCombo(player);
+                    });
+                }
             }
+            case 1860 -> {
+                if (net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) {
+                    mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
+                    mc.player.setYRot(0); mc.player.setXRot(0);
+                    mc.options.keyAttack.setDown(true);
+                }
+            }
+            case 2010 -> {
+                if (net.minecraftforge.fml.ModList.get().isLoaded("bettercombat")) {
+                    mc.options.keyAttack.setDown(false);
+                    String[] expected = {"stainkatana:stain_serious_1", "stainkatana:stain_serious_2",
+                            "stainkatana:stain_improved_3", "stainkatana:stain_improved_4"};
+                    for (String id : expected) if (!bcHits.contains(id))
+                        throw new IllegalStateException("Better Combat did not attack target with " + id + ": " + bcHits);
+                    System.out.println("STAIN_BC_FOUR_IMPORTED_ATTACKS_HIT_TARGET=" + bcHits);
+                    mc.getSingleplayerServer().execute(VisualFixtureServer::verifyBetterCombatCombo);
+                }
+            }
+            case 2020 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }
     }

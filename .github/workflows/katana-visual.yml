@@ -165,6 +165,8 @@ jobs:
           grep -F 'STAIN_MULTIPART_RANGE_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_BC_ATTACK_FX_VERIFIED' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_BC_IMPORTED_COMBO_RESOLVED' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_BC_FOUR_IMPORTED_ATTACKS_HIT_TARGET' /tmp/stain-visual-full-bc.log
+          grep -F 'STAIN_BC_COMBO_DAMAGE_VERIFIED=' /tmp/stain-visual-full-bc.log
           test -f run/stain-visual-test/00c_left_guard_front.png
           grep -F 'STAIN_EFFECT_SAMPLES_DONE' /tmp/stain-visual-full-bc.log
           grep -F 'STAIN_VISUAL_FIXTURE_FINISHED' /tmp/stain-visual-full-bc.log
