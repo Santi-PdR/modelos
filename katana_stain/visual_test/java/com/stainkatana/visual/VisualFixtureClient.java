@@ -85,6 +85,8 @@ public final class VisualFixtureClient {
                     throw new IllegalStateException("Left-handed fixture did not synchronize");
                 capture = "00a_left_third.png";
             }
+            case 19 -> mc.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+            case 20 -> capture = "00c_left_guard_front.png";
             case 21 -> mc.options.setCameraType(CameraType.FIRST_PERSON);
             case 26 -> capture = "00b_left_first.png";
             case 29 -> {
