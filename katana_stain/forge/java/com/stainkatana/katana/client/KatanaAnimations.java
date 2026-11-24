@@ -116,15 +116,16 @@ public final class KatanaAnimations {
             });
         }
         if (ability == 1) {
-            // The world-model arm can otherwise fill the entire first-person
-            // view. Move only the first-person render pass into a readable frame;
-            // the third-person pose and server hit schedule are unchanged.
+            // Keep shoulders and held item together: frame the entire model
+            // only in the first-person render pass, not each arm separately.
+            // Third-person motion and server hit schedule are unchanged.
             timedClip.addModifierBefore(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier(part -> {
-                if (!FirstPersonMode.isFirstPersonPass() || !(part.equals("leftArm") || part.equals("rightArm")))
+                if (!FirstPersonMode.isFirstPersonPass() || !part.equals("body"))
                     return java.util.Optional.empty();
+                boolean leftHanded = player.getMainArm() == HumanoidArm.LEFT;
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                         dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
-                        new dev.kosmx.playerAnim.core.util.Vec3f(0, 1, 5)));
+                        new dev.kosmx.playerAnim.core.util.Vec3f(leftHanded ? -1F : .5F, .1F, -1F)));
             }) {
                 @Override protected float getFadeIn(float delta) { return 1F; }
             });
