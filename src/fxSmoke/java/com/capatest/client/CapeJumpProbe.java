@@ -21,6 +21,7 @@ final class CapeJumpProbe {
     private final StringBuilder rows = new StringBuilder("time\ton_ground\theight\tvertical\tspeed\tpace\tleg_pos\tstride\trun\tair\tfall"
             + "\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\tvy\taterrizaje_deg\taterrizaje_eco\n");
     private final StringBuilder boxes = new StringBuilder(), fixedChain = new StringBuilder(), fixedHem = new StringBuilder();
+    private final StringBuilder poseTimes = new StringBuilder("tick\tsample_time\ton_ground\theight\tspeed\tvertical_speed\tsprinting\tpose_run\n");
     private final BlockPos deck;
     private NativeImage apex, contact, sample80, sample90, sample92, sample118, sample120, sample138, sample140;
     private int start = -1, fitTick = -1;
@@ -95,6 +96,11 @@ final class CapeJumpProbe {
         if (fit != null) {
             fitTick = p.tickCount;
             int elapsed = fitTick - start;
+            // Preserve the player state at the exact render partial that produced these SAT boxes.
+            poseTimes.append(elapsed).append('\t').append(t).append('\t').append(p.onGround() ? 1 : 0).append('\t')
+                    .append(height).append('\t').append(Math.sqrt(travel.horizontalSquared())).append('\t')
+                    .append(travel.vertical()).append('\t').append(p.isSprinting() ? 1 : 0).append('\t')
+                    .append(draw.run()).append('\n');
             fit.boxes().lines().forEach(box -> boxes.append(elapsed).append('\t').append(box).append('\n'));
             fit.fixedChain().lines().forEach(box -> fixedChain.append(elapsed).append('\t').append(box).append('\n'));
             fit.fixedHem().lines().forEach(box -> fixedHem.append(elapsed).append('\t').append(box).append('\n'));
@@ -138,6 +144,7 @@ final class CapeJumpProbe {
         }
         Files.writeString(dir.resolve(name + ".tsv"), rows);
         Files.writeString(dir.resolve(name + "-cubos.tsv"), boxes);
+        Files.writeString(dir.resolve(name + "-poses.tsv"), poseTimes);
         Files.writeString(dir.resolve(name + "-cadena-fija.tsv"), fixedChain);
         Files.writeString(dir.resolve(name + "-dobladillo-fijo.tsv"), fixedHem);
         return true;

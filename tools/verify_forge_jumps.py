@@ -148,19 +148,19 @@ def verdict(data, spans, now, before, slot):
                 slot, e.name, 'sigue el tirón en el salto con zancada o al aterrizar del borde', a, b)
 
 
-def contact_detail(data, tick, limb, cloth_index, signed_gap, rig, cloth_indices, cloth_names):
+def contact_detail(tick, pose_state, limb, cloth_index, signed_gap, rig, cloth_indices, cloth_names):
     garment_index = int(cloth_indices[cloth_index])
     garment_name = str(cloth_names[cloth_index])
     local_cube = int(np.count_nonzero(np.asarray(rig.names)[:garment_index] == garment_name))
-    sample_index = int(np.argmin(np.abs(data['time'] - tick)))
     return {
         'tick': int(tick),
-        'sample_time': round(float(data['time'][sample_index]), 3),
-        'on_ground': bool(data['on_ground'][sample_index]),
-        'height': round(float(data['height'][sample_index]), 3),
-        'speed': round(float(data['speed'][sample_index]), 3),
-        'vertical_speed': round(float(data['vertical'][sample_index]), 3),
-        'run': bool(data['run'][sample_index]),
+        'sample_time': round(pose_state['sample_time'], 4),
+        'on_ground': pose_state['on_ground'],
+        'height': round(pose_state['height'], 3),
+        'speed': round(pose_state['speed'], 3),
+        'vertical_speed': round(pose_state['vertical_speed'], 3),
+        'run': pose_state['sprinting'],
+        'pose_run': pose_state['pose_run'],
         'limb': limb,
         'cape_bone': garment_name,
         'cube_in_bone': local_cube,
@@ -169,8 +169,37 @@ def contact_detail(data, tick, limb, cloth_index, signed_gap, rig, cloth_indices
     }
 
 
+def read_pose_states(path):
+    with path.open(newline='', encoding='utf-8') as stream:
+        rows = list(csv.DictReader(stream, delimiter='\t'))
+    states = {
+        int(row['tick']): {
+            'sample_time': float(row['sample_time']),
+            'on_ground': bool(int(row['on_ground'])),
+            'height': float(row['height']),
+            'speed': float(row['speed']),
+            'vertical_speed': float(row['vertical_speed']),
+            'sprinting': bool(int(row['sprinting'])),
+            'pose_run': float(row['pose_run']),
+        }
+        for row in rows
+    }
+    assert len(states) == len(rows), ('duplicated pose tick', path)
+    assert all(tick <= state['sample_time'] <= tick + 1.0001 for tick, state in states.items()), (
+        'pose sample outside its tick', path)
+    assert all(np.isfinite([state['sample_time'], state['height'], state['speed'],
+                            state['vertical_speed'], state['pose_run']]).all()
+               and 0 <= state['pose_run'] <= 1 for state in states.values()), (
+        'invalid pose state', path)
+    assert np.all(np.diff([states[tick]['sample_time'] for tick in sorted(states)]) > 0), (
+        'pose times are not increasing', path)
+    return states
+
+
 def fit(root, slot, data, spans, rig, source):
     boxes = read_boxes(root / f'saltos-{slot}-cubos.tsv')
+    pose_states = read_pose_states(root / f'saltos-{slot}-poses.tsv')
+    assert set(pose_states) == set(boxes), (slot, 'poses fuera de sincronía con cajas SAT')
     chain_path = root/f'saltos-{slot}-cadena-fija.tsv'
     chain_base = read_boxes(chain_path) if chain_path.is_file() else None
     if chain_base is not None:
@@ -212,7 +241,7 @@ def fit(root, slot, data, spans, rig, source):
         if current_arm_hit > arm_hit:
             arm_hit = current_arm_hit
             limb_index, cloth_index = worst_arm
-            arm_detail = contact_detail(data, tick, limb_names[limb_index], cloth_index,
+            arm_detail = contact_detail(tick, pose_states[tick], limb_names[limb_index], cloth_index,
                                         arm_contacts[worst_arm], rig, cloth_indices, cloth_names)
         leg_contacts = hit[2:]
         worst = np.unravel_index(int(np.argmin(leg_contacts)), leg_contacts.shape)
@@ -220,7 +249,7 @@ def fit(root, slot, data, spans, rig, source):
         if current_leg_hit > leg_hit:
             leg_hit = current_leg_hit
             limb_index, cloth_index = worst
-            leg_detail = contact_detail(data, tick, limb_names[limb_index + 2], cloth_index,
+            leg_detail = contact_detail(tick, pose_states[tick], limb_names[limb_index + 2], cloth_index,
                                         leg_contacts[worst], rig, cloth_indices, cloth_names)
         min_fit = np.minimum(min_fit, [*rig.joins(live), lap(live[roots], torso)])
     assert (min_fit > [.038, .025, .018]).all() and drift < .006, (slot, 'deriva o costura en salto', min_fit, drift)

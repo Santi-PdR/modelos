@@ -1322,6 +1322,7 @@ jobs:
             build/fx-smoke-run/fx-shots/saltos-forge.jpg
             build/fx-smoke-run/fx-shots/saltos-forge.tsv
             build/fx-smoke-run/fx-shots/costuras-saltos-forge.tsv
+            build/fx-smoke-run/fx-shots/saltos-*-poses.tsv
             build/fx-smoke-run/fx-shots/saltos-*-muestra-t*.png
           if-no-files-found: error
           retention-days: 30
