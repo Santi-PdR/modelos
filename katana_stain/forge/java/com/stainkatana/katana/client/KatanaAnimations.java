@@ -94,8 +94,7 @@ public final class KatanaAnimations {
                 if (part.equals("body")) {
                     return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                             dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
-                            new dev.kosmx.playerAnim.core.util.Vec3f(leftHanded ? -1.5F : .5F,
-                                    leftHanded ? -.20F : -.10F, -1F)));
+                            new dev.kosmx.playerAnim.core.util.Vec3f(.5F, -.10F, -1F)));
                 }
                 if (!part.equals("leftArm")) return java.util.Optional.empty();
                 float contact = GestureCurve.contact(playing.getTick() + contactDelta[0]);
