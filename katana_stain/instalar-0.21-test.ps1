@@ -3,7 +3,7 @@
 $ErrorActionPreference = 'Stop'
 $mods = 'D:\Minecraft\SKLauncher\sklauncher-data-v4\instances\test-1\mods'
 $name = 'stainkatana-0.21.0-test.jar'
-$sha = 'C84724AE1C6F5C8FE7ABB74B36A5B0B55E3D2A1054C1DC6661EFE07AEBEA1D857'
+$sha = 'C84724AE1C6F5C8FE7ABB74B36A5B0B55E3D2A1054C1DC6661EF07AEBEA1D857'
 $url = 'https://github.com/Santi-PdR/modelos/raw/refs/heads/arena/a09d390b-modelos/katana_stain/descargas/stainkatana-0.21.0-test.jar'
 if (-not (Test-Path -LiteralPath $mods -PathType Container)) { throw "No existe la carpeta de mods: $mods" }
 if (Get-Process -Name 'javaw','java' -ErrorAction SilentlyContinue) { throw 'Cierra Minecraft y cualquier proceso Java antes de instalar.' }
