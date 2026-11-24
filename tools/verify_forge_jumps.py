@@ -4,6 +4,7 @@ import argparse
 import base64
 import csv
 import io
+import json
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -147,6 +148,27 @@ def verdict(data, spans, now, before, slot):
                 slot, e.name, 'sigue el tirón en el salto con zancada o al aterrizar del borde', a, b)
 
 
+def contact_detail(data, tick, limb, cloth_index, signed_gap, rig, cloth_indices, cloth_names):
+    garment_index = int(cloth_indices[cloth_index])
+    garment_name = str(cloth_names[cloth_index])
+    local_cube = int(np.count_nonzero(np.asarray(rig.names)[:garment_index] == garment_name))
+    sample_index = int(np.argmin(np.abs(data['time'] - tick)))
+    return {
+        'tick': int(tick),
+        'sample_time': round(float(data['time'][sample_index]), 3),
+        'on_ground': bool(data['on_ground'][sample_index]),
+        'height': round(float(data['height'][sample_index]), 3),
+        'speed': round(float(data['speed'][sample_index]), 3),
+        'vertical_speed': round(float(data['vertical'][sample_index]), 3),
+        'run': bool(data['run'][sample_index]),
+        'limb': limb,
+        'cape_bone': garment_name,
+        'cube_in_bone': local_cube,
+        'rig_cube_index': garment_index,
+        'signed_sat_gap_u': float(signed_gap),
+    }
+
+
 def fit(root, slot, data, spans, rig, source):
     boxes = read_boxes(root / f'saltos-{slot}-cubos.tsv')
     chain_path = root/f'saltos-{slot}-cadena-fija.tsv'
@@ -164,7 +186,7 @@ def fit(root, slot, data, spans, rig, source):
     fixed = rig.rigid & ~np.array([hood_moves(name) or flex_plates and name.startswith('v18_pad_') for name in rig.names])
     min_fit = np.full(3, np.inf)
     leg_hit, arm_hit, drift = 0., 0., 0.
-    leg_detail = None
+    arm_detail = leg_detail = None
     cloth_indices = np.flatnonzero(rig.cloth)
     cloth_names = np.asarray(rig.names)[cloth_indices]
     limb_names = ('left_arm', 'right_arm', 'left_leg', 'right_leg')
@@ -184,31 +206,22 @@ def fit(root, slot, data, spans, rig, source):
         torso = np.array(group['body'])
         limbs = np.array([group[name][0] for name in limb_names])
         hit = contacts(live[None, rig.cloth], limbs[None])[0]
-        arm_hit = max(arm_hit, -hit[:2].min())
+        arm_contacts = hit[:2]
+        worst_arm = np.unravel_index(int(np.argmin(arm_contacts)), arm_contacts.shape)
+        current_arm_hit = max(0., -float(arm_contacts[worst_arm]))
+        if current_arm_hit > arm_hit:
+            arm_hit = current_arm_hit
+            limb_index, cloth_index = worst_arm
+            arm_detail = contact_detail(data, tick, limb_names[limb_index], cloth_index,
+                                        arm_contacts[worst_arm], rig, cloth_indices, cloth_names)
         leg_contacts = hit[2:]
         worst = np.unravel_index(int(np.argmin(leg_contacts)), leg_contacts.shape)
         current_leg_hit = max(0., -float(leg_contacts[worst]))
         if current_leg_hit > leg_hit:
             leg_hit = current_leg_hit
             limb_index, cloth_index = worst
-            garment_index = int(cloth_indices[cloth_index])
-            garment_name = str(cloth_names[cloth_index])
-            local_cube = int(np.count_nonzero(np.asarray(rig.names)[:garment_index] == garment_name))
-            sample_index = int(np.argmin(np.abs(data['time'] - tick)))
-            leg_detail = {
-                'tick': int(tick),
-                'sample_time': round(float(data['time'][sample_index]), 3),
-                'on_ground': bool(data['on_ground'][sample_index]),
-                'height': round(float(data['height'][sample_index]), 3),
-                'speed': round(float(data['speed'][sample_index]), 3),
-                'vertical_speed': round(float(data['vertical'][sample_index]), 3),
-                'run': bool(data['run'][sample_index]),
-                'limb': limb_names[limb_index + 2],
-                'cape_bone': garment_name,
-                'cube_in_bone': local_cube,
-                'rig_cube_index': garment_index,
-                'signed_sat_gap_u': float(leg_contacts[worst]),
-            }
+            leg_detail = contact_detail(data, tick, limb_names[limb_index + 2], cloth_index,
+                                        leg_contacts[worst], rig, cloth_indices, cloth_names)
         min_fit = np.minimum(min_fit, [*rig.joins(live), lap(live[roots], torso)])
     assert (min_fit > [.038, .025, .018]).all() and drift < .006, (slot, 'deriva o costura en salto', min_fit, drift)
     # Keep the measured row even when leg contact exceeds the gate. The main
@@ -216,8 +229,10 @@ def fit(root, slot, data, spans, rig, source):
     # the TSV/gallery artifacts have been written.
     print(f'{slot}: {len(boxes)} poses de vuelo y suelo; costura/raíz/apoyo {min_fit[0]:.3f}/{min_fit[1]:.3f}/{min_fit[2]:.3f}u; '
           f'deriva {drift:.6f}u; cruces máximos en brazos/piernas {arm_hit:.4f}/{leg_hit:.4f}u.', flush=True)
-    row = [slot, len(boxes), *(f'{v:.6f}' for v in (*min_fit, drift, arm_hit, leg_hit))]
-    return row, leg_hit, leg_detail
+    row = [slot, len(boxes), *(f'{v:.6f}' for v in (*min_fit, drift, arm_hit, leg_hit)),
+           json.dumps(arm_detail, ensure_ascii=False, separators=(',', ':')) if arm_detail else '',
+           json.dumps(leg_detail, ensure_ascii=False, separators=(',', ':')) if leg_detail else '']
+    return row, arm_hit, arm_detail, leg_hit, leg_detail
 
 
 def landing_geometry(root, slot, data, spans):
@@ -306,7 +321,8 @@ def save(root, reports, fit_rows=()):
     if fit_rows:
         with (root / 'costuras-saltos-forge.tsv').open('w', newline='') as f:
             out = csv.writer(f, delimiter='\t', lineterminator='\n')
-            out.writerow(['ranura', 'cuadros', 'costura_u', 'raiz_u', 'apoyo_u', 'deriva_u', 'pico_brazo_u', 'pico_pierna_u'])
+            out.writerow(['ranura', 'cuadros', 'costura_u', 'raiz_u', 'apoyo_u', 'deriva_u', 'pico_brazo_u', 'pico_pierna_u',
+                          'brazo_detalle_json', 'pierna_detalle_json'])
             out.writerows(fit_rows)
 
 
@@ -373,7 +389,7 @@ if __name__ == '__main__':
         data, spans, result = report(args.shots, slot)
         verdict(data, spans, result, before, slot)
         summary[version, slot] = result
-        fit_row, leg_hit, leg_detail = fit(args.shots, slot, data, spans, rig, source)
+        fit_row, _arm_hit, _arm_detail, leg_hit, leg_detail = fit(args.shots, slot, data, spans, rig, source)
         fit_rows.append(fit_row)
         leg_hits.append((slot, leg_hit, leg_detail))
         landing_geometry(args.shots, slot, data, spans)
