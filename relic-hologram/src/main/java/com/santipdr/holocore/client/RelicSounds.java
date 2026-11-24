@@ -113,6 +113,8 @@ public final class RelicSounds {
             case BURNING -> 0.58F;
             // El frio es fino: el tono mas agudo fuera del End.
             case FREEZING -> 1.55F;
+            // Alarma: agudo y cortante, por debajo del hielo.
+            case HUNTED -> 1.34F;
             case NETHER -> 0.62F;
             case END -> 1.62F;
         };

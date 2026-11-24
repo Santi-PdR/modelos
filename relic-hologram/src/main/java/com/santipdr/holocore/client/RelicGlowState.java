@@ -110,6 +110,14 @@ final class RelicGlowState {
     private static final float NETHER_RED = 0.98F;
     private static final float NETHER_GREEN = 0.38F;
     private static final float NETHER_BLUE = 0.20F;
+    /**
+     * Monstruo cerca: magenta de alarma. Es el unico color de la paleta que no se
+     * parece a ningun otro, y a proposito: si hay un monstruo detras, el color
+     * tiene que cantar.
+     */
+    private static final float HUNTED_RED = 1.00F;
+    private static final float HUNTED_GREEN = 0.26F;
+    private static final float HUNTED_BLUE = 0.62F;
     /** End: hueso verdoso del vacio. Es el unico estado claro y desaturado. */
     private static final float END_RED = 0.78F;
     private static final float END_GREEN = 0.86F;
@@ -216,6 +224,16 @@ final class RelicGlowState {
                 aura += 0.02F;
                 ring -= 0.20F;
                 spin -= 0.020F;
+            }
+            case HUNTED -> {
+                // Color de alarma, anillo muy marcado y el giro mas nervioso de los
+                // estados que no son dano directo.
+                red = lerp(red, HUNTED_RED, 0.50F);
+                green = lerp(green, HUNTED_GREEN, 0.50F);
+                blue = lerp(blue, HUNTED_BLUE, 0.50F);
+                aura += 0.10F;
+                ring += 0.45F;
+                spin += 0.055F;
             }
             case NETHER -> {
                 // El sitio calienta la reliquia: brasa, mas aura y el giro avivado.

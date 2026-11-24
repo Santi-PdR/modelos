@@ -73,6 +73,7 @@
   "message.holocore.state.portal": "portal",
   "message.holocore.state.burning": "ardiendo",
   "message.holocore.state.freezing": "congelándose",
+  "message.holocore.state.hunted": "un monstruo cerca",
   "message.holocore.state.nether": "en el Nether",
   "message.holocore.state.end": "en el End",
   "message.holocore.mood_show": "Estado de brillo: %s.",

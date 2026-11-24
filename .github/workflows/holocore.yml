@@ -378,10 +378,24 @@ jobs:
           eventos = (base / 'RelicClientEvents.java').read_text(encoding='utf-8')
           configuracion = (base.parent / 'config' / 'RelicConfig.java').read_text(encoding='utf-8')
 
-          enum = animatable.split('enum Mood {', 1)[1].split('}', 1)[0]
+          # El bloque del enum se corta por llaves contadas, no por el primer '}':
+          # una llave dentro de un comentario ({@code ALERT}) dejaba fuera a la mitad
+          # de los estados y el CI decia que faltaban (paso en 1.0.60).
+          def bloque_llaves(texto, desde):
+              hondo = 0
+              for i in range(desde, len(texto)):
+                  if texto[i] == '{':
+                      hondo += 1
+                  elif texto[i] == '}':
+                      hondo -= 1
+                      if hondo == 0:
+                          return texto[desde:i]
+              return texto[desde:]
+
+          enum = bloque_llaves(animatable, animatable.index('enum Mood {'))
           moods = re.findall(r'^\s*([A-Z][A-Z_]*)\s*,?$', enum, re.M)
-          esperados = ['NEUTRAL', 'RESONANT', 'STORM', 'WOUNDED', 'DARK', 'RAIN', 'NIGHT',
-                       'SUBMERGED', 'PORTAL', 'BURNING', 'FREEZING', 'NETHER', 'END']
+          esperados = ['NEUTRAL', 'RESONANT', 'STORM', 'WOUNDED', 'HUNTED', 'DARK', 'RAIN',
+                       'NIGHT', 'SUBMERGED', 'PORTAL', 'BURNING', 'FREEZING', 'NETHER', 'END']
           assert moods == esperados, moods
           assert 'public Mood mood()' in animatable, 'falta el accessor de Mood'
           assert 'isThundering()' in animatable, 'la tormenta no alimenta ningun estado'
@@ -417,6 +431,16 @@ jobs:
               'el End no es un estado'
           assert 'case NETHER -> 1.14D;' in animatable and 'case END -> 0.82D;' in animatable, \
               'los estados de dimension no tienen ritmo propio'
+          # 1.0.60: el peligro se enciende. Usa la cuenta que ya existia (threatTicks,
+          # la del estado de animacion ALERT) para no escanear monstruos dos veces.
+          assert 'case HUNTED -> 1.26D;' in animatable, 'el peligro no tiene ritmo propio'
+          assert 'if (this.threatTicks > 0) {' in animatable, 'el peligro no alimenta ningun estado'
+          assert 'this.threatTicks = hasThreat(player) ? 40' in animatable, \
+              'el peligro no viene de la deteccion de monstruos que ya existia'
+          assert 'HUNTED_RED' in glow and 'HUNTED_GREEN' in glow and 'HUNTED_BLUE' in glow, \
+              'el peligro no tiene color propio'
+          assert 'case HUNTED -> 1.30F;' in aura, 'el peligro no cambia el vaiven'
+          assert 'case HUNTED -> 1.04F;' in geo, 'el peligro no cambia el tinte del shader'
           assert 'case NETHER -> 1.25F;' in aura and 'case END -> 0.70F;' in aura, \
               'los estados de dimension no cambian el vaiven'
           assert 'case NETHER -> 1.02F;' in geo and 'case END -> 0.88F;' in geo, \
@@ -481,6 +505,10 @@ jobs:
               'estar ardiendo tiene que mandar sobre el herido'
           assert deteccion.index('Level.NETHER') < deteccion.index('isRainingAt'), \
               'la dimension tiene que mirarse antes que la lluvia'
+          assert deteccion.index('threatTicks') < deteccion.index('isThundering()'), \
+              'un monstruo tiene que mandar sobre la tormenta'
+          assert deteccion.index('getHealth()') < deteccion.index('threatTicks'), \
+              'estar herido manda sobre el peligro (herido es lo que ya paso)'
           assert deteccion.index('Level.NETHER') < deteccion.index('isNight()'), \
               'la dimension tiene que mirarse antes que la noche'
           # Y despues de lo que le pasa al portador: quemarse en el Nether se ve
@@ -747,7 +775,7 @@ jobs:
               assert 'message.holocore.mood_list' in lang, f'{idioma} sin la lista de estados'
               for mood in ('wounded', 'storm', 'resonant', 'dark', 'rain',
                            'neutral', 'night', 'submerged', 'portal', 'burning',
-                           'freezing', 'nether', 'end'):
+                           'freezing', 'nether', 'end', 'hunted'):
                   clave = f'message.holocore.state.{mood}'
                   assert clave in lang, f'{idioma} sin {clave}'
               # Los cuatro suelos del eco (1.0.55-1.0.57) y los avisos de forzarlo.
@@ -889,6 +917,7 @@ jobs:
           assert 'KeyMapping PULSE' in teclas, 'falta la tecla del pulso'
           # Sonido: solo la reliquia propia, con sonidos de vanilla y apagable.
           sonidos = (base / 'RelicSounds.java').read_text(encoding='utf-8')
+          assert 'case HUNTED -> 1.34F;' in sonidos, 'el peligro no tiene tono'
           assert 'playLocalSound(' in sonidos, 'la reliquia no suena'
           assert '!player.getUUID().equals(wearer)' in sonidos, \
               'sonarian tambien las reliquias de otros jugadores'

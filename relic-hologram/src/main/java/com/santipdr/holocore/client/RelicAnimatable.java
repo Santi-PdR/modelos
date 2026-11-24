@@ -80,6 +80,14 @@ public final class RelicAnimatable implements GeoAnimatable {
         STORM,
         /** Portador con poca vida. */
         WOUNDED,
+        /**
+         * Un monstruo cerca (1.0.60): el estado de animacion ALERT ya lo decia
+         * desde 1.0.29, pero solo movia la animacion. Ahora la reliquia
+         * tambien <b>se enciende</b>: magenta de alarma, anillo marcado y un tono
+         * cortante. Es el unico estado que avisa de algo que puede matarte sin que
+         * lo estes mirando.
+         */
+        HUNTED,
         /** Poca luz donde esta el portador: la reliquia es su propia luz. */
         DARK,
         /** Cae lluvia (sin tormenta) encima del portador. */
@@ -728,6 +736,8 @@ public final class RelicAnimatable implements GeoAnimatable {
     private static double speedFor(Mood mood) {
         double base = switch (mood) {
             case WOUNDED -> 0.72D;
+            // El peligro acelera: entre herido y tormenta.
+            case HUNTED -> 1.26D;
             case STORM -> 1.32D;
             case DARK -> 1.06D;
             case RAIN -> 0.92D;
@@ -770,6 +780,13 @@ public final class RelicAnimatable implements GeoAnimatable {
         }
         if (player.getHealth() < player.getMaxHealth() * WOUNDED_HEALTH) {
             return Mood.WOUNDED;
+        }
+        // Peligro: se reutiliza la cuenta del estado de animacion ALERT (misma
+        // deteccion, mismo radio de config y con histeresis de 2 s), asi que mirar
+        // si hay un monstruo cerca aqui no cuesta ni una consulta mas. Va antes que
+        // el tiempo porque un monstruo importa mas que la lluvia.
+        if (this.threatTicks > 0) {
+            return Mood.HUNTED;
         }
         if (player.level().isThundering()) {
             return Mood.STORM;

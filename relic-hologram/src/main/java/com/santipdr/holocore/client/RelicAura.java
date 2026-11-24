@@ -1057,6 +1057,7 @@ public final class RelicAura {
             case FREEZING -> 0.55F;
             // El Nether vibra mas que el reposo pero menos que ardiendo; en el End
             // no hay nada que empuje, asi que flota por debajo.
+            case HUNTED -> 1.30F;
             case NETHER -> 1.25F;
             case END -> 0.70F;
             case NEUTRAL -> 1.0F;
