@@ -1253,6 +1253,34 @@ jobs:
           test -s build/fx-smoke-run/fx-shots/saltos-forge.jpg
           printf '::notice title=Saltos en Forge::Galería JPEG completa incluida en el artefacto capatest-fx-en-mundo.'
 
+      - name: Publicar métricas geométricas de saltos en el resumen
+        if: ${{ !cancelled() && steps.verify-jumps.outcome == 'success' }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import csv
+          from pathlib import Path
+
+          root = Path('build/fx-smoke-run/fx-shots')
+          with (root / 'saltos-forge.tsv').open(newline='', encoding='utf-8') as f:
+              jumps = list(csv.DictReader(f, delimiter='\t'))
+          with (root / 'costuras-saltos-forge.tsv').open(newline='', encoding='utf-8') as f:
+              fits = list(csv.DictReader(f, delimiter='\t'))
+
+          print('## Medición de saltos reales en Forge')
+          print('El paso `verify-jumps` aprobó sus aserciones geométricas. El resumen describe este paso; no representa por sí solo el resultado global de CI.')
+          print()
+          print('| Ranura | Ensayo | Vuelo (ticks) | AIR | FALL | Ángulo (°) | Bisagra (°/tick) | Punta (u/tick) | Punta en aterrizaje (u/tick) | Pares |')
+          print('|---|---|---:|---:|---:|---:|---:|---:|---:|---:|')
+          for r in jumps:
+              print(f"| {r['ranura']} | {r['prueba']} | {float(r['airtime']):.3f} | {float(r['air']):.1%} | {float(r['fall']):.1%} | {float(r['top']):.2f} | {float(r['hinge']):.2f}/{float(r['middle']):.2f} | {float(r['hem']):.3f} | {float(r['landing']):.3f} | {r['frames']} |")
+          print()
+          print('### Holgura y contactos de malla')
+          print('| Ranura | Poses | Costura mínima (u) | Raíz mínima (u) | Apoyo mínimo (u) | Deriva (u) | Cruce brazo (u) | Cruce pierna (u) |')
+          print('|---|---:|---:|---:|---:|---:|---:|---:|')
+          for r in fits:
+              print(f"| {r['ranura']} | {r['cuadros']} | {float(r['costura_u']):.6f} | {float(r['raiz_u']):.6f} | {float(r['apoyo_u']):.6f} | {float(r['deriva_u']):.6f} | {float(r['pico_brazo_u']):.6f} | {float(r['pico_pierna_u']):.6f} |")
+          PY
+
       - name: Subir evidencia compacta de saltos en Forge
         if: ${{ !cancelled() && steps.verify-jumps.outcome == 'success' }}
         uses: actions/upload-artifact@v4
