@@ -4,7 +4,7 @@ Estas imágenes son capturas automáticas de un cliente Forge de prueba, **no un
 
 **Estado de revisión:** la guardia aparece al costado en los ensayos recientes, pero todavía no está aprobada. En Z los brazos zurdos siguen viéndose separados o solapados; en X se probó un encuadre más bajo y aún debe revisarse la continuidad. La coreografía de C sigue siendo repetitiva y no está aprobada. Ninguna de estas capturas equivale a una aceptación visual o un playtest.
 
-**Último ensayo visual:** workflow `45443052143` y compilación `45443049897`, ambos exitosos. Se descartó la prueba simétrica anterior porque ocultaba la espada y los brazos zurdos. Las imágenes se regeneraron con el encuadre anterior, que aún tiene defectos. Los impactos se capturan después del evento de daño, no necesariamente en el mismo fotograma.
+**Último ensayo visual:** workflow `45471640998` y compilación `45471640827`, ambos exitosos. Se descartaron una prueba simétrica de Z que ocultaba los brazos y una alternancia de cortes de C cuya hoja quedaba alta y alejada de la víctima. Las imágenes se regeneraron con el código anterior; los problemas visuales siguen pendientes. Los impactos se capturan después del evento de daño, no necesariamente en el mismo fotograma.
 
 ## Con Better Combat instalado
 
