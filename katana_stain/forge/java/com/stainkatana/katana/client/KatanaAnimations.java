@@ -125,7 +125,7 @@ public final class KatanaAnimations {
                 boolean leftHanded = player.getMainArm() == HumanoidArm.LEFT;
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                         dev.kosmx.playerAnim.core.util.Vec3f.ZERO,
-                        new dev.kosmx.playerAnim.core.util.Vec3f(leftHanded ? -1F : .5F, .1F, -1F)));
+                        new dev.kosmx.playerAnim.core.util.Vec3f(leftHanded ? -1F : .5F, -.35F, -1F)));
             }) {
                 @Override protected float getFadeIn(float delta) { return 1F; }
             });
