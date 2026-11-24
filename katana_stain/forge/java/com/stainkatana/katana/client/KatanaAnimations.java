@@ -68,9 +68,6 @@ public final class KatanaAnimations {
         boolean overhead = ability == 2 || ability == 9 || ability == 12 || ability == 15;
         String clipName = ability == 0 ? "inspect" : ability == 1 ? "stain_x_cut"
                 : overhead ? "stain_c_overhead"
-                // Alternate two credited Serious Player Animations attacks
-                // rather than repeating the same cut at every lateral stroke.
-                : ability == 7 || ability == 10 || ability == 13 ? "sword_attack"
                 : ability >= 7 ? "sword_attack2"
                 : ((ability & 1) == 0 ? "sword_attack" : "sword_attack2");
         KeyframeAnimation clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID, clipName));
