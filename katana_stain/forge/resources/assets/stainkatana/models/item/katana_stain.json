@@ -72,7 +72,7 @@
     "thirdperson_lefthand": {
       "rotation": [
         75,
-        -45,
+        45,
         -25
       ],
       "translation": [
