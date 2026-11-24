@@ -108,7 +108,7 @@ def report(root, slot, reference=False):
     for span in spans:
         row = metrics(data, span, slot)
         result[span.name] = row
-        print(f'{slot} / {span.name}: {row["air"]:.1%} de AIR; {row["fall"]:.1%} de FALL; '
+        print(f'{slot} / {span.name}: peso de pose AIR/planeo {row["air"]:.1%}; peso FALL/caída {row["fall"]:.1%}; '
               f'ángulo superior {row["top"]:.2f}°; picos de bisagras {row["hinge"]:.2f}/{row["middle"]:.2f}°/tick, '
               f'punta {row["hem"]:.3f}u/tick (al aterrizar {row["landing"]:.3f}u/tick); {row["frames"]} pares.', flush=True)
     if reference:

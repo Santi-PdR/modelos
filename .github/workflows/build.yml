@@ -1271,8 +1271,9 @@ jobs:
           md = [
               '## Medición de saltos reales en Forge',
               'El paso `verify-jumps` aprobó sus aserciones geométricas. Este resultado no representa por sí solo el resultado global de CI.',
+              'AIR y FALL son pesos de pose de la capa, no fracciones de tiempo aéreo: AIR corresponde a planeo/Elytra; el vuelo físico se mide aparte con on_ground y Vuelo (ticks).',
               '',
-              '| Ranura | Ensayo | Vuelo (ticks) | AIR | FALL | Ángulo (°) | Bisagra (°/tick) | Punta (u/tick) | Punta en aterrizaje (u/tick) | Pares |',
+              '| Ranura | Ensayo | Vuelo físico (ticks) | Peso AIR/planeo | Peso FALL/caída | Ángulo (°) | Bisagra (°/tick) | Punta (u/tick) | Punta en aterrizaje (u/tick) | Pares |',
               '|---|---|---:|---:|---:|---:|---:|---:|---:|---:|',
           ]
           for r in jumps:
@@ -1302,7 +1303,7 @@ jobs:
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as f:
               f.write('\n'.join(md) + '\n')
 
-          facts = [f"{r['ranura']}/{r['prueba']} AIR={float(r['air']):.3f} FALL={float(r['fall']):.3f} top={float(r['top']):.2f}deg hinge={float(r['hinge']):.2f}/{float(r['middle']):.2f}deg_tick hem={float(r['hem']):.3f}u_tick landing={float(r['landing']):.3f}u_tick pairs={r['frames']}" for r in jumps]
+          facts = [f"{r['ranura']}/{r['prueba']} pose_AIR_glide={float(r['air']):.3f} pose_FALL={float(r['fall']):.3f} top={float(r['top']):.2f}deg hinge={float(r['hinge']):.2f}/{float(r['middle']):.2f}deg_tick hem={float(r['hem']):.3f}u_tick landing={float(r['landing']):.3f}u_tick pairs={r['frames']}" for r in jumps]
           facts.extend(f"fit-{r['ranura']} poses={r['cuadros']} seam={float(r['costura_u']):.6f} root={float(r['raiz_u']):.6f} support={float(r['apoyo_u']):.6f} drift={float(r['deriva_u']):.6f} arm={float(r['pico_brazo_u']):.6f} leg={float(r['pico_pierna_u']):.6f}u" for r in fits)
           for r in fits:
               for label, key in (('arm', 'brazo_detalle_json'), ('leg', 'pierna_detalle_json')):
