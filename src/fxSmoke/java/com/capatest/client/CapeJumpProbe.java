@@ -22,7 +22,7 @@ final class CapeJumpProbe {
             + "\tcollar_z\ttop\tmid\ttip_x\ttip_y\ttip_z\tvy\taterrizaje_deg\taterrizaje_eco\n");
     private final StringBuilder boxes = new StringBuilder(), fixedChain = new StringBuilder(), fixedHem = new StringBuilder();
     private final BlockPos deck;
-    private NativeImage apex, contact, sample120, sample138;
+    private NativeImage apex, contact, sample80, sample92, sample120, sample138;
     private int start = -1, fitTick = -1;
     private boolean rose;
 
@@ -106,17 +106,24 @@ final class CapeJumpProbe {
             if (rose && contact == null && p.onGround() && height < .12)
                 contact = Screenshot.takeScreenshot(game.getMainRenderTarget());
         }
-        // Preserve the fixed samples where the geometric diagnostic found its
-        // largest arm SAT overlaps; these are review images, not pass/fail gates.
+        // Preserve fixed checkpoints around the sprint jump and later motion
+        // where arm SAT maxima have appeared; they are review images, not gates.
+        if (sample80 == null && t >= 80 && t < 81)
+            sample80 = Screenshot.takeScreenshot(game.getMainRenderTarget());
+        if (sample92 == null && t >= 92 && t < 93)
+            sample92 = Screenshot.takeScreenshot(game.getMainRenderTarget());
         if (sample120 == null && t >= 120 && t < 121)
             sample120 = Screenshot.takeScreenshot(game.getMainRenderTarget());
         if (sample138 == null && t >= 138 && t < 139)
             sample138 = Screenshot.takeScreenshot(game.getMainRenderTarget());
         if (t < END) return false;
         if (apex == null || contact == null) throw new AssertionError(name + ": missing apex or touchdown");
-        try (var shotA = apex; var shotB = contact; var shot120 = sample120; var shot138 = sample138) {
+        try (var shotA = apex; var shotB = contact; var shot80 = sample80; var shot92 = sample92;
+             var shot120 = sample120; var shot138 = sample138) {
             shotA.writeToFile(dir.resolve(name + "-apice.png"));
             shotB.writeToFile(dir.resolve(name + "-contacto.png"));
+            if (shot80 != null) shot80.writeToFile(dir.resolve(name + "-muestra-t80.png"));
+            if (shot92 != null) shot92.writeToFile(dir.resolve(name + "-muestra-t92.png"));
             if (shot120 != null) shot120.writeToFile(dir.resolve(name + "-muestra-t120.png"));
             if (shot138 != null) shot138.writeToFile(dir.resolve(name + "-muestra-t138.png"));
         }
