@@ -71,8 +71,13 @@ def leer_constantes():
     # tambien existe en el anillo y en la onda, y el script comprobaba otro numero.
     eco_alpha = floats(re.search(r'GROUND_ADDITIVE = ([\d.]+)F', aura).group(1))[0]
     eco_boost = floats(re.search(r'GROUND_TINT_BOOST = ([\d.]+)F', aura).group(1))[0]
+    # Los otros dos pases de evento (1.0.50): la onda y el eco del anillo.
+    onda = floats(re.search(r'SHOCK_ADDITIVE = ([\d.]+)F', aura).group(1))[0]
+    onda_boost = floats(re.search(r'SHOCK_TINT_BOOST = ([\d.]+)F', aura).group(1))[0]
+    eco_anillo = floats(re.search(r'ECHO_ADDITIVE = ([\d.]+)F', aura).group(1))[0]
+    eco_anillo_boost = floats(re.search(r'ECHO_TINT_BOOST = ([\d.]+)F', aura).group(1))[0]
     return (diametros, pesos, alpha, boost, darken, tinte, intensidad, anillo,
-            eco_alpha, eco_boost)
+            eco_alpha, eco_boost, onda, onda_boost, eco_anillo, eco_anillo_boost)
 
 
 def leer_pixel_central(ruta=AURA_PNG, modo='centro'):
@@ -170,8 +175,8 @@ def componer_eco(fondo, eco_alpha, eco_boost, tinte, tex):
 
 
 def main():
-    diametros, pesos, alpha, boost, darken, tinte, intensidad, anillo, \
-        eco_alpha, eco_boost = leer_constantes()
+    (diametros, pesos, alpha, boost, darken, tinte, intensidad, anillo, eco_alpha, eco_boost,
+     onda, onda_boost, eco_anillo, eco_anillo_boost) = leer_constantes()
     tex = leer_pixel_central()
     print(f'textura centro: rgb {tuple(round(c, 2) for c in tex[:3])} alpha {tex[3]:.2f}')
     print(f'diametros {diametros}  pesos {pesos}  auraAlpha {alpha}  '
@@ -215,6 +220,27 @@ def main():
             fallos.append(f'eco {nombre}: se blanquea (canal minimo {min(salida):.2f})')
         if nombre == 'nieve' and tono < MIN_TONO_NIEVE:
             fallos.append(f'eco nieve: el tono se pierde (b-r {tono:+.2f})')
+
+    # --- Los otros dos pases de evento (1.0.50) --------------------------------
+    # La onda de chispas y el eco del anillo eran 0.55 de aditivo: sobre nieve,
+    # blanco. Se comprueban con la misma regla que el eco del suelo.
+    eventos = [
+        ('onda', onda, onda_boost, leer_pixel_central()),
+        ('eco anillo', eco_anillo, eco_anillo_boost, eco_tex),
+    ]
+    for nombre, aditivo, tinte_boost, tex in eventos:
+        print(f'{nombre}: aditivo {aditivo:.2f}  tinte x{tinte_boost:.2f}  '
+              f'texto rgb {tuple(round(c, 2) for c in tex[:3])} alpha {tex[3]:.2f}')
+        for fondo_nombre, fondo in BACKGROUNDS.items():
+            salida = componer_eco(fondo, aditivo, tinte_boost, tinte, tex)
+            tono = salida[2] - salida[0]
+            print(f'  {nombre} {fondo_nombre:5s} -> {tuple(round(c, 2) for c in salida)}  '
+                  f'tono(b-r) {tono:+.2f}')
+            if min(salida) > MAX_BLANCO:
+                fallos.append(f'{nombre} {fondo_nombre}: se blanquea '
+                              f'(canal minimo {min(salida):.2f})')
+            if fondo_nombre == 'nieve' and tono < MIN_TONO_NIEVE:
+                fallos.append(f'{nombre} nieve: el tono se pierde (b-r {tono:+.2f})')
 
     if fallos:
         for fallo in fallos:

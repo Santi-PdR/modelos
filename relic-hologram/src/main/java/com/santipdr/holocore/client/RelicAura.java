@@ -116,6 +116,17 @@ public final class RelicAura {
      */
     private static final float GROUND_TINT_BOOST = 3.0F;
     private static final float GROUND_ADDITIVE = 0.12F;
+    /**
+     * Lo mismo para los otros dos pases de evento: la onda (chispas que salen) y el
+     * eco del anillo. Todos son aditivos que vuelan sobre el suelo, o sea que todos
+     * se quemaban a blanco sobre nieve con los 0.55 de antes. Regla: tinte ×3 del
+     * aditivo, y el aditivo entre 0.12 y 0.18. tools/check_aura_math.py compone los
+     * tres sobre nieve, piedra y cueva.
+     */
+    private static final float SHOCK_TINT_BOOST = 3.0F;
+    private static final float SHOCK_ADDITIVE = 0.16F;
+    private static final float ECHO_TINT_BOOST = 3.0F;
+    private static final float ECHO_ADDITIVE = 0.18F;
     private static final int SHOCK_COUNT = 8;
     private static final float SHOCK_MIN = 0.16F;
     private static final float SHOCK_MAX = 0.62F;
@@ -275,14 +286,35 @@ public final class RelicAura {
                                       RelicGlowState glow, float flash, float fade) {
         float t = 1.0F - Math.min(1.0F, flash);
         float radius = SHOCK_MIN + (SHOCK_MAX - SHOCK_MIN) * t;
-        float weight = flash * 0.55F * fade;
+        float weight = flash * SHOCK_ADDITIVE * fade;
         if (weight <= 0.01F) {
             return;
+        }
+        // Tinte debajo (ver SHOCK_ADDITIVE): si no, sobre nieve la onda es un
+        // fogonazo blanco y deja de ser del color del estado.
+        if (RelicConfig.AURA_TINT.get()) {
+            VertexConsumer tint = bufferSource.getBuffer(RelicRenderTypes.TINT_GLOW.apply(AURA_TEXTURE));
+            float coverage = Math.min(1.0F, weight * SHOCK_TINT_BOOST);
+            drawShockRing(tint, frame, time, radius, t, coverage,
+                    glow.red(), glow.green(), glow.blue());
         }
         VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
         float red = glow.red();
         float green = glow.green();
         float blue = glow.blue();
+        // Gira un poco mientras se abre: una onda perfectamente radial parece un
+        // anillo estatico que solo escala.
+        drawShockRing(buffer, frame, time, radius, t, 1.0F,
+                red * weight, green * weight, blue * weight);
+    }
+
+    /**
+     * Las ocho particulas de la onda. Se dibuja dos veces (tinte y aditivo) con los
+     * mismos numeros; el color ya viene multiplicado por quien llama.
+     */
+    private static void drawShockRing(VertexConsumer buffer, Frame frame, float time,
+                                      float radius, float t, float alpha,
+                                      float red, float green, float blue) {
         // Gira un poco mientras se abre: una onda perfectamente radial parece un
         // anillo estatico que solo escala.
         float turn = seconds(time) * 0.35F;
@@ -295,7 +327,7 @@ public final class RelicAura {
             float cy = frame.originY + frame.leftY * left + frame.upY * up;
             float cz = frame.originZ + frame.leftZ * left + frame.upZ * up;
             billboardAt(buffer, frame, cx, cy, cz, size, angle * 1.5F,
-                    red * weight, green * weight, blue * weight, 1.0F);
+                    red, green, blue, alpha);
         }
     }
 
@@ -342,7 +374,16 @@ public final class RelicAura {
         // Es lo que convierte un fogonazo en una onda. Un quad, mismo lote.
         if (flash > 0.05F) {
             float echoSize = RING_DIAMETER * (1.0F + 2.4F * flash);
-            float echo = weight * flash * 0.55F;
+            float echo = weight * flash * ECHO_ADDITIVE;
+            // Tinte debajo, como el eco del suelo: el eco del anillo tambien vuela
+            // sobre el suelo y con solo aditivo se quedaba blanco sobre nieve.
+            if (RelicConfig.AURA_TINT.get()) {
+                VertexConsumer echoTint =
+                        bufferSource.getBuffer(RelicRenderTypes.TINT_GLOW.apply(RING_TEXTURE));
+                billboard(echoTint, frame, echoSize, -angle * 0.6F,
+                        glow.red(), glow.green(), glow.blue(),
+                        Math.min(1.0F, echo * ECHO_TINT_BOOST));
+            }
             billboard(buffer, frame, echoSize, -angle * 0.6F,
                     glow.red() * echo, glow.green() * echo, glow.blue() * echo, 1.0F);
         }

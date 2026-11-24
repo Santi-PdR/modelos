@@ -495,6 +495,24 @@ jobs:
               'el aditivo del eco no es configurable desde su constante'
           assert '.define("groundEcho", true)' in configuracion, 'groundEcho no esta declarado'
           assert 'private static void drawShockwave(' in aura, 'los eventos no tienen onda'
+          # 1.0.50: todos los pases de evento van tenidos debajo del aditivo. Sobre
+          # nieve el aditivo solo sube los tres canales: 0.55 de antes = blanco.
+          assert 'private static void drawShockRing(' in aura, 'la onda no comparte sus numeros'
+          assert 'drawShockRing(tint, frame, time, radius, t, coverage,' in aura, \
+              'la onda no lleva tinte debajo'
+          assert 'SHOCK_ADDITIVE' in aura and 'SHOCK_TINT_BOOST' in aura, \
+              'faltan las constantes de composicion de la onda'
+          assert 'VertexConsumer echoTint =' in aura and \
+              'billboard(echoTint, frame, echoSize, -angle * 0.6F,' in aura, \
+              'el eco del anillo no lleva tinte debajo'
+          # Y los cinco pases tenidos tienen que estar bajo su guarda: cambiar la
+          # condicion por 'false' deja el codigo escrito y el pase sin tinte.
+          guardas = aura.count('if (RelicConfig.AURA_TINT.get()) {')
+          assert guardas == 5, f'esperaba 5 guardas de AURA_TINT (aura, anillo, 2 ecos, onda), hay {guardas}'
+          assert 'ECHO_ADDITIVE' in aura and 'ECHO_TINT_BOOST' in aura, \
+              'faltan las constantes de composicion del eco del anillo'
+          assert 'float echo = weight * flash * ECHO_ADDITIVE;' in aura, \
+              'el eco del anillo no usa su constante de aditivo'
           assert 'drawShockwave(bufferSource, frame, time, glow, flash, fade)' in aura, \
               'la onda de choque no se dibuja nunca'
           assert 'SHOCK_COUNT' in aura and 'SHOCK_MAX' in aura, \

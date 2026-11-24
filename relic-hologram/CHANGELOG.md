@@ -1,5 +1,25 @@
 # Historial de cambios
 
+## 1.0.50 — los tres pases de evento, tenidos
+
+1.0.49 arregló el eco del suelo. Faltaban los otros dos pases que también vuelan sobre el
+suelo y también eran aditivos a 0.55: **la onda de chispas** y **el eco del anillo**. Los
+dos se quedaban blancos sobre nieve por el mismo motivo.
+
+* **Regla única para todo pase de evento**: tinte debajo (cobertura = 3 × el aditivo) y
+  aditivo pequeño. Eco del suelo 0.12, onda 0.16, eco del anillo 0.18. Medido: la onda
+  sobre nieve queda en `(0.66, 0.91, 1.00)` con tono +0.34, y el eco del anillo en
+  `(0.82, 1.00, 1.00)` con +0.18.
+* **`drawShockRing`**: las ocho partículas de la onda se dibujan ahora con el mismo código
+  en los dos pases (tinte y aditivo), en vez de tener el bucle copiado en un sitio y los
+  números en otro.
+* **[tools/check_aura_math.py](tools/check_aura_math.py) comprueba los tres pases** sobre
+  nieve, piedra y cueva con los números leídos del código: 3 pases × 3 fondos, y falla si
+  alguno se blanquea o pierde el tono. Con los valores de 1.0.49 la onda salía a 1.00 en
+  los tres canales y el script lo dice.
+* CI: 5 comprobaciones nuevas, con 4 negativos en rojo (onda sin tinte, eco del anillo sin
+  tinte, guardas de tinte cambiadas por `false`, y la onda con los números viejos).
+
 ## 1.0.49 — el eco del suelo deja de quemarse a blanco
 
 El eco de 1.0.47 era **solo aditivo**: sobre nieve o arena sumaba a un fondo ya a 0.95 y el

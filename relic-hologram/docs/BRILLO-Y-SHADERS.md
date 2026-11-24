@@ -237,6 +237,15 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.50, la regla de los pases de evento.** Todo lo que es aditivo y vuela sobre el suelo
+(eco del suelo, onda de chispas, eco del anillo) lleva tinte debajo con cobertura `3 ×` su
+aditivo, y el aditivo se queda entre 0.12 y 0.18. Con 0.55 puro, sobre nieve se sumaba a un
+fondo ya a 0.95 y el resultado era blanco en los tres canales. `check_aura_math.py` compone
+los tres pases con los números leídos de `RelicAura` sobre nieve, piedra y cueva: si alguien
+sube un aditivo sin tocar el tinte, el CI lo dice antes de que se vea. Los cinco sitios con
+tinte están además contados por el validador (5 guardas de `AURA_TINT`), porque poner la
+condición a `false` deja el código escrito y el pase sin teñir.
+
 **1.0.49, el eco también se tiñe.** Composición del eco con los números del código:
 tinte `cobertura = 0.12 × 3.0 = 0.36`, aditivo `0.12` sobre el píxel de más peso de
 `relic_ring.png` (blanco puro, alpha 1) y color `IDLE` (0.52, 0.86, 1.00). Sobre nieve

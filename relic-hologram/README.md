@@ -238,9 +238,11 @@ golpea el suelo a sus pies en vez de ser otro aro de frente. Solo se dibuja en t
 —en la vista previa no hay suelo y quedaría una tarjeta en el aire— y se apaga con
 `visuals.groundEcho`.
 
-El eco se **tiñe** antes de sumar (como el aura y el anillo): con solo aditivo, sobre nieve
-sumaba a un fondo ya casi blanco y el anillo desaparecía. Los números están comprobados en
-`tools/check_aura_math.py`, que compone las dos pasadas sobre nieve, piedra y cueva.
+Los **tres pases de evento** (eco del suelo, onda de chispas y eco del anillo) se **tiñen**
+antes de sumar, como el aura y el anillo: con solo aditivo, sobre nieve sumaban a un fondo ya
+casi blanco y desaparecían. Regla: tinte con cobertura 3× el aditivo, y aditivo entre 0.12 y
+0.18. Los números están comprobados en `tools/check_aura_math.py`, que compone los tres pases
+sobre nieve, piedra y cueva.
 
 **Unidades**: el reloj interno de la reliquia son ticks y todo efecto nuevo pasa por
 `seconds()` (`ticks / 20`). Los primeros VFX de estado se escribieron en «por segundo» sin
