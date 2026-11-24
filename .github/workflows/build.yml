@@ -1253,6 +1253,18 @@ jobs:
           test -s build/fx-smoke-run/fx-shots/saltos-forge.jpg
           printf '::notice title=Saltos en Forge::Galería JPEG completa incluida en el artefacto capatest-fx-en-mundo.'
 
+      - name: Subir evidencia compacta de saltos en Forge
+        if: ${{ !cancelled() && steps.verify-jumps.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: capatest-saltos-forge
+          path: |
+            build/fx-smoke-run/fx-shots/saltos-forge.jpg
+            build/fx-smoke-run/fx-shots/saltos-forge.tsv
+            build/fx-smoke-run/fx-shots/costuras-saltos-forge.tsv
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Cargar las tomas de referencia de v1.67.20
         id: old-cape-shots
         if: ${{ !cancelled() && steps.fx-smoke.outcome == 'success' && contains(github.event.head_commit.message, '[comparar-v16720]') }}
