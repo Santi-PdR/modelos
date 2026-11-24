@@ -66,7 +66,11 @@ public final class KatanaAnimations {
         // Use credited motions from other mods regardless of whether Better Combat
         // is installed. It remains authoritative for ordinary weapon hits.
         boolean overhead = ability == 2 || ability == 9 || ability == 12 || ability == 15;
-        String clipName = ability == 0 ? "inspect" : ability == 1 ? "stain_x_cut"
+        // Alternate Improved Animations' adapted sword arc with Serious Player
+        // Animations' stroke. These are external clips, not Better Combat's.
+        // Damage and the six-tick server wind-up remain unchanged.
+        boolean sweeping = ability == 7 || ability == 10 || ability == 13;
+        String clipName = ability == 0 ? "inspect" : ability == 1 || sweeping ? "stain_x_cut"
                 : overhead ? "stain_c_overhead"
                 : ability >= 7 ? "sword_attack2"
                 : ((ability & 1) == 0 ? "sword_attack" : "sword_attack2");
@@ -133,6 +137,7 @@ public final class KatanaAnimations {
         // Contact estimates in source clips are 8.75 ticks (Improved Animations)
         // and 7.5 ticks (Serious Player Animations). Damage remains server-timed.
         float speed = ability == 0 ? 3F : ability == 1 ? 1F
+                : sweeping ? 8.75F / 6F
                 : overhead ? (ability == 2 ? .875F : 8.75F / 6F) : 7.5F / 6F;
         timedClip.addModifierBefore(new SpeedModifier(speed));
         animation.replaceAnimationWithFade(AbstractFadeModifier.standardFadeIn(2, Ease.INOUTSINE), timedClip, true);
