@@ -4,7 +4,7 @@ Estas imágenes son capturas automáticas de un cliente Forge de prueba, **no un
 
 **Estado de revisión:** la guardia aparece al costado en los ensayos recientes, pero todavía no está aprobada. En Z los brazos zurdos siguen viéndose separados o solapados; en X se probó un encuadre más bajo y aún debe revisarse la continuidad. La coreografía de C sigue siendo repetitiva y no está aprobada. Ninguna de estas capturas equivale a una aceptación visual o un playtest.
 
-**Último ensayo visual:** workflow `45498027170` y compilación `45498026953`, ambos exitosos. Se descartaron una prueba simétrica de Z que ocultaba los brazos, otro intento de anclar el hombro que aumentaba el solapamiento, y una alternancia de cortes de C cuya hoja quedaba alta y alejada de la víctima. Las imágenes se regeneraron con el código anterior; los problemas visuales siguen pendientes. Los impactos se capturan después del evento de daño, no necesariamente en el mismo fotograma.
+**Último ensayo visual:** workflow `45539185719` y compilación `45539185668`, ambos exitosos. Se descartaron una prueba simétrica de Z que ocultaba los brazos, otro intento de anclar el hombro que aumentaba el solapamiento, y una alternancia de cortes de C cuya hoja quedaba alta y alejada de la víctima. Las imágenes actuales incluyen un ensayo posterior de compensación por fases para el agarre de C, no incluido en el JAR 0.21. La corrección no está aprobada y los problemas visuales siguen pendientes. Los impactos se capturan después del evento de daño, no necesariamente en el mismo fotograma.
 
 ## Con Better Combat instalado
 
@@ -24,7 +24,9 @@ Estas imágenes son capturas automáticas de un cliente Forge de prueba, **no un
 
 [Preparación](client-full-bc/114_c_lateral_prepare.png) · [Anticipación](client-full-bc/115_c_lateral_windup.png) · [Contacto estimado](client-full-bc/116_c_lateral_contact_estimate.png) · [Continuación](client-full-bc/117_c_lateral_follow.png) · [Recuperación](client-full-bc/118_c_lateral_recover.png)
 
-Son muestras locales sin víctima; **se observa separación entre empuñadura y mano**, así que el agarre sigue sin estar corregido. No prueban sincronización del daño.
+[Preparación zurda](client-full-bc/119_c_left_lateral_prepare.png) · [Anticipación zurda](client-full-bc/120_c_left_lateral_windup.png) · [Contacto estimado zurdo](client-full-bc/121_c_left_lateral_contact_estimate.png) · [Continuación zurda](client-full-bc/122_c_left_lateral_follow.png) · [Recuperación zurda](client-full-bc/123_c_left_lateral_recover.png)
+
+Son muestras locales sin víctima: la compensación experimental acerca la empuñadura en algunas fases, pero no valida agarre, continuidad ni sincronización del daño. La escena zurda tiene un obstáculo de fondo.
 
 ### C: impactos confirmados por el servidor
 

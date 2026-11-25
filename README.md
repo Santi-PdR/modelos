@@ -1,5 +1,7 @@
 # Mantle of the Blight Star — v1.28.0
 
+> Katana de Stain independiente: [estado actual y pruebas](katana_stain/ESTADO_ACTUAL.md) · [galería](katana_stain/vistas/GALERIA.md). Las versiones de la capa descritas aquí son un proyecto distinto.
+
 Mod de prueba para **Minecraft Java 1.20.1 / Forge 47.3.0 + GeckoLib 4.8.1**.
 Capa equipada en `curios:back`, temática
 **Deterioro (Shigaraki) + Evil Saiyan Rosé**.

@@ -1,7 +1,7 @@
 # Katana del Asesino de Héroes — prototipo Forge 1.20.1
 
 > Las primeras secciones describen prototipos históricos integrados en capatest.
-> La versión actual es independiente (`stainkatana`); ver las secciones finales.
+> La versión actual es independiente (`stainkatana`). Para el estado vigente, el JAR experimental y los problemas pendientes consulta [ESTADO_ACTUAL.md](ESTADO_ACTUAL.md); las secciones de versión son históricas.
 
 Se integra en el mod existente (Forge 47.3.0, GeckoLib 4.8.1), manteniendo
 el identificador `capatest` para no romper mundos ni recursos de la capa.
