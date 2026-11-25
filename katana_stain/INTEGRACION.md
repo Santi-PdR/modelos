@@ -638,6 +638,6 @@ Continuación directa. Único cambio funcional respecto a 0.23.0-test:
   SlashBlade y sus derivados (VMDs + assets del upstream sin licencia) y
   TheDarkDimensions siguen sin poder incorporarse; Emotecraft-emotes
   (CC0, 51 entradas) no tiene cortes de arma.
-- Aviso: esta es otra entrega sin playtest sobre 0.23.0-test. El
+- Aviso: esta es otra entrega sin playtest sobre 0.23.0-test. El instalador 0.24 retira solas 0.20 (rechazada), 0.21, 0.22 y 0.23 por autorización del usuario; se detiene solo ante versiones stainkatana-* desconocidas. El
   agarre, la sincronización, el audio y todos los FX siguen sin
   aprobarse; el usuario debe jugar 0.23/0.24 antes de otra iteración.

@@ -8,16 +8,17 @@ $name = 'stainkatana-0.24.0-test.jar'
 $sha = '0CC5F8F8AA9CAE6962EE1187860C652776D5DB3089A2308340174FCB0BF8C009'
 $url = 'https://github.com/Santi-PdR/modelos/raw/refs/heads/arena/ce4979c1-modelos/katana_stain/descargas/stainkatana-0.24.0-test.jar'
 # La 0.20.0-test fue rechazada; la 0.21.0-test, la 0.22.0-test y la 0.23.0-test
-# no constan como instaladas ni aprobadas: si alguna está, se retira sola junto
-# con la 0.20.0-test rechazada; la 0.21.0-test se detiene a que la retires a mano.
+# no constan como instaladas ni aprobadas: todas se retiran solas. Cualquier
+# OTRA versión stainkatana-*.jar (desconocida) detiene la instalación.
 if (-not (Test-Path -LiteralPath $mods -PathType Container)) { throw "No existe la carpeta de mods: $mods" }
 if (Get-Process -Name 'javaw','java' -ErrorAction SilentlyContinue) { throw 'Cierra Minecraft y cualquier proceso Java antes de instalar.' }
 $retirable = 'stainkatana-0.20.0-test.jar'
+$retirable21 = 'stainkatana-0.21.0-test.jar'
 $retirable22 = 'stainkatana-0.22.0-test.jar'
 $retirable23 = 'stainkatana-0.23.0-test.jar'
-$other = @(Get-ChildItem -LiteralPath $mods -Filter 'stainkatana-*.jar' -File | Where-Object { $_.Name -ne $name -and $_.Name -ne $retirable -and $_.Name -ne $retirable22 -and $_.Name -ne $retirable23 })
+$other = @(Get-ChildItem -LiteralPath $mods -Filter 'stainkatana-*.jar' -File | Where-Object { $_.Name -ne $name -and $_.Name -ne $retirable -and $_.Name -ne $retirable21 -and $_.Name -ne $retirable22 -and $_.Name -ne $retirable23 })
 if (Test-Path -LiteralPath (Join-Path $mods 'capatest-0.1.0-katana-test.jar')) { throw 'Retira manualmente capatest-0.1.0-katana-test.jar: entra en conflicto con la capa.' }
-if ($other.Count -gt 0) { throw ('Retira manualmente las otras versiones de stainkatana antes de instalar (p. ej. la 0.21.0-test): ' + (($other | ForEach-Object Name) -join ', ')) }
+if ($other.Count -gt 0) { throw ('Retira manualmente las otras versiones de stainkatana antes de instalar (versión desconocida): ' + (($other | ForEach-Object Name) -join ', ')) }
 if (-not (Get-ChildItem -LiteralPath $mods -Filter '*geckolib*.jar' -File)) { Write-Warning 'Falta GeckoLib Forge 4.8.1 o compatible.' }
 if (-not (Get-ChildItem -LiteralPath $mods -Filter '*player*anim*.jar' -File)) { Write-Warning 'Falta PlayerAnimator Forge 1.0.2-rc1+1.20 o compatible.' }
 $tmp = Join-Path $mods ($name + '.download')
@@ -25,7 +26,7 @@ try {
     Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $tmp
     if ((Get-FileHash -LiteralPath $tmp -Algorithm SHA256).Hash -ne $sha) { throw 'SHA-256 incorrecto: no se instala el archivo.' }
     Move-Item -LiteralPath $tmp -Destination (Join-Path $mods $name) -Force
-    foreach ($retirableN in $retirable, $retirable22, $retirable23) {
+    foreach ($retirableN in $retirable, $retirable21, $retirable22, $retirable23) {
         $old = Join-Path $mods $retirableN
         if (Test-Path -LiteralPath $old -PathType Leaf) { Remove-Item -LiteralPath $old -Force }
     }
