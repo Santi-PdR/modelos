@@ -217,16 +217,62 @@ def check_sat_witness():
     cases = (
         (box((0, 0, 0), (2, 2, 2)), box((1.5, .5, .5), (3.5, 2.5, 2.5)), -.5, .5, .5),
         (box((2, 2, 2), (3, 3, 3)), box((0, 0, 0), (5, 5, 5)), -3., 1., 3.),
+        (box((0, 0, 0), (1, 1, 1)), box((1, 0, 0), (2, 1, 1)), 0., 0., 0.),
         (box((0, 0, 0), (1, 1, 1)), box((3, 3, 3), (4, 4, 4)), 2., 0., 0.),
     )
-    for a, b, signed_gap, intersection, translation in cases:
+
+    def check_pair(a, b, expected=None):
         detail = sat_witness(a, b)
         scalar = float(sat(a[None], b[None])[0])
-        assert np.isclose(detail['signed_gap_u'], scalar, atol=1e-9, rtol=1e-9)
-        assert np.isclose(scalar, signed_gap, atol=1e-9, rtol=1e-9), detail
-        assert np.isclose(detail['projection_intersection_on_axis_u'], intersection, atol=1e-9, rtol=1e-9), detail
-        assert np.isclose(detail['separation_translation_on_axis_u'], translation, atol=1e-9, rtol=1e-9), detail
-    print('SAT witness: solape parcial, contención y separación validados.', flush=True)
+        assert np.isclose(detail['signed_gap_u'], scalar, atol=1e-9, rtol=1e-9), detail
+        if expected is not None:
+            signed_gap, intersection, translation = expected
+            assert np.isclose(scalar, signed_gap, atol=1e-9, rtol=1e-9), detail
+            assert np.isclose(detail['projection_intersection_on_axis_u'], intersection, atol=1e-9, rtol=1e-9), detail
+            assert np.isclose(detail['separation_translation_on_axis_u'], translation, atol=1e-9, rtol=1e-9), detail
+        axis = np.asarray(detail['axis'])
+        assert np.isclose(np.linalg.norm(axis), 1., atol=1e-9), detail
+        intervals = (np.asarray(detail['cape_interval_u']), np.asarray(detail['limb_interval_u']))
+        projected = (a @ axis, b @ axis)
+        assert all(np.allclose(bounds, (values.min(), values.max()), atol=1e-9)
+                   for bounds, values in zip(intervals, projected, strict=True)), detail
+        reverse = sat_witness(b, a)
+        assert np.isclose(reverse['signed_gap_u'], scalar, atol=1e-9, rtol=1e-9), (detail, reverse)
+        assert np.isclose(reverse['projection_intersection_on_axis_u'],
+                          detail['projection_intersection_on_axis_u'], atol=1e-9, rtol=1e-9), (detail, reverse)
+        return detail
+
+    for a, b, signed_gap, intersection, translation in cases:
+        check_pair(a, b, (signed_gap, intersection, translation))
+
+    # Exercise independently rotated, scaled parallelepipeds as well as the
+    # hand-picked overlap/containment/touching/separation cases above.
+    rng = np.random.default_rng(0x5A7)
+    corners = np.array([[x, y, z] for x in (0., 1.) for y in (0., 1.) for z in (0., 1.)])[list(order)]
+
+    def random_box():
+        rotation, _ = np.linalg.qr(rng.normal(size=(3, 3)))
+        if np.linalg.det(rotation) < 0:
+            rotation[:, 0] *= -1
+        edges = rotation @ np.diag(rng.uniform(.2, 2.5, size=3))
+        center = rng.uniform(-4., 4., size=3)
+        return (corners - .5) @ edges.T + center
+
+    for _ in range(128):
+        a, b = random_box(), random_box()
+        detail = check_pair(a, b)
+        # A second, direct projection pass is kept separate from both SAT APIs.
+        ea, eb = (box_points[[1, 3, 4]] - box_points[0] for box_points in (a, b))
+        axes = np.concatenate((np.cross(ea, np.roll(ea, 1, axis=0)),
+                               np.cross(eb, np.roll(eb, 1, axis=0)),
+                               np.cross(ea[:, None], eb[None, :]).reshape(9, 3)))
+        axes = axes[np.linalg.norm(axes, axis=1) > 1e-8]
+        axes /= np.linalg.norm(axes, axis=1, keepdims=True)
+        projected_a, projected_b = a @ axes.T, b @ axes.T
+        gaps = np.maximum(projected_a.min(0) - projected_b.max(0),
+                          projected_b.min(0) - projected_a.max(0))
+        assert np.isclose(detail['signed_gap_u'], gaps.max(), atol=1e-8, rtol=1e-8), detail
+    print('SAT witness: solape parcial, contención, tangencia, separación y 128 pares rotados/escalados validados.', flush=True)
 
 
 def fit(root, slot, data, spans, rig, source):
