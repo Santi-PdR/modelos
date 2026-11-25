@@ -1431,5 +1431,9 @@ jobs:
           git add -f "$out/stainkatana-0.22.0-test.jar" "$out/SHA256SUMS.txt"
           if ! git diff --cached --quiet; then
             git commit -m 'Store isolated katana test jar'
+            # Otro workflow (imágenes del fixture) puede haber avanzado la rama;
+            # reaplicar el commit del jar sobre la punta actual antes de empujar.
+            git fetch origin "$BRANCH"
+            git rebase "origin/$BRANCH"
             git push origin "HEAD:$BRANCH"
           fi
