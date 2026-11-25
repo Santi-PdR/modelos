@@ -18,13 +18,9 @@ base = Path(__file__).resolve().parents[1] / 'forge/resources/assets/stainkatana
 source = json.loads((base / 'sword_attack2.json').read_text())
 clip = source['animations']['sword_attack2']
 assert clip['bones']['rightItem']['position'] == {'vector': [0, 3, 0]}, 'Source changed; review retarget.'
-clip['bones']['rightItem']['position'] = {
-    '0.0': {'vector': [0, 3, 0]},
-    '0.25': {'vector': [0, 3, 0], 'easing': 'linear'},
-    '0.375': {'vector': [0, 15, 0], 'easing': 'linear'},
-    '0.5625': {'vector': [0, 15, 0], 'easing': 'linear'},
-    '1.0': {'vector': [0, 3, 0], 'easing': 'linear'},
-}
+# 0.26.0-test: compensation window removed for the same reason (unvalidated;
+# confirmed_c_impact_09.png showed the katana detached on low strokes).
+clip['bones']['rightItem']['position'] = {'vector': [0, 3, 0]}
 out = {'format_version': source['format_version'], 'animations': {'stain_c_grip_trial': clip}}
 (base / 'stain_c_grip_trial.json').write_text(json.dumps(out, indent=2) + '\n')
 
@@ -33,12 +29,6 @@ clip = source['animations']['sword_attack']
 SCALE = 0.875
 assert clip['animation_length'] == SCALE, 'Source changed; review retarget.'
 assert clip['bones']['rightItem']['position']['0.25']['vector'] == [0, 3, 0], 'Source changed; review retarget.'
-clip['bones']['rightItem']['position'] = {
-    '0.0': {'vector': [0, 3, 0]},
-    f'{0.25 * SCALE:.6g}': {'vector': [0, 3, 0], 'easing': 'linear'},
-    f'{0.375 * SCALE:.6g}': {'vector': [0, 15, 0], 'easing': 'linear'},
-    f'{0.5625 * SCALE:.6g}': {'vector': [0, 15, 0], 'easing': 'linear'},
-    f'{SCALE:.6g}': {'vector': [0, 3, 0], 'easing': 'linear'},
-}
+clip['bones']['rightItem']['position'] = {'vector': [0, 3, 0]}
 out = {'format_version': source['format_version'], 'animations': {'stain_c_grip_trial2': clip}}
 (base / 'stain_c_grip_trial2.json').write_text(json.dumps(out, indent=2) + '\n')

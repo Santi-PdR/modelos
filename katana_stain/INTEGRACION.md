@@ -664,3 +664,21 @@ deben tirar mensaje; las habilidades necesitan mejorar en todo").
   entrega primero la capa visual/audiovisual para playtest y luego se
   afinan números/efectos en iteraciones sucesivas.
 - CI de entrega como siempre; nada de esto está aprobado hasta playtest.
+
+
+## 0.26.0-test — retirada de la compensación rightItem (nov 2026)
+
+Investigación de `confirmed_c_impact_09.png` (katana en el suelo junto a los
+puños cruzados durante un corte bajo de C):
+
+- No existe lógica de soltar/tirar el arma en el mod (grep), descartado.
+  El hotbar conserva la katana en la captura.
+- El pipeline GeckoLib funciona con el mismo esqueleto (impact_08, corte en
+  diagonal, correcto), descartado como causa raíz genérica.
+- Las ventanas `rightItem` 3→15 nunca fueron aprobadas; se inyectaron como
+  experimento de pivote en 0.22. Se eliminan en los 8 cortes (y en los
+  convertidores, para que no reaparezcan al regenerar). Verificador: falla
+  si cualquier vector rightItem != [0,3,0].
+- Riesgo aceptado: sin playtest; si el artefacto persiste, los siguientes
+  sospechosos son el pivote del modelo GeckoLib (KatanaRenderer) y las
+  poses agazapadas.

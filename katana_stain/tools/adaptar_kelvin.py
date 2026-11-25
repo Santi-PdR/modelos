@@ -15,9 +15,10 @@ The upstream clip predates PlayerAnimator's current bone naming, so bones are
 renamed snake_case -> camelCase and `geckolib_format_version` is dropped
 (it is an ignored leftover key). All keyframe times are rescaled so both
 cuts last 0.9 s with the contact window aligned to the Serious Player
-Animations clips used for C; the katana hilt compensation used for the
-lateral trial is injected as a `rightItem` bone with the same phase window
-(3 -> 15 model pixels between 0.25 s and 0.5625 s, back to 3 at the end).
+Animations clips used for C. 0.26.0-test: the `rightItem` hilt compensation
+window (3 -> 15 pixels between 0.25 s and 0.5625 s) is removed; it was an
+unvalidated 0.22 experiment and detached the katana from the fists during
+low strokes (see confirmed_c_impact_09.png).
 
 Usage:
   python3 tools/adaptar_kelvin.py --src-dir /path/to/raw [out_dir]
@@ -39,8 +40,6 @@ BONE_RENAME = {
     'torso': 'torso',
 }
 TARGET_LENGTH = 0.9
-# Phase window for the hilt compensation, in seconds (matches stain_c_grip_trial).
-RAMP_START, CONTACT_START, CONTACT_END = 0.25, 0.375, 0.5625
 
 
 def rescale_keys(channel, factor):
@@ -71,13 +70,7 @@ def convert(src_path: Path, dst_path: Path, source_name: str, output_name: str, 
         bones[renamed] = converted
     bones['rightItem'] = {
         'rotation': {'vector': [-80, 0, 0]},
-        'position': {
-            '0.0': {'vector': [0, 3, 0]},
-            f'{RAMP_START}': {'vector': [0, 3, 0], 'easing': 'linear'},
-            f'{CONTACT_START}': {'vector': [0, 15, 0], 'easing': 'linear'},
-            f'{CONTACT_END}': {'vector': [0, 15, 0], 'easing': 'linear'},
-            f'{TARGET_LENGTH}': {'vector': [0, 3, 0], 'easing': 'linear'},
-        },
+        'position': {'vector': [0, 3, 0]},
     }
     clip = {
         'animation_length': TARGET_LENGTH,

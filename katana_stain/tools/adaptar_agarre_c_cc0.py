@@ -12,13 +12,10 @@ author as CC0-1.0; verified 2026-11-25):
           (license: Creative Commons Zero v1.0 Universal)
 
 These are the agazapadas counterparts of sword_attack / sword_attack2 used for
-stain_c_grip_trial2 / stain_c_grip_trial. Only the item translation is changed,
-by phase, to test the Stain katana's hand pivot; the motion itself is the
-upstream clip. Same convention as tools/adaptar_agarre_c.py:
-  stain_c_grip_sneak  (0.875 s) <- sword_attack_sneak   (windows x 0.875)
-  stain_c_grip_sneak2 (1.0 s)   <- sword_attack_sneak2  (absolute windows)
-Not visually approved; separate from the original clips so normal attacks
-remain unchanged.
+stain_c_grip_trial2 / stain_c_grip_trial. The motion is the upstream CC0 clip,
+with the Stain-pivot rightItem bone at the constant upstream offset.
+0.26.0-test: the phase-matched compensation window was removed (unvalidated;
+see confirmed_c_impact_09.png). Not visually approved.
 
 Usage:
   python3 tools/adaptar_agarre_c_cc0.py --src-dir /path/to/raw [out_dir]
@@ -26,8 +23,6 @@ Usage:
 import argparse
 import json
 from pathlib import Path
-
-RAMP_START, CONTACT_START, CONTACT_END = 0.25, 0.375, 0.5625
 
 def convert(src_path, dst_path, clip_name, original_length):
     source = json.loads(src_path.read_text())
@@ -41,20 +36,12 @@ def convert(src_path, dst_path, clip_name, original_length):
               else [v.get('vector') for v in position.values() if isinstance(v, dict)])
     assert values and all(v == [0, 3, 0] for v in values), \
         f'Source rightItem changed from static hilt offset: {position!r}. Review retarget.'
-    scale = original_length
-    end = f'{original_length:.6g}'
-    clip['bones']['rightItem']['position'] = {
-        '0.0': {'vector': [0, 3, 0]},
-        f'{RAMP_START * scale:.6g}': {'vector': [0, 3, 0], 'easing': 'linear'},
-        f'{CONTACT_START * scale:.6g}': {'vector': [0, 15, 0], 'easing': 'linear'},
-        f'{CONTACT_END * scale:.6g}': {'vector': [0, 15, 0], 'easing': 'linear'},
-        end: {'vector': [0, 3, 0], 'easing': 'linear'},
-    }
+    clip['bones']['rightItem']['position'] = {'vector': [0, 3, 0]}
     name = 'stain_c_grip_sneak' if original_length < 1.0 else 'stain_c_grip_sneak2'
     clip['loop'] = False
     out = {'format_version': source['format_version'], 'animations': {name: clip}}
     dst_path.write_text(json.dumps(out, indent=2) + '\n')
-    print(f'{src_path.name} -> {dst_path.name} (rightItem window x{scale:.3g})')
+    print(f'{src_path.name} -> {dst_path.name} (constant rightItem offset)')
 
 def main():
     parser = argparse.ArgumentParser()

@@ -24,6 +24,13 @@ clips = ('sword_attack', 'sword_attack2', 'stain_c_grip_trial', 'stain_c_grip_tr
 for clip in clips:
     animation = json.loads((a/'player_animation'/f'{clip}.json').read_text())['animations'][clip]
     assert animation.get('loop', False) is False and animation['animation_length'] > 0
+    # 0.26.0-test: constant Stain-pivot offset; the experimental compensation
+    # window is gone (it detached the katana on low strokes). Source clips may
+    # keep keyframed positions, but every vector must stay [0, 3, 0].
+    _pos = animation['bones']['rightItem']['position']
+    _vectors = ([_pos.get('vector')] if 'vector' in _pos
+                else [v.get('vector') for v in _pos.values()])
+    assert _vectors and all(v == [0, 3, 0] for v in _vectors)
 assert 'PLAY_TO_CLIENT' in java and 'TRACKING_ENTITY_AND_SELF' in java
 assert 'playeranimator' in (root/'resources/META-INF/mods.toml').read_text()
 assert (root/'resources/META-INF/SERIOUS_PLAYER_ANIMATIONS_LICENSE.txt').is_file()
