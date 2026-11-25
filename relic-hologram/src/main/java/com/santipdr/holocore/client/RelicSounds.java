@@ -37,6 +37,9 @@ public final class RelicSounds {
     /** Tope del pulso: por encima de 2.0 la ametista se convierte en un pitido. */
     private static final float PULSE_MAX = 2.0F;
     /** Bajo el agua el sonido se apaga, como se apaga la luz (1.0.59). */
+    /** Sobresalto: el reloj de la reliquia, no una nota: seco y por debajo del tono. */
+    private static final float FLINCH_GAIN = 0.65F;
+    private static final float FLINCH_PITCH = 0.70F;
     private static final float SUBMERGED_GAIN = 0.45F;
     private static final float SUBMERGED_PITCH = 0.85F;
 
@@ -56,6 +59,17 @@ public final class RelicSounds {
      * a 1.35 y sonaba igual ardiendo que en el vacio, que es justo lo que no debe
      * pasar cuando el color ya dice cual es cual.
      */
+    /**
+     * Sobresalto (1.0.64): el golpe del portador. Un golpe de amatista, apagado y
+     * por debajo del tono del estado, para que suene a "eso ha dolido" y no a un
+     * pulso mas: el pulso es un chime, esto es algo que se rompe.
+     */
+    static void flinch(UUID wearer, RelicAnimatable.Mood mood) {
+        applySubmerged(mood);
+        play(SoundEvents.AMETHYST_BLOCK_BREAK, FLINCH_GAIN,
+                Math.max(0.5F, pitchFor(mood) * FLINCH_PITCH), wearer);
+    }
+
     static void pulse(UUID wearer, RelicAnimatable.Mood mood) {
         float pitch = Math.min(PULSE_MAX, pitchFor(mood) * PULSE_INTERVAL);
         applySubmerged(mood);

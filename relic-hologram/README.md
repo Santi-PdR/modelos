@@ -249,6 +249,10 @@ lista de bloques — que se quedaría vieja a la siguiente versión del juego. Y
 **también salta** (1.0.56): polvo en arena y tierra —solo tinte, el polvo no brilla— y
 salpicadura en el agua; la piedra no levanta nada.
 
+Y cuando **te dan**, la reliquia se cierra: medio segundo de un anillo que se encoge, el aura un
+tercio más baja y un golpe de amatista en vez de una nota (1.0.64). No es lo mismo que el estado
+herido: aquello es "estás mal de vida", esto es "te acaban de dar".
+
 Y el eco **también cae al andar** (1.0.62): cada 0,85 bloques aparece un anillo pequeño donde
 está el pie (0,45 de la fuerza de un evento, se apaga en 0,35 s), con su polvo o su salpicadura
 si el suelo cede. Se apaga con `visuals.groundEcho`, como el eco de los eventos, y en el agua no

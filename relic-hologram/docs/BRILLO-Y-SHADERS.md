@@ -237,6 +237,12 @@ tono del borde se mezcla con el color del estado.
 El ruido del dither sigue **sin tiempo dentro** a propósito: si cambia por frame
 deja de romper el banding y se ve hervir.
 
+**1.0.64, el sobresalto.** Es el único efecto del mod que **quita** luz: el aura se multiplica
+por `1 − 0.35 · hurt` y el anillo nuevo se dibuja con las constantes de la onda
+(`SHOCK_ADDITIVE` × `HURT_BOOST` 1.8, tope de tinte al 1.0), así que su pico está por debajo de
+la onda de un golpe de evento. No añade ninguna medición porque no añade luz nueva: reutiliza un
+presupuesto ya medido y además baja el del aura.
+
 **1.0.63, la regla.** Todo trozo de código que use `TINT_GLOW` tiene que estar bajo
 `AURA_TINT`, y el CI lo comprueba **método a método**, no con asserts sueltos. Si añades un
 pase nuevo con tinte y se te olvida la guarda, el build se cae con el nombre del método. El

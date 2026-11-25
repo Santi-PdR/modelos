@@ -147,11 +147,44 @@ public final class RelicAura {
     private static final float SHOCK_TINT_BOOST = 3.0F;
     private static final float SHOCK_ADDITIVE = 0.16F;
     /**
+     * Sobresalto: un anillo que se <b>cierra</b> en vez de abrirse. Es lo contrario
+     * de un pulso, y por eso se lee como un golpe: el pulso empuja hacia fuera, el
+     * golpe encoge. Usa {@link #drawShockRing} con las constantes de la onda, asi
+     * que no gasta presupuesto nuevo (tinte debajo, aditivo encima).
+     *
+     * <p>Va en todas las calidades a proposito: un golpe pasa pocas veces, y es de
+     * las cosas que el jugador agradece notar aunque este en LITE.</p>
+     */
+    private static void drawHurtFlinch(MultiBufferSource bufferSource, Frame frame, float time,
+                                       RelicGlowState glow, float hurt, float fade) {
+        float radius = HURT_MIN_RADIUS + (HURT_MAX_RADIUS - HURT_MIN_RADIUS) * hurt;
+        float alpha = hurt * hurt * SHOCK_ADDITIVE * HURT_BOOST * fade;
+        if (alpha <= 0.01F) {
+            return;
+        }
+        if (RelicConfig.AURA_TINT.get()) {
+            VertexConsumer tint = bufferSource.getBuffer(RelicRenderTypes.TINT_GLOW.apply(AURA_TEXTURE));
+            drawShockRing(tint, frame, time, radius, hurt,
+                    Math.min(1.0F, alpha * SHOCK_TINT_BOOST),
+                    glow.red(), glow.green(), glow.blue());
+        }
+        VertexConsumer buffer = bufferSource.getBuffer(RelicRenderTypes.ADDITIVE_GLOW.apply(AURA_TEXTURE));
+        drawShockRing(buffer, frame, time, radius, hurt, 1.0F,
+                glow.red() * alpha, glow.green() * alpha, glow.blue() * alpha);
+    }
+
+    /**
      * Escaner de peligro (1.0.60/1.0.61): cada dos segundos sale un anillo pequeno
      * que se abre y se apaga. Es un ping, no una onda de golpe: no depende de
      * ningun evento, se repite solo mientras el estado sea {@code HUNTED}.
      */
     private static final float SCAN_PERIOD = 2.0F;
+    /** Sobresalto (1.0.64): un anillo que se cierra de 0.60 a 0.22 en medio segundo. */
+    private static final float HURT_MAX_RADIUS = 0.60F;
+    private static final float HURT_MIN_RADIUS = 0.22F;
+    private static final float HURT_BOOST = 1.8F;
+    /** Y el aura se encoge: el golpe se lee en lo que se apaga, no en lo que se anade. */
+    private static final float AURA_HURT_DIP = 0.35F;
     private static final float SCAN_MIN = 0.18F;
     private static final float SCAN_MAX = 0.78F;
     private static final float ECHO_TINT_BOOST = 3.0F;
@@ -199,7 +232,7 @@ public final class RelicAura {
     static void render(PoseStack poseStack, MultiBufferSource bufferSource, float partialTick,
                        RelicAnimatable.LoopState state, RelicGlowState glow, float fade,
                        RelicAnimatable.Mood mood, float motion, boolean onShoulder,
-                       RelicAnimatable.Ground ground, float step) {
+                       RelicAnimatable.Ground ground, float step, float hurt) {
         float time = time(partialTick);
         Frame frame = frame(poseStack);
         // Destello de evento: el anillo se enciende aunque el estado no lo tenga,
@@ -207,10 +240,16 @@ public final class RelicAura {
         float flash = glow.flashScaled();
 
         if (RelicConfig.GLOW_AURA.get()) {
-            drawAura(bufferSource, frame, time, glow, flash, fade);
+            drawAura(bufferSource, frame, time, glow, flash, fade, hurt);
         }
         if (RelicConfig.GLOW_RING.get() && glow.ring() + flash * 0.8F > 0.01F) {
             drawRing(bufferSource, frame, time, state, glow, flash, fade, motion);
+        }
+        // Sobresalto (1.0.64): un golpe del portador cierra el aura y tira un
+        // anillo que se encoge. Va antes que todo lo demas para que el pulso del
+        // estado quede encima: primero el golpe, luego la reliquia.
+        if (hurt > 0.02F) {
+            drawHurtFlinch(bufferSource, frame, time, glow, hurt, fade);
         }
         // Paso (1.0.62): un anillo pequeño y corto donde cae el pie, cada 0.85
         // bloques. Va con el eco del suelo, asi que se apaga con la misma config.
@@ -249,9 +288,10 @@ public final class RelicAura {
     // ------------------------------------------------------------------
 
     private static void drawAura(MultiBufferSource bufferSource, Frame frame, float time,
-                                 RelicGlowState glow, float flash, float fade) {
+                                 RelicGlowState glow, float flash, float fade, float hurt) {
+        // El sobresalto resta luz, nunca suma: el aura se cierra un tercio y vuelve.
         float intensity = RelicConfig.AURA_INTENSITY.get().floatValue() * glow.aura()
-                * (1.0F + 0.35F * flash) * fade;
+                * (1.0F + 0.35F * flash) * fade * (1.0F - AURA_HURT_DIP * hurt);
         // El destello abre el aura muy poco: el fogonazo lo da el anillo, que es
         // una linea y no una mancha.
         float spread = 1.0F + 0.10F * flash;

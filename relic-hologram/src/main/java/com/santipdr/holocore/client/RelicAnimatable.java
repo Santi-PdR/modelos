@@ -59,6 +59,10 @@ public final class RelicAnimatable implements GeoAnimatable {
     private static final float STEP_DISTANCE = 0.85F;
     /** Lo que tarda en apagarse el eco de un paso, en segundos. */
     private static final float STEP_FADE = 0.35F;
+    /** El sobresalto dura medio segundo: un golpe es un instante, no un estado. */
+    private static final float HURT_FADE = 0.55F;
+    /** Cuanto tiene que caer la vida para que cuente como golpe. */
+    private static final float HURT_DROP = 0.5F;
     /** Ticks durante los que se usa wake/sleep en vez de activation/deactivation. */
     private static final int QUICK_TOGGLE_WINDOW = 400;
     private static final String LAYER_CONTROLLER = "layer";
@@ -193,6 +197,10 @@ public final class RelicAnimatable implements GeoAnimatable {
     private long seenBump;
     private int combatTicks;
     private int threatTicks;
+    /** Cuando el portador recibio el ultimo golpe (1.0.64). */
+    private long hurtNanos;
+    /** Vida del tick anterior, para ver el golpe y no solo la vida baja. */
+    private float lastHealth = -1.0F;
     private int scanCooldown;
     private int idleCountdown = -1;
 
@@ -531,6 +539,7 @@ public final class RelicAnimatable implements GeoAnimatable {
         decayFlash();
         updateMotion(player);
         updateStep(player);
+        updateHurt(player);
 
         boolean wasActive = this.active;
         this.active = snapshot.active();
@@ -1013,6 +1022,38 @@ public final class RelicAnimatable implements GeoAnimatable {
         }
         // Cuadratico: el anillo del paso sale y se va, no se queda flotando.
         float rest = 1.0F - age / STEP_FADE;
+        return rest * rest;
+    }
+
+    /**
+     * Sobresalto (1.0.64): la reliquia se cierra cuando el portador recibe un
+     * golpe. No es {@link Mood#WOUNDED}, que es "estas bajo de vida" y dura lo que
+     * dure la herida: esto es el <b>instante</b> del golpe, y se apaga en medio
+     * segundo. Se compara la vida con la del tick anterior ({@code HURT_DROP}) para
+     * no confundir un golpe con estar malherido, y no se dispara la primera vez
+     * que aparece el portador, que traeria la vida que traiga.
+     */
+    private void updateHurt(Player player) {
+        float health = player.getHealth();
+        if (this.lastHealth >= 0.0F && health < this.lastHealth - HURT_DROP) {
+            this.hurtNanos = System.nanoTime();
+            if (this.active) {
+                RelicSounds.flinch(this.wearer, this.mood);
+            }
+        }
+        this.lastHealth = health;
+    }
+
+    /** El sobresalto de ahora mismo, de 1 (el golpe) a 0 (medio segundo despues). */
+    public float hurtFade() {
+        if (this.hurtNanos == 0L) {
+            return 0.0F;
+        }
+        float age = (System.nanoTime() - this.hurtNanos) / 1.0E9F;
+        if (age >= HURT_FADE || age < 0.0F) {
+            return 0.0F;
+        }
+        float rest = 1.0F - age / HURT_FADE;
         return rest * rest;
     }
 

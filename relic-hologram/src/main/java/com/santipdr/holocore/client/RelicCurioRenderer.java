@@ -113,7 +113,7 @@ public class RelicCurioRenderer implements ICurioRenderer {
             long began = System.nanoTime();
             RelicAura.render(poseStack, bufferSource, partialTicks, state, visual.glow(), fade,
                     animatable.mood(), animatable.motion(), true, animatable.ground(),
-                    animatable.stepFade());
+                    animatable.stepFade(), animatable.hurtFade());
             RelicRenderStats.aura(System.nanoTime() - began);
         }
 

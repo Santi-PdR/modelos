@@ -612,8 +612,8 @@ jobs:
           # eco del suelo, onda, escaner, polvo) y dos ternarios (motas y pavesas).
           # Se cuentan las consultas y no la forma: la guarda del polvo va negada.
           guardas = aura.count('RelicConfig.AURA_TINT.get()')
-          assert guardas == 9, \
-              f'esperaba 9 consultas de AURA_TINT (7 guardas + 2 ternarios), hay {guardas}'
+          assert guardas == 10, \
+              f'esperaba 10 consultas de AURA_TINT (8 guardas + 2 ternarios), hay {guardas}'
           # 1.0.63: y una regla general, que es la que faltaba: NINGUN trozo de codigo
           # que pida TINT_GLOW puede quedarse fuera de la guarda. Es el invariante
           # que 1.0.48 rompio sin que nada lo notara.
@@ -820,7 +820,7 @@ jobs:
           assert 'isCrouching()' in animatable, 'agacharse no frena la energia'
           assert 'RelicAnimatable.Mood mood, float motion, boolean onShoulder,' in aura, \
               'el aura no recibe la energia de movimiento (y el eco, si va en el hombro)'
-          assert 'RelicAnimatable.Ground ground, float step)' in aura, \
+          assert 'RelicAnimatable.Ground ground, float step, float hurt)' in aura, \
               'el aura no sabe sobre que suelo esta el portador (eco ciego, 1.0.55)'
           # 1.0.62: el eco de un paso. Distancia horizontal acumulada (no la animacion
           # del jugador, que no dice nada del desplazamiento real) y sin pisada en el
@@ -845,6 +845,32 @@ jobs:
               'el polvo de las pisadas no mira la calidad (siete quads por paso en LITE)'
           assert 'if (dust && (ground == RelicAnimatable.Ground.LOOSE' in paso, \
               'el polvo de las pisadas se dispara aunque la calidad sea LITE'
+          # 1.0.64: el sobresalto. Se mide la BAJADA de vida, no la vida baja (eso ya
+          # es WOUNDED, que dura mientras dure la herida): esto es el instante del
+          # golpe, y se cierra en medio segundo en vez de abrirse como un pulso.
+          assert 'private void updateHurt(Player player)' in animatable, \
+              'la reliquia no se entera de un golpe'
+          assert 'updateHurt(player);' in animatable, 'el golpe se mira pero no se actualiza'
+          assert 'health < this.lastHealth - HURT_DROP' in animatable, \
+              'el golpe no se mide contra la vida del tick anterior'
+          assert 'this.lastHealth >= 0.0F' in animatable, \
+              'el primer tick cuenta como golpe: aparecer malherido dispararia el sobresalto'
+          assert 'float hurtFade()' in animatable, 'el sobresalto no se puede leer'
+          assert 'if (hurt > 0.02F) {' in aura, 'el sobresalto no se dibuja'
+          assert 'drawHurtFlinch(bufferSource, frame, time, glow, hurt, fade);' in aura, \
+              'el sobresalto se mira pero no se dibuja'
+          assert 'HURT_MIN_RADIUS + (HURT_MAX_RADIUS - HURT_MIN_RADIUS) * hurt' in aura, \
+              'el sobresalto se abre como un pulso en vez de cerrarse'
+          assert '(1.0F - AURA_HURT_DIP * hurt)' in aura, \
+              'el aura no se encoge con el golpe: el sobresalto solo sumaria luz'
+          flinch = re.split(r'\n    \}', aura.split('private static void drawHurtFlinch(', 1)[1])[0]
+          assert 'drawShockRing(tint, frame, time, radius, hurt,' in flinch, \
+              'el sobresalto no lleva tinte debajo (sobre nieve se quedaria blanco)'
+          assert 'drawShockRing(buffer, frame, time, radius, hurt, 1.0F,' in flinch, \
+              'el sobresalto no lleva aditivo encima'
+          assert 'animatable.hurtFade()' in curio, 'el hombro no pasa el sobresalto'
+          assert 'RelicAnimatable.Ground.OTHER, 0.0F, 0.0F);' in eventos, \
+              'la vista previa se inventa un sobresalto'
           # 1.0.55: el eco del suelo cambia de forma segun lo que pisas. Se mira una
           # vez por segundo y cacheado, como el portal: en el render ya no se puede.
           assert 'public enum Ground {' in animatable, 'no hay tipos de suelo'
@@ -931,12 +957,13 @@ jobs:
           assert 'energy *= 1.0F + 0.60F * motion;' in aura, \
               'el vaiven no crece al correr'
           # Las dos vistas tienen que pasarla al aura (no solo al movimiento propio).
-          assert 'animatable.stepFade());' in curio, 'el hombro no pasa el eco del paso'
+          assert 'animatable.stepFade(), animatable.hurtFade());' in curio, \
+              'el hombro no pasa el eco del paso o el sobresalto'
           assert 'animatable.mood(), animatable.motion(), true, animatable.ground(),' in curio, \
               'el hombro no pasa la energia de movimiento al aura (ni pide el eco en el suelo)'
           assert '1.0F, animatable.mood(), animatable.motion(), false,' in eventos, \
               'la vista previa no pasa la energia de movimiento al aura o dibuja el eco sin suelo'
-          assert 'RelicAnimatable.Ground.OTHER, 0.0F);' in eventos, \
+          assert 'RelicAnimatable.Ground.OTHER, 0.0F, 0.0F);' in eventos, \
               'la vista previa no dice sobre que suelo esta (no lo hay)'
           assert 'static void applyAliveMotion(' in aura, 'la reliquia no tiene movimiento propio'
           assert 'RelicAura.applyAliveMotion(' in curio, 'el hombro no usa el movimiento propio'
@@ -952,6 +979,13 @@ jobs:
           assert 'KeyMapping PULSE' in teclas, 'falta la tecla del pulso'
           # Sonido: solo la reliquia propia, con sonidos de vanilla y apagable.
           sonidos = (base / 'RelicSounds.java').read_text(encoding='utf-8')
+          # 1.0.64: el sobresalto suena a algo que se rompe, no a otro chime, y su
+          # tono baja con el del estado para que ardiendo y en el vacio no suenen igual.
+          assert 'AMETHYST_BLOCK_BREAK' in sonidos, 'el golpe no suena'
+          assert 'pitchFor(mood) * FLINCH_PITCH' in sonidos, \
+              'el sobresalto suena igual en todos los estados'
+          assert 'static void flinch(UUID wearer, RelicAnimatable.Mood mood)' in sonidos, \
+              'el sobresalto no tiene sonido propio'
           assert 'case HUNTED -> 1.34F;' in sonidos, 'el peligro no tiene tono'
           # 1.0.61: el escaner. Un ping cada dos segundos mientras hay peligro, hecho
           # con el dibujo y las constantes de la onda (no gasta presupuesto nuevo).

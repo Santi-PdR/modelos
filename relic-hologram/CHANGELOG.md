@@ -1,5 +1,26 @@
 # Historial de cambios
 
+## 1.0.64 — el sobresalto
+
+La reliquia ya decía "estás herido" (`WOUNDED`, vida baja, mientras dure). Lo que no hacía era
+**reaccionar al golpe**: ese instante en que te dan. Ahora se cierra.
+
+* **Se encoge, no se abre**: un anillo que va de 0,60 a 0,22 en medio segundo. Un pulso empuja
+  hacia fuera; un golpe encoge. Es la diferencia entre "aquí estoy" y "eso ha dolido".
+* **El aura baja un tercio** durante ese medio segundo (`AURA_HURT_DIP`). El sobresalto
+  **resta** luz, nunca suma: no hay fogonazo nuevo que medir ni que blanquee la nieve.
+* **Suena a algo que se rompe**: `AMETHYST_BLOCK_BREAK` en vez del `CHIME` del pulso, por debajo
+  del tono del estado (ardiendo y en el vacío no suenan igual). Respeta el volumen, el agua y
+  `sound.events`.
+* **Se mide la bajada de vida**, no la vida baja: `WOUNDED` sigue siendo "estás malherido" y el
+  sobresalto es "te acaban de dar". Y no salta en el primer tick, o aparecer con poca vida
+  dispararía el golpe sin que nadie te haya tocado.
+* **En todas las calidades**: un golpe pasa pocas veces y es de las cosas que se agradecen
+  aunque el jugador esté en LITE.
+* CI: 14 comprobaciones nuevas y **nueve negativos en rojo**, uno por cada forma de romperlo
+  (medir la vida en vez de la bajada, abrir el anillo en vez de cerrarlo, sumar luz, el primer
+  tick, la vista previa, el chime en vez del golpe, el tono fijo, el hombro y el tinte).
+
 ## 1.0.63 — el eco también respeta la calidad (y una regla nueva en el CI)
 
 Bloque de auditoría, de los que no se ven pero se notan en cuanto algo va mal.
