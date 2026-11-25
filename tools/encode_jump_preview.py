@@ -15,18 +15,41 @@ CHUNK_SIZE = 3_500
 def encode_preview(path: Path) -> tuple[bytes, tuple[int, int]]:
     with Image.open(path) as source:
         image = source.convert('RGB')
-    width = min(560, image.width)
-    while width >= 96:
+    max_width = min(560, image.width)
+    qualities = (68, 56, 44, 32, 20)
+
+    def encode_at(width: int):
         height = max(1, round(width * image.height / image.width))
         preview = image.resize((width, height), Image.Resampling.LANCZOS)
-        for quality in (68, 56, 44, 32, 20):
+        for quality in qualities:
             output = io.BytesIO()
             preview.save(output, format='JPEG', quality=quality, optimize=True)
             payload = output.getvalue()
             if len(payload) <= MAX_BYTES:
                 return payload, (width, height)
-        width = round(width * .78)
-    raise RuntimeError(f'No se pudo comprimir {path} por debajo de {MAX_BYTES} bytes')
+        return None
+
+    if max_width < 96:
+        raise RuntimeError(f'La imagen {path} es demasiado estrecha para una vista previa legible')
+    best = encode_at(max_width)
+    if best:
+        return best
+
+    # The old 0.78 width step could drop 20% of the resolution while leaving
+    # substantial budget unused. Search for the largest fitting width instead.
+    low = 96
+    best = encode_at(low)
+    if best is None:
+        raise RuntimeError(f'No se pudo comprimir {path} por debajo de {MAX_BYTES} bytes')
+    high = max_width
+    while high - low > 1:
+        middle = (low + high) // 2
+        candidate = encode_at(middle)
+        if candidate:
+            low, best = middle, candidate
+        else:
+            high = middle
+    return best
 
 
 def main() -> None:
