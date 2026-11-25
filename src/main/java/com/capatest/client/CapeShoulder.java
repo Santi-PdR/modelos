@@ -3,11 +3,12 @@ package com.capatest.client;
 /** Small rigid hinge above each sleeve, in the baked torso's model-pixel axes. */
 final class CapeShoulder {
     static final double HINGE_X = 5.60, HINGE_Y = 24.25, HINGE_Z = .53;
-    private static final double START = .020, FULL = .235;
-    private static final double PITCH = 10, ROLL = 13;
-    // Most of the clearance comes from rolling and moving out half a
-    // model pixel, not lifting the inside edge into the head during a turn.
-    private static final double OUT = .49, LIFT = .04, FOLLOW_UP = .025, FOLLOW_Z = .24, SWEEP = .29;
+    // Require a deliberate upper-arm lift before the floating plate follows.
+    // The previous 12°–40° window drove the full spring during ordinary gait.
+    private static final double START = .12, FULL = .62;
+    private static final double PITCH = 4.5, ROLL = 6;
+    // Keep the plate seated: small outward give and a quiet hinge, not a flap.
+    private static final double OUT = .24, LIFT = .025, FOLLOW_UP = .018, FOLLOW_Z = .14, SWEEP = .16;
     private static final double UP_LIMIT = .75, Z_LIMIT = .55;
 
     record Pose(double x, double y, double z, double pitch, double roll) {}

@@ -829,7 +829,8 @@ jobs:
           chain_base="entregables/v1.67.40/capatest-1.67.40.jar:$CLASSES"
           java -cp "$CLASSES" com.capatest.client.CapeHaloWakeTest --samples .60 3.20 6 .352 > "$CLASSES/halo-wake.tsv"
           java -cp "$chain_base" com.capatest.client.CapeHaloWakeTest --samples .60 3.20 6 .352 | cmp - "$CLASSES/halo-wake.tsv"
-          java -cp "$chain_base" com.capatest.client.CapeShoulderTest --samples | cmp - "$CLASSES/articulacion-hombros.tsv"
+          # La bisagra de hombro se suavizó intencionalmente; sus límites y
+          # la paridad Java/visor se prueban arriba, no contra la curva vieja .40.
           java -cp "$CLASSES" com.capatest.client.CapeWornMotionTest
           java -cp "$CLASSES" com.capatest.client.CapeJumpMotionTest
           java -cp "$CLASSES" com.capatest.client.CapeLandingTest

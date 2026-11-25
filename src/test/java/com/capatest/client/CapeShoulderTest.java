@@ -12,12 +12,18 @@ public final class CapeShoulderTest {
                 var left = CapeShoulder.pose(true, y, z, rise, fore);
                 check(right.x() == -left.x() && right.roll() == -left.roll() && right.y() == left.y()
                         && right.z() == left.z() && right.pitch() == left.pitch(), "el lado cambia la respuesta");
-                check(right.x() >= 0 && right.x() <= .50 && right.y() >= 0 && right.y() <= .06
-                        && Math.abs(right.z()) <= .43 && Math.abs(right.pitch()) <= 10 && right.roll() <= 13,
-                        "placa fuera del recorrido");
-                if (Math.abs(angle) <= 10) check(right == CapeShoulder.REST && left == CapeShoulder.REST, "vibra en reposo");
-                if (Math.abs(angle) == 45) check(right.x() > .45 && right.roll() > 12 && right.pitch() * angle < 0,
-                        "la placa no sigue el giro de su manga");
+                check(right.x() >= 0 && right.x() <= .25 && right.y() >= 0 && right.y() <= .05
+                        && Math.abs(right.z()) <= .31 && Math.abs(right.pitch()) <= 4.5
+                        && Math.abs(right.roll()) <= 6,
+                        "placa fuera del recorrido suave");
+                if (Math.abs(angle) <= 20) check(right == CapeShoulder.REST && left == CapeShoulder.REST,
+                        "la marcha normal debe dejar la placa asentada");
+                if (Math.abs(angle) == 45) check(right.x() > .06 && right.x() < .09
+                                && right.roll() > 1.6 && right.roll() < 1.8 && right.pitch() * angle < 0,
+                        "la carrera no debe arrancar con un golpe de hombro");
+                if (Math.abs(angle) == 60) check(right.x() > .19 && right.x() < .22
+                                && right.roll() > 4.9 && right.roll() < 5.4,
+                        "la placa pierde su apoyo cuando el brazo sí se eleva");
                 if (samples && angle % 5 == 0) {
                     print(0, y, z, rise, fore, right);
                     print(1, y, z, rise, fore, left);
