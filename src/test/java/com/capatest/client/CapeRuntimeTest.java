@@ -85,6 +85,14 @@ public final class CapeRuntimeTest {
         check(other.sample(CapeState.SPRINT, 12.09).equals(CapeState.SPRINT.glow(12.09)), "RGB compartido");
         check(t.sample(CapeState.BLIGHT, 12.30).equals(CapeState.BLIGHT.glow(12.30)), "no converge");
         check(t.sample(CapeState.WALK, 1).equals(CapeState.WALK.glow(1)), "arrastre al cambiar el reloj");
+        CapeTint guarded = new CapeTint();
+        var safe = guarded.sample(CapeState.SPRINT, 5.2);
+        check(guarded.sample(CapeState.BLIGHT, Double.NaN).equals(safe), "reloj inválido envenenó el RGB actual");
+        check(guarded.sample(CapeState.SPRINT, 5.3).equals(CapeState.SPRINT.glow(5.3)),
+                "la transición no reanudó desde el último reloj válido");
+        CapeTint firstInvalid = new CapeTint();
+        check(firstInvalid.sample(CapeState.BLIGHT, Double.POSITIVE_INFINITY).equals(CapeState.BLIGHT.glow(0)),
+                "el primer reloj inválido no usó una época finita");
     }
 
     private static void stride() {

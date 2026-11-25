@@ -32,10 +32,13 @@ public class CapaSparkParticle extends TextureSheetParticle {
         // SpriteSet scales its index to the list, so they repeat at 0 and 1.
         this.spriteEnd = sprites.get(0, CapeEmber.LAST_SPRITE) == sprites.get(1, CapeEmber.LAST_SPRITE)
                 ? 2 : CapeEmber.LAST_SPRITE;
-        double horizontal = Math.hypot(dx, dz);
+        double vx = Double.isFinite(dx) ? dx : 0;
+        double vy = Double.isFinite(dy) ? dy : 0;
+        double vz = Double.isFinite(dz) ? dz : 0;
+        double horizontal = Math.hypot(vx, vz);
         this.streak = (float) Math.min(1.0D, horizontal / 0.035D);
         double clamp = horizontal > 0.04D ? 0.04D / horizontal : 1.0D;
-        this.setParticleSpeed(dx * clamp, Math.max(0.007D, Math.min(0.021D, dy)), dz * clamp);
+        this.setParticleSpeed(vx * clamp, Math.max(0.007D, Math.min(0.021D, vy)), vz * clamp);
         this.lifetime = 39 - Math.round(13 * this.streak) + this.random.nextInt(9);
         this.alpha = 0.0F;
         // Stop at block shapes (including panes and slabs). This does not

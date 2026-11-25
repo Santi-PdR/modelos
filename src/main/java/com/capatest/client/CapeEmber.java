@@ -48,15 +48,17 @@ public final class CapeEmber {
     }
 
     public static Look look(double progress, double streak, double phase) {
-        double p = Math.max(0, Math.min(1, progress));
-        double glint = .5 + .5 * Math.sin(phase + p * 7.5);
+        double p = Double.isFinite(progress) ? Math.max(0, Math.min(1, progress)) : 0;
+        double trail = Double.isFinite(streak) ? Math.max(0, Math.min(1, streak)) : 0;
+        double clock = Double.isFinite(phase) ? phase : 0;
+        double glint = .5 + .5 * Math.sin(clock + p * 7.5);
         double fade = ease(0, .16, p) * (1 - ease(.36, 1, p));
         double cool = ease(.22, .93, p);
         // A warm rose core on ignition, blending back to violet before
         // the final sprite. Keep the opacity envelope, quad and impulse.
         double heat = 1 - ease(.14, .58, p);
         int frame = p < FIRST_CHANGE ? 0 : p < SECOND_CHANGE ? 1 : 2;
-        return new Look(frame, (.79 + .06 * glint + .07 * streak) * fade,
+        return new Look(frame, (.79 + .06 * glint + .07 * trail) * fade,
                 1 - .43 * p + .05 * glint, 1 - .39 * cool,
                 .98 - .18 * cool - .055 * heat, .93 + .07 * cool - .20 * heat);
     }

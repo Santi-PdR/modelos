@@ -12,6 +12,16 @@ public final class CapeTint {
     private double last = Double.NaN;
 
     public CapeState.Glow sample(CapeState mode, double seconds) {
+        if (!Double.isFinite(seconds)) {
+            // Invalid render clocks must not poison the tint with NaN RGB.
+            // Hold the last valid appearance, or start from a finite epoch.
+            if (target == null) {
+                target = mode;
+                last = changedAt = 0;
+                return target.glow(0);
+            }
+            return at(last);
+        }
         double dt = seconds - last;
         last = seconds;
         if (target == null || !Double.isFinite(dt) || dt < 0 || dt > .5) {

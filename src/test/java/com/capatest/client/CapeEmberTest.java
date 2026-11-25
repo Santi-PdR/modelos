@@ -49,6 +49,10 @@ public final class CapeEmberTest {
             var cool = CapeEmber.look(.55, .43, .82);
             check(hot.alpha() > .79 && hot.red() - hot.blue() > .25 && cool.blue() > cool.red(),
                     "no se ve la transición de rosa cálido a violeta");
+            check(CapeEmber.look(Double.NaN, Double.NaN, Double.NaN).equals(CapeEmber.look(0, 0, 0)),
+                    "el reloj o impulso inválido envenenó el sprite");
+            check(CapeEmber.look(Double.POSITIVE_INFINITY, 2, Double.NaN).equals(CapeEmber.look(0, 1, 0)),
+                    "la apariencia no acotó sus entradas");
         }
     }
 
