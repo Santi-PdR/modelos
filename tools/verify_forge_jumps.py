@@ -481,10 +481,15 @@ def gallery(root, baseline, curves, version):
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument('shots', type=Path)
+    ap.add_argument('shots', nargs='?', type=Path)
     ap.add_argument('--baseline-shots', type=Path)
+    ap.add_argument('--self-test-only', action='store_true', help='ejecuta las autopruebas SAT sin capturas Forge')
     args = ap.parse_args()
     check_sat_witness()
+    if args.self_test_only:
+        raise SystemExit(0)
+    if args.shots is None:
+        ap.error('indica el directorio de capturas Forge o usa --self-test-only')
     summary, curves, fit_rows, leg_hits = {}, {}, [], []
     version = 'v' + mod_version()
     geo = load(ARMOR_GEO)

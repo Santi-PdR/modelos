@@ -800,6 +800,9 @@ jobs:
           python3 -m py_compile tools/energy_calibration.py
           PYTHONPATH=tools python3 -c "import energy_calibration as E; t=E.target(); g=E.read_gains(); assert len(t)==10 and len(g)==12 and min(t)>0; print('OK: objetivo de energia por banda', [round(x,1) for x in t])"
 
+      - name: Autopruebas SAT de solape, tangencia y cajas rotadas
+        run: OPENBLAS_NUM_THREADS=1 PYTHONPATH=tools python3 tools/verify_forge_jumps.py --self-test-only
+
       - name: Test worn-state and cosmetic profiles
         run: |
           CLASSES="$RUNNER_TEMP/cape-state-test"
