@@ -15,6 +15,10 @@ Documento de trabajo para la rama `arena/ce4979c1-modelos`. Resume qué mods se 
 | **Kelvin's Better Player Animations** (mrzenc/kelvins-better-anims @ b03e0e1) | **MIT**, © 2023 Kevin Merrill (ver `META-INF/KELVIN_BETTER_PLAYER_ANIMATIONS_LICENSE.txt`) | `sword_swing_first/second` y variantes `_sneak` (misma estocada, postura agazapada más profunda) | Desde 0.23.0-test: rotación lateral de C amplía a 6 cortes (`kelvin_swing_first_sneak`, `kelvin_swing_second_sneak`), reescalados a 0.9 s con la compensación de empuñadura `rightItem` |
 | **Emotecraft** | CC0 | Emote "Inspect" | En uso para el gesto Z (`inspect`) |
 | **player-animation-rework** | MIT (continuidad) | Fallback de animaciones | No incorporado todavía; reservado si hace falta una fuente adicional |
+| **Serious Player Animations — template pack** (McVader34) | **CC0-1.0** | Cortes agazapados `sword_attack_sneak[2]` | Desde 0.24.0-test: `stain_c_grip_sneak[2]` en la rotación de C (slots 6–7) |
+| **Better Katanas** (Modrinth, Forge 1.20.1) | MIT (licencia declarada en Modrinth) | Katanas por material, animaciones Better Combat | NO inspeccionado: cdn.modrinth.com no es accesible desde el sandbox; si el usuario baja el JAR se puede evaluar |
+| **Emotecraft-emotes** (KosmX, archivado) | CC0-1.0 | Emotes | 51 entradas; ningún corte de arma útil (ya tenemos `inspect`) |
+| **Simple_Katanas** (Morris-23) | MIT | Katana con parries | Sin assets de animación reutilizables |
 | **SlashBlade / SlashBlade_2** (flammpfeil) | **SIN LICENCIA** (todos los derechos reservados) | El referente katana por excelencia (拔刀剑): iaido, combos, filo | **No se pueden usar sus assets ni código.** Su catálogo confirma que hacen falta: draw desde vaina, arco de corte legible y postura de guardia baja |
 | **The-Dark-Dimensions** (WahlJanick) | **SIN LICENCIA** | `katana_parry.json`, `katana_finisher.json`, `katana_dodge_*` en formato PlayerAnimator — justo el formato que consumimos | **No se pueden usar.** Queda anotado como referencia de lo que el género necesita (parry, finisher, esquivas) |
 | **Epic Fight** | GPL-3.0 | Hit-stop, posturas de empuñadura, dash attack, cámara teledirigida en habilidades | Conceptos generales únicamente; nada copiado |
@@ -29,7 +33,7 @@ Documento de trabajo para la rama `arena/ce4979c1-modelos`. Resume qué mods se 
 4. **Tarjeta de título** (`TITLE_CARD`): "S E N T E N C E" / "P A R A L Y S I S" con subtítulo "v e r e d i c t o  f i n a l", aparición 6 ticks, permanencia ~40 ticks. Ambos desactivables por config (`/mconfig stainkatana`).
 5. **Impulso de FOV mayor en el remate** (×1.8 sobre la envolvente de impacto).
 6. **Partículas propias nuevas**: `blood_mote` (reutiliza los 6 frames de `blood_pulse`, tinte pálido #FFF3D6, cámara-facing, deriva ascendente); pobladas en la ejecución decisiva de C y Z. Se respeta la regla del build aislado (ningún `ParticleTypes.` en Java).
-7. **C fijo**: la rotación lateral ahora usa 6 cortes; el resto del pipeline (compensación `rightItem`, IDs de animación 7–16) sin cambios.
+7. **C fijo**: la rotación lateral usa 6 cortes en 0.23.0-test y **8** en 0.24.0-test (se añaden los dos agazapados CC0 de Serious template pack); el resto del pipeline (compensación `rightItem`, IDs de animación 7–16) sin cambios.
 
 ## Qué sigue pendiente (y por qué)
 

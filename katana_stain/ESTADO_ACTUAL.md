@@ -6,12 +6,16 @@ Este es el punto de entrada vigente. Las secciones antiguas de `INTEGRACION.md` 
 
 ## Entrega e instalación
 
-- `descargas/stainkatana-0.23.0-test.jar` es una **prueba experimental**, no una versión final. SHA-256: `2ecd6918c0650552338e18e9c3ed4ea8f7cc03b248135ad83caea65fe4a0a8bb`. Lo compiló y verificó el workflow `45551864727` (ambos jobs verdes: Gradle/JDK 17 y Katana aislada para test-1, incluyendo verificación de assets y arranque del servidor Forge); el bot lo almacenó en `descargas/` en `1e237a3` y se re-verificó el hash contra el JAR publicado. **No está confirmado que el usuario lo haya instalado ni probado.** La 0.20.0-test fue rechazada; la 0.21.0-test y la 0.22.0-test no constan como instaladas ni aprobadas.
-- `instalar-0.23-test.ps1` instala en `D:\Minecraft\SKLauncher\sklauncher-data-v4\instances\test-1\mods`; valida el hash, sustituye la 0.20.0-test rechazada y la 0.22.0-test si estuviera, y **se detiene** si hay otras versiones (p. ej. la 0.21.0-test). Sin respaldos.
+- `descargas/stainkatana-0.23.0-test.jar` es una **prueba experimental**, no una versión final. SHA-256: `2ecd6918c0650552338e18e9c3ed4ea8f7cc03b248135ad83caea65fe4a0a8bb`. Lo compiló y verificó el workflow `45551864727` (ambos jobs verdes); el bot lo almacenó en `1e237a3` y se re-verificó el hash. **No está confirmado que el usuario lo haya instalado ni probado.**
+- El árbol de la rama ya es **0.24.0-test** (rotación lateral de C de 8 cortes; ver abajo). `descargas/` seguirá conteniendo 0.23.0-test hasta que CI almacene 0.24.0-test; este archivo se actualizará entonces con el SHA-256 y `instalar-0.24-test.ps1`. La 0.20.0-test fue rechazada; la 0.21.0-test y la 0.22.0-test no constan como instaladas ni aprobadas.
 - Requiere Forge 1.20.1, GeckoLib Forge 4.8.1 o compatible y PlayerAnimator Forge 1.0.2-rc1+1.20 o compatible. Better Combat es opcional y controla el combate ordinario; las animaciones proceden de **otros mods**. Las atribuciones están en `forge/resources/META-INF/` (Se añaden desde siempre: Cinema Scope, Kelvin (ahora con variantes `_sneak`), Serious Player Animations, Better Combat Particle, Emotecraft, etc.).
 - Investigación de mods para cinemática y FX: `referencias/cinematicas_fx_analisis.md` (Oborokage MIT — técnicas adaptadas como código propio; SlashBlade y TheDarkDimensions sin licencia — no usables; Epic Fight — conceptos).
 
-### Qué cambia en 0.23.0-test respecto a 0.22.0-test
+### Qué cambia en 0.24.0-test respecto a 0.23.0-test
+
+- Dos cortes más para C, adaptados del **template pack CC0** de Serious Player Animations (McVader34, CC0-1.0; ver `META-INF/SERIOUS_PLAYER_ANIMATIONS_CC0.txt`): `stain_c_grip_sneak` (0.875 s) y `stain_c_grip_sneak2` (1.0 s), mismas ventanas de compensación `rightItem` que sus hermanos standing. La rotación lateral de C pasa de 6 a **8** cortes; los slots 0–5 no cambian y los dos nuevos ocupan 6–7. Sin otros cambios de código.
+
+### Qué cambió en 0.23.0-test respecto a 0.22.0-test
 
 - **Más variedad real en C**: dos cortes nuevos adaptados de Kelvin's Better Player Animations (MIT): `kelvin_swing_first_sneak` y `kelvin_swing_second_sneak` (misma estocada, postura agazapada más profunda), reescalados a 0.9 s con la misma compensación `rightItem`. La rotación lateral de C pasa de 4 a **6** cortes (serias → kelvin → kelvin agazapados). El mapeo de IDs de animación y el protocolo visual v11 no cambian.
 - **Impacto decisivo con más cuerpo**:

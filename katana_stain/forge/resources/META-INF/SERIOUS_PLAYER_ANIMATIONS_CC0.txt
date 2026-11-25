@@ -1,0 +1,20 @@
+Creative Commons Zero v1.0 Universal (CC0 1.0) — voluntary provenance note.
+
+Source (template resource pack, published by the Serious Player Animations
+author):
+  repo:   McVader34/Serious-Player-Animations-Template-Resource-Pack
+  branch: main
+  files:  player_animation/sword_attack_sneak.json
+          sha256 6a5ce096cb391bb33ccf444679de8d94178c0dd28dac052e03a81cf55cf8f1d9
+          player_animation/sword_attack_sneak2.json
+          sha256 445e27b0aaf15c098d1c269edfe1ae003682a8976c44eddbd6f523443f0690e2
+  license: Creative Commons Zero v1.0 Universal
+
+Derived clips committed here (tools/adaptar_agarre_c_cc0.py):
+  stain_c_grip_sneak.json  (from sword_attack_sneak, rightItem window x0.875)
+  stain_c_grip_sneak2.json (from sword_attack_sneak2, absolute rightItem window)
+
+No attribution is required by CC0; this note is kept for provenance and so
+the retarget decisions can be audited. The MIT Serious Player Animations
+clips used elsewhere in this mod are covered by
+SERIOUS_PLAYER_ANIMATIONS_LICENSE.txt instead.

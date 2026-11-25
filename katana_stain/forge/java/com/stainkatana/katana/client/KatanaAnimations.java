@@ -38,15 +38,19 @@ public final class KatanaAnimations {
     // C alternates lateral cuts from other mods (Serious Player Animations and
     // Kelvin's Better Player Animations, both MIT), compensated per phase.
     // Better Combat keeps ordinary combat; its default clips are never used.
-    // The Kelvin *_sneak variants are the same cuts re-timed to a deeper crouch,
-    // used for the low strokes of SENTENCE.
+    // The Kelvin *_sneak variants and the Serious CC0 crouched cuts are the
+    // same motion re-timed to a deeper stance, used for the low strokes of
+    // SENTENCE. Slots 0–5 deliberately keep their order (capture validity);
+    // the CC0 Serious cuts occupy 6–7.
     private static final String[] LATERAL_CUTS = {
-        "stain_c_grip_trial",       // sword_attack2-derived (Serious Player Animations)
-        "stain_c_grip_trial2",      // sword_attack-derived  (Serious Player Animations)
-        "kelvin_swing_first",       // sword_swing_first     (Kelvin's Better Player Animations)
-        "kelvin_swing_second",      // sword_swing_second    (Kelvin's Better Player Animations)
-        "kelvin_swing_first_sneak", // sword_swing_first_sneak (Kelvin's Better Player Animations)
-        "kelvin_swing_second_sneak" // sword_swing_second_sneak (Kelvin's Better Player Animations)
+        "stain_c_grip_trial",       // sword_attack2-derived (Serious Player Animations, MIT)
+        "stain_c_grip_trial2",      // sword_attack-derived  (Serious Player Animations, MIT)
+        "kelvin_swing_first",       // sword_swing_first     (Kelvin's Better Player Animations, MIT)
+        "kelvin_swing_second",      // sword_swing_second    (Kelvin's Better Player Animations, MIT)
+        "kelvin_swing_first_sneak", // sword_swing_first_sneak (Kelvin's Better Player Animations, MIT)
+        "kelvin_swing_second_sneak",// sword_swing_second_sneak (Kelvin's Better Player Animations, MIT)
+        "stain_c_grip_sneak",       // sword_attack_sneak    (Serious template pack, CC0)
+        "stain_c_grip_sneak2"       // sword_attack_sneak2   (Serious template pack, CC0)
     };
     private static final int[] OVERHEAD_STROKES = {2, 5, 8};
     private static boolean overheadStroke(int stroke) {

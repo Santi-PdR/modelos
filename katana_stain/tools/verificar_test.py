@@ -20,7 +20,7 @@ assert 'NetworkDirection.PLAY_TO_SERVER' in java and 'player.canHarmPlayer' in j
 assert 'capatest' not in java
 assert 'paralysis' in (a/'lang/en_us.json').read_text().lower()
 print('OK: 25 fotogramas de Better Combat Particle, tres teclas, seguridad de red e independencia de capatest')
-clips = ('sword_attack', 'sword_attack2', 'stain_c_grip_trial', 'stain_c_grip_trial2', 'kelvin_swing_first', 'kelvin_swing_second', 'kelvin_swing_first_sneak', 'kelvin_swing_second_sneak')
+clips = ('sword_attack', 'sword_attack2', 'stain_c_grip_trial', 'stain_c_grip_trial2', 'kelvin_swing_first', 'kelvin_swing_second', 'kelvin_swing_first_sneak', 'kelvin_swing_second_sneak', 'stain_c_grip_sneak', 'stain_c_grip_sneak2')
 for clip in clips:
     animation = json.loads((a/'player_animation'/f'{clip}.json').read_text())['animations'][clip]
     assert animation.get('loop', False) is False and animation['animation_length'] > 0
@@ -28,6 +28,7 @@ assert 'PLAY_TO_CLIENT' in java and 'TRACKING_ENTITY_AND_SELF' in java
 assert 'playeranimator' in (root/'resources/META-INF/mods.toml').read_text()
 assert (root/'resources/META-INF/SERIOUS_PLAYER_ANIMATIONS_LICENSE.txt').is_file()
 assert (root/'resources/META-INF/KELVIN_BETTER_PLAYER_ANIMATIONS_LICENSE.txt').is_file()
+assert (root/'resources/META-INF/SERIOUS_PLAYER_ANIMATIONS_CC0.txt').is_file()
 kelvin_license = (root/'resources/META-INF/KELVIN_BETTER_PLAYER_ANIMATIONS_LICENSE.txt').read_text()
 assert 'Kevin Merrill' in kelvin_license and 'sword_swing_first' in kelvin_license
 print('OK: clips externos no cíclicos, mensaje de animación y licencias')

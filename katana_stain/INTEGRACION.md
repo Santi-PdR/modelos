@@ -618,3 +618,26 @@ publicado: SHA-256 `2ecd6918c0650552338e18e9c3ed4ea8f7cc03b248135ad83caea65fe4a0
 `ESTADO_ACTUAL.md` y `instalar-0.23-test.ps1` lo referencian. Nada de esto
 equivale a playtest humano; el agarre, la sincronización y el audio siguen
 sin aprobarse. El encuadre zurdo sigue siendo trabajo de diseño propio.
+
+
+## 0.24.0-test — cortes agazapados CC0 de Serious para C (nov 2026)
+
+Continuación directa. Único cambio funcional respecto a 0.23.0-test:
+
+- C incorpora dos cortes más, adaptados del template pack de Serious
+  Player Animations (McVader34, **CC0-1.0**): `stain_c_grip_sneak`
+  (de `sword_attack_sneak`, 0.875 s; ventana `rightItem` x0.875) y
+  `stain_c_grip_sneak2` (de `sword_attack_sneak2`, 1.0 s; ventana
+  absoluta). Retarget por `tools/adaptar_agarre_c_cc0.py`; procedència
+  y SHAs en `META-INF/SERIOUS_PLAYER_ANIMATIONS_CC0.txt`. La rotación
+  lateral de C pasa de 6 a 8 cortes (slots 6–7 nuevos; 0–5 intactos).
+- Búsqueda adicional de fuentes públicas (github + Modrinth) documentada
+  en `referencias/cinematicas_fx_analisis.md`: Better Katanas (MIT en
+  Modrinth) queda como candidata si el usuario puede bajar el JAR para
+  inspeccionarlo (cdn.modrinth.com no es accesible desde el sandbox);
+  SlashBlade y sus derivados (VMDs + assets del upstream sin licencia) y
+  TheDarkDimensions siguen sin poder incorporarse; Emotecraft-emotes
+  (CC0, 51 entradas) no tiene cortes de arma.
+- Aviso: esta es otra entrega sin playtest sobre 0.23.0-test. El
+  agarre, la sincronización, el audio y todos los FX siguen sin
+  aprobarse; el usuario debe jugar 0.23/0.24 antes de otra iteración.

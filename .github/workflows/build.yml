@@ -1339,7 +1339,7 @@ jobs:
           DIAG
             exit "$status"
           fi
-          jar=build/libs/stainkatana-0.23.0-test.jar
+          jar=build/libs/stainkatana-0.24.0-test.jar
           test -f "$jar"
           python3 - "$jar" <<'PY'
           import json,sys,zipfile
@@ -1371,6 +1371,9 @@ jobs:
                         'assets/stainkatana/player_animation/kelvin_swing_second.json',
                         'assets/stainkatana/player_animation/kelvin_swing_first_sneak.json',
                         'assets/stainkatana/player_animation/kelvin_swing_second_sneak.json',
+                        'assets/stainkatana/player_animation/stain_c_grip_sneak.json',
+                        'assets/stainkatana/player_animation/stain_c_grip_sneak2.json',
+                        'META-INF/SERIOUS_PLAYER_ANIMATIONS_CC0.txt',
                         'assets/stainkatana/player_animation/inspect.json',
                         'META-INF/KELVIN_BETTER_PLAYER_ANIMATIONS_LICENSE.txt',
                         'META-INF/EMOTECRAFT_EMOTES_CC0.txt',
@@ -1397,7 +1400,7 @@ jobs:
                   assert all('capa_deteriorer' not in k for k in keys)
               meta=z.read('META-INF/mods.toml').decode()
               assert 'modId="stainkatana"' in meta and 'modId="geckolib"' in meta and 'modId="playeranimator"' in meta
-              assert '0.23.0-test' in meta
+              assert '0.24.0-test' in meta
           print('OK: katana e icono presentes; sin clases ni recursos de la capa')
           PY
       - name: Inicio de servidor dedicado de prueba
@@ -1427,11 +1430,11 @@ jobs:
           set -euo pipefail
           out=katana_stain/descargas
           mkdir -p "$out"
-          cp build/libs/stainkatana-0.23.0-test.jar "$out/stainkatana-0.23.0-test.jar"
-          (cd "$out" && sha256sum stainkatana-0.23.0-test.jar > SHA256SUMS.txt)
+          cp build/libs/stainkatana-0.24.0-test.jar "$out/stainkatana-0.24.0-test.jar"
+          (cd "$out" && sha256sum stainkatana-0.24.0-test.jar > SHA256SUMS.txt)
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -f "$out/stainkatana-0.23.0-test.jar" "$out/SHA256SUMS.txt"
+          git add -f "$out/stainkatana-0.24.0-test.jar" "$out/SHA256SUMS.txt"
           if ! git diff --cached --quiet; then
             git commit -m 'Store isolated katana test jar'
             # Otro workflow (imágenes del fixture) puede haber avanzado la rama;
