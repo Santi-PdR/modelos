@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -41,7 +41,7 @@ jobs:
 
       # El zip original no trae gradlew, por eso instalamos Gradle 8.8 directamente.
       - name: Set up Gradle 8.8
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6.4.1
         with:
           gradle-version: '8.8'
 
@@ -941,7 +941,7 @@ jobs:
 
       - name: Upload build log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: gradle-build-log
           path: /tmp/gradle-build.log
@@ -1049,7 +1049,7 @@ jobs:
 
       - name: Upload verified jar as artifact
         id: verified-jar
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: capatest-jar
           path: |
@@ -1158,7 +1158,7 @@ jobs:
 
       - name: Subir capturas y malla de la maniobra en mundo
         if: ${{ !cancelled() && steps.combined-smoke.outcome != 'skipped' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: capatest-maniobra-forge
           path: |
@@ -1325,7 +1325,7 @@ jobs:
 
       - name: Subir evidencia compacta de saltos en Forge
         if: ${{ !cancelled() && steps.verify-jumps.outcome == 'success' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: capatest-saltos-forge
           path: |
@@ -1502,7 +1502,7 @@ jobs:
 
       - name: Subir capturas de la prueba en mundo
         if: always() && steps.fx-smoke.outcome != 'skipped'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: capatest-fx-en-mundo
           path: |
