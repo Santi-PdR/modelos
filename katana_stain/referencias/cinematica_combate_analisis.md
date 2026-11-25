@@ -32,3 +32,44 @@ Las fases despejadas del corte lateral (`45491426698`) revelaron que el clip alt
 ## Ensayo posterior: compensación por fases
 
 El ajuste fijo del ítem a Y=15 (`dcb5541`, visual `45536152917`) acercó la empuñadura durante el contacto, pero la separó claramente durante la anticipación. Se probó interpolación por fases en `0e00ad0`: Y=3 hasta 0,25 s, Y=15 en 0,375–0,5625 s y retorno a Y=3. El ensayo continúa como `stain_c_grip_trial`, derivado de Serious Player Animations y regenerable con `tools/adaptar_agarre_c.py`; se aplica solo a ciertos cortes laterales C. Visual `45539185719` y build `45539185668` pasaron; se añadieron fases locales diestras y zurdas. Algunas vistas acercan el mango, pero una captura aislada no prueba agarre tridimensional, continuidad, sincronización con el servidor ni aprobación del usuario. Esta modificación no está en el JAR 0.21.0-test.
+
+## Ensayo posterior: variedad lateral de C con clips fuera de Better Combat
+
+Investigación de mods antiguos/poco conocidos con licencias reutilizables:
+
+- **Kelvin's Better Player Animations** (`mrzenc/kelvins-better-anims`, MIT,
+  Kevin Merrill 2023, autor original inactivo, Fabric 1.19.2): dos cortes de
+  espada en JSON estilo PlayerAnimator (`sword_swing_first` 0.36 s,
+  `sword_swing_second` 0.4 s), con piernas y torso. Bones heredados en
+  snake_case; el adaptador `tools/adaptar_kelvin.py` los renombra a
+  camelCase, comprime tiempos a 0.9 s (factor 2.5/2.25) para acercar el
+  contacto al mismo tick que los cortes de Serious Player Animations, y
+  añade el hueso `rightItem` con la compensación de empuñadura por fases.
+  Fuentes fijadas al commit `b03e0e1049a307fcaf8e7a20732e88911a1ba1c6`;
+  licencia en `META-INF/KELVIN_BETTER_PLAYER_ANIMATIONS_LICENSE.txt`.
+- **Custom Player Animations** (`cpa`, CC-BY-NC-SA-4.0): **no incorporado**
+  por la cláusula NC; permitiría capacidad pero no la seguridad de uso que
+  exige el proyecto.
+- **Locomotion** (Trainguy9512): All Rights Reserved; no incorporado.
+- **Mo' Bends** (MIT): animaciones codificadas en Java, no exportables como
+  clips JSON; sin incorporación directa.
+- **Kelvin's Better Player Animations** también tiene golpes Sneak; no se
+  probaron por alcance. Quedan documentados como candidatos futuros.
+
+Cambios aplicados en esta iteración (sin aprobar visualmente):
+
+1. Corrección del límite de ids de animación: el décimo golpe de C (id 16)
+   nunca se reproducía en clientes por una tabla de 16 entradas (0–15).
+2. Rotación determinista de cortes laterales de C:
+   `stain_c_grip_trial` → `stain_c_grip_trial2` → `kelvin_swing_first` →
+   `kelvin_swing_second`, conservándose `stain_c_overhead` en los golpes
+   2, 5 y 8. `stain_c_grip_trial2` deriva de `sword_attack` con las
+   ventanas de compensación escaladas a 0.875 (el clip mide 0.875 s).
+3. En Z primera persona, la mano libre configurable (`blood_gesture.*`)
+   se aplica ahora a la mano no principal (zurdos incluidos).
+4. Hipótesis de encuadre para la guardia zurda en tercera persona:
+   rotación XP +45 (espejo de la −45 diestra). Sin confirmar.
+5. El fixture muestrea los nuevos clips por fases (imágenes 124–139) en
+   ambas manos. Son muestras locales; no prueban agarre tridimensional,
+   continuidad real, sincronización bajo latencia ni audio. La revisión
+   sigue pendiente de playtest humano.

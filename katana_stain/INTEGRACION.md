@@ -537,3 +537,42 @@ incrementaron para diferenciarla de las pruebas anteriores.
 
 Las capturas y las pruebas automáticas no garantizan contacto perfecto, estética
 final, ni sincronización exacta bajo latencia. No se usan efectos de Darkest Hours.
+
+## 0.22.0-test — variedad real de C y correcciones de encuadre
+
+Versión de prueba, no una versión definitiva. Cambios respecto a 0.21.0-test
+(que sigue en `descargas/` sin cambios y no es una corrección aprobada):
+
+- Se corrige un error de límites en `KatanaAnimations`: la tabla de clips tenía
+  16 entradas (id 0–15) y el décimo golpe de C (id 16) no reproducía ninguna
+  animación en clientes. Ahora el límite es un id máximo explícito.
+- Los cortes laterales de C alternan cuatro clips derivados de otros mods,
+  todos MIT y ninguno de Better Combat ni de Darkest Hours: `stain_c_grip_trial`
+  y `stain_c_grip_trial2` (derivados de Serious Player Animations vía
+  `tools/adaptar_agarre_c.py`) y `kelvin_swing_first` / `kelvin_swing_second`
+  (derivados de Kelvin's Better Player Animations, mod antiguo y poco
+  mantenido, vía `tools/adaptar_kelvin.py`). Los cortes de apertura (2.º, 5.º y
+  8.º) conservan `stain_c_overhead`. La compensación de empuñadura por fases se
+  aplica también a los clips de Kelvin (hueso `rightItem`).
+- El calendario de golpes del servidor no cambia: los impactos se siguen
+  emitiendo solo con daño aceptado, y la reubicación del atacante antes de
+  cada anticipación de C se conserva tal como estaba.
+- En primera persona, el ajuste opcional de mano libre (`blood_gesture.*`) se
+  aplica ahora a la mano que no sostiene la katana (zurdos incluidos), no
+  siempre al brazo izquierdo.
+- El giro de la hoja zurda en tercera persona se espeja (+45° frente a −45°)
+  como hipótesis de encuadre; el fixture debe confirmarlo antes de aceptarlo.
+- El JAR de prueba se llama `stainkatana-0.22.0-test.jar`; no sustituye a la
+  0.20.0-test rechazada ni asume que nadie probó la 0.21.0-test.
+
+Licencias añadidas: `META-INF/KELVIN_BETTER_PLAYER_ANIMATIONS_LICENSE.txt`
+(MIT, Kevin Merrill 2023; fuentes fijadas al commit
+`b03e0e1049a307fcaf8e7a20732e88911a1ba1c6`). No hay efectos de Darkest Hours.
+Better Combat sigue controlando el combate ordinario si está instalado; sus
+clips predeterminados no se usan para las habilidades.
+
+Las capturas nuevas del fixture (imágenes 124–139) muestrean los clips
+laterales por fases en ambas manos; son muestras locales, no prueba de
+agarre tridimensional, sincronización bajo latencia ni playtest. Ninguna
+imagen generada por CI equivale a aceptación visual; falta juicio humano y
+escuchar el audio.

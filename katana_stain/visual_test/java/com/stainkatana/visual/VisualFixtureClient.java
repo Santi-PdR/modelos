@@ -719,7 +719,50 @@ public final class VisualFixtureClient {
             case 2062 -> capture = "121_c_left_lateral_contact_estimate.png";
             case 2064 -> capture = "122_c_left_lateral_follow.png";
             case 2066 -> capture = "123_c_left_lateral_recover.png";
-            case 2074 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
+            // Isolated phase samples for the other lateral variants. These are
+            // local playback samples, not proof of damage or exact network timing.
+            case 2068 -> {
+                com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), -1);
+                mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
+            }
+            case 2070 -> com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 8);
+            case 2072 -> capture = "124_c_trial2_prepare.png";
+            case 2074 -> capture = "125_c_trial2_windup.png";
+            case 2076 -> capture = "126_c_trial2_contact.png";
+            case 2078 -> capture = "127_c_trial2_recover.png";
+            case 2084 -> {
+                com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), -1);
+                com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 10);
+            }
+            case 2086 -> capture = "128_c_kelvin1_prepare.png";
+            case 2088 -> capture = "129_c_kelvin1_windup.png";
+            case 2090 -> capture = "130_c_kelvin1_contact.png";
+            case 2092 -> capture = "131_c_kelvin1_recover.png";
+            case 2098 -> {
+                com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), -1);
+                com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 11);
+            }
+            case 2100 -> capture = "132_c_kelvin2_prepare.png";
+            case 2102 -> capture = "133_c_kelvin2_windup.png";
+            case 2104 -> capture = "134_c_kelvin2_contact.png";
+            case 2106 -> capture = "135_c_kelvin2_recover.png";
+            case 2112 -> {
+                com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), -1);
+                mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.LEFT);
+            }
+            case 2114 -> {
+                if (mc.player.getMainArm() != net.minecraft.world.entity.HumanoidArm.LEFT)
+                    throw new IllegalStateException("Left hand not synchronized for Kelvin C sample");
+                com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 10);
+            }
+            case 2116 -> capture = "136_c_kelvin1_left_prepare.png";
+            case 2118 -> capture = "137_c_kelvin1_left_windup.png";
+            case 2120 -> capture = "138_c_kelvin1_left_contact.png";
+            case 2122 -> capture = "139_c_kelvin1_left_recover.png";
+            case 2124 -> {
+                mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.RIGHT);
+                com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), -1);
+                System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }
     }

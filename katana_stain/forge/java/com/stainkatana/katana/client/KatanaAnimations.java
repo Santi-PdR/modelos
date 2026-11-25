@@ -31,10 +31,29 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 public final class KatanaAnimations {
     private static final ResourceLocation LAYER = new ResourceLocation(StainKatanaMod.MOD_ID, "abilities");
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final String[] CLIPS = {
-        "inspect", "stain_x_cut", "scene_01", "sword_attack", "sword_attack2", "sword_attack", "combo_heavy",
-        "scene_02", "scene_03", "scene_04", "scene_05", "scene_06", "scene_07", "scene_08", "scene_09", "scene_10"
+    // Valid animation ids: 0=Z cast, 1=X cast, 2=C opening, 3=X follow-up,
+    // 6=Z finisher, 7..16=C strokes (overhead strokes are 9, 12, 15), -1=clear.
+    // The old 16-entry CLIPS table made id 16 (final C stroke) fall off the map.
+    private static final int MAX_ANIMATION_ID = 16;
+    // C alternates lateral cuts from other mods (Serious Player Animations and
+    // Kelvin's Better Player Animations, both MIT), compensated per phase.
+    // Better Combat keeps ordinary combat; its default clips are never used.
+    private static final String[] LATERAL_CUTS = {
+        "stain_c_grip_trial",   // sword_attack2-derived (Serious Player Animations)
+        "stain_c_grip_trial2",  // sword_attack-derived  (Serious Player Animations)
+        "kelvin_swing_first",   // sword_swing_first     (Kelvin's Better Player Animations)
+        "kelvin_swing_second"   // sword_swing_second    (Kelvin's Better Player Animations)
     };
+    private static final int[] OVERHEAD_STROKES = {2, 5, 8};
+    private static boolean overheadStroke(int stroke) {
+        for (int index : OVERHEAD_STROKES) if (index == stroke) return true;
+        return false;
+    }
+    private static String lateralClip(int stroke) {
+        int slot = 0;
+        for (int i = 0; i < stroke; i++) if (!overheadStroke(i)) slot++;
+        return LATERAL_CUTS[Math.floorMod(slot, LATERAL_CUTS.length)];
+    }
     private KatanaAnimations() { }
 
     private static final class AbilityLayer extends ModifierLayer<IAnimation> {
@@ -51,7 +70,7 @@ public final class KatanaAnimations {
     }
 
     public static void play(int entityId, int ability) {
-        if (ability < -1 || ability >= CLIPS.length || Minecraft.getInstance().level == null) return;
+        if (ability < -1 || ability > MAX_ANIMATION_ID || Minecraft.getInstance().level == null) return;
         if (!(Minecraft.getInstance().level.getEntity(entityId) instanceof AbstractClientPlayer player)) return;
         if (player == Minecraft.getInstance().player) {
             if (ability == 2 || ability == 6) KatanaScene.start(ability == 6);
@@ -68,7 +87,7 @@ public final class KatanaAnimations {
         boolean overhead = ability == 2 || ability == 9 || ability == 12 || ability == 15;
         String clipName = ability == 0 ? "inspect" : ability == 1 ? "stain_x_cut"
                 : overhead ? "stain_c_overhead"
-                : ability >= 7 ? "stain_c_grip_trial"
+                : ability >= 7 ? lateralClip(ability - 7)
                 : ((ability & 1) == 0 ? "sword_attack" : "sword_attack2");
         KeyframeAnimation clip = PlayerAnimationRegistry.getAnimation(new ResourceLocation(StainKatanaMod.MOD_ID, clipName));
         if (clip == null) {
@@ -97,7 +116,9 @@ public final class KatanaAnimations {
                             new dev.kosmx.playerAnim.core.util.Vec3f(leftHanded ? -1.5F : .5F,
                                     leftHanded ? -.20F : -.10F, -1F)));
                 }
-                if (!part.equals("leftArm")) return java.util.Optional.empty();
+                // The free hand is the off-hand: left for right-handed and vice versa.
+                String offHand = player.getMainArm() == HumanoidArm.LEFT ? "rightArm" : "leftArm";
+                if (!part.equals(offHand)) return java.util.Optional.empty();
                 float contact = GestureCurve.contact(playing.getTick() + contactDelta[0]);
                 return java.util.Optional.of(new dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier.PartModifier(
                         dev.kosmx.playerAnim.core.util.Vec3f.ZERO,

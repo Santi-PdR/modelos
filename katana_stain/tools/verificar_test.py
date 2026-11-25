@@ -20,14 +20,17 @@ assert 'NetworkDirection.PLAY_TO_SERVER' in java and 'player.canHarmPlayer' in j
 assert 'capatest' not in java
 assert 'paralysis' in (a/'lang/en_us.json').read_text().lower()
 print('OK: 25 fotogramas de Better Combat Particle, tres teclas, seguridad de red e independencia de capatest')
-clips = ('sword_attack', 'sword_attack2')
+clips = ('sword_attack', 'sword_attack2', 'stain_c_grip_trial', 'stain_c_grip_trial2', 'kelvin_swing_first', 'kelvin_swing_second')
 for clip in clips:
     animation = json.loads((a/'player_animation'/f'{clip}.json').read_text())['animations'][clip]
     assert animation.get('loop', False) is False and animation['animation_length'] > 0
 assert 'PLAY_TO_CLIENT' in java and 'TRACKING_ENTITY_AND_SELF' in java
 assert 'playeranimator' in (root/'resources/META-INF/mods.toml').read_text()
 assert (root/'resources/META-INF/SERIOUS_PLAYER_ANIMATIONS_LICENSE.txt').is_file()
-print('OK: tres clips externos no cíclicos, mensaje de animación y licencia')
+assert (root/'resources/META-INF/KELVIN_BETTER_PLAYER_ANIMATIONS_LICENSE.txt').is_file()
+kelvin_license = (root/'resources/META-INF/KELVIN_BETTER_PLAYER_ANIMATIONS_LICENSE.txt').read_text()
+assert 'Kevin Merrill' in kelvin_license and 'sword_swing_first' in kelvin_license
+print('OK: clips externos no cíclicos, mensaje de animación y licencias')
 
 ability = (root/'java/com/stainkatana/katana/KatanaAbilities.java').read_text()
 timeline = (root/'java/com/stainkatana/katana/AbilityTimeline.java').read_text()
@@ -36,6 +39,7 @@ assert 'PlayerLoggedOutEvent' in ability and 'ServerStoppedEvent' in ability
 assert 'player.getMainHandItem() != cast.stack' in ability
 anim = (root/'java/com/stainkatana/katana/client/KatanaAnimations.java').read_text()
 assert 'loadBetterCombat' not in anim and 'sword_attack2' in anim and 'stain_c_overhead' in anim
+assert 'kelvin_swing_first' in anim and 'stain_c_grip_trial2' in anim and 'MAX_ANIMATION_ID' in anim
 assert 'THIRD_PERSON_MODEL' in anim and 'ability == -1' in anim
 print('OK: secuencia de impacto, cancelación, recurso externo opcional y primera persona configurada')
 
