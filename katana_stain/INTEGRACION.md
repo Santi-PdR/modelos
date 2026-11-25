@@ -578,3 +578,42 @@ laterales por fases en ambas manos; son muestras locales, no prueba de
 agarre tridimensional, sincronización bajo latencia ni playtest. Ninguna
 imagen generada por CI equivale a aceptación visual; falta juicio humano y
 escuchar el audio.
+
+## 0.23.0-test — más cortes para C e impacto decisivo con cuerpo (nov 2026)
+
+Continuación de la línea experimental. Añadido sobre 0.22.0-test:
+
+- Dos cortes nuevos, adaptados de Kelvin's Better Player Animations (MIT,
+  Kevin Merrill 2023, commit `b03e0e1049a307fcaf8e7a20732e88911a1ba1c6`):
+  `kelvin_swing_first_sneak` (0.24 s aguas arriba) y
+  `kelvin_swing_second_sneak` (0.32 s), reescalados a 0.9 s con la misma
+  ventana de compensación `rightItem` ya usada por los cortes laterales.
+  Son los mismos cortes re-temporizados para una postura agazapada más
+  profunda (piernas y torso bajados). La rotación lateral de C pasa de 4
+  a 6 cortes; los slots 0–3 no cambian, por lo que las muestras 124–139
+  siguen representando los mismos clips.
+- Refuerzo de impacto nuevo (view-only, nunca toca servidor): sacudida de
+  cámara aditiva en `ComputeCameraAngles` (`applyShake`, 0,45× en cortes
+  normales, 1,0× en la ejecución decisiva; decae en 7 ticks; config
+  `screenShakeDegrees`), rim flash carmesí de 6 ticks en la ejecución
+  decisiva (`finalFlash`), tarjeta de título "S E N T E N C E" /
+  "P A R A L Y S I S" con subtítulo "v e r e d i c t o final"
+  (`titleCard`), e impulso de FOV ×1,8 en el remate. Inspirado en las
+  técnicas MIT de Cinema Scope (ya en uso) y Oborokage (implementación
+  propia; verificación en `referencias/cinematicas_fx_analisis.md`).
+- Nueva partícula `blood_mote` (reutiliza los 6 frames de `blood_pulse`,
+  tinte pálido #FFF3D6, deriva ascendente) en la ejecución decisiva de C
+  y Z. El build aislado sigue prohibiendo `ParticleTypes.` de vanilla;
+  los FX decisivos son todos del pipeline propio.
+- Config de cliente ampliada (`ultimate_scene.screenShakeDegrees`,
+  `finalFlash`, `titleCard`). Todo desactivable por el jugador.
+- Investigación de mods documentada en
+  `referencias/cinematicas_fx_analisis.md`: qué licencias permiten usar
+  qué y por qué SlashBlade y TheDarkDimensions (sin licencia) y Epic
+  Fight (GPL-3.0) no aportan assets a este árbol.
+
+Pendiente: el JAR 0.23.0-test debe ser almacenado por CI y su SHA-256
+publicado en `ESTADO_ACTUAL.md` y en `instalar-0.23-test.ps1` antes de
+entregar. Nada de esto equivale a playtest humano; el agarre, la
+sincronización y el audio siguen sin aprobarse. El encuadre zurdo sigue
+siendo trabajo de diseño propio.

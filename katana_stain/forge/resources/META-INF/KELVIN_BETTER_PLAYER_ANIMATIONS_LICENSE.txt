@@ -25,8 +25,13 @@ commit b03e0e1049a307fcaf8e7a20732e88911a1ba1c6, files
 src/main/resources/assets/betteranimations/player_animation/sword_swing_first.json
 (sha256 fb7cd3c1b1541234bac2ff9696c0dc1735a7ac771c5c3f487af85c8a02fa9b5c) and
 sword_swing_second.json
-(sha256 ad12245eb07ac408d019c3a3a043114f3646696b99ed555def458454c76bdd6b).
-Derived clips: kelvin_swing_first.json and kelvin_swing_second.json, produced by
+(sha256 ad12245eb07ac408d019c3a3a043114f3646696b99ed555def458454c76bdd6b),
+sword_swing_first_sneak.json
+(sha256 210cb1a14e9e7d946dfb3a6f90e60e4bd4c812b21a216dc7aa8bd98ae7d7ca52) and
+sword_swing_second_sneak.json
+(sha256 e513a7ece573ec85dd659ce26140dd8b951a93208b480cfe62cbc16150d86358).
+Derived clips: kelvin_swing_first.json, kelvin_swing_second.json,
+kelvin_swing_first_sneak.json and kelvin_swing_second_sneak.json, produced by
 tools/adaptar_kelvin.py (bone rename to PlayerAnimator naming, keyframe rescale
 to 0.9 s, rightItem hilt compensation injected). No other upstream assets are
 redistributed.

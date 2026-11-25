@@ -30,20 +30,21 @@ public final class KatanaParticle extends TextureSheetParticle {
         this.sprites = sprites; this.style = style;
         this.yawAngle = (float) yaw; this.pitchAngle = (float) pitch; this.rollAngle = (float) angle;
         this.hasPhysics = false;
-        this.lifetime = style == 0 ? 8 : style == 1 ? 7 : style == 3 ? 12 : 10;
-        this.quadSize = style == 0 ? 1.35F : style == 1 ? 0.32F : style == 3 ? 1.65F : 1.45F;
-        // The slash planes encode orientation in dx/dy/dz, while shard packets
-        // carry actual velocity. Do not discard the blood particles' motion.
-        if (style == 1) {
+        this.lifetime = style == 0 ? 8 : style == 1 ? 7 : style == 3 ? 12 : style == 4 ? 14 : 10;
+        this.quadSize = style == 0 ? 1.35F : style == 1 ? 0.32F : style == 3 ? 1.65F : style == 4 ? 0.30F : 1.45F;
+        // The slash planes encode orientation in dx/dy/dz, while shard and mote
+        // packets carry actual velocity. Do not discard the motion they bring.
+        if (style == 1 || style == 4) {
             this.xd = yaw; this.yd = pitch; this.zd = angle;
-            this.gravity = .2F;
+            this.gravity = style == 1 ? .2F : .012F;
         } else {
             this.xd = this.yd = this.zd = 0;
         }
         if (style == 0) this.setColor(1.0F, .65F, .65F);
         else if (style == 3) this.setColor(.95F, .24F, .26F);
+        else if (style == 4) this.setColor(1.0F, .93F, .78F);
         else this.setColor(.82F, .13F, .16F);
-        this.alpha = style == 0 ? .85F : .80F;
+        this.alpha = style == 0 ? .85F : style == 4 ? .9F : .80F;
         this.setSpriteFromAge(sprites);
     }
 
@@ -54,7 +55,7 @@ public final class KatanaParticle extends TextureSheetParticle {
     @Override public ParticleRenderType getRenderType() { return ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT; }
 
     @Override public void render(VertexConsumer out, Camera camera, float partialTick) {
-        if (style == 1) {
+        if (style == 1 || style == 4) {
             super.render(out, camera, partialTick);
             return;
         }
@@ -101,6 +102,12 @@ public final class KatanaParticle extends TextureSheetParticle {
         private final SpriteSet sprites; public RingProvider(SpriteSet sprites) { this.sprites = sprites; }
         public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double dx, double dy, double dz) {
             return new KatanaParticle(level, x, y, z, dx, dy, dz, sprites, 3);
+        }
+    }
+    public static final class MoteProvider implements ParticleProvider<SimpleParticleType> {
+        private final SpriteSet sprites; public MoteProvider(SpriteSet sprites) { this.sprites = sprites; }
+        public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double dx, double dy, double dz) {
+            return new KatanaParticle(level, x, y, z, dx, dy, dz, sprites, 4);
         }
     }
     public static final class PulseProvider implements ParticleProvider<SimpleParticleType> {

@@ -4,8 +4,10 @@
 Source (archived, unmaintained upstream):
   repo: mrzenc/kelvins-better-anims @ b03e0e1049a307fcaf8e7a20732e88911a1ba1c6
   files: src/main/resources/assets/betteranimations/player_animation/
-         sword_swing_first.json  sha256 fb7cd3c1b1541234bac2ff9696c0dc1735a7ac771c5c3f487af85c8a02fa9b5c
-         sword_swing_second.json sha256 ad12245eb07ac408d019c3a3a043114f3646696b99ed555def458454c76bdd6b
+         sword_swing_first.json        sha256 fb7cd3c1b1541234bac2ff9696c0dc1735a7ac771c5c3f487af85c8a02fa9b5c
+         sword_swing_second.json       sha256 ad12245eb07ac408d019c3a3a043114f3646696b99ed555def458454c76bdd6b
+         sword_swing_first_sneak.json  sha256 210cb1a14e9e7d946dfb3a6f90e60e4bd4c812b21a216dc7aa8bd98ae7d7ca52
+         sword_swing_second_sneak.json sha256 e513a7ece573ec85dd659ce26140dd8b951a93208b480cfe62cbc16150d86358
 License: MIT, Copyright (c) 2023 Kevin Merrill (see
          forge/resources/META-INF/KELVIN_BETTER_PLAYER_ANIMATIONS_LICENSE.txt).
 
@@ -99,6 +101,12 @@ def main():
             'sword_swing_first', 'kelvin_swing_first', 0.36)
     convert(args.src_dir / 'sword_swing_second.json', out / 'kelvin_swing_second.json',
             'sword_swing_second', 'kelvin_swing_second', 0.4)
+    # Crouch variants: same cuts re-timed to a deeper stance (legs + torso lowered),
+    # used for the low strokes of C's SENTENCE.
+    convert(args.src_dir / 'sword_swing_first_sneak.json', out / 'kelvin_swing_first_sneak.json',
+            'sword_swing_first_sneak', 'kelvin_swing_first_sneak', 0.24)
+    convert(args.src_dir / 'sword_swing_second_sneak.json', out / 'kelvin_swing_second_sneak.json',
+            'sword_swing_second_sneak', 'kelvin_swing_second_sneak', 0.32)
 
 
 if __name__ == '__main__':

@@ -20,7 +20,7 @@ assert 'NetworkDirection.PLAY_TO_SERVER' in java and 'player.canHarmPlayer' in j
 assert 'capatest' not in java
 assert 'paralysis' in (a/'lang/en_us.json').read_text().lower()
 print('OK: 25 fotogramas de Better Combat Particle, tres teclas, seguridad de red e independencia de capatest')
-clips = ('sword_attack', 'sword_attack2', 'stain_c_grip_trial', 'stain_c_grip_trial2', 'kelvin_swing_first', 'kelvin_swing_second')
+clips = ('sword_attack', 'sword_attack2', 'stain_c_grip_trial', 'stain_c_grip_trial2', 'kelvin_swing_first', 'kelvin_swing_second', 'kelvin_swing_first_sneak', 'kelvin_swing_second_sneak')
 for clip in clips:
     animation = json.loads((a/'player_animation'/f'{clip}.json').read_text())['animations'][clip]
     assert animation.get('loop', False) is False and animation['animation_length'] > 0
@@ -84,10 +84,18 @@ print('OK: encuadre local cancelable y sonido de Better Combat con alternativa')
 visuals=(root/'java/com/stainkatana/katana/client/KatanaVisuals.java').read_text()
 network=(root/'java/com/stainkatana/katana/KatanaNetwork.java').read_text()
 assert 'KatanaVisualStyle.ULTIMATE_CROSS' in visuals and '^ leftHanded' in visuals
-assert 'getId() == entityId' in visuals and 'KatanaScene.impact(style == KatanaVisualStyle.ULTIMATE_CROSS, leftHanded, x, y, z)' in visuals
+assert 'getId() == entityId' in visuals and 'KatanaScene.impact(style == KatanaVisualStyle.ULTIMATE_CROSS, leftHanded, x, y, z, decisive)' in visuals
 assert 'private static final String VERSION = "11"' in network
 assert 'buf.writeBoolean(msg.leftHanded)' in network and 'buf.readBoolean()' in network
 assert 'impactEnvelope' in scene and 'KatanaClientConfig.ZOOM_FRACTION.get()' in scene
+# 0.23.0-test: decisive-execution feedback and view-only shake.
+cfg=(root/'java/com/stainkatana/katana/KatanaClientConfig.java').read_text()
+assert 'SCREEN_SHAKE' in cfg and 'FINAL_FLASH' in cfg and 'TITLE_CARD' in cfg
+assert 'applyShake' in scene and 'finalFlashAge' in scene and 'titleAge' in scene
+assert 'S E N T E N C E' in visuals and 'P A R A L Y S I S' in visuals
+mote=(root/'resources/assets/stainkatana/particles/blood_mote.json').read_text()
+assert 'blood_pulse_0' in mote and 'blood_pulse_5' in mote
+assert 'ParticleTypes.' not in visuals and 'MOTE' in (root/'java/com/stainkatana/katana/KatanaParticles.java').read_text()
 print('OK: segundo corte, zurdos, impulso local y protocolo visual v11')
 
 assert model['firstperson_righthand']['scale'] == [0.56, 0.56, 0.56]

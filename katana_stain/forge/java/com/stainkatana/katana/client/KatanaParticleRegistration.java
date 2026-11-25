@@ -15,5 +15,6 @@ public final class KatanaParticleRegistration {
         event.registerSpriteSet(KatanaParticles.SHARD.get(), KatanaParticle.ShardProvider::new);
         event.registerSpriteSet(KatanaParticles.PULSE.get(), KatanaParticle.PulseProvider::new);
         event.registerSpriteSet(KatanaParticles.RING.get(), KatanaParticle.RingProvider::new);
+        event.registerSpriteSet(KatanaParticles.MOTE.get(), KatanaParticle.MoteProvider::new);
     }
 }

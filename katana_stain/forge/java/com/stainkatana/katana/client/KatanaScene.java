@@ -25,6 +25,13 @@ public final class KatanaScene {
     private static int impactDirection;
     private static float initialYaw;
     private static boolean finisher;
+    // 0.23.0-test: view-only impact feedback. The scene steers the camera during
+    // the ultimate; these decay independently so the flash and the title can
+    // outlive the camera cut, like the cinematic letterbox fade-out.
+    private static double shakeAge = 99, finalFlashAge = 99, titleAge = 99;
+    private static boolean bigImpact;
+    private static String titleText;
+    private static double shakePower;
     // Side-biased two-shots keep both actors readable; a full orbit frequently
     // put the victim directly in front of the attacker. Z has its own timing.
     private static final double[] C_ANGLE = {72, 92, 106, 78, 100, 88};
@@ -59,14 +66,29 @@ public final class KatanaScene {
         if (active && KatanaClientConfig.ULTIMATE_FRAME.get())
             focus = new net.minecraft.world.phys.Vec3(x, y, z);
     }
-    public static void impact(boolean second, boolean leftHanded, double x, double y, double z) {
+    /**
+     * A server-confirmed stroke. {@code decisiveTitle} is non-null only for the
+     * decisive execution of an ability: it selects the big-impact feedback
+     * (stronger FOV pulse, crimson rim flash, title card). Everything else is a
+     * regular cut.
+     */
+    public static void impact(boolean second, boolean leftHanded, double x, double y, double z, String decisiveTitle) {
         if (active && KatanaClientConfig.ULTIMATE_FRAME.get()) {
             impactAge = 0;
             focus = new net.minecraft.world.phys.Vec3(x, y, z);
             impactDirection = (second ^ leftHanded) ? -1 : 1;
+            bigImpact = decisiveTitle != null;
+            shakeAge = 0;
+            shakePower = bigImpact ? 1.0 : 0.45;
+            if (bigImpact) {
+                finalFlashAge = 0;
+                titleAge = 0;
+                titleText = decisiveTitle;
+            }
         }
     }
-    private static void reset() { stop(); age = 0; impactAge = 4; progress = previous = 0; }
+    private static void reset() { stop(); age = 0; impactAge = 4; progress = previous = 0;
+        shakeAge = finalFlashAge = titleAge = 99; bigImpact = false; titleText = null; shakePower = 0; }
 
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
@@ -75,6 +97,9 @@ public final class KatanaScene {
         if (mc.isPaused()) return;
         previous = progress;
         if (impactAge < 4) impactAge++;
+        if (shakeAge < 40) shakeAge++;
+        if (finalFlashAge < 40) finalFlashAge++;
+        if (titleAge < 60) titleAge++;
         if (active && ++age >= SAFETY_TIMEOUT) stop();
         progress = Math.max(0, Math.min(1, progress + (active ? 1.0 : -1.0) / TRANSITION_TICKS));
     }
@@ -90,8 +115,9 @@ public final class KatanaScene {
     @SubscribeEvent public static void fov(ViewportEvent.ComputeFov event) {
         if (!canRender() || !event.usedConfiguredFov()) return;
         double strength = strength(Minecraft.getInstance().getFrameTime());
-        // Brief additional zoom on each server-confirmed stroke; no screen shake or flash.
-        double impulse = SceneCurve.impactEnvelope(impactAge + Minecraft.getInstance().getFrameTime());
+        // Brief additional zoom on each server-confirmed stroke (stronger on the
+        // decisive execution); roll, shake and flash are applied elsewhere.
+        double impulse = SceneCurve.impactEnvelope(impactAge + Minecraft.getInstance().getFrameTime()) * (bigImpact ? 1.8 : 1.0);
         double zoom = KatanaClientConfig.ZOOM_FRACTION.get() * strength * (1.0 + 0.35 * impulse);
         event.setFOV(event.getFOV() * (1.0 - zoom));
     }
@@ -101,7 +127,10 @@ public final class KatanaScene {
         double pulse = SceneCurve.impactEnvelope(impactAge + partial);
         double tilt = KatanaClientConfig.CAMERA_ROLL.get() * strength(partial) * pulse * impactDirection;
         event.setRoll(event.getRoll() + (float) tilt);
-        if (!active || focus == null || cameraUnavailable) return;
+        if (!active || focus == null || cameraUnavailable) {
+            applyShake(event, partial);
+            return;
+        }
         Minecraft mc = Minecraft.getInstance();
         // Target-relative side framing: preserve the line between the two
         // actors even when the server relocates the caster for the next cut.
@@ -158,16 +187,86 @@ public final class KatanaScene {
             cameraUnavailable = true;
             com.mojang.logging.LogUtils.getLogger().warn("Katana cinematic camera unavailable; keeping normal framing", failure);
         }
+        // The steering above sets absolute yaw/pitch; the shake rides on top.
+        applyShake(event, partial);
     }
+
+    /**
+     * Additive view-only shake on strokes (half power on ordinary cuts, full on
+     * the decisive execution). Decays within seven ticks and never affects aim.
+     */
+    private static void applyShake(ViewportEvent.ComputeCameraAngles event, float partial) {
+        double t = shakeAge + partial;
+        double shake = KatanaClientConfig.SCREEN_SHAKE.get() * shakePower;
+        if (t < 7 && shake > 0) {
+            double amp = shake * Math.pow(1.0 - t / 7.0, 2.0);
+            event.setYaw(event.getYaw() + (float) (Math.sin(t * 3.1) * amp * 0.9));
+            event.setPitch(event.getPitch() + (float) (Math.cos(t * 2.7 + 0.6) * amp * 0.75));
+        }
+    }
+    /** Edge flash and title setup, drawn even when the scene has already handed the camera back. */
+    private static boolean overlayAllowed() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.level != null && mc.player != null && mc.screen == null
+                && KatanaClientConfig.ULTIMATE_FRAME.get();
+    }
+
     @SubscribeEvent public static void render(RenderGuiEvent.Post event) {
-        if (!canRender()) return;
+        if (!overlayAllowed()) return;
         GuiGraphics graphics = event.getGuiGraphics();
+        Minecraft mc = Minecraft.getInstance();
         int w = graphics.guiWidth(), h = graphics.guiHeight();
-        double eased = strength(event.getPartialTick());
-        int bar = (int)Math.round(h * KatanaClientConfig.BAR_FRACTION.get() * eased);
-        if (bar <= 0) return;
-        // Adapted from Cinema Scope's animated letterbox, with a capped fractional height.
-        graphics.fill(0, 0, w, bar, 0xFF000000);
-        graphics.fill(0, h - bar, w, h, 0xFF000000);
+        float partial = (float) event.getPartialTick();
+        if (canRender()) {
+            double eased = strength(partial);
+            int bar = (int)Math.round(h * KatanaClientConfig.BAR_FRACTION.get() * eased);
+            if (bar > 0) {
+                // Adapted from Cinema Scope's animated letterbox, with a capped fractional height.
+                graphics.fill(0, 0, w, bar, 0xFF000000);
+                graphics.fill(0, h - bar, w, h, 0xFF000000);
+            }
+        }
+        double fage = finalFlashAge + partial;
+        if (fage < 6 && KatanaClientConfig.FINAL_FLASH.get()) {
+            // Crimson rim, two soft passes, easing out to nothing within six ticks.
+            double a = Math.pow(1.0 - fage / 6.0, 2.0);
+            for (int i = 0; i < 8; i++) {
+                int o = (int)Math.round((i + 1) * Math.min(w, h) * 0.0021f);
+                int ia = (int)(150 * a * (1.0 - (double) i / 8.0));
+                if (ia <= 0) continue;
+                int col = (ia << 24) | 0x8F1420;
+                graphics.fill(0, 0, w, o, col);
+                graphics.fill(0, h - o, w, h, col);
+                graphics.fill(0, 0, o, h, col);
+                graphics.fill(w - o, 0, w, h, col);
+            }
+        }
+        double tage = titleAge + partial;
+        if (tage < 54 && titleText != null && KatanaClientConfig.TITLE_CARD.get()) {
+            double a = tage < 6 ? tage / 6.0 : tage > 40 ? Math.max(0.0, 1.0 - (tage - 40.0) / 14.0) : 1.0;
+            if (a > 0.01) {
+                int centerY = (int)(h * 0.66);
+                int lineA = (int)(190 * a);
+                int lineCol = (lineA << 24) | 0xB03A46;
+                int lineW = Math.min(w / 4, 240);
+                graphics.fill(w / 2 - lineW, centerY - 10, w / 2 + lineW, centerY - 8, lineCol);
+                graphics.fill(w / 2 - lineW, centerY + 34, w / 2 + lineW, centerY + 36, lineCol);
+                var pose = graphics.pose();
+                int textA = (int)(255 * a);
+                pose.pushPose();
+                pose.translate(w / 2.0f, centerY, 0);
+                pose.scale(2.1f, 2.1f, 1f);
+                int textW = mc.font.width(titleText);
+                graphics.drawString(mc.font, titleText, -textW / 2, 0, (textA << 24) | 0xF5E9E2, true);
+                pose.popPose();
+                pose.pushPose();
+                pose.translate(w / 2.0f, centerY + 50, 0);
+                int subA = (int)(210 * a);
+                String subtitle = "v e r e d i c t o   f i n a l";
+                int subW = mc.font.width(subtitle);
+                graphics.drawString(mc.font, subtitle, -subW / 2, 0, (subA << 24) | 0xC9B7B0, true);
+                pose.popPose();
+            }
+        }
     }
 }

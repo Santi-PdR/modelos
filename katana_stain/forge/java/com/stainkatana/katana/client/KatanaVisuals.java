@@ -26,7 +26,13 @@ public final class KatanaVisuals {
                 || style == KatanaVisualStyle.ULTIMATE_FINAL || style == KatanaVisualStyle.FINISHER
                 || style == KatanaVisualStyle.SCENE_FOCUS)) {
             if (style == KatanaVisualStyle.SCENE_FOCUS) KatanaScene.focus(x, y, z);
-            else KatanaScene.impact(style == KatanaVisualStyle.ULTIMATE_CROSS, leftHanded, x, y, z);
+            else {
+                // Decisive execution gets the full cinematic hit (rim flash, title
+                // card, stronger zoom and shake); ordinary cuts only shake.
+                String decisive = style == KatanaVisualStyle.ULTIMATE_FINAL ? "S E N T E N C E"
+                        : style == KatanaVisualStyle.FINISHER ? "P A R A L Y S I S" : null;
+                KatanaScene.impact(style == KatanaVisualStyle.ULTIMATE_CROSS, leftHanded, x, y, z, decisive);
+            }
         }
         // Focus is a camera cue, not a premature hit effect.
         if (style == KatanaVisualStyle.SCENE_FOCUS) return;
@@ -42,6 +48,16 @@ public final class KatanaVisuals {
                 level.addParticle(KatanaParticles.SLASH.get(), x, y, z, yaw + 180, 70, sign * 35);
                 level.addParticle(KatanaParticles.RING.get(), x, y - .65, z, yaw, 0, 0);
                 sparks(level, x, y, z, yaw, 8);
+                // Bright pale motes and a second crossing arc mark the decisive execution.
+                level.addParticle(KatanaParticles.SLASH.get(), x, y + .5, z, yaw + 90, 70, sign * 45);
+                for (int i = 0; i < 10; i++) {
+                    double a = level.random.nextDouble() * Math.PI * 2;
+                    double r = .1 + .35 * level.random.nextDouble();
+                    level.addParticle(KatanaParticles.MOTE.get(),
+                            x + Math.cos(a) * r, y + .3 + .45 * level.random.nextDouble(),
+                            z + Math.sin(a) * r,
+                            Math.cos(a) * .09, .18 + .14 * level.random.nextDouble(), Math.sin(a) * .09);
+                }
             }
         } else if (style == KatanaVisualStyle.BLOOD_BIND) {
             // An expanding, grounded ring and a vertical glyph distinguish a bind
@@ -54,6 +70,12 @@ public final class KatanaVisuals {
             level.addParticle(KatanaParticles.PULSE.get(), x, y, z, yaw + 180, 80, -sign * 30);
             level.addParticle(KatanaParticles.RING.get(), x, y, z, yaw, 70, sign * 15);
             sparks(level, x, y, z, yaw, 8);
+            level.addParticle(KatanaParticles.SLASH.get(), x, y + .55, z, yaw + 90, 70, sign * 45);
+            for (int i = 0; i < 6; i++) {
+                double a = level.random.nextDouble() * Math.PI * 2;
+                level.addParticle(KatanaParticles.MOTE.get(), x, y + .5, z,
+                        Math.cos(a) * .22, .18 + .1 * level.random.nextDouble(), Math.sin(a) * .22);
+            }
         } else if (style == KatanaVisualStyle.HIT) {
             sparks(level, x, y, z, yaw, 3);
         }
