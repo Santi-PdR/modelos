@@ -705,7 +705,21 @@ public final class VisualFixtureClient {
             case 2034 -> capture = "116_c_lateral_contact_estimate.png";
             case 2036 -> capture = "117_c_lateral_follow.png";
             case 2038 -> capture = "118_c_lateral_recover.png";
-            case 2050 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
+            case 2045 -> {
+                com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), -1);
+                mc.options.mainHand().set(net.minecraft.world.entity.HumanoidArm.LEFT);
+            }
+            case 2056 -> {
+                if (mc.player.getMainArm() != net.minecraft.world.entity.HumanoidArm.LEFT)
+                    throw new IllegalStateException("Left hand not synchronized for C lateral sample");
+                com.stainkatana.katana.client.KatanaAnimations.play(mc.player.getId(), 7);
+            }
+            case 2058 -> capture = "119_c_left_lateral_prepare.png";
+            case 2060 -> capture = "120_c_left_lateral_windup.png";
+            case 2062 -> capture = "121_c_left_lateral_contact_estimate.png";
+            case 2064 -> capture = "122_c_left_lateral_follow.png";
+            case 2066 -> capture = "123_c_left_lateral_recover.png";
+            case 2074 -> { System.out.println("STAIN_VISUAL_FIXTURE_FINISHED"); mc.stop(); }
             default -> { }
         }
     }
