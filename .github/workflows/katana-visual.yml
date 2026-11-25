@@ -1,7 +1,9 @@
 name: Katana real client visual fixture
 on:
   push:
-    branches: ['arena/a09d390b-modelos']
+    # La rama de trabajo de esta iteración también necesita el fixture real;
+    # el disparador por push del branch forzoso lo ejecuta sin dispatch.
+    branches: ['arena/a09d390b-modelos', 'arena/ce4979c1-modelos']
   workflow_dispatch:
 permissions:
   contents: write
