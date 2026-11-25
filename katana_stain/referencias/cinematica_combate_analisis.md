@@ -68,7 +68,10 @@ Cambios aplicados en esta iteración (sin aprobar visualmente):
 3. En Z primera persona, la mano libre configurable (`blood_gesture.*`)
    se aplica ahora a la mano no principal (zurdos incluidos).
 4. Hipótesis de encuadre para la guardia zurda en tercera persona:
-   rotación XP +45 (espejo de la −45 diestra). Sin confirmar.
+   rotación XP +45 (espejo de la −45 diestra). **Medida y revertida**: la
+   vista trasera mostraba la hoja cruzando la espalda; se volvió a 0°.
+   El problema de la guardia zurda sigue abierto y no debe arreglarse a
+   ciegas.
 5. El fixture muestrea los nuevos clips por fases (imágenes 124–139) en
    ambas manos. Son muestras locales; no prueban agarre tridimensional,
    continuidad real, sincronización bajo latencia ni audio. La revisión

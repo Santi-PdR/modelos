@@ -560,8 +560,10 @@ Versión de prueba, no una versión definitiva. Cambios respecto a 0.21.0-test
 - En primera persona, el ajuste opcional de mano libre (`blood_gesture.*`) se
   aplica ahora a la mano que no sostiene la katana (zurdos incluidos), no
   siempre al brazo izquierdo.
-- El giro de la hoja zurda en tercera persona se espeja (+45° frente a −45°)
-  como hipótesis de encuadre; el fixture debe confirmarlo antes de aceptarlo.
+- Se probó espejar el pitch de la hoja zurda en tercera persona (+45° frente a
+  −45°). Las capturas del fixture lo mostraron **peor** en la vista trasera (la
+  hoja cruzaba la espalda), así que se revirtió a 0°; el encuadre zurdo sigue
+  pendiente de un rediseño propio, no de otro ajuste ciego.
 - El JAR de prueba se llama `stainkatana-0.22.0-test.jar`; no sustituye a la
   0.20.0-test rechazada ni asume que nadie probó la 0.21.0-test.
 
