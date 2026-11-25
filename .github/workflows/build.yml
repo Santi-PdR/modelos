@@ -1253,6 +1253,10 @@ jobs:
           test -s build/fx-smoke-run/fx-shots/saltos-forge.jpg
           printf '::notice title=Saltos en Forge::Galería JPEG completa incluida en el artefacto capatest-fx-en-mundo.'
 
+      - name: Emitir vista previa JPEG compacta para inspección visual
+        if: ${{ !cancelled() && steps.verify-jumps.outcome == 'success' && contains(github.event.head_commit.message, '[visual-saltos]') }}
+        run: python3 tools/encode_jump_preview.py build/fx-smoke-run/fx-shots/saltos-forge.jpg
+
       - name: Publicar métricas geométricas de saltos en el resumen
         if: ${{ !cancelled() && steps.verify-jumps.outcome == 'success' }}
         run: |
