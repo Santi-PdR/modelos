@@ -254,7 +254,16 @@ def check_sat_witness():
         rotation, _ = np.linalg.qr(rng.normal(size=(3, 3)))
         if np.linalg.det(rotation) < 0:
             rotation[:, 0] *= -1
-        edges = rotation @ np.diag(rng.uniform(.2, 2.5, size=3))
+        scale = np.diag(rng.uniform(.2, 2.5, size=3))
+        if rng.random() < .5:
+            # Ordinary rotated boxes.
+            edges = rotation @ scale
+        else:
+            # Mild shear exercises true parallelepiped face normals rather
+            # than assuming the three edge directions are perpendicular.
+            shear = np.array([[1., rng.uniform(-.35, .35), rng.uniform(-.35, .35)],
+                              [0., 1., rng.uniform(-.35, .35)], [0., 0., 1.]])
+            edges = rotation @ scale @ shear
         center = rng.uniform(-4., 4., size=3)
         return (corners - .5) @ edges.T + center
 
@@ -272,7 +281,7 @@ def check_sat_witness():
         gaps = np.maximum(projected_a.min(0) - projected_b.max(0),
                           projected_b.min(0) - projected_a.max(0))
         assert np.isclose(detail['signed_gap_u'], gaps.max(), atol=1e-8, rtol=1e-8), detail
-    print('SAT witness: solape parcial, contención, tangencia, separación y 128 pares rotados/escalados validados.', flush=True)
+    print('SAT witness: solape parcial, contención, tangencia, separación y 128 pares rotados/escalados/sesgados validados.', flush=True)
 
 
 def fit(root, slot, data, spans, rig, source):
