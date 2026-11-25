@@ -222,11 +222,45 @@
             ]
           },
           "position": {
-            "vector": [
-              0,
-              15,
-              0
-            ]
+            "0.0": {
+              "vector": [
+                0,
+                3,
+                0
+              ]
+            },
+            "0.25": {
+              "vector": [
+                0,
+                3,
+                0
+              ],
+              "easing": "linear"
+            },
+            "0.375": {
+              "vector": [
+                0,
+                15,
+                0
+              ],
+              "easing": "linear"
+            },
+            "0.5625": {
+              "vector": [
+                0,
+                15,
+                0
+              ],
+              "easing": "linear"
+            },
+            "1.0": {
+              "vector": [
+                0,
+                3,
+                0
+              ],
+              "easing": "linear"
+            }
           }
         }
       }
