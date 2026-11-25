@@ -612,8 +612,9 @@ Continuación de la línea experimental. Añadido sobre 0.22.0-test:
   qué y por qué SlashBlade y TheDarkDimensions (sin licencia) y Epic
   Fight (GPL-3.0) no aportan assets a este árbol.
 
-Pendiente: el JAR 0.23.0-test debe ser almacenado por CI y su SHA-256
-publicado en `ESTADO_ACTUAL.md` y en `instalar-0.23-test.ps1` antes de
-entregar. Nada de esto equivale a playtest humano; el agarre, la
-sincronización y el audio siguen sin aprobarse. El encuadre zurdo sigue
-siendo trabajo de diseño propio.
+El JAR 0.23.0-test quedó almacenado por CI (`1e237a3`; compilación del
+workflow `45551864727`, ambos jobs verdes) y verificado contra el archivo
+publicado: SHA-256 `2ecd6918c0650552338e18e9c3ed4ea8f7cc03b248135ad83caea65fe4a0a8bb`.
+`ESTADO_ACTUAL.md` y `instalar-0.23-test.ps1` lo referencian. Nada de esto
+equivale a playtest humano; el agarre, la sincronización y el audio siguen
+sin aprobarse. El encuadre zurdo sigue siendo trabajo de diseño propio.
