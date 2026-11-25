@@ -6,19 +6,6 @@
   "key.stainkatana.stun": "Parálisis de sangre",
   "key.stainkatana.slash": "Corte rápido",
   "key.stainkatana.ultimate": "Sentencia del Asesino",
-  "stainkatana.cooldown": "Habilidad disponible en %s s.",
-  "stainkatana.no_mark": "Primero golpea para marcar con sangre.",
-  "stainkatana.no_safe_teleport": "No hay una posición segura para el teletransporte.",
-  "stainkatana.target_unavailable": "La víctima marcada está fuera de alcance, oculta o ausente.",
-  "stainkatana.no_target": "No hay objetivos válidos delante.",
-  "stainkatana.stun_used": "Parálisis de sangre",
-  "stainkatana.slash_used": "Corte rápido",
-  "stainkatana.ultimate_used": "Sentencia del Asesino",
   "effect.stainkatana.blood_paralysis": "Parálisis de sangre",
-  "stainkatana.resisted": "La víctima resistió la parálisis.",
-  "item.stainkatana.katana_stain.flavour": "«Solo un héroe de verdad puede detenerme.»",
-  "stainkatana.hud.paralysis": "PARÁLISIS",
-  "stainkatana.hud.slash": "CORTE",
-  "stainkatana.hud.ultimate": "SENTENCIA",
-  "stainkatana.hud.finisher": "REMATE"
+  "item.stainkatana.katana_stain.flavour": "«Solo un héroe de verdad puede detenerme.»"
 }

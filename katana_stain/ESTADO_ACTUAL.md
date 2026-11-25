@@ -6,12 +6,22 @@ Este es el punto de entrada vigente. Las secciones antiguas de `INTEGRACION.md` 
 
 ## Entrega e instalación
 
+- El árbol de la rama ya es **0.25.0-test** (mensaje de habilidades eliminado por completo, tarjeta de título eliminada, HUD rehecho y mucho más compacto, FX carmesí reforzados, guardia baja en tercera persona). `descargas/` seguirá conteniendo 0.24.0-test hasta que CI almacene 0.25.0-test; entonces este archivo se actualizará con el SHA-256 y `instalar-0.25-test.ps1`. La 0.20.0-test fue rechazada; la 0.21.0-test, la 0.22.0-test, la 0.23.0-test y la 0.24.0-test (SHA `0cc5f8f8…`) no constan como instaladas ni aprobadas.
 - `descargas/stainkatana-0.24.0-test.jar` es una **prueba experimental**, no una versión final. SHA-256: `0cc5f8f8aa9cae6962ee1187860c652776d5db3089a2308340174fcb0bf8c009`. Lo compiló y verificó el workflow `45629566094` (ambos jobs verdes: Gradle/JDK 17 y Katana aislada para test-1, incluyendo verificación de assets y arranque del servidor Forge); el bot lo almacenó en `268d4be` y se re-verificó el hash contra el JAR publicado (el JAR declara `version="0.24.0-test"` y contiene los nuevos cortes y el aviso CC0). **No está confirmado que el usuario lo haya instalado ni probado.** La 0.20.0-test fue rechazada; la 0.21.0-test, la 0.22.0-test y la 0.23.0-test (SHA `2ecd6918…`) no constan como instaladas ni aprobadas.
 - `instalar-0.24-test.ps1` instala en `D:\Minecraft\SKLauncher\sklauncher-data-v4\instances\test-1\mods`; valida el hash, sustituye las 0.20.0-test (rechazada), 0.21.0-test, 0.22.0-test y 0.23.0-test que estén, y **se detiene** solo si hay versiones stainkatana-* desconocidas (la 0.20 rechazada, la 0.21, la 0.22 y la 0.23 se retiran solas, por autorización del usuario). Sin respaldos.
 - Requiere Forge 1.20.1, GeckoLib Forge 4.8.1 o compatible y PlayerAnimator Forge 1.0.2-rc1+1.20 o compatible. Better Combat es opcional y controla el combate ordinario; las animaciones proceden de **otros mods**. Las atribuciones están en `forge/resources/META-INF/` (Se añaden desde siempre: Cinema Scope, Kelvin (ahora con variantes `_sneak`), Serious Player Animations, Better Combat Particle, Emotecraft, etc.).
 - Investigación de mods para cinemática y FX: `referencias/cinematicas_fx_analisis.md` (Oborokage MIT — técnicas adaptadas como código propio; SlashBlade y TheDarkDimensions sin licencia — no usables; Epic Fight — conceptos).
 
-### Qué cambia en 0.24.0-test respecto a 0.23.0-test
+### Qué cambia en 0.25.0-test respecto a 0.24.0-test
+
+- **Nada de texto en pantalla al usar habilidades**: eliminados TODOS los `displayClientMessage` (actionbar) y la tarjeta de título "S E N T E N C E"/"P A R A L Y S I S" (config `titleCard` retirada); el rim flash carmesí, el zoom y la sacudida se mantienen.
+- **HUD rehecho y mucho más pequeño**: siglas circulares carmesí (anillo gris + barrido de cooldown, aro dorado pulsante cuando el remate Z está listo, 2 gotas de sangre bajo Z). Sin placas, sin corazones, sin texto de etiquetas. Posición sobre `hudPosition` como antes (RIGHT_MIDDLE / TOP_CENTER).
+- **FX carmesí reforzados**: estela de motas "speed lines" en los cortes (`trace`), motes ascendentes en PARÁLISIS y en el remate (`rise`), chispas adicionales en cortes C/X. Reutiliza las partículas acreditadas existentes (Better Combat Particle / propias).
+- **Guardia baja en tercera persona** (derecha e izquierda): la katana ya no cuelga vertical como caña; inclina hacia delante-abajo. Cifras provisionales, sin playtest.
+- **Sin tocar mecánicas**: daño, alcance, cooldowns, requisitos de cargas, duración de parálisis y teletransportes son idénticos a 0.24. La mecánica de habilidades (números, efectos de estado, hit-stop) sigue pendiente de decisión tras el playtest.
+- **No validado**: pose nueva de guardia, siglas nuevas, intensidad de FX nuevos. Todo sigue sin playtest del usuario.
+
+### Qué cambió en 0.24.0-test respecto a 0.23.0-test
 
 - Dos cortes más para C, adaptados del **template pack CC0** de Serious Player Animations (McVader34, CC0-1.0; ver `META-INF/SERIOUS_PLAYER_ANIMATIONS_CC0.txt`): `stain_c_grip_sneak` (0.875 s) y `stain_c_grip_sneak2` (1.0 s), mismas ventanas de compensación `rightItem` que sus hermanos standing. La rotación lateral de C pasa de 6 a **8** cortes; los slots 0–5 no cambian y los dos nuevos ocupan 6–7. Sin otros cambios de código.
 

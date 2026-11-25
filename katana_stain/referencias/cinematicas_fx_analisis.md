@@ -33,7 +33,7 @@ Documento de trabajo para la rama `arena/ce4979c1-modelos`. Resume qué mods se 
 4. **Tarjeta de título** (`TITLE_CARD`): "S E N T E N C E" / "P A R A L Y S I S" con subtítulo "v e r e d i c t o  f i n a l", aparición 6 ticks, permanencia ~40 ticks. Ambos desactivables por config (`/mconfig stainkatana`).
 5. **Impulso de FOV mayor en el remate** (×1.8 sobre la envolvente de impacto).
 6. **Partículas propias nuevas**: `blood_mote` (reutiliza los 6 frames de `blood_pulse`, tinte pálido #FFF3D6, cámara-facing, deriva ascendente); pobladas en la ejecución decisiva de C y Z. Se respeta la regla del build aislado (ningún `ParticleTypes.` en Java).
-7. **C fijo**: la rotación lateral usa 6 cortes en 0.23.0-test y **8** en 0.24.0-test (se añaden los dos agazapados CC0 de Serious template pack); el resto del pipeline (compensación `rightItem`, IDs de animación 7–16) sin cambios.
+7. **C fijo**: la rotación lateral usa 6 cortes en 0.23.0-test, **8** en 0.24.0-test y 8 en 0.25.0-test; el resto del pipeline (compensación `rightItem`, IDs de animación 7–16) sin cambios. En 0.25.0-test se añaden estelas/motes FX y se retira la tarjeta de título.
 
 ## Qué sigue pendiente (y por qué)
 

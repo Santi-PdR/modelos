@@ -641,3 +641,26 @@ Continuación directa. Único cambio funcional respecto a 0.23.0-test:
 - Aviso: esta es otra entrega sin playtest sobre 0.23.0-test. El instalador 0.24 retira solas 0.20 (rechazada), 0.21, 0.22 y 0.23 por autorización del usuario; se detiene solo ante versiones stainkatana-* desconocidas. El
   agarre, la sincronización, el audio y todos los FX siguen sin
   aprobarse; el usuario debe jugar 0.23/0.24 antes de otra iteración.
+
+
+## 0.25.0-test — sin mensajes, HUD compacto, FX carmesí (nov 2026)
+
+Continuación de 0.24.0-test. Respuesta a la revisión visual del usuario
+("la pose está mal hecha; la interfaz no me gusta; las habilidades no
+deben tirar mensaje; las habilidades necesitan mejorar en todo").
+
+- Mensajes: eliminados TODOS los avisos al usar habilidades (actionbar) y
+  la tarjeta de título del impacto decisivo; verificador actualizado
+  (`TITLE_CARD` ausente, `displayClientMessage` ausente, sin strings de
+  títulos). Las claves de idioma de los mensajes se retiraron de
+  `en_us.json`/`es_es.json`.
+- HUD: siglas circulares pequeñas (anillo + barrido), gotas de sangre,
+  aro dorado para remate Z. Ningún texto de estado salvo la tecla.
+- FX: estelas y motes ascendentes para PARÁLISIS/remate/cortes, chispas
+  extra en C/X. Partículas existentes reutilizadas.
+- Guardia baja 3ª persona (XP +55, ZP ∓8), mirrored en la mano izquierda.
+  Provisional, sin validar.
+- Mecánicas intactas a propósito: la revisión pedió "mejorar en todo"; se
+  entrega primero la capa visual/audiovisual para playtest y luego se
+  afinan números/efectos en iteraciones sucesivas.
+- CI de entrega como siempre; nada de esto está aprobado hasta playtest.

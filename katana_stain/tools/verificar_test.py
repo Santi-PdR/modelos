@@ -91,9 +91,11 @@ assert 'buf.writeBoolean(msg.leftHanded)' in network and 'buf.readBoolean()' in 
 assert 'impactEnvelope' in scene and 'KatanaClientConfig.ZOOM_FRACTION.get()' in scene
 # 0.23.0-test: decisive-execution feedback and view-only shake.
 cfg=(root/'java/com/stainkatana/katana/KatanaClientConfig.java').read_text()
-assert 'SCREEN_SHAKE' in cfg and 'FINAL_FLASH' in cfg and 'TITLE_CARD' in cfg
-assert 'applyShake' in scene and 'finalFlashAge' in scene and 'titleAge' in scene
-assert 'S E N T E N C E' in visuals and 'P A R A L Y S I S' in visuals
+assert 'SCREEN_SHAKE' in cfg and 'FINAL_FLASH' in cfg and 'TITLE_CARD' not in cfg
+assert 'applyShake' in scene and 'finalFlashAge' in scene and 'titleAge' not in scene
+assert 'S E N T E N C E' not in visuals and 'P A R A L Y S I S' not in visuals
+hud=(root/'java/com/stainkatana/katana/client/KatanaHud.java').read_text()
+assert 'displayClientMessage' not in java and 'arc(g,' in hud and 'droplet(g,' in hud
 mote=(root/'resources/assets/stainkatana/particles/blood_mote.json').read_text()
 assert 'blood_pulse_0' in mote and 'blood_pulse_5' in mote
 assert 'ParticleTypes.' not in visuals and 'MOTE' in (root/'java/com/stainkatana/katana/KatanaParticles.java').read_text()

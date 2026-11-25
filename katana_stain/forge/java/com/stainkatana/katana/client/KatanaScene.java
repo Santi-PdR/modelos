@@ -25,12 +25,11 @@ public final class KatanaScene {
     private static int impactDirection;
     private static float initialYaw;
     private static boolean finisher;
-    // 0.23.0-test: view-only impact feedback. The scene steers the camera during
-    // the ultimate; these decay independently so the flash and the title can
-    // outlive the camera cut, like the cinematic letterbox fade-out.
-    private static double shakeAge = 99, finalFlashAge = 99, titleAge = 99;
+    // View-only impact feedback. The scene steers the camera during the
+    // ultimate; these decay independently so the rim flash can outlive the
+    // camera cut, like the cinematic letterbox fade-out.
+    private static double shakeAge = 99, finalFlashAge = 99;
     private static boolean bigImpact;
-    private static String titleText;
     private static double shakePower;
     // Side-biased two-shots keep both actors readable; a full orbit frequently
     // put the victim directly in front of the attacker. Z has its own timing.
@@ -67,28 +66,22 @@ public final class KatanaScene {
             focus = new net.minecraft.world.phys.Vec3(x, y, z);
     }
     /**
-     * A server-confirmed stroke. {@code decisiveTitle} is non-null only for the
-     * decisive execution of an ability: it selects the big-impact feedback
-     * (stronger FOV pulse, crimson rim flash, title card). Everything else is a
-     * regular cut.
+     * A server-confirmed stroke. {@code decisive} selects the big-impact feedback
+     * (stronger FOV pulse, crimson rim flash). No text is ever shown on screen.
      */
-    public static void impact(boolean second, boolean leftHanded, double x, double y, double z, String decisiveTitle) {
+    public static void impact(boolean second, boolean leftHanded, double x, double y, double z, boolean decisive) {
         if (active && KatanaClientConfig.ULTIMATE_FRAME.get()) {
             impactAge = 0;
             focus = new net.minecraft.world.phys.Vec3(x, y, z);
             impactDirection = (second ^ leftHanded) ? -1 : 1;
-            bigImpact = decisiveTitle != null;
+            bigImpact = decisive;
             shakeAge = 0;
             shakePower = bigImpact ? 1.0 : 0.45;
-            if (bigImpact) {
-                finalFlashAge = 0;
-                titleAge = 0;
-                titleText = decisiveTitle;
-            }
+            if (bigImpact) finalFlashAge = 0;
         }
     }
     private static void reset() { stop(); age = 0; impactAge = 4; progress = previous = 0;
-        shakeAge = finalFlashAge = titleAge = 99; bigImpact = false; titleText = null; shakePower = 0; }
+        shakeAge = finalFlashAge = 99; bigImpact = false; shakePower = 0; }
 
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
@@ -99,7 +92,6 @@ public final class KatanaScene {
         if (impactAge < 4) impactAge++;
         if (shakeAge < 40) shakeAge++;
         if (finalFlashAge < 40) finalFlashAge++;
-        if (titleAge < 60) titleAge++;
         if (active && ++age >= SAFETY_TIMEOUT) stop();
         progress = Math.max(0, Math.min(1, progress + (active ? 1.0 : -1.0) / TRANSITION_TICKS));
     }
@@ -239,33 +231,6 @@ public final class KatanaScene {
                 graphics.fill(0, h - o, w, h, col);
                 graphics.fill(0, 0, o, h, col);
                 graphics.fill(w - o, 0, w, h, col);
-            }
-        }
-        double tage = titleAge + partial;
-        if (tage < 54 && titleText != null && KatanaClientConfig.TITLE_CARD.get()) {
-            double a = tage < 6 ? tage / 6.0 : tage > 40 ? Math.max(0.0, 1.0 - (tage - 40.0) / 14.0) : 1.0;
-            if (a > 0.01) {
-                int centerY = (int)(h * 0.66);
-                int lineA = (int)(190 * a);
-                int lineCol = (lineA << 24) | 0xB03A46;
-                int lineW = Math.min(w / 4, 240);
-                graphics.fill(w / 2 - lineW, centerY - 10, w / 2 + lineW, centerY - 8, lineCol);
-                graphics.fill(w / 2 - lineW, centerY + 34, w / 2 + lineW, centerY + 36, lineCol);
-                var pose = graphics.pose();
-                int textA = (int)(255 * a);
-                pose.pushPose();
-                pose.translate(w / 2.0f, centerY, 0);
-                pose.scale(2.1f, 2.1f, 1f);
-                int textW = mc.font.width(titleText);
-                graphics.drawString(mc.font, titleText, -textW / 2, 0, (textA << 24) | 0xF5E9E2, true);
-                pose.popPose();
-                pose.pushPose();
-                pose.translate(w / 2.0f, centerY + 50, 0);
-                int subA = (int)(210 * a);
-                String subtitle = "v e r e d i c t o   f i n a l";
-                int subW = mc.font.width(subtitle);
-                graphics.drawString(mc.font, subtitle, -subW / 2, 0, (subA << 24) | 0xC9B7B0, true);
-                pose.popPose();
             }
         }
     }

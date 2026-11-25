@@ -14,7 +14,6 @@ import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -182,22 +181,18 @@ public final class KatanaAbilities {
         }
         String key = "next" + ability;
         if (now < state.getLong(key)) {
-            int seconds = (int)((state.getLong(key) - now + 19) / 20);
-            player.displayClientMessage(Component.translatable("stainkatana.cooldown", seconds), true);
             return;
         }
-        LivingEntity marked = ability == 0 ? markedTarget(player, stack, level, true) : null;
+        LivingEntity marked = ability == 0 ? markedTarget(player, stack, level) : null;
         if (ability == 0 && marked == null) return;
         LivingEntity ultimateTarget = ability == 2 ? ultimateTarget(player, level) : null;
         Vec3 arrival = ultimateTarget == null ? null : safePosition(player, ultimateTarget, 0);
         if (ability == 2 && ultimateTarget == null) {
-            player.displayClientMessage(Component.translatable("stainkatana.no_target"), true);
             return;
         }
         if (ability == 2 && arrival == null) {
             // Airborne or very large bosses can lack safe footing. The bind still works,
             // but do not silently imply the caster was teleported.
-            player.displayClientMessage(Component.translatable("stainkatana.no_safe_teleport"), true);
         }
         state.putLong(key, now + CombatTuning.cooldown(ability));
         player.getPersistentData().put(COOLDOWNS, state);
@@ -278,12 +273,10 @@ public final class KatanaAbilities {
             target = targets(player, player.serverLevel(), false).stream().findFirst().orElse(null);
         }
         if (target == null) {
-            player.displayClientMessage(Component.translatable("stainkatana.no_target"), true);
             return;
         }
         Vec3 spot = safePosition(player, target, 0, true);
         if (spot == null) {
-            player.displayClientMessage(Component.translatable("stainkatana.no_safe_teleport"), true);
             return;
         }
         data.putInt("daggerCharges", 0);
@@ -471,23 +464,20 @@ public final class KatanaAbilities {
         return player.hasLineOfSight(target);
     }
 
-    private static LivingEntity markedTarget(ServerPlayer player, ItemStack stack, ServerLevel level, boolean notify) {
+    private static LivingEntity markedTarget(ServerPlayer player, ItemStack stack, ServerLevel level) {
         CompoundTag tag = stack.getTag();
         if (tag == null || !tag.contains(StainKatanaItem.MARK, 10)) {
-            if (notify) player.displayClientMessage(Component.translatable("stainkatana.no_mark"), true);
             return null;
         }
         CompoundTag mark = tag.getCompound(StainKatanaItem.MARK);
         if (!mark.hasUUID("Target") || !mark.getString("Dimension").equals(level.dimension().location().toString())
                 || level.getGameTime() > mark.getLong("Expires")) {
             tag.remove(StainKatanaItem.MARK);
-            if (notify) player.displayClientMessage(Component.translatable("stainkatana.no_mark"), true);
             return null;
         }
         Entity entity = level.getEntity(mark.getUUID("Target"));
         if (!(entity instanceof LivingEntity target) || !legalTarget(player, target)
                 || player.distanceToSqr(target) > 576.0D) {
-            if (notify) player.displayClientMessage(Component.translatable("stainkatana.target_unavailable"), true);
             return null;
         }
         return target;
@@ -498,19 +488,16 @@ public final class KatanaAbilities {
         if (mark == null || !mark.hasUUID("Target") || !mark.getUUID("Target").equals(cast.markedTarget)
                 || !mark.getString("Dimension").equals(level.dimension().location().toString())
                 || level.getGameTime() > mark.getLong("Expires")) {
-            player.displayClientMessage(Component.translatable("stainkatana.no_mark"), true);
             return false;
         }
         Entity entity = level.getEntity(cast.markedTarget);
         if (!(entity instanceof LivingEntity target) || !legalTarget(player, target)
                 || player.distanceToSqr(target) > 576.0D) {
-            player.displayClientMessage(Component.translatable("stainkatana.target_unavailable"), true);
             return false;
         }
         CompoundTag tag = cast.stack.getTag();
         int duration = CombatTuning.paralysisTicks(target instanceof Player);
         if (!target.addEffect(new MobEffectInstance(KatanaEffects.PARALYSIS.get(), duration, 0, false, false, false))) {
-            player.displayClientMessage(Component.translatable("stainkatana.resisted"), true);
             return false;
         }
         // A newer mark belongs to a later hit and must not be consumed here.
@@ -533,7 +520,6 @@ public final class KatanaAbilities {
         level.sendParticles(KatanaParticles.SHARD.get(), bloodHand.x, bloodHand.y, bloodHand.z, 8, .12, .18, .12, .01);
         level.playSound(null, player.blockPosition(), SoundEvents.HONEY_BLOCK_BREAK, SoundSource.PLAYERS, .55F, 1.25F);
         level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, .7F, .65F);
-        player.displayClientMessage(Component.translatable("stainkatana.stun_used"), true);
         return true;
     }
 
@@ -581,7 +567,6 @@ public final class KatanaAbilities {
         }
         level.playSound(null, player.blockPosition(), katanaSwingSound(), SoundSource.PLAYERS, .8F, ultimate ? .85F : 1.0F);
         if (hits == 0) {
-            if (ultimate) player.displayClientMessage(Component.translatable("stainkatana.no_target"), true);
             return false;
         }
         // La ulti puede golpear dos veces, pero desgasta el arma una sola vez.
@@ -590,7 +575,6 @@ public final class KatanaAbilities {
             if (current != null) current.durabilitySpent = true;
             stack.hurtAndBreak(1, player, p -> p.broadcastBreakEvent(InteractionHand.MAIN_HAND));
         }
-        player.displayClientMessage(Component.translatable(ultimate ? "stainkatana.ultimate_used" : "stainkatana.slash_used"), true);
         return true;
     }
 

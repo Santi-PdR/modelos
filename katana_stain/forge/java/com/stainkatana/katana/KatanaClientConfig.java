@@ -12,7 +12,7 @@ public final class KatanaClientConfig {
     public static final ForgeConfigSpec.DoubleValue ZOOM_FRACTION;
     public static final ForgeConfigSpec.DoubleValue CAMERA_ROLL;
     public static final ForgeConfigSpec.DoubleValue SCREEN_SHAKE;
-    public static final ForgeConfigSpec.BooleanValue FINAL_FLASH, TITLE_CARD;
+    public static final ForgeConfigSpec.BooleanValue FINAL_FLASH;
     public static final ForgeConfigSpec.DoubleValue BLOOD_HAND_X, BLOOD_HAND_Y, BLOOD_HAND_Z;
     public static final ForgeConfigSpec.BooleanValue SHOW_HUD, HUD_LEFT, BLOOD_FLASH, VANILLA_SWINGS;
     static {
@@ -30,8 +30,6 @@ public final class KatanaClientConfig {
                 .defineInRange("screenShakeDegrees", 1.1, 0.0, 4.0);
         FINAL_FLASH = builder.comment("Flash a crimson rim on the decisive execution of an ultimate or Z finisher.")
                 .define("finalFlash", true);
-        TITLE_CARD = builder.comment("Show the SENTENCE / PARALYSIS title card on the decisive execution.")
-                .define("titleCard", true);
         builder.pop();
         builder.push("blood_gesture");
         BLOOD_HAND_X = builder.comment("First-person free-hand adjustment in model pixels; mirrored with the animation.").defineInRange("freeHandX", 0.0, -8.0, 8.0);

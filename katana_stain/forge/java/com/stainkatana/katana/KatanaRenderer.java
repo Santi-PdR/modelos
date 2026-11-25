@@ -58,14 +58,13 @@ public class KatanaRenderer extends GeoItemRenderer<StainKatanaItem> {
                 poseStack.translate(0, -1.2 / 16.0, 0);
             if (!FIRST_PERSON_ARM.get() && (context == ItemDisplayContext.THIRD_PERSON_RIGHT_HAND
                     || context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND)) {
-                // Keep the original mirrored third-person transform while the
-                // rejected 0.20 guard and pose are reworked. A +45 pitch for the
-                // left hand was trialled in 0.22.0-test and measured worse in the
-                // back view (blade leaning across the shoulders); reverted to the
-                // previous 0 pitch, which keeps the blade vertical at the side.
+                // Low ready stance: the blade rides down-forward from the hip
+                // instead of standing up like a fishing rod. Mirrored for the
+                // opposite hand by the vanilla display transform. Unverified in
+                // a real client; the playtest decides whether to keep it.
                 poseStack.translate(.5, .5, .5);
-                poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(
-                        context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND ? 0 : -45));
+                poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(55));
+                poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(context == ItemDisplayContext.THIRD_PERSON_LEFT_HAND ? 8 : -8));
                 poseStack.translate(-.5, -.5, -.5);
             }
             super.renderByItem(stack, context, poseStack, buffers, light, overlay);
