@@ -392,12 +392,17 @@ def motion_gallery(root):
     margin, gap, heading = 12, 8, 42
     sheet = Image.new('RGB', (margin*2 + 2*cw + gap, heading + 2*(ch + 32)), '#17121d')
     pen = ImageDraw.Draw(sheet)
-    pen.text((margin, 10), 'ALEX / SALTOS REALES EN FORGE · VISTA Y CONTACTO', fill='#f8eaf2')
+    try:
+        title_font = ImageFont.truetype('DejaVuSans-Bold.ttf', 15)
+        label_font = ImageFont.truetype('DejaVuSans-Bold.ttf', 12)
+    except OSError:
+        title_font = label_font = ImageFont.load_default()
+    pen.text((margin, 4), 'ALEX / SALTO REAL EN FORGE', fill='#f8eaf2', font=title_font)
     for col, title in enumerate(('ÁPICE', 'PRIMER CONTACTO')):
-        pen.text((margin + col*(cw+gap), 28), title, fill='#e8c9e1')
+        pen.text((margin + col*(cw+gap), 25), title, fill='#e8c9e1', font=label_font)
     for row, slot in enumerate(SLOTS):
         y = heading + row*(ch + 32)
-        pen.text((margin, y + 2), slot.upper(), fill='#f8eaf2')
+        pen.text((margin, y + 2), slot.upper(), fill='#f8eaf2', font=label_font)
         for col, phase in enumerate(('apice', 'contacto')):
             path = root / f'saltos-{slot}-{phase}.png'
             with Image.open(path) as photo:
