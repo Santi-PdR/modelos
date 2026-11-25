@@ -19,7 +19,7 @@ jobs:
       CANDIDATE: 44930868176
       CANDIDATE_SOURCE: fb91ca29c612c4023a3309038c58afcbb13dd33b
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 

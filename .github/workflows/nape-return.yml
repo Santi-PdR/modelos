@@ -15,14 +15,14 @@ jobs:
       ALSOFT_DRIVERS: 'null'
       OPENBLAS_NUM_THREADS: '1'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: temurin
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6.4.1
         with:
           gradle-version: '8.8'
       - name: Reproducir ambos JAR entregados y capturar cada sentido
@@ -68,7 +68,7 @@ jobs:
           git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
       - name: Conservar cuadros y malla original del retorno
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: retorno-nuca-forge
           path: |
