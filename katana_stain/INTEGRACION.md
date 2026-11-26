@@ -682,3 +682,20 @@ puños cruzados durante un corte bajo de C):
 - Riesgo aceptado: sin playtest; si el artefacto persiste, los siguientes
   sospechosos son el pivote del modelo GeckoLib (KatanaRenderer) y las
   poses agazapadas.
+
+
+## 0.27.0-test — hit-stop, lazo de veredicto y latido (nov 2026)
+
+Iteración sobre "las habilidades deben mejorar en todo" manteniendo los
+números intactos:
+
+- Hit-stop real para X (3 ticks; 5 en la vía de ultimate por coherencia),
+  oculto (sin icono, sin partículas): la pausa de lectura la da la cámara,
+  no el HUD. C ya congela vía CINEMATIC_BIND.
+- Lazo de veredicto: 4 motas SHARD en la línea ejecutante→víctima cada
+  4 ticks durante el bind de C (sendParticles al servidor, a la vista de
+  todos; sin texto en pantalla).
+- Latido grave (WARDEN_HEARTBEAT) al confirmar parálisis y al backstab.
+  Nunca escuchado; sin aprobación.
+- Verificador: exige presencia de MOVEMENT_SLOWDOWN, WARDEN_HEARTBEAT y
+  el lazo. Mecánicas numéricas intactas a propósito.

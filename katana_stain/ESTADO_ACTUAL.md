@@ -6,7 +6,7 @@ Este es el punto de entrada vigente. Las secciones antiguas de `INTEGRACION.md` 
 
 ## Entrega e instalación
 
-- El árbol de la rama es el de la entrega **0.26.0-test** (compensación experimental `rightItem` eliminada de los 8 cortes de C tras la investigación de `confirmed_c_impact_09.png`; el resto sin cambios desde 0.25.0-test).
+- El árbol de la rama es el de la entrega **0.27.0-test** (hit-stop en los cortes aceptados, lazo de veredicto durante la ejecución de C, latido grave al parálisis/backstab; el resto sin cambios desde 0.26.0-test).
 - `descargas/stainkatana-0.26.0-test.jar` — **prueba experimental**, no final. SHA-256: `de676d18ba9cc38287a6c22108134120229b243fe8331081e93e64084465dda9` (219467 bytes). Lo compiló y verificó el workflow `45723305624` (ambos jobs verdes); el bot lo almacenó en `6fe1c9a` y se re-verificó el hash contra el publicado (el JAR declara `version="0.26.0-test"` y los 8 cortes llevan `rightItem` constante `[0,3,0]`). **No está confirmado que el usuario lo haya instalado ni probado.**
 - `instalar-0.26-test.ps1` instala en test-1 validando el hash y retirando solas 0.20 (rechazada), 0.21, 0.22, 0.23, 0.24 y 0.25; se detiene solo ante versiones desconocidas.
 - `descargas/stainkatana-0.25.0-test.jar` es una **prueba experimental**, no una versión final. SHA-256: `5f20cd5b692cdaf54ff7fcc76e0c3bd20a79a9e81becee7c9336ba1dea205f4a`. Lo compiló y verificó el workflow `45683770104` (ambos jobs verdes); el bot lo almacenó en `cc8be84` y se re-verificó el hash contra el JAR publicado (el JAR declara `version="0.25.0-test"`). **No está confirmado que el usuario lo haya instalado ni probado.** La 0.20.0-test fue rechazada; la 0.21.0-test, la 0.22.0-test, la 0.23.0-test y la 0.24.0-test (SHA `0cc5f8f8…`) no constan como instaladas ni aprobadas.
@@ -15,6 +15,13 @@ Este es el punto de entrada vigente. Las secciones antiguas de `INTEGRACION.md` 
 - `instalar-0.24-test.ps1` instala en `D:\Minecraft\SKLauncher\sklauncher-data-v4\instances\test-1\mods`; valida el hash, sustituye las 0.20.0-test (rechazada), 0.21.0-test, 0.22.0-test y 0.23.0-test que estén, y **se detiene** solo si hay versiones stainkatana-* desconocidas (la 0.20 rechazada, la 0.21, la 0.22 y la 0.23 se retiran solas, por autorización del usuario). Sin respaldos.
 - Requiere Forge 1.20.1, GeckoLib Forge 4.8.1 o compatible y PlayerAnimator Forge 1.0.2-rc1+1.20 o compatible. Better Combat es opcional y controla el combate ordinario; las animaciones proceden de **otros mods**. Las atribuciones están en `forge/resources/META-INF/` (Se añaden desde siempre: Cinema Scope, Kelvin (ahora con variantes `_sneak`), Serious Player Animations, Better Combat Particle, Emotecraft, etc.).
 - Investigación de mods para cinemática y FX: `referencias/cinematicas_fx_analisis.md` (Oborokage MIT — técnicas adaptadas como código propio; SlashBlade y TheDarkDimensions sin licencia — no usables; Epic Fight — conceptos).
+
+### Qué cambia en 0.27.0-test respecto a 0.26.0-test
+
+- **Hit-stop real en X** (tímido: 3 ticks; 5 si se usara la vía de ultimate): lentitud oculta (`MOVEMENT_SLOWDOWN` amplitud 6, icono e partículas desactivados) solo sobre los golpeados. C ya estaba prácticamente congelado (`CINEMATIC_BIND` + navegación parada); sin cambios ahí.
+- **Lazo de veredicto en C**: cada 4 ticks durante el bind, 4 motas carmesí (partículas SHARD acreditadas) recorren la línea del ejecutante a la víctima — el vínculo se ve, no se anuncia con texto.
+- **Latido grave** (`WARDEN_HEARTBEAT`, volumen moderado, tono grave) al confirmar la parálisis de sangre y al iniciar el backstab de remate. Audio nuevo sin escuchar — sin aprobación.
+- Mecánicas numéricas intactas (daño, alcance, cooldowns, cargas, duración de parálisis). Sin message ni tarjetas nuevas. **Todo sin playtest.**
 
 ### Qué cambia en 0.26.0-test respecto a 0.25.0-test
 

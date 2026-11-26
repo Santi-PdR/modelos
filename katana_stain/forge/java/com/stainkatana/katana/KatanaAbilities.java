@@ -286,6 +286,7 @@ public final class KatanaAbilities {
         ItemStack sword = player.getMainHandItem();
         moveTo(player, target, spot);
         BACKSTABS.put(player.getUUID(), new Backstab(target.getUUID(), sword, player.level().dimension(), now, false, player.position()));
+        player.serverLevel().playSound(null, target.blockPosition(), SoundEvents.WARDEN_HEARTBEAT, SoundSource.PLAYERS, .9F, .65F);
         KatanaNetwork.broadcastAnimation(player, 6);
         // Give the short finisher camera a server-selected focus immediately;
         // otherwise it switches to third person but has nothing to frame.
@@ -398,6 +399,15 @@ public final class KatanaAbilities {
         }
         // Short refreshable effect: if the server dies, it expires without permanently changing mob AI.
         if (elapsed % 4 == 0) mob.addEffect(new MobEffectInstance(KatanaEffects.CINEMATIC_BIND.get(), 12, 0, false, false, false));
+        if (elapsed % 4 == 2) {
+            // Verdict tether: short crimson sparks along the caster→victim line.
+            Vec3 from = player.position().add(0, 1.15, 0);
+            Vec3 to = mob.position().add(0, mob.getBbHeight() * .55, 0);
+            for (int i = 1; i <= 4; i++) {
+                Vec3 point = from.lerp(to, i / 5.0);
+                player.serverLevel().sendParticles(KatanaParticles.SHARD.get(), point.x, point.y, point.z, 1, .04, .04, .04, .01);
+            }
+        }
         if (mob instanceof Mob movingMob) movingMob.getNavigation().stop();
         Vec3 velocity = mob.getDeltaMovement();
         mob.setDeltaMovement(0, Math.min(velocity.y, 0), 0);
@@ -520,6 +530,7 @@ public final class KatanaAbilities {
         level.sendParticles(KatanaParticles.SHARD.get(), bloodHand.x, bloodHand.y, bloodHand.z, 8, .12, .18, .12, .01);
         level.playSound(null, player.blockPosition(), SoundEvents.HONEY_BLOCK_BREAK, SoundSource.PLAYERS, .55F, 1.25F);
         level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, .7F, .65F);
+        level.playSound(null, target.blockPosition(), SoundEvents.WARDEN_HEARTBEAT, SoundSource.PLAYERS, .8F, .75F);
         return true;
     }
 
@@ -544,6 +555,9 @@ public final class KatanaAbilities {
             float damage = CombatTuning.damage(base, ultimate);
             if (!target.hurt(player.damageSources().playerAttack(player), damage)) continue;
             hits++;
+            // Brief impact freeze: hidden Slowness (icon suppressed), so the
+            // camera reads a pause without exposing an effect or changing AI.
+            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, ultimate ? 5 : 3, 6, false, false, false));
             // Marca una única víctima por corte: la primera válida y más próxima.
             if (hits == 1 && target.isAlive()) StainKatanaItem.markTarget(stack, target, level);
             if (ultimate) {

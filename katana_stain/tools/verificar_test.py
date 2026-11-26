@@ -44,6 +44,7 @@ ability = (root/'java/com/stainkatana/katana/KatanaAbilities.java').read_text()
 timeline = (root/'java/com/stainkatana/katana/AbilityTimeline.java').read_text()
 assert 'IMPACT_TICK = {9, 7, 10}' in timeline and 'FINISH_TICK = {21, 16, 200}' in timeline
 assert 'PlayerLoggedOutEvent' in ability and 'ServerStoppedEvent' in ability
+assert 'MOVEMENT_SLOWDOWN' in ability and 'WARDEN_HEARTBEAT' in ability and 'Verdict tether' in ability
 assert 'player.getMainHandItem() != cast.stack' in ability
 anim = (root/'java/com/stainkatana/katana/client/KatanaAnimations.java').read_text()
 assert 'loadBetterCombat' not in anim and 'sword_attack2' in anim and 'stain_c_overhead' in anim
