@@ -160,6 +160,8 @@ public final class RelicClientCommands {
                                         .executes(ctx -> vfxShock(ctx.getSource(),
                                                 ctx.getArgument("fuerza", Double.class)
                                                         .floatValue())))))
+                        .then(Commands.literal("flinch")
+                                .executes(ctx -> vfxFlinch(ctx.getSource()))))
                 .then(Commands.literal("stats")
                         .executes(ctx -> stats(ctx.getSource()))
                         .then(Commands.literal("reset").executes(ctx -> statsReset(ctx.getSource()))))
@@ -839,6 +841,23 @@ public final class RelicClientCommands {
      * esperar a que pase algo. La fuerza es lo que se le pasa al destello: 0.6
      * es un pulso normal, 1.0 el pico maximo (onda grande y lenta de apagar).
      */
+    /**
+     * {@code /relic vfx flinch}: el sobresalto de 1.0.64 a mano. Es la forma de
+     * revisarlo (y de revisarlo en {@code /relic preview}) sin esperar a que te
+     * pegue algo.
+     */
+    private static int vfxFlinch(CommandSourceStack source) {
+        RelicVisuals.RelicVisual visual = localVisual();
+        if (visual == null) {
+            source.sendFailure(Component.translatable("message.holocore.not_equipped"));
+            return 0;
+        }
+        visual.animatable().flinch();
+        source.sendSuccess(() -> Component.translatable("message.holocore.vfx_flinch")
+                .withStyle(ChatFormatting.LIGHT_PURPLE), false);
+        return 1;
+    }
+
     private static int vfxShock(CommandSourceStack source, float strength) {
         RelicVisuals.RelicVisual visual = localVisual();
         if (visual == null) {

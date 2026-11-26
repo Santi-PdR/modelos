@@ -1044,6 +1044,18 @@ public final class RelicAnimatable implements GeoAnimatable {
         this.lastHealth = health;
     }
 
+    /**
+     * Dispara el sobresalto a mano ({@code /relic vfx flinch}). Existe porque el
+     * golpe lo pone el juego cuando quiere: sin esto, revisar 1.0.64 exige esperar
+     * a que un zombi acierte.
+     */
+    public void flinch() {
+        this.hurtNanos = System.nanoTime();
+        if (this.active) {
+            RelicSounds.flinch(this.wearer, this.mood);
+        }
+    }
+
     /** El sobresalto de ahora mismo, de 1 (el golpe) a 0 (medio segundo despues). */
     public float hurtFade() {
         if (this.hurtNanos == 0L) {

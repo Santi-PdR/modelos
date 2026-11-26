@@ -40,6 +40,7 @@
   "message.holocore.anim_list": "Animations: %s",
   "message.holocore.stats": "Stats: %s relic(s) in memory · %s draws/s · %s passes per draw",
   "message.holocore.vfx_shock": "Shockwave fired (flash %s)",
+  "message.holocore.vfx_flinch": "Flinch fired (half a second)",
   "message.holocore.preset_list": "Presets: %s",
   "message.holocore.preset_unknown": "There is no preset %s (available: %s)",
   "message.holocore.preset_applied": "Preset %s applied: %s keys changed. /relic save to keep it.",

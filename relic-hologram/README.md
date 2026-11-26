@@ -91,6 +91,7 @@ En el juego:
 | Ver valores actuales | `/relic info` (tres líneas: placement, estado en vivo y brillo) |
 | Cambiar de "look" de golpe | `/relic preset soft\|normal\|showcase` — ajusta ritmo, aura, halo, GLSL, anillo y destello a la vez (no guarda: `/relic save`) |
 | Probar un efecto | `/relic vfx shock [fuerza]` — destello a mano (0.1–1, por defecto 0.6) para ver la onda de choque sin esperar a que pase nada |
+| Probar el golpe | `/relic vfx flinch` — dispara el sobresalto de 1.0.64 sin esperar a que te pegue nada (funciona también con `/relic preview` puesto) |
 | Probar una animación | `/relic anim <nombre>` · `/relic anim list` |
 | Ajustar cualquier clave | `/relic set` (lista) · `/relic set <clave> <valor>` |
 | Guardar los ajustes | `/relic save` |

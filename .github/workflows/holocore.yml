@@ -869,8 +869,8 @@ jobs:
           assert 'drawShockRing(buffer, frame, time, radius, hurt, 1.0F,' in flinch, \
               'el sobresalto no lleva aditivo encima'
           assert 'animatable.hurtFade()' in curio, 'el hombro no pasa el sobresalto'
-          assert 'RelicAnimatable.Ground.OTHER, 0.0F, 0.0F);' in eventos, \
-              'la vista previa se inventa un sobresalto'
+          assert ', 0.0F, animatable.hurtFade());' in eventos, \
+              'la vista previa no ensena el sobresalto que dispara /relic vfx flinch'
           # 1.0.55: el eco del suelo cambia de forma segun lo que pisas. Se mira una
           # vez por segundo y cacheado, como el portal: en el render ya no se puede.
           assert 'public enum Ground {' in animatable, 'no hay tipos de suelo'
@@ -963,7 +963,7 @@ jobs:
               'el hombro no pasa la energia de movimiento al aura (ni pide el eco en el suelo)'
           assert '1.0F, animatable.mood(), animatable.motion(), false,' in eventos, \
               'la vista previa no pasa la energia de movimiento al aura o dibuja el eco sin suelo'
-          assert 'RelicAnimatable.Ground.OTHER, 0.0F, 0.0F);' in eventos, \
+          assert 'RelicAnimatable.Ground.OTHER, 0.0F,' in eventos, \
               'la vista previa no dice sobre que suelo esta (no lo hay)'
           assert 'static void applyAliveMotion(' in aura, 'la reliquia no tiene movimiento propio'
           assert 'RelicAura.applyAliveMotion(' in curio, 'el hombro no usa el movimiento propio'
@@ -984,6 +984,25 @@ jobs:
           assert 'AMETHYST_BLOCK_BREAK' in sonidos, 'el golpe no suena'
           assert 'pitchFor(mood) * FLINCH_PITCH' in sonidos, \
               'el sobresalto suena igual en todos los estados'
+          # 1.0.65: el sobresalto se puede disparar a mano. Sin esto, revisarlo
+          # exige esperar a que un zombi acierte, y en /relic preview no se puede.
+          comandos = (base / 'RelicClientCommands.java').read_text(encoding='utf-8')
+          assert 'public void flinch()' in animatable, 'el sobresalto no se puede disparar'
+          # El literal tiene que estar ENLAZADO a su implementacion: declarar
+          # "flinch" y colgarle otra cosa se lee igual en el texto y no hace nada.
+          assert re.search(r'literal\("flinch"\)\s*\n?\s*\.executes\(ctx -> vfxFlinch\(', comandos), \
+              'no hay /relic vfx flinch'
+          assert 'private static int vfxFlinch(CommandSourceStack source)' in comandos, \
+              'el subcomando flinch no tiene implementacion'
+          assert 'visual.animatable().flinch();' in comandos, \
+              '/relic vfx flinch no dispara el sobresalto de la reliquia local'
+          # Y el disparo tiene que reiniciar el reloj DENTRO de flinch(): el mismo
+          # System.nanoTime() aparece en updateHurt, asi que se mira el trozo.
+          disparo = re.split(r'\n    \}', animatable.split('public void flinch()', 1)[1])[:1][0]
+          assert 'this.hurtNanos = System.nanoTime();' in disparo, \
+              'disparar el sobresalto no lo pone a cero (se quedaria apagado)'
+          assert 'RelicSounds.flinch(this.wearer, this.mood);' in disparo, \
+              '/relic vfx flinch no suena: no se puede juzgar el golpe mirando'
           assert 'static void flinch(UUID wearer, RelicAnimatable.Mood mood)' in sonidos, \
               'el sobresalto no tiene sonido propio'
           assert 'case HUNTED -> 1.34F;' in sonidos, 'el peligro no tiene tono'

@@ -1,5 +1,21 @@
 # Historial de cambios
 
+## 1.0.65 — el sobresalto a mano
+
+El sobresalto es bonito pero incómodo de revisar: el golpe lo pone el juego cuando quiere. Ahora
+se dispara cuando tú quieras.
+
+* **`/relic vfx flinch`**: cierra el aura y lanza el anillo, con su sonido, sin que nadie te
+  toque. Funciona también con `/relic preview` puesto, así que se puede mirar de cerca y parado.
+* **La vista previa ya enseña el sobresalto**: antes pasaba `0` fijo y el efecto era invisible
+  ahí. Sigue sin inventarse ninguno: solo se ve si lo disparas tú.
+* **`mods.toml` al día**: decía "once estados" desde 1.0.45 y listaba diez; ahora dice catorce y
+  los nombra todos, con `vfx flinch` entre los comandos (la validación de comandos documentados
+  lo cogió sola, que es justo para lo que está).
+* CI: el literal `flinch` tiene que estar **enlazado** a su implementación (`literal("flinch")`
+  seguido de `.executes(... vfxFlinch(...))`), el disparo tiene que reiniciar el reloj dentro de
+  `flinch()` y sonar. Cuatro negativos en rojo.
+
 ## 1.0.64 — el sobresalto
 
 La reliquia ya decía "estás herido" (`WOUNDED`, vida baja, mientras dure). Lo que no hacía era
