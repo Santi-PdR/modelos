@@ -820,6 +820,17 @@ jobs:
           assert 'isCrouching()' in animatable, 'agacharse no frena la energia'
           assert 'RelicAnimatable.Mood mood, float motion, boolean onShoulder,' in aura, \
               'el aura no recibe la energia de movimiento (y el eco, si va en el hombro)'
+          # 1.0.65: parentesis y llaves a la vista. 1.0.65 se fue a rojo por un `)`
+          # de mas en el registro del comando: una comprobacion de dos lineas lo
+          # habria cazado en la validacion, con el nombre del archivo, en vez de en
+          # `compileJava` con un "Compilation failed" seco.
+          for nombre_java in sorted(p.name for p in base.glob('*.java')):
+              fuente = re.sub(r'"(\\.|[^"\\])*"', '""',
+                              (base / nombre_java).read_text(encoding='utf-8'))
+              fuente = re.sub(r'//[^\n]*', '', fuente)
+              assert fuente.count('(') == fuente.count(')'), \
+                  f'{nombre_java}: parentesis descuadrados'
+              assert fuente.count('{') == fuente.count('}'), f'{nombre_java}: llaves descuadradas'
           assert 'RelicAnimatable.Ground ground, float step, float hurt)' in aura, \
               'el aura no sabe sobre que suelo esta el portador (eco ciego, 1.0.55)'
           # 1.0.62: el eco de un paso. Distancia horizontal acumulada (no la animacion

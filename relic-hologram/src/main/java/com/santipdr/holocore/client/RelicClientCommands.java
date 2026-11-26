@@ -159,7 +159,7 @@ public final class RelicClientCommands {
                                                 DoubleArgumentType.doubleArg(0.1D, 1.0D))
                                         .executes(ctx -> vfxShock(ctx.getSource(),
                                                 ctx.getArgument("fuerza", Double.class)
-                                                        .floatValue())))))
+                                                        .floatValue()))))
                         .then(Commands.literal("flinch")
                                 .executes(ctx -> vfxFlinch(ctx.getSource()))))
                 .then(Commands.literal("stats")

@@ -14,7 +14,11 @@ se dispara cuando tú quieras.
   lo cogió sola, que es justo para lo que está).
 * CI: el literal `flinch` tiene que estar **enlazado** a su implementación (`literal("flinch")`
   seguido de `.executes(... vfxFlinch(...))`), el disparo tiene que reiniciar el reloj dentro de
-  `flinch()` y sonar. Cuatro negativos en rojo.
+  `flinch()` y suena. Cuatro negativos en rojo.
+* **Y una comprobación que faltaba**: paréntesis y llaves de cada `.java`, contados sin mirar
+  dentro de cadenas ni comentarios. El primer intento de esta versión se fue a rojo por un `)`
+  de más en el registro del comando: `compileJava` dijo "Compilation failed" y nada más. Ahora
+  eso lo caza una validación, con el nombre del archivo, antes de compilar.
 
 ## 1.0.64 — el sobresalto
 
